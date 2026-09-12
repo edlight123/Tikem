@@ -14,7 +14,11 @@ export const runtime = 'nodejs'
 export const revalidate = 300
 
 export const size = { width: 1200, height: 630 }
-export const contentType = 'image/png'
+// JPEG, not the PNG ImageResponse produces natively. A 1200x630 card carrying a
+// photographic poster comes out ~345KB as PNG, and WhatsApp — the way most of
+// these links actually get shared — gets unreliable with big images. The same
+// card as JPEG is a fraction of that with no visible loss on a photo.
+export const contentType = 'image/jpeg'
 export const alt = 'Event on Tikèm'
 
 // Posters are portrait (~4:5), social cards are landscape. Pairing a full-bleed
@@ -100,7 +104,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
     ? 'Free entry'
     : `${pricing.hasFreeTier ? 'From ' : ''}${new Intl.NumberFormat('en-US').format(lowest)} ${currency}`
 
-  return new ImageResponse(
+  const png = new ImageResponse(
     (
       <div style={{ display: 'flex', width: '100%', height: '100%', background: CANVAS }}>
         {/* Poster column — the art, uncropped vertically. */}
@@ -250,4 +254,23 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
     ),
     { ...size, fonts }
   )
+
+  // Re-encode to JPEG. If sharp is unavailable or throws for any reason, serve
+  // the PNG rather than failing the card — a heavy preview beats no preview.
+  try {
+    const { default: sharp } = await import('sharp')
+    const jpeg = await sharp(Buffer.from(await png.arrayBuffer()))
+      .jpeg({ quality: 86, mozjpeg: true, chromaSubsampling: '4:4:4' })
+      .toBuffer()
+
+    return new Response(new Uint8Array(jpeg), {
+      headers: {
+        'Content-Type': 'image/jpeg',
+        'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400',
+      },
+    })
+  } catch (err) {
+    console.error('opengraph-image: JPEG re-encode failed, serving PNG', err)
+    return png
+  }
 }
