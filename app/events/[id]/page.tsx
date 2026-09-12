@@ -42,21 +42,29 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     day: 'numeric',
   })
 
+  // NOTE: no `images` here, deliberately. An explicit openGraph.images OVERRIDES
+  // the opengraph-image.tsx file convention, and this used to point straight at
+  // the raw poster — which shipped a bare og:image with no og:image:width or
+  // og:image:height. Scrapers (WhatsApp especially) will not download an image
+  // just to measure it, so the preview arrived with no picture; and when it did
+  // render, a 1080x1350 portrait poster in a summary_large_image card was
+  // cropped to nothing. Leaving images unset lets the sibling opengraph-image
+  // route supply the 1200x630 card AND its dimensions automatically.
   return {
     title: `${event.title} | Tikèm`,
     description: event.description || `Join us for ${event.title} at ${event.venue_name}, ${event.city}`,
+    alternates: { canonical: `/events/${id}` },
     openGraph: {
       title: event.title,
       description: event.description || `Join us for ${event.title}`,
-      images: event.banner_image_url ? [event.banner_image_url] : [],
       type: 'website',
       siteName: 'Tikèm',
+      url: `/events/${id}`,
     },
     twitter: {
       card: 'summary_large_image',
       title: event.title,
       description: event.description || `Join us for ${event.title}`,
-      images: event.banner_image_url ? [event.banner_image_url] : [],
     },
   }
 }

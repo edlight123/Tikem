@@ -50,6 +50,14 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns'],
   },
+
+  // The OG card route reads these TTFs off disk at request time (satori needs a
+  // raw font buffer and cannot use the woff2 that next/font emits). Tracing
+  // cannot infer a runtime fs.readFileSync, so name the files explicitly or the
+  // serverless bundle ships without them and every share card 500s in prod.
+  outputFileTracingIncludes: {
+    '/events/[id]/opengraph-image': ['./assets/fonts/**'],
+  },
   
   // Add headers for better caching, performance, and security
   async headers() {
