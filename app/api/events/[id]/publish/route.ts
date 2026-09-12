@@ -5,27 +5,7 @@ import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { resolveEventCountry } from '@/lib/event-country'
 import { normalizeCountryCode } from '@/lib/payment-provider'
-import { isComingSoon, countrySupport, normalizeSupportedCountry } from '@/lib/country-support'
-import { getPayoutProfile, getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
-
-function getStripe() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is not configured')
-  }
-  return require('stripe')(process.env.STRIPE_SECRET_KEY)
-}
-
-async function isOrganizerVerified(userId: string): Promise<boolean> {
-  const userDoc = await adminDb.collection('users').doc(userId).get()
-  const userData = userDoc.exists ? userDoc.data() : null
-
-  const userVerified = userData?.is_verified === true || userData?.verification_status === 'approved'
-  if (userVerified) return true
-
-  const requestDoc = await adminDb.collection('verification_requests').doc(userId).get()
-  const requestData = requestDoc.exists ? requestDoc.data() : null
-  return requestData?.status === 'approved'
-}
+import { checkPaidPublishGate } from '@/lib/events/publish-gate'
 
 async function isPaidEvent(eventId: string, eventData: any): Promise<boolean> {
   if ((eventData?.ticket_price || 0) > 0) return true
@@ -57,6 +37,7 @@ export async function POST(
     // Non-blocking advisories returned alongside a SUCCESSFUL publish. Nothing
     // here may ever stop a publish — the hard gates are the 403s below.
     const warnings: Array<Record<string, any>> = []
+    let clearPayoutBlock = false
 
     // Verify event ownership
     const eventDoc = await adminDb.collection('events').doc(id).get()
@@ -78,83 +59,29 @@ export async function POST(
     // paid out to a verified organizer with a valid payout profile. This lets HT
     // organizers list and sell first, then complete KYC before cashing out.
     //
-    // US/Canada keep the full pre-publish gate: Stripe destination charges require
+    // Stripe Connect markets (US/CA/FR) keep the full pre-publish gate: destination charges require
     // completed Connect onboarding (identity + charges/payouts enabled) before any
     // money can be collected, so those checks must pass before publishing.
     if (is_published === true) {
       const paid = await isPaidEvent(id, eventData)
       if (paid) {
         const resolvedCountry = await resolveEventCountry(eventData)
-        const requiredProfileId = getRequiredPayoutProfileIdForEventCountry(resolvedCountry || eventData?.country)
+        const gate = await checkPaidPublishGate({
+          organizerId: user.id,
+          country: resolvedCountry || eventData?.country,
+        })
 
-        // Coming-soon markets (Dominican Republic): payouts aren't wired yet, so a
-        // PAID event may not be published there. The country stays browsable and
-        // free/RSVP events publish normally — only priced events are blocked.
-        const countryForSupport = resolvedCountry || eventData?.country
-        if (isComingSoon(countryForSupport)) {
-          const name = countrySupport(countryForSupport)?.name || 'this country'
-          return NextResponse.json(
-            { error: `Paid events are coming soon in ${name}` },
-            { status: 403 }
-          )
+        if (!gate.ok) {
+          return NextResponse.json({ error: gate.error, code: gate.code }, { status: gate.status })
         }
 
-        // Haiti (and other non-US/CA) events: no publish-time gate — KYC is enforced
-        // at disbursement instead. Free/RSVP events remain unrestricted as before.
+        warnings.push(...gate.warnings)
 
-        if (requiredProfileId === 'stripe_connect') {
-          const verified = await isOrganizerVerified(user.id)
-          if (!verified) {
-            return NextResponse.json(
-              { error: 'Verification required to publish paid events' },
-              { status: 403 }
-            )
-          }
-
-          const stripeProfile = await getPayoutProfile(user.id, 'stripe_connect')
-          const stripeAccountId = stripeProfile?.stripeAccountId
-          if (!stripeAccountId) {
-            return NextResponse.json(
-              { error: 'Stripe Connect required to publish paid events in this country.' },
-              { status: 403 }
-            )
-          }
-
-          const stripe = getStripe()
-          const account = await stripe.accounts.retrieve(stripeAccountId)
-          const verifiedStripe = Boolean(account?.details_submitted && account?.charges_enabled && account?.payouts_enabled)
-          if (!verifiedStripe) {
-            return NextResponse.json(
-              { error: 'Stripe Connect onboarding required before publishing paid events in this country.' },
-              { status: 403 }
-            )
-          }
-
-          // ── Cross-border advisory (WARN, never block) ──
-          // A Stripe Express account's country is fixed when it is created, and
-          // an organizer holds exactly ONE stripe_connect profile. So a
-          // US-registered organizer running a Canadian event still gets paid —
-          // but into their USD account, with an FX conversion nobody warned them
-          // about. Getting a genuinely local Canadian payout would mean a second
-          // connected account, which this model does not support. Say so at
-          // publish rather than letting them discover it on the payout.
-          const accountCountry = String(account?.country || '').toUpperCase()
-          const eventCountryCode = normalizeSupportedCountry(countryForSupport)
-          if (accountCountry && eventCountryCode && accountCountry !== eventCountryCode) {
-            warnings.push({
-              code: 'payout_country_mismatch',
-              eventCountry: eventCountryCode,
-              eventCountryName: countrySupport(eventCountryCode)?.name || eventCountryCode,
-              accountCountry,
-              accountCountryName: countrySupport(accountCountry)?.name || accountCountry,
-              payoutCurrency: String(account?.default_currency || '').toUpperCase() || null,
-              message:
-                `This event is in ${countrySupport(eventCountryCode)?.name || eventCountryCode}, but your connected payout account is registered in ` +
-                `${countrySupport(accountCountry)?.name || accountCountry}. You'll still be paid — into that account, in ` +
-                `${String(account?.default_currency || '').toUpperCase() || 'its own currency'}, with a currency conversion applied. ` +
-                `Being paid locally would require a separate connected account for ${countrySupport(eventCountryCode)?.name || eventCountryCode}, which Tikèm doesn't support yet.`,
-            })
-          }
+        // This event has just re-passed the gate, so any block the health sweep
+        // recorded is stale. Clear it here: an auto-unpublished event leaves the
+        // sweep's `is_published == true` query and could never clear its own marker.
+        if (eventData.payout_blocked) {
+          clearPayoutBlock = true
         }
       }
     }
@@ -166,6 +93,14 @@ export async function POST(
       is_published,
       status: is_published ? 'published' : 'draft',
       updated_at: new Date(),
+      ...(clearPayoutBlock
+        ? {
+            payout_blocked: false,
+            payout_blocked_code: null,
+            payout_blocked_reason: null,
+            payout_blocked_at: null,
+          }
+        : {}),
     }
 
     // Persist a normalized country code when we can determine it.
