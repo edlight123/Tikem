@@ -117,6 +117,7 @@
   },
   "event_card_detail": {
     "sold_out": "ÉPUISÉ",
+    "payout_blocked": "Paiements bloqués",
     "needs_attention": "Nécessite une attention",
     "no_cover_image": "Image de couverture manquante",
     "published": "Publié",

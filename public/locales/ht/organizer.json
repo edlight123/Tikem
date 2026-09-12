@@ -117,6 +117,7 @@
   },
   "event_card_detail": {
     "sold_out": "VANN FINI",
+    "payout_blocked": "Pa ka pran peman",
     "needs_attention": "Bezwen atansyon",
     "no_cover_image": "Imaj kouvèti manke",
     "published": "Pibliye",

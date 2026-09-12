@@ -29,6 +29,9 @@ export type NotificationType =
   | 'organizer_message'
   | 'organizer_reply'
   | 'payment_dispute'
+  // An organizer's payout account can no longer take money for a LIVE event.
+  // Transactional: it is about their own money and is never suppressed.
+  | 'payout_account_blocked'
 
 export interface Database {
   public: {

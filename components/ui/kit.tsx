@@ -216,12 +216,15 @@ export function StatusChip({
   icon: Icon,
   children,
   className = '',
+  title,
 }: {
   status?: string
   tone?: ChipTone
   icon?: IconType
   children?: React.ReactNode
   className?: string
+  /** Native tooltip — for a state whose reason is too long for the label. */
+  title?: string
 }) {
   const resolved: ChipTone = tone ?? statusTone(status ?? '')
   const label =
@@ -229,6 +232,7 @@ export function StatusChip({
     (status ? status.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '')
   return (
     <span
+      title={title}
       className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs capitalize ${toneText[resolved]} ${className}`}
     >
       {Icon ? (

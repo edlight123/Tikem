@@ -52,6 +52,10 @@
     {
       "path": "/api/cron/organizer-nudge",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/connect-health-sweep",
+      "schedule": "0 6 * * *"
     }
   ]
 }

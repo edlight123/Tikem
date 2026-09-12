@@ -27,6 +27,9 @@ interface EventData {
   ticket_tiers?: any[]
   location_name?: string
   join_url?: string
+  /** Set by the Connect health sweep when this live event can no longer take money. */
+  payout_blocked?: boolean
+  payout_blocked_reason?: string
 }
 
 interface OrganizerEventCardProps {
@@ -114,6 +117,15 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
             {event.is_published ? t('event_card_detail.published') : t('event_card_detail.draft')}
           </StatusChip>
           {isSoldOut && <StatusChip tone="danger">{t('event_card_detail.sold_out')}</StatusChip>}
+          {/* A live event whose payout account can no longer accept a charge. The
+              buyer would reach checkout and fail, so this outranks every other
+              signal on the row — shown before "needs attention", never hidden
+              behind a hover. */}
+          {event.payout_blocked && (
+            <StatusChip tone="danger" title={event.payout_blocked_reason || undefined}>
+              {t('event_card_detail.payout_blocked', "Can't take payments")}
+            </StatusChip>
+          )}
           {needsAttention && (
             <span title={t('event_card_detail.needs_attention')} className="inline-flex items-center text-amber-300">
               <AlertCircle className="h-4 w-4" />

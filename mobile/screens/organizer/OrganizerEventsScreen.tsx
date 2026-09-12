@@ -309,6 +309,16 @@ export default function OrganizerEventsScreen() {
                     <StatusChip status={getChipStatus(displayStatus)} label={getStatusLabel(displayStatus)} />
                   </View>
 
+                  {/* A live event whose payout account can no longer accept a
+                      charge (set by the Connect health sweep). The buyer would
+                      reach checkout and fail, so it gets its own line rather
+                      than competing for space in the header row. */}
+                  {(event as any).payout_blocked && (
+                    <View style={styles.payoutBlockedRow}>
+                      <StatusChip status="error" label={t('organizerEvents.status.payoutBlocked')} />
+                    </View>
+                  )}
+
                   <View style={styles.eventDetails}>
                     <View style={styles.detailRow}>
                       <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
@@ -440,6 +450,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     marginRight: 10,
     lineHeight: 24,
+  },
+  payoutBlockedRow: {
+    marginTop: 6,
   },
   eventDetails: {
     marginBottom: 12,
