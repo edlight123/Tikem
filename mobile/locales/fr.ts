@@ -1812,6 +1812,7 @@ export default {
       draft: 'Brouillon',
       published: 'Publié',
       soldOut: 'Complet',
+      payoutBlocked: 'Paiements bloqués',
       completed: 'Terminé',
       cancelled: 'Annulé',
     },
@@ -1862,6 +1863,10 @@ export default {
     createSuccessBody: 'Votre événement a été créé avec succès !',
     updateSuccessBody: 'Votre événement a été mis à jour avec succès !',
     saveFailedCreate: "Échec de la création de l'événement. Veuillez réessayer.",
+    publishCheckFailed: {
+      title: 'Impossible de vérifier vos paramètres de versement',
+      body: "Nous n'avons pas pu confirmer votre compte de versement. Enregistrez un brouillon et publiez une fois reconnecté.",
+    },
     saveFailedUpdate: "Échec de la mise à jour de l'événement. Veuillez réessayer.",
     entry: {
       kicker: 'NOUVEL ÉVÉNEMENT',

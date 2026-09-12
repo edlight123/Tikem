@@ -1782,6 +1782,7 @@ export default {
       draft: 'Bouyon',
       published: 'Pibliye',
       soldOut: 'Fini',
+      payoutBlocked: 'Pa ka pran peman',
       completed: 'Fini nèt',
       cancelled: 'Anile',
     },
@@ -1832,6 +1833,10 @@ export default {
     createSuccessBody: 'Evènman ou a kreye avèk siksè!',
     updateSuccessBody: 'Evènman ou a mete ajou avèk siksè!',
     saveFailedCreate: 'Pa t kapab kreye evènman an. Tanpri eseye ankò.',
+    publishCheckFailed: {
+      title: 'Nou pa t kapab tcheke konfigirasyon peman an',
+      body: "Nou pa t kapab konfime kont peman ou an. Sove l kòm bouyon epi pibliye l lè ou gen koneksyon ankò.",
+    },
     saveFailedUpdate: 'Pa t kapab mete evènman an ajou. Tanpri eseye ankò.',
     entry: {
       kicker: 'NOUVO EVÈNMAN',

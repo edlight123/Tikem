@@ -43,8 +43,6 @@ import { useI18n } from '../../contexts/I18nContext';
 import { createEvent, updateEvent, SaveEventOptions } from '../../lib/api/events';
 import { getEventById } from '../../lib/api/organizer';
 import { RADIUS } from '../../config/brand';
-import { db } from '../../config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { COUNTRIES, CITIES_BY_COUNTRY } from '../../types/filters';
 import { getDeviceLocationInfo } from '../../utils/deviceLocation';
 import {
@@ -65,6 +63,7 @@ import {
   defaultCurrencyForCountry,
   normalizeSupportedCountry,
   providerForCountry,
+  countrySupport,
 } from '../../lib/countrySupport';
 import { orderCountriesByMarkets, useDeclaredMarkets } from '../../lib/organizerMarkets';
 import { backendFetch, backendJson } from '../../lib/api/backend';
@@ -1261,52 +1260,58 @@ export default function CreateEventFlowRefactored() {
 
     const eventData = buildEventData();
 
-    // Match web restrictions: paid US/CA events require Stripe Connect.
+    // Paid events in Stripe Connect markets need a payout account that can
+    // actually accept a charge. Ask the server rather than deciding here: this
+    // used to read the payout profile from Firestore and pass as long as SOME
+    // stripeAccountId was present, which a client cannot improve on — it cannot
+    // see charges_enabled, so an id left over from a previous platform account
+    // looked healthy and the organizer published tickets nobody could buy. It
+    // also only covered US/CA and silently let paid FR events through.
     const draftCountry = String((eventDraft as any).country || 'HT').toUpperCase();
-    const isStripeCountry = draftCountry === 'US' || draftCountry === 'CA';
     const hasPaidTickets = !eventDraft.is_rsvp && (eventData.ticket_tiers || []).some((tier) => {
       const price = parseFloat(String((tier as any).price ?? '0'));
       return Number.isFinite(price) && price > 0;
     });
+    // `publish` is undefined on the edit-mode save (handleSubmit({ applyToSeries }))
+    // and on that path updateEvent() leaves is_published untouched — so an edit
+    // only needs the gate when it explicitly asks to publish. createEvent()
+    // instead treats undefined as publish (`options.publish !== false`), so a
+    // create does need checking unless it explicitly asks for a draft.
+    const wantsPublish = isEditMode ? options.publish === true : options.publish !== false;
 
-    if (isStripeCountry && hasPaidTickets) {
+    // Haiti and other non-Stripe markets are ungated at publish by design (KYC
+    // lands at withdrawal), so skip the round trip entirely — that is the common
+    // case, and it keeps event creation working offline for the main market.
+    // The server re-decides this anyway; this only avoids asking when the answer
+    // cannot be "no".
+    const needsStripeGate = countrySupport(draftCountry)?.requiredProfile === 'stripe_connect';
+
+    if (hasPaidTickets && wantsPublish && needsStripeGate) {
+      let eligibility: { allowed?: boolean; reason?: string; retryable?: boolean } | null = null;
       try {
-        const organizerId = user?.uid || userProfile.id;
+        eligibility = await backendJson(
+          `/api/organizer/publish-eligibility?country=${encodeURIComponent(draftCountry)}`
+        );
+      } catch (err: any) {
+        // Preflight itself failed (offline, server error). Don't strand the
+        // organizer's work: saving a draft is always allowed, so fall back to
+        // that rather than blocking, and say why.
+        setConfirmVisible(false);
+        showAlert(
+          t('organizerCreateEventFlow.publishCheckFailed.title', { defaultValue: 'Could not check payout setup' }),
+          err?.message ||
+            t('organizerCreateEventFlow.publishCheckFailed.body', {
+              defaultValue: "We couldn't confirm your payout account. Save as a draft and publish once you're back online.",
+            })
+        );
+        return;
+      }
 
-        // Prefer new payout profile doc; fall back to legacy payoutConfig/main.
-        const [profileSnap, legacySnap] = await Promise.all([
-          getDoc(doc(db, 'organizers', organizerId, 'payoutProfiles', 'stripe_connect')),
-          getDoc(doc(db, 'organizers', organizerId, 'payoutConfig', 'main')),
-        ]);
-
-        const profileData = profileSnap.exists() ? (profileSnap.data() as any) : null;
-        const legacyData = legacySnap.exists() ? (legacySnap.data() as any) : null;
-        const merged = profileData || legacyData;
-
-        const provider = String(merged?.payoutProvider || '').toLowerCase();
-        const stripeAccountId = merged?.stripeAccountId || merged?.stripe_account_id || null;
-        const ok = provider === 'stripe_connect' && !!stripeAccountId;
-
-        if (!ok) {
-          setConfirmVisible(false);
-          showAlert(
-            t('organizerEarnings.stripeConnectRequired.title'),
-            t('organizerEarnings.stripeConnectRequired.body'),
-            [
-              { text: t('common.cancel'), style: 'cancel' },
-              {
-                text: t('organizerEarnings.openPayoutSettings'),
-                onPress: () => (navigation as any).navigate('OrganizerPayoutSettings'),
-              },
-            ]
-          );
-          return;
-        }
-      } catch {
+      if (eligibility && eligibility.allowed === false) {
         setConfirmVisible(false);
         showAlert(
           t('organizerEarnings.stripeConnectRequired.title'),
-          t('organizerEarnings.stripeConnectRequired.body'),
+          eligibility.reason || t('organizerEarnings.stripeConnectRequired.body'),
           [
             { text: t('common.cancel'), style: 'cancel' },
             {

@@ -679,7 +679,17 @@ function parseDateTimeString(dateStr: string, timeStr: string): Date {
 }
 
 /**
- * Toggle event publication status (pause/resume ticket sales)
+ * Toggle event publication status (pause/resume ticket sales).
+ *
+ * Goes through the web publish route rather than writing is_published straight
+ * to Firestore. Firestore rules leave that field client-mutable so organizers
+ * can legitimately toggle publish, which means a direct write also skipped every
+ * pre-publish check — an organizer could resume sales on a paid US/CA/FR event
+ * whose Stripe account can no longer accept charges, and the failure would only
+ * surface to the buyer at checkout. The route enforces the gate and hands back a
+ * message worth showing; resuming is exactly when it needs re-checking.
+ *
+ * Unpublishing is never gated, so pausing still works regardless of payout state.
  */
 export async function toggleEventPublication(
   eventId: string,
@@ -687,16 +697,16 @@ export async function toggleEventPublication(
 ): Promise<void> {
   try {
     console.log(`Toggling event ${eventId} publication to:`, isPublished);
-    const eventRef = doc(db, 'events', eventId);
-    await updateDoc(eventRef, {
-      is_published: isPublished,
-      status: isPublished ? 'published' : 'draft',
-      updated_at: serverTimestamp(),
+    await backendJson(`/api/events/${eventId}/publish`, {
+      method: 'POST',
+      body: JSON.stringify({ is_published: isPublished }),
     });
     console.log(`Event ${isPublished ? 'published' : 'unpublished'} successfully. Status set to: ${isPublished ? 'published' : 'draft'}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error toggling event publication:', error);
-    throw new Error('Failed to update event status');
+    // Preserve the server's explanation (e.g. "Reconnect Stripe in Payout
+    // settings...") — the caller shows error.message directly.
+    throw new Error(error?.message || 'Failed to update event status');
   }
 }
 

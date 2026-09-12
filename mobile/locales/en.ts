@@ -537,6 +537,10 @@ export default {
     createSuccessBody: 'Your event has been created successfully!',
     updateSuccessBody: 'Your event has been updated successfully!',
     saveFailedCreate: 'Failed to create event. Please try again.',
+    publishCheckFailed: {
+      title: 'Could not check payout setup',
+      body: "We couldn't confirm your payout account. Save as a draft and publish once you're back online.",
+    },
     saveFailedUpdate: 'Failed to update event. Please try again.',
     entry: {
       kicker: 'NEW EVENT',
@@ -2116,6 +2120,7 @@ export default {
       draft: 'Draft',
       published: 'Published',
       soldOut: 'Sold Out',
+      payoutBlocked: "Can't take payments",
       completed: 'Completed',
       cancelled: 'Cancelled',
     },
