@@ -165,8 +165,16 @@ service cloud.firestore {
       // - otherwise => USD only
       // The creator can only mint events they own — without this, any signed-in
       // account could publish content attributed to another organizer's page.
+      //
+      // A client also cannot mint an event that is ALREADY published. Publishing
+      // has to pass the payout gate (identity, payout profile, and for Stripe
+      // markets an account that can actually accept a charge), which only
+      // /api/events/[id]/publish can evaluate. Both composers already create a
+      // draft and publish as a second, server-side step; this makes that the
+      // only possible order rather than a convention a client can skip.
       allow create: if isSignedIn()
         && request.resource.data.organizer_id == request.auth.uid
+        && request.resource.data.get('is_published', false) == false
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -174,11 +182,26 @@ service cloud.firestore {
           resource.data.organizer_id == request.auth.uid &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
-          // (it bypasses rules). is_published stays client-mutable so organizers
-          // can legitimately toggle publish. .get() defaults keep legacy docs
-          // that predate these fields writable.
+          // (it bypasses rules). .get() defaults keep legacy docs that predate
+          // these fields writable.
           request.resource.data.get('rejected', false) == resource.data.get('rejected', false) &&
-          request.resource.data.get('reports_count', 0) == resource.data.get('reports_count', 0)
+          request.resource.data.get('reports_count', 0) == resource.data.get('reports_count', 0) &&
+          // is_published may only travel DOWNWARDS from a client: leave it alone,
+          // or turn it off. Turning it ON means money can be taken, and whether
+          // that is safe depends on the organizer's payout account — a question
+          // no security rule can ask Stripe. So publishing goes through
+          // /api/events/[id]/publish, which runs the gate on the Admin SDK and
+          // is unaffected by this clause.
+          //
+          // This was the last hole: the field was deliberately left client-mutable
+          // "so organizers can toggle publish", which also let a client publish a
+          // paid event whose Stripe account could not accept a charge, and let a
+          // stale app build keep doing so after the clients were fixed.
+          // Unpublishing stays open — pausing sales is never gated.
+          (
+            request.resource.data.get('is_published', false) == resource.data.get('is_published', false)
+            || request.resource.data.get('is_published', false) == false
+          )
         )
         // H2 closed: the tickets_sold clause is gone. That counter is now written
         // only by lib/tickets/inventory.ts via FieldValue.increment on the Admin

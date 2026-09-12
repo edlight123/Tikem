@@ -252,6 +252,33 @@ export function filterExploreEvents<T extends { show_on_explore?: boolean }>(eve
 }
 
 /**
+ * Publish freshly created events through the server route, which runs the payout
+ * gate. Called AFTER the ticket_tiers docs exist, because the gate decides
+ * whether an event is paid by reading them.
+ *
+ * On failure the events simply stay drafts — nothing is rolled back, because a
+ * draft is the correct resting state for an event that could not go live. The
+ * thrown message says so, since "failed to create event" would be wrong: the
+ * event exists and their work is safe.
+ */
+async function publishCreatedEvents(eventIds: string[]): Promise<void> {
+  try {
+    for (const id of eventIds) {
+      await backendJson(`/api/events/${id}/publish`, {
+        method: 'POST',
+        body: JSON.stringify({ is_published: true }),
+      });
+    }
+  } catch (error: any) {
+    throw new Error(
+      error?.message
+        ? `Saved as a draft, but not published: ${error.message}`
+        : 'Your event was saved as a draft but could not be published.'
+    );
+  }
+}
+
+/**
  * Create a new event in Firestore
  */
 export async function createEvent(
@@ -406,8 +433,12 @@ export async function createEvent(
         // Password gate — public flag only. The secret lives hashed in the
         // private/access subdoc (written below), never on this doc.
         is_password_protected: !!eventData.is_password_protected,
-        is_published: publish,
-        status: publish ? 'published' : 'draft',
+        // Always created as a DRAFT, matching the web composer. Publishing is a
+        // separate, server-gated step (publishCreatedEvent below) so a paid event
+        // can never go live without passing the payout gate — and so the
+        // Firestore rule can refuse any client write that turns is_published on.
+        is_published: false,
+        status: 'draft',
         // Moderation defaults — every event must carry these or it goes invisible
         // to the admin events tabs (see event-moderation-data-model). Drafts too.
         rejected: false,
@@ -447,19 +478,20 @@ export async function createEvent(
     if (!isRecurring) {
       const id = await createOccurrence(occurrences[0].start, occurrences[0].end);
       console.log('Event created successfully:', id);
+      if (publish) await publishCreatedEvents([id]);
       return id;
     }
 
     // Recurring: create each planned occurrence in order.
-    let firstId = '';
+    const createdIds: string[] = [];
     for (let i = 0; i < occurrences.length; i++) {
-      const id = await createOccurrence(occurrences[i].start, occurrences[i].end);
-      if (i === 0) firstId = id;
+      createdIds.push(await createOccurrence(occurrences[i].start, occurrences[i].end));
     }
 
     console.log(`Recurring series ${seriesId} created: ${occurrences.length} events`);
+    if (publish) await publishCreatedEvents(createdIds);
     // Keep the existing return contract: the FIRST occurrence's id.
-    return firstId;
+    return createdIds[0] || '';
   } catch (error) {
     console.error('Error creating event:', error);
     throw new Error('Failed to create event. Please try again.');
@@ -544,11 +576,9 @@ export async function updateEvent(
       // private/access hash is simply left in place (harmless — the gate is off).
       is_password_protected: !!eventData.is_password_protected,
       updated_at: serverTimestamp(),
-      // Only flip publication state when the caller explicitly asks (e.g. the
-      // publish-vs-draft confirmation sheet); otherwise leave it untouched.
-      ...(options.publish !== undefined
-        ? { is_published: options.publish, status: options.publish ? 'published' : 'draft' }
-        : {}),
+      // Publication state is NOT written here. Turning it on has to pass the
+      // payout gate, and the Firestore rule refuses a client write that does so
+      // — it goes through the server route below instead.
     };
 
     // Update the event document
@@ -618,10 +648,23 @@ export async function updateEvent(
       }
     }
 
+    // Publication state, when the caller explicitly asked for it (the
+    // publish-vs-draft sheet). Last, so the gate judges the edited event — its
+    // tiers are already rewritten above, and the gate reads them to decide
+    // whether this is a paid event. Unpublishing is never gated.
+    if (options.publish !== undefined) {
+      await backendJson(`/api/events/${eventId}/publish`, {
+        method: 'POST',
+        body: JSON.stringify({ is_published: options.publish }),
+      });
+    }
+
     console.log('Event updated successfully:', eventId);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating event:', error);
-    throw new Error('Failed to update event. Please try again.');
+    // Keep a gate refusal legible ("Reconnect Stripe…") instead of flattening
+    // every failure into the same generic sentence.
+    throw new Error(error?.message || 'Failed to update event. Please try again.');
   }
 }
 
