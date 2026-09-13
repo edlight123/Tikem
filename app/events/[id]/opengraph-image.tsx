@@ -21,12 +21,21 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/jpeg'
 export const alt = 'Event on Tikèm'
 
-// Posters are portrait (~4:5), social cards are landscape. Pairing a full-bleed
-// portrait crop on the left with the billing on the right keeps the artwork
-// uncropped and still fills 1200x630 — which is the whole reason this route
-// exists: handing a raw 1080x1350 poster to a summary_large_image card made
-// every platform centre-crop the art to nothing.
+// Posters are portrait (~4:5), social cards are landscape — which is the whole
+// reason this route exists: handing a raw 1080x1350 poster to a
+// summary_large_image card made every platform centre-crop the art to nothing.
+//
+// So the poster is shown uncropped at the largest 4:5 this height allows, and a
+// blurred copy of it fills the rest of the frame. The card then reads as the
+// artwork at the thumbnail size a chat app actually renders, with the billing
+// demoted to a caption beside it. The poster and caption are inset together and
+// optically centred: pinning the poster flush left left ~700px of near-black
+// doing nothing, which made the card read as mostly empty.
 const POSTER_W = 504 // 630 * 4/5
+const MARGIN = 112
+const GAP = 60
+const TEXT_X = MARGIN + POSTER_W + GAP
+const TEXT_W = 1200 - TEXT_X - MARGIN
 
 const CANVAS = '#0a0a0a'
 const INK = '#f5f4f1'
@@ -45,6 +54,30 @@ async function usablePoster(url: string | undefined): Promise<string | null> {
     if (!res.ok) return null
     const type = (res.headers.get('content-type') || '').toLowerCase()
     return /^image\/(png|apng|jpeg|jpg|gif|svg\+xml)/.test(type) ? url : null
+  } catch {
+    return null
+  }
+}
+
+// The fill behind the card. A cover-scaled copy of the poster at full size
+// showed recognisable-but-cropped shapes — a half a face, a cut-off word — which
+// reads as a mistake rather than as atmosphere. Downsampling to thumbnail size
+// and blurring turns it into an ambient wash of the poster's own colour instead.
+// It has to happen here because satori implements no filter: blur().
+async function ambientFill(url: string | null): Promise<string | null> {
+  if (!url) return null
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const { default: sharp } = await import('sharp')
+    const buf = await sharp(Buffer.from(await res.arrayBuffer()))
+      .resize(64, 34, { fit: 'cover' })
+      .blur(3)
+      .jpeg({ quality: 62 })
+      .toBuffer()
+    // 64x34 is ~2KB, so inlining it costs nothing and saves satori a second
+    // trip to the CDN for an image it would only smear anyway.
+    return `data:image/jpeg;base64,${buf.toString('base64')}`
   } catch {
     return null
   }
@@ -90,6 +123,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
   const title = String(event?.title || 'Event')
   const theme = getPosterTheme(event?.id || title, event?.category)
   const poster = await usablePoster(event?.banner_image_url)
+  const fill = await ambientFill(poster)
 
   const date = formatDate(event?.start_datetime)
   const place = [event?.venue_name, event?.city].filter(Boolean).join(', ')
@@ -106,15 +140,70 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
 
   const png = new ImageResponse(
     (
-      <div style={{ display: 'flex', width: '100%', height: '100%', background: CANVAS }}>
-        {/* Poster column — the art, uncropped vertically. */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          background: CANVAS,
+          alignItems: 'center',
+        }}
+      >
+        {/* Ambient fill — the blurred poster, or its deterministic gradient. */}
         <div
           style={{
             display: 'flex',
-            position: 'relative',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            ...(fill
+              ? { backgroundImage: `url(${fill})`, backgroundSize: '1200px 630px' }
+              : { backgroundImage: theme.bg }),
+          }}
+        />
+
+        {/* Two scrims rather than one. The flat pass keeps the wash dark enough
+            to be a background everywhere; the ramp adds what the caption side
+            needs on its own, so the poster's colour still reads on the left
+            instead of the whole card going to mud. */}
+        <div
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(10,10,10,0.60)',
+          }}
+        />
+        <div
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage:
+              'linear-gradient(90deg, rgba(10,10,10,0.10) 0%, rgba(10,10,10,0.25) 40%, rgba(10,10,10,0.72) 62%, rgba(10,10,10,0.80) 100%)',
+          }}
+        />
+
+        {/* Poster — the art, uncropped, and the thing the eye lands on first. */}
+        <div
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: 0,
+            left: MARGIN,
             width: POSTER_W,
             height: '100%',
             backgroundImage: theme.bg,
+            boxShadow: '0 30px 90px rgba(0,0,0,0.6)',
           }}
         >
           {poster ? (
@@ -122,8 +211,8 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
           ) : (
             // No poster: the deterministic gradient stands in for the artwork,
             // as a plain colour field. The app paints the title over this
-            // gradient, but here the billing column alongside already carries
-            // the title — printing it twice on one card just reads as a mistake.
+            // gradient, but here the caption alongside already carries the
+            // title — printing it twice on one card just reads as a mistake.
             <div
               style={{
                 display: 'flex',
@@ -138,116 +227,105 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
           )}
         </div>
 
-        {/* Billing column. */}
+        {/* Caption. Deliberately small and kept in one flowing stack — this is a
+            caption on a poster, not a headline with a picture next to it. */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            flex: 1,
+            position: 'absolute',
+            left: TEXT_X,
+            top: 0,
+            width: TEXT_W,
             height: '100%',
-            position: 'relative',
-            padding: '64px',
             justifyContent: 'center',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {date ? (
-              <div
-                style={{
-                  fontFamily: 'Instrument',
-                  fontSize: 22,
-                  letterSpacing: '0.18em',
-                  color: TEAL,
-                  marginBottom: 20,
-                }}
-              >
-                {date}
-              </div>
-            ) : null}
+          {date ? (
+            <div
+              style={{
+                fontFamily: 'Instrument',
+                fontSize: 17,
+                letterSpacing: '0.2em',
+                color: TEAL,
+                marginBottom: 14,
+              }}
+            >
+              {date}
+            </div>
+          ) : null}
 
+          <div
+            style={{
+              fontFamily: 'Instrument',
+              fontStyle: 'italic',
+              fontSize: title.length > 28 ? 32 : 38,
+              lineHeight: 1.08,
+              letterSpacing: '-0.01em',
+              color: INK,
+              // The wrap IS the editorial look — clamp rather than truncate.
+              display: 'flex',
+              lineClamp: 3,
+            }}
+          >
+            {title}
+          </div>
+
+          {place ? (
+            <div
+              style={{
+                fontFamily: 'Instrument',
+                fontSize: 20,
+                lineHeight: 1.3,
+                color: MUTED,
+                marginTop: 18,
+                display: 'flex',
+                lineClamp: 2,
+              }}
+            >
+              {place}
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              fontFamily: 'Instrument',
+              fontSize: 18,
+              letterSpacing: '0.06em',
+              color: FAINT,
+              marginTop: 8,
+            }}
+          >
+            {priceLabel}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: 40 }}>
+            <div style={{ fontFamily: 'Instrument', fontSize: 17, color: FAINT }}>
+              Tickets on
+            </div>
             <div
               style={{
                 fontFamily: 'Instrument',
                 fontStyle: 'italic',
-                fontSize: title.length > 28 ? 60 : 76,
-                lineHeight: 1.0,
-                letterSpacing: '-0.01em',
-                color: INK,
-                // The wrap IS the editorial look — clamp rather than truncate.
-                display: 'flex',
-                lineClamp: 3,
+                fontSize: 26,
+                color: MUTED,
+                lineHeight: 1.1,
+                marginLeft: 9,
               }}
             >
-              {title}
+              tikèm
             </div>
-
-            {place ? (
-              <div
-                style={{
-                  fontFamily: 'Instrument',
-                  fontSize: 30,
-                  lineHeight: 1.25,
-                  color: MUTED,
-                  marginTop: 26,
-                  display: 'flex',
-                  lineClamp: 2,
-                }}
-              >
-                {place}
-              </div>
-            ) : null}
-
             <div
               style={{
-                fontFamily: 'Instrument',
-                fontSize: 26,
-                letterSpacing: '0.06em',
-                color: FAINT,
-                marginTop: 14,
+                display: 'flex',
+                width: 6,
+                height: 6,
+                borderRadius: 6,
+                background: TEAL,
+                marginLeft: 6,
+                marginBottom: 10,
               }}
-            >
-              {priceLabel}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              position: 'absolute',
-              left: 64,
-              bottom: 52,
-              alignItems: 'flex-end',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontFamily: 'Instrument', fontSize: 26, color: MUTED }}>
-                Tickets on
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div
-                  style={{
-                    fontFamily: 'Instrument',
-                    fontStyle: 'italic',
-                    fontSize: 46,
-                    color: INK,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  tikèm
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    width: 9,
-                    height: 9,
-                    borderRadius: 9,
-                    background: TEAL,
-                    marginLeft: 8,
-                    marginBottom: 18,
-                  }}
-                />
-              </div>
-            </div>
+            />
           </div>
         </div>
       </div>
