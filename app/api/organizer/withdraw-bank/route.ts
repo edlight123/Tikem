@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { getEventEarnings, withdrawFromEarnings } from '@/lib/earnings'
+import {
+  EARNINGS_CURRENCY_REVIEW_CODE,
+  EARNINGS_CURRENCY_REVIEW_MESSAGE,
+  flagEarningsCurrencyReview,
+  getEventEarnings,
+  withdrawFromEarnings,
+} from '@/lib/earnings'
 import {
   addSecondaryBankDestination,
   getDecryptedBankDestination,
@@ -116,6 +122,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Earnings are not yet available for withdrawal' },
         { status: 400 }
+      )
+    }
+
+    // Same refusal as the MonCash route: a stored row in another currency than
+    // the event's reads as 0 available, which would otherwise surface as a
+    // misleading "Insufficient balance".
+    if (earnings.withdrawalBlocked?.code === EARNINGS_CURRENCY_REVIEW_CODE) {
+      await flagEarningsCurrencyReview(String(eventId), { lastRefusedWithdrawalAt: new Date().toISOString() })
+      return NextResponse.json(
+        { error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true },
+        { status: 409 }
       )
     }
 
@@ -256,8 +273,26 @@ export async function POST(req: NextRequest) {
       .collection('withdrawal_requests')
       .add(withdrawalRequest)
 
-    // Update earnings record (amount is already in cents)
-    await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+    // Update earnings record (amount is already in cents). A refused debit
+    // (double submit, balance moved since the check, currency review) must not
+    // leave a pending request behind: an admin would pay out money that was
+    // never taken off the balance.
+    const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+    if (!debit?.success) {
+      await withdrawalRef.update({
+        status: 'failed',
+        failureReason: debit?.error || 'Balance could not be reserved',
+        updatedAt: new Date().toISOString(),
+      })
+      const isReview = debit?.code === EARNINGS_CURRENCY_REVIEW_CODE
+      return NextResponse.json(
+        {
+          error: debit?.error || 'Your balance changed — please refresh and try again.',
+          ...(isReview ? { code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true } : {}),
+        },
+        { status: 409 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
