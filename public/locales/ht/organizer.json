@@ -958,14 +958,14 @@
     "view_details": "Gade detay yo"
   },
   "danger_zone": {
-    "all_data_deleted": "Tout evènman, tikè ak done patisipan yo ap efase",
+    "all_data_deleted": "Pwofil ou, enfòmasyon peman ou ak done pèsonèl ou efase; evènman ki pase, tikè ak dosye peman rete, san enfòmasyon pèsonèl ou",
     "deactivate_account": "Dezaktive kont lan",
     "deactivate_account_q": "Dezaktive kont lan?",
     "delete_forever_q": "Efase kont lan pou tout bon?",
     "delete_permanently": "Efase kont lan nèt",
     "delete_confirm_phrase": "EFASE KONT MWEN",
     "export_your_data": "Ekspòte done ou yo",
-    "pending_payouts_forfeited": "W ap pèdi peman ki annatant yo",
+    "pending_payouts_forfeited": "Bloke jiskaske evènman k ap vini ki gen tikè vann anile epi ranbouse, e ou retire balans ou",
     "immediate_irreversible": "Aksyon sa a fèt touswit e ou p ap ka defè l",
     "profile_removed": "Pwofil òganizatè ou a ap retire",
     "deactivate": "Dezaktive",

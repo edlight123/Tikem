@@ -201,7 +201,7 @@
             },
             {
               "question": "Puis-je supprimer mon compte ?",
-              "answer": "Oui. Allez dans Paramètres > Confidentialité & Sécurité > Supprimer le compte. C’est permanent et supprime vos données et historique. Téléchargez d’abord vos billets à venir."
+              "answer": "Oui. Dans l'application Tikèm, allez dans Profil et touchez Supprimer le compte en bas ; sur le web, ouvrez Profil et choisissez Supprimer le compte sous Compte. C'est définitif : votre profil et vos données personnelles sont supprimés, et vos billets et commandes ne sont conservés que sans votre nom ni vos coordonnées. Détails : tikem.co/account/delete"
             },
             {
               "question": "Comment changer mes préférences de notifications ?",

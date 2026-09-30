@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { User, Shield, Bell, Lock, Trash2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { EditorialHeader, EditorialSectionHeading } from '@/components/ui/EditorialHeader'
 import { StatusChip } from '@/components/ui/kit'
+import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
 
 interface SettingsPageClientProps {
   user: {
@@ -41,6 +43,7 @@ const READONLY_FIELD = 'rounded-xl bg-white/[0.055] px-4 py-3'
 
 export default function SettingsPageClient({ user }: SettingsPageClientProps) {
   const { t } = useTranslation('settings')
+  const [showDelete, setShowDelete] = useState(false)
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -212,11 +215,18 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
                 {t('danger.delete_warning')}
               </p>
               <button
-                disabled
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                onClick={() => setShowDelete(true)}
+                className="px-4 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-200 font-semibold transition-colors"
               >
                 {t('danger.delete_button')}
               </button>
+              <p className="mt-3 text-xs text-white/45">
+                <Link href="/account/delete" className="underline underline-offset-2 hover:text-white/70">
+                  {t('danger.what_is_deleted')}
+                </Link>
+              </p>
+              <DeleteAccountDialog open={showDelete} onClose={() => setShowDelete(false)} />
             </div>
           </div>
         </div>

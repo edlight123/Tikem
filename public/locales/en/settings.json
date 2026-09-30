@@ -35,6 +35,7 @@
     "subtitle": "Irreversible actions",
     "delete_account": "Delete Account",
     "delete_warning": "Once you delete your account, there is no going back. Please be certain.",
-    "delete_button": "Delete Account (Contact Support)"
+    "delete_button": "Delete Account",
+    "what_is_deleted": "What gets deleted and what is kept"
   }
 }

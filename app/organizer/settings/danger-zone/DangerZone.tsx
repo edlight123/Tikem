@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Download, XCircle, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useRouter } from 'next/navigation';
+import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog';
 
 interface DangerZoneProps {
   userId: string;
@@ -18,8 +19,6 @@ export default function DangerZone({ userId }: DangerZoneProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [confirmText, setConfirmText] = useState('');
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -97,48 +96,6 @@ export default function DangerZone({ userId }: DangerZoneProps) {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirmText !== 'DELETE MY ACCOUNT') {
-      showToast({
-        title: 'Confirmation required',
-        message: 'Please type "DELETE MY ACCOUNT" exactly to confirm.',
-        type: 'error',
-      });
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const response = await fetch('/api/organizer/settings/danger-zone/delete', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete account');
-      }
-
-      showToast({
-        title: 'Account deleted',
-        message: 'Your account and all data have been permanently deleted.',
-        type: 'success',
-      });
-
-      setTimeout(() => {
-        router.push('/api/auth/signout');
-      }, 2000);
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      showToast({
-        title: 'Error',
-        message: 'Failed to delete account. Please try again.',
-        type: 'error',
-      });
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -244,51 +201,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111] rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-300" />
-              <h3 className="font-display text-xl text-white">{t('danger_zone.delete_forever_q')}</h3>
-            </div>
-            <p className="text-white/60 mb-4">
-              This action is <strong>permanent and irreversible</strong>. All your data will be permanently deleted.
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-white/70 mb-2">
-                {t('actions.type')}<span className="font-mono text-red-300">{t('danger_zone.delete_confirm_phrase')}</span> to confirm
-              </label>
-              <input
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-red-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
-                placeholder={t('danger_zone.delete_confirm_phrase')}
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setConfirmText('');
-                }}
-                className="flex-1 px-4 py-3 text-white/70 font-medium rounded-[10px] bg-white/[0.06] hover:bg-white/[0.12] text-[16px] focus:outline-none"
-              >
-                {t('actions.cancel')}
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting || confirmText !== 'DELETE MY ACCOUNT'}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isDeleting ? 'Deleting...' : 'Delete Forever'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteAccountDialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)} />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
-import { Bell, BookOpen, Briefcase, ChevronRight, Compass, FileText, Heart, HelpCircle, LogOut, MapPin, RotateCcw, Settings, Shield, Users } from 'lucide-react-native';
+import { Bell, BookOpen, Briefcase, ChevronRight, Compass, FileText, Heart, HelpCircle, LogOut, MapPin, RotateCcw, Settings, Shield, Trash2, Users } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
@@ -44,6 +44,7 @@ import PosterEventCard from '../components/PosterEventCard';
 import EmptyState from '../components/EmptyState';
 import { Skeleton, PosterCardSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
+import DeleteAccountSheet from '../components/DeleteAccountSheet';
 import { findMetro } from '../data/metros';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -55,6 +56,7 @@ export default function ProfileScreen() {
   const styles = getStyles(colors);
   const navigation: any = useNavigation();
   const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const { mode, setMode } = useAppMode();
   const { language, setLanguage, t } = useI18n();
   const { setUserCountry, setActiveCity } = useFilters();
@@ -1048,6 +1050,20 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Account deletion (App Store 5.1.1(v)). A quiet row off the card —
+            findable, but never louder than Sign out. */}
+        {!isDemoMode ? (
+          <TouchableOpacity
+            style={styles.deleteAccountRow}
+            onPress={() => setShowDeleteAccount(true)}
+            accessibilityRole="button"
+          >
+            <Trash2 size={15} color={colors.textTertiary} />
+            <Text style={styles.deleteAccountText}>{t('profile.deleteAccount.row')}</Text>
+          </TouchableOpacity>
+        ) : null}
+        <DeleteAccountSheet visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -1468,6 +1484,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+  },
+  deleteAccountRow: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  deleteAccountText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.error,
+    opacity: 0.85,
   },
   centerEmpty: {
     flex: 1,
