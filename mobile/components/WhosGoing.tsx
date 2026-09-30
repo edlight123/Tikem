@@ -7,10 +7,20 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchEventSocial } from '../lib/api/social';
 import { radius } from '../theme/tokens';
+import { useI18n } from '../contexts/I18nContext';
+import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
 
 interface WhosGoingProps {
   eventId: string;
+  /**
+   * The organizer's choice in the composer, resolved with
+   * guestlistVisibilityFrom. Same three modes as the web's WhosGoing:
+   * 'faces' is the full section, 'count' is the number with nobody named, and
+   * 'hidden' renders nothing at all (and fetches nothing, since the social
+   * endpoint returns who is attending).
+   */
+  visibility?: GuestlistVisibility;
 }
 
 function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number }) {
@@ -45,8 +55,9 @@ function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number })
   );
 }
 
-export default function WhosGoing({ eventId }: WhosGoingProps) {
+export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const styles = getStyles(colors);
   const navigation: any = useNavigation();
   const { user } = useAuth();
@@ -54,6 +65,10 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (visibility === 'hidden') {
+      setLoading(false);
+      return;
+    }
     let active = true;
     setLoading(true);
     fetchEventSocial(eventId)
@@ -66,16 +81,18 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
     return () => {
       active = false;
     };
-  }, [eventId]);
+  }, [eventId, visibility]);
 
   const goToProfile = (uid: string) => navigation.navigate('OrganizerProfile', { organizerId: uid });
+
+  if (visibility === 'hidden') return null;
 
   if (loading) {
     return (
       <View style={styles.section}>
         <View style={styles.header}>
           <Users size={20} color={colors.primary} />
-          <Text style={styles.title}>Who&apos;s going</Text>
+          <Text style={styles.title}>{t('whosGoing.title')}</Text>
         </View>
         <ActivityIndicator size="small" color={colors.primary} />
       </View>
@@ -85,6 +102,30 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
   if (!data || data.totalGoing === 0) return null;
 
   const { totalGoing, viewerIsGoing, friendsGoing, publicGoing } = data;
+
+  // 'count': the number and nothing that identifies anyone. No faces, no
+  // names, no friend row; those are exactly what this mode withholds.
+  if (visibility === 'count') {
+    return (
+      <View style={styles.section}>
+        <View style={styles.header}>
+          <Users size={20} color={colors.primary} />
+          <Text style={styles.title}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>
+        </View>
+        {viewerIsGoing && <Text style={styles.countSub}>{t('whosGoing.youreGoing')}</Text>}
+      </View>
+    );
+  }
+
+  // "Mika and 24 others going", as on the web: naming the first face makes
+  // the pile a sentence rather than a number beside strangers.
+  const lead = (friendsGoing[0]?.displayName || publicGoing[0]?.displayName || '').split(' ')[0];
+  const pileLabel = viewerIsGoing
+    ? t('whosGoing.youreGoing')
+    : lead && totalGoing > 1
+      ? t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 })
+      : t('whosGoing.goingCount', { count: totalGoing });
+
   const pile = publicGoing.slice(0, 6);
   const named = friendsGoing.length + pile.length + (viewerIsGoing ? 1 : 0);
   const remaining = Math.max(0, totalGoing - named);
@@ -94,10 +135,10 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
       <View style={styles.headerRow}>
         <View style={styles.header}>
           <Users size={20} color={colors.primary} />
-          <Text style={styles.title}>Who&apos;s going</Text>
+          <Text style={styles.title}>{t('whosGoing.title')}</Text>
         </View>
         <Text style={styles.count}>
-          {totalGoing} {totalGoing === 1 ? 'person' : 'people'}
+          {t(totalGoing === 1 ? 'whosGoing.personOne' : 'whosGoing.personOther', { count: totalGoing })}
         </Text>
       </View>
 
@@ -105,7 +146,9 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
       {friendsGoing.length > 0 && (
         <View style={styles.friendsBlock}>
           <Text style={styles.friendsLabel}>
-            {friendsGoing.length} {friendsGoing.length === 1 ? 'friend' : 'friends'} going
+            {t(friendsGoing.length === 1 ? 'whosGoing.friendGoingOne' : 'whosGoing.friendGoingOther', {
+              count: friendsGoing.length,
+            })}
           </Text>
           <View style={styles.friendsWrap}>
             {friendsGoing.map((f) => (
@@ -126,7 +169,7 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
           <View style={styles.pile}>
             {viewerIsGoing && (
               <View style={[styles.youBubble]}>
-                <Text style={styles.youText}>You</Text>
+                <Text style={styles.youText}>{t('whosGoing.youBadge')}</Text>
               </View>
             )}
             {pile.map((u, i) => (
@@ -145,7 +188,7 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
               </View>
             )}
           </View>
-          <Text style={styles.pileLabel}>{viewerIsGoing ? "You're going" : `${totalGoing} going`}</Text>
+          <Text style={styles.pileLabel}>{pileLabel}</Text>
         </View>
       )}
 
@@ -154,7 +197,7 @@ export default function WhosGoing({ eventId }: WhosGoingProps) {
         <View style={styles.privacyRow}>
           <Lock size={16} color={colors.textSecondary} />
           <Text style={styles.privacyText}>
-            {totalGoing} {totalGoing === 1 ? 'person is' : 'people are'} going. Attendees keep their attendance private.
+            {t(totalGoing === 1 ? 'whosGoing.privacyNoteOne' : 'whosGoing.privacyNoteOther', { count: totalGoing })}
           </Text>
         </View>
       )}
@@ -188,6 +231,11 @@ const getStyles = (colors: any) =>
       fontSize: 17,
       fontWeight: '700',
       color: colors.text,
+    },
+    countSub: {
+      marginTop: 4,
+      fontSize: 13,
+      color: colors.textSecondary,
     },
     count: {
       fontSize: 12,

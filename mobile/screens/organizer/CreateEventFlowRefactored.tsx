@@ -40,6 +40,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
+import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicker';
+import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
 import { createEvent, updateEvent, SaveEventOptions } from '../../lib/api/events';
 import { getEventById } from '../../lib/api/organizer';
 import { RADIUS } from '../../config/brand';
@@ -129,7 +131,9 @@ export interface EventDraft {
   // official embed on the event page. Picked via song search, or pasted when
   // the search route has no credentials.
   spotify_url: string;
-  show_guestlist: boolean;    // whether attendees can see who's going
+  // How the guest list shows on the event page: faces / count / hidden. Same
+  // three states the web composer writes (see lib/guestlistVisibility).
+  guestlist_visibility: GuestlistVisibility;
 
   // Poster-theme override. '' = Auto (deterministic pick from seed/category);
   // a valid PosterThemeKey pins the poster gradient for this event everywhere.
@@ -471,7 +475,7 @@ export default function CreateEventFlowRefactored() {
     show_on_explore: true,
     video_url: '',
     spotify_url: '',
-    show_guestlist: true,
+    guestlist_visibility: 'faces',
     theme_key: '',
     recurrence: 'none',
     recurrence_count: 4,
@@ -583,7 +587,8 @@ export default function CreateEventFlowRefactored() {
           show_on_explore: (event as any).show_on_explore !== false,
           video_url: (event as any).video_url || '',
           spotify_url: (event as any).spotify_url || '',
-          show_guestlist: (event as any).show_guestlist !== false,
+          // New field first, then the legacy boolean for older events.
+          guestlist_visibility: guestlistVisibilityFrom(event as any),
           // Poster-theme override; default '' (Auto) when the field is absent.
           theme_key: (event as any).theme_key || '',
           // Recurrence is create-only; editing never regenerates a series. The
@@ -2287,20 +2292,13 @@ export default function CreateEventFlowRefactored() {
                     onChange={(url) => updateDraft({ spotify_url: url })}
                   />
 
-                  {/* Guest list visibility */}
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingTextCol}>
-                      <Text style={styles.settingLabel}>{t('organizerCreateEventFlow.canvas.showGuestlist')}</Text>
-                      <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.showGuestlistHint')}</Text>
-                    </View>
-                    <Switch
-                      value={eventDraft.show_guestlist}
-                      onValueChange={(v) => updateDraft({ show_guestlist: v })}
-                      trackColor={{ false: colors.border, true: colors.primary }}
-                      thumbColor={colors.white}
-                      ios_backgroundColor={colors.border}
-                    />
-                  </View>
+                  {/* Guest list visibility — faces / count / hidden, picked
+                      against a preview of the row, as on the web composer. */}
+                  <GuestlistVisibilityPicker
+                    colors={colors}
+                    value={eventDraft.guestlist_visibility}
+                    onChange={(v) => updateDraft({ guestlist_visibility: v })}
+                  />
 
                   {/* Password protection — gate ticketing behind an access code.
                       The code is hashed on save (never stored in plaintext). */}

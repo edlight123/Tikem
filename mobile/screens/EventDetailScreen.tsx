@@ -48,6 +48,7 @@ import FollowButton from '../components/FollowButton';
 import CountdownTimer from '../components/CountdownTimer';
 import VenueStaticMap from '../components/VenueStaticMap';
 import WhosGoing from '../components/WhosGoing';
+import { guestlistVisibilityFrom } from '../lib/guestlistVisibility';
 import ContactOrganizerModal from '../components/ContactOrganizerModal';
 import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
 import { useAppAlert } from '../components/AppAlert';
@@ -850,10 +851,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
-          {/* Who's Going - social attendance (hidden when organizer disables the guest list) */}
-          {(event as any).show_guestlist !== false && (
-            <WhosGoing eventId={eventId} />
-          )}
+          {/* Who's Going: faces, a count, or nothing, per the organizer's
+              guest-list setting (same resolver as the web event page). */}
+          <WhosGoing eventId={eventId} visibility={guestlistVisibilityFrom(event as any)} />
 
           {/* Bottom padding so the floating CTA never overlaps page content */}
           <View style={{ height: 160 }} />
