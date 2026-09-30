@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -33,11 +34,11 @@ import MoneyText from '../../components/MoneyText'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
 import SegmentedTabs from '../../components/organizer/SegmentedTabs'
 import SelectField from '../../components/organizer/SelectField'
+import MarketsSheet from '../../components/organizer/MarketsSheet'
 import { HAITI_BANKS, OTHER_BANK } from '../../data/haitiBanks'
 import { getDeviceLocationInfo } from '../../utils/deviceLocation'
 import { countryName, normalizeSupportedCountry } from '../../lib/countrySupport'
 import {
-  DECLARABLE_MARKETS,
   marketsForRail,
   railsForMarkets,
   shouldShowRail,
@@ -245,20 +246,11 @@ export default function OrganizerPayoutSettingsScreenV2() {
   // lock anyone out of a rail they turn out to need.
   const [showAllRails, setShowAllRails] = useState(false)
   /**
-   * Open until the organizer has actually declared where they run events, then
-   * collapsed. `marketsLoaded` gates it so the section does not flash open on
-   * every launch before the saved answer arrives.
+   * The country list is a sheet you open, never a form on the page. The page
+   * shows the saved answer as one row; Change opens the sheet, where choices
+   * are a draft until Save.
    */
-  /**
-   * CLOSED UNTIL ASKED FOR. Previously this opened whenever nothing was declared,
-   * which meant a new organizer met five country chips laid out in the open on a
-   * page they came to for payout methods. Feedback, more than once: it should be
-   * something you edit and save, not a form sitting in the middle of the screen.
-   *
-   * So it is a single row stating the answer — or that there is none — and the
-   * chips appear only after they tap Edit.
-   */
-  const [marketsExpanded, setMarketsExpanded] = useState(false)
+  const [marketsSheetOpen, setMarketsSheetOpen] = useState(false)
 
   // Until markets have loaded we show everything — narrowing off a not-yet-known
   // answer would flash the wrong rails. A rail that is already SET UP always
@@ -275,19 +267,22 @@ export default function OrganizerPayoutSettingsScreenV2() {
     Boolean(stripeProfile?.connected)
   const someRailHidden = !showHaitiRail || !showStripeRail
 
-  const toggleMarket = useCallback(
-    async (code: string) => {
-      const next = declaredMarkets.includes(code)
-        ? declaredMarkets.filter((c) => c !== code)
-        : [...declaredMarkets, code]
+  const saveMarketsDraft = useCallback(
+    async (next: string[]) => {
       try {
         await saveMarkets(next)
+        setMarketsSheetOpen(false)
       } catch {
         showAlert(t('common.error'), t('organizerPayoutSettings.markets.saveFailed'))
       }
     },
-    [declaredMarkets, saveMarkets, showAlert, t]
+    [saveMarkets, showAlert, t]
   )
+
+  const marketsSummary =
+    declaredMarkets.length > 0
+      ? declaredMarkets.map((code) => countryName(code)).join(' · ')
+      : t('organizerPayoutSettings.markets.notSet')
 
   // Cross-border payout advisory. A Stripe Express account's country is fixed
   // at creation and an organizer holds exactly ONE connected account, so a
@@ -924,97 +919,56 @@ export default function OrganizerPayoutSettingsScreenV2() {
             shown every rail — a Port-au-Prince organizer was offered Stripe
             Connect they will never use, and a diaspora organizer got no signal
             that Haiti and the US are TWO setups. Answering is optional and
-            re-editable; it changes what is OFFERED, never what is allowed. */}
-        {/*
-          COLLAPSED ONCE ANSWERED. This is a setup decision, not something an
-          organizer needs in front of them every time they check a payout method
-          — and leaving it expanded is what made this page read as a form rather
-          than a list. Unanswered, it stays open, because that is the moment it
-          matters. Answered, it becomes one line they can tap to change.
-        */}
-        <View style={styles.marketsBlock}>
-          <TouchableOpacity
-            activeOpacity={marketsExpanded ? 1 : 0.7}
-            disabled={marketsExpanded}
-            onPress={() => setMarketsExpanded(true)}
-            accessibilityRole={marketsExpanded ? undefined : 'button'}
-          >
-            <SectionHeader
-              title={t('organizerPayoutSettings.markets.title')}
-              subtitle={
-                marketsExpanded
-                  ? t('organizerPayoutSettings.markets.subtitle')
-                  : declaredMarkets.length > 0
-                    ? declaredMarkets.map((code) => countryName(code)).join(' · ')
-                    : t('organizerPayoutSettings.markets.noneSet')
-              }
-              subtitleLines={2}
-              trailing={
-                marketsExpanded ? null : (
-                  <Text style={styles.marketsEdit}>{t('common.edit')}</Text>
-                )
-              }
-            />
-          </TouchableOpacity>
-          {marketsExpanded ? (
-          <>
-          <View style={styles.marketChipRow}>
-            {DECLARABLE_MARKETS.map((code) => {
-              const isOn = declaredMarkets.includes(code)
-              return (
-                <TouchableOpacity
-                  key={code}
-                  style={[styles.chip, isOn && styles.chipActive, savingMarkets && { opacity: 0.6 }]}
-                  disabled={savingMarkets}
-                  onPress={() => toggleMarket(code)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isOn }}
-                >
-                  <View style={styles.marketChipInner}>
-                    {isOn ? <Ionicons name="checkmark" size={14} color={colors.text} /> : null}
-                    <Text style={[styles.chipText, isOn && styles.chipTextActive]}>
-                      {countryName(code)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-          <Text style={styles.marketsHint}>
-            {declaredMarkets.length === 0
-              ? t('organizerPayoutSettings.markets.noneHint')
-              : showHaitiRail && showStripeRail && !someRailHidden
-                ? t('organizerPayoutSettings.markets.twoSetupsHint')
-                : t('organizerPayoutSettings.markets.oneSetupHint')}
-          </Text>
+            re-editable; it changes what is OFFERED, never what is allowed.
 
-          {/* Cross-border advisory: one connected account, fixed country. */}
-          {mismatchedStripeMarkets.length > 0 ? (
-            <View style={styles.marketsWarning}>
-              <Text style={styles.marketsWarningText}>
-                {t('organizerPayoutSettings.markets.countryMismatch')
-                  .replace('{account}', countryName(connectedAccountCountry))
-                  .replace(
-                    '{markets}',
-                    mismatchedStripeMarkets.map((code) => countryName(code)).join(', ')
-                  )}
-              </Text>
-            </View>
-          ) : null}
-
-          {someRailHidden ? (
-            <TouchableOpacity
-              onPress={() => setShowAllRails(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            A SAVED ANSWER, NOT A FORM. Feedback, repeatedly: "this should be
+            something the organizer edit and saved ... not display all the
+            countries like that, out in the open." So the page only ever shows
+            the answer — one row — and the full country list lives in a sheet
+            behind Change, where picking is a draft until Save. Nothing on this
+            page lays out every country inline any more, in any state. */}
+        <TouchableOpacity
+          style={styles.setupRow}
+          onPress={() => setMarketsSheetOpen(true)}
+          disabled={!marketsLoaded}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('organizerPayoutSettings.markets.title')}: ${marketsSummary}`}
+        >
+          <Ionicons name="globe-outline" size={20} color={colors.textSecondary} />
+          <View style={styles.setupRowText}>
+            <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.markets.title')}</Text>
+            <Text
+              style={[styles.setupRowHint, declaredMarkets.length > 0 && styles.setupRowValue]}
+              numberOfLines={1}
             >
-              <Text style={styles.marketsShowAll}>
-                {t('organizerPayoutSettings.markets.showAllRails')}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          </>
-          ) : null}
-        </View>
+              {marketsSummary}
+            </Text>
+          </View>
+          <Text style={styles.setupRowAction}>
+            {declaredMarkets.length > 0
+              ? t('organizerPayoutSettings.markets.change')
+              : t('organizerPayoutSettings.markets.choose')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Cross-border advisory: one connected account, fixed country. It
+            stays on the page (not in the sheet) because it needs action. */}
+        {mismatchedStripeMarkets.length > 0 ? (
+          <View style={styles.marketsWarning}>
+            <Ionicons name="swap-horizontal-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.marketsWarningText}>
+              {t('organizerPayoutSettings.markets.countryMismatch')
+                .replace('{account}', countryName(connectedAccountCountry))
+                .replace(
+                  '{markets}',
+                  mismatchedStripeMarkets.map((code) => countryName(code)).join(', ')
+                )}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={{ height: 10 }} />
 
         {/* Destinations List */}
         {destinations.length === 0 && !stripeProfile?.connected ? (
@@ -1198,6 +1152,20 @@ export default function OrganizerPayoutSettingsScreenV2() {
                 {t('organizerPayoutSettings.addMethodRow')}
               </Text>
             </TouchableOpacity>
+
+            {/* A declaration narrows what is shown; it must never lock anyone
+                out of a rail. The escape hatch sits after the list it widens. */}
+            {someRailHidden ? (
+              <TouchableOpacity
+                onPress={() => setShowAllRails(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ alignSelf: 'center' }}
+              >
+                <Text style={styles.marketsShowAll}>
+                  {t('organizerPayoutSettings.markets.showAllRails')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </>
         )}
           </>
@@ -1253,9 +1221,13 @@ export default function OrganizerPayoutSettingsScreenV2() {
       </ScrollView>
 
       {/* Add Method Modal */}
-      <Modal visible={showAddModal} transparent animationType="fade" onRequestClose={() => setShowAddModal(false)}>
+      {/* A bottom sheet, like the markets and location pickers — not a card
+          floating mid-screen — so every chooser on this page behaves alike. */}
+      <Modal visible={showAddModal} transparent animationType="slide" onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowAddModal(false)} />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.sheetHandle} />
             <Text style={styles.modalTitle}>{t('organizerPayoutSettings.addModal.title')}</Text>
             <Text style={styles.modalSubtitle}>{t('organizerPayoutSettings.addModal.subtitle')}</Text>
 
@@ -1526,6 +1498,14 @@ export default function OrganizerPayoutSettingsScreenV2() {
           </ScrollView>
         </View>
       </Modal>
+
+      <MarketsSheet
+        visible={marketsSheetOpen}
+        markets={declaredMarkets}
+        saving={savingMarkets}
+        onClose={() => setMarketsSheetOpen(false)}
+        onSave={saveMarketsDraft}
+      />
     </View>
   )
 }
@@ -1548,9 +1528,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 10,
   },
   payoutAmount: {
     fontSize: 17,
@@ -1565,8 +1543,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: RADIUS.lg,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardTitle: {
     fontSize: 16,
@@ -1626,14 +1602,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
+    borderRadius: radius.button,
+    backgroundColor: colors.surface,
+    marginBottom: 10,
   },
   setupRowText: { flex: 1, gap: 2 },
   setupRowLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
   setupRowHint: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+  setupRowValue: { fontSize: 13, color: colors.text },
+  setupRowAction: { fontSize: 13, fontWeight: '600', color: colors.primary },
   addMethodRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1641,50 +1618,27 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 8,
     marginTop: 16,
     paddingVertical: 14,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
+    borderRadius: radius.button,
+    backgroundColor: colors.surfaceRaised,
   },
   addMethodRowText: { fontSize: 15, fontWeight: '600', color: colors.text },
-  marketsBlock: {
-    marginBottom: 22,
-  },
-  marketChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  marketChipInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  marketsHint: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.textSecondary,
-    marginTop: 10,
-  },
   marketsWarning: {
-    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
     padding: 12,
+    marginBottom: 10,
     borderRadius: radius.button,
     backgroundColor: colors.surface,
   },
   marketsWarningText: {
+    flex: 1,
     fontSize: 12,
     lineHeight: 18,
     color: colors.textSecondary,
   },
-  marketsEdit: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
   marketsShowAll: {
-    marginTop: 12,
+    marginTop: 14,
     fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
@@ -1746,8 +1700,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   secondaryButtonText: {
     color: colors.text,
@@ -1756,19 +1708,24 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: colors.surface,
-    borderRadius: RADIUS['2xl'],
-    padding: 20,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceRaised,
+    marginBottom: 14,
   },
   modalTitle: {
     fontSize: 22,
@@ -1791,8 +1748,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: RADIUS.lg,
     backgroundColor: colors.surfaceRaised,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   methodIcon: {
     width: 44,
@@ -1801,8 +1756,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   methodText: {
     flex: 1,
@@ -1827,13 +1780,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 14,
   },
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     color: colors.text,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     fontSize: 16,
   },
   chip: {
@@ -1842,11 +1793,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.chip,
     backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'transparent',
   },
   chipActive: {
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.textSecondary,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.primary,
   },
   chipText: {
     color: colors.text,

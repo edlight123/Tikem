@@ -1642,6 +1642,12 @@ export default {
         'Your connected payout account is registered in {account}. Events you run in {markets} will still pay you — into that same account, in its currency, after a conversion. Getting paid locally there would need a separate connected account, which Tikèm doesn’t support yet.',
       showAllRails: 'Show every payout method anyway',
       saveFailed: 'Could not save your countries. Please try again.',
+      notSet: 'Not set yet',
+      change: 'Change',
+      choose: 'Choose',
+      save: 'Save countries',
+      railHaiti: 'Paid out to a Haitian bank or MonCash',
+      railStripe: 'Paid out through Stripe',
     },
     profileTitle: 'Payout profile',
     profiles: {
