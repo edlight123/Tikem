@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isPayeeReasonCode, resolvePayeeReason } from '@/lib/payouts/payee-reasons'
 import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { adminError, adminOk } from '@/lib/api/admin-response'
@@ -13,7 +14,25 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { withdrawalId, action, note } = body
+    const { withdrawalId, action } = body
+    // Two separate things, never mixed:
+    //  - internalNote: admins only (legacy `note` lands here, so an old client
+    //    can never leak an internal comment to the payee);
+    //  - payeeReasonCode/payeeReasonText: what the payee is told on reject/fail.
+    const internalNote: string | null =
+      typeof body.internalNote === 'string' && body.internalNote.trim()
+        ? body.internalNote.trim()
+        : typeof body.note === 'string' && body.note.trim()
+          ? body.note.trim()
+          : null
+    const payeeReasonCode = isPayeeReasonCode(body.payeeReasonCode) ? body.payeeReasonCode : null
+    const payeeReasonText =
+      typeof body.payeeReasonText === 'string' && body.payeeReasonText.trim() ? body.payeeReasonText.trim().slice(0, 500) : null
+    if (payeeReasonCode === 'other' && !payeeReasonText) {
+      return adminError('Write the message the payee will see, or pick a preset reason', 400)
+    }
+    // Stored in English for the payout history; notifications localize from the code.
+    const payeeReasonEn = resolvePayeeReason(payeeReasonCode, payeeReasonText, 'en')
 
     if (!withdrawalId || !action) {
       return adminError('Missing withdrawalId or action', 400)
@@ -48,6 +67,9 @@ export async function POST(req: NextRequest) {
       const setFailedWithRefund = async (reason: string) => {
         updates.status = 'failed'
         updates.failureReason = reason
+        updates.payeeReasonCode = payeeReasonCode
+        updates.payeeReasonText = payeeReasonText
+        if (internalNote) updates.adminNote = internalNote
         updates.processedBy = user.id
         updates.processedAt = now
         // Same guard fields the reconcile cron writes (lib/payouts/withdrawal-finalize.ts).
@@ -109,13 +131,13 @@ export async function POST(req: NextRequest) {
         updates.status = 'processing'
         updates.processedBy = user.id
         updates.processedAt = now
-        if (note) updates.adminNote = note
+        if (internalNote) updates.adminNote = internalNote
       }
 
       if (action === 'reject') {
         if (beforeStatus === 'failed') return { idempotent: true, afterStatus: beforeStatus }
         if (beforeStatus !== 'pending') return { conflict: true, beforeStatus }
-        await setFailedWithRefund(note || 'Rejected by admin')
+        await setFailedWithRefund(payeeReasonEn || 'Your withdrawal request was declined.')
       }
 
       if (action === 'complete') {
@@ -123,7 +145,7 @@ export async function POST(req: NextRequest) {
         if (beforeStatus !== 'processing') return { conflict: true, beforeStatus }
         updates.status = 'completed'
         updates.completedAt = now
-        if (note) updates.completionNote = note
+        if (internalNote) updates.completionNote = internalNote
         if (withdrawal.needsReconciliation) {
           updates.needsReconciliation = false
           updates.reconciledAt = now
@@ -134,7 +156,7 @@ export async function POST(req: NextRequest) {
       if (action === 'fail') {
         if (beforeStatus === 'failed') return { idempotent: true, afterStatus: beforeStatus }
         if (beforeStatus === 'completed') return { conflict: true, beforeStatus }
-        await setFailedWithRefund(note || 'Processing failed')
+        await setFailedWithRefund(payeeReasonEn || 'The payout could not be completed.')
       }
 
       tx.update(withdrawalRef, updates)
@@ -172,7 +194,9 @@ export async function POST(req: NextRequest) {
         resourceId: withdrawalId,
         details: {
           withdrawalId,
-          note: note || null,
+          internalNote,
+          payeeReasonCode,
+          payeeReasonText,
           beforeStatus: (txResult as any)?.beforeStatus,
           afterStatus: (txResult as any)?.afterStatus,
         },
@@ -187,7 +211,8 @@ export async function POST(req: NextRequest) {
       }
       await notifyWithdrawalOutcome(withdrawalId, outcomeByAction[action], {
         row: (txResult as any)?.row,
-        reason: action === 'reject' ? note || null : null,
+        reasonCode: action === 'reject' || action === 'fail' ? payeeReasonCode : null,
+        reasonText: action === 'reject' || action === 'fail' ? payeeReasonText : null,
       })
     }
 

@@ -615,11 +615,44 @@ describe('sync route + admin endpoint notifications', () => {
     session.admin = false
     const out2 = await (await withdraw(post({ eventId: 'evt1', amount: NET, moncashNumber: '+509 3700 7294' }))).json()
     session.admin = true
-    await adminPOST(post({ withdrawalId: out2.withdrawalId, action: 'reject', note: 'Number does not match' }))
+    // A legacy `note` is INTERNAL: stored for admins, never sent to the payee.
+    await adminPOST(
+      post({ withdrawalId: out2.withdrawalId, action: 'reject', note: 'looks like fraud, checking ID', payeeReasonCode: 'details_mismatch' })
+    )
     const [rej] = pushesFor('org1', 'admin_rejected')
     expect(pushesFor('org1', 'admin_rejected')).toHaveLength(1)
-    expect(rej.body).toContain('Reason: Number does not match')
+    expect(rej.body).toContain("Reason: The payout details don't match your verified identity.")
+    expect(rej.body).not.toContain('fraud')
+    expect(row(out2.withdrawalId)).toMatchObject({
+      adminNote: 'looks like fraud, checking ID',
+      payeeReasonCode: 'details_mismatch',
+      failureReason: "The payout details don't match your verified identity.",
+    })
     expect(earnings().withdrawnAmount).toBe(0)
+  })
+
+  it('localizes preset reasons, keeps internal notes out, and requires text for "other"', async () => {
+    seed({ language: 'fr' })
+    coll('config').payouts = { prefunding: { enabled: false, available: false } }
+    const out = await (await withdraw(post({ eventId: 'evt1', amount: NET, moncashNumber: '+509 3700 7294' }))).json()
+    session.admin = true
+
+    const bad = await adminPOST(post({ withdrawalId: out.withdrawalId, action: 'reject', payeeReasonCode: 'other' }))
+    expect(bad.status).toBe(400)
+    expect(row(out.withdrawalId).status).toBe('pending')
+
+    await adminPOST(
+      post({
+        withdrawalId: out.withdrawalId,
+        action: 'reject',
+        payeeReasonCode: 'verification_required',
+        internalNote: 'ID photo blurry',
+      })
+    )
+    const [rej] = pushesFor('org1', 'admin_rejected')
+    expect(rej.body).toContain('Motif : Nous devons vérifier votre identité avant le paiement.')
+    expect(rej.body).not.toContain('blurry')
+    expect(row(out.withdrawalId).adminNote).toBe('ID photo blurry')
   })
 })
 

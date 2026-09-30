@@ -13,6 +13,7 @@ import {
 } from '@/components/admin/console'
 import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { useToast } from '@/components/ui/Toast'
+import { PAYEE_REASON_CODES, PAYEE_REASON_LABELS, type PayeeReasonCode } from '@/lib/payouts/payee-reasons'
 
 interface Withdrawal {
   id: string
@@ -40,6 +41,8 @@ interface Withdrawal {
   moncashTransactionId?: string
   adminNote?: string
   completionNote?: string
+  payeeReasonCode?: string | null
+  payeeReasonText?: string | null
   event: {
     id: string
     title: string
@@ -83,6 +86,13 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
   const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'failed'>('pending')
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null)
   const [actionNote, setActionNote] = useState('')
+  const [payeeReasonCode, setPayeeReasonCode] = useState<PayeeReasonCode | ''>('')
+  const [payeeReasonText, setPayeeReasonText] = useState('')
+  const resetActionFields = () => {
+    setActionNote('')
+    setPayeeReasonCode('')
+    setPayeeReasonText('')
+  }
   const [processing, setProcessing] = useState(false)
 
   const fetchWithdrawals = useCallback(async () => {
@@ -116,6 +126,16 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
 
   const handleAction = async (withdrawalId: string, action: 'approve' | 'reject' | 'complete' | 'fail') => {
     const isDestructive = action === 'reject' || action === 'fail'
+    // The payee is told why; that message must be chosen deliberately, never
+    // taken from the internal note.
+    if (isDestructive && (!payeeReasonCode || (payeeReasonCode === 'other' && !payeeReasonText.trim()))) {
+      showToast({
+        type: 'error',
+        title: 'Reason required',
+        message: 'Choose the reason the payee will see (or write it under “Other”).',
+      })
+      return
+    }
     const ok = await confirmDialog({
       title: `${action.charAt(0).toUpperCase() + action.slice(1)} this withdrawal?`,
       description: 'This updates the withdrawal status and may trigger a payout. Please confirm the details are correct.',
@@ -129,7 +149,12 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
       const response = await fetch(`/api/admin/withdrawals/${withdrawalId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ withdrawalId, action, note: actionNote })
+        body: JSON.stringify({
+          withdrawalId,
+          action,
+          internalNote: actionNote,
+          ...(isDestructive ? { payeeReasonCode, payeeReasonText } : {}),
+        })
       })
 
       const data = await response.json()
@@ -144,7 +169,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
         message: `Withdrawal ${action}d successfully`,
       })
       setSelectedWithdrawal(null)
-      setActionNote('')
+      resetActionFields()
       fetchWithdrawals()
     } catch (error: any) {
       showToast({
@@ -338,7 +363,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
               <button
                 onClick={() => {
                   setSelectedWithdrawal(null)
-                  setActionNote('')
+                  resetActionFields()
                 }}
                 className="text-console-mut hover:text-console-text text-2xl"
               >
@@ -490,26 +515,68 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
             {/* Failure Reason */}
             {selectedWithdrawal.failureReason && (
               <div className="mb-6 rounded-lg bg-console-ground p-4">
-                <div className="font-bold text-console-red mb-1">Failure Reason</div>
+                <div className="font-bold text-console-red mb-1">Reason (shown to the payee)</div>
                 <div className="text-console-red">{selectedWithdrawal.failureReason}</div>
               </div>
             )}
 
-            {/* Action Note Input */}
+            {/* Payee-facing reason vs internal note — kept strictly apart */}
             {selectedWithdrawal.status === 'pending' || selectedWithdrawal.status === 'processing' ? (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-console-mut mb-2">
-                  Note (optional)
-                </label>
-                <textarea
-                  value={actionNote}
-                  onChange={(e) => setActionNote(e.target.value)}
-                  placeholder="Add a note about this action..."
-                  className="w-full rounded bg-console-ground px-4 py-2 text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut"
-                  rows={3}
-                />
+              <div className="mb-6 space-y-4">
+                <div className="rounded-lg bg-console-ground p-4">
+                  <label className="block text-sm font-medium text-console-text mb-1">
+                    Reason shown to the payee
+                  </label>
+                  <p className="text-xs text-console-mut mb-3">
+                    Required to {selectedWithdrawal.status === 'pending' ? 'reject' : 'mark failed'}. Sent in their notification and email, translated for presets.
+                  </p>
+                  <select
+                    value={payeeReasonCode}
+                    onChange={(e) => setPayeeReasonCode(e.target.value as PayeeReasonCode | '')}
+                    className="w-full rounded bg-console-panel px-4 py-2 text-console-text focus:outline-none focus:ring-2 focus:ring-console-mut"
+                  >
+                    <option value="">Choose a reason…</option>
+                    {PAYEE_REASON_CODES.map((code) => (
+                      <option key={code} value={code}>
+                        {PAYEE_REASON_LABELS[code]}
+                      </option>
+                    ))}
+                  </select>
+                  {payeeReasonCode === 'other' && (
+                    <textarea
+                      value={payeeReasonText}
+                      onChange={(e) => setPayeeReasonText(e.target.value)}
+                      placeholder="Written exactly as the payee will read it"
+                      maxLength={500}
+                      className="mt-3 w-full rounded bg-console-panel px-4 py-2 text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut"
+                      rows={2}
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-console-mut mb-2">
+                    Internal note — admins only (optional)
+                  </label>
+                  <textarea
+                    value={actionNote}
+                    onChange={(e) => setActionNote(e.target.value)}
+                    placeholder="Never shown to the payee"
+                    className="w-full rounded bg-console-ground px-4 py-2 text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut"
+                    rows={3}
+                  />
+                </div>
               </div>
             ) : null}
+
+            {/* Past internal notes */}
+            {(selectedWithdrawal.adminNote || selectedWithdrawal.completionNote) && (
+              <div className="mb-6 rounded-lg bg-console-ground p-4 text-sm">
+                <div className="font-bold text-console-mut mb-1">Internal note (admins only)</div>
+                <div className="text-console-text whitespace-pre-wrap">
+                  {[selectedWithdrawal.adminNote, selectedWithdrawal.completionNote].filter(Boolean).join('\n')}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3">

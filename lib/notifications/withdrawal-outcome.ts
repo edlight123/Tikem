@@ -18,6 +18,7 @@
  * - Localized en/fr/ht from the recipient's saved `users/{uid}.language`.
  */
 import { adminDb } from '@/lib/firebase/admin'
+import { resolvePayeeReason } from '@/lib/payouts/payee-reasons'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { isTransactional } from '@/lib/notifications/policy'
@@ -132,7 +133,7 @@ export function withdrawalOutcomeCopy(
           `Your ${v.amount} MonCash withdrawal failed and the money is back in your balance. You can try again.`,
           `Votre retrait MonCash de ${v.amount} a échoué et le montant a été remis sur votre solde. Vous pouvez réessayer.`,
           `Retrè MonCash ${v.amount} ou a pa pase, lajan an retounen nan balans ou. Ou ka eseye ankò.`
-        ),
+        ) + reasonSuffix(lang, v.reason),
         cta,
       }
     case 'approved':
@@ -222,7 +223,7 @@ export type NotifyWithdrawalResult = { sent: boolean; reason?: 'duplicate' | 'no
 export async function notifyWithdrawalOutcome(
   withdrawalId: string,
   outcome: WithdrawalOutcome,
-  opts: { row?: any; reason?: string | null; now?: Date } = {}
+  opts: { row?: any; reasonCode?: string | null; reasonText?: string | null; now?: Date } = {}
 ): Promise<NotifyWithdrawalResult> {
   try {
     let row = opts.row
@@ -245,7 +246,12 @@ export async function notifyWithdrawalOutcome(
     const copy = withdrawalOutcomeCopy(outcome, lang, {
       amount: amountFor(outcome, row, lang),
       phone: maskPhone(row?.moncashNumber),
-      reason: outcome === 'admin_rejected' && opts.reason ? String(opts.reason) : null,
+      // Only an admin-authored payee reason is ever shown — never internal notes
+      // or raw provider errors. Presets are localized; "other" text is verbatim.
+      reason:
+        outcome === 'admin_rejected' || outcome === 'failed'
+          ? resolvePayeeReason(opts.reasonCode, opts.reasonText, lang)
+          : null,
     })
     const actionUrl = isPromoter ? '/promoter' : '/organizer/payouts'
     const meta = { withdrawalId, outcome, eventId: row?.eventId || undefined }
