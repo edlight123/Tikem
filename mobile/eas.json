@@ -42,6 +42,9 @@
         "EXPO_PUBLIC_API_URL": "https://www.tikem.co",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "71580084056-sngjoi0agfg6ro6ben71eo2taghe6t2n.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "71580084056-uk9npqpsmm9sfdfe03k2ot3ha7qtv9h8.apps.googleusercontent.com"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
