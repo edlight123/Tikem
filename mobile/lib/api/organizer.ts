@@ -10,6 +10,14 @@ import {
   getDoc,
   doc,
 } from 'firebase/firestore';
+import {
+  CurrencyAmount,
+  dominantEventCurrency,
+  eventLocationLabel,
+  isCountedSale,
+  sumRevenueByCurrency,
+  ticketPurchaseDate,
+} from '../organizerStats';
 
 export interface OrganizerEvent {
   id: string;
@@ -70,7 +78,13 @@ export interface OrganizerStats {
   upcomingEvents: number;
   draftEvents: number;
   ticketsSold: number;
-  revenue: number;
+  /**
+   * Revenue per currency, largest first. Never summed across currencies: an
+   * HTG sale and a USD sale are different money. Empty when nothing sold.
+   */
+  revenueByCurrency: CurrencyAmount[];
+  /** Currency to show a zero revenue in (the organizer's usual event currency). */
+  defaultCurrency: string;
   avgTicketsPerEvent: number;
   upcomingSoonWithNoSales: number;
 }
@@ -79,7 +93,11 @@ export interface TodayEvent {
   id: string;
   title: string;
   start_datetime: string;
+  /** Composed display location (location, else venue/city); may be ''. */
   location: string;
+  /** Poster URL (banner first, then cover, as the attendee side reads it). */
+  posterUri: string | null;
+  category?: string;
   ticketsSold: number;
   ticketsCheckedIn: number;
   capacity: number;
@@ -201,10 +219,15 @@ export async function getOrganizerStats(
         ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
         : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Filter tickets by date range
-    const filteredTickets = tickets.filter(
-      (t: any) => new Date(t.purchased_at) >= cutoffDate
-    );
+    // Only sales count: refunded / cancelled / pending tickets are not revenue.
+    const soldTickets = tickets.filter((t: any) => isCountedSale(t.status));
+
+    // Filter tickets by date range. purchased_at is missing on some writers,
+    // so ticketPurchaseDate falls back to created_at.
+    const filteredTickets = soldTickets.filter((t: any) => {
+      const bought = ticketPurchaseDate(t);
+      return !!bought && bought >= cutoffDate;
+    });
 
     // Calculate stats
     const totalEvents = events.length;
@@ -215,10 +238,10 @@ export async function getOrganizerStats(
     }).length;
     const draftEvents = events.filter((e) => !e.is_published).length;
     const ticketsSold = filteredTickets.length;
-    const revenue = filteredTickets.reduce(
-      (sum: number, t: any) => sum + (t.price_paid || 0),
-      0
-    );
+    const eventCurrencyById: Record<string, string | undefined> = {};
+    for (const e of events) eventCurrencyById[e.id] = e.currency;
+    const revenueByCurrency = sumRevenueByCurrency(filteredTickets, eventCurrencyById);
+    const defaultCurrency = dominantEventCurrency(events);
     const avgTicketsPerEvent =
       totalEvents > 0 ? ticketsSold / totalEvents : 0;
 
@@ -226,7 +249,7 @@ export async function getOrganizerStats(
     const sevenDaysFromNow = new Date(
       now.getTime() + 7 * 24 * 60 * 60 * 1000
     );
-    const eventsWithTickets = new Set(tickets.map((t: any) => t.event_id));
+    const eventsWithTickets = new Set(soldTickets.map((t: any) => t.event_id));
     const upcomingSoonWithNoSales = events.filter((e: any) => {
       if (!e.is_published) return false;
       const start = e.start_datetime ? new Date(e.start_datetime) : null;
@@ -242,7 +265,8 @@ export async function getOrganizerStats(
       upcomingEvents,
       draftEvents,
       ticketsSold,
-      revenue,
+      revenueByCurrency,
+      defaultCurrency,
       avgTicketsPerEvent,
       upcomingSoonWithNoSales,
     };
@@ -253,7 +277,8 @@ export async function getOrganizerStats(
       upcomingEvents: 0,
       draftEvents: 0,
       ticketsSold: 0,
-      revenue: 0,
+      revenueByCurrency: [],
+      defaultCurrency: dominantEventCurrency([]),
       avgTicketsPerEvent: 0,
       upcomingSoonWithNoSales: 0,
     };
@@ -284,6 +309,16 @@ export async function getTodayEvents(
     // Get ticket data for each event
     const eventsWithTickets = await Promise.all(
       todayEvents.map(async (event) => {
+        const base = {
+          id: event.id,
+          title: event.title,
+          start_datetime: event.start_datetime,
+          location: eventLocationLabel(event),
+          posterUri: event.banner_image_url || event.cover_image_url || null,
+          category: event.category,
+          ticketsSold: event.tickets_sold || 0,
+          capacity: event.total_tickets || 0,
+        };
         try {
           // Get checked-in count from tickets collection.
           // NOTE: Avoid `checked_in_at != null` which can require additional ordering/indexing
@@ -295,28 +330,10 @@ export async function getTodayEvents(
           );
           const checkedInSnapshot = await getDocs(ticketsQuery);
 
-          const result = {
-            id: event.id,
-            title: event.title,
-            start_datetime: event.start_datetime,
-            location: event.location,
-            ticketsSold: event.tickets_sold || 0,
-            ticketsCheckedIn: checkedInSnapshot.size,
-            capacity: event.total_tickets || 0,
-          };
-
-          return result;
+          return { ...base, ticketsCheckedIn: checkedInSnapshot.size };
         } catch (error) {
           console.error(`Error fetching tickets for event ${event.id}:`, error);
-          return {
-            id: event.id,
-            title: event.title,
-            start_datetime: event.start_datetime,
-            location: event.location,
-            ticketsSold: event.tickets_sold || 0,
-            ticketsCheckedIn: 0,
-            capacity: event.total_tickets || 0,
-          };
+          return { ...base, ticketsCheckedIn: 0 };
         }
       })
     );
