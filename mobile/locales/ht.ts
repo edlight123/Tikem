@@ -1371,6 +1371,16 @@ export default {
         cancelled: 'Anile',
       },
     },
+    instantMoncash: {
+      title: 'Peman MonCash instant',
+      feeLine: 'Frè {fee} pou chak retrè instant',
+      bodyAvailable: 'Aktive: retrè ou yo rive sou MonCash ou nan kèk minit, epi nou retire yon frè {fee} sou chak. Dezaktive: chak retrè pase anba revizyon ekip nou an anvan (anjeneral nan 24 èdtan), san frè instant.',
+      bodyPaused: 'Peman instant yo kanpe pou kounye a. Jiskaske yo tounen, chak retrè pase anba revizyon ekip nou an (anjeneral nan 24 èdtan), san frè instant.',
+      bodyNotYet: 'Peman instant yo poko disponib. Pou kounye a, chak retrè pase anba revizyon ekip nou an, anjeneral nan 24 èdtan.',
+      stateNotYet: 'Talè konsa',
+      minimum: 'Retrè minimòm: {htg} ({usd} pou evènman an USD).',
+      saveFailed: 'Nou pa t kapab chanje peman instant yo. Tanpri eseye ankò.',
+    },
     moncashVerify: {
       title: 'Verifye idantite w',
       body: 'Peman MonCash yo aktive lè idantite w verifye. Apre sa, ekip nou an ap revize epi lage chak retrè a lamen.',
@@ -1556,12 +1566,15 @@ export default {
       amount: 'Kantite',
       instantFee: 'Frè instant (3%)',
       youReceive: 'Ou resevwa',
+      usdConverted: 'Konvèti soti nan {usd} ak to jodi a. MonCash peye an HTG.',
+      usdConvertedNoRate: 'Konvèti an HTG ak to jou ou fè retrè a.',
     },
     moncash: {
       title: 'MonCash',
       placeholder: '+509 1234 5678',
       instantAvailable: 'MonCash instant disponib pou retrè sa a.',
       processedWithin24: 'Retrè ou ap trete nan 24 èdtan.',
+      instantOffered: 'Ou vle l nan kèk minit? Aktive peman MonCash instant nan paramèt peman yo (frè 3%).',
     },
     bank: {
       title: 'Bank',
@@ -1594,6 +1607,7 @@ export default {
       sending: 'Nap voye...',
       enterCodePlaceholder: 'Antre kòd',
       verifyAndContinue: 'Verifye & kontinye',
+      moncashNumberBody: 'Nimewo MonCash sa a pa sa ki sou pwofil peman ou. Pou sekirite ou, konfime l ak kòd nou voye ba ou pa imèl.',
       verifying: 'Nap verifye...',
     },
     success: {
@@ -1602,6 +1616,10 @@ export default {
       youReceivedLabel: 'Ou resevwa: ',
       requestSubmittedTitle: 'Demann soumèt',
       requestSubmittedBody: 'Demann retrè ou a soumèt avèk siksè.',
+      confirmingTitle: 'Demann soumèt',
+      confirmingBody: 'Retrè ou a voye epi n ap konfime l ak MonCash. Pa soumèt li ankò. N ap mete l ajou depi MonCash konfime.',
+      instantFallbackBody: 'Peman instant yo pa t ka kouvri retrè sa a kounye a, kidonk li pase anba revizyon manyèl, san frè instant. Ekip nou an anjeneral voye l nan 24 èdtan.',
+      manualReviewBody: 'Demann retrè ou a soumèt. Ekip nou an revize l epi voye l sou MonCash ou, anjeneral nan 24 èdtan.',
     },
     validation: {
       unavailableTitle: 'Pa disponib',
@@ -1624,6 +1642,10 @@ export default {
       sendCodeFailed: 'Pa t kapab voye kòd la',
       verificationFailed: 'Verifikasyon echwe',
       unableToOpenLinkTitle: 'Pa t kapab ouvri lyen an',
+      submitFailed: 'Demann retrè a pa pase',
+      duplicateTitle: 'Deja an kou',
+      duplicateBody: 'Gen yon retrè pou balans sa a ki deja an kou, oswa balans lan fèk chanje. Nou rafrechi l. Tcheke l anvan ou eseye ankò.',
+      instantFailedBody: 'MonCash pa t ka fè transfè instant lan. Pa gen lajan ki voye epi balans ou retounen. Eseye ankò, oswa dezaktive peman instant yo pou voye l nan revizyon manyèl.',
     },
   },
 
