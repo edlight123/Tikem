@@ -28,6 +28,12 @@ export interface EventEarnings {
    * the organizer's balance and are settled directly).
    */
   promoterCommission?: number
+  /**
+   * Rail fees Tikèm pays OUT OF its platformFee (MonCash's 2% on collections).
+   * The platform fee is all-in for the organizer, so this never touches
+   * netAmount — it exists so platform margin = platformFee - absorbedProcessingFees.
+   */
+  absorbedProcessingFees?: number
   netAmount: number              // grossSales - platformFee - processingFees - promoterCommission
   
   // Withdrawal tracking (all in cents)

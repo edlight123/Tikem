@@ -42,6 +42,33 @@ function normalizePaymentMethod(raw: unknown): PaymentMethod {
   return 'unknown'
 }
 
+/**
+ * MonCash keeps 2% of every collection before it reaches Tikèm's merchant
+ * account (measured: a 25 HTG sale landed as 24.50). The platform fee is
+ * all-in for organizers, so this is Tikèm's cost, recorded as
+ * absorbedProcessingFees and never deducted from the organizer's net.
+ */
+export const MONCASH_COLLECTION_FEE_RATE = 0.02
+
+/**
+ * The MonCash fee is taken on the HTG actually charged; express it in the
+ * event's currency (fxRate is charged-per-event, so divide).
+ */
+function moncashAbsorbedFeeEventCents(options: {
+  grossEventCents: number
+  paymentMethod: PaymentMethod
+  chargedAmountCents?: number | null
+  fxRate?: number | null
+}): number {
+  if (options.paymentMethod !== 'moncash' && options.paymentMethod !== 'moncash_button') return 0
+  const charged = Math.max(0, Math.round(options.chargedAmountCents ?? options.grossEventCents))
+  const feeChargedCents = Math.round(charged * MONCASH_COLLECTION_FEE_RATE)
+  const fx = typeof options.fxRate === 'number' && Number.isFinite(options.fxRate) && options.fxRate > 0
+    ? options.fxRate
+    : null
+  return fx ? Math.round(feeChargedCents / fx) : feeChargedCents
+}
+
 function calculateEventCurrencyFees(options: {
   grossEventCents: number
   paymentMethod: PaymentMethod
@@ -49,11 +76,13 @@ function calculateEventCurrencyFees(options: {
   fxRate?: number | null
   platformFeePercentage?: number
   feeIncidence?: FeeIncidence
-}): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number } {
+}): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number; absorbedProcessingFee: number } {
   const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
   if (grossEventCents <= 0) {
-    return { grossAmount: 0, platformFee: 0, processingFee: 0, netAmount: 0 }
+    return { grossAmount: 0, platformFee: 0, processingFee: 0, netAmount: 0, absorbedProcessingFee: 0 }
   }
+  // MonCash takes its cut whoever bears the platform fee.
+  const absorbedProcessingFee = moncashAbsorbedFeeEventCents({ ...options, grossEventCents })
 
   // Buyer incidence (US / Canada / France): the buyer was charged the fee ON TOP
   // of the face value and the organizer's Stripe transfer is the face value
@@ -67,6 +96,7 @@ function calculateEventCurrencyFees(options: {
       platformFee: 0,
       processingFee: 0,
       netAmount: grossEventCents,
+      absorbedProcessingFee,
     }
   }
 
@@ -98,6 +128,7 @@ function calculateEventCurrencyFees(options: {
     platformFee,
     processingFee: processingFeeEventCents,
     netAmount,
+    absorbedProcessingFee,
   }
 }
 
@@ -243,6 +274,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   let grossSales = 0
   let platformFee = 0
   let processingFees = 0
+  let absorbedProcessingFees = 0
   let netAmount = 0
 
   for (const group of Array.from(paymentGroups.values())) {
@@ -257,6 +289,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     grossSales += fees.grossAmount
     platformFee += fees.platformFee
     processingFees += fees.processingFee
+    absorbedProcessingFees += fees.absorbedProcessingFee
     netAmount += fees.netAmount
   }
 
@@ -282,6 +315,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     ticketsSold,
     platformFee,
     processingFees,
+    absorbedProcessingFees,
     promoterCommission,
     netAmount,
     availableToWithdraw,
@@ -517,6 +551,7 @@ export async function getOrCreateEventEarnings(eventId: string): Promise<{
     ticketsSold: 0,
     platformFee: 0,
     processingFees: 0,
+    absorbedProcessingFees: 0,
     netAmount: 0,
     availableToWithdraw: 0,
     withdrawnAmount: 0,
@@ -608,6 +643,7 @@ export async function addTicketToEarnings(
     ticketsSold: (data?.ticketsSold || 0) + quantity,
     platformFee: (data?.platformFee || 0) + fees.platformFee,
     processingFees: (data?.processingFees || 0) + fees.processingFee,
+    absorbedProcessingFees: (data?.absorbedProcessingFees || 0) + fees.absorbedProcessingFee,
     promoterCommission: (data?.promoterCommission || 0) + promoterCommissionCents,
     netAmount: (data?.netAmount || 0) + netAfterCommission,
     availableToWithdraw: (data?.availableToWithdraw || 0) + netAfterCommission,
