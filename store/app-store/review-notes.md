@@ -38,10 +38,10 @@ Every ticket sold in Tikèm admits the holder to a physical, in-person event at 
 Organizers who sell paid tickets verify their identity once before payout (government ID and a short selfie video, reviewed by our team). The camera and microphone prompts only appear inside that flow and the ticket scanner; the recording is saved muted.
 
 4. ACCOUNT DELETION (5.1.1(v))
-TODO: Profile > Account > Delete account. This deletes the account and personal data (confirmation required). NOT YET BUILT: fill in the real path before submitting.
+Profile tab > Delete account (below Sign out). Type DELETE to confirm; a sign-in older than 10 minutes asks for the password again. Personal data is deleted; tickets and payment records are kept without name or contact details. Web: https://www.tikem.co/account/delete
 
 5. USER-GENERATED CONTENT (1.2)
-Events are published by organizers. Our team moderates every event from an admin console and can unpublish events and ban organizers. TODO: in-app "Report event" and "Block user" controls, their location, and the 24-hour review commitment. NOT YET BUILT: fill in before submitting.
+Events are published by organizers. Every event page and organizer profile has a "…" menu with Report (8 reasons, optional details); organizer profiles also offer Block, which removes that organizer's events from your feeds and stops their notifications. Reports alert our moderation team immediately; we review them within 24 hours and can dismiss, unpublish the event or ban the organizer. An event reported by 5 different people is hidden from discovery until reviewed.
 Support: https://www.tikem.co/support. Terms: https://www.tikem.co/legal/terms (objectionable content and abusive users are not tolerated).
 
 6. SIGN-IN
@@ -55,7 +55,7 @@ Contact: Ted Jacquet, ted.jacquet@edlight.org
 
 ## Before you submit
 
-- [ ] Replace both `TODO` paragraphs (sections 4 and 5) once account deletion and report/block exist in the build you attach. Apple rejects apps that let people create an account but not delete it in the app (5.1.1(v)). Apple also expects report and block controls in apps with user-generated content (1.2).
+- [x] Account deletion (5.1.1(v)) and report/block (1.2) are described in sections 4 and 5; attach a build that contains them (44 or later).
 - [ ] Sign in to both demo accounts on a real device with build 43. Confirm the free ticket can be claimed again. Delete the reviewer's old ticket if the event caps one per person.
 - [ ] Keep the test event published and in the future until the app is approved. Move its date forward if review runs long.
 - [ ] If the attendee account has 2FA or email verification, turn it off for the review accounts.
