@@ -63,7 +63,7 @@ payment for physical goods and services, which includes tickets to in-person eve
 The first upload must go through the web UI. The API, and so `eas submit`, cannot create the app's first release.
 
 1. Download the AAB from the EAS build page:
-   https://expo.dev/accounts/edlight/projects/tikem/builds/49652bd0-4a44-460b-8c14-bca33efa0bf4
+   https://expo.dev/accounts/edlight/projects/tikem/builds/84113ec0-08c3-458d-8d33-9ad09a3dffc8
    (versionCode **2**, package `co.tikem.mobile`)
 2. **Test and release → Testing → Internal testing → Create new release**
 3. **Play App Signing:** when prompted, choose **Use Google-generated key** (recommended) → **Continue**.
