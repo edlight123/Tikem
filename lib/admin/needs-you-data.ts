@@ -139,7 +139,7 @@ const QUEUE_SPECS: QueueSpec[] = [
     build: () => adminDb.collection('events').where('reports_count', '>', 0),
     ageField: 'created_at',
     decision: (d) => `reported ×${d?.reports_count ?? 1}`,
-    href: '/admin/events',
+    href: '/admin/events?tab=reported',
     subject: (d) => firstString(d, ['title']) ?? 'Untitled event',
   },
 ]

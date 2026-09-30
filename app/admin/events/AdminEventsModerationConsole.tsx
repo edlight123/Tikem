@@ -108,6 +108,31 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
     void loadEvents()
   }, [loadEvents])
 
+  // Deep link from a "content reported" admin notification:
+  // /admin/events?tab=reported&event=<id> opens that tab and that event.
+  const deepLinkEventRef = useRef<string | null>(null)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab === 'pending' || tab === 'published' || tab === 'reported' || tab === 'unpublished') {
+        setActiveTab(tab)
+      }
+      deepLinkEventRef.current = params.get('event')
+    } catch {
+      // no-op: a malformed query string just lands on the default tab
+    }
+  }, [])
+  useEffect(() => {
+    const wanted = deepLinkEventRef.current
+    if (!wanted || loading) return
+    const match = events.find((e) => e.id === wanted)
+    if (match) {
+      deepLinkEventRef.current = null
+      setSelectedEvent(match)
+    }
+  }, [events, loading])
+
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     // Debounce search
@@ -304,6 +329,10 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
         isOpen={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
         onAction={handleEventAction}
+        onReportsResolved={() => {
+          setSelectedEvent(null)
+          void loadEvents()
+        }}
       />
     </div>
   )

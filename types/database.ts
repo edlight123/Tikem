@@ -37,6 +37,8 @@ export type NotificationType =
   | 'withdrawal_update'
   // Admin-only: an unconfirmed instant withdrawal could not be settled automatically.
   | 'withdrawal_escalated'
+  // Admin-only: a user reported an event or organizer (App Store 1.2 moderation queue).
+  | 'content_reported'
 
 export interface Database {
   public: {

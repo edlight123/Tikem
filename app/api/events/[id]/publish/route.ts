@@ -133,7 +133,17 @@ export async function POST(
           .where('organizer_id', '==', user.id)
           .get()
 
-        const followerIds = followersSnapshot.docs.map((doc: any) => doc.data().follower_id)
+        const allFollowerIds: string[] = followersSnapshot.docs.map((doc: any) => doc.data().follower_id).filter(Boolean)
+        // Defense in depth: blocking removes the follow, but never notify a
+        // follower who has this organizer blocked (lib/moderation/blocks.ts).
+        const blockSnaps = allFollowerIds.length
+          ? await adminDb.getAll(
+              ...allFollowerIds.map((fid) =>
+                adminDb.collection('users').doc(fid).collection('blocked_organizers').doc(user.id)
+              )
+            )
+          : []
+        const followerIds = allFollowerIds.filter((_fid, i) => !blockSnaps[i]?.exists)
 
         if (followerIds.length > 0) {
           // Notify each follower

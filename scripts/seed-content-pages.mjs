@@ -11,7 +11,8 @@
  * - terms / privacy / refunds: English is the reference; fr/ht are
  *   machine-translated drafts (draft: true) pending human review.
  *
- * Run with: node scripts/seed-content-pages.mjs
+ * Run with: node scripts/seed-content-pages.mjs            (all pages)
+ *           node scripts/seed-content-pages.mjs --only=terms
  * Requires:  FIREBASE_SERVICE_ACCOUNT_KEY (service-account JSON, e.g. .env.local)
  * Idempotent: each doc is fully replaced via .set().
  */
@@ -128,7 +129,7 @@ const terms = {
   translations: {
     en: {
       title: 'Terms of Service',
-      updated: 'November 23, 2025',
+      updated: 'September 30, 2026',
       blocks: [
         { type: 'heading', level: 2, text: '1. Acceptance of Terms' },
         { type: 'paragraph', text: 'By accessing and using Tikèm ("the Platform"), you accept and agree to be bound by the terms and provision of this agreement.' },
@@ -172,6 +173,14 @@ const terms = {
           'Harass or harm other users',
           'Use automated systems to access the Platform',
         ] },
+        { type: 'heading', level: 3, text: 'Zero tolerance for objectionable content and abusive users' },
+        { type: 'paragraph', text: 'Tikèm has no tolerance for objectionable content or abusive users. You may not publish events, images, descriptions, profiles or messages that are hateful, harassing, threatening, sexually explicit, violent, fraudulent, misleading or illegal, or that target any person or group. This applies to everyone who uses the Platform, including event organizers.' },
+        { type: 'list', items: [
+          'Every event page and organizer profile has a Report option. Our team reviews reports within 24 hours and removes content that breaks these terms.',
+          'You can block an organizer at any time; their events are then hidden from your feeds and you stop receiving notifications about them.',
+          'Accounts that post objectionable content or abuse other users are removed from the Platform, and their events are taken down.',
+          'To report something urgent, email support@tikem.co.',
+        ] },
         { type: 'heading', level: 2, text: '7. Payment Processing' },
         { type: 'paragraph', text: 'Payments are processed securely through third-party payment processors. Tikèm does not store credit card information. A service fee may be applied to ticket purchases.' },
         { type: 'heading', level: 2, text: '8. Limitation of Liability' },
@@ -191,7 +200,7 @@ const terms = {
     fr: {
       draft: true,
       title: "Conditions d'utilisation",
-      updated: '23 novembre 2025',
+      updated: '30 septembre 2026',
       blocks: [
         { type: 'heading', level: 2, text: '1. Acceptation des conditions' },
         { type: 'paragraph', text: 'En accédant à Tikèm (« la Plateforme ») et en l\'utilisant, vous acceptez d\'être lié par les conditions et dispositions du présent accord.' },
@@ -235,6 +244,14 @@ const terms = {
           'Harceler ou nuire à d\'autres utilisateurs',
           'Utiliser des systèmes automatisés pour accéder à la Plateforme',
         ] },
+        { type: 'heading', level: 3, text: 'Tolérance zéro pour les contenus répréhensibles et les utilisateurs abusifs' },
+        { type: 'paragraph', text: "Tikèm ne tolère aucun contenu répréhensible ni aucun utilisateur abusif. Vous ne pouvez pas publier d'événements, d'images, de descriptions, de profils ou de messages haineux, harcelants, menaçants, sexuellement explicites, violents, frauduleux, trompeurs ou illégaux, ou visant une personne ou un groupe. Cela s'applique à tous les utilisateurs de la Plateforme, y compris les organisateurs d'événements." },
+        { type: 'list', items: [
+          "Chaque page d'événement et chaque profil d'organisateur propose une option Signaler. Notre équipe examine les signalements sous 24 heures et retire les contenus qui enfreignent ces conditions.",
+          "Vous pouvez bloquer un organisateur à tout moment ; ses événements sont alors masqués de vos fils et vous ne recevez plus de notifications à leur sujet.",
+          'Les comptes qui publient des contenus répréhensibles ou abusent des autres utilisateurs sont retirés de la Plateforme, et leurs événements sont supprimés.',
+          'Pour un signalement urgent, écrivez à support@tikem.co.',
+        ] },
         { type: 'heading', level: 2, text: '7. Traitement des paiements' },
         { type: 'paragraph', text: 'Les paiements sont traités de manière sécurisée par des prestataires de paiement tiers. Tikèm ne conserve pas les informations de carte bancaire. Des frais de service peuvent s\'appliquer aux achats de billets.' },
         { type: 'heading', level: 2, text: '8. Limitation de responsabilité' },
@@ -254,7 +271,7 @@ const terms = {
     ht: {
       draft: true,
       title: 'Kondisyon itilizasyon',
-      updated: '23 novanm 2025',
+      updated: '30 septanm 2026',
       blocks: [
         { type: 'heading', level: 2, text: '1. Aksepte kondisyon yo' },
         { type: 'paragraph', text: 'Lè w aksede epi w itilize Tikèm (« Plafòm nan »), ou aksepte epi ou dakò pou respekte kondisyon ak dispozisyon akò sa a.' },
@@ -297,6 +314,14 @@ const terms = {
           'Angaje nan vant oswa acha tikè fwod',
           'Anmède oswa fè lòt itilizatè mal',
           'Itilize sistèm otomatik pou aksede Plafòm nan',
+        ] },
+        { type: 'heading', level: 3, text: 'Zewo tolerans pou kontni ki choke ak itilizatè ki abize lòt moun' },
+        { type: 'paragraph', text: 'Tikèm pa tolere okenn kontni ki choke ni okenn itilizatè ki abize lòt moun. Ou pa gen dwa pibliye evènman, imaj, deskripsyon, pwofil oswa mesaj ki gen rayisman, asèlman, menas, kontni seksyèl eksplisit, vyolans, fwod, manti oswa bagay ilegal, oswa ki vize yon moun oswa yon gwoup. Sa aplike pou tout moun k ap itilize Plafòm nan, enkli òganizatè evènman yo.' },
+        { type: 'list', items: [
+          'Chak paj evènman ak chak pwofil òganizatè gen yon opsyon Siyale. Ekip nou an egzaminen siyalman yo nan 24 èdtan epi li retire kontni ki vyole kondisyon sa yo.',
+          'Ou ka bloke yon òganizatè nenpòt ki lè; evènman li yo pa parèt nan fil ou ankò epi ou pa resevwa notifikasyon sou yo ankò.',
+          'Kont ki pibliye kontni ki choke oswa ki abize lòt itilizatè yo retire sou Plafòm nan, epi evènman yo retire tou.',
+          'Pou yon siyalman ijan, ekri support@tikem.co.',
         ] },
         { type: 'heading', level: 2, text: '7. Tretman peman' },
         { type: 'paragraph', text: 'Peman yo trete an sekirite atravè founisè peman tyès. Tikèm pa konsève enfòmasyon kat kredi. Yon frè sèvis ka aplike sou acha tikè.' },
@@ -963,7 +988,11 @@ const refunds = {
   },
 }
 
-const pages = [terms, privacy, refunds, support]
+// `--only=terms` (comma-separated slugs) re-seeds just those pages, so a terms
+// update does not also overwrite privacy/refunds/support.
+const onlyArg = process.argv.find((a) => a.startsWith('--only='))
+const only = onlyArg ? new Set(onlyArg.slice('--only='.length).split(',').map((s) => s.trim())) : null
+const pages = [terms, privacy, refunds, support].filter((p) => !only || only.has(p.slug))
 
 async function main() {
   console.log('🌱 Seeding content_pages (per-language)...\n')

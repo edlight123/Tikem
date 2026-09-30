@@ -1716,5 +1716,48 @@
       "support_heading": "Can't sign in?",
       "support_body": "Email {{email}} from the address on your account and we'll delete it for you."
     }
+  },
+  "moderation": {
+    "report_event": "Report this event",
+    "report_organizer": "Report organizer",
+    "report_event_title": "Report this event",
+    "report_organizer_title": "Report this organizer",
+    "report_intro": "What's wrong? Reports are private — the organizer is never told who sent one.",
+    "reasons": {
+      "spam": "Spam",
+      "scam_or_fraud": "Scam or fraud",
+      "offensive": "Hateful or offensive",
+      "violence": "Violence or threats",
+      "sexual": "Sexual content",
+      "illegal": "Illegal activity",
+      "misleading": "Misleading or fake",
+      "other": "Something else"
+    },
+    "details_label": "Details (optional)",
+    "details_placeholder": "Anything that helps us review it",
+    "submit": "Send report",
+    "submitting": "Sending…",
+    "success_title": "Thanks for telling us",
+    "success_body": "Our team reviews every report within 24 hours and removes content that breaks our Terms.",
+    "already_reported": "You've already reported this. Our team will review it within 24 hours.",
+    "done": "Done",
+    "contact_line": "You can also email support@tikem.co",
+    "block": "Block organizer",
+    "unblock": "Unblock organizer",
+    "block_confirm_title": "Block {{name}}?",
+    "block_confirm_body": "Their events will no longer appear in your feeds or search, you'll stop following them, and you won't get notifications about their events. You can unblock them any time.",
+    "unblock_confirm_title": "Unblock {{name}}?",
+    "unblock_confirm_body": "Their events will appear in your feeds again.",
+    "blocked_toast": "Organizer blocked",
+    "blocked_toast_body": "You won't see their events anymore.",
+    "unblocked_toast": "Organizer unblocked",
+    "cancel": "Cancel",
+    "errors": {
+      "generic": "Something went wrong. Try again.",
+      "rate_limited": "You've sent a lot of reports. Try again in a little while.",
+      "unauthorized": "Sign in to report content.",
+      "not_found": "This content isn't available anymore.",
+      "self_report": "You can't report yourself."
+    }
   }
 }

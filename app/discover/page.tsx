@@ -26,6 +26,7 @@ import {
   sortEventsByDate
 } from '@/lib/discover/helpers'
 import { getDiscoverEvents } from '@/lib/data/events'
+import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 
 // Revalidate every 30 seconds for discover page (frequently updated)
@@ -73,6 +74,9 @@ export default async function DiscoverPage({
     // Use optimized data layer with 30s caching
     allEvents = await getDiscoverEvents(filters, 200)
   }
+
+  // Organizers this viewer blocked never reach their feed (App Store 1.2).
+  allEvents = filterBlockedEvents(allEvents, await getBlockedOrganizerIds(user?.id))
 
   // Apply filters and sort
   let filteredEvents = applyFiltersAndSort(allEvents, filters)

@@ -251,6 +251,20 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* Terms acceptance (App Store 1.2 / EULA): creating an account is
+              agreeing to Terms that prohibit objectionable content. */}
+          <p className="text-[12px] leading-relaxed text-white/50">
+            {t('signup.terms_prefix')}{' '}
+            <Link href="/legal/terms" target="_blank" className="font-semibold text-white/80 underline-offset-2 hover:underline">
+              {t('signup.terms_link')}
+            </Link>{' '}
+            {t('signup.terms_and')}{' '}
+            <Link href="/legal/privacy" target="_blank" className="font-semibold text-white/80 underline-offset-2 hover:underline">
+              {t('signup.privacy_link')}
+            </Link>
+            {t('signup.terms_suffix')}
+          </p>
+
           <button
             type="submit"
             disabled={loading}

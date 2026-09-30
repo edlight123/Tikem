@@ -239,7 +239,10 @@ function buildTierEmbedded(tier: CreateEventData['ticket_tiers'][number]) {
  * which would silently drop every doc that lacks the field.
  */
 export function isVisibleOnExplore(event: { show_on_explore?: boolean } | null | undefined): boolean {
-  return (event as any)?.show_on_explore !== false;
+  // `hidden_pending_review` is set server-side once enough distinct people have
+  // reported the event (lib/moderation/reports.ts on the web side). It stays
+  // published and linkable, but out of discovery until an admin reviews it.
+  return (event as any)?.show_on_explore !== false && (event as any)?.hidden_pending_review !== true;
 }
 
 /**

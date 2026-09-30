@@ -19,6 +19,7 @@ import type { Database } from '@/types/database'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { applyFiltersAndSort } from '@/lib/filters/apply'
 import { getDiscoverEvents, getCinemaArtworkEvents } from '@/lib/data/events'
+import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { LocationBannerWrapper } from '@/components/LocationBannerWrapper'
 import { adminDb } from '@/lib/firebase/admin'
@@ -92,6 +93,11 @@ export default async function HomePage({
     events = await getDiscoverEvents(filters, 50)
   }
 
+  // Organizers this viewer blocked never reach their feed (App Store 1.2).
+  // Per-user, so it runs here, outside the shared discover cache.
+  const blockedOrganizers = await getBlockedOrganizerIds(user?.id)
+  events = filterBlockedEvents(events, blockedOrganizers)
+
   // Apply filters and sorting using new filter system
   events = applyFiltersAndSort(events, filters)
 
@@ -125,7 +131,7 @@ export default async function HomePage({
   // event ends — getDiscoverEvents cuts past events, so the archive comes from
   // its own (same-cache) read. Tops up the film strip, poster chapter and city
   // collages when few events are upcoming.
-  const artworkArchive = isDemoMode() ? [] : await getCinemaArtworkEvents(20)
+  const artworkArchive = isDemoMode() ? [] : filterBlockedEvents(await getCinemaArtworkEvents(20), blockedOrganizers)
 
   // Everything still upcoming, ALL countries — the diaspora rail reads from
   // here, since the strict scope filter below would erase it.

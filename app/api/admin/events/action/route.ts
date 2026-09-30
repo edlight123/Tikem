@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
+import { resolveReports } from '@/lib/moderation/reports'
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,6 +149,22 @@ export async function POST(request: NextRequest) {
           details: { eventTitle: eventData.title }
         })
         break
+    }
+
+    // Taking a reported event down IS acting on its reports: close them so the
+    // event leaves the Reported tab instead of sitting there already handled.
+    if ((action === 'unpublish' || action === 'delete') && (Number(eventData.reports_count) || 0) > 0) {
+      try {
+        await resolveReports({
+          kind: 'event',
+          targetId: eventId,
+          resolution: 'actioned',
+          adminId,
+          note: typeof reason === 'string' ? reason : null,
+        })
+      } catch (resolveError) {
+        console.error('Failed to close reports after action:', resolveError)
+      }
     }
 
     return adminOk({ success: true })

@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
+import { unpublishOrganizerEvents } from '@/lib/moderation/ban'
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,6 +67,13 @@ export async function POST(request: NextRequest) {
 
     // Update the user document
     await organizerDocRef.update(updates)
+
+    // A ban takes the organizer's live events down too — the confirm dialog
+    // promises "their events will be hidden", which the status flag alone
+    // never did (see lib/moderation/ban.ts).
+    if (action === 'ban') {
+      updates.events_unpublished = await unpublishOrganizerEvents(organizerId)
+    }
 
     // Log the action
     await adminDb.collection('admin_actions').add({

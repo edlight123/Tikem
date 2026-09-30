@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
           organizer_verified: organizer.verified,
           tickets_sold,
           reports_count: data.reports_count || 0,
+          hidden_pending_review: data.hidden_pending_review === true,
           rejected: data.rejected || false,
         }
       }),

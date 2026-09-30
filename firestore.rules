@@ -124,6 +124,15 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow write: if isOwner(userId);
       }
+
+      // Blocked organizers (App Store 1.2). The owner reads their own list so
+      // the mobile feeds can filter; only the server (POST/DELETE
+      // /api/users/me/blocks/[organizerId]) writes it, because a block also
+      // removes the follow — a client-side write would skip that.
+      match /blocked_organizers/{organizerId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
     }
 
     // Public profiles (H4) - a minimal, read-only projection of a user's SAFE
@@ -186,6 +195,9 @@ service cloud.firestore {
           // these fields writable.
           request.resource.data.get('rejected', false) == resource.data.get('rejected', false) &&
           request.resource.data.get('reports_count', 0) == resource.data.get('reports_count', 0) &&
+          // Auto-hide after repeated reports (lib/moderation/reports.ts) is
+          // likewise admin-only: an organizer must not un-hide their own event.
+          request.resource.data.get('hidden_pending_review', false) == resource.data.get('hidden_pending_review', false) &&
           // is_published may only travel DOWNWARDS from a client: leave it alone,
           // or turn it off. Turning it ON means money can be taken, and whether
           // that is safe depends on the organizer's payout account — a question
@@ -488,7 +500,10 @@ service cloud.firestore {
     // Organizer follows - users can read all, authenticated users can follow/unfollow
     match /organizer_follows/{followId} {
       allow read: if true; // Anyone can see follower counts
-      allow create: if isSignedIn() && request.resource.data.follower_id == request.auth.uid;
+      // Not while the follower has this organizer blocked (blocking removes
+      // the follow server-side; this stops the app re-adding it).
+      allow create: if isSignedIn() && request.resource.data.follower_id == request.auth.uid
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid)/blocked_organizers/$(request.resource.data.organizer_id));
       allow delete: if isSignedIn() && resource.data.follower_id == request.auth.uid;
     }
     
@@ -528,6 +543,27 @@ service cloud.firestore {
         resource.data.sender_id == request.auth.uid
       );
       allow create, update, delete: if false;
+    }
+
+    // User reports + moderation bookkeeping (App Store 1.2) — server only.
+    // Written by /api/events/[id]/report and /api/organizers/[id]/report via
+    // the Admin SDK; read by admins through /api/admin/reports. Listed
+    // explicitly (the default deny below already covers them) so nobody
+    // "helpfully" opens them to clients later.
+    match /event_reports/{reportId} {
+      allow read, write: if false;
+    }
+    match /organizer_reports/{reportId} {
+      allow read, write: if false;
+    }
+    match /report_dedupe/{key} {
+      allow read, write: if false;
+    }
+    match /report_rate/{uid} {
+      allow read, write: if false;
+    }
+    match /organizer_moderation/{organizerId} {
+      allow read, write: if false;
     }
 
     // Default deny for everything else

@@ -7,6 +7,7 @@ import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
 import ShareIconButton from './ShareIconButton'
 import ShareButtonInline from './ShareButtonInline'
+import { ReportButton } from '@/components/moderation/ModerationActions'
 import MobileHero from './MobileHero'
 import MobileKeyFacts from './MobileKeyFacts'
 import MobileSections from './MobileSections'
@@ -637,6 +638,14 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           visibility={guestlistVisibilityFrom(event as any)}
           className="mt-8"
         />
+
+        {/* Report — quiet, but on every event page (App Store 1.2). Hidden
+            from the organizer's own event: the server refuses a self-report. */}
+        {user?.id !== event.organizer_id && (
+          <div className="mt-8 px-4 md:px-0">
+            <ReportButton kind="event" targetId={event.id} userId={user?.id} />
+          </div>
+        )}
 
         {/* Related Events Section */}
         {relatedEvents?.length > 0 && (
