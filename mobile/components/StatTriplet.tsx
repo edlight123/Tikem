@@ -14,6 +14,11 @@ export interface StatItem {
   value: string | number | null;
   /** Tints the numeral only (default = white). */
   tone?: StatTone;
+  /**
+   * Optional small muted line under the numeral, e.g. a second currency's
+   * revenue ("+ $40") that must not be added into the main figure.
+   */
+  caption?: string;
 }
 
 interface StatTripletProps {
@@ -69,12 +74,21 @@ export default function StatTriplet({ items, columns = 3 }: StatTripletProps) {
                 <Text
                   style={[styles.value, { color: TONE_COLOR[tone] }]}
                   numberOfLines={1}
+                  // Money values ("12,500 HTG") can outgrow a third of the
+                  // row; shrink rather than truncate the number.
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.55}
                   accessibilityLabel={
                     isLoading ? 'loading' : String(item.value)
                   }
                 >
                   {isLoading ? '•••' : String(item.value)}
                 </Text>
+                {!isLoading && !!item.caption && (
+                  <Text style={styles.caption} numberOfLines={2}>
+                    {item.caption}
+                  </Text>
+                )}
               </View>
             );
           })}
@@ -126,6 +140,12 @@ const styles = StyleSheet.create({
     fontSize: 27,
     fontWeight: '700',
     letterSpacing: -0.5,
+    fontVariant: ['tabular-nums'],
+  },
+  caption: {
+    marginTop: 2,
+    fontSize: 12,
+    color: colors.textSecondary,
     fontVariant: ['tabular-nums'],
   },
 });

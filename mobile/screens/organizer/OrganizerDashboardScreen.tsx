@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { radius } from '../../theme/tokens';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { font, radius } from '../../theme/tokens';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -28,6 +30,26 @@ import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHea
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import GettingStartedCard from '../../components/organizer/GettingStartedCard';
 import { Calendar } from 'lucide-react-native';
+import SectionHeader from '../../components/SectionHeader';
+import { TikemWordmark } from '../../components/TikemWordmark';
+import { resolvePosterTheme } from '../../lib/posterGradient';
+import { formatPrice } from '../../lib/currency';
+
+/**
+ * The revenue cell: the largest currency is the figure, any other currency is
+ * a caption beneath it. HTG and USD are never added together.
+ */
+function revenueCell(stats: OrganizerStats | null): { value: string | null; caption?: string } {
+  if (!stats) return { value: null };
+  const [primary, ...rest] = stats.revenueByCurrency;
+  if (!primary) return { value: formatPrice(0, stats.defaultCurrency) };
+  return {
+    value: formatPrice(primary.amount, primary.currency),
+    caption: rest.length
+      ? rest.map((r) => `+ ${formatPrice(r.amount, r.currency)}`).join('\n')
+      : undefined,
+  };
+}
 
 export default function OrganizerDashboardScreen() {
   const { colors } = useTheme();
@@ -96,12 +118,12 @@ export default function OrganizerDashboardScreen() {
         <View style={{ paddingTop: headerH }}>
           {/* Today's Events: section title + one event card (padded surface). */}
           <View style={styles.section}>
-            <Skeleton width={150} height={19} radius={7} style={{ marginBottom: 12 }} />
-            <Skeleton width="100%" height={148} radius={RADIUS.lg} />
+            <Skeleton width={150} height={22} radius={7} style={{ marginBottom: 12 }} />
+            <Skeleton width="100%" height={200} radius={RADIUS.lg} />
           </View>
           {/* This Week: section title + the metric triplet (••• while loading). */}
           <View style={styles.section}>
-            <Skeleton width={120} height={19} radius={7} style={{ marginBottom: 12 }} />
+            <Skeleton width={120} height={22} radius={7} style={{ marginBottom: 12 }} />
             <StatTriplet
               items={[
                 { label: t('organizerDashboard.revenue'), value: null },
@@ -113,7 +135,7 @@ export default function OrganizerDashboardScreen() {
           {/* Quick Actions: section title + the 2-col grid of 6 action tiles
               (46 tall = paddingVertical 13×2 + 20 icon). */}
           <View style={styles.section}>
-            <Skeleton width={140} height={19} radius={7} style={{ marginBottom: 12 }} />
+            <Skeleton width={140} height={22} radius={7} style={{ marginBottom: 12 }} />
             <View style={styles.quickActionsGrid}>
               {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} width="48%" height={46} radius={RADIUS.lg} />
@@ -151,7 +173,7 @@ export default function OrganizerDashboardScreen() {
 
         {/* Today's Events */}
         <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('organizerDashboard.todaysEvents')}</Text>
+        <SectionHeader title={t('organizerDashboard.todaysEvents')} />
         {todayEvents.length === 0 ? (
           <EmptyState
             icon={Calendar}
@@ -165,48 +187,73 @@ export default function OrganizerDashboardScreen() {
               minute: '2-digit',
             });
 
+            // Time, then the place when we have one. An empty location used to
+            // leave a pin icon with nothing next to it (TestFlight 2026-09-06).
+            const meta = [eventTime, event.location].filter(Boolean).join('  ·  ');
+
             return (
-              <TouchableOpacity 
-                key={event.id} 
+              <TouchableOpacity
+                key={event.id}
                 style={styles.eventCard}
                 onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <View style={styles.eventHeader}>
-                  <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
-                  <TouchableOpacity
-                    style={styles.scanButton}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      navigation.navigate('TicketScanner', { eventId: event.id });
-                    }}
-                  >
-                    <Ionicons name="qr-code-outline" size={20} color={colors.text} />
-                    <Text style={styles.scanButtonText}>{t('tabs.scan')}</Text>
-                  </TouchableOpacity>
+                <View style={styles.eventRow}>
+                  {/* Portrait poster, the same 4:5 thumb My Events uses. */}
+                  <View style={styles.eventPoster}>
+                    {event.posterUri ? (
+                      <Image
+                        source={{ uri: event.posterUri }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={200}
+                        recyclingKey={event.id}
+                      />
+                    ) : (
+                      <>
+                        <LinearGradient
+                          colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={StyleSheet.absoluteFill}
+                        />
+                        <View style={styles.eventPosterBrand}>
+                          <TikemWordmark fontSize={15} />
+                        </View>
+                      </>
+                    )}
+                  </View>
+
+                  <View style={styles.eventBody}>
+                    <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                    <View style={styles.eventMetaRow}>
+                      <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                      <Text style={styles.eventMetaText} numberOfLines={1}>{meta}</Text>
+                    </View>
+                    <StatTriplet
+                      columns={2}
+                      items={[
+                        { label: t('organizerDashboard.ticketsSold'), value: `${event.ticketsSold}/${event.capacity}` },
+                        { label: t('organizerDashboard.checkedIn'), value: event.ticketsCheckedIn },
+                      ]}
+                    />
+                  </View>
                 </View>
 
-                <View style={styles.eventDetails}>
-                  <View style={styles.eventDetailRow}>
-                    <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.eventDetailText}>{eventTime}</Text>
-                  </View>
-                  <View style={styles.eventDetailRow}>
-                    <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.eventDetailText} numberOfLines={1}>{event.location}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.eventStatsWrap}>
-                  <StatTriplet
-                    columns={2}
-                    items={[
-                      { label: t('organizerDashboard.ticketsSold'), value: `${event.ticketsSold}/${event.capacity}` },
-                      { label: t('organizerDashboard.checkedIn'), value: event.ticketsCheckedIn },
-                    ]}
-                  />
-                </View>
+                {/* Scanning is the day-of job, so it gets the primary fill. */}
+                <TouchableOpacity
+                  style={styles.scanButton}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    navigation.navigate('TicketScanner', { eventId: event.id });
+                  }}
+                >
+                  <Ionicons name="qr-code-outline" size={18} color="#000" />
+                  <Text style={styles.scanButtonText}>{t('tabs.scan')}</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
             );
           })
@@ -215,16 +262,18 @@ export default function OrganizerDashboardScreen() {
 
       {/* This Week Stats — the reusable POSH metric triplet (§2.3).
           Revenue / Tickets Sold / Upcoming, three across. `null` renders •••
-          while loading; zero-states ($0.00 / 0) render with confidence. */}
+          while loading; zero-states (0 HTG / 0) render with confidence.
+          Revenue is per currency: the largest is the figure, others sit under
+          it as a caption (a 25 HTG sale once rendered as "$25.00"). */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('organizerDashboard.thisWeek')}</Text>
+        <SectionHeader title={t('organizerDashboard.thisWeek')} />
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => navigation.navigate('OrganizerAnalytics')}
         >
           <StatTriplet
             items={[
-              { label: t('organizerDashboard.revenue'), value: stats ? `$${(stats.revenue || 0).toFixed(2)}` : null },
+              { label: t('organizerDashboard.revenue'), ...revenueCell(stats) },
               { label: t('organizerDashboard.ticketsSold'), value: stats ? (stats.ticketsSold || 0) : null },
               { label: t('organizerDashboard.upcomingEvents'), value: stats ? (stats.upcomingEvents || 0) : null },
             ]}
@@ -234,7 +283,7 @@ export default function OrganizerDashboardScreen() {
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('organizerDashboard.quickActions') || 'Quick Actions'}</Text>
+        <SectionHeader title={t('organizerDashboard.quickActions') || 'Quick Actions'} />
         <View style={styles.quickActionsGrid}>
           <TouchableOpacity 
             style={styles.quickActionButton}
@@ -302,61 +351,67 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingTop: 14,
     paddingBottom: 6,
   },
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 12,
-    letterSpacing: -0.3,
-  },
+  // Filled surface (not a hairline box): poster left, details right, and the
+  // Scan action across the bottom.
   eventCard: {
     backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    padding: 12,
     marginBottom: SPACING.md,
   },
-  eventHeader: {
+  eventRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 14,
+  },
+  eventPoster: {
+    width: 96,
+    aspectRatio: 4 / 5,
+    borderRadius: radius.chip,
+    backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+  },
+  eventPosterBrand: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
+    opacity: 0.9,
+    paddingHorizontal: 8,
+  },
+  eventBody: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   eventTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontFamily: font.serif,
+    fontSize: 21,
+    lineHeight: 25,
     color: colors.text,
+  },
+  eventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  eventMetaText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginLeft: 5,
     flex: 1,
-    marginRight: 12,
   },
   scanButton: {
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceRaised,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.sm,
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.button,
+    paddingVertical: 11,
   },
   scanButtonText: {
-    color: colors.text,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  eventDetails: {
-    marginBottom: 12,
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  eventDetailText: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    color: '#000',
+    fontSize: 15,
+    fontWeight: '700',
     marginLeft: 6,
-    flex: 1,
-  },
-  eventStatsWrap: {
-    marginTop: 12,
   },
   quickActionsGrid: {
     flexDirection: 'row',

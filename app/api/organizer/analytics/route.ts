@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { getOrganizerEvents, getOrganizerTickets } from '@/lib/firestore/organizer'
 import { format, subDays, startOfDay } from 'date-fns'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,17 @@ type Range = '7d' | '30d' | 'all'
  * Revenue is organizer-facing: getOrganizerTickets() already normalizes each ticket's
  * `currency` to the event/original currency (not what the customer was charged), so
  * MonCash USD events report USD here, consistent with earnings.
+ *
+ * `revenueByCurrency` is keyed by every currency that sold (major units). USD and
+ * HTG are always present so older app builds that read only those two keys keep
+ * working; a CAD or EUR sale is no longer folded into USD.
  */
+
+/** A scanned ticket was still a sale, so the check-in states count as sold. */
+const SCANNED_STATUSES = new Set(['used', 'checked_in', 'scanned'])
+const isSoldTicket = (status: unknown) =>
+  isLiveTicketStatus(status) || SCANNED_STATUSES.has(String(status ?? '').toLowerCase().trim())
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
@@ -49,7 +60,7 @@ export async function GET(request: Request) {
 
     // Revenue is tracked per currency (cents). The "primary" currency is whichever
     // has the most revenue, matching the mobile fallback's display logic.
-    const revenueByCurrency: { USD: number; HTG: number } = { USD: 0, HTG: 0 }
+    const revenueByCurrency: Record<string, number> = { USD: 0, HTG: 0 }
     const perEvent = new Map<string, { ticketCount: number; revenueCents: number; currency: string }>()
 
     // Last-7-days chart bins (the screen always renders the last 7 days).
@@ -65,16 +76,17 @@ export async function GET(request: Request) {
     let totalTicketsSold = 0
 
     for (const ticket of tickets as any[]) {
+      // Refunded, cancelled and pending tickets are not sales.
+      if (!isSoldTicket(ticket.status)) continue
       const purchaseDate = parseDate(ticket.purchased_at) || parseDate(ticket.created_at)
       if (cutoffDate && purchaseDate && purchaseDate < cutoffDate) continue
 
       const eventId = String(ticket.event_id)
       const currency = String(ticket.currency || eventCurrencyById.get(eventId) || 'HTG').toUpperCase()
-      const bucket: 'USD' | 'HTG' = currency === 'HTG' ? 'HTG' : 'USD'
       const priceCents = Math.round((Number(ticket.price_paid) || 0) * 100)
 
       totalTicketsSold += 1
-      revenueByCurrency[bucket] += priceCents
+      revenueByCurrency[currency] = (revenueByCurrency[currency] || 0) + priceCents
 
       const existing = perEvent.get(eventId) || { ticketCount: 0, revenueCents: 0, currency }
       existing.ticketCount += 1
@@ -106,7 +118,16 @@ export async function GET(request: Request) {
       .sort((a, b) => b.ticketCount - a.ticketCount)
       .slice(0, 5)
 
-    const primaryCurrency: 'USD' | 'HTG' = revenueByCurrency.USD >= revenueByCurrency.HTG ? 'USD' : 'HTG'
+    // Primary = the currency with the most revenue; with no sales, the currency
+    // most of the organizer's events use (HTG when there are none).
+    const eventCurrencyCounts = new Map<string, number>()
+    for (const c of eventCurrencyById.values()) eventCurrencyCounts.set(c, (eventCurrencyCounts.get(c) || 0) + 1)
+    const dominantEventCurrency =
+      Array.from(eventCurrencyCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || 'HTG'
+    const soldCurrencies = Object.entries(revenueByCurrency)
+      .filter(([, cents]) => cents > 0)
+      .sort((a, b) => b[1] - a[1])
+    const primaryCurrency = soldCurrencies[0]?.[0] || dominantEventCurrency
 
     const chartData = Object.keys(dailySales)
       .sort()
@@ -120,12 +141,11 @@ export async function GET(request: Request) {
       totalEvents: events.length,
       publishedEvents: events.filter((e: any) => e.is_published).length,
       totalTicketsSold,
-      totalRevenue: revenueByCurrency[primaryCurrency] / 100,
+      totalRevenue: (revenueByCurrency[primaryCurrency] || 0) / 100,
       currency: primaryCurrency,
-      revenueByCurrency: {
-        USD: revenueByCurrency.USD / 100,
-        HTG: revenueByCurrency.HTG / 100,
-      },
+      revenueByCurrency: Object.fromEntries(
+        Object.entries(revenueByCurrency).map(([code, cents]) => [code, cents / 100])
+      ),
       chartData,
       topEvents,
       range,

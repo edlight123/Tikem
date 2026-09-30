@@ -76,11 +76,17 @@ export default function OrganizerScanScreen() {
     navigation.navigate('TicketScanner', { eventId: selectedEvent.id });
   };
 
+  // Drop the location half when the event has none, instead of "7:00 PM • ".
   const eventSubtitle = (e: TodayEvent) =>
-    `${new Date(e.start_datetime).toLocaleTimeString(locale, {
-      hour: 'numeric',
-      minute: '2-digit',
-    })} • ${e.location}`;
+    [
+      new Date(e.start_datetime).toLocaleTimeString(locale, {
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+      e.location,
+    ]
+      .filter(Boolean)
+      .join(' • ');
 
   if (loading) {
     return (
