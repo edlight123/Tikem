@@ -43,12 +43,14 @@ export async function GET(req: NextRequest) {
         const amount = normalizeAmountToCents(data.amount)
         
         // Fetch event details
-        const eventDoc = await adminDb.collection('events').doc(data.eventId).get()
-        const event = eventDoc.exists ? eventDoc.data() : null
+        // Promoter withdrawals carry eventId: null — doc(null) throws and would
+        // take the whole admin list down with it.
+        const eventDoc = data.eventId ? await adminDb.collection('events').doc(String(data.eventId)).get() : null
+        const event = eventDoc?.exists ? eventDoc.data() : null
 
         // Fetch organizer details
-        const organizerDoc = await adminDb.collection('users').doc(data.organizerId).get()
-        const organizer = organizerDoc.exists ? organizerDoc.data() : null
+        const organizerDoc = data.organizerId ? await adminDb.collection('users').doc(String(data.organizerId)).get() : null
+        const organizer = organizerDoc?.exists ? organizerDoc.data() : null
 
         return {
           id: doc.id,
@@ -57,6 +59,7 @@ export async function GET(req: NextRequest) {
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
           updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
           processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,
+          completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt,
           event: event ? {
             id: data.eventId,
             title: event.title,

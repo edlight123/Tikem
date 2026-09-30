@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       success: true,
       withdrawalId: result.withdrawalId,
       instant: result.instant,
+      confirming: Boolean(result.confirming),
       grossHtgCents: result.grossHtgCents,
       feeCents: result.feeCents,
       payoutHtgCents: result.payoutHtgCents,

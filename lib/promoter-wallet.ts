@@ -23,7 +23,12 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { previewRelease } from '@/lib/payouts/withdrawal-gate'
 import { getEventEarnings } from '@/lib/earnings'
-import { moncashPrefundedTransfer } from '@/lib/moncash'
+import {
+  computePrefundedPayout,
+  executePrefundedTransfer,
+  normalizeMoncashReceiver,
+  prefundedBalanceCovers,
+} from '@/lib/payouts/moncash-prefunded'
 import { fetchUsdToHtgRate } from '@/lib/currency'
 
 export const PROMOTER_WITHDRAWAL_FEE_PERCENT = 0.03
@@ -205,6 +210,8 @@ export type PromoterWithdrawalResult =
       ok: true
       withdrawalId: string
       instant: boolean
+      /** Sent over the prefunded rail but not confirmed; held for an admin. */
+      confirming?: boolean
       grossHtgCents: number
       feeCents: number
       payoutHtgCents: number
@@ -218,8 +225,9 @@ export type PromoterWithdrawalResult =
  * matching organizer standard withdrawals).
  */
 export async function executePromoterWithdrawal(uid: string, rawPhone: string): Promise<PromoterWithdrawalResult> {
-  const phone = String(rawPhone || '').replace(/[^\d+]/g, '')
-  if (!/^\+?\d{8,15}$/.test(phone)) {
+  // Digicel's Transfert wants 509XXXXXXXX; "+509 3700 7294" must not reach it verbatim.
+  const phone = normalizeMoncashReceiver(rawPhone)
+  if (!phone) {
     return { ok: false, code: 'invalid_phone', error: 'Enter a valid MonCash phone number.' }
   }
 
@@ -243,7 +251,13 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
   // Instant only when the platform prefunding pool is on and stocked.
   const configDoc = await adminDb.collection('config').doc('payouts').get()
   const prefunding = configDoc.exists ? (configDoc.data() as any)?.prefunding : null
-  const instant = Boolean(prefunding?.enabled) && Boolean(prefunding?.available)
+  // The cron's `available` is up to 15 minutes old; check the pool covers THIS
+  // transfer plus Digicel's 3% before promising an instant payout.
+  const instantPricing = computePrefundedPayout(grossHtgCents)
+  const instant =
+    Boolean(prefunding?.enabled) &&
+    Boolean(prefunding?.available) &&
+    (await prefundedBalanceCovers(instantPricing.poolDebitHtgCents))
 
   // Promoter pays the 3% on the instant rail; the manual/admin rail is free,
   // exactly like organizer withdrawals.
@@ -298,6 +312,10 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
         usdToHtgRateUsed: usdCents > 0 ? usdToHtgRate : undefined,
         prefundingUsed: instant || undefined,
         prefundingFeePercent: instant ? PROMOTER_WITHDRAWAL_FEE_PERCENT : undefined,
+        // Digicel's own 3% on the amount sent — Tikèm's cost, kept apart from feeCents.
+        prefundingProviderFeeHtgCents: instant ? instantPricing.providerFeeHtgCents : undefined,
+        prefundingPoolDebitHtgCents: instant ? instantPricing.poolDebitHtgCents : undefined,
+        prefundingPlatformNetHtgCents: instant ? feeCents - instantPricing.providerFeeHtgCents : undefined,
         // What was debited from the wallet, per currency — the admin
         // reject/fail path credits exactly this back.
         walletDebits: {
@@ -319,34 +337,65 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     return { ok: true, withdrawalId: withdrawalRef.id, instant: false, grossHtgCents, feeCents, payoutHtgCents: payoutCents }
   }
 
-  try {
-    const result = await moncashPrefundedTransfer({
-      amount: Number((payoutCents / 100).toFixed(2)),
-      receiver: phone,
-      desc: 'Tikèm promoter commission withdrawal',
-      reference: withdrawalRef.id,
-    })
+  const outcome = await executePrefundedTransfer({
+    amount: Number((payoutCents / 100).toFixed(2)),
+    receiver: phone,
+    desc: 'Tikèm promoter commission withdrawal',
+    reference: withdrawalRef.id,
+  })
+
+  if (outcome.outcome === 'completed') {
     await withdrawalRef.set(
       {
         status: 'completed',
         completedAt: new Date(),
         processedAt: new Date(),
-        moncashTransactionId: result.transactionId,
-        prefundingTransferRaw: result.raw,
+        moncashTransactionId: outcome.transactionId,
+        prefundingTransferRaw: outcome.raw,
+        confirmedVia: outcome.confirmedVia,
         updatedAt: new Date(),
       },
       { merge: true }
     )
     return { ok: true, withdrawalId: withdrawalRef.id, instant: true, grossHtgCents, feeCents, payoutHtgCents: payoutCents }
-  } catch (err: any) {
-    // Transfer failed AFTER the reservation: put the money back and mark failed.
-    await refundPromoterWalletDebits(uid, { ...(htgCents > 0 ? { HTG: htgCents } : {}), ...(usdCents > 0 ? { USD: usdCents } : {}) })
+  }
+
+  if (outcome.outcome === 'unconfirmed') {
+    // The money MAY have moved: keep the wallet debit (restoring it would allow
+    // a second withdrawal of the same money) and leave it for an admin.
+    console.error('[promoter-wallet] prefunded transfer outcome unknown; held for reconciliation', {
+      withdrawalId: withdrawalRef.id,
+      reason: outcome.reason,
+      statusCheck: outcome.statusCheck,
+    })
     await withdrawalRef.set(
-      { status: 'failed', failureReason: err?.message || 'MonCash transfer failed', updatedAt: new Date() },
+      {
+        status: 'processing',
+        needsReconciliation: true,
+        reconciliationReason: outcome.reason,
+        reconciliationStatusCheck: outcome.statusCheck,
+        updatedAt: new Date(),
+      },
       { merge: true }
     )
-    return { ok: false, code: 'transfer_failed', error: 'The MonCash transfer failed. Your balance was restored — try again shortly.' }
+    return {
+      ok: true,
+      withdrawalId: withdrawalRef.id,
+      instant: false,
+      confirming: true,
+      grossHtgCents,
+      feeCents,
+      payoutHtgCents: payoutCents,
+    }
   }
+
+  // Definitively rejected by MonCash: nothing moved, put the money back.
+  await refundPromoterWalletDebits(uid, { ...(htgCents > 0 ? { HTG: htgCents } : {}), ...(usdCents > 0 ? { USD: usdCents } : {}) })
+  await withdrawalRef.set(
+    { status: 'failed', failureReason: outcome.reason || 'MonCash transfer failed', updatedAt: new Date() },
+    { merge: true }
+  )
+  return { ok: false, code: 'transfer_failed', error: 'The MonCash transfer failed. Your balance was restored — try again shortly.' }
 }
 
 /** Credit wallet debits back (failed transfer, or admin reject/fail). */

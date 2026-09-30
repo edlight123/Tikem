@@ -829,7 +829,10 @@ export async function moncashPrefundedBalance(): Promise<MonCashPrefundedBalance
   })
 
   const data = await response.json().catch(() => ({}))
-  const balanceNode = data?.balance || data
+  // Nested ({ balance: { balance, message } }) or flat ({ balance, message }).
+  // `data.balance || data` only worked flat while the balance was 0: a funded
+  // flat balance (a number) would be read as the node and parse to NaN.
+  const balanceNode = data?.balance && typeof data.balance === 'object' ? data.balance : data
   const balance = Number(balanceNode?.balance)
 
   if (!Number.isFinite(balance)) {

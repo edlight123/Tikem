@@ -203,6 +203,20 @@ export interface WithdrawalRequest {
   prefundingUsed?: boolean
   prefundingFeePercent?: number
   prefundingTransferRaw?: any
+  // Digicel's own fee on the transfer (3% of the amount SENT, taken from the
+  // prefunded pool). A cost to Tikèm — kept apart from feeCents, which is what
+  // the payee paid Tikèm.
+  prefundingProviderFeeHtgCents?: number
+  // Pool debit for this transfer: payoutAmountHtgCents + provider fee.
+  prefundingPoolDebitHtgCents?: number
+  // Tikèm's fee in HTG minus Digicel's fee: the instant rail's actual margin.
+  prefundingPlatformNetHtgCents?: number
+  // Ambiguous transfer outcome (timeout / 5xx / unparseable): the reservation
+  // is KEPT and an admin must confirm in MonCash before completing or failing.
+  needsReconciliation?: boolean
+  reconciliationReason?: string
+  reconciliationStatusCheck?: string
+  confirmedVia?: 'transfer' | 'status_check'
 
   // Reservation metadata (used for instant prefunded payouts)
   reservedAt?: Date
