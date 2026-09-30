@@ -55,3 +55,6 @@ next-env.d.ts
 firebase-debug.log
 .env*
 .playwright-mcp/
+
+# App Review demo credentials (never commit)
+store/app-store/demo.env

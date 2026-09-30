@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Tik\u00e8m",
+    "name": "Tikèm",
     "slug": "tikem",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -108,15 +108,31 @@
     "plugins": [
       "expo-apple-authentication",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Tikèm uses the camera to scan tickets at the door, scan your card at checkout, and take the ID photo and selfie video that verify organizers before payout.",
+          "microphonePermission": "Tikèm records a short, muted selfie video to verify organizers before payout. No audio is kept.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Tikèm uses your photos when you choose a profile picture, an event poster or an ID document.",
+          "cameraPermission": "Tikèm uses the camera to scan tickets at the door, scan your card at checkout, and take the ID photo and selfie video that verify organizers before payout.",
+          "microphonePermission": "Tikèm records a short, muted selfie video to verify organizers before payout. No audio is kept."
+        }
+      ],
+      [
         "expo-contacts",
         {
-          "contactsPermission": "Allow Tik\u00e8m to access your contacts to find friends who are already on Tik\u00e8m. Your contacts are only used to match and are never stored."
+          "contactsPermission": "Allow Tikèm to access your contacts to find friends who are already on Tikèm. Your contacts are only used to match and are never stored."
         }
       ],
       [
         "react-native-document-scanner-plugin",
         {
-          "cameraPermission": "Allow Tik\u00e8m to use the camera to scan your payment card at checkout, or your ID document when we verify your identity before sending you money. Scans are used only for that and are never stored."
+          "cameraPermission": "Allow Tikèm to use the camera to scan your payment card at checkout, or your ID document when we verify your identity before sending you money. Scans are used only for that and are never stored."
         }
       ],
       [
