@@ -389,9 +389,16 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
     const isPaid = !!(payment?.success && payment?.payment_status)
 
     if (!isPaid) {
+      // Keep Digicel's own words. Their rejections are account-level and specific
+      // ("Failed to match a reason type because the Identity Type factor of the
+      // credit party does not match"), and without this the only trace a failed
+      // sale leaves is a bare `failed` row.
+      const gatewayReason = String(payment?.payment_status || '').trim() || 'payment_failed'
+      console.warn('[moncash_button] return: gateway reports not paid', { orderId, gatewayReason })
+
       await supabase
         .from('pending_transactions')
-        .update({ status: 'failed' })
+        .update({ status: 'failed', failure_reason: gatewayReason })
         .eq('order_id', orderId)
 
       return NextResponse.redirect(new URL('/purchase/failed?reason=payment_failed', request.url))

@@ -412,9 +412,31 @@ export interface MonCashGatewayPayment {
   token: string
   orderId: string
   mode: string
+  /** ISO time the gateway token dies (~10 minutes). Null if the token has no `ext` claim. */
+  expiresAt: string | null
 }
 
 /** Create a MonCash Button gateway payment and return the redirect URL. */
+/**
+ * The gateway token is a JWT carrying `ext`, the epoch-ms moment it stops working
+ * — about ten minutes after it is minted. Recording it means a buyer who went
+ * looking for their phone can be told the session expired, and reconciliation
+ * knows when it is safe to stop waiting on an order.
+ */
+function getGatewayTokenExpiry(token: string): string | null {
+  const parts = String(token || '').split('.')
+  if (parts.length < 2) return null
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(Buffer.from(b64.padEnd(Math.ceil(b64.length / 4) * 4, '='), 'base64').toString('utf8'))
+    const ext = Number(payload?.ext)
+    if (!Number.isFinite(ext) || ext <= 0) return null
+    return new Date(ext).toISOString()
+  } catch {
+    return null
+  }
+}
+
 export async function createMonCashGatewayPayment({
   amount,
   orderId,
@@ -474,6 +496,7 @@ export async function createMonCashGatewayPayment({
     token: gatewayToken,
     orderId: String(orderId),
     mode: getMonCashStatus(),
+    expiresAt: getGatewayTokenExpiry(gatewayToken),
   }
 }
 
@@ -534,6 +557,30 @@ async function retrieveGatewayPayment(
     }
     if (!response.ok) {
       const errorText2 = await response.text()
+
+      // A 404 is Digicel's ANSWER, not a transport failure: it is how the gateway
+      // says "this order has not settled". Both flavours arrive this way —
+      // "Transaction Not Found" for an order nobody paid, and the account-level
+      // rejection ("Failed to match a reason type because the Identity Type factor
+      // of the credit party does not match") for one the ledger refused.
+      //
+      // Throwing here made the caller's `if (!isPaid)` branch unreachable, so a
+      // genuinely failed payment surfaced as a generic processing error and its
+      // order was left `pending` forever, with Digicel's reason swallowed.
+      //
+      // Anything else (401, 5xx) really is a failure to get an answer, and must
+      // keep throwing — a Digicel outage must never be recorded as a failed payment.
+      if (response.status === 404) {
+        const parsed = (() => {
+          try {
+            return JSON.parse(errorText2)
+          } catch {
+            return { message: errorText2 || 'Transaction Not Found', status: 404 }
+          }
+        })()
+        return normalizeGatewayPayment(parsed)
+      }
+
       throw new Error(`MonCash ${endpoint} failed (${response.status}): ${errorText2}`)
     }
   }

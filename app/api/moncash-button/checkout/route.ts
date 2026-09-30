@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import { createMonCashButtonCheckoutFormPost, isMonCashButtonConfigured } from '@/lib/moncash-button'
+import {
+  buildTokenVariants,
+  createMonCashButtonCheckoutFormPost,
+  isMonCashButtonConfigured,
+} from '@/lib/moncash-button'
 import { createMonCashGatewayPayment, isMonCashConfigured } from '@/lib/moncash'
 import { verifyGuestToken } from '@/lib/guest/identity'
 import crypto from 'crypto'
@@ -93,15 +97,24 @@ export async function GET(request: Request) {
         return new NextResponse('MonCash is not configured', { status: 500 })
       }
 
-      const { redirectUrl, token } = await createMonCashGatewayPayment({ amount, orderId })
+      const { redirectUrl, token, expiresAt } = await createMonCashGatewayPayment({ amount, orderId })
       console.info('[moncash_button] checkout: redirecting to MonCash gateway', { orderHash, amount })
 
       // Persist the gateway token so the Return handler can correlate back to this order
       // even if cookies are dropped on the cross-site round trip. (Best effort.)
+      //
+      // The variants matter: Digicel hands the token back re-encoded (base64 vs
+      // base64url, padding stripped), and the Return handler looks the order up by
+      // `moncash_button_token_variants`. Writing only the raw token left that
+      // fallback permanently empty on this rail.
       try {
         await supabase
           .from('pending_transactions')
-          .update({ moncash_button_token: token })
+          .update({
+            moncash_button_token: token,
+            moncash_button_token_variants: buildTokenVariants(token),
+            moncash_token_expires_at: expiresAt,
+          })
           .eq('order_id', orderId)
       } catch {
         /* non-fatal */

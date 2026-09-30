@@ -13,6 +13,17 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
+/**
+ * Total a list of already-rounded money amounts.
+ *
+ * Summing 2-decimal values reintroduces float drift — seven tickets at 3903.67
+ * add up to 27325.690000000002 — and that raw Number is what a gateway payload
+ * carries. Round the total, once, at the end.
+ */
+export function sumMoney(parts: number[]): number {
+  return roundMoney(parts.reduce((total, part) => total + part, 0))
+}
+
 export type UsdToHtgRateResult = {
   baseRate: number
   effectiveRate: number

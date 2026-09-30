@@ -9,7 +9,7 @@ import {
 } from '@/lib/guest/checkout'
 import { calculateDiscount, resolvePromoCode, promoHasCapacity, type PromoDoc } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
-import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread } from '@/lib/fx/usd-htg'
+import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread, sumMoney } from '@/lib/fx/usd-htg'
 import { inferCountryFromEventText } from '@/lib/event-country'
 import { checkEventCapacity } from '@/lib/capacity'
 import { hasEventAccess } from '@/lib/events/access-guard'
@@ -345,7 +345,7 @@ export async function POST(request: Request) {
         originalUnitPrice: s.unitPrice,
         unitPrice: convertUsdToHtgAmount(s.unitPrice, effectiveRate),
       }))
-      chargeAmount = chargeSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
+      chargeAmount = sumMoney(chargeSelections.map((s) => s.quantity * s.unitPrice))
     } else if (originalCurrency !== 'HTG') {
       return NextResponse.json(
         { error: `MonCash only supports HTG. Event currency ${originalCurrency} is not supported for MonCash.` },

@@ -146,7 +146,7 @@ function decodeBase64OrBase64UrlToBuffer(value: string): Buffer | null {
   }
 }
 
-function buildTokenVariants(token: string): string[] {
+export function buildTokenVariants(token: string): string[] {
   const raw = String(token || '').trim()
   if (!raw) return []
 
