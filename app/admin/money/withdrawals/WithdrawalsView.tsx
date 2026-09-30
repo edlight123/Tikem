@@ -33,6 +33,11 @@ interface Withdrawal {
   processedAt?: string
   completedAt?: string
   failureReason?: string
+  prefundingUsed?: boolean
+  needsReconciliation?: boolean
+  reconciliationReason?: string
+  reconciliationStatusCheck?: string
+  moncashTransactionId?: string
   adminNote?: string
   completionNote?: string
   event: {
@@ -462,6 +467,25 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                 )}
               </div>
             </div>
+
+            {/* Instant (prefunded) transfer whose outcome is unknown */}
+            {selectedWithdrawal.needsReconciliation && (
+              <div className="mb-6 rounded-lg bg-console-ground p-4">
+                <div className="font-bold text-console-red mb-1">Needs reconciliation — do not fail blindly</div>
+                <div className="text-sm text-console-mut">
+                  An instant MonCash transfer was sent (reference <span className="font-mono">{selectedWithdrawal.id}</span>) but its outcome
+                  is unknown, so the organizer&apos;s balance is still reserved. Check this reference in the MonCash
+                  prefunded portal (or POST /api/admin/moncash-prefunded/status). If it was paid, Complete it; only
+                  Fail it (which restores the balance) if MonCash confirms no money moved.
+                </div>
+                {selectedWithdrawal.reconciliationReason && (
+                  <div className="mt-2 text-xs font-mono text-console-mut">Error: {selectedWithdrawal.reconciliationReason}</div>
+                )}
+                {selectedWithdrawal.reconciliationStatusCheck && (
+                  <div className="mt-1 text-xs font-mono text-console-mut">Status check: {selectedWithdrawal.reconciliationStatusCheck}</div>
+                )}
+              </div>
+            )}
 
             {/* Failure Reason */}
             {selectedWithdrawal.failureReason && (

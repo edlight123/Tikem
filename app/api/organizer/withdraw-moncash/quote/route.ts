@@ -5,12 +5,11 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getEventEarnings } from '@/lib/earnings'
 import { fetchUsdToHtgRate } from '@/lib/currency'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { PREFUNDING_FEE_PERCENT, computePrefundedPayout } from '@/lib/payouts/moncash-prefunded'
 
 const QuerySchema = z.object({
   eventId: z.string().min(1),
 })
-
-const PREFUNDING_FEE_PERCENT = 0.03
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,11 +67,15 @@ export async function GET(request: NextRequest) {
 
     const instantAvailable = prefundingEnabled && prefundingAvailable && allowInstantMoncash
 
-    const feeCents = instantAvailable ? Math.max(0, Math.round(availableToWithdraw * PREFUNDING_FEE_PERCENT)) : 0
-    const payoutAmountCents = Math.max(0, availableToWithdraw - feeCents)
-
+    // Same math as the withdrawal itself (lib/payouts/moncash-prefunded.ts), so
+    // the fee and net shown here are exactly what the POST charges and sends.
     const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
-    const payoutAmountHtgCents = Math.max(0, Math.round((payoutAmountCents / 100) * usdToHtgRate * 100))
+    const instantPricing = computePrefundedPayout(availableToWithdraw, usdToHtgRate)
+    const feeCents = instantAvailable ? instantPricing.feeCents : 0
+    const payoutAmountCents = instantAvailable ? instantPricing.payoutAmountCents : availableToWithdraw
+    const payoutAmountHtgCents = instantAvailable
+      ? instantPricing.payoutAmountHtgCents
+      : Math.max(0, Math.round(availableToWithdraw * usdToHtgRate))
 
     return NextResponse.json({
       success: true,

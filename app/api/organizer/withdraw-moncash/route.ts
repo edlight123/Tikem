@@ -2,14 +2,32 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { getEventEarnings, getOrCreateEventEarnings, withdrawFromEarnings } from '@/lib/earnings'
-import { moncashPrefundedTransfer } from '@/lib/moncash'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
+import {
+  consumePayoutDetailsChangeVerification,
+  requireRecentPayoutDetailsChangeVerification,
+} from '@/lib/firestore/payout'
 import { fetchUsdToHtgRate } from '@/lib/currency'
 import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
+import {
+  PREFUNDING_FEE_PERCENT,
+  computePrefundedPayout,
+  executePrefundedTransfer,
+  normalizeMoncashReceiver,
+  prefundedBalanceCovers,
+  sameMoncashNumberLast4,
+} from '@/lib/payouts/moncash-prefunded'
 
-const PREFUNDING_FEE_PERCENT = 0.03
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+/** Minimum withdrawal, in minor units of the event's currency. */
+const MIN_WITHDRAWAL_MINOR = 5000
+
+/** A refusal raised inside the reservation transaction — a 4xx, not a crash. */
+class ReservationRefused extends Error {}
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,21 +67,28 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json()
-    const { eventId, amount, moncashNumber } = body
+    const body = await req.json().catch(() => ({}))
+    const { eventId, moncashNumber } = body || {}
+    const amount = Number(body?.amount)
 
     // Validate inputs
-    if (!eventId || !amount || !moncashNumber) {
+    if (!eventId || !body?.amount || !moncashNumber) {
       return NextResponse.json(
         { error: 'Missing required fields: eventId, amount, moncashNumber' },
         { status: 400 }
       )
     }
 
-    // Minimum withdrawal amount (in cents)
-    if (amount < 5000) {
+    if (!Number.isInteger(amount) || amount <= 0) {
+      return NextResponse.json({ error: 'Amount must be a whole number of cents' }, { status: 400 })
+    }
+
+    // Digicel's prefunded docs send `receiver` as 509XXXXXXXX. The forms collect
+    // "+509 1234 5678" and similar, which must never reach Transfert verbatim.
+    const receiver = normalizeMoncashReceiver(moncashNumber)
+    if (!receiver) {
       return NextResponse.json(
-        { error: 'Minimum withdrawal amount is $50.00' },
+        { error: 'Enter a valid Haitian MonCash number (8 digits, optionally with +509).', code: 'invalid_phone' },
         { status: 400 }
       )
     }
@@ -107,6 +132,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
     }
 
+    // Preserve the event's real currency in the record. This is the Haiti rail
+    // (MonCash executes in HTG; USD earnings are converted at withdrawal below).
+    // A CAD/EUR event would withdraw via Stripe, not here — but if one reaches
+    // this route we must NOT silently rewrite CAD/EUR to HTG.
+    const rawCurrency = String(earnings.currency || 'HTG').toUpperCase()
+    const currency = (['USD', 'CAD', 'EUR'].includes(rawCurrency) ? rawCurrency : 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
+
+    if (amount < MIN_WITHDRAWAL_MINOR) {
+      return NextResponse.json(
+        { error: `Minimum withdrawal amount is ${(MIN_WITHDRAWAL_MINOR / 100).toFixed(2)} ${currency}` },
+        { status: 400 }
+      )
+    }
+
     if (earnings.settlementStatus !== 'ready') {
       return NextResponse.json(
         { error: 'Earnings are not yet available for withdrawal' },
@@ -118,7 +157,7 @@ export async function POST(req: NextRequest) {
     const availableBalance = earnings.availableToWithdraw || 0
     if (amount > availableBalance) {
       return NextResponse.json(
-        { error: `Insufficient balance. Available: ${(availableBalance / 100).toFixed(2)} ${earnings.currency || 'HTG'}` },
+        { error: `Insufficient balance. Available: ${(availableBalance / 100).toFixed(2)} ${currency}` },
         { status: 400 }
       )
     }
@@ -153,36 +192,65 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(gate.body, { status: gate.status })
     }
 
-    // Preserve the event's real currency in the record. This is the Haiti rail
-    // (MonCash executes in HTG; USD earnings are converted at withdrawal below).
-    // A CAD/EUR event would withdraw via Stripe, not here — but if one reaches
-    // this route we must NOT silently rewrite CAD/EUR to HTG.
-    const rawCurrency = String(earnings.currency || 'HTG').toUpperCase()
-    const currency = (['USD', 'CAD', 'EUR'].includes(rawCurrency) ? rawCurrency : 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
-
     // Check if instant MonCash (prefunding) is available and allowed.
-    const [platformConfigDoc] = await Promise.all([
-      adminDb.collection('config').doc('payouts').get(),
-    ])
-
+    const platformConfigDoc = await adminDb.collection('config').doc('payouts').get()
     const prefunding = platformConfigDoc.exists ? (platformConfigDoc.data() as any)?.prefunding : null
     const prefundingEnabled = Boolean(prefunding?.enabled)
     const prefundingAvailable = Boolean(prefunding?.available)
-
     const allowInstantMoncash = Boolean(haitiProfile?.allowInstantMoncash)
-
-    const shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
 
     // MonCash transfers are executed in HTG. If earnings are in USD, we convert at withdrawal time.
     const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
+    const instantPricing = computePrefundedPayout(amount, usdToHtgRate)
 
-    const feeCents = shouldUsePrefunding ? Math.max(0, Math.round(Number(amount) * PREFUNDING_FEE_PERCENT)) : 0
-    const payoutAmountCents = Math.max(0, Number(amount) - feeCents)
+    let shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
+    let instantFallbackReason: string | null = null
 
-    const payoutAmountHtgCents = Math.max(0, Math.round((payoutAmountCents / 100) * usdToHtgRate * 100))
+    // The cron refreshes `available` every 15 minutes; the pool can be drained
+    // in between. Check it covers THIS transfer plus Digicel's fee, or file the
+    // request for the manual queue (fee-free) instead of attempting it.
+    if (shouldUsePrefunding && !(await prefundedBalanceCovers(instantPricing.poolDebitHtgCents))) {
+      shouldUsePrefunding = false
+      instantFallbackReason = 'insufficient_prefunded_balance'
+    }
 
-    // Pre-create withdrawal request ref so we can use it as MonCash `reference`.
-    // This also makes retries safer (same request id is used throughout the flow).
+    // An instant transfer is automatic and irreversible — no admin ever looks at
+    // it. Sending it to a number other than the one on the payout profile gets
+    // the same OTP step-up a new bank account does.
+    let stepUpUsed = false
+    if (
+      shouldUsePrefunding &&
+      !sameMoncashNumberLast4(receiver, (haitiProfile as any)?.mobileMoneyDetails?.phoneNumberLast4)
+    ) {
+      try {
+        await requireRecentPayoutDetailsChangeVerification(user.id)
+        stepUpUsed = true
+      } catch (e: any) {
+        if (String(e?.message || '').includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+          return NextResponse.json(
+            {
+              error: 'Verification required',
+              code: 'PAYOUT_CHANGE_VERIFICATION_REQUIRED',
+              requiresVerification: true,
+              message:
+                'For your security, confirm this MonCash number with the code we email you — it is not the number on your payout profile.',
+            },
+            { status: 403 }
+          )
+        }
+        throw e
+      }
+    }
+
+    const feeCents = shouldUsePrefunding ? instantPricing.feeCents : 0
+    const payoutAmountCents = shouldUsePrefunding ? instantPricing.payoutAmountCents : amount
+    const payoutAmountHtgCents = shouldUsePrefunding
+      ? instantPricing.payoutAmountHtgCents
+      : Math.max(0, Math.round(amount * usdToHtgRate))
+
+    // Pre-create withdrawal request ref so we can use it as MonCash `reference`
+    // — which is also what PrefundedTransactionStatus is asked about when the
+    // transfer's outcome is unknown.
     const withdrawalRef = adminDb.collection('withdrawal_requests').doc()
     const now = new Date()
     const nowIso = now.toISOString()
@@ -194,7 +262,7 @@ export async function POST(req: NextRequest) {
       currency,
       method: 'moncash',
       status: shouldUsePrefunding ? 'processing' : 'pending',
-      moncashNumber,
+      moncashNumber: receiver,
       feeCents: feeCents || undefined,
       payoutAmountCents: payoutAmountCents || undefined,
       payoutCurrency: 'HTG',
@@ -202,87 +270,106 @@ export async function POST(req: NextRequest) {
       usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
       prefundingUsed: shouldUsePrefunding || undefined,
       prefundingFeePercent: shouldUsePrefunding ? PREFUNDING_FEE_PERCENT : undefined,
+      prefundingProviderFeeHtgCents: shouldUsePrefunding ? instantPricing.providerFeeHtgCents : undefined,
+      prefundingPoolDebitHtgCents: shouldUsePrefunding ? instantPricing.poolDebitHtgCents : undefined,
+      prefundingPlatformNetHtgCents: shouldUsePrefunding
+        ? Math.round(instantPricing.feeCents * usdToHtgRate) - instantPricing.providerFeeHtgCents
+        : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
+    if (instantFallbackReason) (baseWithdrawalRequest as any).instantFallbackReason = instantFallbackReason
 
     if (shouldUsePrefunding) {
       // For instant prefunding, reserve (debit) earnings first so we never end up
       // transferring money without deducting the organizer's available balance.
+      // The transaction serializes concurrent submits on the earnings doc: the
+      // second one sees the reduced balance and is refused.
       const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId))
 
-      await adminDb.runTransaction(async (tx: any) => {
-        const [earningsSnap, withdrawalSnap] = await Promise.all([
-          tx.get(earningsRef),
-          tx.get(withdrawalRef),
-        ])
+      try {
+        await adminDb.runTransaction(async (tx: any) => {
+          const [earningsSnap, withdrawalSnap] = await Promise.all([
+            tx.get(earningsRef),
+            tx.get(withdrawalRef),
+          ])
 
-        if (withdrawalSnap.exists) {
-          // Defensive: this should not happen since we just created the ref.
-          throw new Error('Withdrawal request already exists')
-        }
+          if (withdrawalSnap.exists) {
+            // Defensive: this should not happen since we just created the ref.
+            throw new ReservationRefused('Withdrawal request already exists')
+          }
 
-        if (!earningsSnap.exists) {
-          throw new Error('Earnings not found')
-        }
+          if (!earningsSnap.exists) {
+            throw new ReservationRefused('Earnings not found')
+          }
 
-        const earningsData = earningsSnap.data() as any
-        const settlementStatus = String(earningsData?.settlementStatus || '')
-        const availableToWithdraw = Math.max(0, Number(earningsData?.availableToWithdraw || 0) || 0)
-        const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
+          const earningsData = earningsSnap.data() as any
+          const settlementStatus = String(earningsData?.settlementStatus || '')
+          const netAmount = Math.max(0, Number(earningsData?.netAmount || 0) || 0)
+          const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
 
-        if (settlementStatus !== 'ready') {
-          throw new Error('Earnings are not yet available for withdrawal')
-        }
+          // Readiness was decided above by getEventEarnings, which normalizes it
+          // against the event's end time on READ without persisting it — so a
+          // stored 'pending' here is routinely stale. 'locked' (fully withdrawn)
+          // is the only stored state that refuses. Availability is recomputed
+          // from this snapshot, exactly as withdrawFromEarnings' sync does.
+          if (settlementStatus === 'locked') {
+            throw new ReservationRefused('Earnings are not yet available for withdrawal')
+          }
+          const availableToWithdraw = Math.max(0, netAmount - withdrawnAmount)
 
-        if (availableToWithdraw < amount) {
-          throw new Error(
-            `Insufficient funds. Available: ${(availableToWithdraw / 100).toFixed(2)} ${currency}, Requested: ${(Number(amount) / 100).toFixed(2)} ${currency}`
-          )
-        }
+          if (availableToWithdraw < amount) {
+            throw new ReservationRefused(
+              `Insufficient funds. Available: ${(availableToWithdraw / 100).toFixed(2)} ${currency}, Requested: ${(Number(amount) / 100).toFixed(2)} ${currency}`
+            )
+          }
 
-        const remaining = Math.max(0, availableToWithdraw - Number(amount))
-        const newWithdrawn = withdrawnAmount + Number(amount)
+          const remaining = Math.max(0, availableToWithdraw - Number(amount))
+          const newWithdrawn = withdrawnAmount + Number(amount)
 
-        tx.set(withdrawalRef, {
-          ...baseWithdrawalRequest,
-          status: 'processing',
-          reservedAt: now,
-          reservedCents: Number(amount),
-          updatedAt: now,
-        } satisfies WithdrawalRequest as any)
+          tx.set(withdrawalRef, {
+            ...baseWithdrawalRequest,
+            status: 'processing',
+            reservedAt: now,
+            reservedCents: Number(amount),
+            updatedAt: now,
+          } satisfies WithdrawalRequest as any)
 
-        tx.update(earningsRef, {
-          availableToWithdraw: remaining,
-          withdrawnAmount: newWithdrawn,
-          settlementStatus: remaining === 0 ? 'locked' : 'ready',
-          updatedAt: nowIso,
+          tx.update(earningsRef, {
+            availableToWithdraw: remaining,
+            withdrawnAmount: newWithdrawn,
+            settlementStatus: remaining === 0 ? 'locked' : 'ready',
+            updatedAt: nowIso,
+          })
         })
+      } catch (e: any) {
+        if (e instanceof ReservationRefused) {
+          return NextResponse.json({ error: e.message }, { status: 409 })
+        }
+        throw e
+      }
+
+      const outcome = await executePrefundedTransfer({
+        amount: Number((payoutAmountHtgCents / 100).toFixed(2)),
+        receiver,
+        desc: `Tikèm instant withdrawal (${eventId})`,
+        reference: withdrawalRef.id,
       })
 
-      try {
-        const payoutAmount = Number((payoutAmountHtgCents / 100).toFixed(2))
-        const result = await moncashPrefundedTransfer({
-          amount: payoutAmount,
-          receiver: String(moncashNumber),
-          desc: `Tikèm instant withdrawal (${eventId})`,
-          reference: withdrawalRef.id,
-        })
-
+      if (outcome.outcome === 'completed') {
         await withdrawalRef.set(
           {
             status: 'completed',
             completedAt: new Date(),
             processedAt: new Date(),
-            moncashTransactionId: result.transactionId,
-            prefundingTransferRaw: result.raw,
-            payoutCurrency: 'HTG',
-            payoutAmountHtgCents,
-            usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
+            moncashTransactionId: outcome.transactionId,
+            prefundingTransferRaw: outcome.raw,
+            confirmedVia: outcome.confirmedVia,
             updatedAt: new Date(),
           },
           { merge: true }
         )
+        if (stepUpUsed) await consumePayoutDetailsChangeVerification(user.id)
 
         return NextResponse.json({
           success: true,
@@ -295,97 +382,150 @@ export async function POST(req: NextRequest) {
           usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : null,
           message: 'Instant MonCash withdrawal completed successfully'
         })
-      } catch (e: any) {
-        const failureReason = e?.message || String(e)
+      }
 
-        // Rollback reserved earnings if the MonCash transfer failed.
-        try {
-          const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId))
-          await adminDb.runTransaction(async (tx: any) => {
-            const [earningsSnap, withdrawalSnap] = await Promise.all([
-              tx.get(earningsRef),
-              tx.get(withdrawalRef),
-            ])
+      if (outcome.outcome === 'unconfirmed') {
+        // The money MAY have moved. Keep the reservation — restoring it would let
+        // the organizer withdraw the same money again — and hand it to an admin,
+        // who checks MonCash for this reference and completes or fails it.
+        console.error('[withdraw-moncash] prefunded transfer outcome unknown; held for reconciliation', {
+          withdrawalId: withdrawalRef.id,
+          reason: outcome.reason,
+          statusCheck: outcome.statusCheck,
+        })
+        await withdrawalRef.set(
+          {
+            status: 'processing',
+            needsReconciliation: true,
+            reconciliationReason: outcome.reason,
+            reconciliationStatusCheck: outcome.statusCheck,
+            updatedAt: new Date(),
+          },
+          { merge: true }
+        )
+        if (stepUpUsed) await consumePayoutDetailsChangeVerification(user.id)
 
-            if (!withdrawalSnap.exists) {
-              // Nothing to rollback (should not happen).
-              return
-            }
+        return NextResponse.json(
+          {
+            success: true,
+            withdrawalId: withdrawalRef.id,
+            instant: false,
+            confirming: true,
+            feeCents,
+            payoutAmountCents,
+            payoutCurrency: 'HTG',
+            payoutAmountHtgCents,
+            message:
+              'Your MonCash withdrawal was sent but not yet confirmed. We are verifying it with MonCash — do not resubmit.',
+          },
+          { status: 202 }
+        )
+      }
 
-            const withdrawal = withdrawalSnap.data() as any
-            if (String(withdrawal?.status || '') === 'completed') {
-              // Don't rollback once marked completed.
-              return
-            }
+      // outcome === 'rejected': MonCash definitively refused, no money moved.
+      const failureReason = outcome.reason
 
-            if (!earningsSnap.exists) {
-              // Can't safely rollback earnings; still mark withdrawal failed.
-              tx.set(
-                withdrawalRef,
-                {
-                  status: 'failed',
-                  failureReason,
-                  updatedAt: new Date(),
-                },
-                { merge: true }
-              )
-              return
-            }
+      // Rollback reserved earnings.
+      try {
+        await adminDb.runTransaction(async (tx: any) => {
+          const [earningsSnap, withdrawalSnap] = await Promise.all([
+            tx.get(earningsRef),
+            tx.get(withdrawalRef),
+          ])
 
-            const earningsData = earningsSnap.data() as any
-            const availableToWithdraw = Math.max(0, Number(earningsData?.availableToWithdraw || 0) || 0)
-            const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
+          if (!withdrawalSnap.exists) {
+            // Nothing to rollback (should not happen).
+            return
+          }
 
-            const restoredAvailable = availableToWithdraw + Number(amount)
-            const restoredWithdrawn = Math.max(0, withdrawnAmount - Number(amount))
+          const withdrawal = withdrawalSnap.data() as any
+          if (String(withdrawal?.status || '') !== 'processing') {
+            // Completed or already rolled back: never credit twice.
+            return
+          }
 
-            tx.update(earningsRef, {
-              availableToWithdraw: restoredAvailable,
-              withdrawnAmount: restoredWithdrawn,
-              settlementStatus: restoredAvailable === 0 ? 'locked' : 'ready',
-              updatedAt: new Date().toISOString(),
-            })
-
+          if (!earningsSnap.exists) {
+            // Can't safely rollback earnings; still mark withdrawal failed.
             tx.set(
               withdrawalRef,
               {
                 status: 'failed',
                 failureReason,
-                reservationRolledBackAt: new Date(),
                 updatedAt: new Date(),
               },
               { merge: true }
             )
+            return
+          }
+
+          const earningsData = earningsSnap.data() as any
+          const availableToWithdraw = Math.max(0, Number(earningsData?.availableToWithdraw || 0) || 0)
+          const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
+
+          const restoredAvailable = availableToWithdraw + Number(amount)
+          const restoredWithdrawn = Math.max(0, withdrawnAmount - Number(amount))
+
+          tx.update(earningsRef, {
+            availableToWithdraw: restoredAvailable,
+            withdrawnAmount: restoredWithdrawn,
+            settlementStatus: restoredAvailable === 0 ? 'locked' : 'ready',
+            updatedAt: new Date().toISOString(),
           })
-        } catch (rollbackErr) {
-          console.error('Failed to rollback earnings after prefunded transfer failure:', rollbackErr)
-          await withdrawalRef.set(
+
+          tx.set(
+            withdrawalRef,
             {
               status: 'failed',
               failureReason,
+              reservationRolledBackAt: new Date(),
               updatedAt: new Date(),
             },
             { merge: true }
           )
-        }
-
-        return NextResponse.json(
-          { error: 'Instant MonCash transfer failed', message: e?.message || String(e) },
-          { status: 502 }
+        })
+      } catch (rollbackErr) {
+        // The reservation is still held and the row still says 'processing',
+        // so it stays visible to an admin rather than silently losing money.
+        console.error('Failed to rollback earnings after prefunded transfer failure:', rollbackErr)
+        await withdrawalRef.set(
+          {
+            needsReconciliation: true,
+            reconciliationReason: `rejected by MonCash but rollback failed: ${failureReason}`,
+            updatedAt: new Date(),
+          },
+          { merge: true }
         )
       }
+
+      return NextResponse.json(
+        { error: 'Instant MonCash transfer failed', message: failureReason },
+        { status: 502 }
+      )
     }
 
     // Create withdrawal request for manual processing.
     await withdrawalRef.set(baseWithdrawalRequest)
 
-    // Standard (manual) MonCash request.
-    await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+    // Standard (manual) MonCash request. The debit is the real guard: if it is
+    // refused (a concurrent submit already took the balance), the request we
+    // just filed must not stay 'pending' for an admin to pay out a second time.
+    const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+    if (!debit.success) {
+      await withdrawalRef.set(
+        { status: 'failed', failureReason: debit.error || 'Earnings debit refused', updatedAt: new Date() },
+        { merge: true }
+      )
+      return NextResponse.json(
+        { error: debit.error || 'Insufficient balance for this withdrawal' },
+        { status: 409 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
       withdrawalId: withdrawalRef.id,
       instant: false,
+      instantFallbackReason,
       payoutCurrency: 'HTG',
       payoutAmountHtgCents,
       usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : null,
