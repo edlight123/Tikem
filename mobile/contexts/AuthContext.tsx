@@ -10,6 +10,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
+import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import type { SocialLinks, PrivacySettings } from '../types/social';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -265,11 +266,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  /**
+   * Android: native Google Sign-In. Google no longer allows custom-URI-scheme
+   * redirects on Android OAuth clients, so the browser flow (expo-auth-session)
+   * can't complete there. The native picker verifies package + signing SHA-1
+   * against the Android OAuth clients in the event-haiti project and returns an
+   * ID token minted for the WEB client, which is what Firebase expects.
+   * Resolves null when the user closes the picker.
+   */
+  const nativeGoogleIdToken = async (): Promise<string | null> => {
+    GoogleSignin.configure({ webClientId: googleWebClientId });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Always show the account chooser, so re-auth and "switch account" work.
+    await GoogleSignin.signOut().catch(() => {});
+    const res = await GoogleSignin.signIn();
+    if (!isSuccessResponse(res)) return null;
+    return res.data.idToken ?? null;
+  };
+
   const signInWithGoogle = async () => {
     if (!googleConfigured) {
       throw new Error('Google Sign-In is not configured (missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).');
     }
     try {
+      if (Platform.OS === 'android') {
+        const idToken = await nativeGoogleIdToken();
+        if (idToken) await handleGoogleSignInSuccess(idToken);
+        return;
+      }
       await promptAsync();
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
@@ -379,6 +403,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await reauthenticateWithCredential(current, credential);
     } else if (method === 'google') {
       if (!googleConfigured) throw new Error('Google Sign-In is not configured.');
+      if (Platform.OS === 'android') {
+        const idToken = await nativeGoogleIdToken();
+        if (!idToken) throw Object.assign(new Error('Re-authentication cancelled'), { code: 'auth/cancelled' });
+        await reauthenticateWithCredential(current, GoogleAuthProvider.credential(idToken));
+        await current.getIdToken(true);
+        return;
+      }
       googleReauthInFlight.current = true;
       try {
         const result = await promptAsync();

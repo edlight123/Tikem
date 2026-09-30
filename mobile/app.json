@@ -151,6 +151,12 @@
           "merchantIdentifier": "merchant.co.tikem",
           "enableGooglePay": true
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.71580084056-uk9npqpsmm9sfdfe03k2ot3ha7qtv9h8"
+        }
       ]
     ],
     "extra": {
