@@ -17,6 +17,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as Crypto from 'expo-crypto';
 import { hasPaidTier } from '../ticketPricing';
 import { backendJson } from './backend';
+import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 
 /**
  * SHA-256 hex of the trimmed raw access code (trim only; case-sensitive).
@@ -100,7 +101,12 @@ export interface CreateEventData {
    * the event page; anything unparseable is simply ignored there.
    */
   spotify_url?: string;
-  /** Whether attendees can see the guest list. */
+  /**
+   * How the guest list appears on the event page — see lib/guestlistVisibility.
+   * Same three states the web composer writes.
+   */
+  guestlist_visibility?: GuestlistVisibility;
+  /** Legacy boolean, derived from guestlist_visibility on write. */
   show_guestlist?: boolean;
   /**
    * Recurring-event cadence (create-only). When set to a real cadence and
@@ -426,7 +432,10 @@ export async function createEvent(
         // Song. `null` (not '') when empty, matching the web composer and the
         // lib/data/events.ts field whitelist.
         spotify_url: eventData.spotify_url?.trim() || null,
-        show_guestlist: eventData.show_guestlist !== false,
+        // Both fields, like the web composer: the three-state mode, plus the
+        // legacy boolean for older readers (see lib/guestlistVisibility).
+        guestlist_visibility: guestlistVisibilityFrom(eventData),
+        show_guestlist: showGuestlistFor(guestlistVisibilityFrom(eventData)),
         // Organizer poster-theme override ('' = Auto). Resolvers fall back to the
         // deterministic pick when this is empty/invalid.
         theme_key: eventData.theme_key || '',
@@ -569,7 +578,10 @@ export async function updateEvent(
       video_url: eventData.video_url || '',
       // Song — cleared to null when the organizer removes it (see createEvent).
       spotify_url: eventData.spotify_url?.trim() || null,
-      show_guestlist: eventData.show_guestlist !== false,
+      // Both fields — writing only the boolean left a web-set
+      // guestlist_visibility in force, so a mobile "off" never took effect.
+      guestlist_visibility: guestlistVisibilityFrom(eventData),
+      show_guestlist: showGuestlistFor(guestlistVisibilityFrom(eventData)),
       // Organizer poster-theme override ('' = Auto); see createEvent.
       theme_key: eventData.theme_key || '',
       // Password gate flag. When toggled OFF this becomes false and the old
