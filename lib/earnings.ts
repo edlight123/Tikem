@@ -329,6 +329,65 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   }
 }
 
+/** Code returned when an event's stored earnings must be reviewed before any withdrawal. */
+export const EARNINGS_CURRENCY_REVIEW_CODE = 'earnings_currency_review' as const
+
+export const EARNINGS_CURRENCY_REVIEW_MESSAGE =
+  "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it — no money has moved."
+
+/**
+ * A stored event_earnings row whose currency is not the event's.
+ *
+ * Such a row cannot be trusted for a debit, and cannot be safely repaired
+ * automatically: addTicketToEarnings always adds event-currency amounts but
+ * never rewrites `currency`, so the stored figures may be in the event currency
+ * under a wrong label, or genuinely in another currency — nothing on the row
+ * says which. Its withdrawnAmount carries the same ambiguity, so it can be
+ * neither subtracted from a tickets-derived net nor converted. Every surface
+ * therefore treats the balance as 0 and every debit refuses until an admin
+ * corrects the row. A missing stored currency is not a mismatch (legacy rows
+ * are in the event currency).
+ */
+export function storedEarningsCurrencyMismatch(
+  storedCurrencyRaw: unknown,
+  eventCurrencyRaw: unknown
+): { storedCurrency: string; eventCurrency: string } | null {
+  if (!storedCurrencyRaw) return null
+  const storedCurrency = normalizeCurrency(storedCurrencyRaw)
+  const eventCurrency = normalizeCurrency(eventCurrencyRaw || 'HTG')
+  return storedCurrency === eventCurrency ? null : { storedCurrency, eventCurrency }
+}
+
+/**
+ * Mark the stored row so an admin can find it (`currencyReview.status ==
+ * 'needs_admin_review'`). Touches no money field. Best-effort.
+ */
+export async function flagEarningsCurrencyReview(eventId: string, context?: Record<string, unknown>): Promise<void> {
+  try {
+    const doc = await findEventEarningsDoc(eventId)
+    if (!doc) return
+    const eventDoc = await adminDb.collection('events').doc(eventId).get()
+    const mismatch = storedEarningsCurrencyMismatch(
+      (doc.data() as any)?.currency,
+      eventDoc.exists ? (eventDoc.data() as any)?.currency : null
+    )
+    if (!mismatch) return
+    await doc.ref.set(
+      {
+        currencyReview: {
+          status: 'needs_admin_review',
+          ...mismatch,
+          flaggedAt: new Date().toISOString(),
+          ...(context || {}),
+        },
+      },
+      { merge: true }
+    )
+  } catch (e) {
+    console.error('flagEarningsCurrencyReview failed', eventId, (e as any)?.message)
+  }
+}
+
 /**
  * Get event earnings record (without creating if missing)
  * 
@@ -381,26 +440,40 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
       }
     }
 
-    // If stored currency disagrees with the event currency, prefer a derived view from tickets.
-    // This avoids showing Stripe charged currency (USD) for HTG events.
+    // If stored currency disagrees with the event currency, show a derived view
+    // from tickets (so an HTG event never displays Stripe's charged USD) — but
+    // NEVER as a withdrawable balance. See storedEarningsCurrencyMismatch.
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     const eventCurrency = eventDoc.exists ? normalizeCurrency((eventDoc.data() as any)?.currency || 'HTG') : null
 
-    if (eventCurrency && normalizeCurrency((stored as any)?.currency || eventCurrency) !== eventCurrency) {
+    const mismatch = eventCurrency ? storedEarningsCurrencyMismatch((stored as any)?.currency, eventCurrency) : null
+    if (eventCurrency && mismatch) {
+      const withdrawalBlocked = {
+        code: EARNINGS_CURRENCY_REVIEW_CODE,
+        storedCurrency: mismatch.storedCurrency,
+        eventCurrency,
+      } as const
       const derived = await deriveEventEarningsFromTickets(eventId)
       if (derived) {
-        const withdrawnAmount = Math.max(0, Number((stored as any).withdrawnAmount || 0) || 0)
         derived.id = stored.id
-        derived.withdrawnAmount = withdrawnAmount
-        derived.availableToWithdraw =
-          derived.settlementStatus === 'ready' ? Math.max(0, Number(derived.netAmount || 0) - withdrawnAmount) : 0
+        // The stored figure, in the STORED currency's units — shown for history,
+        // never subtracted from the derived (event-currency) net.
+        derived.withdrawnAmount = Math.max(0, Number((stored as any).withdrawnAmount || 0) || 0)
+        derived.availableToWithdraw = 0
         derived.currency = eventCurrency
+        derived.withdrawalBlocked = withdrawalBlocked
         ;(derived as any).dataSource = 'tickets_derived'
         return derived
       }
 
       // No tickets to derive from; at least align display currency to event currency.
-      return { ...stored, currency: eventCurrency, dataSource: (stored as any).dataSource || 'event_earnings' } as EventEarnings
+      return {
+        ...stored,
+        currency: eventCurrency,
+        availableToWithdraw: 0,
+        withdrawalBlocked,
+        dataSource: (stored as any).dataSource || 'event_earnings',
+      } as EventEarnings
     }
 
     return stored
@@ -515,18 +588,15 @@ export async function getOrCreateEventEarnings(eventId: string): Promise<{
   ref: FirebaseFirestore.DocumentReference
   data: EventEarnings | null
 }> {
-  // Try to find existing earnings
-  const earningsSnapshot = await adminDb
-    .collection('event_earnings')
-    .where('eventId', '==', eventId)
-    .limit(1)
-    .get()
-
-  if (!earningsSnapshot.empty) {
-    const doc = earningsSnapshot.docs[0]
+  // Find the existing row with the SAME lookup getEventEarnings uses (eventId,
+  // then legacy event_id, then doc id). Querying `eventId` alone here used to
+  // miss a legacy row that the read path found, so a withdrawal was validated
+  // against one document and debited from a freshly created empty one.
+  const existing = await findEventEarningsDoc(eventId)
+  if (existing) {
     return {
-      ref: doc.ref,
-      data: { id: doc.id, ...doc.data() } as EventEarnings,
+      ref: existing.ref,
+      data: { id: existing.id, ...(existing.data() as any) } as EventEarnings,
     }
   }
 
@@ -673,11 +743,20 @@ export async function withdrawFromEarnings(
   eventId: string,
   amount: number,
   payoutId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string }> {
   const { ref, data } = await getOrCreateEventEarnings(eventId)
 
   if (!data) {
     return { success: false, error: 'Earnings not found' }
+  }
+
+  // Never debit a row whose units are ambiguous (see storedEarningsCurrencyMismatch).
+  // getEventEarnings reports its balance as 0, so the callers' validation and
+  // this debit agree; this is the backstop for any caller that skipped it.
+  const eventForCurrency = await adminDb.collection('events').doc(eventId).get()
+  const eventCurrencyRaw = eventForCurrency.exists ? (eventForCurrency.data() as any)?.currency : null
+  if (storedEarningsCurrencyMismatch((data as any).currency, eventCurrencyRaw)) {
+    return { success: false, error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE }
   }
 
   const netAmount = Math.max(0, Number((data as any).netAmount || 0) || 0)
@@ -751,11 +830,19 @@ export async function withdrawFromEarnings(
       const available = Math.max(0, Number(cur?.availableToWithdraw || 0) || 0)
       const withdrawn = Math.max(0, Number(cur?.withdrawnAmount || 0) || 0)
 
+      if (storedEarningsCurrencyMismatch(cur?.currency, eventCurrencyRaw)) {
+        return {
+          success: false,
+          error: EARNINGS_CURRENCY_REVIEW_MESSAGE,
+          code: EARNINGS_CURRENCY_REVIEW_CODE,
+        } as { success: boolean; error?: string; code?: string }
+      }
+
       if (available < amount) {
         return {
           success: false,
           error: `Insufficient funds. Available: ${available}, Requested: ${amount}`,
-        } as { success: boolean; error?: string }
+        } as { success: boolean; error?: string; code?: string }
       }
 
       const remaining = Math.max(0, available - amount)
@@ -766,7 +853,7 @@ export async function withdrawFromEarnings(
         settlementStatus: remaining === 0 ? 'locked' : 'ready',
         updatedAt: new Date().toISOString(),
       })
-      return { success: true } as { success: boolean; error?: string }
+      return { success: true } as { success: boolean; error?: string; code?: string }
     })
 
     if (result.success) {

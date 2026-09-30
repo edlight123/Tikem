@@ -5,8 +5,26 @@
  * those: the preview here must match what the withdrawal actually charges.
  */
 
-/** Server minimum, in MINOR units of the event's currency (50.00 HTG or $50). */
-export const MONCASH_MIN_WITHDRAWAL_MINOR = 5000
+/**
+ * MonCash withdrawal floor: 1,000 HTG, in HTG minor units, measured on the HTG
+ * value (a USD balance converted at the withdrawal's rate). Mirrors
+ * MONCASH_MIN_WITHDRAWAL_HTG_CENTS in lib/payouts/moncash-withdrawal-minimum.ts,
+ * which the withdraw + quote routes enforce. Bank withdrawals keep their own
+ * 5,000-minor floor.
+ */
+export const MONCASH_MIN_WITHDRAWAL_HTG_CENTS = 100_000
+
+/**
+ * The floor in the event currency's minor units — the smallest whole amount the
+ * server accepts (same rounding as moncashWithdrawalMinimumMinor on the server).
+ * Null for a USD event whose rate is not known yet: do not guess.
+ */
+export function moncashMinimumMinor(currency: string, usdToHtgRate?: number | null): number | null {
+  if (String(currency || '').toUpperCase() !== 'USD') return MONCASH_MIN_WITHDRAWAL_HTG_CENTS
+  const rate = Number(usdToHtgRate)
+  if (!Number.isFinite(rate) || rate <= 0) return null
+  return Math.ceil(MONCASH_MIN_WITHDRAWAL_HTG_CENTS / rate - 1e-9)
+}
 
 /** Instant (prefunded) MonCash fee — PREFUNDING_FEE_PERCENT on the server. */
 export const INSTANT_MONCASH_FEE_PERCENT = 0.03

@@ -11,15 +11,24 @@ import type { EventEarnings } from '@/types/earnings'
 import type { EventTierSalesBreakdownRow } from '@/lib/earnings'
 import { MetricCard, StatusChip, type ChipTone } from '@/components/organizer/ui'
 import { DollarSign, TrendingUp, Wallet } from 'lucide-react'
+import {
+  MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
+  type MoncashMinimumInfo,
+} from '@/lib/payouts/moncash-withdrawal-minimum'
+
+/** Haiti bank-transfer floor, as enforced by /api/organizer/withdraw-bank (unchanged). */
+const BANK_MIN_WITHDRAWAL_MINOR = 5000
 
 interface EventEarningsViewProps {
   event: any
   earnings: EventEarnings | null
   organizerId: string
   tierBreakdown?: EventTierSalesBreakdownRow[]
+  /** The MonCash 1,000 HTG floor in this event's currency, from the server. */
+  moncashMinimum?: MoncashMinimumInfo | null
 }
 
-export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown }: EventEarningsViewProps) {
+export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown, moncashMinimum }: EventEarningsViewProps) {
   const { t } = useTranslation('organizer')
   const router = useRouter()
   const { showToast } = useToast()
@@ -77,8 +86,12 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     routingNumber: ''
   })
 
+  // Held for admin review: the withdraw routes refuse it, so show nothing withdrawable.
+  const withdrawalBlocked = Boolean(earnings?.withdrawalBlocked)
+
   const availableToWithdraw = useMemo(() => {
     if (!earnings) return 0
+    if (earnings.withdrawalBlocked) return 0
     if (earnings.settlementStatus !== 'ready') return 0
     return Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
   }, [earnings])
@@ -86,6 +99,24 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
   const isInstantPrefundingAvailable = useMemo(() => {
     return Boolean(prefunding?.enabled && prefunding?.available && allowInstantMoncash)
   }, [prefunding, allowInstantMoncash])
+
+  // Same floor the MonCash route enforces: 1,000 HTG, measured in HTG (a USD
+  // balance converted at the server's rate). Unknown minimum on a USD event →
+  // let the server decide rather than block.
+  const moncashMinMinor = useMemo(() => {
+    const cur = String(earnings?.currency || 'HTG').toUpperCase()
+    if (moncashMinimum && Number.isFinite(moncashMinimum.minimumMinor)) return moncashMinimum.minimumMinor
+    return cur === 'USD' ? 0 : MONCASH_MIN_WITHDRAWAL_HTG_CENTS
+  }, [earnings?.currency, moncashMinimum])
+  const moncashMeetsMinimum = availableToWithdraw >= moncashMinMinor
+  const bankMeetsMinimum = availableToWithdraw >= BANK_MIN_WITHDRAWAL_MINOR
+  const moncashMinLabel = useMemo(() => {
+    const htg = formatCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG')
+    if (String(earnings?.currency || 'HTG').toUpperCase() === 'USD' && moncashMinMinor > 0) {
+      return `${htg} (≈ ${formatCurrency(moncashMinMinor, 'USD')})`
+    }
+    return htg
+  }, [earnings?.currency, moncashMinMinor])
 
   const prefundingFeeCents = useMemo(() => {
     if (!isInstantPrefundingAvailable) return 0
@@ -498,7 +529,13 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       )}
 
       {/* Withdrawal Section */}
-      {earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
+      {withdrawalBlocked && (
+        <div className="rounded-xl bg-amber-500/10 p-4 mb-6">
+          <p className="text-amber-200 text-sm">{t('event_earnings.needs_admin_review')}</p>
+        </div>
+      )}
+
+      {!withdrawalBlocked && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
         <div className="rounded-xl bg-white/[0.03] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -507,11 +544,13 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
             </div>
           </div>
 
-          {availableToWithdraw >= 5000 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <button
                 onClick={() => handleWithdraw('moncash')}
-                className="border-2 border-brand-500/30 rounded-xl p-4 hover:border-brand-400 hover:shadow-md transition-all text-left group"
+                disabled={!moncashMeetsMinimum}
+                aria-disabled={!moncashMeetsMinimum}
+                className="w-full border-2 border-brand-500/30 rounded-xl p-4 hover:border-brand-400 hover:shadow-md transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-brand-500/30"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-brand-200 transition-colors">
@@ -524,10 +563,22 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 </div>
                 <div className="text-xs text-white/70">{t('event_earnings.processed_24h')}</div>
               </button>
+              {!moncashMeetsMinimum && (
+                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  {t('event_earnings.moncash_below_minimum', {
+                    min: moncashMinLabel,
+                    balance: formatCurrency(availableToWithdraw, earnings.currency),
+                  })}
+                </p>
+              )}
+            </div>
 
+            <div>
               <button
                 onClick={() => handleWithdraw('bank')}
-                className="border-2 border-brand-500/30 rounded-xl p-4 hover:border-brand-400 hover:shadow-md transition-all text-left group"
+                disabled={!bankMeetsMinimum}
+                aria-disabled={!bankMeetsMinimum}
+                className="w-full border-2 border-brand-500/30 rounded-xl p-4 hover:border-brand-400 hover:shadow-md transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-brand-500/30"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-brand-500/15 transition-colors">
@@ -540,14 +591,15 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 </div>
                 <div className="text-xs text-white/70">{t('event_earnings.processed_3_5_days')}</div>
               </button>
+              {!bankMeetsMinimum && (
+                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  {t('event_earnings.bank_below_minimum', {
+                    min: formatCurrency(BANK_MIN_WITHDRAWAL_MINOR, earnings.currency),
+                  })}
+                </p>
+              )}
             </div>
-          ) : (
-            <div className="border border-amber-500/30 rounded-lg p-4">
-              <p className="text-amber-300 text-sm">
-                ⚠️ Minimum withdrawal amount is $50.00. Current available balance: {formatCurrency(availableToWithdraw, earnings.currency)}
-              </p>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -563,7 +615,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               </div>
               <span className="font-mono tabular-nums font-bold text-white">{formatCurrency(earnings.withdrawnAmount, earnings.currency)}</span>
             </div>
-            {earnings.netAmount - earnings.withdrawnAmount > 0 && (
+            {!withdrawalBlocked && earnings.netAmount - earnings.withdrawnAmount > 0 && (
               <div className="flex justify-between items-center py-3">
                 <div>
                   <div className="font-medium text-white">{t('event_earnings.remaining_balance')}</div>

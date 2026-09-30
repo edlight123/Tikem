@@ -7,6 +7,8 @@ import { getEventEarnings, getEventTierSalesBreakdown } from '@/lib/earnings'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
 import { isAdmin } from '@/lib/admin'
+import { fetchUsdToHtgRate } from '@/lib/currency'
+import { moncashMinimumInfo, type MoncashMinimumInfo } from '@/lib/payouts/moncash-withdrawal-minimum'
 
 export const revalidate = 30
 
@@ -58,6 +60,16 @@ export default async function EventEarningsPage({
 
   const tierBreakdown = await getEventTierSalesBreakdown(eventId)
 
+  // The MonCash floor (1,000 HTG) in this event's currency, at the rate the
+  // withdrawal route would convert with. Null = unknown; the route still enforces it.
+  let moncashMinimum: MoncashMinimumInfo | null = null
+  try {
+    const cur = String(earnings?.currency || 'HTG').toUpperCase()
+    moncashMinimum = moncashMinimumInfo(cur, cur === 'USD' ? await fetchUsdToHtgRate() : 1)
+  } catch {
+    moncashMinimum = null
+  }
+
   // Serialize Firestore timestamps
   const serializeData = (obj: any): any => {
     if (!obj || typeof obj !== 'object') return obj
@@ -86,6 +98,7 @@ export default async function EventEarningsPage({
       earnings={serializedEarnings}
       organizerId={user.id}
       tierBreakdown={tierBreakdown}
+      moncashMinimum={moncashMinimum}
     />
   )
 }

@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { getEventEarnings } from '@/lib/earnings'
+import { EARNINGS_CURRENCY_REVIEW_CODE, EARNINGS_CURRENCY_REVIEW_MESSAGE, getEventEarnings } from '@/lib/earnings'
 import { fetchUsdToHtgRate } from '@/lib/currency'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { PREFUNDING_FEE_PERCENT, computePrefundedPayout } from '@/lib/payouts/moncash-prefunded'
+import {
+  MONCASH_BELOW_MINIMUM_CODE,
+  meetsMoncashWithdrawalMinimum,
+  moncashMinimumInfo,
+} from '@/lib/payouts/moncash-withdrawal-minimum'
 
 const QuerySchema = z.object({
   eventId: z.string().min(1),
@@ -47,8 +52,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
     }
 
+    // A row held for admin review has nothing withdrawable — the POST refuses it.
+    const blocked = earnings.withdrawalBlocked?.code === EARNINGS_CURRENCY_REVIEW_CODE
     const availableToWithdraw =
-      earnings.settlementStatus === 'ready'
+      !blocked && earnings.settlementStatus === 'ready'
         ? Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
         : 0
 
@@ -70,6 +77,16 @@ export async function GET(request: NextRequest) {
     // Same math as the withdrawal itself (lib/payouts/moncash-prefunded.ts), so
     // the fee and net shown here are exactly what the POST charges and sends.
     const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
+
+    // The same 1,000 HTG floor, at the same rate, that the POST enforces.
+    const minimum = moncashMinimumInfo(currency, usdToHtgRate)
+    const meetsMinimum = meetsMoncashWithdrawalMinimum(availableToWithdraw, currency, usdToHtgRate)
+    const refusal = blocked
+      ? { code: EARNINGS_CURRENCY_REVIEW_CODE, message: EARNINGS_CURRENCY_REVIEW_MESSAGE }
+      : !meetsMinimum
+        ? { code: MONCASH_BELOW_MINIMUM_CODE, message: 'The minimum MonCash withdrawal is 1,000 HTG.' }
+        : null
+
     const instantPricing = computePrefundedPayout(availableToWithdraw, usdToHtgRate)
     const feeCents = instantAvailable ? instantPricing.feeCents : 0
     const payoutAmountCents = instantAvailable ? instantPricing.payoutAmountCents : availableToWithdraw
@@ -89,6 +106,10 @@ export async function GET(request: NextRequest) {
         payoutCurrency: 'HTG',
         payoutAmountHtgCents,
         usdToHtgRate: currency === 'USD' ? usdToHtgRate : null,
+        minimum,
+        canWithdraw: refusal === null,
+        code: refusal?.code ?? null,
+        message: refusal?.message ?? null,
       },
     })
   } catch (err: any) {

@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { getEventEarnings, getOrCreateEventEarnings, withdrawFromEarnings } from '@/lib/earnings'
+import {
+  EARNINGS_CURRENCY_REVIEW_CODE,
+  EARNINGS_CURRENCY_REVIEW_MESSAGE,
+  flagEarningsCurrencyReview,
+  getEventEarnings,
+  getOrCreateEventEarnings,
+  storedEarningsCurrencyMismatch,
+  withdrawFromEarnings,
+} from '@/lib/earnings'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
@@ -19,17 +27,26 @@ import {
   prefundedBalanceCovers,
   sameMoncashNumberLast4,
 } from '@/lib/payouts/moncash-prefunded'
+import {
+  MONCASH_BELOW_MINIMUM_CODE,
+  MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
+  meetsMoncashWithdrawalMinimum,
+  moncashMinimumInfo,
+} from '@/lib/payouts/moncash-withdrawal-minimum'
 import { finalizeWithdrawalCompleted, releaseWithdrawalReservation } from '@/lib/payouts/withdrawal-finalize'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/** Minimum withdrawal, in minor units of the event's currency. */
-const MIN_WITHDRAWAL_MINOR = 5000
-
 /** A refusal raised inside the reservation transaction — a 4xx, not a crash. */
-class ReservationRefused extends Error {}
+class ReservationRefused extends Error {
+  code?: string
+  constructor(message: string, code?: string) {
+    super(message)
+    this.code = code
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -141,9 +158,33 @@ export async function POST(req: NextRequest) {
     const rawCurrency = String(earnings.currency || 'HTG').toUpperCase()
     const currency = (['USD', 'CAD', 'EUR'].includes(rawCurrency) ? rawCurrency : 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
 
-    if (amount < MIN_WITHDRAWAL_MINOR) {
+    // A stored row in another currency than the event's: its figures can be
+    // neither validated nor debited safely, so nothing moves until an admin
+    // corrects it (lib/earnings.ts storedEarningsCurrencyMismatch).
+    if (earnings.withdrawalBlocked?.code === EARNINGS_CURRENCY_REVIEW_CODE) {
+      await flagEarningsCurrencyReview(String(eventId), { lastRefusedWithdrawalAt: new Date().toISOString() })
       return NextResponse.json(
-        { error: `Minimum withdrawal amount is ${(MIN_WITHDRAWAL_MINOR / 100).toFixed(2)} ${currency}` },
+        { error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true },
+        { status: 409 }
+      )
+    }
+
+    // MonCash transfers are executed in HTG. If earnings are in USD, we convert
+    // at withdrawal time — and the 1,000 HTG floor is measured on that HTG value.
+    const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
+
+    if (!meetsMoncashWithdrawalMinimum(amount, currency, usdToHtgRate)) {
+      const minimum = moncashMinimumInfo(currency, usdToHtgRate)
+      const htgLabel = `${(MONCASH_MIN_WITHDRAWAL_HTG_CENTS / 100).toLocaleString('en-US')} HTG`
+      return NextResponse.json(
+        {
+          error:
+            currency === 'USD'
+              ? `The minimum MonCash withdrawal is ${htgLabel} (about ${(minimum.minimumMinor / 100).toFixed(2)} USD at today's rate).`
+              : `The minimum MonCash withdrawal is ${htgLabel}.`,
+          code: MONCASH_BELOW_MINIMUM_CODE,
+          minimum,
+        },
         { status: 400 }
       )
     }
@@ -201,8 +242,6 @@ export async function POST(req: NextRequest) {
     const prefundingAvailable = Boolean(prefunding?.available)
     const allowInstantMoncash = Boolean(haitiProfile?.allowInstantMoncash)
 
-    // MonCash transfers are executed in HTG. If earnings are in USD, we convert at withdrawal time.
-    const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
     const instantPricing = computePrefundedPayout(amount, usdToHtgRate)
 
     let shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
@@ -318,6 +357,11 @@ export async function POST(req: NextRequest) {
           if (settlementStatus === 'locked') {
             throw new ReservationRefused('Earnings are not yet available for withdrawal')
           }
+          // Re-checked on the snapshot being debited: validation above read the
+          // same row, and must have read it in the same currency.
+          if (storedEarningsCurrencyMismatch(earningsData?.currency, eventData?.currency)) {
+            throw new ReservationRefused(EARNINGS_CURRENCY_REVIEW_MESSAGE, EARNINGS_CURRENCY_REVIEW_CODE)
+          }
           const availableToWithdraw = Math.max(0, netAmount - withdrawnAmount)
 
           if (availableToWithdraw < amount) {
@@ -346,7 +390,7 @@ export async function POST(req: NextRequest) {
         })
       } catch (e: any) {
         if (e instanceof ReservationRefused) {
-          return NextResponse.json({ error: e.message }, { status: 409 })
+          return NextResponse.json({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: 409 })
         }
         throw e
       }
@@ -466,7 +510,7 @@ export async function POST(req: NextRequest) {
         { merge: true }
       )
       return NextResponse.json(
-        { error: debit.error || 'Insufficient balance for this withdrawal' },
+        { error: debit.error || 'Insufficient balance for this withdrawal', ...(debit.code ? { code: debit.code } : {}) },
         { status: 409 }
       )
     }

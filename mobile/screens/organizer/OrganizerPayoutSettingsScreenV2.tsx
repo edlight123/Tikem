@@ -26,7 +26,7 @@ import { useLocaleFormat } from '../../lib/format'
 import { formatCurrency as fmtCurrency } from '../../lib/currency'
 import {
   INSTANT_MONCASH_FEE_PERCENT,
-  MONCASH_MIN_WITHDRAWAL_MINOR,
+  MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
   parsePrefundingStatus,
   type PrefundingStatus,
 } from '../../lib/moncashPayout'
@@ -864,8 +864,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         ? 'available'
         : 'paused'
   const instantMinimumLine = t('organizerPayoutSettings.instantMoncash.minimum')
-    .replace('{htg}', fmtCurrency(MONCASH_MIN_WITHDRAWAL_MINOR, 'HTG', { fromCents: true, decimals: 0 }))
-    .replace('{usd}', fmtCurrency(MONCASH_MIN_WITHDRAWAL_MINOR, 'USD', { fromCents: true, decimals: 0 }))
+    .replace('{htg}', fmtCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG', { fromCents: true, decimals: 0 }))
   const instantFeeLabel = `${Math.round(INSTANT_MONCASH_FEE_PERCENT * 100)}%`
 
   const pickVerificationDocument = useCallback(async () => {

@@ -1378,7 +1378,7 @@ export default {
       bodyPaused: 'Peman instant yo kanpe pou kounye a. Jiskaske yo tounen, chak retrè pase anba revizyon ekip nou an (anjeneral nan 24 èdtan), san frè instant.',
       bodyNotYet: 'Peman instant yo poko disponib. Pou kounye a, chak retrè pase anba revizyon ekip nou an, anjeneral nan 24 èdtan.',
       stateNotYet: 'Talè konsa',
-      minimum: 'Retrè minimòm: {htg} ({usd} pou evènman an USD).',
+      minimum: 'Retrè MonCash minimòm: {htg}. Pou yon evènman an USD, se menm valè a an USD nan to jou a.',
       saveFailed: 'Nou pa t kapab chanje peman instant yo. Tanpri eseye ankò.',
     },
     moncashVerify: {
@@ -1559,6 +1559,8 @@ export default {
       notReadyWithDate: 'Revni yo ap disponib pou retrè {date}.',
       underReview: 'Peman ou pou evènman sa a nan men ekip Tikèm nan. N ap voye yon imèl ba ou lè li apwouve.',
       missingEndDate: 'Evènman sa a pa gen dat fen, donk nou pa ka di kilè lajan an ap disponib. Ajoute yon dat fen.',
+      moncashBelowMinimum: 'Retrè MonCash kòmanse a {min}. Balans ou ki disponib se {balance}.',
+      needsAdminReview: 'Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l — pa gen okenn lajan ki deplase.',
     },
     modal: {
       titleMoncash: 'Mande retrè MonCash',
@@ -1636,6 +1638,7 @@ export default {
       selectAccountBody: 'Tanpri chwazi yon kont bank.',
       belowMinimumTitle: 'Minimòm pa rive',
       belowMinimumBody: 'Ou bezwen omwen {min} pou retire.',
+      moncashBelowMinimumBody: 'Retrè MonCash kòmanse a {min}. Balans ou ki disponib se {balance}.',
     },
     errors: {
       loadFailed: 'Pa t kapab chaje revni yo',

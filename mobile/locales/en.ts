@@ -1730,7 +1730,7 @@ export default {
       bodyPaused: 'Instant payouts are paused right now. Until they are back, every withdrawal goes to manual review by our team (usually within 24 hours), with no instant fee.',
       bodyNotYet: 'Instant payouts are not available yet. For now, every withdrawal goes to manual review by our team, usually within 24 hours.',
       stateNotYet: 'Coming soon',
-      minimum: 'Minimum withdrawal: {htg} ({usd} for USD events).',
+      minimum: 'Minimum MonCash withdrawal: {htg}. For a USD event, it is the USD equivalent at that day’s rate.',
       saveFailed: 'Could not update instant payouts. Please try again.',
     },
     moncashVerify: {
@@ -1911,6 +1911,8 @@ export default {
       notReadyWithDate: 'Earnings will be available for withdrawal on {date}.',
       underReview: 'Your payout for this event is with the Tikèm payouts team. We will email you as soon as it is approved.',
       missingEndDate: 'This event has no end date, so we cannot tell when its funds are due. Add an end date to the event.',
+      moncashBelowMinimum: 'MonCash withdrawals start at {min}. Your available balance is {balance}.',
+      needsAdminReview: 'This event’s earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We’ve flagged it — no money has moved.',
     },
     modal: {
       titleMoncash: 'Request MonCash Withdrawal',
@@ -1988,6 +1990,7 @@ export default {
       selectAccountBody: 'Please select a bank account.',
       belowMinimumTitle: 'Minimum not reached',
       belowMinimumBody: 'You need at least {min} to withdraw.',
+      moncashBelowMinimumBody: 'MonCash withdrawals start at {min}. Your available balance is {balance}.',
     },
     errors: {
       loadFailed: 'Failed to load earnings',

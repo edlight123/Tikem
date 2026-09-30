@@ -12,6 +12,13 @@ import { updatePayoutProfileConfig } from './actions'
 import { useRouter } from 'next/navigation'
 import DeclaredMarketsCard from '@/components/organizer/payouts/DeclaredMarketsCard'
 import { normalizeDeclaredMarkets, shouldShowRail } from '@/lib/organizer-markets'
+import { MONCASH_MIN_WITHDRAWAL_HTG_CENTS } from '@/lib/payouts/moncash-withdrawal-minimum'
+
+// The MonCash floor enforced by /api/organizer/withdraw-moncash, and the English
+// fallback for the instant-payouts explainer (localized in organizer.json).
+const MONCASH_MIN_LABEL = `${(MONCASH_MIN_WITHDRAWAL_HTG_CENTS / 100).toLocaleString('en-US')} HTG`
+const INSTANT_MONCASH_DESC_FALLBACK =
+  "On: MonCash withdrawals land within minutes for a 3% fee, whenever platform prefunding is available. Off (or while it is unavailable): every withdrawal goes to manual review by our team first, usually within 24 hours, with no instant fee. Minimum MonCash withdrawal: {{min}} (for a USD event, the USD equivalent at that day's rate)."
 
 // Feature flag: launching MonCash-only — NatCash hidden as a provider choice
 // for new payout methods (saved NatCash configs still display). Mirrors the
@@ -1180,7 +1187,7 @@ export default function PayoutsPageNew({
                       {isHaiti && String(formData.method || '').toLowerCase() === 'mobile_money' && selectedProvider === 'moncash' ? (
                         <div className="mb-4 rounded-xl bg-white/[0.055] p-4">
                           <p className="text-sm font-semibold text-white">{t('payouts_page.instant_moncash_title', { defaultValue: 'Instant MonCash (prefunding)' })}</p>
-                          <p className="mt-1 text-sm text-white/60">{t('payouts_page.instant_moncash_desc', { defaultValue: 'Instant payouts depend on platform prefunding availability.' })}</p>
+                          <p className="mt-1 text-sm text-white/60">{t('payouts_page.instant_moncash_desc', { min: MONCASH_MIN_LABEL, defaultValue: INSTANT_MONCASH_DESC_FALLBACK })}</p>
                           {prefundingError ? <div className="mt-2 text-sm text-red-300">{prefundingError}</div> : null}
                           {prefunding ? (
                             <div className="mt-2 text-sm text-white/70">{t('payouts_page.prefunding_status', { status: prefunding.enabled && prefunding.available ? t('payouts_page.prefunding_available', { defaultValue: 'Available' }) : prefunding.enabled ? t('payouts_page.prefunding_unavailable', { defaultValue: 'Temporarily unavailable' }) : t('payouts_page.prefunding_disabled', { defaultValue: 'Disabled' }), defaultValue: 'Status: {{status}}' })}</div>
@@ -1947,7 +1954,7 @@ export default function PayoutsPageNew({
                   <div className="mb-4 rounded-lg p-3 sm:p-4 bg-white/[0.055]">
                     <p className="text-sm font-semibold text-white">{t('payouts_page.instant_moncash_title', { defaultValue: 'Instant MonCash (prefunding)' })}</p>
                     <p className="!text-[12px] sm:!text-sm text-white/60 mt-1">
-                      {t('payouts_page.instant_moncash_desc', { defaultValue: 'Instant payouts depend on platform prefunding availability.' })}
+                      {t('payouts_page.instant_moncash_desc', { min: MONCASH_MIN_LABEL, defaultValue: INSTANT_MONCASH_DESC_FALLBACK })}
                     </p>
 
                     {prefundingError ? (

@@ -245,7 +245,7 @@
     "payouts_via_stripe": "Vos paiements sont traités via Stripe Connect.",
     "payouts_to_this_account": "Vos paiements seront envoyés sur ce compte.",
     "instant_moncash_title": "MonCash instantané (préfinancement)",
-    "instant_moncash_desc": "Les paiements instantanés dépendent des fonds disponibles sur la plateforme.",
+    "instant_moncash_desc": "Activé : vos retraits MonCash arrivent en quelques minutes, avec des frais de 3 %, lorsque le préfinancement de la plateforme est disponible. Désactivé (ou indisponible) : chaque retrait passe d'abord par une vérification manuelle de notre équipe, généralement sous 24 heures, sans frais instantanés. Retrait MonCash minimum : {{min}} (pour un événement en USD, l'équivalent en USD au taux du jour).",
     "prefunding_status": "Statut : {{status}}",
     "prefunding_available": "Disponible",
     "prefunding_unavailable": "Temporairement indisponible",
@@ -856,7 +856,10 @@
     "prefunding_instant_note": "Ce retrait sera envoyé instantanément grâce au préfinancement de la plateforme.",
     "new_bank_needs_verification": "L'utilisation d'un nouveau compte bancaire nécessite une vérification par e-mail.",
     "bank_deposit_note": "Votre retrait sera déposé sur votre compte bancaire sous 3 à 5 jours ouvrables.",
-    "moncash_note": "Votre retrait sera envoyé sur votre compte MonCash (généralement sous 24 heures)."
+    "moncash_note": "Votre retrait sera envoyé sur votre compte MonCash (généralement sous 24 heures).",
+    "moncash_below_minimum": "Les retraits MonCash commencent à {{min}}. Votre solde disponible est de {{balance}}.",
+    "bank_below_minimum": "Les virements bancaires commencent à {{min}}.",
+    "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé — aucun argent n'a été déplacé."
   },
   "events_filters": {
     "alphabetical": "Alphabétique",

@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { getEventEarnings } from '@/lib/earnings'
 import { previewRelease } from '@/lib/payouts/withdrawal-gate'
+import { fetchUsdToHtgRate } from '@/lib/currency'
+import { moncashMinimumInfo } from '@/lib/payouts/moncash-withdrawal-minimum'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -47,12 +49,26 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
      * here degrades to the old behaviour rather than breaking the page: money
      * figures still render, they just carry no release date.
      */
+    // Held for admin review (stored row in the wrong currency): nothing is
+    // withdrawable, exactly as the withdraw route and quote say.
+    const withdrawalBlocked = (earnings as any)?.withdrawalBlocked || null
+    const currency = String((earnings as any)?.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
+
+    // The MonCash floor (1,000 HTG) in this event's currency, at the rate the
+    // withdrawal would use. Best-effort: absent means "unknown", and the server
+    // still enforces it on submit.
+    let moncashMinimum = null
+    try {
+      moncashMinimum = moncashMinimumInfo(currency, currency === 'USD' ? await fetchUsdToHtgRate() : 1)
+    } catch (e) {
+      console.error('earnings moncash minimum failed', (e as any)?.message)
+    }
+
     let release = null
     try {
-      const availableMinor = Math.max(
-        0,
-        Number((earnings as any)?.netAmount || 0) - Number((earnings as any)?.withdrawnAmount || 0)
-      )
+      const availableMinor = withdrawalBlocked
+        ? 0
+        : Math.max(0, Number((earnings as any)?.netAmount || 0) - Number((earnings as any)?.withdrawnAmount || 0))
       release = await previewRelease({
         eventId: id,
         organizerId: user.id,
@@ -78,7 +94,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           ticketsSold: Number((earnings as any)?.ticketsSold || 0),
           withdrawnAmount: Number((earnings as any)?.withdrawnAmount || 0),
 
-          currency: String((earnings as any)?.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG',
+          currency,
           settlementStatus: (earnings as any)?.settlementStatus || 'pending',
           settlementReadyDate: (earnings as any)?.settlementReadyDate || null,
           lastCalculatedAt: (earnings as any)?.lastCalculatedAt || null,
@@ -87,6 +103,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           // The release ladder's verdict. Null when it could not be computed —
           // clients must treat that as "unknown", never as "released".
           release,
+
+          withdrawalBlocked,
+          moncashMinimum,
         },
       },
       { status: 200 }

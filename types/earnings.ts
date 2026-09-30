@@ -46,7 +46,19 @@ export interface EventEarnings {
   
   // Currency
   currency: 'HTG' | 'USD' | 'CAD' | 'EUR'
-  
+
+  /**
+   * Set (read-side only, never stored) when this event's balance must not be
+   * withdrawn until an admin reviews it — today only when the stored record's
+   * currency disagrees with the event's. availableToWithdraw is then 0 on every
+   * surface, and the withdraw routes refuse with `code`.
+   */
+  withdrawalBlocked?: {
+    code: 'earnings_currency_review'
+    storedCurrency: string
+    eventCurrency: string
+  } | null
+
   // Timestamps
   lastCalculatedAt: string       // Last time earnings were recalculated
   createdAt: string
