@@ -60,7 +60,9 @@ export async function GET(request: Request) {
     const balanceRes = await moncashPrefundedBalance()
     const balance = Number(balanceRes.balance)
 
-    const available = enabled && Number.isFinite(balance) && balance >= minBalanceSafe
+    // An empty account is never available, even with no minBalance configured:
+    // `0 >= 0` would otherwise offer instant payouts that cannot be funded.
+    const available = enabled && Number.isFinite(balance) && balance > 0 && balance >= minBalanceSafe
 
     await payoutsRef.set(
       {
