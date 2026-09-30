@@ -25,6 +25,15 @@ import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import SegmentedTabs from '../../components/organizer/SegmentedTabs';
 import { format, subDays, startOfDay } from 'date-fns';
 import { safeFormatForLanguage } from '../../lib/dates';
+import { normalizeCurrency } from '../../lib/currency';
+import {
+  CurrencyAmount,
+  dominantEventCurrency,
+  isCountedSale,
+  sumRevenueByCurrency,
+  ticketCurrency,
+  ticketPurchaseDate,
+} from '../../lib/organizerStats';
 
 interface ChartData {
   date: string;
@@ -40,9 +49,16 @@ interface EventStats {
   currency: string;
 }
 
-interface RevenueByBurrency {
-  USD: number;
-  HTG: number;
+/**
+ * The API returns `revenueByCurrency` as a map of currency → major units. Turn
+ * it into the same largest-first list the dashboard uses, dropping zeros.
+ */
+function revenueListFromApi(map: unknown): CurrencyAmount[] {
+  if (!map || typeof map !== 'object') return [];
+  return Object.entries(map as Record<string, unknown>)
+    .map(([code, amount]) => ({ currency: normalizeCurrency(code), amount: Number(amount) || 0 }))
+    .filter((r) => r.amount > 0)
+    .sort((a, b) => b.amount - a.amount || a.currency.localeCompare(b.currency));
 }
 
 export default function OrganizerAnalyticsScreen({ navigation }: any) {
@@ -59,9 +75,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
     publishedEvents: 0,
     totalTicketsSold: 0,
     totalRevenue: 0,
-    currency: 'USD',
+    currency: normalizeCurrency(null),
   });
-  const [revenueByBurrency, setRevenueByBurrency] = useState<RevenueByBurrency>({ USD: 0, HTG: 0 });
+  // Revenue per currency, largest first. Never summed across currencies.
+  const [revenueByCurrency, setRevenueByCurrency] = useState<CurrencyAmount[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [topEvents, setTopEvents] = useState<EventStats[]>([]);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
@@ -84,15 +101,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           publishedEvents: data.publishedEvents || 0,
           totalTicketsSold: data.totalTicketsSold || 0,
           totalRevenue: data.totalRevenue || 0,
-          currency: data.currency || 'USD',
+          currency: normalizeCurrency(data.currency),
         });
-        // The "Total Revenue" card reads revenueByBurrency (in cents). The API returns
-        // revenueByCurrency in major units, so convert. Without this the card would show 0
-        // whenever the API path succeeds.
-        setRevenueByBurrency({
-          USD: Math.round((data.revenueByCurrency?.USD || 0) * 100),
-          HTG: Math.round((data.revenueByCurrency?.HTG || 0) * 100),
-        });
+        // Major units, keyed by every currency that sold (not just USD/HTG).
+        setRevenueByCurrency(revenueListFromApi(data.revenueByCurrency));
         setChartData(data.chartData || []);
         setTopEvents(data.topEvents || []);
       } else {
@@ -130,7 +142,8 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
       // Get tickets for these events
       let totalTickets = 0;
-      const revenueByBurrency: RevenueByBurrency = { USD: 0, HTG: 0 };
+      const soldInRange: any[] = [];
+      const eventCurrencyById: Record<string, string | undefined> = {};
       const eventStats: EventStats[] = [];
       const dailySales: Record<string, { sales: number; revenue: number }> = {};
 
@@ -144,54 +157,39 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
       for (const event of events) {
         const eventData = event as any;
-        const eventCurrency = eventData.currency || 'USD';
-        
+        eventCurrencyById[event.id] = eventData.currency;
+
         const ticketsQuery = query(
           collection(db, 'tickets'),
           where('event_id', '==', event.id)
         );
         const ticketsSnapshot = await getDocs(ticketsQuery);
-        
+
         let eventTicketCount = 0;
         let eventRevenueCents = 0;
+        let eventCurrency = ticketCurrency(null, eventData.currency);
 
         ticketsSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          
-          // Get the purchase date
-          let purchaseDate: Date | null = null;
-          if (data.purchased_at) {
-            if (data.purchased_at.toDate) {
-              purchaseDate = data.purchased_at.toDate();
-            } else if (typeof data.purchased_at === 'string') {
-              purchaseDate = new Date(data.purchased_at);
-            }
-          } else if (data.created_at) {
-            if (data.created_at.toDate) {
-              purchaseDate = data.created_at.toDate();
-            } else if (typeof data.created_at === 'string') {
-              purchaseDate = new Date(data.created_at);
-            }
-          }
+
+          // Refunded / cancelled / pending tickets are not sales.
+          if (!isCountedSale(data.status)) return;
+
+          const purchaseDate = ticketPurchaseDate(data);
 
           // Filter by time range
           if (cutoffDate && purchaseDate && purchaseDate < cutoffDate) {
             return; // Skip tickets outside the time range
           }
 
-          const pricePaidCents = Math.round((data.price_paid || 0) * 100);
+          const pricePaidCents = Math.round((Number(data.price_paid) || 0) * 100);
           eventTicketCount++;
           eventRevenueCents += pricePaidCents;
+          eventCurrency = ticketCurrency(data, eventData.currency);
           totalTickets++;
+          soldInRange.push({ ...data, event_id: event.id });
 
-          // Track revenue by currency
-          if (eventCurrency === 'HTG') {
-            revenueByBurrency.HTG += pricePaidCents;
-          } else {
-            revenueByBurrency.USD += pricePaidCents;
-          }
-
-          // Track daily sales for chart
+          // Track daily sales for chart (the chart plots counts, not money).
           if (purchaseDate) {
             const dateKey = format(purchaseDate, 'yyyy-MM-dd');
             if (dailySales[dateKey]) {
@@ -214,18 +212,19 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
       eventStats.sort((a, b) => b.ticketCount - a.ticketCount);
 
-      // Determine primary currency (the one with more revenue)
-      const primaryCurrency = revenueByBurrency.USD >= revenueByBurrency.HTG ? 'USD' : 'HTG';
-      const totalRevenueCents = revenueByBurrency[primaryCurrency];
+      // Per currency, largest first; the primary is the biggest, or the
+      // organizer's usual event currency when nothing sold.
+      const revenueRows = sumRevenueByCurrency(soldInRange, eventCurrencyById);
+      const primaryCurrency = revenueRows[0]?.currency || dominantEventCurrency(events as any[]);
 
       setStats({
         totalEvents: events.length,
         publishedEvents: events.filter((e: any) => e.is_published).length,
         totalTicketsSold: totalTickets,
-        totalRevenue: totalRevenueCents / 100,
+        totalRevenue: revenueRows[0]?.amount || 0,
         currency: primaryCurrency,
       });
-      setRevenueByBurrency(revenueByBurrency);
+      setRevenueByCurrency(revenueRows);
       setTopEvents(eventStats.slice(0, 5));
 
       // Build chart data
@@ -254,22 +253,20 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
   // Delegate to the shared, currency-aware formatter so HTG renders as a suffixed
   // code (`1,234.56 HTG`) and USD as a prefixed symbol (`$1,234.56`) — never a
   // hardcoded `$`/`G`.
-  const formatMoney = (amount: number, currency: string = 'USD') =>
-    fmtMoney(amount, { currency });
+  const formatMoney = (amount: number, currency?: string) =>
+    fmtMoney(amount, { currency: normalizeCurrency(currency) });
 
-  // Format revenue display showing both currencies if both exist
-  const formatTotalRevenue = () => {
-    const parts: string[] = [];
-    if (revenueByBurrency.USD > 0) {
-      parts.push(formatMoney(revenueByBurrency.USD / 100, 'USD'));
-    }
-    if (revenueByBurrency.HTG > 0) {
-      parts.push(formatMoney(revenueByBurrency.HTG / 100, 'HTG'));
-    }
-    if (parts.length === 0) {
-      return formatMoney(0, stats.currency);
-    }
-    return parts.join(' + ');
+  // Total revenue: the largest currency is the figure, any other currency is a
+  // caption under it ("+ $40"). Currencies are never added together.
+  const totalRevenueCell = () => {
+    const [primary, ...rest] = revenueByCurrency;
+    if (!primary) return { value: formatMoney(0, stats.currency) };
+    return {
+      value: formatMoney(primary.amount, primary.currency),
+      caption: rest.length
+        ? rest.map((r) => `+ ${formatMoney(r.amount, r.currency)}`).join('\n')
+        : undefined,
+    };
   };
 
   // Simple bar chart rendering
@@ -374,7 +371,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           <StatTriplet
             columns={2}
             items={[
-              { label: t('analytics.totalRevenue') || 'Total Revenue', value: formatTotalRevenue(), tone: 'brand' },
+              { label: t('analytics.totalRevenue') || 'Total Revenue', ...totalRevenueCell(), tone: 'brand' },
               { label: t('analytics.ticketsSold') || 'Tickets Sold', value: stats.totalTicketsSold },
               { label: t('analytics.totalEvents') || 'Total Events', value: stats.totalEvents },
               { label: t('analytics.published') || 'Published', value: stats.publishedEvents },
