@@ -1664,5 +1664,48 @@
     "state_friends": "Zanmi",
     "remove": "Retire",
     "remove_friend": "Retire zanmi sa a"
+  },
+  "moderation": {
+    "report_event": "Siyale evènman sa a",
+    "report_organizer": "Siyale òganizatè a",
+    "report_event_title": "Siyale evènman sa a",
+    "report_organizer_title": "Siyale òganizatè sa a",
+    "report_intro": "Ki pwoblèm nan? Siyalman yo prive: òganizatè a pa janm konnen kiyès ki voye l.",
+    "reasons": {
+      "spam": "Spam",
+      "scam_or_fraud": "Eskwokri oswa fwod",
+      "offensive": "Rayisman oswa ofansan",
+      "violence": "Vyolans oswa menas",
+      "sexual": "Kontni seksyèl",
+      "illegal": "Aktivite ilegal",
+      "misleading": "Twonpè oswa fo",
+      "other": "Lòt bagay"
+    },
+    "details_label": "Detay (si ou vle)",
+    "details_placeholder": "Nenpòt bagay ki ka ede nou egzaminen l",
+    "submit": "Voye siyalman an",
+    "submitting": "N ap voye…",
+    "success_title": "Mèsi paske ou di nou sa",
+    "success_body": "Ekip nou an egzaminen chak siyalman nan 24 èdtan epi li retire kontni ki vyole Kondisyon nou yo.",
+    "already_reported": "Ou te deja siyale sa. Ekip nou an ap egzaminen l nan 24 èdtan.",
+    "done": "Fini",
+    "contact_line": "Ou ka ekri support@tikem.co tou",
+    "block": "Bloke òganizatè a",
+    "unblock": "Debloke òganizatè a",
+    "block_confirm_title": "Bloke {{name}}?",
+    "block_confirm_body": "Evènman li yo p ap parèt nan fil ou ni nan rechèch ankò, ou p ap swiv li ankò, epi ou p ap resevwa notifikasyon sou evènman li yo. Ou ka debloke l nenpòt ki lè.",
+    "unblock_confirm_title": "Debloke {{name}}?",
+    "unblock_confirm_body": "Evènman li yo ap parèt nan fil ou ankò.",
+    "blocked_toast": "Òganizatè a bloke",
+    "blocked_toast_body": "Ou p ap wè evènman li yo ankò.",
+    "unblocked_toast": "Òganizatè a debloke",
+    "cancel": "Anile",
+    "errors": {
+      "generic": "Gen yon bagay ki pa mache. Eseye ankò.",
+      "rate_limited": "Ou voye anpil siyalman. Eseye ankò pita.",
+      "unauthorized": "Konekte pou w ka siyale kontni.",
+      "not_found": "Kontni sa a pa disponib ankò.",
+      "self_report": "Ou pa ka siyale tèt ou."
+    }
   }
 }

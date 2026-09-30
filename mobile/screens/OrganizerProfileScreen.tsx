@@ -21,6 +21,7 @@ import {
   MessageCircle,
   ChevronDown,
   ExternalLink,
+  MoreHorizontal,
 } from 'lucide-react-native';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -36,6 +37,10 @@ import { OrganizerProfileSkeleton } from '../components/Skeleton';
 import { fetchConnections } from '../lib/api/social';
 import { goBackOrHome } from '../lib/goBackOrHome';
 import { type FriendshipState } from '../types/social';
+import ReportContentModal from '../components/ReportContentModal';
+import { useAppAlert } from '../components/AppAlert';
+import { useBlockedOrganizers } from '../lib/blockedOrganizers';
+import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 
 const { width } = Dimensions.get('window');
 // Hero geometry. Build 13 gave the hero a fixed 232pt floor and bottom-aligned
@@ -98,6 +103,9 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [friendship, setFriendship] = useState<FriendshipState>('none');
   const [friendshipLoaded, setFriendshipLoaded] = useState(false);
+  const showAlert = useAppAlert();
+  const [showReport, setShowReport] = useState(false);
+  const isBlocked = useBlockedOrganizers().has(organizerId);
 
   // Resolve the viewer's friendship with this profile (drives connect button + privacy gating)
   useEffect(() => {
@@ -247,6 +255,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
       navigation.navigate('Auth');
       return;
     }
+    // Blocking dropped the follow server-side; re-following is refused.
+    if (isBlocked && !isFollowing) return;
 
     try {
       if (isFollowing && followDocId) {
@@ -267,6 +277,45 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     } catch (error) {
       console.error('Error toggling follow:', error);
     }
+  };
+
+  // "…" menu: report or block this organizer (App Store 1.2).
+  const handleMore = () => {
+    if (!user) {
+      showAlert(t('auth.loginRequiredTitle'), t('moderation.signInToReport'));
+      return;
+    }
+    const name = organizer?.organization_name || organizer?.full_name || '';
+    showAlert(t('moderation.moreTitle'), undefined, [
+      {
+        text: t('moderation.reportOrganizer'),
+        onPress: () => setTimeout(() => setShowReport(true), AFTER_ALERT_MS),
+      },
+      {
+        text: isBlocked ? t('moderation.unblock') : t('moderation.block'),
+        style: 'destructive',
+        onPress: () =>
+          setTimeout(
+            () =>
+              promptBlockToggle({
+                showAlert,
+                t,
+                organizerId,
+                organizerName: name,
+                currentlyBlocked: isBlocked,
+                onChanged: (nowBlocked) => {
+                  if (nowBlocked && isFollowing) {
+                    setIsFollowing(false);
+                    setFollowDocId(null);
+                    setStats((prev) => ({ ...prev, followerCount: Math.max(0, prev.followerCount - 1) }));
+                  }
+                },
+              }),
+            AFTER_ALERT_MS
+          ),
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const openLink = async (url: string) => {
@@ -458,19 +507,36 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
             <Ionicons name="chevron-back" size={26} color={colors.white} />
           </TouchableOpacity>
 
-          {/* Small Follow Button - Top Right */}
-          <TouchableOpacity
-            style={[
-              styles.followButtonSmall,
-              { top: insets.top + HERO_CONTROL_TOP },
-              isFollowing && styles.followingButtonSmall,
-            ]}
-            onPress={handleFollow}
-          >
-            <Text style={[styles.followButtonSmallText, isFollowing && styles.followingButtonSmallText]}>
-              {isFollowing ? t('organizerProfile.following') : t('organizerProfile.follow')}
-            </Text>
-          </TouchableOpacity>
+          {/* "…" — report / block. Top right, the Follow button sits beside it.
+              Not on your own profile. */}
+          {!isSelf && (
+            <TouchableOpacity
+              style={[styles.moreButton, { top: insets.top + HERO_CONTROL_TOP }]}
+              onPress={handleMore}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('moderation.moreTitle')}
+            >
+              <MoreHorizontal size={20} color={colors.white} />
+            </TouchableOpacity>
+          )}
+
+          {/* Small Follow Button - Top Right. Hidden while blocked: the block
+              removed the follow and re-following is refused. */}
+          {!isSelf && !isBlocked && (
+            <TouchableOpacity
+              style={[
+                styles.followButtonSmall,
+                { top: insets.top + HERO_CONTROL_TOP },
+                isFollowing && styles.followingButtonSmall,
+              ]}
+              onPress={handleFollow}
+            >
+              <Text style={[styles.followButtonSmallText, isFollowing && styles.followingButtonSmallText]}>
+                {isFollowing ? t('organizerProfile.following') : t('organizerProfile.follow')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Hero Content — TOP-anchored (build 13 shipped it bottom-aligned
               inside a 232pt floor, which left dead cover art above it). It is a
@@ -698,6 +764,12 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           </View>
         </View>
       </ScrollView>
+      <ReportContentModal
+        visible={showReport}
+        onClose={() => setShowReport(false)}
+        kind="organizer"
+        targetId={organizerId}
+      />
     </SafeAreaView>
   );
 }
@@ -758,10 +830,23 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     zIndex: 10,
   },
-  followButtonSmall: {
+  moreButton: {
     position: 'absolute',
     top: 24,
     right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  followButtonSmall: {
+    position: 'absolute',
+    top: 24,
+    // Clears the 40pt "…" button at right: 16, plus an 8pt gap.
+    right: 64,
     height: 40,
     paddingHorizontal: 16,
     justifyContent: 'center',

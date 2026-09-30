@@ -19,6 +19,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { getDiscoverEvents } from '@/lib/data/events'
+import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import { getAcceptedFriendIds } from '@/lib/firestore/connections'
 import { getCitiesForCountry } from '@/lib/filters/config'
 
@@ -215,7 +216,8 @@ export async function GET(request: Request) {
     ])
 
     // ---- 1. Events: title (prefix > word > substring), then venue, then city.
-    const events: EventSuggestion[] = eventPool
+    const blockedOrganizers = await getBlockedOrganizerIds((user as any)?.id)
+    const events: EventSuggestion[] = filterBlockedEvents(eventPool as any[], blockedOrganizers)
       .map((event: any) => {
         const titleRank = matchRank(event?.title, needle)
         const venueRank = matchRank(event?.venue_name, needle)

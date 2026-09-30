@@ -17,6 +17,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { AuthBackground } from '../../components/auth/AuthBackground';
 import { AuthHeadline } from '../../components/auth/AuthHeadline';
 import { AuthInput } from '../../components/auth/AuthInput';
+import { TermsAgreement } from '../../components/auth/TermsAgreement';
 import { SecondaryPill } from '../../components/auth/SecondaryPill';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -220,6 +221,10 @@ export default function SignupScreen({ navigation }: any) {
                 returnKeyType="go"
                 onSubmitEditing={handleSignup}
               />
+
+              {/* Terms acceptance (App Store 1.2): creating an account — by
+                  email, Google or Apple below — is agreeing to the Terms. */}
+              <TermsAgreement />
 
               {/* Primary action — the one white pill per screen (POSH §2.2) */}
               <WhitePillCTA

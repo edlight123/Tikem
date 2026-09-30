@@ -357,6 +357,9 @@ const readPublishedEvents = unstable_cache(
         tickets_sold: data.tickets_sold || 0,
         show_on_explore: data.show_on_explore,
         rejected: data.rejected,
+        // Auto-hidden after repeated user reports, pending admin review
+        // (lib/moderation/reports.ts). Discovery skips it; direct links still work.
+        hidden_pending_review: data.hidden_pending_review === true,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       } as Event
@@ -401,6 +404,10 @@ export async function getDiscoverEvents(
       // event; missing/undefined stays visible (legacy events lack the field). Done in-memory so
       // docs without the field aren't dropped by a type-sensitive Firestore inequality query.
       events = events.filter((event: Event) => (event as any).rejected !== true)
+
+      // Moderation: an event auto-hidden after repeated reports stays out of
+      // discovery until an admin reviews it (lib/moderation/reports.ts).
+      events = events.filter((event: Event) => (event as any).hidden_pending_review !== true)
 
       // Apply search filter in memory (Firestore doesn't support text search)
       if (filters.search) {
@@ -476,6 +483,7 @@ export async function getCinemaArtworkEvents(limit: number = 20): Promise<Event[
     return events
       .filter((e: Event) => e.show_on_explore !== false)
       .filter((e: Event) => (e as any).rejected !== true)
+      .filter((e: Event) => (e as any).hidden_pending_review !== true)
       .filter((e: Event) => e.banner_image_url)
       .sort((a: Event, b: Event) => {
         const ta = new Date(a.start_datetime).getTime() || 0

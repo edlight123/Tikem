@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useBlockedOrganizers } from '../lib/blockedOrganizers';
+import { isVisibleOnExplore } from '../lib/api/events';
 import { Animated, View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, MapPin } from 'lucide-react-native';
@@ -62,6 +64,8 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   const [showPricePicker, setShowPricePicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const { userCountry, countryResolved, activeCity, activeMetro, setActiveCity } = useFilters();
+  // Blocked organizers' events never reach the list; a change re-runs the load.
+  const blockedOrganizers = useBlockedOrganizers();
   const locationCopy = useActiveLocationCopy();
   const currencyCode = CURRENCY_BY_COUNTRY[userCountry]?.code || 'HTG';
   const priceCeiling = currencyCode === 'HTG' || currencyCode === 'DOP' ? 10000 : 200;
@@ -115,6 +119,10 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
           // finished; `start >= now` here would have hidden an event that is
           // currently running while Home still showed it.
           .filter((e: any) => e.is_published !== false && !isEventOver(e, now))
+          // Same moderation gates as the Home rail this page expands: not
+          // rejected, not unlisted / auto-hidden, not from a blocked organizer.
+          .filter((e: any) => e.rejected !== true && isVisibleOnExplore(e))
+          .filter((e: any) => !(e.organizer_id && blockedOrganizers.has(String(e.organizer_id))))
           .sort(
             (a: any, b: any) => a.start_datetime.getTime() - b.start_datetime.getTime()
           );
@@ -143,7 +151,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
     };
 
     load();
-  }, [category, feed, city, userCountry, countryResolved, activeMetro?.id]);
+  }, [category, feed, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
 
   const { start: dStart, end: dEnd } = getDateRange(dateFilter, pickedDate);
   const visibleEvents = events.filter((e) => {

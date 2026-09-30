@@ -1,12 +1,13 @@
 'use client'
 
-import { X, ExternalLink, CheckCircle, XCircle, Trash2, AlertTriangle, User, Ticket, Calendar, MapPin, Star } from 'lucide-react'
+import { X, ExternalLink, CheckCircle, XCircle, Trash2, User, Ticket, Calendar, MapPin, Star } from 'lucide-react'
 import { format } from 'date-fns'
 import { useState } from 'react'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/components/ui/Toast'
 import { ConsoleButton, ConsoleState, consoleTone } from '@/components/admin/console'
+import { AdminReportsPanel } from './AdminReportsPanel'
 
 // Guard against missing/malformed dates: date-fns `format` throws
 // "RangeError: Invalid time value" on an Invalid Date, which would crash the
@@ -36,12 +37,8 @@ interface Event {
   organizer_email: string
   organizer_verified?: boolean
   tickets_sold?: number
-  reports?: Array<{
-    id: string
-    reason: string
-    reported_by: string
-    created_at: string
-  }>
+  reports_count?: number
+  hidden_pending_review?: boolean
   audit_logs?: Array<{
     id: string
     action: string
@@ -56,11 +53,13 @@ interface AdminEventDetailSheetProps {
   isOpen: boolean
   onClose: () => void
   onAction: (action: 'publish' | 'unpublish' | 'delete' | 'feature' | 'unfeature', reason?: string) => void
+  /** Called after reports were dismissed/actioned so the list can refresh. */
+  onReportsResolved?: () => void
 }
 
 const SECTION_LABEL = 'label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint'
 
-export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: AdminEventDetailSheetProps) {
+export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onReportsResolved }: AdminEventDetailSheetProps) {
   const { t } = useTranslation('common')
   const { showToast } = useToast()
   const [reason, setReason] = useState('')
@@ -257,26 +256,14 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
               </div>
             </div>
 
-            {/* Reports */}
-            {event.reports && event.reports.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-4 h-4 text-console-amber" />
-                  <h4 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-amber">
-                    Reports ({event.reports.length})
-                  </h4>
-                </div>
-                <div className="space-y-2">
-                  {event.reports.map((report) => (
-                    <div key={report.id} className="p-3 bg-console-ground rounded-md">
-                      <div className="text-sm text-console-text mb-1">{report.reason}</div>
-                      <div className="text-xs text-console-faint">
-                        By {report.reported_by} • {safeFormat(report.created_at, 'MMM d, h:mm a')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Reports — open user reports with dismiss / unpublish / ban. */}
+            {(event.reports_count ?? 0) > 0 && (
+              <AdminReportsPanel
+                kind="event"
+                targetId={event.id}
+                hiddenPendingReview={event.hidden_pending_review}
+                onResolved={onReportsResolved}
+              />
             )}
 
             {/* Audit Log */}

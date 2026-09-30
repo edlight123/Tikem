@@ -3,6 +3,7 @@ import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getDiscoverEvents } from '@/lib/data/events'
+import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import CategoryPageContent from './CategoryPageContent'
@@ -38,6 +39,9 @@ export default async function CategoryPage({
   } else {
     events = await getDiscoverEvents({ category }, 60)
   }
+
+  // Organizers this viewer blocked never reach their feed (App Store 1.2).
+  events = filterBlockedEvents(events, await getBlockedOrganizerIds(user?.id))
 
   // Strict country scope + soonest first (data layer already returns ISO strings).
   events = events

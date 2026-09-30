@@ -21,7 +21,8 @@ import {
         ExternalLink,
   ChevronRight,
   ChevronLeft,
-  PlayCircle
+  PlayCircle,
+  MoreHorizontal
 } from 'lucide-react-native';
 import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -51,6 +52,9 @@ import VenueStaticMap from '../components/VenueStaticMap';
 import WhosGoing from '../components/WhosGoing';
 import { guestlistVisibilityFrom } from '../lib/guestlistVisibility';
 import ContactOrganizerModal from '../components/ContactOrganizerModal';
+import ReportContentModal from '../components/ReportContentModal';
+import { useBlockedOrganizers } from '../lib/blockedOrganizers';
+import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
 import { useAppAlert } from '../components/AppAlert';
 import { EventDetailSkeleton } from '../components/Skeleton';
@@ -100,6 +104,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const [showTierSelector, setShowTierSelector] = useState(false);
   const [showFreeTicketModal, setShowFreeTicketModal] = useState(false);
   const [showContactOrganizer, setShowContactOrganizer] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const blockedOrganizers = useBlockedOrganizers();
   // Set the moment a purchase or free claim lands; carries the count so the
   // confirmation can say "2 tickets" rather than a generic success message.
   const [successQuantity, setSuccessQuantity] = useState<number | null>(null);
@@ -316,6 +322,50 @@ export default function EventDetailScreen({ route, navigation }: any) {
     } catch (error) {
       console.error('Error sharing:', error);
     }
+  };
+
+  // "…" menu: report the event, block its organizer (App Store 1.2).
+  const handleMore = () => {
+    if (!user) {
+      showAlert(t('auth.loginRequiredTitle'), t('moderation.signInToReport'));
+      return;
+    }
+    const organizerId: string = event?.organizer_id || '';
+    const isOwn = !!organizerId && organizerId === user.uid;
+    if (isOwn) {
+      showAlert(t('moderation.moreTitle'), t('moderation.ownEvent'));
+      return;
+    }
+    const organizerName =
+      event?.users?.organization_name || event?.users?.full_name || event?.organizer_name || '';
+    const blocked = !!organizerId && blockedOrganizers.has(organizerId);
+    showAlert(t('moderation.moreTitle'), undefined, [
+      {
+        text: t('moderation.reportEvent'),
+        onPress: () => setTimeout(() => setShowReport(true), AFTER_ALERT_MS),
+      },
+      ...(organizerId
+        ? [
+            {
+              text: blocked ? t('moderation.unblock') : t('moderation.block'),
+              style: 'destructive' as const,
+              onPress: () =>
+                setTimeout(
+                  () =>
+                    promptBlockToggle({
+                      showAlert,
+                      t,
+                      organizerId,
+                      organizerName,
+                      currentlyBlocked: blocked,
+                    }),
+                  AFTER_ALERT_MS
+                ),
+            },
+          ]
+        : []),
+      { text: t('common.cancel'), style: 'cancel' as const },
+    ]);
   };
 
   const openInMaps = () => {
@@ -647,6 +697,15 @@ export default function EventDetailScreen({ route, navigation }: any) {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.iconButton}
+              onPress={handleMore}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('moderation.moreTitle')}
+            >
+              <MoreHorizontal size={20} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
               onPress={toggleFavorite}
               disabled={favoriteLoading}
               hitSlop={8}
@@ -930,6 +989,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
         }}
         event={event}
         quantity={successQuantity ?? 1}
+      />
+
+      <ReportContentModal
+        visible={showReport}
+        onClose={() => setShowReport(false)}
+        kind="event"
+        targetId={eventId}
       />
 
       <ContactOrganizerModal

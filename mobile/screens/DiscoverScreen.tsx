@@ -17,6 +17,7 @@ import { collection, query, where, getDocs, addDoc, deleteDoc, doc, Timestamp } 
 import { db } from '../config/firebase';
 import { filterExploreEvents } from '../lib/api/events';
 import { fetchPublishedEventsForCountry } from '../lib/api/eventFeed';
+import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
 import EventFiltersSheet from '../components/EventFiltersSheet';
@@ -60,6 +61,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
     activeLocationLabel,
     setActiveCity,
   } = useFilters();
+  // Blocked organizers' events never reach the feed; a change re-runs the fetch.
+  const blockedOrganizers = useBlockedOrganizers();
   const { user } = useAuth();
   const { t, language } = useI18n();
   // The active location, in words — every empty state and the header chip.
@@ -132,7 +135,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!countryResolved) return;
     fetchEvents();
-  }, [userCountry, countryResolved]);
+  }, [userCountry, countryResolved, blockedOrganizers]);
 
   // Listen for tab press to scroll to top and reset filters
   useEffect(() => {
@@ -231,7 +234,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
 
       // Hide events the organizer marked as not shown on Explore (unlisted).
       // Missing field = visible, so existing events are unaffected.
-      const exploreEvents = filterExploreEvents(notRejected);
+      // …and events from organizers this user blocked (App Store 1.2).
+      const exploreEvents = filterBlockedEvents(filterExploreEvents(notRejected), blockedOrganizers);
 
       const now = new Date();
       const futureEvents = exploreEvents.filter((event) => {

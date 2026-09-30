@@ -17,6 +17,8 @@ export type AuditAction =
   | 'user.unban'
   | 'user.disable_posting'
   | 'user.enable_posting'
+  | 'event.reports_dismiss'
+  | 'user.reports_dismiss'
   | 'ticket.refund'
   | 'verification.approve'
   | 'verification.reject'
@@ -239,6 +241,8 @@ function getActionDescription(action: string, details: any = {}): string {
     'user.unban': `Unbanned user${forUser}`.trim(),
     'user.disable_posting': userTarget ? `Disabled posting for ${userTarget}` : 'Disabled posting',
     'user.enable_posting': userTarget ? `Enabled posting for ${userTarget}` : 'Enabled posting',
+    'event.reports_dismiss': `Dismissed ${details.resolved ?? 0} report(s) on "${details.eventTitle || 'Untitled'}"`,
+    'user.reports_dismiss': `Dismissed ${details.resolved ?? 0} report(s)${forUserPhrase}`.trim(),
     'ticket.refund': `Refunded ticket #${details.ticketId || ''}`.trim(),
     'verification.approve': `Approved verification${forUserPhrase}`.trim(),
     'verification.reject': `Rejected verification${forUserPhrase}`.trim(),

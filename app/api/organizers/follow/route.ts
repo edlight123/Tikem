@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
+import { isOrganizerBlocked } from '@/lib/moderation/blocks'
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +27,15 @@ export async function POST(request: Request) {
       .where('organizer_id', '==', organizerId)
       .limit(1)
       .get()
+
+    // A blocked organizer cannot be (re)followed: blocking removed the follow,
+    // and following again would restart their "new event" notifications.
+    if (existingSnapshot.empty && (await isOrganizerBlocked(user.id, organizerId))) {
+      return Response.json(
+        { error: 'Unblock this organizer to follow them.', code: 'blocked' },
+        { status: 409 }
+      )
+    }
 
     if (!existingSnapshot.empty) {
       // Unfollow

@@ -7,6 +7,7 @@ import { ConsoleButton } from '@/components/admin/console'
 import OrganizerPayoutReleaseCard from './OrganizerPayoutReleaseCard'
 import OrganizerEventsList, { type OrganizerEventRow } from './OrganizerEventsList'
 import OrganizerStatsStrip from './OrganizerStatsStrip'
+import { AdminReportsPanel } from '@/components/admin/events/AdminReportsPanel'
 import OrganizerAccountCard from './OrganizerAccountCard'
 import OrganizerPayoutSummaryCard from './OrganizerPayoutSummaryCard'
 import OrganizerProfileCard from './OrganizerProfileCard'
@@ -222,6 +223,11 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
         )}
         {isBanned && <span className="label-mono uppercase text-console-red">Banned</span>}
         {!canPost && <span className="label-mono uppercase text-console-amber">Posting Disabled</span>}
+      </div>
+
+      {/* Open user reports against this organizer (renders nothing when none). */}
+      <div className="mb-5">
+        <AdminReportsPanel kind="organizer" targetId={id} onResolved={() => window.location.reload()} />
       </div>
 
       <OrganizerStatsStrip stats={stats} />

@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { notFound } from 'next/navigation'
 import OrganizerProfileClient from './OrganizerProfileClient'
+import { isOrganizerBlocked } from '@/lib/moderation/blocks'
 import type { Metadata } from 'next'
 
 export const runtime = 'nodejs'
@@ -171,6 +172,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
         // are optional and the row simply omits what is missing.
         city={typeof userData?.default_city === 'string' ? userData.default_city : undefined}
         country={typeof userData?.default_country === 'string' ? userData.default_country : undefined}
+        isBlocked={user && !isSelf ? await isOrganizerBlocked(user.id, organizerId) : false}
       />
 
       <MobileNavWrapper user={user} />

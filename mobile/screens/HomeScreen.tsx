@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { filterExploreEvents } from '../lib/api/events';
 import { fetchPublishedEventsForCountry } from '../lib/api/eventFeed';
+import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useI18n } from '../contexts/I18nContext';
 import { useFilters } from '../contexts/FiltersContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -67,6 +68,8 @@ export default function HomeScreen({ navigation }: any) {
   const styles = getStyles(colors);
   const { t, language } = useI18n();
   const { userCountry, countryResolved, activeCity, activeMetro, setActiveCity } = useFilters();
+  // Blocked organizers' events never reach the feed; a change re-runs the fetch.
+  const blockedOrganizers = useBlockedOrganizers();
   const locationCopy = useActiveLocationCopy();
   const insets = useSafeAreaInsets();
   // The tab bar is a translucent overlay, so reserve its height here or the
@@ -153,7 +156,8 @@ export default function HomeScreen({ navigation }: any) {
 
       // Hide events the organizer marked as not shown on Explore (unlisted).
       // Missing field = visible, so existing events are unaffected.
-      const exploreEvents = filterExploreEvents(notRejected);
+      // …and events from organizers this user blocked (App Store 1.2).
+      const exploreEvents = filterBlockedEvents(filterExploreEvents(notRejected), blockedOrganizers);
 
       // Filter out past events (be lenient - show events from past week that could be ongoing)
       const now = new Date();
@@ -289,7 +293,7 @@ export default function HomeScreen({ navigation }: any) {
     fetchEvents();
     // activeCity is the browse location: changing it must re-scope the feed,
     // and it also feeds the "near you" rail inside fetchEvents.
-  }, [userCountry, countryResolved, activeCity]);
+  }, [userCountry, countryResolved, activeCity, blockedOrganizers]);
 
   // Active-tab taps: once = scroll to top, twice (quick) = refresh.
   useEffect(() => {

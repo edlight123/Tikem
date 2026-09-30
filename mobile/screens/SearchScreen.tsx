@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Search as SearchIcon, X, Building2, User, CloudOff } from 'lucide-react-native';
 import { filterExploreEvents } from '../lib/api/events';
 import { fetchPublishedEventsForCountry } from '../lib/api/eventFeed';
+import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { searchUsers, type UserSearchResult } from '../lib/api/social';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -65,6 +66,8 @@ export default function SearchScreen({ navigation }: any) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { userCountry, countryResolved, activeMetro } = useFilters();
+  // Blocked organizers' events never reach results; a change re-runs the fetch.
+  const blockedOrganizers = useBlockedOrganizers();
   const locationCopy = useActiveLocationCopy();
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
@@ -103,7 +106,7 @@ export default function SearchScreen({ navigation }: any) {
 
       // Hide rejected + unlisted events, then future-only (same rules as Discover).
       const notRejected = (eventsData as any[]).filter((e) => e.rejected !== true);
-      const exploreEvents = filterExploreEvents(notRejected);
+      const exploreEvents = filterBlockedEvents(filterExploreEvents(notRejected), blockedOrganizers);
       const now = new Date();
       const futureEvents = exploreEvents.filter((event) => {
         const start = event.start_datetime ? new Date(event.start_datetime) : null;
@@ -119,7 +122,7 @@ export default function SearchScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  }, [userCountry, countryResolved]);
+  }, [userCountry, countryResolved, blockedOrganizers]);
 
   useEffect(() => {
     loadEvents();

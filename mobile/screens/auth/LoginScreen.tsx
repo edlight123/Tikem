@@ -21,6 +21,7 @@ import { TikemWordmark } from '../../components/TikemWordmark';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { SecondaryPill } from '../../components/auth/SecondaryPill';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { TermsAgreement } from '../../components/auth/TermsAgreement';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { colors, spacing, type } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
@@ -238,6 +239,10 @@ export default function LoginScreen({ navigation }: any) {
                   onPress={handleAppleSignIn}
                 />
               )}
+
+              {/* Google / Apple here create an account on first use, so the
+                  Terms line belongs on this screen too (App Store 1.2). */}
+              <TermsAgreement />
 
               <Pressable
                 onPress={() => navigation.navigate('Signup')}

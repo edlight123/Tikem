@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import {
   View,
   Text,
@@ -40,7 +41,14 @@ export default function NotificationsScreen() {
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   const showAlert = useAppAlert();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [allNotifications, setNotifications] = useState<Notification[]>([]);
+  // Notifications about a blocked organizer (e.g. "new event from …") are
+  // hidden, not deleted — unblocking brings them back (App Store 1.2).
+  const blockedOrganizers = useBlockedOrganizers();
+  const notifications = allNotifications.filter((n: any) => {
+    const organizerId = n?.metadata?.organizerId || n?.organizerId;
+    return !(organizerId && blockedOrganizers.has(String(organizerId)));
+  });
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

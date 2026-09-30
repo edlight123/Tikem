@@ -1664,5 +1664,48 @@
     "state_friends": "Amis",
     "remove": "Retirer",
     "remove_friend": "Retirer cet ami"
+  },
+  "moderation": {
+    "report_event": "Signaler cet événement",
+    "report_organizer": "Signaler l'organisateur",
+    "report_event_title": "Signaler cet événement",
+    "report_organizer_title": "Signaler cet organisateur",
+    "report_intro": "Quel est le problème ? Les signalements sont privés : l'organisateur ne sait jamais qui l'a envoyé.",
+    "reasons": {
+      "spam": "Spam",
+      "scam_or_fraud": "Arnaque ou fraude",
+      "offensive": "Haineux ou offensant",
+      "violence": "Violence ou menaces",
+      "sexual": "Contenu sexuel",
+      "illegal": "Activité illégale",
+      "misleading": "Trompeur ou faux",
+      "other": "Autre chose"
+    },
+    "details_label": "Détails (facultatif)",
+    "details_placeholder": "Tout ce qui peut nous aider à l'examiner",
+    "submit": "Envoyer le signalement",
+    "submitting": "Envoi…",
+    "success_title": "Merci de nous avoir prévenus",
+    "success_body": "Notre équipe examine chaque signalement sous 24 heures et retire les contenus qui enfreignent nos Conditions.",
+    "already_reported": "Vous avez déjà signalé ce contenu. Notre équipe l'examinera sous 24 heures.",
+    "done": "Terminé",
+    "contact_line": "Vous pouvez aussi écrire à support@tikem.co",
+    "block": "Bloquer l'organisateur",
+    "unblock": "Débloquer l'organisateur",
+    "block_confirm_title": "Bloquer {{name}} ?",
+    "block_confirm_body": "Ses événements n'apparaîtront plus dans vos fils ni dans la recherche, vous ne le suivrez plus et vous ne recevrez plus de notifications sur ses événements. Vous pouvez le débloquer à tout moment.",
+    "unblock_confirm_title": "Débloquer {{name}} ?",
+    "unblock_confirm_body": "Ses événements réapparaîtront dans vos fils.",
+    "blocked_toast": "Organisateur bloqué",
+    "blocked_toast_body": "Vous ne verrez plus ses événements.",
+    "unblocked_toast": "Organisateur débloqué",
+    "cancel": "Annuler",
+    "errors": {
+      "generic": "Une erreur s'est produite. Réessayez.",
+      "rate_limited": "Vous avez envoyé beaucoup de signalements. Réessayez un peu plus tard.",
+      "unauthorized": "Connectez-vous pour signaler un contenu.",
+      "not_found": "Ce contenu n'est plus disponible.",
+      "self_report": "Vous ne pouvez pas vous signaler vous-même."
+    }
   }
 }

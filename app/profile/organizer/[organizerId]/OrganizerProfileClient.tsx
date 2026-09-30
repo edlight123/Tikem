@@ -34,6 +34,7 @@ import { useTranslation } from 'react-i18next'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import FollowButton from '@/components/FollowButton'
 import ConnectButton from '@/components/connections/ConnectButton'
+import { BlockOrganizerButton, ReportButton } from '@/components/moderation/ModerationActions'
 import {
   Shield,
   CalendarDays,
@@ -69,6 +70,8 @@ interface OrganizerProfileClientProps {
   /** Where they organize, when they have set it. Often absent. */
   city?: string
   country?: string
+  /** The viewer has blocked this organizer (lib/moderation/blocks.ts). */
+  isBlocked?: boolean
 }
 
 const SOCIAL_META: Array<{ key: keyof SocialLinks; Icon: typeof Instagram; label: string }> = [
@@ -124,6 +127,7 @@ export default function OrganizerProfileClient({
   isAuthenticated = false,
   city,
   country,
+  isBlocked = false,
 }: OrganizerProfileClientProps) {
   const { t, i18n } = useTranslation('profile')
   const socialEntries = SOCIAL_META.filter(({ key }) => (socialLinks?.[key] || '').trim())
@@ -261,11 +265,15 @@ export default function OrganizerProfileClient({
                         isAuthenticated={isAuthenticated}
                         quiet
                       />
-                      <FollowButton
-                        organizerId={organizer.id}
-                        userId={userId}
-                        initialIsFollowing={isFollowing}
-                      />
+                      {/* No Follow while blocked: blocking removed the follow and
+                          the follow API refuses to re-add it. */}
+                      {!isBlocked && (
+                        <FollowButton
+                          organizerId={organizer.id}
+                          userId={userId}
+                          initialIsFollowing={isFollowing}
+                        />
+                      )}
                     </>
                   )}
                   {socialEntries.map(({ key, Icon, label }) => (
@@ -280,6 +288,19 @@ export default function OrganizerProfileClient({
                       <Icon className="h-4 w-4" />
                     </a>
                   ))}
+                </div>
+              )}
+              {/* Report / block (App Store 1.2) — quiet text actions, never
+                  shown on your own profile. */}
+              {userId !== organizer.id && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <ReportButton kind="organizer" targetId={organizer.id} userId={userId} />
+                  <BlockOrganizerButton
+                    organizerId={organizer.id}
+                    organizerName={organizer.full_name}
+                    userId={userId}
+                    initialBlocked={isBlocked}
+                  />
                 </div>
               )}
             </div>
