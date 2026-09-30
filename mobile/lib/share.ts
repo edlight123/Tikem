@@ -52,7 +52,7 @@ export async function shareEvent(event: any, language: Language = 'en'): Promise
 
   // The canonical tikem.co event URL (unchanged from the original helper),
   // set off by a blank line so it reads as the call-to-action.
-  const url = `https://tikem.co/events/${event.id}`;
+  const url = `https://www.tikem.co/events/${event.id}`;
   const message = lines.length ? `${lines.join('\n')}\n\n${url}` : url;
 
   try {

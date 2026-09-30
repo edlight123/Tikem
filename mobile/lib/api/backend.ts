@@ -7,7 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 const API_URL = String(
   process.env.EXPO_PUBLIC_API_URL ||
     process.env.EXPO_PUBLIC_WEB_URL ||
-    'https://tikem.co'
+    'https://www.tikem.co'
 ).replace(/\/$/, '')
 
 const DEBUG_API = process.env.EXPO_PUBLIC_DEBUG_API === 'true'

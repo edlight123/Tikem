@@ -86,7 +86,7 @@ export default function TransferTicketModal({
 
       // Show transfer link if available
       if (data.transfer?.transferToken) {
-        const link = `https://tikem.co/tickets/transfer/${data.transfer.transferToken}`;
+        const link = `https://www.tikem.co/tickets/transfer/${data.transfer.transferToken}`;
         setTransferLink(link);
         setShowLink(true);
         

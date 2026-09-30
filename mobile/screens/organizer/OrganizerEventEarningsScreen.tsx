@@ -286,7 +286,7 @@ export default function OrganizerEventEarningsScreen() {
     return t('organizerEarnings.notices.notReady')
   }, [earnings?.release?.reason, releaseDateLabel, settlementReadyDateLabel, t])
 
-  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://tikem.co'
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.tikem.co'
 
   const loadPayoutRail = useCallback(async () => {
     if (!user?.uid) {

@@ -155,7 +155,7 @@ export default function OrganizerEventManagementScreen() {
 
   const handleShareEvent = async () => {
     try {
-      const url = `https://tikem.co/events/${eventId}`;
+      const url = `https://www.tikem.co/events/${eventId}`;
       await Share.share({
         message: `${event?.title || t('common.event')}\n\n${url}`,
       });

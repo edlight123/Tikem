@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "71580084056",
+    "firebase_url": "https://event-haiti-default-rtdb.firebaseio.com",
+    "project_id": "event-haiti",
+    "storage_bucket": "event-haiti.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:71580084056:android:84a5203ec9ddddebd3a72d",
+        "android_client_info": {
+          "package_name": "co.tikem.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "71580084056-sngjoi0agfg6ro6ben71eo2taghe6t2n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABuOMSLpkf7JkzvG4YF2TDbjZD55A5vDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "71580084056-sngjoi0agfg6ro6ben71eo2taghe6t2n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "71580084056-ep55b9muep09ac6dlglvtmq366dt4di8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.eventhaiti.mobile"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

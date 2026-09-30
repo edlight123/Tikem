@@ -21,7 +21,7 @@ import { setFeeConfig, type RemoteLocationFees } from './buyerPricing';
 const STORAGE_KEY = 'tikem.feeConfig.v1';
 
 const API_URL = String(
-  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_WEB_URL || 'https://tikem.co'
+  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_WEB_URL || 'https://www.tikem.co'
 ).replace(/\/$/, '');
 
 /** A slow network must not delay the first screen; the defaults are fine meanwhile. */

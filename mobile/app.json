@@ -52,26 +52,6 @@
           "data": [
             {
               "scheme": "https",
-              "host": "tikem.co",
-              "pathPrefix": "/events"
-            },
-            {
-              "scheme": "https",
-              "host": "tikem.co",
-              "pathPrefix": "/tickets"
-            },
-            {
-              "scheme": "https",
-              "host": "tikem.co",
-              "pathPrefix": "/invite"
-            },
-            {
-              "scheme": "https",
-              "host": "tikem.co",
-              "pathPrefix": "/notifications"
-            },
-            {
-              "scheme": "https",
               "host": "www.tikem.co",
               "pathPrefix": "/events"
             },
@@ -95,11 +75,41 @@
             "BROWSABLE",
             "DEFAULT"
           ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/events"
+            },
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/tickets"
+            },
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/notifications"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "permissions": [
         "android.permission.READ_CONTACTS"
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
