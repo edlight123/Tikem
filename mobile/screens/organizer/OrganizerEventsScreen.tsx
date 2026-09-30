@@ -32,7 +32,7 @@ import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import SegmentedTabs from '../../components/organizer/SegmentedTabs';
 import { TikemWordmark } from '../../components/TikemWordmark';
 
-type EventStatus = 'draft' | 'published' | 'sold_out' | 'completed' | 'cancelled';
+type EventStatus = 'draft' | 'unpublished' | 'sold_out' | 'rejected' | 'cancelled';
 
 export default function OrganizerEventsScreen() {
   const { colors } = useTheme();
@@ -107,19 +107,29 @@ export default function OrganizerEventsScreen() {
     </TouchableOpacity>
   );
 
+  // Only the exceptions earn a label. A live event (and a past one that
+  // simply finished) is the normal state, so it returns null and the row
+  // carries no status at all — "PUBLISHED" on every row was pure noise.
+  const getDisplayStatus = (event: OrganizerEvent): EventStatus | null => {
+    if ((event as any).rejected === true) return 'rejected';
+    if (event.status === 'cancelled') return 'cancelled';
+    if (!event.is_published) return event.status === 'draft' ? 'draft' : 'unpublished';
+    // `total_tickets > 0` guard: an event with no capacity set used to read
+    // as sold out because 0 >= 0.
+    if (event.total_tickets > 0 && (event.tickets_sold || 0) >= event.total_tickets) return 'sold_out';
+    return null;
+  };
+
   // Map an event status to the locked StatusChip semantic (POSH §2.7):
-  //   published → live (teal) · draft → action-needed (amber) ·
-  //   sold_out/cancelled → error (red) · completed → used (grey).
+  //   draft/unpublished → action-needed (amber) · sold out/rejected/cancelled → red.
   const getChipStatus = (status: EventStatus): string => {
     switch (status) {
       case 'draft':
+      case 'unpublished':
         return 'actionNeeded';
-      case 'published':
-        return 'live';
       case 'sold_out':
         return 'soldOut';
-      case 'completed':
-        return 'used';
+      case 'rejected':
       case 'cancelled':
         return 'error';
       default:
@@ -131,12 +141,12 @@ export default function OrganizerEventsScreen() {
     switch (status) {
       case 'draft':
         return t('organizerEvents.status.draft');
-      case 'published':
-        return t('organizerEvents.status.published');
+      case 'unpublished':
+        return t('organizerEvents.status.unpublished');
       case 'sold_out':
         return t('organizerEvents.status.soldOut');
-      case 'completed':
-        return t('organizerEvents.status.completed');
+      case 'rejected':
+        return t('organizerEvents.status.rejected');
       case 'cancelled':
         return t('organizerEvents.status.cancelled');
       default:
@@ -169,12 +179,14 @@ export default function OrganizerEventsScreen() {
             <View key={i} style={styles.eventCard}>
               <Skeleton width={104} aspectRatio={4 / 5} radius={radius.chip} />
               <View style={styles.skeletonCardBody}>
-                <Skeleton width="72%" height={20} radius={7} />
-                <Skeleton width="85%" height={14} radius={5} style={{ marginTop: 10 }} />
-                <Skeleton width="60%" height={14} radius={5} style={{ marginTop: 6 }} />
-                <View style={styles.skeletonCardFooter}>
-                  <Skeleton width={90} height={14} radius={5} />
-                  <Skeleton width={70} height={14} radius={5} />
+                <View>
+                  <Skeleton width="72%" height={20} radius={7} />
+                  <Skeleton width="60%" height={14} radius={5} style={{ marginTop: 8 }} />
+                  <Skeleton width="40%" height={12} radius={5} style={{ marginTop: 6 }} />
+                </View>
+                <View>
+                  <Skeleton width={80} height={12} radius={5} />
+                  <Skeleton width="100%" height={3} radius={2} style={{ marginTop: 6 }} />
                 </View>
               </View>
             </View>
@@ -232,43 +244,58 @@ export default function OrganizerEventsScreen() {
         ) : (
           events.map((event) => {
             const eventDate = new Date(event.start_datetime);
-            const formattedDate = eventDate.toLocaleDateString(locale, {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            });
-            const formattedTime = eventDate.toLocaleTimeString(locale, {
-              hour: 'numeric',
-              minute: '2-digit',
-            });
+            const hasDate = !Number.isNaN(eventDate.getTime());
+            // One compact line — "Sat, Sep 27 · 4:00 PM". The year only
+            // appears when it isn't this one (mostly the Past tab).
+            const dateLabel = hasDate
+              ? `${eventDate.toLocaleDateString(locale, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  ...(eventDate.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}),
+                })} · ${eventDate.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}`
+              : '';
 
-            // Determine event status
-            let displayStatus: EventStatus = event.status as EventStatus;
-            if (event.is_published && event.tickets_sold >= event.total_tickets) {
-              displayStatus = 'sold_out';
-            } else if (event.is_published) {
-              displayStatus = 'published';
-            } else if (!event.is_published && event.status === 'draft') {
-              displayStatus = 'draft';
-            }
+            const displayStatus = getDisplayStatus(event);
+            const statusLabel = displayStatus ? getStatusLabel(displayStatus) : null;
+            const payoutBlocked = Boolean((event as any).payout_blocked);
 
             // Attendee-side reads banner first, then cover. Match that so the
             // real poster shows on the organizer list too.
             const posterUri = event.banner_image_url || event.cover_image_url;
 
-            // `location` is often empty; fall back to venue_name/city/commune/
-            // address (same fields the attendee card composes) so the pin row
-            // isn't a lonely icon with no text.
-            const locationLabel =
-              (event.location && event.location.trim()) ||
-              [event.venue_name, (event as any).city, event.commune, event.address]
-                .filter((s) => s && String(s).trim())
-                .join(', ');
+            // Venue NAME only — the full street address truncated mid-word on
+            // every row. Falls back to the first segment of the free-text
+            // location ("Le Gibus, Paris, 18 Rue…" → "Le Gibus"), then city.
+            const venueLabel =
+              (event.venue_name && event.venue_name.trim()) ||
+              (event.location && event.location.split(',')[0].trim()) ||
+              (event.city && String(event.city).trim()) ||
+              (event.commune && event.commune.trim()) ||
+              '';
+
+            const sold = event.tickets_sold || 0;
+            const capacity = event.total_tickets || 0;
+            const soldRatio = capacity > 0 ? Math.min(1, sold / capacity) : 0;
+            const salesLabel = capacity > 0
+              ? `${sold} / ${capacity} ${t('common.sold')}`
+              : `${sold} ${t('common.sold')}`;
 
             return (
               <TouchableOpacity
                 key={event.id}
                 style={styles.eventCard}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={[
+                  event.title,
+                  dateLabel,
+                  venueLabel,
+                  statusLabel,
+                  payoutBlocked ? t('organizerEvents.status.payoutBlocked') : null,
+                  salesLabel,
+                ].filter(Boolean).join(', ')}
+                accessibilityHint={t('organizerEvents.manage')}
                 onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id, event })}
               >
                 {/* Vertical poster thumbnail on the left. Real image when we have
@@ -301,52 +328,45 @@ export default function OrganizerEventsScreen() {
                     </View>
                   )}
                 </View>
+                {/* Three quiet tiers and no icons: title, when/where, sales.
+                    A status appears only when it's NOT the normal state. */}
                 <View style={styles.eventContent}>
-                  <View style={styles.eventHeaderRow}>
+                  <View>
+                    {(statusLabel || payoutBlocked) && (
+                      <View style={styles.statusRow}>
+                        {displayStatus && statusLabel ? (
+                          <StatusChip status={getChipStatus(displayStatus)} label={statusLabel} />
+                        ) : null}
+                        {/* A live event whose payout account can no longer
+                            accept a charge (set by the Connect health sweep).
+                            Buyers would fail at checkout, so it always shows. */}
+                        {payoutBlocked ? (
+                          <StatusChip status="error" label={t('organizerEvents.status.payoutBlocked')} />
+                        ) : null}
+                      </View>
+                    )}
                     <Text style={styles.eventTitle} numberOfLines={2}>
                       {event.title}
                     </Text>
-                    <StatusChip status={getChipStatus(displayStatus)} label={getStatusLabel(displayStatus)} />
-                  </View>
-
-                  {/* A live event whose payout account can no longer accept a
-                      charge (set by the Connect health sweep). The buyer would
-                      reach checkout and fail, so it gets its own line rather
-                      than competing for space in the header row. */}
-                  {(event as any).payout_blocked && (
-                    <View style={styles.payoutBlockedRow}>
-                      <StatusChip status="error" label={t('organizerEvents.status.payoutBlocked')} />
-                    </View>
-                  )}
-
-                  <View style={styles.eventDetails}>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                      <Text style={styles.detailText}>{formattedDate}</Text>
-                      <Ionicons name="time-outline" size={16} color={colors.textSecondary} style={styles.detailIcon} />
-                      <Text style={styles.detailText}>{formattedTime}</Text>
-                    </View>
-                    {locationLabel ? (
-                      <View style={styles.detailRow}>
-                        <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                        <Text style={styles.detailText} numberOfLines={1}>
-                          {locationLabel}
-                        </Text>
-                      </View>
+                    {dateLabel ? (
+                      <Text style={styles.metaPrimary} numberOfLines={1}>
+                        {dateLabel}
+                      </Text>
+                    ) : null}
+                    {venueLabel ? (
+                      <Text style={styles.metaSecondary} numberOfLines={1}>
+                        {venueLabel}
+                      </Text>
                     ) : null}
                   </View>
 
-                  <View style={styles.eventFooter}>
-                    <View style={styles.ticketInfo}>
-                      <Ionicons name="ticket-outline" size={16} color={colors.primary} />
-                      <Text style={styles.ticketText}>
-                        {event.tickets_sold || 0} / {event.total_tickets || 0} {t('common.sold')}
-                      </Text>
-                    </View>
-                    <View style={styles.manageButton}>
-                      <Text style={styles.manageButtonText}>{t('organizerEvents.manage')}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-                    </View>
+                  <View style={styles.salesBlock}>
+                    <Text style={styles.salesText}>{salesLabel}</Text>
+                    {capacity > 0 ? (
+                      <View style={styles.salesTrack}>
+                        <View style={[styles.salesFill, { width: `${soldRatio * 100}%` }]} />
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -374,18 +394,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 16,
     paddingVertical: 4,
   },
+  // Mirrors eventContent: text stack on top, sales line + track at the foot.
   skeletonCardBody: {
     flex: 1,
     paddingVertical: 2,
-  },
-  // eventFooter: paddingTop 12 over a hairline, pinned toward the card bottom.
-  skeletonCardFooter: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 18,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   createButton: {
     flexDirection: 'row',
@@ -437,66 +450,51 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 2,
     justifyContent: 'space-between',
   },
-  eventHeaderRow: {
+  statusRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 6,
   },
   eventTitle: {
     fontFamily: font.serif,
     fontSize: 20,
     color: colors.text,
-    flex: 1,
-    marginRight: 10,
     lineHeight: 24,
   },
-  payoutBlockedRow: {
+  // Date/time is the one fact an organizer scans for, so it gets the brighter
+  // tier; the venue sits one step quieter beneath it.
+  metaPrimary: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
     marginTop: 6,
   },
-  eventDetails: {
-    marginBottom: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  detailIcon: {
-    marginLeft: 12,
-  },
-  detailText: {
-    fontSize: 14,
+  metaSecondary: {
+    fontSize: 13,
     color: colors.textSecondary,
-    marginLeft: 6,
-    flex: 1,
+    marginTop: 2,
   },
-  eventFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  // Sales sit at the foot of the poster as one quiet line over a slim filled
+  // track — no ticket icon, no divider, no separate "Manage" link (the whole
+  // row is the tap target).
+  salesBlock: {
+    marginTop: 10,
   },
-  ticketInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  salesText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
-  ticketText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginLeft: 6,
+  salesTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceRaised,
+    marginTop: 6,
+    overflow: 'hidden',
   },
-  manageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  manageButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    marginRight: 4,
+  salesFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
   },
 });

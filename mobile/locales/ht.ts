@@ -1785,6 +1785,8 @@ export default {
       payoutBlocked: 'Pa ka pran peman',
       completed: 'Fini nèt',
       cancelled: 'Anile',
+      rejected: 'Rejte',
+      unpublished: 'Pa pibliye',
     },
   },
 

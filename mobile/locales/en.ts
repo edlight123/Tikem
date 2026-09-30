@@ -2123,6 +2123,8 @@ export default {
       payoutBlocked: "Can't take payments",
       completed: 'Completed',
       cancelled: 'Cancelled',
+      rejected: 'Rejected',
+      unpublished: 'Unpublished',
     },
   },
 

@@ -1815,6 +1815,8 @@ export default {
       payoutBlocked: 'Paiements bloqués',
       completed: 'Terminé',
       cancelled: 'Annulé',
+      rejected: 'Refusé',
+      unpublished: 'Non publié',
     },
   },
 
