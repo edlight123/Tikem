@@ -34,6 +34,7 @@ import VerifiedBadge from '../components/VerifiedBadge';
 import EmptyState from '../components/EmptyState';
 import { OrganizerProfileSkeleton } from '../components/Skeleton';
 import { fetchConnections } from '../lib/api/social';
+import { goBackOrHome } from '../lib/goBackOrHome';
 import { type FriendshipState } from '../types/social';
 
 const { width } = Dimensions.get('window');
@@ -449,7 +450,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               organizer-surface headers (top-left, never over the avatar). */}
           <TouchableOpacity
             style={[styles.backButton, { top: insets.top + HERO_CONTROL_TOP }]}
-            onPress={() => navigation.goBack()}
+            onPress={() => goBackOrHome(navigation)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel={t('common.back')}
