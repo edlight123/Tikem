@@ -1317,6 +1317,12 @@ export default {
         'Kont peman ou konekte a anrejistre nan {account}. Evènman w ap fè nan {markets} ap toujou peye w — nan menm kont sa a, nan lajan pa l, apre yon konvèsyon. Pou w ta peye lokalman la, ou ta bezwen yon lòt kont konekte, e Tikèm poko sipòte sa.',
       showAllRails: 'Montre tout metòd peman kanmenm',
       saveFailed: 'Nou pa t ka anrejistre peyi w yo. Tanpri eseye ankò.',
+      notSet: 'Poko chwazi',
+      change: 'Chanje',
+      choose: 'Chwazi',
+      save: 'Anrejistre peyi yo',
+      railHaiti: 'Peye nan yon bank ayisyen oswa MonCash',
+      railStripe: 'Peye atravè Stripe',
     },
     profileTitle: 'Pwofil peman',
     profiles: {

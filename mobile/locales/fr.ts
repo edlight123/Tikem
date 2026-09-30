@@ -1347,6 +1347,12 @@ export default {
         'Votre compte de paiement connecté est enregistré en {account}. Les événements que vous organisez en {markets} vous paieront quand même — sur ce même compte, dans sa devise, après conversion. Être payé localement là-bas exigerait un compte connecté distinct, que Tikèm ne prend pas encore en charge.',
       showAllRails: 'Afficher quand même tous les moyens de paiement',
       saveFailed: 'Impossible d’enregistrer vos pays. Veuillez réessayer.',
+      notSet: 'Pas encore défini',
+      change: 'Modifier',
+      choose: 'Choisir',
+      save: 'Enregistrer les pays',
+      railHaiti: 'Versé sur une banque haïtienne ou MonCash',
+      railStripe: 'Versé via Stripe',
     },
     profileTitle: 'Profil de paiement',
     profiles: {
