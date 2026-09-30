@@ -710,6 +710,15 @@ async function getPrefundedAccessToken(): Promise<string> {
   )
 }
 
+/**
+ * Bound every prefunded REST call well inside the function's own limit. A
+ * Transfert that hangs until Vercel kills the function leaves the payout row
+ * in `processing` with no reconciliation flag; aborting here instead throws,
+ * which classifyPrefundedTransferError reads as AMBIGUOUS — the reservation is
+ * held and PrefundedTransactionStatus decides, never a blind release.
+ */
+const MONCASH_REST_TIMEOUT_MS = 25_000
+
 async function monCashRestRequest(path: string, init: RequestInit & { method: string }): Promise<Response> {
   const baseUrl = getMonCashRestApiBaseUrl()
   const url = `${baseUrl}${path}`
@@ -719,6 +728,7 @@ async function monCashRestRequest(path: string, init: RequestInit & { method: st
   const doRequest = async (): Promise<Response> => {
     const token = usePrefunded ? await getPrefundedAccessToken() : await getAccessToken()
     return fetch(url, {
+      signal: AbortSignal.timeout(MONCASH_REST_TIMEOUT_MS),
       ...init,
       headers: {
         'Accept': 'application/json',

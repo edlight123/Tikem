@@ -107,6 +107,13 @@ describe('classifyPrefundedTransferError', () => {
     expect(classifyPrefundedTransferError(new TypeError('fetch failed'))).toBe('ambiguous')
     expect(classifyPrefundedTransferError(new Error('Unexpected MonCash prefunded transfer response: {}'))).toBe('ambiguous')
   })
+
+  it('treats our own request timeout as ambiguous — the transfer may have landed', async () => {
+    // What monCashRestRequest's AbortSignal.timeout actually throws.
+    const err = await fetch('http://127.0.0.1:9', { signal: AbortSignal.timeout(1) }).catch((e) => e)
+    expect(classifyPrefundedTransferError(err)).toBe('ambiguous')
+    expect(classifyPrefundedTransferError(new DOMException('The operation was aborted due to timeout', 'TimeoutError'))).toBe('ambiguous')
+  })
 })
 
 describe('executePrefundedTransfer', () => {
