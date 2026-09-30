@@ -1,0 +1,103 @@
+{
+  "$comment": "Source of truth for the App Store listing. Applied by scripts/asc-apply-metadata.mjs (dry run by default). Placeholders in {{DOUBLE_BRACES}} are filled from store/app-store/demo.env or the environment at apply time; secrets never live in this file.",
+  "app": {
+    "appId": "6794334427",
+    "bundleId": "co.tikem.mobile",
+    "primaryLocale": "en-US",
+    "versionString": "1.0.0",
+    "$versionString": "Must equal the build's CFBundleShortVersionString (app.json expo.version = 1.0.0). ASC currently says 1.0, which hides every build from the build picker.",
+    "copyright": "2026 L'initiative Edlight",
+    "$copyright": "Legal entity as verified on the Google payments profile (L'initiative Edlight, Canada). The repo only uses the display name 'EdLight Initiative'.",
+    "contentRightsDeclaration": "USES_THIRD_PARTY_CONTENT",
+    "$contentRightsDeclaration": "Event posters, descriptions, organizer logos and embedded videos are uploaded by organizers (third parties). The Terms grant Tikèm the licence to display them, so answer 'Yes, it contains third-party content, and I have the rights'.",
+    "categories": {
+      "primary": "ENTERTAINMENT",
+      "secondary": "LIFESTYLE",
+      "$why": "Entertainment is where live-event ticketing apps are ranked and where people browse for concerts, parties and festivals. Lifestyle is the secondary because Tikèm is a cultural-discovery guide (food, family, community, business events), not only a ticket wallet. Music would under-describe sport, food and business events; Social Networking would invite UGC scrutiny without matching what the app is for."
+    },
+    "price": {
+      "baseTerritory": "USA",
+      "customerPrice": "0.0"
+    },
+    "availability": {
+      "availableInNewTerritories": true,
+      "territories": "ALL",
+      "$why": "Diaspora buyers live everywhere; organizers are limited to HT/US/CA/FR by the app itself. Pass --territories USA,CAN,FRA,HTI to the apply script to restrict."
+    }
+  },
+
+  "localizations": {
+    "en-US": {
+      "name": "Tikèm: Events & Tickets",
+      "subtitle": "Haiti & the diaspora, live",
+      "promotionalText": "Konpa nights, festivals, concerts and culture across Haiti and the diaspora. Find what's on, get your ticket in seconds, walk in with a QR code.",
+      "keywords": "haiti,haitian,konpa,kompa,concert,party,nightlife,diaspora,moncash,festival,kanaval,rara,rsvp,fete",
+      "description": "Tikèm is where Haitian culture goes out. Concerts, konpa nights, festivals, food, sport and community events across Haiti and the diaspora, all in one place and poster first.\n\nFIND WHAT'S ON\n• Browse by city and country, from Port-au-Prince to Miami, Montréal and Paris\n• Filter by category, date and price, or search by name\n• Save events, follow organizers and see which friends are going\n• Get reminders and add events to your calendar\n\nTICKETS THAT JUST WORK\n• Pay by card or Apple Pay, or with MonCash for events in Haiti\n• Every ticket is a QR code that lives in the app, even offline\n• Add your ticket to Apple Wallet\n• Send a ticket to a friend in a couple of taps\n• Join the waitlist when an event sells out\n\nHOST YOUR OWN\n• Create and publish an event in minutes, free\n• Set ticket tiers, free RSVPs, promo codes and private events\n• Share promoter links and see what each one sells\n• Scan tickets at the door with your phone; check-in keeps working offline\n• Invite your door team and send updates to your guests\n• Follow sales as they happen, then get paid through MonCash or bank in Haiti, or Stripe in the US, Canada and France\n\nTikèm speaks English, French and Haitian Creole.\n\nTickets on Tikèm are for real-world events. Organizers set their prices; a service fee may apply at checkout.",
+      "whatsNew": "The first Tikèm release for iPhone. Discover events across Haiti and the diaspora, buy tickets with card, Apple Pay or MonCash, and host your own events from your phone.",
+      "supportUrl": "https://www.tikem.co/support",
+      "marketingUrl": "https://www.tikem.co",
+      "privacyPolicyUrl": "https://www.tikem.co/legal/privacy",
+      "termsUrl": "https://www.tikem.co/legal/terms"
+    },
+    "fr-FR": {
+      "name": "Tikèm : Événements & Billets",
+      "subtitle": "Haïti et sa diaspora, en live",
+      "promotionalText": "Soirées konpa, festivals, concerts et culture en Haïti et dans la diaspora. Trouvez quoi faire, prenez votre billet en quelques secondes, entrez avec un QR code.",
+      "keywords": "haïti,haïtien,konpa,kompa,concert,soirée,fête,diaspora,moncash,festival,kanaval,rara,sortie,rsvp",
+      "description": "Tikèm, c'est la culture haïtienne quand elle sort. Concerts, soirées konpa, festivals, gastronomie, sport et événements communautaires en Haïti et dans la diaspora, réunis au même endroit, l'affiche en premier.\n\nTROUVEZ VOTRE SORTIE\n• Parcourez les événements par ville et par pays, de Port-au-Prince à Miami, Montréal et Paris\n• Filtrez par catégorie, date et prix, ou cherchez par nom\n• Enregistrez vos événements, suivez vos organisateurs et voyez quels amis y vont\n• Recevez des rappels et ajoutez les événements à votre calendrier\n\nDES BILLETS SANS PRISE DE TÊTE\n• Payez par carte ou Apple Pay, ou avec MonCash pour les événements en Haïti\n• Chaque billet est un QR code rangé dans l'app, même hors ligne\n• Ajoutez votre billet à Apple Wallet\n• Envoyez un billet à un ami en deux gestes\n• Inscrivez-vous sur liste d'attente quand c'est complet\n\nORGANISEZ LES VÔTRES\n• Créez et publiez un événement en quelques minutes, gratuitement\n• Proposez plusieurs catégories de billets, des RSVP gratuits, des codes promo et des événements privés\n• Partagez des liens promoteurs et voyez ce que chacun vend\n• Scannez les billets à l'entrée avec votre téléphone ; le contrôle continue de fonctionner hors ligne\n• Invitez votre équipe d'accueil et envoyez des nouvelles à vos invités\n• Suivez vos ventes en direct, puis encaissez via MonCash ou virement en Haïti, ou via Stripe aux États-Unis, au Canada et en France\n\nTikèm parle français, anglais et créole haïtien.\n\nLes billets vendus sur Tikèm donnent accès à des événements bien réels. Les organisateurs fixent leurs prix ; des frais de service peuvent s'appliquer au paiement.",
+      "whatsNew": "La première version de Tikèm pour iPhone. Découvrez les événements en Haïti et dans la diaspora, achetez vos billets par carte, Apple Pay ou MonCash, et organisez vos propres événements depuis votre téléphone.",
+      "supportUrl": "https://www.tikem.co/support",
+      "marketingUrl": "https://www.tikem.co",
+      "privacyPolicyUrl": "https://www.tikem.co/legal/privacy",
+      "termsUrl": "https://www.tikem.co/legal/terms"
+    }
+  },
+
+  "ageRating": {
+    "$why": "Answers for Apple's 2025 age-rating questionnaire (API field names). Organizers publish events without pre-approval, so UGC is true; posters for parties and nightlife routinely reference drinks, so alcohol is INFREQUENT and mature/suggestive themes INFREQUENT. Contact-organizer messages and event updates count as messaging; friends, followers, public profiles and 'who's going' count as social features. No ads, no gambling, no contests, no open browser (web views are locked to tikem.co and payment pages). Expect Apple to compute 13+; do not override.",
+    "advertising": false,
+    "alcoholTobaccoOrDrugUseOrReferences": "INFREQUENT",
+    "contests": "NONE",
+    "gambling": false,
+    "gamblingSimulated": "NONE",
+    "gunsOrOtherWeapons": "NONE",
+    "healthOrWellnessTopics": false,
+    "lootBox": false,
+    "medicalOrTreatmentInformation": "NONE",
+    "messagingAndChat": true,
+    "parentalControls": false,
+    "profanityOrCrudeHumor": "NONE",
+    "ageAssurance": false,
+    "sexualContentGraphicAndNudity": "NONE",
+    "sexualContentOrNudity": "NONE",
+    "socialMedia": true,
+    "socialMediaAgeRestricted": false,
+    "horrorOrFearThemes": "NONE",
+    "matureOrSuggestiveThemes": "INFREQUENT",
+    "unrestrictedWebAccess": false,
+    "userGeneratedContent": true,
+    "violenceCartoonOrFantasy": "NONE",
+    "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+    "violenceRealistic": "NONE"
+  },
+
+  "reviewDetail": {
+    "contactFirstName": "Ted",
+    "contactLastName": "Jacquet",
+    "contactPhone": "+16316295402",
+    "$contactPhone": "Tikèm support line from the verified Google business profile. Replace with a direct mobile if App Review should reach the owner.",
+    "contactEmail": "ted.jacquet@edlight.org",
+    "demoAccountRequired": true,
+    "demoAccountName": "{{ASC_DEMO_EMAIL}}",
+    "demoAccountPassword": "{{ASC_DEMO_PASSWORD}}",
+    "notesFile": "review-notes.md",
+    "$notesFile": "The text between the NOTES-BEGIN / NOTES-END markers of review-notes.md is sent as the review notes, with {{PLACEHOLDERS}} filled in."
+  },
+
+  "screenshots": {
+    "displayType": "APP_IPHONE_67",
+    "defaultDir": "store/screenshots/ios-6.9",
+    "acceptedSizes": ["1320x2868", "1290x2796"],
+    "$note": "One set serves every iPhone size: App Store Connect scales the 6.9\" set down. The app is iPhone-only, so no iPad set is required."
+  }
+}

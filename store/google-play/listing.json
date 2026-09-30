@@ -1,0 +1,32 @@
+{
+  "$comment": "Play Console → Grow users → Store presence → Main store listing (en-US default) and Manage translations → fr-FR. Limits: title 30, short description 80, full description 4000. Google Wallet is deliberately NOT mentioned: the Google Wallet issuer is still in demo mode, so Add to Google Wallet only works for the console admin.",
+  "packageName": "co.tikem.mobile",
+  "defaultLanguage": "en-US",
+  "appCategory": "Events",
+  "$appCategory": "Play has a dedicated 'Events' app category. It is where Eventbrite-style ticketing apps are ranked, and a closer match than Entertainment.",
+  "tags": ["Event tickets", "Concerts", "Nightlife", "Festivals", "Local events"],
+  "$tags": "Pick up to 5 from Play's tag list (Store settings → Tags); use the closest available names.",
+  "contact": {
+    "email": "support@tikem.co",
+    "phone": "+1 631-629-5402",
+    "website": "https://www.tikem.co"
+  },
+  "privacyPolicyUrl": "https://www.tikem.co/legal/privacy",
+  "graphics": {
+    "icon": "store/google-play/icon-512.png",
+    "featureGraphic": "store/google-play/feature-graphic-1024x500.png",
+    "phoneScreenshots": "store/screenshots/play-phone/ (2 to 8 images, 16:9 or 9:16, each side 320 to 3840 px)"
+  },
+  "listings": {
+    "en-US": {
+      "title": "Tikèm: Events & Tickets",
+      "shortDescription": "Haitian concerts, parties and culture. Get tickets fast, walk in with a QR code.",
+      "fullDescription": "Tikèm is where Haitian culture goes out. Concerts, konpa nights, festivals, food, sport and community events across Haiti and the diaspora, all in one place and poster first.\n\nFIND WHAT'S ON\n• Browse by city and country, from Port-au-Prince to Miami, Montréal and Paris\n• Filter by category, date and price, or search by name\n• Save events, follow organizers and see which friends are going\n• Get reminders and add events to your calendar\n\nTICKETS THAT JUST WORK\n• Pay by card or Google Pay, or with MonCash for events in Haiti\n• Every ticket is a QR code that lives in the app, even offline\n• Send a ticket to a friend in a couple of taps\n• Join the waitlist when an event sells out\n\nHOST YOUR OWN\n• Create and publish an event in minutes, free\n• Set ticket tiers, free RSVPs, promo codes and private events\n• Share promoter links and see what each one sells\n• Scan tickets at the door with your phone; check-in keeps working offline\n• Invite your door team and send updates to your guests\n• Follow sales as they happen, then get paid through MonCash or bank in Haiti, or Stripe in the US, Canada and France\n\nTikèm speaks English, French and Haitian Creole.\n\nTickets on Tikèm are for real-world events. Organizers set their prices; a service fee may apply at checkout."
+    },
+    "fr-FR": {
+      "title": "Tikèm : Événements & Billets",
+      "shortDescription": "Concerts, soirées et culture haïtienne. Billet en poche, QR code à l'entrée.",
+      "fullDescription": "Tikèm, c'est la culture haïtienne quand elle sort. Concerts, soirées konpa, festivals, gastronomie, sport et événements communautaires en Haïti et dans la diaspora, réunis au même endroit, l'affiche en premier.\n\nTROUVEZ VOTRE SORTIE\n• Parcourez les événements par ville et par pays, de Port-au-Prince à Miami, Montréal et Paris\n• Filtrez par catégorie, date et prix, ou cherchez par nom\n• Enregistrez vos événements, suivez vos organisateurs et voyez quels amis y vont\n• Recevez des rappels et ajoutez les événements à votre calendrier\n\nDES BILLETS SANS PRISE DE TÊTE\n• Payez par carte ou Google Pay, ou avec MonCash pour les événements en Haïti\n• Chaque billet est un QR code rangé dans l'app, même hors ligne\n• Envoyez un billet à un ami en deux gestes\n• Inscrivez-vous sur liste d'attente quand c'est complet\n\nORGANISEZ LES VÔTRES\n• Créez et publiez un événement en quelques minutes, gratuitement\n• Proposez plusieurs catégories de billets, des RSVP gratuits, des codes promo et des événements privés\n• Partagez des liens promoteurs et voyez ce que chacun vend\n• Scannez les billets à l'entrée avec votre téléphone ; le contrôle continue de fonctionner hors ligne\n• Invitez votre équipe d'accueil et envoyez des nouvelles à vos invités\n• Suivez vos ventes en direct, puis encaissez via MonCash ou virement en Haïti, ou via Stripe aux États-Unis, au Canada et en France\n\nTikèm parle français, anglais et créole haïtien.\n\nLes billets vendus sur Tikèm donnent accès à des événements bien réels. Les organisateurs fixent leurs prix ; des frais de service peuvent s'appliquer au paiement."
+    }
+  }
+}
