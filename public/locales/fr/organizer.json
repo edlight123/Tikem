@@ -245,7 +245,7 @@
     "payouts_via_stripe": "Vos paiements sont traités via Stripe Connect.",
     "payouts_to_this_account": "Vos paiements seront envoyés sur ce compte.",
     "instant_moncash_title": "MonCash instantané (préfinancement)",
-    "instant_moncash_desc": "Les paiements instantanés dépendent des fonds disponibles sur la plateforme.",
+    "instant_moncash_desc": "Activé : vos retraits MonCash arrivent en quelques minutes, avec des frais de 3 %, lorsque le préfinancement de la plateforme est disponible. Désactivé (ou indisponible) : chaque retrait passe d'abord par une vérification manuelle de notre équipe, généralement sous 24 heures, sans frais instantanés. Retrait MonCash minimum : {{min}} (pour un événement en USD, l'équivalent en USD au taux du jour).",
     "prefunding_status": "Statut : {{status}}",
     "prefunding_available": "Disponible",
     "prefunding_unavailable": "Temporairement indisponible",

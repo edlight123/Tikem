@@ -245,7 +245,7 @@
     "payouts_via_stripe": "Peman ou yo pase nan Stripe Connect.",
     "payouts_to_this_account": "Peman ou yo ap voye nan kont sa a.",
     "instant_moncash_title": "MonCash rapid (prefinansman)",
-    "instant_moncash_desc": "Peman rapid depann si platfòm nan gen lajan disponib davans.",
+    "instant_moncash_desc": "Aktive: retrè MonCash ou rive nan kèk minit, avèk 3% frè, lè prefinansman platfòm nan disponib. Dezaktive (oswa lè li pa disponib): chak retrè pase anba verifikasyon manyèl ekip nou an anvan, anjeneral nan 24 èdtan, san frè rapid. Retrè MonCash minimòm: {{min}} (pou yon evènman an USD, menm valè a an USD nan to jou a).",
     "prefunding_status": "Estati: {{status}}",
     "prefunding_available": "Disponib",
     "prefunding_unavailable": "Pa disponib pou kounye a",

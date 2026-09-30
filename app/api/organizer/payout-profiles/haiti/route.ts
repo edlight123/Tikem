@@ -38,6 +38,36 @@ export async function POST(req: NextRequest) {
 
     const allowInstantMoncash = typeof body?.allowInstantMoncash === 'boolean' ? body.allowInstantMoncash : undefined
 
+    /**
+     * Preference-only update: `{ allowInstantMoncash }` with nothing else.
+     *
+     * The full save below insists on complete details and rewrites method +
+     * provider, and resending the (masked) details a client got back from GET
+     * would read as a change of payout destination — OTP step-up and a payout
+     * hold, for flipping a speed preference. The web toggle writes just this
+     * field through a server action; mobile does it here. It changes WHEN money
+     * moves, never WHERE, so it is not a sensitive update.
+     */
+    const isPreferenceOnly =
+      allowInstantMoncash !== undefined && !body?.method && !body?.bankDetails && !body?.mobileMoneyDetails
+    if (isPreferenceOnly) {
+      const existing = await getPayoutProfile(user.id, 'haiti')
+      if (!existing) {
+        return NextResponse.json(
+          { error: 'Set up a Haiti payout method first', code: 'HAITI_PROFILE_REQUIRED' },
+          { status: 400 }
+        )
+      }
+      const prefResult = await updatePayoutProfileConfig(user.id, 'haiti', { allowInstantMoncash })
+      if (!prefResult.success) {
+        return NextResponse.json(
+          { error: 'Failed to save payout settings', message: prefResult.error || 'Unknown error' },
+          { status: 500 }
+        )
+      }
+      return NextResponse.json({ success: true, allowInstantMoncash })
+    }
+
     const bankDetails = body?.bankDetails
       ? {
           accountLocation: 'haiti',
@@ -87,6 +117,19 @@ export async function POST(req: NextRequest) {
     })
 
     if (!updateResult.success) {
+      // Changing an existing destination needs a recent email OTP. Say so with
+      // a machine-readable code instead of a generic 500, so clients can route
+      // the organizer into the step-up flow.
+      if (String(updateResult.error || '').includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+        return NextResponse.json(
+          {
+            error: 'Verification required',
+            code: 'PAYOUT_CHANGE_VERIFICATION_REQUIRED',
+            requiresVerification: true,
+          },
+          { status: 403 }
+        )
+      }
       return NextResponse.json(
         { error: 'Failed to save payout settings', message: updateResult.error || 'Unknown error' },
         { status: 500 }

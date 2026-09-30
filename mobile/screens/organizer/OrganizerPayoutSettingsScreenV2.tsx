@@ -5,6 +5,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -22,6 +23,13 @@ import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
 import { getVerificationRequest } from '../../lib/verification'
 import { useLocaleFormat } from '../../lib/format'
+import { formatCurrency as fmtCurrency } from '../../lib/currency'
+import {
+  INSTANT_MONCASH_FEE_PERCENT,
+  MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
+  parsePrefundingStatus,
+  type PrefundingStatus,
+} from '../../lib/moncashPayout'
 import { RADIUS } from '../../config/brand'
 import { radius } from '../../theme/tokens'
 import { Skeleton } from '../../components/Skeleton'
@@ -215,6 +223,16 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const [verificationAsset, setVerificationAsset] = useState<ImagePicker.ImagePickerAsset | null>(null)
   const [submittingVerification, setSubmittingVerification] = useState(false)
 
+  // Instant MonCash (prefunded) payouts. `haitiMethod` is the Haiti profile's
+  // ACTIVE method — the opt-in only means something while payouts go to
+  // MonCash. `prefunding` is the platform switch (null = not loaded / failed).
+  const [haitiMethod, setHaitiMethod] = useState<string | null>(null)
+  const [allowInstantMoncash, setAllowInstantMoncash] = useState(false)
+  const [prefunding, setPrefunding] = useState<PrefundingStatus | null>(null)
+  const [savingInstant, setSavingInstant] = useState(false)
+  // A background refresh landing mid-toggle must not stomp the optimistic value.
+  const savingInstantRef = useRef(false)
+
   // Phone verification (for MonCash)
   const [phoneCode, setPhoneCode] = useState('')
   const [sendingPhoneCode, setSendingPhoneCode] = useState(false)
@@ -321,6 +339,10 @@ export default function OrganizerPayoutSettingsScreenV2() {
       const profileRes = await backendFetch('/api/organizer/payout-profiles/haiti')
       if (profileRes.ok) {
         const data = await profileRes.json()
+        setHaitiMethod(data?.profile?.method ? String(data.profile.method) : null)
+        if (!savingInstantRef.current) {
+          setAllowInstantMoncash(Boolean(data?.profile?.allowInstantMoncash))
+        }
         const mm = data?.profile?.mobileMoneyDetails
         if (mm && (mm.phoneNumber || mm.accountName)) {
           const phone = String(mm.phoneNumber || '')
@@ -365,6 +387,16 @@ export default function OrganizerPayoutSettingsScreenV2() {
     return combined
   }, [user?.uid])
 
+  const loadPrefunding = useCallback(async () => {
+    try {
+      const raw = await backendJson<any>('/api/organizer/payout-prefunding-status')
+      setPrefunding(parsePrefundingStatus(raw))
+    } catch {
+      // Unknown platform state: hide the opt-in rather than guess.
+      setPrefunding(null)
+    }
+  }, [])
+
   const loadIdentityStatus = useCallback(async () => {
     if (!user?.uid) return
 
@@ -383,13 +415,13 @@ export default function OrganizerPayoutSettingsScreenV2() {
     if (loadInFlightRef.current) return
     loadInFlightRef.current = true
     try {
-      await Promise.all([loadDestinations(), loadIdentityStatus()])
+      await Promise.all([loadDestinations(), loadIdentityStatus(), loadPrefunding()])
       serverLoadedRef.current = true
     } finally {
       setLoading(false)
       loadInFlightRef.current = false
     }
-  }, [loadDestinations, loadIdentityStatus])
+  }, [loadDestinations, loadIdentityStatus, loadPrefunding])
 
   // Instant paint: seed from the AsyncStorage cache so subsequent opens show
   // methods + verification status immediately (never a blank screen), while the
@@ -766,6 +798,11 @@ export default function OrganizerPayoutSettingsScreenV2() {
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // Replacing an existing MonCash number needs a recent email OTP.
+        if (data?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
+          showAlert(t('organizerPayoutSettings.alerts.securityTitle'), t('organizerPayoutSettings.alerts.securityBody'))
+          return
+        }
         throw new Error(data?.error || data?.message || t('organizerPayoutSettings.alerts.failedSaveMoncash'))
       }
 
@@ -779,6 +816,56 @@ export default function OrganizerPayoutSettingsScreenV2() {
       setSavingMoncash(false)
     }
   }, [moncashForm, loadDestinations, t])
+
+  /**
+   * Instant MonCash opt-in. Optimistic: the switch moves at once, and snaps
+   * back if the write fails. It sends ONLY the preference — resending the
+   * payout details would read as a destination change and trip the OTP hold.
+   */
+  const toggleInstantMoncash = useCallback(
+    async (next: boolean) => {
+      if (savingInstantRef.current) return
+      const previous = allowInstantMoncash
+      savingInstantRef.current = true
+      setSavingInstant(true)
+      setAllowInstantMoncash(next)
+      try {
+        await backendJson('/api/organizer/payout-profiles/haiti', {
+          method: 'POST',
+          body: JSON.stringify({ allowInstantMoncash: next }),
+        })
+      } catch (e: any) {
+        setAllowInstantMoncash(previous)
+        if (e?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
+          showAlert(t('organizerPayoutSettings.alerts.securityTitle'), t('organizerPayoutSettings.alerts.securityBody'))
+        } else {
+          showAlert(t('common.error'), t('organizerPayoutSettings.instantMoncash.saveFailed'))
+        }
+      } finally {
+        savingInstantRef.current = false
+        setSavingInstant(false)
+      }
+    },
+    [allowInstantMoncash, showAlert, t]
+  )
+
+  // Only for an organizer whose Haiti payouts actually go to MonCash, and only
+  // once the platform state is known.
+  const hasActiveMoncash =
+    haitiMethod === 'mobile_money' &&
+    destinations.some(
+      (d) => d.type === 'moncash' && String((d as MoncashDestination).provider || 'moncash').toLowerCase() === 'moncash'
+    )
+  const instantState: 'available' | 'paused' | 'not_yet' | null = !hasActiveMoncash || !prefunding
+    ? null
+    : !prefunding.enabled
+      ? 'not_yet'
+      : prefunding.available
+        ? 'available'
+        : 'paused'
+  const instantMinimumLine = t('organizerPayoutSettings.instantMoncash.minimum')
+    .replace('{htg}', fmtCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG', { fromCents: true, decimals: 0 }))
+  const instantFeeLabel = `${Math.round(INSTANT_MONCASH_FEE_PERCENT * 100)}%`
 
   const pickVerificationDocument = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -1136,6 +1223,47 @@ export default function OrganizerPayoutSettingsScreenV2() {
                 </TouchableOpacity>
               )
             })}
+
+            {/* Instant MonCash opt-in. Sits under the MonCash method it
+                applies to. Three platform states: live (a real switch),
+                paused (the switch stays visible but locked, so a saved "on"
+                is not misread as lost), and not launched (no switch at all). */}
+            {instantState ? (
+              <View style={styles.instantCard}>
+                <View style={styles.destinationHeader}>
+                  <View style={styles.methodIconTile}>
+                    <Ionicons name="flash-outline" size={16} color={colors.text} />
+                  </View>
+                  <View style={styles.destinationBody}>
+                    <Text style={styles.destinationTitle}>{t('organizerPayoutSettings.instantMoncash.title')}</Text>
+                    <Text style={styles.destinationSubtitle}>
+                      {t('organizerPayoutSettings.instantMoncash.feeLine').replace('{fee}', instantFeeLabel)}
+                    </Text>
+                  </View>
+                  {instantState === 'not_yet' ? (
+                    <Text style={styles.instantStateLabel}>{t('organizerPayoutSettings.instantMoncash.stateNotYet')}</Text>
+                  ) : (
+                    <Switch
+                      value={allowInstantMoncash}
+                      onValueChange={toggleInstantMoncash}
+                      disabled={instantState !== 'available' || savingInstant}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.border}
+                      accessibilityLabel={t('organizerPayoutSettings.instantMoncash.title')}
+                    />
+                  )}
+                </View>
+                <Text style={styles.instantBody}>
+                  {instantState === 'available'
+                    ? t('organizerPayoutSettings.instantMoncash.bodyAvailable').replace('{fee}', instantFeeLabel)
+                    : instantState === 'paused'
+                      ? t('organizerPayoutSettings.instantMoncash.bodyPaused')
+                      : t('organizerPayoutSettings.instantMoncash.bodyNotYet')}
+                </Text>
+                <Text style={styles.instantBody}>{instantMinimumLine}</Text>
+              </View>
+            ) : null}
             </>
             ) : null}
 
@@ -1611,6 +1739,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   setupRowHint: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
   setupRowValue: { fontSize: 13, color: colors.text },
   setupRowAction: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  instantCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.button,
+    padding: 13,
+    marginBottom: 10,
+    gap: 8,
+  },
+  instantBody: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+  instantStateLabel: { fontSize: 11, letterSpacing: 0.4, color: colors.textSecondary },
   addMethodRow: {
     flexDirection: 'row',
     alignItems: 'center',

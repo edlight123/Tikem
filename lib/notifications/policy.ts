@@ -16,6 +16,7 @@ export type NotificationCategory =
   | 'purchase' // your ticket is confirmed
   | 'reminder' // your event starts soon
   | 'event_change' // time/venue changed
+  | 'payout' // your withdrawal was paid / failed / is being confirmed — your own money
   | 'filling_fast' // an event you follow is nearly sold out
   | 'discovery' // new events in your city
   | 'organizer_sale' // you sold a ticket
@@ -26,6 +27,7 @@ const TRANSACTIONAL: ReadonlySet<NotificationCategory> = new Set([
   'purchase',
   'reminder',
   'event_change',
+  'payout',
 ])
 
 export function isTransactional(category: NotificationCategory): boolean {
@@ -41,6 +43,8 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   purchase: 'notify_ticket_purchase',
   reminder: 'notify_reminders',
   event_change: 'notify_event_updates',
+  // No opt-out: a payout outcome is about the recipient's own money.
+  payout: null,
   filling_fast: 'notify_filling_fast',
   discovery: 'notify_discovery',
   organizer_sale: 'notify_ticket_purchase',

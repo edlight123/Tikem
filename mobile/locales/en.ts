@@ -1723,6 +1723,16 @@ export default {
         cancelled: 'Cancelled',
       },
     },
+    instantMoncash: {
+      title: 'Instant MonCash payouts',
+      feeLine: '{fee} fee per instant withdrawal',
+      bodyAvailable: 'On: withdrawals land in your MonCash within minutes, and a {fee} fee is taken from each one. Off: every withdrawal goes to manual review by our team first (usually within 24 hours), with no instant fee.',
+      bodyPaused: 'Instant payouts are paused right now. Until they are back, every withdrawal goes to manual review by our team (usually within 24 hours), with no instant fee.',
+      bodyNotYet: 'Instant payouts are not available yet. For now, every withdrawal goes to manual review by our team, usually within 24 hours.',
+      stateNotYet: 'Coming soon',
+      minimum: 'Minimum MonCash withdrawal: {htg}. For a USD event, it is the USD equivalent at that day’s rate.',
+      saveFailed: 'Could not update instant payouts. Please try again.',
+    },
     moncashVerify: {
       title: 'Verify your identity',
       body: 'MonCash payouts are enabled once your identity is verified. Each withdrawal is then reviewed and released manually by our team.',
@@ -1910,12 +1920,15 @@ export default {
       amount: 'Amount',
       instantFee: 'Instant fee (3%)',
       youReceive: 'You receive',
+      usdConverted: 'Converted from {usd} at today’s rate. MonCash pays in HTG.',
+      usdConvertedNoRate: 'Converted to HTG at the rate on the day you withdraw.',
     },
     moncash: {
       title: 'MonCash',
       placeholder: '+509 1234 5678',
       instantAvailable: 'Instant MonCash is available for this withdrawal.',
       processedWithin24: 'Your withdrawal will be processed within 24 hours.',
+      instantOffered: 'Want it in minutes? Turn on instant MonCash payouts in Payout settings (3% fee).',
     },
     bank: {
       title: 'Bank',
@@ -1948,6 +1961,7 @@ export default {
       sending: 'Sending...',
       enterCodePlaceholder: 'Enter code',
       verifyAndContinue: 'Verify & continue',
+      moncashNumberBody: 'This MonCash number is not the one on your payout profile. For your security, confirm it with a code we email you.',
       verifying: 'Verifying...',
     },
     success: {
@@ -1956,6 +1970,10 @@ export default {
       youReceivedLabel: 'You received: ',
       requestSubmittedTitle: 'Request submitted',
       requestSubmittedBody: 'Your withdrawal request was submitted successfully.',
+      confirmingTitle: 'Request submitted',
+      confirmingBody: 'Your withdrawal was sent and we are confirming it with MonCash. Please don’t submit it again. We’ll update it as soon as MonCash confirms.',
+      instantFallbackBody: 'Instant payouts couldn’t cover this withdrawal right now, so it went to manual review instead, with no instant fee. Our team usually sends it within 24 hours.',
+      manualReviewBody: 'Your withdrawal request was submitted. Our team reviews it and sends it to your MonCash, usually within 24 hours.',
     },
     validation: {
       unavailableTitle: 'Unavailable',
@@ -1979,6 +1997,10 @@ export default {
       sendCodeFailed: 'Failed to send code',
       verificationFailed: 'Verification failed',
       unableToOpenLinkTitle: 'Unable to open link',
+      submitFailed: 'Failed to submit withdrawal',
+      duplicateTitle: 'Already in progress',
+      duplicateBody: 'A withdrawal for this balance is already in progress, or the balance just changed. We refreshed it. Check it before trying again.',
+      instantFailedBody: 'MonCash could not complete the instant transfer. No money was sent and your balance has been put back. Try again, or turn off instant payouts to send it for manual review.',
     },
   },
 

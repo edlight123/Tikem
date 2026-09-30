@@ -25,6 +25,12 @@ import { getRequiredPayoutProfileIdForEventCountry, normalizeCountryCode } from 
 import { RADIUS } from '../../config/brand'
 import { colors as tokenColors, radius } from '../../theme/tokens'
 import { formatCurrency as fmtCurrency } from '../../lib/currency'
+import {
+  MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
+  computeInstantMoncashQuote,
+  moncashMinimumMinor,
+  parsePrefundingStatus,
+} from '../../lib/moncashPayout'
 import StatTriplet from '../../components/StatTriplet'
 import WhitePillCTA from '../../components/WhitePillCTA'
 import SecondaryPill from '../../components/auth/SecondaryPill'
@@ -84,12 +90,6 @@ type EventEarnings = {
 
 /** Haiti bank-transfer floor enforced by /api/organizer/withdraw-bank (unchanged). */
 const BANK_MIN_WITHDRAWAL_CENTS = 5000
-/**
- * MonCash floor: 1,000 HTG, measured in HTG. Mirrors
- * lib/payouts/moncash-withdrawal-minimum.ts; the server's `moncashMinimum`
- * (converted for USD events at the withdrawal's own rate) wins when present.
- */
-const MONCASH_MIN_WITHDRAWAL_HTG_CENTS = 100_000
 
 export default function OrganizerEventEarningsScreen() {
   const { colors } = useTheme();
@@ -137,6 +137,9 @@ export default function OrganizerEventEarningsScreen() {
   const [moncashNumber, setMoncashNumber] = useState('')
   const [prefunding, setPrefunding] = useState<{ enabled: boolean; available: boolean } | null>(null)
   const [allowInstantMoncash, setAllowInstantMoncash] = useState(false)
+  // USD events are converted to HTG at withdrawal; the server's quote endpoint
+  // hands us the rate it will use so the preview can show the HTG that lands.
+  const [usdToHtgRate, setUsdToHtgRate] = useState<number | null>(null)
 
   // Bank
   const [bankDestinations, setBankDestinations] = useState<BankDestination[] | null>(null)
@@ -193,23 +196,34 @@ export default function OrganizerEventEarningsScreen() {
   const instantPreview = useMemo(() => {
     if (!prefunding?.enabled || !prefunding?.available) return null
     if (!allowInstantMoncash) return null
-    if (currency !== 'HTG') return null
+    // The MonCash rail pays HTG and USD events (USD converted at withdrawal);
+    // CAD/EUR events withdraw through Stripe and never reach it.
+    if (currency !== 'HTG' && currency !== 'USD') return null
 
-    const feeCents = Math.round(availableToWithdraw * 0.03)
-    const payoutAmountCents = Math.max(0, availableToWithdraw - feeCents)
-    return { feeCents, payoutAmountCents }
-  }, [allowInstantMoncash, availableToWithdraw, currency, prefunding?.available, prefunding?.enabled])
+    // Same math as the server (computePrefundedPayout): fee on the gross, in the
+    // event's currency; the rest is converted to HTG for a USD event.
+    const quote = computeInstantMoncashQuote(availableToWithdraw, currency === 'USD' ? usdToHtgRate ?? 0 : 1)
+    return {
+      ...quote,
+      // Only claim an HTG figure once we actually know the rate.
+      payoutAmountHtgCents: currency === 'USD' && !usdToHtgRate ? null : quote.payoutAmountHtgCents,
+    }
+  }, [allowInstantMoncash, availableToWithdraw, currency, prefunding?.available, prefunding?.enabled, usdToHtgRate])
+
+  // Platform can pay instantly but this organizer hasn't opted in — worth a
+  // pointer to the setting, since the default is manual review.
+  const instantOffered = Boolean(prefunding?.enabled && prefunding?.available && !allowInstantMoncash)
 
   // Centralized formatter (values are in cents server-side).
   const formatCurrency = (cents: number, curr: string) => fmtCurrency(cents, curr, { fromCents: true })
 
   // Per-rail floors. MonCash: 1,000 HTG (for a USD event, the server's converted
-  // figure; unknown → let the server decide). Bank: 5,000 minor units.
+  // figure, else the quote's rate; unknown → let the server decide). Bank: 5,000 minor.
   const moncashMinMinor = useMemo(() => {
     const serverMin = earnings?.moncashMinimum?.minimumMinor
     if (typeof serverMin === 'number' && Number.isFinite(serverMin)) return serverMin
-    return currency === 'USD' ? 0 : MONCASH_MIN_WITHDRAWAL_HTG_CENTS
-  }, [earnings?.moncashMinimum?.minimumMinor, currency])
+    return moncashMinimumMinor(currency, usdToHtgRate) ?? 0
+  }, [earnings?.moncashMinimum?.minimumMinor, currency, usdToHtgRate])
   const moncashMinLabel = useMemo(() => {
     const htg = formatCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG')
     return currency === 'USD' && moncashMinMinor > 0 ? `${htg} (≈ ${formatCurrency(moncashMinMinor, 'USD')})` : htg
@@ -504,15 +518,23 @@ export default function OrganizerEventEarningsScreen() {
           backendJson<{ allowInstantMoncash?: boolean }>('/api/organizer/payout-config-summary'),
         ])
 
-        const prefundingPayload = (prefRaw as any)?.prefunding ?? prefRaw
-        setPrefunding({
-          enabled: Boolean(prefundingPayload?.enabled),
-          available: Boolean(prefundingPayload?.available),
-        })
+        setPrefunding(parsePrefundingStatus(prefRaw))
         setAllowInstantMoncash(!!cfg?.allowInstantMoncash)
       } catch {
         setPrefunding(null)
         setAllowInstantMoncash(false)
+      }
+
+      if (currency === 'USD') {
+        try {
+          const q = await backendJson<{ quote?: { usdToHtgRate?: number | null } }>(
+            `/api/organizer/withdraw-moncash/quote?eventId=${encodeURIComponent(String(eventId))}`
+          )
+          const rate = Number(q?.quote?.usdToHtgRate)
+          setUsdToHtgRate(Number.isFinite(rate) && rate > 0 ? rate : null)
+        } catch {
+          setUsdToHtgRate(null)
+        }
       }
     }
 
@@ -617,15 +639,28 @@ export default function OrganizerEventEarningsScreen() {
         body: JSON.stringify(payload),
       })
 
-      // Success
-      if (method === 'moncash' && res?.instant) {
+      // Success. What lands in MonCash is always HTG; for a USD event the
+      // server reports the converted figure separately.
+      const received =
+        typeof res?.payoutAmountHtgCents === 'number'
+          ? formatCurrency(res.payoutAmountHtgCents, 'HTG')
+          : formatCurrency(res?.payoutAmountCents || 0, currency)
+
+      if (method === 'moncash' && res?.confirming) {
+        // 202: the instant transfer was sent but MonCash hasn't confirmed it.
+        // The balance stays reserved; resubmitting could pay twice.
+        showAlert(t('organizerEarnings.success.confirmingTitle'), t('organizerEarnings.success.confirmingBody'))
+      } else if (method === 'moncash' && res?.instant) {
         showAlert(
           t('organizerEarnings.success.instantTitle'),
-          `${t('organizerEarnings.success.feeLabel')}${formatCurrency(res?.feeCents || 0, currency)}\n${t('organizerEarnings.success.youReceivedLabel')}${formatCurrency(
-            res?.payoutAmountCents || 0,
-            currency
-          )}`
+          `${t('organizerEarnings.success.feeLabel')}${formatCurrency(res?.feeCents || 0, currency)}\n${t('organizerEarnings.success.youReceivedLabel')}${received}`
         )
+      } else if (method === 'moncash' && res?.instantFallbackReason) {
+        // Instant was on but the pool couldn't cover it: filed for manual
+        // review instead, with no instant fee.
+        showAlert(t('organizerEarnings.success.requestSubmittedTitle'), t('organizerEarnings.success.instantFallbackBody'))
+      } else if (method === 'moncash') {
+        showAlert(t('organizerEarnings.success.requestSubmittedTitle'), t('organizerEarnings.success.manualReviewBody'))
       } else {
         showAlert(t('organizerEarnings.success.requestSubmittedTitle'), t('organizerEarnings.success.requestSubmittedBody'))
       }
@@ -634,8 +669,31 @@ export default function OrganizerEventEarningsScreen() {
       setMethod(null)
       await loadEarnings()
     } catch (e: any) {
-      const message = e?.message || 'Failed to submit withdrawal'
-      const requires = /verify|verification/i.test(message)
+      // backendJson appends " [url]" for debugging — never show that.
+      const message = String(e?.message || t('organizerEarnings.errors.submitFailed')).replace(/\s*\[https?:[^\]]*\]\s*$/, '')
+      const status = typeof e?.status === 'number' ? e.status : null
+      const requires =
+        e?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED' ||
+        e?.payload?.requiresVerification === true ||
+        (status === 403 && /verify|verification/i.test(message))
+
+      if (status === 409) {
+        // Another submit already took this balance (double tap, second device),
+        // or the reservation was refused. Show the fresh balance.
+        showAlert(t('organizerEarnings.errors.duplicateTitle'), t('organizerEarnings.errors.duplicateBody'))
+        setShowWithdraw(false)
+        setMethod(null)
+        await loadEarnings()
+        return
+      }
+
+      if (method === 'moncash' && status === 502) {
+        // MonCash definitively refused the instant transfer; nothing moved and
+        // the balance was released.
+        showAlert(t('common.error'), t('organizerEarnings.errors.instantFailedBody'))
+        await loadEarnings()
+        return
+      }
 
       if (/payout profile required/i.test(message) || /payout profile not active/i.test(message) || /not configured/i.test(message)) {
         showAlert(
@@ -656,7 +714,12 @@ export default function OrganizerEventEarningsScreen() {
         setVerificationRequired(true)
         setPendingEndpoint(endpoint)
         setPendingPayload(payload)
-        showAlert(t('organizerEarnings.otp.verificationRequiredTitle'), t('organizerEarnings.otp.verificationRequiredBody'))
+        showAlert(
+          t('organizerEarnings.otp.verificationRequiredTitle'),
+          endpoint.includes('withdraw-moncash')
+            ? t('organizerEarnings.otp.moncashNumberBody')
+            : t('organizerEarnings.otp.verificationRequiredBody')
+        )
         return
       }
 
@@ -932,8 +995,22 @@ export default function OrganizerEventEarningsScreen() {
                   </View>
                   <View style={styles.rowBetween}>
                     <Text style={styles.metaText}>{t('organizerEarnings.modal.youReceive')}</Text>
-                    <Text style={styles.metaText}>{formatCurrency(instantPreview.payoutAmountCents, currency)}</Text>
+                    <Text style={styles.metaText}>
+                      {currency === 'USD' && instantPreview.payoutAmountHtgCents != null
+                        ? formatCurrency(instantPreview.payoutAmountHtgCents, 'HTG')
+                        : formatCurrency(instantPreview.payoutAmountCents, currency)}
+                    </Text>
                   </View>
+                  {currency === 'USD' ? (
+                    <Text style={styles.metaText}>
+                      {instantPreview.payoutAmountHtgCents != null
+                        ? t('organizerEarnings.modal.usdConverted').replace(
+                            '{usd}',
+                            formatCurrency(instantPreview.payoutAmountCents, 'USD')
+                          )
+                        : t('organizerEarnings.modal.usdConvertedNoRate')}
+                    </Text>
+                  ) : null}
                 </>
               ) : null}
             </View>
@@ -985,6 +1062,19 @@ export default function OrganizerEventEarningsScreen() {
                   ) : (
                     <Text style={styles.sectionHelp}>{t('organizerEarnings.moncash.processedWithin24')}</Text>
                   )}
+                  {instantOffered ? (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowWithdraw(false)
+                        navigation.navigate('OrganizerPayoutSettings')
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.sectionHelp, { textDecorationLine: 'underline' }]}>
+                        {t('organizerEarnings.moncash.instantOffered')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ) : (
                 <View style={{ marginTop: 12 }}>

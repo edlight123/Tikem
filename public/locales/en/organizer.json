@@ -245,7 +245,7 @@
     "payouts_via_stripe": "Your payouts are handled through Stripe Connect.",
     "payouts_to_this_account": "Your payouts will be sent to this account.",
     "instant_moncash_title": "Instant MonCash (prefunding)",
-    "instant_moncash_desc": "Instant payouts depend on platform prefunding availability.",
+    "instant_moncash_desc": "On: MonCash withdrawals land within minutes for a 3% fee, whenever platform prefunding is available. Off (or while it is unavailable): every withdrawal goes to manual review by our team first, usually within 24 hours, with no instant fee. Minimum MonCash withdrawal: {{min}} (for a USD event, the USD equivalent at that day's rate).",
     "prefunding_status": "Status: {{status}}",
     "prefunding_available": "Available",
     "prefunding_unavailable": "Temporarily unavailable",
