@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   LogOut,
   Trash2,
-  AlertTriangle,
   HelpCircle,
   Briefcase,
   ChevronRight,
@@ -14,10 +13,8 @@ import {
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ProfileSection, Panel, PanelRows } from './ui'
+import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
 
-interface AccountCardProps {
-  onDeleteAccount?: () => Promise<void>
-}
 
 /**
  * Account: three destinations, then the destructive one.
@@ -33,14 +30,22 @@ interface AccountCardProps {
  * apart under it on a red wash — set off by distance and a red edge over a fill,
  * not by a red box, matching the organizer settings danger row.
  */
-export function AccountCard({ onDeleteAccount }: AccountCardProps) {
+export function AccountCard() {
   const { t } = useTranslation('profile')
   const { t: tCommon } = useTranslation('common')
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
-  const [isDeleting, setIsDeleting] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
+
+  // /account/delete (the public page) and a re-sign-in both land here with
+  // ?delete=1, which reopens the deletion dialog.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('delete') === '1') setShowDeleteModal(true)
+    } catch {
+      // ignore
+    }
+  }, [])
 
   /**
    * BUNDLE: firebase/auth is fetched in the handler, not imported at module
@@ -67,29 +72,6 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
       console.error('Error signing out:', error)
       setIsSigningOut(false)
       alert(t('account.sign_out_error'))
-    }
-  }
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== 'DELETE') {
-      alert(t('account.delete_confirm_error'))
-      return
-    }
-
-    setIsDeleting(true)
-    try {
-      if (onDeleteAccount) {
-        await onDeleteAccount()
-      } else {
-        // Stub implementation
-        alert(t('account.delete_error'))
-      }
-      setShowDeleteModal(false)
-    } catch (error) {
-      console.error('Error deleting account:', error)
-      alert(t('account.delete_error'))
-    } finally {
-      setIsDeleting(false)
     }
   }
 
@@ -165,6 +147,7 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
 
         {/* Delete Account — apart, on a red wash rather than in a red box */}
         <button
+          id="delete-account"
           onClick={() => setShowDeleteModal(true)}
           className="group mt-4 flex w-full items-center gap-3.5 rounded-2xl bg-red-500/[0.05] px-4 py-4 text-left ring-1 ring-inset ring-red-500/20 transition-colors hover:bg-red-500/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 sm:px-5"
         >
@@ -182,67 +165,7 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
         </button>
       </ProfileSection>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-[#141414] p-6 ring-1 ring-inset ring-white/10">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-red-500/10 text-red-300">
-              <AlertTriangle className="h-7 w-7" aria-hidden />
-            </div>
-
-            {/* h3 + `!`: .mobile-typography would drop this to text-base on a phone. */}
-            <h3 className="text-center font-display !text-[24px] !leading-tight text-white">
-              {t('account.delete_modal_title')}
-            </h3>
-            <p className="mx-auto mt-2 max-w-sm text-center !text-[13px] !leading-relaxed text-white/55">
-              {t('account.delete_modal_desc')}
-            </p>
-
-            {/* Confirmation Input */}
-            <div className="mt-6">
-              <label
-                htmlFor="delete-confirm"
-                className="eyebrow mb-2 block text-white/40"
-              >
-                {t('account.delete_confirm_label')}
-              </label>
-              <input
-                id="delete-confirm"
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                /* Deliberately not the shared FIELD: this one field's focus ring
-                   is red, and stacking two ring-colour utilities leaves the
-                   winner to stylesheet order rather than intent. */
-                className="w-full rounded-xl bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
-                placeholder={t('account.delete_confirm_placeholder')}
-                autoFocus
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false)
-                  setDeleteConfirmText('')
-                }}
-                disabled={isDeleting}
-                className="flex-1 rounded-xl bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
-              >
-                {t('account.cancel')}
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={isDeleting || deleteConfirmText !== 'DELETE'}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-red-600/40 disabled:text-white/60"
-              >
-                {isDeleting ? t('account.deleting') : t('account.delete_button')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteAccountDialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)} />
     </>
   )
 }

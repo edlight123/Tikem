@@ -958,14 +958,14 @@
     "view_details": "View Details"
   },
   "danger_zone": {
-    "all_data_deleted": "All events, tickets, and attendee data will be deleted",
+    "all_data_deleted": "Your profile, payout details and personal data are deleted; past events, tickets and payout records stay, without your personal details",
     "deactivate_account": "Deactivate Account",
     "deactivate_account_q": "Deactivate Account?",
     "delete_forever_q": "Delete Account Forever?",
     "delete_permanently": "Delete Account Permanently",
     "delete_confirm_phrase": "DELETE MY ACCOUNT",
     "export_your_data": "Export Your Data",
-    "pending_payouts_forfeited": "Pending payouts will be forfeited",
+    "pending_payouts_forfeited": "Blocked until upcoming events with sold tickets are cancelled and refunded, and your balance is withdrawn",
     "immediate_irreversible": "This action is immediate and irreversible",
     "profile_removed": "Your organizer profile will be removed",
     "deactivate": "Deactivate",

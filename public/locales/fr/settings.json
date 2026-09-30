@@ -35,6 +35,7 @@
     "subtitle": "Actions irréversibles",
     "delete_account": "Supprimer le compte",
     "delete_warning": "Une fois que vous supprimez votre compte, il n'y a pas de retour en arrière. Soyez certain.",
-    "delete_button": "Supprimer le compte (Contacter le support)"
+    "delete_button": "Supprimer le compte",
+    "what_is_deleted": "Ce qui est supprimé et ce qui est conservé"
   }
 }

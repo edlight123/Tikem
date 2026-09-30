@@ -1,3 +1,4 @@
+import { handleAccountDeletionRequest } from '@/lib/account/deletion'
 import { createClient } from '@/lib/firebase-db/server'
 
 // Export user data (GDPR Article 15 - Right to access)
@@ -70,87 +71,11 @@ export async function GET(request: Request) {
   }
 }
 
-// Delete user account and data (GDPR Article 17 - Right to erasure)
+// Delete user account and data (GDPR Article 17 - Right to erasure).
+// One implementation for every entry point: see lib/account/deletion.ts. The
+// old body here ran against the Supabase-style shim, never deleted the Firebase
+// Auth user (the person could still sign in), and left tickets and orders
+// carrying their name and email.
 export async function DELETE(request: Request) {
-  try {
-    const supabase = await createClient()
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { confirmEmail } = await request.json()
-
-    // Verify email matches
-    if (confirmEmail !== user.email) {
-      return Response.json({ error: 'Email confirmation does not match' }, { status: 400 })
-    }
-
-    // Check for upcoming events as organizer
-    const { data: upcomingEvents } = await supabase
-      .from('events')
-      .select('id')
-      .eq('organizer_id', user.id)
-      .gte('start_datetime', new Date().toISOString())
-
-    if (upcomingEvents && upcomingEvents.length > 0) {
-      return Response.json({ 
-        error: 'Cannot delete account with upcoming events. Please cancel or complete your events first.' 
-      }, { status: 400 })
-    }
-
-    // Check for upcoming tickets
-    const { data: upcomingTickets } = await supabase
-      .from('tickets')
-      .select('id, events(start_datetime)')
-      .eq('attendee_id', user.id)
-      .not('status', 'in', '(refunded,cancelled)')
-
-    const hasUpcomingTickets = upcomingTickets?.some((t: any) => {
-      const event = t.events as any
-      return new Date(event.start_datetime) > new Date()
-    })
-
-    if (hasUpcomingTickets) {
-      return Response.json({ 
-        error: 'Cannot delete account with upcoming tickets. Please request refunds first.' 
-      }, { status: 400 })
-    }
-
-    // Anonymize user data instead of hard delete (to preserve referential integrity)
-    const anonymousEmail = `deleted_${user.id}@tikem.co`
-    
-    await supabase
-      .from('users')
-      .update({
-        email: anonymousEmail,
-        full_name: 'Deleted User',
-        phone: null,
-        bio: null,
-        avatar_url: null
-      })
-      .eq('id', user.id)
-
-    // Delete sensitive data
-    await supabase.from('user_preferences').delete().eq('user_id', user.id)
-    await supabase.from('favorites').delete().eq('user_id', user.id)
-    
-    // Anonymize reviews (keep for platform integrity but remove personal info)
-    await supabase
-      .from('reviews')
-      .update({ comment: '[Deleted by user]' })
-      .eq('user_id', user.id)
-
-    // Sign out user
-    await supabase.auth.signOut()
-
-    return Response.json({ 
-      success: true, 
-      message: 'Account deleted successfully' 
-    })
-  } catch (error) {
-    console.error('Account deletion error:', error)
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  return handleAccountDeletionRequest(request)
 }

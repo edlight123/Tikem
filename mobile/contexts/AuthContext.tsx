@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithCredential } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithCredential, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isDemoMode } from '../config/firebase';
 import { syncPublicProfile } from '../lib/publicProfile';
@@ -46,6 +46,15 @@ interface AuthContextType {
   appleAuthAvailable: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Which sign-in method re-authentication will use for the current user. */
+  reauthMethod: () => 'password' | 'google' | 'apple' | null;
+  /**
+   * Prove it is still the account holder (refreshes the token's auth_time) —
+   * required before account deletion. Password users pass their password;
+   * Google/Apple users re-run the provider sheet. Never switches accounts:
+   * Firebase rejects a credential for a different user (auth/user-mismatch).
+   */
+  reauthenticate: (password?: string) => Promise<void>;
   refreshUserProfile: () => Promise<void>;
   updateUserProfile: (patch: UserProfilePatch) => Promise<void>;
 }
@@ -141,8 +150,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Expo handles the redirect automatically in production builds
   });
 
+  // A Google response produced by a re-authentication belongs to it — the
+  // sign-in effect below must never also sign in with it (a different account
+  // picked in the sheet would otherwise switch the session). The flag covers the
+  // prompt while open; the consumed id_token covers the effect firing after it.
+  const googleReauthInFlight = useRef(false);
+  const googleReauthIdToken = useRef<string | null>(null);
+
   // Handle Google Sign-In response
   useEffect(() => {
+    if (googleReauthInFlight.current) return;
+    if (response?.type === 'success' && (response as any).params?.id_token === googleReauthIdToken.current) return;
     if (response?.type === 'success') {
       const { id_token } = response.params;
       handleGoogleSignInSuccess(id_token);
@@ -259,7 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithApple = async () => {
+  const getAppleCredential = async () => {
     // Firebase requires the raw nonce sent to Apple and its SHA-256 hash passed
     // in the authorization request, to prevent replay attacks.
     const rawNonce = Array.from(await Crypto.getRandomBytesAsync(16))
@@ -287,6 +305,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       idToken: appleCredential.identityToken,
       rawNonce,
     });
+    return { credential, appleCredential };
+  };
+
+  const signInWithApple = async () => {
+    const { credential, appleCredential } = await getAppleCredential();
     const userCredential = await signInWithCredential(auth, credential);
 
     // Apple only returns the name on the FIRST authorization — capture it into
@@ -336,8 +359,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await AsyncStorage.clear();
   };
 
+  const reauthMethod = (): 'password' | 'google' | 'apple' | null => {
+    const providers = (auth.currentUser?.providerData || []).map((p) => p?.providerId);
+    if (providers.includes('password')) return 'password';
+    if (providers.includes('apple.com')) return 'apple';
+    if (providers.includes('google.com')) return 'google';
+    return null;
+  };
+
+  const reauthenticate = async (password?: string) => {
+    const current = auth.currentUser;
+    if (!current) throw new Error('Not signed in');
+    const method = reauthMethod();
+    if (method === 'password') {
+      if (!current.email || !password) throw Object.assign(new Error('Password required'), { code: 'auth/missing-password' });
+      await reauthenticateWithCredential(current, EmailAuthProvider.credential(current.email, password));
+    } else if (method === 'apple') {
+      const { credential } = await getAppleCredential();
+      await reauthenticateWithCredential(current, credential);
+    } else if (method === 'google') {
+      if (!googleConfigured) throw new Error('Google Sign-In is not configured.');
+      googleReauthInFlight.current = true;
+      try {
+        const result = await promptAsync();
+        if (result?.type !== 'success' || !(result as any).params?.id_token) {
+          throw Object.assign(new Error('Re-authentication cancelled'), { code: 'auth/cancelled' });
+        }
+        googleReauthIdToken.current = (result as any).params.id_token;
+        await reauthenticateWithCredential(current, GoogleAuthProvider.credential((result as any).params.id_token));
+      } finally {
+        googleReauthInFlight.current = false;
+      }
+    } else {
+      throw new Error('This sign-in method cannot be re-verified here.');
+    }
+    // Mint a token carrying the new auth_time for the next API call.
+    await current.getIdToken(true);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signUp, signOut, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signUp, signOut, reauthMethod, reauthenticate, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

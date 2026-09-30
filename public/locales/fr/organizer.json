@@ -958,14 +958,14 @@
     "view_details": "Voir les détails"
   },
   "danger_zone": {
-    "all_data_deleted": "Tous les événements, billets et données des participants seront supprimés",
+    "all_data_deleted": "Votre profil, vos coordonnées de versement et vos données personnelles sont supprimés ; les événements passés, billets et versements restent, sans vos informations personnelles",
     "deactivate_account": "Désactiver le compte",
     "deactivate_account_q": "Désactiver le compte ?",
     "delete_forever_q": "Supprimer le compte définitivement ?",
     "delete_permanently": "Supprimer le compte définitivement",
     "delete_confirm_phrase": "SUPPRIMER MON COMPTE",
     "export_your_data": "Exporter vos données",
-    "pending_payouts_forfeited": "Les versements en attente seront perdus",
+    "pending_payouts_forfeited": "Impossible tant que les événements à venir avec billets vendus ne sont pas annulés et remboursés, et que votre solde n'est pas retiré",
     "immediate_irreversible": "Cette action est immédiate et irréversible",
     "profile_removed": "Votre profil d'organisateur sera supprimé",
     "deactivate": "Désactiver",
