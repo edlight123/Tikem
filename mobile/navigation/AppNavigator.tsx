@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { COLORS } from '../config/brand';
+import { LINKING_CONFIG, WEB_LINK_PREFIXES } from './linkingConfig';
 import { withAlpha } from '../theme/tokens';
 import { getVerificationRequest } from '../lib/verification';
 import BootScreen from '../components/BootScreen';
@@ -773,21 +774,10 @@ export default function AppNavigator() {
         : AttendeeTabNavigator;
 
   const linking = {
-    prefixes: [
-      ExpoLinking.createURL('/'),
-      'tikem://',
-      'https://tikem.co',
-      'https://tikem.co',
-      'https://www.tikem.co',
-    ],
-    config: {
-      screens: {
-        InviteRedeem: 'invite',
-        Notifications: 'notifications',
-        TicketDetail: 'tickets/:ticketId',
-        EventDetail: 'events/:eventId',
-      },
-    },
+    prefixes: [ExpoLinking.createURL('/'), ...WEB_LINK_PREFIXES],
+    // Seeds `Main` beneath any deep-linked screen so back always has somewhere
+    // to go — see navigation/linkingConfig.ts.
+    config: LINKING_CONFIG,
   };
 
   return (

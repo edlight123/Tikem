@@ -27,6 +27,7 @@ import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, dele
 import { db } from '../config/firebase';
 import { backendJson } from '../lib/api/backend';
 import { getPromoterRef, setPromoterRef } from '../lib/promoterRef';
+import { goBackOrHome } from '../lib/goBackOrHome';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -632,7 +633,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
               as the share/heart cluster opposite. */}
           <TouchableOpacity
             style={[styles.iconButton, styles.heroBack, { top: insets.top + 8 }]}
-            onPress={() => navigation.goBack()}
+            onPress={() => goBackOrHome(navigation)}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('common.back')}

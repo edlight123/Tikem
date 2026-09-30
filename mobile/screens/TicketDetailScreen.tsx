@@ -19,6 +19,7 @@ import { addToCalendar, openDirections } from '../lib/postPurchaseActions';
 import { TicketDetailSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import { useMaxBrightnessWhileFocused } from '../lib/useMaxBrightness';
+import { goBackOrHome } from '../lib/goBackOrHome';
 
 export default function TicketDetailScreen({ route }: any) {
   const { colors } = useTheme();
@@ -220,7 +221,7 @@ export default function TicketDetailScreen({ route }: any) {
           {/* Header with Title */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
+              onPress={() => goBackOrHome(navigation)}
               hitSlop={12}
               style={styles.backBtn}
               accessibilityRole="button"
