@@ -30,6 +30,8 @@ import {
   prefundedBalanceCovers,
 } from '@/lib/payouts/moncash-prefunded'
 import { fetchUsdToHtgRate } from '@/lib/currency'
+import { finalizeWithdrawalCompleted, releaseWithdrawalReservation } from '@/lib/payouts/withdrawal-finalize'
+import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 
 export const PROMOTER_WITHDRAWAL_FEE_PERCENT = 0.03
 /** 500 HTG — small enough for street-team amounts, big enough to be worth a transfer. */
@@ -333,7 +335,19 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     throw err
   }
 
+  // What the notices render from; mirrors the row just written.
+  const noticeRow = {
+    payee_type: 'promoter',
+    promoter_uid: uid,
+    organizerId: uid,
+    amount: grossHtgCents,
+    currency: 'HTG',
+    moncashNumber: phone,
+    payoutAmountHtgCents: payoutCents,
+  }
+
   if (!instant) {
+    await notifyWithdrawalOutcome(withdrawalRef.id, 'submitted', { row: noticeRow })
     return { ok: true, withdrawalId: withdrawalRef.id, instant: false, grossHtgCents, feeCents, payoutHtgCents: payoutCents }
   }
 
@@ -345,18 +359,12 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
   })
 
   if (outcome.outcome === 'completed') {
-    await withdrawalRef.set(
-      {
-        status: 'completed',
-        completedAt: new Date(),
-        processedAt: new Date(),
-        moncashTransactionId: outcome.transactionId,
-        prefundingTransferRaw: outcome.raw,
-        confirmedVia: outcome.confirmedVia,
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    )
+    const done = await finalizeWithdrawalCompleted(withdrawalRef.id, {
+      transactionId: outcome.transactionId,
+      raw: outcome.raw,
+      confirmedVia: outcome.confirmedVia,
+    })
+    if (done.changed) await notifyWithdrawalOutcome(withdrawalRef.id, 'completed', { row: done.row })
     return { ok: true, withdrawalId: withdrawalRef.id, instant: true, grossHtgCents, feeCents, payoutHtgCents: payoutCents }
   }
 
@@ -378,6 +386,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
       },
       { merge: true }
     )
+    await notifyWithdrawalOutcome(withdrawalRef.id, 'confirming', { row: noticeRow })
     return {
       ok: true,
       withdrawalId: withdrawalRef.id,
@@ -389,25 +398,16 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     }
   }
 
-  // Definitively rejected by MonCash: nothing moved, put the money back.
-  await refundPromoterWalletDebits(uid, { ...(htgCents > 0 ? { HTG: htgCents } : {}), ...(usdCents > 0 ? { USD: usdCents } : {}) })
-  await withdrawalRef.set(
-    { status: 'failed', failureReason: outcome.reason || 'MonCash transfer failed', updatedAt: new Date() },
-    { merge: true }
-  )
+  // Definitively rejected by MonCash: nothing moved, put the money back —
+  // exactly the recorded walletDebits, once, in the same transaction that flips
+  // the row to 'failed' (so a concurrent admin fail or cron run cannot also credit).
+  const released = await releaseWithdrawalReservation(withdrawalRef.id, {
+    reason: outcome.reason || 'MonCash transfer failed',
+    releasedBy: 'promoter_withdraw',
+  })
+  if (released.changed) await notifyWithdrawalOutcome(withdrawalRef.id, 'failed', { row: released.row })
   return { ok: false, code: 'transfer_failed', error: 'The MonCash transfer failed. Your balance was restored — try again shortly.' }
 }
 
-/** Credit wallet debits back (failed transfer, or admin reject/fail). */
-export async function refundPromoterWalletDebits(uid: string, debits: Record<string, number>): Promise<void> {
-  const ref = await walletRef(uid)
-  await adminDb.runTransaction(async (tx: any) => {
-    const snap = await tx.get(ref)
-    const stored = snap.exists ? (snap.data() as any)?.withdrawn_by_currency || {} : {}
-    const next: Record<string, number> = { ...stored }
-    for (const [currency, cents] of Object.entries(debits)) {
-      next[currency] = Math.max(0, (Number(stored[currency]) || 0) - Math.max(0, Number(cents) || 0))
-    }
-    tx.set(ref, { withdrawn_by_currency: next, updated_at: new Date().toISOString() }, { merge: true })
-  })
-}
+// Crediting a wallet back lives in lib/payouts/withdrawal-finalize.ts
+// (releaseWithdrawalReservation): guarded so it can only happen once per row.

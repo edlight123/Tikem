@@ -32,6 +32,11 @@ export type NotificationType =
   // An organizer's payout account can no longer take money for a LIVE event.
   // Transactional: it is about their own money and is never suppressed.
   | 'payout_account_blocked'
+  // A MonCash withdrawal outcome (sent / in review / confirming / failed / paid).
+  // Transactional (policy category 'payout'): never suppressed by marketing prefs.
+  | 'withdrawal_update'
+  // Admin-only: an unconfirmed instant withdrawal could not be settled automatically.
+  | 'withdrawal_escalated'
 
 export interface Database {
   public: {

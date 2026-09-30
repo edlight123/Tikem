@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
+import { notifyWithdrawalOutcome, type WithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,6 +50,13 @@ export async function POST(req: NextRequest) {
         updates.failureReason = reason
         updates.processedBy = user.id
         updates.processedAt = now
+        // Same guard fields the reconcile cron writes (lib/payouts/withdrawal-finalize.ts).
+        updates.reservationReleasedAt = now
+        updates.reservationReleasedBy = `admin:${user.id}`
+        if (withdrawal.needsReconciliation) {
+          updates.needsReconciliation = false
+          updates.reconciledAt = now
+        }
 
         // Promoter withdrawals debit a promoter wallet, not event_earnings —
         // credit back exactly the per-currency debits the request recorded.
@@ -116,6 +124,11 @@ export async function POST(req: NextRequest) {
         updates.status = 'completed'
         updates.completedAt = now
         if (note) updates.completionNote = note
+        if (withdrawal.needsReconciliation) {
+          updates.needsReconciliation = false
+          updates.reconciledAt = now
+          updates.confirmedVia = 'admin'
+        }
       }
 
       if (action === 'fail') {
@@ -125,7 +138,12 @@ export async function POST(req: NextRequest) {
       }
 
       tx.update(withdrawalRef, updates)
-      return { idempotent: false, beforeStatus, afterStatus: String(updates.status || beforeStatus) }
+      return {
+        idempotent: false,
+        beforeStatus,
+        afterStatus: String(updates.status || beforeStatus),
+        row: { ...withdrawal, ...updates },
+      }
     })
 
     if ((txResult as any)?.notFound) {
@@ -159,6 +177,18 @@ export async function POST(req: NextRequest) {
           afterStatus: (txResult as any)?.afterStatus,
         },
       }).catch(() => {})
+
+      // Tell the payee. Deduped per (withdrawal, outcome), never throws.
+      const outcomeByAction: Record<string, WithdrawalOutcome> = {
+        approve: 'approved',
+        complete: 'admin_completed',
+        reject: 'admin_rejected',
+        fail: 'failed',
+      }
+      await notifyWithdrawalOutcome(withdrawalId, outcomeByAction[action], {
+        row: (txResult as any)?.row,
+        reason: action === 'reject' ? note || null : null,
+      })
     }
 
     return adminOk({

@@ -19,6 +19,8 @@ import {
   prefundedBalanceCovers,
   sameMoncashNumberLast4,
 } from '@/lib/payouts/moncash-prefunded'
+import { finalizeWithdrawalCompleted, releaseWithdrawalReservation } from '@/lib/payouts/withdrawal-finalize'
+import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -357,19 +359,13 @@ export async function POST(req: NextRequest) {
       })
 
       if (outcome.outcome === 'completed') {
-        await withdrawalRef.set(
-          {
-            status: 'completed',
-            completedAt: new Date(),
-            processedAt: new Date(),
-            moncashTransactionId: outcome.transactionId,
-            prefundingTransferRaw: outcome.raw,
-            confirmedVia: outcome.confirmedVia,
-            updatedAt: new Date(),
-          },
-          { merge: true }
-        )
+        const done = await finalizeWithdrawalCompleted(withdrawalRef.id, {
+          transactionId: outcome.transactionId,
+          raw: outcome.raw,
+          confirmedVia: outcome.confirmedVia,
+        })
         if (stepUpUsed) await consumePayoutDetailsChangeVerification(user.id)
+        if (done.changed) await notifyWithdrawalOutcome(withdrawalRef.id, 'completed', { row: done.row })
 
         return NextResponse.json({
           success: true,
@@ -404,6 +400,9 @@ export async function POST(req: NextRequest) {
           { merge: true }
         )
         if (stepUpUsed) await consumePayoutDetailsChangeVerification(user.id)
+        await notifyWithdrawalOutcome(withdrawalRef.id, 'confirming', {
+          row: { ...baseWithdrawalRequest, status: 'processing', needsReconciliation: true },
+        })
 
         return NextResponse.json(
           {
@@ -425,67 +424,18 @@ export async function POST(req: NextRequest) {
       // outcome === 'rejected': MonCash definitively refused, no money moved.
       const failureReason = outcome.reason
 
-      // Rollback reserved earnings.
+      // Give the reservation back — once, in a transaction that refuses unless
+      // the row is still 'processing' (the same seam the reconcile cron uses).
       try {
-        await adminDb.runTransaction(async (tx: any) => {
-          const [earningsSnap, withdrawalSnap] = await Promise.all([
-            tx.get(earningsRef),
-            tx.get(withdrawalRef),
-          ])
-
-          if (!withdrawalSnap.exists) {
-            // Nothing to rollback (should not happen).
-            return
-          }
-
-          const withdrawal = withdrawalSnap.data() as any
-          if (String(withdrawal?.status || '') !== 'processing') {
-            // Completed or already rolled back: never credit twice.
-            return
-          }
-
-          if (!earningsSnap.exists) {
-            // Can't safely rollback earnings; still mark withdrawal failed.
-            tx.set(
-              withdrawalRef,
-              {
-                status: 'failed',
-                failureReason,
-                updatedAt: new Date(),
-              },
-              { merge: true }
-            )
-            return
-          }
-
-          const earningsData = earningsSnap.data() as any
-          const availableToWithdraw = Math.max(0, Number(earningsData?.availableToWithdraw || 0) || 0)
-          const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
-
-          const restoredAvailable = availableToWithdraw + Number(amount)
-          const restoredWithdrawn = Math.max(0, withdrawnAmount - Number(amount))
-
-          tx.update(earningsRef, {
-            availableToWithdraw: restoredAvailable,
-            withdrawnAmount: restoredWithdrawn,
-            settlementStatus: restoredAvailable === 0 ? 'locked' : 'ready',
-            updatedAt: new Date().toISOString(),
-          })
-
-          tx.set(
-            withdrawalRef,
-            {
-              status: 'failed',
-              failureReason,
-              reservationRolledBackAt: new Date(),
-              updatedAt: new Date(),
-            },
-            { merge: true }
-          )
+        const released = await releaseWithdrawalReservation(withdrawalRef.id, {
+          reason: failureReason,
+          releasedBy: 'withdraw_route',
         })
+        if (released.changed) await notifyWithdrawalOutcome(withdrawalRef.id, 'failed', { row: released.row })
       } catch (rollbackErr) {
         // The reservation is still held and the row still says 'processing',
-        // so it stays visible to an admin rather than silently losing money.
+        // so it stays visible to an admin (and the reconcile cron) rather than
+        // silently losing money.
         console.error('Failed to rollback earnings after prefunded transfer failure:', rollbackErr)
         await withdrawalRef.set(
           {
@@ -520,6 +470,8 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       )
     }
+
+    await notifyWithdrawalOutcome(withdrawalRef.id, 'submitted', { row: baseWithdrawalRequest })
 
     return NextResponse.json({
       success: true,
