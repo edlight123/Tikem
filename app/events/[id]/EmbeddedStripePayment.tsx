@@ -310,6 +310,11 @@ export default function EmbeddedStripePayment({
         const data = await response.json()
 
         if (!response.ok) {
+          if (data?.code === 'organizer_payments_unavailable') {
+            throw new Error(
+              t('checkout.organizer_payments_unavailable', { defaultValue: data.error })
+            )
+          }
           throw new Error(
             data.error || t('checkout.initialize_payment_failed', { defaultValue: 'Failed to initialize payment' })
           )

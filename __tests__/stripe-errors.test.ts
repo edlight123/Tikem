@@ -7,8 +7,8 @@ describe('friendlyStripeError', () => {
     const error = new Error("No such destination: 'acct_1SfytLC6CSO7g3zh'")
     const friendly = friendlyStripeError(error)
 
-    expect(friendly.code).toBe('organizer_payouts_unavailable')
-    expect(friendly.status).toBe(400) // not a 500: nothing is broken on our side
+    expect(friendly.code).toBe('organizer_payments_unavailable')
+    expect(friendly.status).toBe(409) // not a 500: nothing is broken on our side
     expect(friendly.message).not.toMatch(/acct_/)
     expect(friendly.message).toMatch(/organizer/i)
   })
@@ -19,7 +19,7 @@ describe('friendlyStripeError', () => {
       { raw: { code: 'account_invalid' } },
       { raw: { param: 'transfer_data[destination]' } },
     ]) {
-      expect(friendlyStripeError(error).code).toBe('organizer_payouts_unavailable')
+      expect(friendlyStripeError(error).code).toBe('organizer_payments_unavailable')
     }
   })
 

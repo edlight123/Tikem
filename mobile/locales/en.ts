@@ -1136,6 +1136,7 @@ export default {
       haitiMobileMoney: 'Haiti Mobile Money',
       moncash: 'MonCash',
       natcash: 'NatCash',
+      cardUnavailable: 'Not available for this event',
     },
     expoGo: {
       base: 'Stripe is not available in Expo Go.',
@@ -1150,7 +1151,7 @@ export default {
     totalAmount: 'Total',
     securedBy: 'Secured checkout',
     pay: 'Pay',
-    stripeMissingKey: 'Missing Stripe publishable key. Please configure EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY.',
+    stripeMissingKey: "Card payments aren't available in this version of the app. Please update Tikèm, or buy on tikem.co.",
     errors: {
       haitiUseSogepay: 'For Haiti events, please use Sogepay or Mobile Money.',
       stripeUnavailable: 'Stripe is not available right now.',
@@ -1160,6 +1161,10 @@ export default {
       missingMoncashUrl: 'Missing redirect URL.',
       moncashFailed: 'MonCash payment failed. Please try again.',
       natcashFailed: 'NatCash payment failed. Please try again.',
+      organizerCardUnavailable: "This organizer can't accept card payments yet. Please contact the organizer, or try again later.",
+      organizerCardUnavailableTryOther: "This organizer can't accept card payments yet. You can still pay with {method}.",
+      cardDeclined: 'Your card was declined. Please try another card.',
+      network: "We couldn't reach Tikèm. Check your connection and try again.",
     },
   },
 
@@ -2307,6 +2312,7 @@ export default {
     available: 'available',
     checkout: 'Checkout',
     noTiers: 'No ticket types available',
+    noTiersHint: "The organizer hasn't put tickets on sale yet. Check back soon.",
     orderSummary: 'Order Summary',
     selectTickets: 'Select tickets',
     total: 'Total',

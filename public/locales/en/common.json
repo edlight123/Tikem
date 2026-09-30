@@ -866,6 +866,7 @@
     "payment_successful_message": "Your ticket has been confirmed",
     "unexpected_error": "An unexpected error occurred",
     "initialize_payment_failed": "Failed to initialize payment",
+    "organizer_payments_unavailable": "This organizer can't accept card payments yet. Please contact the organizer, or try again later.",
     "promo_invalid": "Invalid promo code",
     "promo_validate_failed": "Failed to validate promo code",
     "error_page_title": "Oops! Something went wrong",

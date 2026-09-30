@@ -830,6 +830,7 @@ export default {
       haitiMobileMoney: 'Mobile Money Haïti',
       moncash: 'MonCash',
       natcash: 'NatCash',
+      cardUnavailable: 'Indisponible pour cet événement',
     },
     expoGo: {
       base: 'Stripe n’est pas disponible dans Expo Go.',
@@ -844,7 +845,7 @@ export default {
     totalAmount: 'Total',
     securedBy: 'Paiement sécurisé',
     pay: 'Payer',
-    stripeMissingKey: 'Clé Stripe manquante. Configurez EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY.',
+    stripeMissingKey: 'Le paiement par carte n’est pas disponible dans cette version de l’app. Mettez Tikèm à jour ou achetez sur tikem.co.',
     errors: {
       haitiUseSogepay: 'Pour les événements en Haïti, utilisez Sogepay ou Mobile Money.',
       stripeUnavailable: 'Stripe n’est pas disponible pour le moment.',
@@ -854,6 +855,10 @@ export default {
       missingMoncashUrl: 'URL de redirection manquante.',
       moncashFailed: 'Paiement MonCash échoué. Veuillez réessayer.',
       natcashFailed: 'Paiement NatCash échoué. Veuillez réessayer.',
+      organizerCardUnavailable: 'Cet organisateur ne peut pas encore accepter les paiements par carte. Contactez l’organisateur ou réessayez plus tard.',
+      organizerCardUnavailableTryOther: 'Cet organisateur ne peut pas encore accepter les paiements par carte. Vous pouvez toujours payer avec {method}.',
+      cardDeclined: 'Votre carte a été refusée. Veuillez essayer une autre carte.',
+      network: 'Impossible de joindre Tikèm. Vérifiez votre connexion et réessayez.',
     },
   },
 
@@ -2286,6 +2291,7 @@ export default {
     available: 'disponibles',
     checkout: 'Paiement',
     noTiers: 'Aucun type de billet disponible',
+    noTiersHint: 'L’organisateur n’a pas encore mis de billets en vente. Revenez bientôt.',
     orderSummary: 'Récapitulatif',
     selectTickets: 'Sélectionnez des billets',
     total: 'Total',

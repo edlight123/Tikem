@@ -800,6 +800,7 @@ export default {
       haitiMobileMoney: 'Mobile Money Ayiti',
       moncash: 'MonCash',
       natcash: 'NatCash',
+      cardUnavailable: 'Pa disponib pou evènman sa a',
     },
     expoGo: {
       base: 'Stripe pa disponib nan Expo Go.',
@@ -814,7 +815,7 @@ export default {
     totalAmount: 'Total',
     securedBy: 'Peman sekirize',
     pay: 'Peye',
-    stripeMissingKey: 'Kle Stripe la manke. Mete EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY.',
+    stripeMissingKey: 'Peman ak kat pa disponib nan vèsyon app sa a. Mete Tikèm ajou, oswa achte sou tikem.co.',
     errors: {
       haitiUseSogepay: 'Pou evènman Ayiti, itilize Sogepay oswa Mobile Money.',
       stripeUnavailable: 'Stripe pa disponib kounye a.',
@@ -824,6 +825,10 @@ export default {
       missingMoncashUrl: 'URL redireksyon an manke.',
       moncashFailed: 'Peman MonCash echwe. Tanpri eseye ankò.',
       natcashFailed: 'Peman NatCash echwe. Tanpri eseye ankò.',
+      organizerCardUnavailable: 'Òganizatè sa a poko ka resevwa peman ak kat. Kontakte òganizatè a, oswa eseye ankò pita.',
+      organizerCardUnavailableTryOther: 'Òganizatè sa a poko ka resevwa peman ak kat. Ou ka toujou peye ak {method}.',
+      cardDeclined: 'Kat ou a refize. Tanpri eseye yon lòt kat.',
+      network: 'Nou pa ka jwenn Tikèm. Tcheke koneksyon w epi eseye ankò.',
     },
   },
 
@@ -2255,6 +2260,7 @@ export default {
     available: 'disponib',
     checkout: 'Peye',
     noTiers: 'Pa gen tip biyè disponib',
+    noTiersHint: 'Òganizatè a poko mete biyè an vant. Tounen tcheke byento.',
     orderSummary: 'Rezime kòmand',
     selectTickets: 'Chwazi biyè',
     total: 'Total',
