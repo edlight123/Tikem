@@ -1401,6 +1401,16 @@ export default {
         cancelled: 'Annulé',
       },
     },
+    instantMoncash: {
+      title: 'Paiements MonCash instantanés',
+      feeLine: 'Frais de {fee} par retrait instantané',
+      bodyAvailable: 'Activé : vos retraits arrivent sur votre MonCash en quelques minutes, et des frais de {fee} sont prélevés sur chacun. Désactivé : chaque retrait passe d’abord en vérification manuelle par notre équipe (généralement sous 24 heures), sans frais instantanés.',
+      bodyPaused: 'Les paiements instantanés sont suspendus pour le moment. D’ici leur retour, chaque retrait passe en vérification manuelle par notre équipe (généralement sous 24 heures), sans frais instantanés.',
+      bodyNotYet: 'Les paiements instantanés ne sont pas encore disponibles. Pour l’instant, chaque retrait passe en vérification manuelle par notre équipe, généralement sous 24 heures.',
+      stateNotYet: 'Bientôt',
+      minimum: 'Retrait minimum : {htg} ({usd} pour les événements en USD).',
+      saveFailed: 'Impossible de modifier les paiements instantanés. Veuillez réessayer.',
+    },
     moncashVerify: {
       title: 'Vérifiez votre identité',
       body: "Les paiements MonCash sont activés une fois votre identité vérifiée. Chaque retrait est ensuite examiné et validé manuellement par notre équipe.",
@@ -1586,12 +1596,15 @@ export default {
       amount: 'Montant',
       instantFee: 'Frais instantané (3%)',
       youReceive: 'Vous recevez',
+      usdConverted: 'Converti depuis {usd} au taux du jour. MonCash paie en HTG.',
+      usdConvertedNoRate: 'Converti en HTG au taux du jour du retrait.',
     },
     moncash: {
       title: 'MonCash',
       placeholder: '+509 1234 5678',
       instantAvailable: 'MonCash instantané est disponible pour ce retrait.',
       processedWithin24: 'Votre retrait sera traité sous 24 heures.',
+      instantOffered: 'Envie de le recevoir en quelques minutes ? Activez les paiements MonCash instantanés dans les paramètres de paiement (frais de 3 %).',
     },
     bank: {
       title: 'Banque',
@@ -1624,6 +1637,7 @@ export default {
       sending: 'Envoi…',
       enterCodePlaceholder: 'Entrer le code',
       verifyAndContinue: 'Vérifier et continuer',
+      moncashNumberBody: 'Ce numéro MonCash n’est pas celui de votre profil de paiement. Pour votre sécurité, confirmez-le avec le code que nous vous envoyons par e-mail.',
       verifying: 'Vérification…',
     },
     success: {
@@ -1632,6 +1646,10 @@ export default {
       youReceivedLabel: 'Vous avez reçu : ',
       requestSubmittedTitle: 'Demande envoyée',
       requestSubmittedBody: 'Votre demande de retrait a été envoyée avec succès.',
+      confirmingTitle: 'Demande envoyée',
+      confirmingBody: 'Votre retrait a été envoyé et nous le confirmons avec MonCash. Ne le soumettez pas à nouveau. Nous le mettrons à jour dès que MonCash confirme.',
+      instantFallbackBody: 'Les paiements instantanés ne pouvaient pas couvrir ce retrait pour le moment : il est donc passé en vérification manuelle, sans frais instantanés. Notre équipe l’envoie généralement sous 24 heures.',
+      manualReviewBody: 'Votre demande de retrait a été envoyée. Notre équipe la vérifie et l’envoie sur votre MonCash, généralement sous 24 heures.',
     },
     validation: {
       unavailableTitle: 'Indisponible',
@@ -1654,6 +1672,10 @@ export default {
       sendCodeFailed: 'Impossible d’envoyer le code',
       verificationFailed: 'Échec de la vérification',
       unableToOpenLinkTitle: 'Impossible d’ouvrir le lien',
+      submitFailed: 'Échec de la demande de retrait',
+      duplicateTitle: 'Déjà en cours',
+      duplicateBody: 'Un retrait pour ce solde est déjà en cours, ou le solde vient de changer. Nous l’avons actualisé. Vérifiez-le avant de réessayer.',
+      instantFailedBody: 'MonCash n’a pas pu effectuer le transfert instantané. Aucun argent n’a été envoyé et votre solde a été rétabli. Réessayez, ou désactivez les paiements instantanés pour passer par la vérification manuelle.',
     },
   },
 
