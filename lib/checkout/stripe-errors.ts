@@ -9,6 +9,11 @@
  * the server logs where it is useful.
  */
 
+import {
+  ORGANIZER_PAYMENTS_UNAVAILABLE,
+  ORGANIZER_PAYMENTS_UNAVAILABLE_MESSAGE,
+} from '@/lib/checkout/destination-readiness'
+
 export interface FriendlyError {
   status: number
   /** Stable code for clients that want to branch, e.g. to offer another method. */
@@ -31,10 +36,9 @@ const GENERIC: FriendlyError = {
  * the organizer rather than blaming the card.
  */
 const UNKNOWN_DESTINATION: FriendlyError = {
-  status: 400,
-  code: 'organizer_payouts_unavailable',
-  message:
-    "This organizer isn't set up to receive card payments yet, so tickets can't be sold right now. Please contact them, or try again later.",
+  status: 409,
+  code: ORGANIZER_PAYMENTS_UNAVAILABLE,
+  message: ORGANIZER_PAYMENTS_UNAVAILABLE_MESSAGE,
 }
 
 function messageOf(error: any): string {

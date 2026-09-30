@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { createNotification } from '@/lib/notifications/helpers'
-import { sendPushNotification } from '@/lib/notification-triggers'
 import { checkPaidPublishGate, type PublishGateResult } from '@/lib/events/publish-gate'
-import { sweepCandidacy, shouldRenotify } from '@/lib/events/connect-health'
+import { sweepCandidacy } from '@/lib/events/connect-health'
+import { claimOrganizerNotice, sendPayoutBlockedNotice } from '@/lib/events/payout-health-notice'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,9 +32,6 @@ export const dynamic = 'force-dynamic'
 
 /** Ceiling on one run's scan — same convention as organizer-nudge/city-discovery. */
 const MAX_EVENTS_SCANNED = 2000
-
-/** Don't re-nag an organizer about the same problem more often than this. */
-const RENOTIFY_AFTER_HOURS = 72
 
 type Verdict = Extract<PublishGateResult, { ok: false }>
 
@@ -161,30 +157,6 @@ export async function GET(request: Request) {
   }
 }
 
-/**
- * Claim the right to notify this organizer about this problem, at most once per
- * RENOTIFY_AFTER_HOURS. Claims BEFORE sending (the reminder-claim convention):
- * a duplicate silence is better than notifying the same person every single day.
- */
-async function claimOrganizerNotice(organizerId: string, code: string, now: Date): Promise<boolean> {
-  const ref = adminDb.collection('payout_health_notices').doc(`${organizerId}_${code}`)
-
-  try {
-    return await adminDb.runTransaction(async (tx: any) => {
-      const snap = await tx.get(ref)
-      const last = snap.exists ? (snap.data() as any)?.notifiedAt : null
-      if (!shouldRenotify(last, now, RENOTIFY_AFTER_HOURS)) return false
-
-      tx.set(ref, { organizerId, code, notifiedAt: now }, { merge: true })
-      return true
-    })
-  } catch (err) {
-    // Fail CLOSED: if we can't prove we haven't already told them, don't tell them again.
-    console.error('connect-health-sweep: notice claim failed', { organizerId, code, err })
-    return false
-  }
-}
-
 async function notifyOrganizer(
   organizerId: string,
   event: any,
@@ -196,26 +168,5 @@ async function notifyOrganizer(
     `${event.title || 'Your event'}: ${verdict.error}` +
     (autoUnpublish ? ' Your event has been moved to draft until this is fixed.' : '')
 
-  try {
-    await createNotification(
-      organizerId,
-      'payout_account_blocked',
-      title,
-      message,
-      '/organizer/settings/payouts',
-      { eventId: event.id, code: verdict.code }
-    )
-  } catch (err) {
-    console.error('connect-health-sweep: in-app notification failed', { organizerId, err })
-  }
-
-  try {
-    await sendPushNotification(organizerId, `⚠️ ${title}`, message, '/organizer/settings/payouts', {
-      type: 'payout_account_blocked',
-      eventId: event.id,
-      code: verdict.code,
-    })
-  } catch (err) {
-    console.error('connect-health-sweep: push notification failed', { organizerId, err })
-  }
+  await sendPayoutBlockedNotice({ organizerId, eventId: event.id, code: verdict.code, title, message })
 }

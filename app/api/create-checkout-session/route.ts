@@ -19,6 +19,12 @@ import { applicationFeeFor, priceOrderCents } from '@/lib/checkout/buyer-pricing
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getEventLocation } from '@/types/platform-settings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import {
+  checkDestinationReadiness,
+  ORGANIZER_PAYMENTS_UNAVAILABLE,
+  ORGANIZER_PAYMENTS_UNAVAILABLE_MESSAGE,
+} from '@/lib/checkout/destination-readiness'
+import { flagOrganizerCardCheckoutBlocked } from '@/lib/events/payout-health-notice'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import { isPaidAllowed, countrySupport, defaultCurrencyForCountry } from '@/lib/country-support'
 
@@ -225,11 +231,34 @@ export async function POST(request: Request) {
 
       const stripeProfile = await getPayoutProfile(organizerId, 'stripe_connect')
       const stripeAccountId = stripeProfile?.stripeAccountId
-      if (!stripeAccountId) {
+
+      // Ask Stripe whether this destination can take the charge BEFORE creating
+      // anything. Organizers onboarded under the previous platform account carry an
+      // acct_ id the live platform has never seen; letting the create call fail
+      // is how "No such destination: 'acct_…'" reached a buyer's screen. A typed
+      // code lets the app localize it and steer the buyer to another method, and
+      // the organizer is told (deduped with the nightly Connect sweep).
+      const readiness = await checkDestinationReadiness(stripeAccountId, { stripe })
+      if (!readiness.ok || !stripeAccountId) {
+        const reason = readiness.ok ? 'missing' : readiness.reason
+        console.warn('card checkout refused: organizer destination not ready', {
+          eventId,
+          organizerId,
+          reason,
+        })
         await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+        await flagOrganizerCardCheckoutBlocked({
+          organizerId,
+          event,
+          eventId: String(eventId),
+          reason,
+        })
         return NextResponse.json(
-          { error: 'Organizer has not connected Stripe Connect yet.' },
-          { status: 400 }
+          {
+            error: ORGANIZER_PAYMENTS_UNAVAILABLE_MESSAGE,
+            code: ORGANIZER_PAYMENTS_UNAVAILABLE,
+          },
+          { status: 409 }
         )
       }
 

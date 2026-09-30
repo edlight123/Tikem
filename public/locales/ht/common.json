@@ -866,6 +866,7 @@
     "payment_successful_message": "Tikè ou konfime",
     "unexpected_error": "Gen yon erè ki pa t prevwa ki fèt",
     "initialize_payment_failed": "Nou pa t kapab prepare peman an",
+    "organizer_payments_unavailable": "Òganizatè sa a poko ka resevwa peman ak kat. Kontakte òganizatè a, oswa eseye ankò pita.",
     "promo_invalid": "Kòd pwomo pa valab",
     "promo_validate_failed": "Nou pa t kapab verifye kòd pwomo a",
     "error_page_title": "Oups! Gen yon bagay ki mal pase",

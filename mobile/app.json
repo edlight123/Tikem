@@ -123,7 +123,7 @@
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "merchant.co.tikem",
-          "enableGooglePay": false
+          "enableGooglePay": true
         }
       ]
     ],

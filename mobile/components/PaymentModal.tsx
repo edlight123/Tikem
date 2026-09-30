@@ -5,7 +5,8 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-    ScrollView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +19,7 @@ import WhitePillCTA from './WhitePillCTA';
 import { formatCurrency } from '../lib/currency';
 import { priceOrder } from '../lib/buyerPricing';
 import { radius } from '../theme/tokens';
+import { classifyCheckoutError, friendlyCheckoutError } from '../lib/checkoutErrors';
 
 // Expo Go can't load native modules like Stripe. Detect it reliably via
 // expo-constants. (The old `Platform.constants.expoConfig` check was always
@@ -29,7 +31,7 @@ const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreCl
 // Conditionally import Stripe only if not in Expo Go
 let StripeProvider: any;
 let useStripe: any;
-let isPlatformPaySupported: (() => Promise<boolean>) | null = null;
+let isPlatformPaySupported: ((params?: any) => Promise<boolean>) | null = null;
 
 if (!isExpoGo) {
   try {
@@ -43,6 +45,15 @@ if (!isExpoGo) {
 }
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!;
+
+/**
+ * Google Pay must be told whether it is talking to Stripe test or live mode, and
+ * the publishable key is the one reliable source of that in a given bundle.
+ */
+const STRIPE_IS_TEST_MODE = String(STRIPE_PUBLISHABLE_KEY || '').startsWith('pk_test_');
+
+/** The wallet's own brand name — never translated. */
+const WALLET_NAME = Platform.OS === 'ios' ? 'Apple Pay' : 'Google Pay';
 
 /**
  * Apple Pay merchant identifier.
@@ -143,11 +154,21 @@ function PaymentForm({
   // it is not on offer, and they close the screen. A tester did exactly that.
   // Asked of the SDK rather than assumed from Platform.OS, so the label is never
   // promising a button that will not be there.
+  //
+  // On Android the same question covers Google Pay, and it doubles as the gate
+  // for passing `googlePay` to the sheet: a build whose manifest lacks the Wallet
+  // API flag (app.json `enableGooglePay`) answers false here, so the sheet is
+  // simply card-only rather than erroring.
   const [walletAvailable, setWalletAvailable] = useState(false);
+  // Set once the server says this organizer cannot take card payments at all, so
+  // the buyer is not invited to tap Pay into the same refusal again.
+  const [cardUnavailable, setCardUnavailable] = useState(false);
   useEffect(() => {
     let cancelled = false;
     if (!isPlatformPaySupported || isHaitiEvent) return;
-    isPlatformPaySupported()
+    isPlatformPaySupported(
+      Platform.OS === 'android' ? { googlePay: { testEnv: STRIPE_IS_TEST_MODE } } : undefined
+    )
       .then((supported) => {
         if (!cancelled) setWalletAvailable(Boolean(supported));
       })
@@ -171,12 +192,19 @@ function PaymentForm({
       setError(t('paymentModal.errors.stripeUnavailable'));
       return;
     }
+    if (cardUnavailable) {
+      setError(t('paymentModal.errors.organizerCardUnavailable'));
+      return;
+    }
     setProcessing(true);
     setError(null);
 
     try {
       // Step 1: Create payment intent from your backend
-      const data = await backendJson<{ clientSecret: string }>(`/api/create-payment-intent`, {
+      const data = await backendJson<{
+        clientSecret: string;
+        pricing?: { currency?: string };
+      }>(`/api/create-payment-intent`, {
         method: 'POST',
         body: JSON.stringify({
           eventId,
@@ -197,6 +225,18 @@ function PaymentForm({
         // The sheet hides the wallet button by itself on a device or account
         // where Apple Pay is unavailable, so this is safe to pass unconditionally.
         applePay: { merchantCountryCode: STRIPE_MERCHANT_COUNTRY },
+        // Google Pay only when the device + build said yes above. Unlike Apple
+        // Pay, handing the sheet a Google Pay config on a build without the
+        // Wallet API manifest flag is not guaranteed to degrade quietly.
+        ...(Platform.OS === 'android' && walletAvailable
+          ? {
+              googlePay: {
+                merchantCountryCode: STRIPE_MERCHANT_COUNTRY,
+                currencyCode: String(data.pricing?.currency || currency || 'USD').toUpperCase(),
+                testEnv: STRIPE_IS_TEST_MODE,
+              },
+            }
+          : {}),
         // A ticket is issued as soon as the charge clears, so a method that
         // settles days later (bank debits, Konbini) would hand out a ticket
         // before the money exists. Cards and wallets only.
@@ -224,7 +264,9 @@ function PaymentForm({
       });
 
       if (initError) {
-        throw new Error(initError.message);
+        // Thrown as-is (not re-wrapped): the SDK error carries a customer-facing
+        // `localizedMessage`, which the sanitizer below may use.
+        throw initError;
       }
 
       // Step 3: Present it. Dismissing the sheet is a decision, not a failure —
@@ -236,7 +278,7 @@ function PaymentForm({
           setProcessing(false);
           return;
         }
-        throw new Error(sheetError.message);
+        throw sheetError;
       }
 
       // Step 4: The sheet reports success without handing back the intent, and a
@@ -266,7 +308,12 @@ function PaymentForm({
       onSuccess('stripe', paymentIntentId);
       onClose();
     } catch (err: any) {
-      setError(err.message || t('paymentModal.errors.paymentFailed'));
+      // Never render err.message: from backendJson it ends in the request URL, and
+      // older servers passed Stripe's developer text (with acct_ ids) through.
+      if (classifyCheckoutError(err) === 'organizer_unavailable') {
+        setCardUnavailable(true);
+      }
+      setError(friendlyCheckoutError(err, t, 'paymentModal.errors.paymentFailed'));
     } finally {
       setProcessing(false);
     }
@@ -300,7 +347,7 @@ function PaymentForm({
         eventId,
       });
     } catch (err: any) {
-      setError(err.message || t('paymentModal.errors.sogepayFailed'));
+      setError(friendlyCheckoutError(err, t, 'paymentModal.errors.sogepayFailed'));
       setProcessing(false);
     }
   };
@@ -337,7 +384,7 @@ function PaymentForm({
         eventId,
       });
     } catch (err: any) {
-      setError(err.message || t('paymentModal.errors.moncashFailed'));
+      setError(friendlyCheckoutError(err, t, 'paymentModal.errors.moncashFailed'));
       setProcessing(false);
     }
   };
@@ -374,7 +421,7 @@ function PaymentForm({
         eventId,
       });
     } catch (err: any) {
-      setError(err.message || t('paymentModal.errors.natcashFailed'));
+      setError(friendlyCheckoutError(err, t, 'paymentModal.errors.natcashFailed'));
       setProcessing(false);
     }
   };
@@ -437,9 +484,11 @@ function PaymentForm({
                     paymentMethod === 'stripe' && styles.methodSubtitleActive,
                   ]}
                 >
-                  {walletAvailable
-                    ? `Apple Pay · ${t('paymentModal.methods.cardBrands')}`
-                    : t('paymentModal.methods.cardBrands')}
+                  {cardUnavailable
+                    ? t('paymentModal.methods.cardUnavailable')
+                    : walletAvailable
+                      ? `${WALLET_NAME} · ${t('paymentModal.methods.cardBrands')}`
+                      : t('paymentModal.methods.cardBrands')}
                 </Text>
               </View>
               <View style={styles.methodCheck}>
@@ -639,7 +688,7 @@ function PaymentForm({
           style={styles.payButtonPill}
           label={t('paymentModal.pay')}
           loading={processing}
-          disabled={processing}
+          disabled={processing || (paymentMethod === 'stripe' && cardUnavailable)}
           onPress={handlePayment}
         />
       </View>
@@ -673,6 +722,8 @@ export default function PaymentModal(props: PaymentModalProps) {
   }
 
   if (!STRIPE_PUBLISHABLE_KEY) {
+    // The env var name is for us, not the buyer: it goes to the log only.
+    console.warn('[PaymentModal] EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set in this bundle');
     return (
       <Modal
         visible={props.visible}
