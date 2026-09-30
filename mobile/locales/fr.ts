@@ -1579,6 +1579,8 @@ export default {
       notReadyWithDate: 'Les revenus seront disponibles pour retrait le {date}.',
       underReview: 'Votre versement pour cet évènement est en cours d’examen par l’équipe Tikèm. Nous vous écrirons dès son approbation.',
       missingEndDate: 'Cet évènement n’a pas de date de fin, nous ne pouvons donc pas dire quand les fonds seront disponibles. Ajoutez une date de fin.',
+      moncashBelowMinimum: 'Les retraits MonCash commencent à {min}. Votre solde disponible est de {balance}.',
+      needsAdminReview: 'Les gains de cet évènement doivent être vérifiés par l’équipe paiements de Tikèm avant tout retrait. Nous l’avons signalé — aucun argent n’a été déplacé.',
     },
     modal: {
       titleMoncash: 'Demander un retrait MonCash',
@@ -1648,6 +1650,7 @@ export default {
       selectAccountBody: 'Veuillez sélectionner un compte bancaire.',
       belowMinimumTitle: 'Minimum non atteint',
       belowMinimumBody: 'Il vous faut au moins {min} pour retirer.',
+      moncashBelowMinimumBody: 'Les retraits MonCash commencent à {min}. Votre solde disponible est de {balance}.',
     },
     errors: {
       loadFailed: 'Impossible de charger les revenus',

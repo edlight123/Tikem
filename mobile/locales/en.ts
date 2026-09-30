@@ -1901,6 +1901,8 @@ export default {
       notReadyWithDate: 'Earnings will be available for withdrawal on {date}.',
       underReview: 'Your payout for this event is with the Tikèm payouts team. We will email you as soon as it is approved.',
       missingEndDate: 'This event has no end date, so we cannot tell when its funds are due. Add an end date to the event.',
+      moncashBelowMinimum: 'MonCash withdrawals start at {min}. Your available balance is {balance}.',
+      needsAdminReview: 'This event’s earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We’ve flagged it — no money has moved.',
     },
     modal: {
       titleMoncash: 'Request MonCash Withdrawal',
@@ -1970,6 +1972,7 @@ export default {
       selectAccountBody: 'Please select a bank account.',
       belowMinimumTitle: 'Minimum not reached',
       belowMinimumBody: 'You need at least {min} to withdraw.',
+      moncashBelowMinimumBody: 'MonCash withdrawals start at {min}. Your available balance is {balance}.',
     },
     errors: {
       loadFailed: 'Failed to load earnings',

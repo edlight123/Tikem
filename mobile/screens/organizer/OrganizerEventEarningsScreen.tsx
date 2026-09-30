@@ -76,7 +76,20 @@ type EventEarnings = {
   ticketsSold?: number
   totalEarned?: number
   withdrawnAmount?: number
+  /** Set when the server holds this balance for admin review — nothing is withdrawable. */
+  withdrawalBlocked?: { code: string; storedCurrency?: string; eventCurrency?: string } | null
+  /** The MonCash 1,000 HTG floor in this event's currency, computed server-side. */
+  moncashMinimum?: { minimumHtgCents: number; minimumMinor: number | null; currency: string; usdToHtgRate: number | null } | null
 }
+
+/** Haiti bank-transfer floor enforced by /api/organizer/withdraw-bank (unchanged). */
+const BANK_MIN_WITHDRAWAL_CENTS = 5000
+/**
+ * MonCash floor: 1,000 HTG, measured in HTG. Mirrors
+ * lib/payouts/moncash-withdrawal-minimum.ts; the server's `moncashMinimum`
+ * (converted for USD events at the withdrawal's own rate) wins when present.
+ */
+const MONCASH_MIN_WITHDRAWAL_HTG_CENTS = 100_000
 
 export default function OrganizerEventEarningsScreen() {
   const { colors } = useTheme();
@@ -90,11 +103,6 @@ export default function OrganizerEventEarningsScreen() {
   const insets = useSafeAreaInsets()
   const showAlert = useAppAlert()
   const dateLocale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US'
-
-  // Server rejects withdrawals below 5000 cents (50 units). Mirror it client-side
-  // so sub-minimum balances get a clear, currency-correct message instead of the
-  // server's hardcoded "$50.00" wall.
-  const MIN_WITHDRAWAL_CENTS = 5000
 
   const [loading, setLoading] = useState(true)
   const [eventTitle, setEventTitle] = useState<string>('')
@@ -154,6 +162,7 @@ export default function OrganizerEventEarningsScreen() {
   const currency = (earnings?.currency || 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
   const availableToWithdraw = useMemo(() => {
     if (!earnings) return 0
+    if (earnings.withdrawalBlocked) return 0
     if (earnings?.settlementStatus !== 'ready') return 0
     /**
      * The release ladder has the final say, and it is stricter than settlement:
@@ -193,6 +202,27 @@ export default function OrganizerEventEarningsScreen() {
 
   // Centralized formatter (values are in cents server-side).
   const formatCurrency = (cents: number, curr: string) => fmtCurrency(cents, curr, { fromCents: true })
+
+  // Per-rail floors. MonCash: 1,000 HTG (for a USD event, the server's converted
+  // figure; unknown → let the server decide). Bank: 5,000 minor units.
+  const moncashMinMinor = useMemo(() => {
+    const serverMin = earnings?.moncashMinimum?.minimumMinor
+    if (typeof serverMin === 'number' && Number.isFinite(serverMin)) return serverMin
+    return currency === 'USD' ? 0 : MONCASH_MIN_WITHDRAWAL_HTG_CENTS
+  }, [earnings?.moncashMinimum?.minimumMinor, currency])
+  const moncashMinLabel = useMemo(() => {
+    const htg = formatCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG')
+    return currency === 'USD' && moncashMinMinor > 0 ? `${htg} (≈ ${formatCurrency(moncashMinMinor, 'USD')})` : htg
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency, moncashMinMinor])
+  const moncashBelowMinimum = availableToWithdraw > 0 && availableToWithdraw < moncashMinMinor
+  const minimumFor = (m: 'moncash' | 'bank' | null) => (m === 'moncash' ? moncashMinMinor : BANK_MIN_WITHDRAWAL_CENTS)
+  const belowMinimumMessage = (m: 'moncash' | 'bank' | null) =>
+    m === 'moncash'
+      ? t('organizerEarnings.validation.moncashBelowMinimumBody')
+          .replace('{min}', moncashMinLabel)
+          .replace('{balance}', formatCurrency(availableToWithdraw, currency))
+      : t('organizerEarnings.validation.belowMinimumBody').replace('{min}', formatCurrency(BANK_MIN_WITHDRAWAL_CENTS, currency))
 
   // Map the raw settlement status ('ready'/'pending'/'locked') to a localized
   // label instead of printing the DB value.
@@ -423,6 +453,11 @@ export default function OrganizerEventEarningsScreen() {
       return
     }
 
+    if (earnings.withdrawalBlocked) {
+      showAlert(t('organizerEarnings.validation.unavailableTitle'), t('organizerEarnings.notices.needsAdminReview'))
+      return
+    }
+
     if (earnings?.settlementStatus !== 'ready') {
       showAlert(t('organizerEarnings.validation.notReadyTitle'), t('organizerEarnings.validation.notReadyBody'))
       return
@@ -433,11 +468,8 @@ export default function OrganizerEventEarningsScreen() {
       return
     }
 
-    if (availableToWithdraw < MIN_WITHDRAWAL_CENTS) {
-      showAlert(
-        t('organizerEarnings.validation.belowMinimumTitle'),
-        t('organizerEarnings.validation.belowMinimumBody').replace('{min}', formatCurrency(MIN_WITHDRAWAL_CENTS, currency))
-      )
+    if (!requiresStripeConnect && availableToWithdraw < minimumFor(nextMethod)) {
+      showAlert(t('organizerEarnings.validation.belowMinimumTitle'), belowMinimumMessage(nextMethod))
       return
     }
 
@@ -642,6 +674,11 @@ export default function OrganizerEventEarningsScreen() {
       return
     }
 
+    if (earnings.withdrawalBlocked) {
+      showAlert(t('organizerEarnings.validation.unavailableTitle'), t('organizerEarnings.notices.needsAdminReview'))
+      return
+    }
+
     if (earnings?.settlementStatus !== 'ready') {
       showAlert(t('organizerEarnings.validation.notReadyTitle'), t('organizerEarnings.validation.notReadyBody'))
       return
@@ -652,11 +689,8 @@ export default function OrganizerEventEarningsScreen() {
       return
     }
 
-    if (availableToWithdraw < MIN_WITHDRAWAL_CENTS) {
-      showAlert(
-        t('organizerEarnings.validation.belowMinimumTitle'),
-        t('organizerEarnings.validation.belowMinimumBody').replace('{min}', formatCurrency(MIN_WITHDRAWAL_CENTS, currency))
-      )
+    if (availableToWithdraw < minimumFor(method)) {
+      showAlert(t('organizerEarnings.validation.belowMinimumTitle'), belowMinimumMessage(method))
       return
     }
 
@@ -828,8 +862,19 @@ export default function OrganizerEventEarningsScreen() {
         ) : identityVerified === true ? (
           <>
             {/* The one white-pill primary for this screen (POSH §2.2). */}
+            {moncashBelowMinimum ? (
+              <View style={styles.noticeStack}>
+                <InfoNotice
+                  icon="information-circle-outline"
+                  text={t('organizerEarnings.notices.moncashBelowMinimum')
+                    .replace('{min}', moncashMinLabel)
+                    .replace('{balance}', formatCurrency(availableToWithdraw, currency))}
+                />
+              </View>
+            ) : null}
             <WhitePillCTA
               label={t('organizerEarnings.withdrawViaMoncash')}
+              disabled={moncashBelowMinimum || Boolean(earnings?.withdrawalBlocked)}
               onPress={() => openWithdraw('moncash')}
               icon={<Ionicons name="phone-portrait-outline" size={20} color={tokenColors.onWhite} />}
             />
@@ -848,6 +893,10 @@ export default function OrganizerEventEarningsScreen() {
         {!earnings ? (
           <View style={styles.noticeStack}>
             <InfoNotice icon="alert-circle-outline" text={t('organizerEarnings.notices.noEarnings')} />
+          </View>
+        ) : earnings.withdrawalBlocked ? (
+          <View style={styles.noticeStack}>
+            <InfoNotice icon="shield-outline" text={t('organizerEarnings.notices.needsAdminReview')} />
           </View>
         ) : earnings?.settlementStatus !== 'ready' ? (
           <View style={styles.noticeStack}>

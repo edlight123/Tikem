@@ -856,7 +856,10 @@
     "prefunding_instant_note": "This withdrawal will be sent instantly using platform prefunding.",
     "new_bank_needs_verification": "Using a new bank account requires email verification.",
     "bank_deposit_note": "Your withdrawal will be deposited to your bank account within 3-5 business days.",
-    "moncash_note": "Your withdrawal will be sent to your MonCash account (typically within 24 hours)."
+    "moncash_note": "Your withdrawal will be sent to your MonCash account (typically within 24 hours).",
+    "moncash_below_minimum": "MonCash withdrawals start at {{min}}. Your available balance is {{balance}}.",
+    "bank_below_minimum": "Bank transfers start at {{min}}.",
+    "needs_admin_review": "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it — no money has moved."
   },
   "events_filters": {
     "alphabetical": "Alphabetical",

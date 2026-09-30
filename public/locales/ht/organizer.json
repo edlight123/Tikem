@@ -856,7 +856,10 @@
     "prefunding_instant_note": "Retrè sa a ap voye touswit gras ak prefinansman platfòm nan.",
     "new_bank_needs_verification": "Pou w sèvi ak yon nouvo kont bankè, ou dwe verifye imel ou.",
     "bank_deposit_note": "Retrè ou a ap depoze nan kont bankè ou nan 3-5 jou ouvrab.",
-    "moncash_note": "Retrè ou a ap voye sou kont MonCash ou (anjeneral nan 24 èdtan)."
+    "moncash_note": "Retrè ou a ap voye sou kont MonCash ou (anjeneral nan 24 èdtan).",
+    "moncash_below_minimum": "Retrè MonCash kòmanse a {{min}}. Balans ou ki disponib se {{balance}}.",
+    "bank_below_minimum": "Transfè labank kòmanse a {{min}}.",
+    "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l — pa gen okenn lajan ki deplase."
   },
   "events_filters": {
     "alphabetical": "Alfabetik",
