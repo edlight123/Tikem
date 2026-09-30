@@ -468,7 +468,32 @@ async function stepBuild(version) {
   const cur = (await get(`/v1/appStoreVersions/${version.id}/build`)).data
   const want = diff({ build: cur?.attributes?.version ?? null }, { build: b.attributes.version })
   if (!Object.keys(want).length) return
-  await api('PATCH', `/v1/appStoreVersions/${version.id}/relationships/build`, { data: { type: 'builds', id: b.id } })
+  // Apple intermittently answers this relationship PATCH with a bare 500 —
+  // notably seconds after versionString changed in the same run. Retry with
+  // backoff, then fall back to setting the relationship on the version itself.
+  const attempts = [
+    () => api('PATCH', `/v1/appStoreVersions/${version.id}/relationships/build`, { data: { type: 'builds', id: b.id } }),
+    () =>
+      api('PATCH', `/v1/appStoreVersions/${version.id}`, {
+        data: { type: 'appStoreVersions', id: version.id, relationships: { build: { data: { type: 'builds', id: b.id } } } },
+      }),
+  ]
+  let lastErr = null
+  outer: for (const attempt of attempts) {
+    for (let i = 0; i < 3; i++) {
+      try {
+        await attempt()
+        lastErr = null
+        break outer
+      } catch (err) {
+        lastErr = err
+        if (err?.status !== 500 || !APPLY) throw err
+        console.log(`  ! Apple returned 500 attaching the build; retrying in ${10 * (i + 1)}s`)
+        await new Promise((r) => setTimeout(r, 10_000 * (i + 1)))
+      }
+    }
+  }
+  if (lastErr) throw lastErr
   console.log(`  ${verb}attach build ${b.attributes.version}`)
 }
 

@@ -56,7 +56,7 @@
   "ageRating": {
     "$why": "Answers for Apple's 2025 age-rating questionnaire (API field names). Organizers publish events without pre-approval, so UGC is true; posters for parties and nightlife routinely reference drinks, so alcohol is INFREQUENT and mature/suggestive themes INFREQUENT. Contact-organizer messages and event updates count as messaging; friends, followers, public profiles and 'who's going' count as social features. No ads, no gambling, no contests, no open browser (web views are locked to tikem.co and payment pages). Expect Apple to compute 13+; do not override.",
     "advertising": false,
-    "alcoholTobaccoOrDrugUseOrReferences": "INFREQUENT",
+    "alcoholTobaccoOrDrugUseOrReferences": "INFREQUENT_OR_MILD",
     "contests": "NONE",
     "gambling": false,
     "gamblingSimulated": "NONE",
@@ -73,7 +73,7 @@
     "socialMedia": true,
     "socialMediaAgeRestricted": false,
     "horrorOrFearThemes": "NONE",
-    "matureOrSuggestiveThemes": "INFREQUENT",
+    "matureOrSuggestiveThemes": "INFREQUENT_OR_MILD",
     "unrestrictedWebAccess": false,
     "userGeneratedContent": true,
     "violenceCartoonOrFantasy": "NONE",
