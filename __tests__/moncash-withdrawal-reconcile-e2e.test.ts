@@ -242,7 +242,7 @@ import {
 const NET = 100_000
 const MIN = 60 * 1000
 
-function seed(opts: { language?: string } = {}) {
+function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
   const ended = '2026-09-01T23:00:00.000Z'
   coll('events').evt1 = { organizer_id: 'org1', title: 'Konpa Night', currency: 'HTG', country: 'HT', end_datetime: ended, status: 'published' }
@@ -257,7 +257,10 @@ function seed(opts: { language?: string } = {}) {
     settlementStatus: 'pending',
     settlementReadyDate: ended,
   }
-  coll('config').payouts = { prefunding: { enabled: true, available: true } }
+  coll('config').payouts = {
+    prefunding: { enabled: true, available: true },
+    ...(opts.autoReleaseNotFound ? { reconcile: { autoReleaseNotFound: true } } : {}),
+  }
   coll('users').org1 = { email: 'org@example.com', language: opts.language ?? 'en', role: 'organizer' }
   coll('users').admin1 = { email: 'admin@tikem.co', role: 'admin' }
   coll('users').promo1 = { email: 'promo@example.com', language: 'fr', role: 'attendee' }
@@ -337,6 +340,15 @@ describe('reconcile cron — confirmation', () => {
 })
 
 describe('reconcile cron — definitive failure', () => {
+  it('never releases on "not found" while the auto-release switch is off (the default)', async () => {
+    seed()
+    const id = await unconfirmedWithdrawal()
+    const r = await runWithdrawalReconciliation({ now: new Date(reservedAtMs(id) + RECONCILE_RELEASE_GRACE_MS + MIN) })
+    expect(r.results[0]).toMatchObject({ withdrawalId: id, detail: 'not_found_auto_release_off' })
+    expect(row(id)).toMatchObject({ status: 'processing', needsReconciliation: true })
+    expect(earnings().withdrawnAmount).toBe(NET)
+  })
+
   it('waits out the grace period before trusting "not found"', async () => {
     seed()
     const id = await unconfirmedWithdrawal()
@@ -347,7 +359,7 @@ describe('reconcile cron — definitive failure', () => {
   })
 
   it('two overlapping runs release the reservation only once', async () => {
-    seed()
+    seed({ autoReleaseNotFound: true })
     const id = await unconfirmedWithdrawal()
     const now = new Date(reservedAtMs(id) + RECONCILE_RELEASE_GRACE_MS + MIN)
 
@@ -385,7 +397,7 @@ describe('reconcile cron — definitive failure', () => {
   })
 
   it('releases a promoter wallet reservation exactly once', async () => {
-    seed()
+    seed({ autoReleaseNotFound: true })
     const t0 = new Date('2026-09-29T10:00:00.000Z')
     coll('promoter_wallets').promo1 = { withdrawn_by_currency: { HTG: 50_000 } }
     coll('withdrawal_requests').pw1 = {
@@ -495,7 +507,7 @@ describe('reconcile cron — stuck processing', () => {
   })
 
   it('an abandoned row MonCash never saw is released after the grace period', async () => {
-    seed()
+    seed({ autoReleaseNotFound: true })
     Object.assign(earnings(), { withdrawnAmount: NET, availableToWithdraw: 0 })
     stuckRow('stuck2', 45)
     digicel.statusAnswer = null

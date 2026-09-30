@@ -38,6 +38,16 @@ export const RECONCILE_BATCH_SIZE = 25
 /** How many candidate rows each query may scan before sorting oldest-first. */
 const RECONCILE_SCAN_LIMIT = 300
 /** A definitive failure / unknown reference is trusted only after this long since the attempt. */
+/** `config/payouts.reconcile.autoReleaseNotFound` — off unless explicitly true. */
+async function autoReleaseNotFoundEnabled(): Promise<boolean> {
+  try {
+    const snap = await adminDb.collection('config').doc('payouts').get()
+    return (snap.exists ? snap.data() : null)?.reconcile?.autoReleaseNotFound === true
+  } catch {
+    return false
+  }
+}
+
 export const RECONCILE_RELEASE_GRACE_MS = 30 * 60 * 1000
 /** A `processing` instant row with no flag this old was abandoned mid-transfer. */
 export const RECONCILE_STUCK_AFTER_MS = 10 * 60 * 1000
@@ -199,6 +209,16 @@ async function reconcileOne(withdrawalId: string, now: Date): Promise<{ action: 
       return { action: 'escalated', detail: 'paid_after_release' }
     }
     return { action: 'skipped', detail: res.reason }
+  }
+
+  // "Not found" only proves money did NOT move if Digicel's status lookup
+  // really indexes our reference. Until the first live transfer confirms that,
+  // releasing on it risks a double payout, so it is opt-in: with the switch off
+  // a not-found row is treated as inconclusive and escalates to an admin.
+  if (verdict.verdict === 'not_found' && !(await autoReleaseNotFoundEnabled())) {
+    const { escalatedNow, row: updated } = await recordAmbiguous(withdrawalId, `not_found (auto-release off): ${verdict.detail}`, now)
+    if (escalatedNow) await notifyAdminsWithdrawalEscalated(withdrawalId, updated, now)
+    return { action: escalatedNow ? 'escalated' : 'waiting_grace', detail: 'not_found_auto_release_off' }
   }
 
   if (verdict.verdict === 'failed' || verdict.verdict === 'not_found') {
