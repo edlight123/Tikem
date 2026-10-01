@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
-import { processStripeRefund } from '@/lib/refunds'
-import { planTicketRefund, sumRefundsByCurrency, type RefundPlan } from '@/lib/tickets/refundPlan'
+import { sumRefundsByCurrency } from '@/lib/tickets/refundPlan'
+import { refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
 import { loadOwnedTickets, parseTicketIds } from '@/lib/organizer/ticketActions'
 
 export const dynamic = 'force-dynamic'
 
 const MAX_TICKETS = 50
-
-type Eligible = Extract<RefundPlan, { eligible: true }>
 
 /**
  * Organizer action: refund tickets. Called by the web attendee drawer with
@@ -46,106 +44,27 @@ export async function POST(request: Request) {
       )
     }
 
-    const nowIso = new Date().toISOString()
     const refunded: { ticketId: string; amount: number; currency: string }[] = []
     const queued: { ticketId: string; amount: number; currency: string }[] = []
     const failed: { ticketId: string; reason: string }[] = []
     const skipped: { ticketId: string; reason: string }[] = []
 
+    // Claim, refund/queue and record each ticket through the same mechanics
+    // event cancellation uses (lib/tickets/refundExecution.ts).
     for (const original of loaded.tickets) {
-      const ref = adminDb.collection('tickets').doc(original.id)
-
-      // 1. Claim. Re-read inside the transaction so the plan reflects the
-      // current doc, not the one loaded a moment ago.
-      let plan: RefundPlan
-      let ticket: Record<string, any> = original
-      try {
-        plan = await adminDb.runTransaction(async (tx: any) => {
-          const snap = await tx.get(ref)
-          ticket = snap.exists ? (snap.data() as any) : {}
-          const p = planTicketRefund(ticket)
-          if (p.eligible) {
-            tx.set(
-              ref,
-              { refund_status: 'processing', refund_claimed_at: nowIso, refund_claimed_by: user.id },
-              { merge: true }
-            )
-          }
-          return p
-        })
-      } catch (e: any) {
-        failed.push({ ticketId: original.id, reason: e?.message || 'claim_failed' })
-        continue
-      }
-
-      if (!plan.eligible) {
-        skipped.push({ ticketId: original.id, reason: plan.reason })
-        continue
-      }
-      const p = plan as Eligible
-
-      // 2. Move the money (or queue it).
-      try {
-        if (p.rail === 'stripe' || p.rail === 'stripe_connect') {
-          const res = await processStripeRefund(String(p.paymentRef), p.amount, {
-            reverseTransfer: p.rail === 'stripe_connect',
-            refundApplicationFee: p.rail === 'stripe_connect',
-          })
-          if (!res.success) throw new Error(res.error || 'Stripe refund failed')
-          await ref.set(
-            {
-              status: 'refunded',
-              refund_status: 'approved',
-              refund_amount: p.amount,
-              refund_currency: p.currency,
-              refund_id: res.refundId || null,
-              refund_reason: 'organizer_refund',
-              refunded_by: user.id,
-              refund_processed_at: nowIso,
-              updated_at: nowIso,
-            },
-            { merge: true }
-          )
-          refunded.push({ ticketId: original.id, amount: p.amount, currency: p.currency })
-        } else {
-          await ref.set(
-            {
-              status: 'refund_pending',
-              refund_status: 'manual_required',
-              refund_amount: p.amount,
-              refund_currency: p.currency,
-              refund_reason: 'organizer_refund',
-              refunded_by: user.id,
-              refund_requested_at: nowIso,
-              updated_at: nowIso,
-            },
-            { merge: true }
-          )
-          await adminDb.collection('manual_refund_queue').add({
-            ticketId: original.id,
-            eventId: event.id,
-            eventTitle: event.title || null,
-            organizerId: event.organizer_id || null,
-            userId: ticket.user_id || ticket.attendee_id || null,
-            amount: p.amount,
-            currency: p.currency,
-            method: String(ticket.payment_method || 'moncash').toLowerCase(),
-            transactionId: p.paymentRef,
-            reason: 'organizer_refund',
-            requestedBy: user.id,
-            status: 'pending',
-            createdAt: nowIso,
-          })
-          queued.push({ ticketId: original.id, amount: p.amount, currency: p.currency })
-        }
-      } catch (e: any) {
-        // Release the claim so the organizer can retry; nothing was refunded.
-        await ref.set({ refund_status: null, refund_claimed_at: null }, { merge: true }).catch(() => undefined)
-        failed.push({ ticketId: original.id, reason: e?.message || 'refund_failed' })
-      }
+      const res = await refundTicket(original.id, {
+        reason: 'organizer_refund',
+        actorId: user.id,
+        event: { id: event.id, title: event.title, organizer_id: event.organizer_id },
+        onFailure: 'release',
+      })
+      if (res.outcome === 'refunded') refunded.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
+      else if (res.outcome === 'queued') queued.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
+      else if (res.outcome === 'skipped') skipped.push({ ticketId: res.ticketId, reason: res.reason })
+      else failed.push({ ticketId: res.ticketId, reason: res.error })
     }
 
-    // 3. Tell the buyer, once per refund call (best-effort).
+    // Tell the buyer, once per refund call (best-effort).
     if (refunded.length + queued.length > 0) {
       await notifyBuyer(loaded.tickets[0], event, refunded, queued).catch((e) =>
         console.error('[refund-ticket] notify failed', e)
@@ -173,14 +92,7 @@ async function notifyBuyer(
   refunded: { amount: number; currency: string }[],
   queued: { amount: number; currency: string }[]
 ) {
-  const isGuest = Boolean(ticket.is_guest) || String(ticket.attendee_id || '').startsWith('guest_')
-  const uid = isGuest ? null : String(ticket.user_id || ticket.attendee_id || '') || null
-  let to: string | null = isGuest ? ticket.guest_email || null : null
-  if (uid) {
-    const snap = await adminDb.collection('users').doc(uid).get()
-    to = (snap.exists && (snap.data() as any)?.email) || null
-  }
-  to = to || ticket.recipient_email || null
+  const { uid, email: to } = await resolveBuyerContact(ticket)
 
   const title = String(event.title || 'your event')
   const toPlans = (rows: { amount: number; currency: string }[]) =>
