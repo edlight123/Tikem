@@ -204,7 +204,9 @@ export async function POST(request: Request) {
         // Admin/auditing fields (charged/settlement amounts)
         charged_amount: pricePerTicket,
         charged_currency: String(paymentIntent.currency || 'usd').toUpperCase(),
-        payment_method: 'stripe',
+        // Same rule as the webhook: a destination charge is 'stripe_connect', so a
+        // refund knows to pull the money back from the organizer's account.
+        payment_method: paymentIntent.metadata.payoutProvider === 'stripe_connect' ? 'stripe_connect' : 'stripe',
         payment_id: paymentIntentId,
         // Promoter attribution: opaque identifiers only — the commission economics
         // live in the server-only promoter_sales ledger, never on the ticket.

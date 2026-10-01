@@ -15,7 +15,7 @@ function getStripe() {
 export async function processStripeRefund(
   paymentIntentId: string,
   amount?: number,
-  options?: { reverseTransfer?: boolean; refundApplicationFee?: boolean }
+  options?: { reverseTransfer?: boolean; refundApplicationFee?: boolean; idempotencyKey?: string }
 ): Promise<RefundResult> {
   try {
     const stripe = getStripe()
@@ -46,7 +46,13 @@ export async function processStripeRefund(
       refundParams.refund_application_fee = true
     }
 
-    const refund = await stripe.refunds.create(refundParams)
+    // An idempotency key makes a retry after a lost Firestore write return the
+    // SAME refund instead of issuing a second one. Several tickets of one order
+    // share a PaymentIntent and are refunded as partial amounts, so without it a
+    // retry could pull one ticket's money back twice.
+    const refund = options?.idempotencyKey
+      ? await stripe.refunds.create(refundParams, { idempotencyKey: options.idempotencyKey })
+      : await stripe.refunds.create(refundParams)
 
     return {
       success: true,
@@ -58,6 +64,28 @@ export async function processStripeRefund(
       success: false,
       error: error.message || 'Failed to process Stripe refund'
     }
+  }
+}
+
+/**
+ * Whether a PaymentIntent was a DESTINATION charge (money sent on to an
+ * organizer's connected account). Returns null when Stripe can't be asked.
+ *
+ * Exists because a ticket's `payment_method` is not a reliable witness:
+ * /api/tickets/create-from-payment used to write 'stripe' for every sale, so a
+ * destination charge fulfilled by that path looks like a platform charge, and
+ * refunding it without reverse_transfer would pay the buyer out of Tikèm's
+ * balance while the organizer kept the sale.
+ */
+export async function isDestinationCharge(paymentIntentId: string): Promise<boolean | null> {
+  const stripe = getStripe()
+  if (!stripe) return null
+  try {
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+    return Boolean(pi?.transfer_data?.destination)
+  } catch (error) {
+    console.error('Stripe PaymentIntent lookup failed:', paymentIntentId, error)
+    return null
   }
 }
 
