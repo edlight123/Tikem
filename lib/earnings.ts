@@ -122,13 +122,15 @@ function calculateEventCurrencyFees(options: {
     processingFeeEventCents = fx ? Math.round(stripeProcessingFeeChargedCents / fx) : stripeProcessingFeeChargedCents
   }
 
-  const netAmount = grossEventCents - platformFee - processingFeeEventCents
+  // Card processing is Tikèm's cost, paid out of the platform fee — the same
+  // treatment MonCash's cut already gets — so it is never deducted here.
+  const netAmount = grossEventCents - platformFee
   return {
     grossAmount: grossEventCents,
     platformFee,
-    processingFee: processingFeeEventCents,
+    processingFee: 0,
     netAmount,
-    absorbedProcessingFee,
+    absorbedProcessingFee: absorbedProcessingFee + processingFeeEventCents,
   }
 }
 

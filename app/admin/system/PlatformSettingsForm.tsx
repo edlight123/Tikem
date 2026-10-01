@@ -166,8 +166,9 @@ export function PlatformSettingsForm() {
     if (isNaN(feePercent)) return null
 
     const platformFee = Math.round(ticketPrice * (feePercent / 100))
-    const processingFee = Math.round(ticketPrice * 0.029) + 30 // Stripe fees
-    const netAmount = ticketPrice - platformFee - processingFee
+    // Stripe's cut is the platform's cost, paid out of the platform fee.
+    const processingFee = Math.round(ticketPrice * 0.029) + 30
+    const netAmount = ticketPrice - platformFee
 
     return {
       gross: (ticketPrice / 100).toFixed(2),
@@ -390,9 +391,9 @@ export function PlatformSettingsForm() {
                       <span>Platform Fee</span>
                       <span className="font-mono tabular-nums">-${haitiPreview.platformFee}</span>
                     </div>
-                    <div className="flex justify-between text-console-red">
-                      <span>Processing Fee</span>
-                      <span className="font-mono tabular-nums">-${haitiPreview.processingFee}</span>
+                    <div className="flex justify-between text-console-mut">
+                      <span>Processing (paid by Tikèm)</span>
+                      <span className="font-mono tabular-nums">${haitiPreview.processingFee}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-console-green">
                       <span>Organizer Earns</span>
@@ -459,9 +460,9 @@ export function PlatformSettingsForm() {
                       <span>Platform Fee</span>
                       <span className="font-mono tabular-nums">-${usCanadaPreview.platformFee}</span>
                     </div>
-                    <div className="flex justify-between text-console-red">
-                      <span>Processing Fee</span>
-                      <span className="font-mono tabular-nums">-${usCanadaPreview.processingFee}</span>
+                    <div className="flex justify-between text-console-mut">
+                      <span>Processing (paid by Tikèm)</span>
+                      <span className="font-mono tabular-nums">${usCanadaPreview.processingFee}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-console-green">
                       <span>Organizer Earns</span>

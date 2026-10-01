@@ -86,8 +86,10 @@ export function calculateStripeFee(grossAmount: number): number {
  */
 export function calculateFees(grossAmount: number): FeeCalculation {
   const platformFee = calculatePlatformFee(grossAmount)
+  // Tikèm's cost, reported for the books — the platform fee already covers it,
+  // so it never comes out of the organizer's net.
   const processingFee = calculateStripeFee(grossAmount)
-  const netAmount = grossAmount - platformFee - processingFee
+  const netAmount = grossAmount - platformFee
 
   return {
     grossAmount,
@@ -109,8 +111,8 @@ export function calculateFeesWithPercentage(
   feePercentage: number
 ): FeeCalculation {
   const platformFee = calculatePlatformFeeWithPercentage(grossAmount, feePercentage)
-  const processingFee = calculateStripeFee(grossAmount)
-  const netAmount = grossAmount - platformFee - processingFee
+  const processingFee = calculateStripeFee(grossAmount) // Tikèm's cost, not the organizer's
+  const netAmount = grossAmount - platformFee
 
   return {
     grossAmount,
@@ -288,15 +290,16 @@ export function estimateNetPerTicket(ticketPrice: number): {
 //
 // Two models, chosen per country by `feeIncidence` in lib/country-support.ts:
 //
-//   organizer (Haiti) — the buyer is charged exactly the face value and the fee
-//     comes out of the organizer's proceeds. This is what every market did
+//   organizer (Haiti) — the buyer is charged exactly the face value and the
+//     platform fee comes out of the organizer's proceeds. This is what every market did
 //     before this existed.
 //   buyer (US/CA/FR) — the fee is added on top, so the organizer keeps the full
 //     face value and the buyer sees a total above the ticket price.
 //
-// The buyer model is a plain ADDITION: charge = face + platformFee. Stripe's
-// processing is absorbed by the platform out of that fee, so the buyer sees the
-// advertised 10% (capped) and nothing more. It was once a gross-up that passed
+// In BOTH models the capped platform fee is the only fee: Tikèm pays card and
+// MonCash processing out of it (owner's rule, 2026-09-30). So the buyer model
+// is a plain addition, charge = face + platformFee, and the organizer model
+// nets face − platformFee. Nobody pays processing on top. It was once a gross-up that passed
 // Stripe's cut to the buyer too, which read as "more than 10%" at checkout.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -343,7 +346,7 @@ export function calculateBuyerPricing(
       buyerFee: 0,
       platformFee,
       processingFee,
-      organizerNet: Math.max(0, faceValue - platformFee - processingFee),
+      organizerNet: Math.max(0, faceValue - platformFee),
       incidence,
     }
   }

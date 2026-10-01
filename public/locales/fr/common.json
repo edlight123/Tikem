@@ -1545,7 +1545,7 @@
     "cards_value": "2.9% + HTG 15 par transaction",
     "moncash_label": "MonCash :",
     "moncash_value": "2.5% par transaction",
-    "processing_note": "Ces frais sont perçus par nos partenaires de paiement (Stripe, MonCash). Là où c’est l’acheteur qui paie les frais (États-Unis, Canada, France), Tikèm les prend en charge sur sa propre commission : l’acheteur ne paie que les frais de service affichés au paiement ; en Haïti, ils sont automatiquement déduits de votre paiement.",
+    "processing_note": "Tikèm les paie sur sa propre commission, dans tous les pays et quel que soit celui qui supporte les frais : ils ne sont jamais ajoutés au total de l’acheteur ni déduits de votre paiement.",
     "payout_schedule": "Calendrier des paiements",
     "schedule_a": "Les paiements sont traités",
     "schedule_strong": "7 jours après la fin de votre événement",

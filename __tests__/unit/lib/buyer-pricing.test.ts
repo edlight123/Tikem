@@ -53,9 +53,9 @@ describe('Haiti — organizer pays, nothing about the charge changes', () => {
         { capMinorPerTicket: DEFAULT_PLATFORM_SETTINGS.haiti.platformFeeCapMinorByCurrency?.HTG }
       )
       expect(p.platformFee).toBe(expectedPlatformFee)
-      expect(applicationFeeFor(p)).toBe(
-        Math.max(0, Math.min(faceCents, expectedPlatformFee + p.processingFee))
-      )
+      // Processing is Tikèm's to absorb: the organizer gives up the platform fee only.
+      expect(applicationFeeFor(p)).toBe(Math.min(faceCents, expectedPlatformFee))
+      expect(p.organizerNet).toBe(Math.max(0, faceCents - expectedPlatformFee))
     }
   })
 

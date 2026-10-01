@@ -244,7 +244,7 @@ export default async function PayoutFeesPage() {
               <p className="text-sm text-white/60">
                 {t(
                   'fees_page.processing_note',
-                  'These fees are collected by our payment partners (Stripe, MonCash). Where the buyer pays the fee (United States, Canada, France) Tikèm covers them out of its own fee, so buyers pay only the service fee shown at checkout; in Haiti they are deducted from your payout automatically.'
+                  'Tikèm pays these out of its own fee, in every country and whoever bears the fee — they are never added to your buyer\'s total or deducted from your payout.'
                 )}
               </p>
             </div>
@@ -375,17 +375,13 @@ export default async function PayoutFeesPage() {
                       </span>
                       <span>- {formatCurrency(htExamplePlatformFee, 'HTG')}</span>
                     </div>
-                    <div className="flex justify-between text-red-300">
-                      <span>{t('fees_page.example_moncash_line', 'MonCash processing (2.5%):')}</span>
-                      <span>- HTG 25.00</span>
-                    </div>
                     <div className="border-t border-white/10 my-2"></div>
                     <div className="flex justify-between text-lg">
                       <span className="text-white font-semibold">
                         {t('fees_page.you_receive', 'You receive:')}
                       </span>
                       <span className="text-emerald-300 font-bold">
-                        {formatCurrency(1000_00 - htExamplePlatformFee - 25_00, 'HTG')}
+                        {formatCurrency(1000_00 - htExamplePlatformFee, 'HTG')}
                       </span>
                     </div>
                   </div>
@@ -393,7 +389,7 @@ export default async function PayoutFeesPage() {
                 <p className="mt-2 text-sm text-white/60">
                   {t(
                     'fees_page.example_ht_note',
-                    'You receive 1,000 HTG minus fees. The advertised price is what your buyer is charged, to the gourde.'
+                    'You receive 1,000 HTG minus the platform fee. The advertised price is what your buyer is charged, to the gourde.'
                   )}
                 </p>
               </div>

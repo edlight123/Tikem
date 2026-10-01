@@ -82,7 +82,8 @@ function calculateEventCurrencyFees(options: {
     processingFeeEventCents = fx ? Math.round(stripeProcessingFeeChargedCents / fx) : stripeProcessingFeeChargedCents
   }
 
-  const netAmount = grossEventCents - platformFee - processingFeeEventCents
+  // Processing is reported for the books but is Tikèm's cost, not the organizer's.
+  const netAmount = grossEventCents - platformFee
   return { platformFee, processingFee: processingFeeEventCents, netAmount }
 }
 

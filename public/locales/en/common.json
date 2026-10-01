@@ -1545,7 +1545,7 @@
     "cards_value": "2.9% + HTG 15 per transaction",
     "moncash_label": "MonCash:",
     "moncash_value": "2.5% per transaction",
-    "processing_note": "These fees are collected by our payment partners (Stripe, MonCash). Where the buyer pays the fee (United States, Canada, France) Tikèm covers them out of its own fee, so buyers pay only the service fee shown at checkout; in Haiti they are deducted from your payout automatically.",
+    "processing_note": "Tikèm pays these out of its own fee, in every country and whoever bears the fee — they are never added to your buyer's total or deducted from your payout.",
     "payout_schedule": "Payout schedule",
     "schedule_a": "Payouts are processed",
     "schedule_strong": "7 days after your event ends",

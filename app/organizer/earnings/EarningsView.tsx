@@ -284,7 +284,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
           </div>
           <div className="flex justify-between">
             <span>{tx('earnings.processing_fee')}</span>
-            <span className="font-mono tabular-nums font-medium text-white">2.9% + $0.30 per transaction</span>
+            <span className="font-mono tabular-nums font-medium text-white">Included — Tikèm pays it</span>
           </div>
           <div className="flex justify-between border-t border-white/10 pt-2">
             <span>{tx('earnings.total_fees_paid')}</span>
@@ -294,9 +294,10 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
               all. Stating the rates without this reads as "deducted from you" in every
               market, which is only true where the organizer bears the fee. */}
           <p className="border-t border-white/10 pt-2 text-xs text-white/45">
-            In the United States, Canada and France these are added to what the buyer
-            pays, so you receive your full ticket price. In Haiti the buyer pays exactly
-            the price you advertised and the fees are deducted from your proceeds.{' '}
+            Card and MonCash processing come out of Tikèm's 10%, never out of your money.
+            When the fee is passed to buyers it is added to what they pay, so you receive
+            your full ticket price; when you absorb it, the 10% is deducted from your
+            proceeds and nothing else.{' '}
             <a
               href="/organizer/settings/payouts/fees"
               className="text-brand-300 underline underline-offset-2"
