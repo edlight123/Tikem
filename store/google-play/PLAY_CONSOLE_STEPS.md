@@ -43,7 +43,7 @@ Work through every card until each is marked complete:
 | Card | Answer |
 |---|---|
 | **Privacy policy** | `https://www.tikem.co/legal/privacy` |
-| **App access** | **All or some functionality is restricted** → **Add instructions**: name "Attendee"; username `appreview.attendee@tikem.co`; password = `ASC_DEMO_PASSWORD` from `store/app-store/demo.env`; notes: "Sign in with email. Open https://www.tikem.co/events/app-review-showcase to claim a free ticket." Add a second entry, "Organizer", with `ASC_DEMO_ORGANIZER_EMAIL` / `ASC_DEMO_ORGANIZER_PASSWORD` and the note "Profile → View as: Organizer to see the dashboard and scanner." |
+| **App access** | **All or some functionality is restricted** → **Add instructions**: name "Attendee"; username `appreview.attendee@tikem.co`; password = **the VALUE after `ASC_DEMO_PASSWORD=` in `store/app-store/demo.env`** (paste the actual password, never the variable name — Google rejected versionCode 4 on 2026-09-30 because the field held the literal text `ASC_DEMO_PASSWORD`); notes: "Sign in with email. Open https://www.tikem.co/events/app-review-showcase to claim a free ticket." Add a second entry, "Organizer", with the VALUES of `ASC_DEMO_ORGANIZER_EMAIL` / `ASC_DEMO_ORGANIZER_PASSWORD` from the same file and the note "Profile → View as: Organizer to see the dashboard and scanner." |
 | **Ads** | **No, my app does not contain ads** |
 | **Content rating** | follow `content-rating.md` |
 | **Target audience and content** | **18 and over** only; "appeal to children" → No |
