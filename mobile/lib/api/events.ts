@@ -963,6 +963,10 @@ export async function toggleEventPublication(
  * Cancel an event
  */
 export type CancelEventOutcome = {
+  /** The event was already cancelled; this call only resumed the refund sweep. */
+  alreadyCancelled: boolean
+  /** Tickets already refunded, pending or in flight — left untouched. */
+  alreadyHandled: number
   ticketsAffected: number
   refundsSucceeded: number
   refundsQueuedManual: number
