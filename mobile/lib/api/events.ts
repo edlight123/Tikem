@@ -12,6 +12,7 @@ import {
   getDoc,
   getDocs,
   deleteDoc,
+  limit,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as Crypto from 'expo-crypto';
@@ -19,6 +20,12 @@ import { hasPaidTier } from '../ticketPricing';
 import { backendJson } from './backend';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
+import {
+  planTierSync,
+  matchSiblingTierIds,
+  resolveOrphan,
+  type ExistingTier,
+} from '../tierReconcile';
 
 /**
  * SHA-256 hex of the trimmed raw access code (trim only; case-sensitive).
@@ -64,6 +71,14 @@ export interface CreateEventData {
   timezone: string;
   currency: string;
   ticket_tiers: Array<{
+    /**
+     * The `ticket_tiers` doc this tier was loaded from (edit mode). Absent for a
+     * tier added in this edit. updateEvent UPDATES this doc in place, so its
+     * sold count and every ticket's `tier_id` survive the save.
+     */
+    id?: string;
+    /** Already sold against `id`. Read-only: never written back. */
+    sold_quantity?: number;
     name: string;
     price: string;
     quantity: string;
@@ -206,12 +221,29 @@ function buildTierCollectionDoc(
 ) {
   return {
     event_id: eventId,
+    ...tierEditableFields(tier, index),
+    sold_quantity: 0,
+    created_at: serverTimestamp(),
+  };
+}
+
+/**
+ * The fields an edit may write on an EXISTING tier doc, and nothing else:
+ * never sold_quantity, created_at or event_id. `totalQuantity` / `available`
+ * come from the reconcile plan (quantity clamped to at least what was sold).
+ */
+function tierEditableFields(
+  tier: CreateEventData['ticket_tiers'][number],
+  index: number,
+  totalQuantity: number = parseInt(tier.quantity) || 0,
+  available: number = totalQuantity
+) {
+  return {
     name: tier.name,
     price: parseFloat(tier.price) || 0,
-    quantity: parseInt(tier.quantity) || 0,
-    total_quantity: parseInt(tier.quantity) || 0,
-    available: parseInt(tier.quantity) || 0,
-    sold_quantity: 0,
+    quantity: totalQuantity,
+    total_quantity: totalQuantity,
+    available,
     description: tier.description || tier.name,
     unlimited: tier.unlimited || false,
     sort_order: index,
@@ -226,9 +258,108 @@ function buildTierCollectionDoc(
     // Per-tier ENTRY-admission window (ISO 8601 strings, or null for no bound).
     valid_from: tier.valid_from ? tier.valid_from : null,
     valid_until: tier.valid_until ? tier.valid_until : null,
-    created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   };
+}
+
+/**
+ * Bring one event's `ticket_tiers` docs in line with the editor, IN PLACE.
+ *
+ * This used to delete every doc and re-add them with `sold_quantity: 0`, which
+ * reset every sold count (checkout reads `total_quantity - sold_quantity`, so an
+ * edited event could oversell) and gave every tier a new id (orphaning each
+ * ticket's `tier_id`). Now: a tier carrying the id of a live doc updates that
+ * doc's editable fields; a tier without one is added; a removed tier is deleted
+ * only when nothing was ever sold against it (counter AND tickets), otherwise it
+ * is deactivated (`is_active: false`, `archived: true`). See lib/tierReconcile.
+ *
+ * For a series sibling pass `source` (the edited event's tier docs before this
+ * save): tiers are matched onto the sibling's OWN docs by name / sort_order, so
+ * each sibling keeps its own ids and sold counts.
+ *
+ * Returns the docs as they were before the write, plus the embedded
+ * `ticket_tiers` array (with ids + live `available`) for this event's doc.
+ */
+async function syncTierDocs(
+  eventId: string,
+  tiers: CreateEventData['ticket_tiers'],
+  source?: ExistingTier[]
+): Promise<{ before: ExistingTier[]; embedded: ReturnType<typeof buildTierEmbedded>[] }> {
+  const snap = await getDocs(query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId)));
+  const existing: ExistingTier[] = snap.docs.map((d) => ({ ...(d.data() as any), id: d.id }));
+
+  const rows = tiers.map((tier) => ({
+    id: (tier.id || null) as string | null,
+    name: tier.name,
+    quantity: parseInt(tier.quantity) || 0,
+    fields: tier,
+  }));
+  if (source) {
+    const siblingIds = matchSiblingTierIds(rows, source, existing);
+    rows.forEach((r, i) => {
+      r.id = siblingIds[i];
+    });
+  }
+  const plan = planTierSync(existing, rows);
+  const embedded: ReturnType<typeof buildTierEmbedded>[] = new Array(rows.length);
+
+  for (const u of plan.updates) {
+    await updateDoc(
+      doc(db, 'ticket_tiers', u.id),
+      tierEditableFields(u.fields, u.sortOrder, u.totalQuantity, u.available)
+    );
+    embedded[u.sortOrder] = buildTierEmbedded(u.fields, {
+      id: u.id,
+      quantity: u.totalQuantity,
+      available: u.available,
+    });
+  }
+  for (const ins of plan.inserts) {
+    const ref = await addDoc(
+      collection(db, 'ticket_tiers'),
+      buildTierCollectionDoc(eventId, { ...ins.fields, quantity: String(ins.totalQuantity) }, ins.sortOrder)
+    );
+    embedded[ins.sortOrder] = buildTierEmbedded(ins.fields, {
+      id: ref.id,
+      quantity: ins.totalQuantity,
+      available: ins.totalQuantity,
+    });
+  }
+  for (const o of plan.orphans) {
+    let referencing = 0;
+    if (o.action === 'check_tickets') {
+      // A 0 counter is not proof — the old replace-on-save reset counters.
+      // Equality on event_id lets the tickets read rule prove ownership.
+      try {
+        const tix = await getDocs(
+          query(
+            collection(db, 'tickets'),
+            where('event_id', '==', eventId),
+            where('tier_id', '==', o.id),
+            limit(1)
+          )
+        );
+        referencing = tix.size;
+      } catch (e) {
+        // Can't prove it has no tickets: keep it (deactivated) rather than delete.
+        console.warn('Ticket lookup for removed tier failed; deactivating instead', e);
+        referencing = 1;
+      }
+    }
+    if (resolveOrphan(o.soldQuantity, referencing) === 'delete') {
+      await deleteDoc(doc(db, 'ticket_tiers', o.id));
+    } else {
+      // Every purchase route refuses is_active === false; `archived` keeps it
+      // out of the editor so it isn't read back as a hidden tier.
+      await updateDoc(doc(db, 'ticket_tiers', o.id), {
+        is_active: false,
+        archived: true,
+        updated_at: serverTimestamp(),
+      });
+    }
+  }
+
+  return { before: existing, embedded };
 }
 
 /**
@@ -236,12 +367,18 @@ function buildTierCollectionDoc(
  * the collection doc's business fields so readers using the embedded copy see
  * the same sale + validity bounds.
  */
-function buildTierEmbedded(tier: CreateEventData['ticket_tiers'][number]) {
+function buildTierEmbedded(
+  tier: CreateEventData['ticket_tiers'][number],
+  live?: { id: string; quantity: number; available: number }
+) {
   return {
+    // The tier doc id once it is known (edit saves), so readers can match a
+    // ticket's tier_id against this array.
+    ...(live ? { id: live.id } : {}),
     name: tier.name,
     price: parseFloat(tier.price) || 0,
-    quantity: parseInt(tier.quantity) || 0,
-    available: parseInt(tier.quantity) || 0,
+    quantity: live ? live.quantity : parseInt(tier.quantity) || 0,
+    available: live ? live.available : parseInt(tier.quantity) || 0,
     description: tier.description || '',
     unlimited: tier.unlimited || false,
     sales_start: tier.sale_start ? tier.sale_start : null,
@@ -468,7 +605,7 @@ export async function createEvent(
         // Mirror the per-tier sale + validity windows into the event-doc array so
         // mobile readers that use this embedded copy see the same bounds as the
         // ticket_tiers collection docs. ISO strings stored as-is (or null).
-        ticket_tiers: eventData.ticket_tiers.map(buildTierEmbedded),
+        ticket_tiers: eventData.ticket_tiers.map((tier) => buildTierEmbedded(tier)),
         // Multiple field names for compatibility with web and mobile.
         // ticket_price is the LOWEST tier price — a "from" figure for display.
         // Never test it for freeness; use has_paid_tiers.
@@ -603,6 +740,13 @@ export async function updateEvent(
     );
     const hasPaidTiers = !eventData.is_rsvp && hasPaidTier(eventData.ticket_tiers);
 
+    // Tier docs first, so the embedded array below carries their ids and live
+    // availability. Updated in place — see syncTierDocs.
+    const { before: tierDocsBefore, embedded: embeddedTiers } = await syncTierDocs(
+      eventId,
+      eventData.ticket_tiers
+    );
+
     // Prepare update data
     const updateData = {
       title: eventData.title,
@@ -623,8 +767,8 @@ export async function updateEvent(
       timezone: eventData.timezone,
       currency: eventData.currency,
       // Mirror the per-tier sale + validity windows into the event-doc array
-      // (see createEvent / buildTierEmbedded).
-      ticket_tiers: eventData.ticket_tiers.map(buildTierEmbedded),
+      // (see createEvent / buildTierEmbedded), now with doc ids + availability.
+      ticket_tiers: embeddedTiers,
       ticket_price: lowestPrice,
       has_paid_tiers: hasPaidTiers,
       total_capacity: totalCapacity,
@@ -656,27 +800,12 @@ export async function updateEvent(
     const eventRef = doc(db, 'events', eventId);
     await updateDoc(eventRef, updateData);
 
-    // Delete existing ticket_tiers documents
-    const tiersQuery = query(
-      collection(db, 'ticket_tiers'),
-      where('event_id', '==', eventId)
-    );
-    const existingTiers = await getDocs(tiersQuery);
-    const deletePromises = existingTiers.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deletePromises);
-
-    // Create new ticket_tiers documents (shared shape incl. sale + validity).
-    const tierPromises = eventData.ticket_tiers.map((tier, index) =>
-      addDoc(collection(db, 'ticket_tiers'), buildTierCollectionDoc(eventId, tier, index))
-    );
-
-    await Promise.all(tierPromises);
-
     // ── Apply edits to the whole series ────────────────────────────────────
     // When the caller opts in AND this event belongs to a series, propagate the
     // SAME field updates to every sibling occurrence — EXCEPT each occurrence's
     // own start/end datetimes and the series_id (siblings keep their own dates
-    // and stay in the series). Each sibling's ticket_tiers are re-synced too.
+    // and stay in the series). Each sibling's ticket_tiers are synced too, onto
+    // its OWN tier docs, keeping its own ids and sold counts.
     // Capped so a runaway series can't fan out unbounded writes.
     if (options.applyToSeries) {
       const targetSnap = await getDoc(eventRef);
@@ -692,17 +821,14 @@ export async function updateEvent(
           if (sibling.id === eventId) continue;        // target already updated
           if (processed >= MAX_RECURRENCE_COUNT) break; // guard huge series
           processed += 1;
-          await updateDoc(sibling.ref, seriesShared);
-          // Re-sync this sibling's ticket_tiers to match the edited tiers.
-          const sibExisting = await getDocs(
-            query(collection(db, 'ticket_tiers'), where('event_id', '==', sibling.id))
+          // Sync this sibling's tier docs (matched by name / sort_order to the
+          // edited event's tiers), then its doc with its OWN embedded array.
+          const { embedded: sibEmbedded } = await syncTierDocs(
+            sibling.id,
+            eventData.ticket_tiers,
+            tierDocsBefore
           );
-          await Promise.all(sibExisting.docs.map((d) => deleteDoc(d.ref)));
-          await Promise.all(
-            eventData.ticket_tiers.map((tier, index) =>
-              addDoc(collection(db, 'ticket_tiers'), buildTierCollectionDoc(sibling.id, tier, index))
-            )
-          );
+          await updateDoc(sibling.ref, { ...seriesShared, ticket_tiers: sibEmbedded });
         }
         console.log(`Series ${seriesId}: applied edits to ${processed} sibling event(s).`);
       }

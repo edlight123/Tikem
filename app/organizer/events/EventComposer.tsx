@@ -36,6 +36,13 @@ const getFirestore = async () => {
   return { ...fs, db: client.db }
 }
 import { isDemoMode } from '@/lib/demo'
+import {
+  planTierSync,
+  matchSiblingTierIds,
+  resolveOrphan,
+  isQuantityBelowSold,
+  type ExistingTier,
+} from '@/lib/tickets/tier-reconcile'
 import { useToast } from '@/components/ui/Toast'
 import ImageUpload from '@/components/ImageUpload'
 import SpotifySongPicker from '@/components/organizer/SpotifySongPicker'
@@ -182,7 +189,16 @@ const DRAFT_KEY = 'tikem:event-draft'
 const UNLIMITED_QTY = 1000000
 
 interface TicketTier {
+  /** Local row key (React key, open/menu state). NOT the Firestore doc id. */
   id: string
+  /**
+   * The `ticket_tiers` doc this row was loaded from. Absent for a row added in
+   * this session (or a duplicate). Saving UPDATES this doc in place, so its
+   * sold count and every ticket's `tier_id` stay valid.
+   */
+  docId?: string
+  /** Already sold against `docId` — the floor for the quantity field. */
+  soldQuantity?: number
   name: string
   price: string
   qty: string
@@ -539,6 +555,8 @@ export default function EventComposer({
             !!(t as any).unlimited || Number((t as any).qty ?? 0) >= UNLIMITED_QTY
           return {
             ...t,
+            docId: (t as any).docId || undefined,
+            soldQuantity: Math.max(0, Number((t as any).soldQuantity ?? (t as any).sold_quantity ?? 0) || 0),
             salesStart: isoToLocalInput((t as any).salesStart ?? (t as any).sales_start),
             salesEnd: isoToLocalInput((t as any).salesEnd ?? (t as any).sales_end),
             validFrom: isoToLocalInput((t as any).validFrom ?? (t as any).valid_from),
@@ -586,6 +604,9 @@ export default function EventComposer({
       const copy: TicketTier = {
         ...prev[i],
         id: copyId,
+        // A copy is a NEW tier: it must not inherit the source's doc or sales.
+        docId: undefined,
+        soldQuantity: 0,
         name: `${prev[i].name || ''}`.trim(),
       }
       setOpenTierId(copyId)
@@ -962,6 +983,13 @@ export default function EventComposer({
   }
   const anyValidityWindowInvalid = sellMode === 'tickets' && tiers.some(validityWindowInvalid)
 
+  // A tier can't hold fewer tickets than it has already sold — checkout reads
+  // `total_quantity - sold_quantity`, so a lower cap would just mean "sold out"
+  // with tickets out in the world beyond it.
+  const qtyBelowSold = (t: TicketTier): boolean =>
+    isQuantityBelowSold(Number(t.qty) || 0, t.soldQuantity || 0, !!t.unlimited)
+  const anyQtyBelowSold = sellMode === 'tickets' && tiers.some(qtyBelowSold)
+
   // Access code: required (min 6) when enabling protection on CREATE; on edit a
   // blank code keeps the existing hash, but a typed code must still be >= 6.
   const trimmedCode = accessCode.trim()
@@ -1138,7 +1166,25 @@ export default function EventComposer({
     return () => clearTimeout(id)
   })
 
-  // Replace the tier set for an event (mirrors the existing editor's behaviour).
+  /**
+   * Bring an event's `ticket_tiers` docs in line with the editor, IN PLACE.
+   *
+   * This used to delete every tier and insert fresh ones with
+   * `sold_quantity: 0`, which reset every sold count (checkout reads
+   * `total_quantity - sold_quantity`, so an edited event could oversell) and
+   * gave the tiers new ids (orphaning every ticket's `tier_id`). Now a row
+   * loaded from a doc updates that doc's EDITABLE fields only; a new row is
+   * inserted; a removed tier is deleted only if nothing was ever sold against
+   * it, and otherwise deactivated. See lib/tickets/tier-reconcile.ts.
+   *
+   * `docIds` are the editor rows' doc ids, parallel to `cleanTiers`. For a
+   * series sibling pass `source` (the edited event's tiers as they were before
+   * this save): the rows are then matched onto the sibling's OWN tier docs by
+   * name / sort_order, so each sibling keeps its own ids and sold counts.
+   *
+   * Returns this event's tier docs as they were before the write, and the doc
+   * id each editor row now lives at (so a second save updates, not re-inserts).
+   */
   const syncTiers = async (
     eventId: string,
     cleanTiers: Array<{
@@ -1155,34 +1201,106 @@ export default function EventComposer({
       valid_from: string | null
       valid_until: string | null
     }>,
-    isRsvp: boolean
-  ) => {
-    await (await getShim()).from('ticket_tiers').delete().eq('event_id', eventId)
-    if (!isRsvp && cleanTiers.length > 0) {
-      // This REPLACES the whole tier set on every save, so any field missing
-      // here is a field the next save silently erases.
-      const tiersToInsert = cleanTiers.map((t, i) => ({
-        event_id: eventId,
-        name: t.name,
-        price: t.price,
-        total_quantity: t.quantity,
-        sold_quantity: 0,
-        unlimited: t.unlimited,
-        description: t.description,
-        is_active: t.is_active,
-        max_per_order: t.max_per_order,
-        enable_waitlist: t.enable_waitlist,
-        // Per-tier sale window (ISO 8601 strings, or null for no bound).
-        sales_start: t.sales_start,
-        sales_end: t.sales_end,
-        // Per-tier entry (validity) window (ISO 8601 strings, or null).
-        valid_from: t.valid_from,
-        valid_until: t.valid_until,
-        sort_order: i,
-      }))
-      const { error } = await (await getShim()).from('ticket_tiers').insert(tiersToInsert)
-      if (error) console.error('Error saving ticket tiers:', error)
+    isRsvp: boolean,
+    opts: { docIds?: Array<string | undefined>; source?: ExistingTier[] } = {}
+  ): Promise<{ before: ExistingTier[]; rowDocIds: Array<string | null> }> => {
+    const { collection, query, where, getDocs, doc, updateDoc, deleteDoc, limit, db } =
+      await getFirestore()
+    const snap = await getDocs(query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId)))
+    const existing: ExistingTier[] = snap.docs.map((d) => ({ ...(d.data() as any), id: d.id }))
+
+    // An RSVP event sells no tiers (the web composer has never written one).
+    const rows = isRsvp
+      ? []
+      : cleanTiers.map((t, i) => ({
+          id: (opts.docIds?.[i] || null) as string | null,
+          name: t.name,
+          quantity: t.quantity,
+          fields: t,
+        }))
+    if (opts.source) {
+      const siblingIds = matchSiblingTierIds(rows, opts.source, existing)
+      rows.forEach((r, i) => (r.id = siblingIds[i]))
     }
+    const plan = planTierSync(existing, rows)
+    const now = new Date().toISOString()
+    const rowDocIds: Array<string | null> = rows.map(() => null)
+    // Every editable field, and ONLY those: sold_quantity, created_at and
+    // event_id are never written on an update.
+    const editable = (t: (typeof cleanTiers)[number]) => ({
+      name: t.name,
+      price: t.price,
+      unlimited: t.unlimited,
+      description: t.description,
+      is_active: t.is_active,
+      max_per_order: t.max_per_order,
+      enable_waitlist: t.enable_waitlist,
+      // Per-tier sale window (ISO 8601 strings, or null for no bound).
+      sales_start: t.sales_start,
+      sales_end: t.sales_end,
+      // Per-tier entry (validity) window (ISO 8601 strings, or null).
+      valid_from: t.valid_from,
+      valid_until: t.valid_until,
+    })
+
+    for (const u of plan.updates) {
+      await updateDoc(doc(db, 'ticket_tiers', u.id), {
+        ...editable(u.fields),
+        total_quantity: u.totalQuantity,
+        sort_order: u.sortOrder,
+        updated_at: now,
+      })
+      rowDocIds[u.sortOrder] = u.id
+    }
+    if (plan.inserts.length > 0) {
+      const { data: inserted, error } = await (await getShim()).from('ticket_tiers').insert(
+        plan.inserts.map((ins) => ({
+          ...editable(ins.fields),
+          event_id: eventId,
+          total_quantity: ins.totalQuantity,
+          sold_quantity: 0,
+          sort_order: ins.sortOrder,
+        }))
+      )
+      if (error) console.error('Error saving ticket tiers:', error)
+      const insertedRows = Array.isArray(inserted) ? inserted : []
+      plan.inserts.forEach((ins, k) => {
+        const id = insertedRows[k]?.id
+        if (id) rowDocIds[ins.sortOrder] = String(id)
+      })
+    }
+    for (const o of plan.orphans) {
+      let referencing = 0
+      if (o.action === 'check_tickets') {
+        // A counter of 0 is not proof: the old replace-on-save reset counters.
+        // Any ticket carrying this tier_id keeps the doc alive. (Equality on
+        // event_id lets the tickets read rule prove the organizer owns them.)
+        try {
+          const tix = await getDocs(
+            query(
+              collection(db, 'tickets'),
+              where('event_id', '==', eventId),
+              where('tier_id', '==', o.id),
+              limit(1)
+            )
+          )
+          referencing = tix.size
+        } catch (e) {
+          // Can't prove it has no tickets: keep it (deactivated) rather than delete.
+          console.warn('Ticket lookup for removed tier failed; deactivating instead', e)
+          referencing = 1
+        }
+      }
+      if (resolveOrphan(o.soldQuantity, referencing) === 'delete') {
+        await deleteDoc(doc(db, 'ticket_tiers', o.id))
+      } else {
+        // Stops selling (every purchase route refuses is_active === false).
+        // `archived` keeps it out of the editor, so it isn't mistaken for a
+        // hidden tier and brought back on the next save.
+        await updateDoc(doc(db, 'ticket_tiers', o.id), { is_active: false, archived: true, updated_at: now })
+      }
+    }
+    return { before: existing, rowDocIds }
   }
 
   const handleSave = async () => {
@@ -1249,6 +1367,17 @@ export default function EventComposer({
           defaultValue: 'A ticket’s sales end must be after its sales start.',
         }),
         duration: 4000,
+      })
+      return
+    }
+    if (anyQtyBelowSold) {
+      showToast({
+        type: 'error',
+        title: t('composer.toasts.qtyBelowSoldTitle', { defaultValue: 'Check ticket quantities' }),
+        message: t('composer.toasts.qtyBelowSoldMsg', {
+          defaultValue: 'A ticket type can’t have fewer tickets than it has already sold.',
+        }),
+        duration: 5000,
       })
       return
     }
@@ -1349,7 +1478,15 @@ export default function EventComposer({
         }
         const { error } = await (await getShim()).from('events').update(data).eq('id', event.id)
         if (error) throw error
-        await syncTiers(event.id, cleanTiers, isRsvp)
+        const tierDocIds = tiers.map((tr) => tr.docId)
+        const { before: sourceTiers, rowDocIds } = await syncTiers(event.id, cleanTiers, isRsvp, {
+          docIds: tierDocIds,
+        })
+        // The composer stays mounted after an edit save: give freshly inserted
+        // rows their new doc ids so saving again updates them in place.
+        setTiers((prev) =>
+          prev.map((tr, i) => (rowDocIds[i] ? { ...tr, docId: rowDocIds[i] as string } : tr))
+        )
         await writeAccessHash(event.id)
 
         // Optionally fan the same edits out to every sibling in the series. Each
@@ -1369,7 +1506,7 @@ export default function EventComposer({
             if (seriesApplied >= MAX_RECURRENCE_COUNT) break
             const { error: sibErr } = await (await getShim()).from('events').update(sharedData).eq('id', sib.id)
             if (sibErr) throw sibErr
-            await syncTiers(sib.id, cleanTiers, isRsvp)
+            await syncTiers(sib.id, cleanTiers, isRsvp, { docIds: tierDocIds, source: sourceTiers })
             await writeAccessHash(sib.id)
             seriesApplied++
           }
@@ -2235,6 +2372,14 @@ export default function EventComposer({
                           </div>
                           </div>
                         </div>
+                        {qtyBelowSold(tier) && (
+                          <p className="mt-2 text-sm text-red-300">
+                            {t('composer.qtyBelowSold', {
+                              defaultValue: '{{sold}} already sold. The quantity can’t go below that.',
+                              sold: tier.soldQuantity || 0,
+                            })}
+                          </p>
+                        )}
                       </div>
 
                       {/* ── DETAIL PANEL (collapsed by default) ───────── */}

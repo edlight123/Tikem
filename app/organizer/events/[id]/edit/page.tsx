@@ -44,22 +44,30 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     .eq('event_id', id)
 
   const initialTiers = (tierRows || [])
+    // A tier removed in an earlier edit is kept (deactivated) for its sales
+    // history, never shown in the editor again.
+    .filter((t: any) => t?.archived !== true)
     .slice()
     .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((t: any) => ({
       id: String(t.id ?? Math.random().toString(36).slice(2, 9)),
+      // The doc this row saves back INTO (the composer updates in place, so the
+      // sold count and every ticket's tier_id survive the edit).
+      docId: t.id ? String(t.id) : undefined,
+      // Floor for the quantity field.
+      sold_quantity: Number(t.sold_quantity ?? 0) || 0,
       name: t.name ?? '',
       price: String(t.price ?? 0),
       qty: String(t.total_quantity ?? t.quantity ?? 0),
-      // Per-tier sale + entry windows MUST ride along: the composer rewrites
-      // the whole tier set on save, so omitting these here silently erased
+      // Per-tier sale + entry windows MUST ride along: the composer writes
+      // every editable field on save, so omitting these here would erase
       // every configured window on any unrelated edit.
       sales_start: t.sales_start ?? null,
       sales_end: t.sales_end ?? null,
       valid_from: t.valid_from ?? null,
       valid_until: t.valid_until ?? null,
       // Same rule, same reason, for every OTHER per-tier field: `syncTiers`
-      // rewrites the whole tier set on save, so anything not hydrated here is
+      // writes every editable field on save, so anything not hydrated here is
       // erased by an unrelated edit. The composer reads snake_case or camel,
       // and derives `unlimited` from the sentinel quantity.
       description: t.description ?? null,

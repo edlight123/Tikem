@@ -2052,6 +2052,7 @@ export default {
       tierName: 'Antre yon non kategori',
       tierPrice: 'Antre yon pri valab',
       tierQuantity: 'Antre yon kantite',
+      tierQuantityBelowSold: '{sold} deja vann. Kantite a pa ka pi ba pase sa.',
       capacity: 'Antre yon limit envite',
       fixErrors: 'Tanpri korije {n} chan pou w kontinye.',
     },

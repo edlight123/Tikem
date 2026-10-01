@@ -620,6 +620,7 @@ export default {
       tierName: 'Enter a tier name',
       tierPrice: 'Enter a valid price',
       tierQuantity: 'Enter a quantity',
+      tierQuantityBelowSold: '{sold} already sold. The quantity can’t go below that.',
       capacity: 'Enter a guest cap',
       fixErrors: 'Please fix {n} field(s) to continue.',
     },
