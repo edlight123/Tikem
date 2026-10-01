@@ -10,7 +10,6 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
-import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import type { SocialLinks, PrivacySettings } from '../types/social';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -275,6 +274,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Resolves null when the user closes the picker.
    */
   const nativeGoogleIdToken = async (): Promise<string | null> => {
+    // Required lazily, on Android only: importing it at the top would throw at
+    // launch in any binary without the native module — iOS builds made before
+    // it was added (which still receive OTA updates for the same app version)
+    // and Expo Go.
+    const { GoogleSignin, isSuccessResponse } =
+      require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
     GoogleSignin.configure({ webClientId: googleWebClientId });
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     // Always show the account chooser, so re-auth and "switch account" work.
