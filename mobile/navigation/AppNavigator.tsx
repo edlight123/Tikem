@@ -32,6 +32,7 @@ import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SubscriptionsScreen from '../screens/SubscriptionsScreen';
+import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ContentPageScreen from '../screens/ContentPageScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import TicketsScreen from '../screens/TicketsScreen';
@@ -100,6 +101,7 @@ export type RootStackParamList = {
   InviteRedeem: { eventId?: string; token?: string };
   Search: undefined;
   Subscriptions: undefined;
+  NotificationSettings: { organizer?: boolean } | undefined;
   ContentPage: { slug: string; title?: string };
   PaymentWebView: { url: string; title?: string; authToken?: string | null; eventId?: string };
   StripeConnectWebView: { url: string; authToken?: string | null };
@@ -831,6 +833,7 @@ export default function AppNavigator() {
             <Stack.Screen name="EventDetail" component={EventDetailScreen} />
             <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />

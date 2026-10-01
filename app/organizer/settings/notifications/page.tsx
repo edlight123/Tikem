@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { adminDb } from '@/lib/firebase/admin';
 import NotificationsForm from './NotificationsForm';
+import { withOrganizerNotificationDefaults } from '@/lib/organizer/notificationPreferences';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
 
 export const dynamic = 'force-dynamic';
@@ -39,17 +40,7 @@ export default async function NotificationsSettingsPage() {
         <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
           <NotificationsForm 
             userId={user.id}
-            initialData={{
-              email_ticket_sales: preferences?.email_ticket_sales ?? true,
-              email_new_reviews: preferences?.email_new_reviews ?? true,
-              email_payout_updates: preferences?.email_payout_updates ?? true,
-              email_event_reminders: preferences?.email_event_reminders ?? true,
-              email_marketing: preferences?.email_marketing ?? false,
-              sms_ticket_sales: preferences?.sms_ticket_sales ?? false,
-              sms_event_reminders: preferences?.sms_event_reminders ?? false,
-              push_ticket_sales: preferences?.push_ticket_sales ?? true,
-              push_new_reviews: preferences?.push_new_reviews ?? true,
-            }}
+            initialData={withOrganizerNotificationDefaults(preferences)}
           />
         </div>
       </div>

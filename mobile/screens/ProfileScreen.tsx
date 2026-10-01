@@ -1040,6 +1040,17 @@ export default function ProfileScreen() {
               );
             })}
           </View>
+
+          <TouchableOpacity
+            style={styles.rowButton}
+            onPress={() => navigation.navigate('NotificationSettings', { organizer: canUseOrganizerMode })}
+          >
+            <View style={styles.rowLeft}>
+              <Bell size={18} color={colors.primary} />
+              <Text style={styles.rowText}>{t('notificationSettings.title')}</Text>
+            </View>
+            <ChevronRight size={18} color={colors.textTertiary} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionCard}>

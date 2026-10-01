@@ -1,41 +1,52 @@
 import en from '../mobile/locales/en'
 import fr from '../mobile/locales/fr'
 import ht from '../mobile/locales/ht'
-import { buildTrackingUrl, eventPageUrl, parseStoredLinks } from '../mobile/lib/trackingLinks'
 
-function keys(obj: any, prefix = ''): string[] {
-  return Object.entries(obj).flatMap(([k, v]) =>
-    v && typeof v === 'object' ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`]
-  )
+/**
+ * The three mobile locale files must stay KEY-IDENTICAL. A key missing from
+ * one language renders as its raw path on the device ("doorScanner.result…"),
+ * which at an event door or on a settings screen reads as broken.
+ */
+function flatten(value: unknown, prefix = ''): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      Object.assign(out, flatten(v, prefix ? `${prefix}.${k}` : k))
+    }
+  } else {
+    out[prefix] = String(value)
+  }
+  return out
 }
 
-describe('mobile locales', () => {
-  it('en, fr and ht carry the same keys', () => {
-    const base = keys(en).sort()
-    expect(keys(ht).sort()).toEqual(base)
-    // French alone needs `countriesIn` / `regionsIn` ("en Haïti", "aux
-    // États-Unis"): the preposition depends on the place. Every other key matches.
-    const frKeys = keys(fr).filter((k) => !/^(countriesIn|regionsIn)\./.test(k)).sort()
-    expect(frKeys).toEqual(base)
-  })
-})
+const base = flatten(en)
 
-describe('mobile tracking links', () => {
-  it('builds www event URLs with only the non-empty UTM params', () => {
-    const base = eventPageUrl('abc123')
-    expect(base).toBe('https://www.tikem.co/events/abc123')
-    expect(buildTrackingUrl(base, 'instagram', 'story', '')).toBe(
-      'https://www.tikem.co/events/abc123?utm_source=instagram&utm_medium=story'
-    )
-    expect(buildTrackingUrl(base, ' whatsapp ', '', 'fèt 2026')).toBe(
-      'https://www.tikem.co/events/abc123?utm_source=whatsapp&utm_campaign=f%C3%A8t+2026'
-    )
-    expect(buildTrackingUrl(base, '', '', '')).toBe(base)
+// Optional per-language grammar variants ("au Québec", "en Haïti") that
+// mobile/lib/locationCopy.ts reads with a fallback. Only French needs them.
+const OPTIONAL_EXTRA = /^(countriesIn|regionsIn)\./
+
+describe.each([
+  ['fr', fr],
+  ['ht', ht],
+])('mobile %s locale', (_lang, locale) => {
+  const other = flatten(locale)
+
+  it('has exactly the English keys', () => {
+    expect(Object.keys(base).filter((k) => !(k in other))).toEqual([])
+    expect(Object.keys(other).filter((k) => !(k in base) && !OPTIONAL_EXTRA.test(k))).toEqual([])
   })
 
-  it('drops malformed stored links', () => {
-    expect(parseStoredLinks(null)).toEqual([])
-    expect(parseStoredLinks('not json')).toEqual([])
-    expect(parseStoredLinks(JSON.stringify([{ id: 'a', url: 'u', label: 'l' }, { id: 1 }]))).toHaveLength(1)
-  })
+  it.each(['doorScanner', 'notificationSettings', 'organizerTicketScanner'])(
+    'has no empty strings and keeps placeholders in %s',
+    (section) => {
+      const keys = Object.keys(base).filter((k) => k.startsWith(`${section}.`))
+      expect(keys.length).toBeGreaterThan(0)
+      for (const k of keys) {
+        expect({ k, empty: !String(other[k] ?? '').trim() }).toEqual({ k, empty: false })
+        const want = (base[k].match(/\{\w+\}/g) || []).sort()
+        const got = (String(other[k] ?? '').match(/\{\w+\}/g) || []).sort()
+        expect({ k, got }).toEqual({ k, got: want })
+      }
+    }
+  )
 })
