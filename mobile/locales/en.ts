@@ -2882,6 +2882,18 @@ export default {
       checkedIn: 'Checked in',
       notValid: 'Not valid',
     },
+    door: {
+      notOnList: 'This ticket isn’t on the door list.',
+      noAccess: 'You no longer have check-in access for this event.',
+      lookupSubtitle: '{count} guests on the door list',
+      placeholder: 'Name or ticket code',
+    },
+    sync: {
+      pendingOne: '{count} check-in waiting to sync',
+      pendingMany: '{count} check-ins waiting to sync',
+      alreadyInElsewhere: 'Already in at another door',
+      refusedOnSync: 'Refused when synced',
+    },
   },
 
   // Notification preferences (buyer + organizer).

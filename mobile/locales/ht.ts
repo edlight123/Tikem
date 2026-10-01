@@ -2872,6 +2872,18 @@ export default {
       checkedIn: 'Antre',
       notValid: 'Pa valid',
     },
+    door: {
+      notOnList: 'Biyè sa a pa sou lis pòt la.',
+      noAccess: 'Ou pa gen aksè pou kontwole antre pou evènman sa a ankò.',
+      lookupSubtitle: '{count} envite sou lis pòt la',
+      placeholder: 'Non oswa kòd biyè',
+    },
+    sync: {
+      pendingOne: '{count} antre k ap tann pou senkronize',
+      pendingMany: '{count} antre k ap tann pou senkronize',
+      alreadyInElsewhere: 'Deja antre pa yon lòt pòt',
+      refusedOnSync: 'Yo refize l lè l senkronize',
+    },
   },
 
   // Notification preferences (buyer + organizer).
