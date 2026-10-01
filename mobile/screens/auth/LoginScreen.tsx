@@ -19,11 +19,10 @@ import { useI18n } from '../../contexts/I18nContext';
 import { AuthBackground } from '../../components/auth/AuthBackground';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import { AuthInput } from '../../components/auth/AuthInput';
-import { SecondaryPill } from '../../components/auth/SecondaryPill';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
 import WhitePillCTA from '../../components/WhitePillCTA';
-import { colors, spacing, type } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 
 // Map a Firebase auth error code to a localized message key. We never surface
@@ -215,30 +214,15 @@ export default function LoginScreen({ navigation }: any) {
                 style={styles.primary}
               />
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>{t('auth.login.or')}</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Secondary action — dark-grey pill, never teal */}
-              <SecondaryPill
-                label={t('auth.login.continueWithGoogle')}
-                onPress={handleGoogleSignIn}
+              <SocialSignInRow
+                orLabel={t('auth.login.or')}
+                googleLabel={t('auth.login.continueWithGoogle')}
+                appleLabel={t('auth.apple.title')}
+                onGoogle={handleGoogleSignIn}
+                onApple={handleAppleSignIn}
+                showApple={appleAuthAvailable}
                 disabled={loading}
               />
-
-              {/* Sign in with Apple — Apple's HIG-compliant native button.
-                  Only renders on iOS with the native module present. */}
-              {appleAuthAvailable && (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                  cornerRadius={28}
-                  style={styles.appleButton}
-                  onPress={handleAppleSignIn}
-                />
-              )}
 
               {/* Google / Apple here create an account on first use, so the
                   Terms line belongs on this screen too (App Store 1.2). */}
@@ -291,10 +275,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
   },
-  appleButton: {
-    width: '100%',
-    height: 56,
-  },
   linkButton: {
     marginTop: spacing.sm,
     alignItems: 'flex-start',
@@ -307,20 +287,5 @@ const styles = StyleSheet.create({
   linkTextBold: {
     color: colors.tealBright,
     fontWeight: '700',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.xs,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  dividerText: {
-    ...type.caption,
-    marginHorizontal: 14,
-    color: colors.textTertiary,
   },
 });

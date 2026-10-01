@@ -18,10 +18,9 @@ import { AuthBackground } from '../../components/auth/AuthBackground';
 import { AuthHeadline } from '../../components/auth/AuthHeadline';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
-import { SecondaryPill } from '../../components/auth/SecondaryPill';
+import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import WhitePillCTA from '../../components/WhitePillCTA';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { colors, spacing, type } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 
 // Map a Firebase auth error code to a localized message key. We never surface
@@ -234,29 +233,15 @@ export default function SignupScreen({ navigation }: any) {
                 style={styles.primary}
               />
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>{t('auth.signup.or')}</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Secondary action — dark-grey pill, never teal */}
-              <SecondaryPill
-                label={t('auth.signup.continueWithGoogle')}
-                onPress={handleGoogleSignIn}
+              <SocialSignInRow
+                orLabel={t('auth.signup.or')}
+                googleLabel={t('auth.signup.continueWithGoogle')}
+                appleLabel={t('auth.apple.title')}
+                onGoogle={handleGoogleSignIn}
+                onApple={handleAppleSignIn}
+                showApple={appleAuthAvailable}
                 disabled={loading}
               />
-
-              {/* Sign up with Apple — native HIG button; iOS + native module only. */}
-              {appleAuthAvailable && (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                  cornerRadius={28}
-                  style={styles.appleButton}
-                  onPress={handleAppleSignIn}
-                />
-              )}
 
               <Pressable
                 onPress={() => navigation.navigate('Login')}
@@ -296,10 +281,6 @@ const styles = StyleSheet.create({
   primary: {
     marginTop: spacing.xs,
   },
-  appleButton: {
-    width: '100%',
-    height: 56,
-  },
   linkButton: {
     marginTop: spacing.sm,
     alignItems: 'flex-start',
@@ -312,20 +293,5 @@ const styles = StyleSheet.create({
   linkTextBold: {
     color: colors.tealBright,
     fontWeight: '700',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.xs,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  dividerText: {
-    ...type.caption,
-    marginHorizontal: 14,
-    color: colors.textTertiary,
   },
 });
