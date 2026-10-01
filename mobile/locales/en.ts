@@ -1597,6 +1597,9 @@ export default {
       tickets: 'Tickets',
       sales: 'Sales',
       owed: 'Owed',
+      clicks: 'Clicks',
+      orders: 'Orders',
+      conversion: 'Conversion',
     },
     commissionPercent: '{value}% of sales',
     commissionFlat: '{amount} per ticket',
@@ -1678,7 +1681,7 @@ export default {
 
   organizerTracking: {
     title: 'Tracking links',
-    infoNotice: 'Tag each place you share your event (a story, a WhatsApp group, a flyer) so you know where people find it. Links are saved on this phone only.',
+    infoNotice: 'Tag each place you share your event (a story, a WhatsApp group, a flyer) so you know where people find it. Each link counts its clicks, orders and revenue.',
     newLink: 'New tracking link',
     listTitle: 'Your links',
     share: 'Share',
@@ -1686,6 +1689,14 @@ export default {
     removeA11y: 'Remove tracking link: {label}',
     empty: 'No tracking links',
     emptySubtitle: 'Create a link for each channel you post to, then share it from here.',
+    creating: 'Creating…',
+    stats: {
+      clicks: 'Clicks',
+      orders: 'Orders',
+      revenue: 'Revenue',
+      conversion: 'Conversion',
+    },
+    statsNote: 'Clicks count once per device every 30 minutes. Orders and revenue include paid and free orders placed after a visit through the link, each currency on its own.',
     sheet: {
       title: 'Build a tracking link',
       label: 'Label',
@@ -1701,12 +1712,15 @@ export default {
     },
     delete: {
       title: 'Remove link?',
-      message: 'It leaves this list. Anyone who already has it can still open your event.',
+      message: 'It stops counting clicks. Anyone who already has it can still open your event, and tickets already sold keep their attribution.',
       confirm: 'Remove',
     },
     errors: {
       labelRequired: 'Give the link a label.',
       sourceRequired: 'Source is required.',
+      loadFailed: 'Unable to load tracking links.',
+      createFailed: 'Could not create this link.',
+      deleteFailed: 'Could not remove this link.',
     },
   },
 

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Check, Copy, ExternalLink, Plus, Users } from 'lucide-react'
 import { OrgEmptyState } from '@/components/organizer/ui'
 import { useToast } from '@/components/ui/Toast'
+import { formatConversion } from '@/lib/attribution'
 
 interface Promoter {
   id: string
@@ -22,6 +23,7 @@ interface Promoter {
   claimed: boolean
   ticketsSold: number
   ordersCount: number
+  clicks: number
   grossCents: number
   commissionCents: number
   currency: string
@@ -303,6 +305,14 @@ export default function PromotersClient({
                   </div>
 
                   <div className="flex items-center gap-6 text-sm">
+                    <div className="text-right">
+                      <p className="text-white font-semibold">{p.clicks || 0}</p>
+                      <p className="text-[11px] uppercase tracking-wider text-white/40">{t('promoters.clicks')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-semibold">{formatConversion(p.ordersCount, p.clicks || 0)}</p>
+                      <p className="text-[11px] uppercase tracking-wider text-white/40">{t('promoters.conversion')}</p>
+                    </div>
                     <div className="text-right">
                       <p className="text-white font-semibold">{p.ticketsSold}</p>
                       <p className="text-[11px] uppercase tracking-wider text-white/40">{t('promoters.tickets')}</p>

@@ -1217,6 +1217,9 @@ export default {
       tickets: 'Billets',
       sales: 'Ventes',
       owed: 'Dû',
+      clicks: 'Clics',
+      orders: 'Commandes',
+      conversion: 'Conversion',
     },
     commissionPercent: '{value}% des ventes',
     commissionFlat: '{amount} par billet',
@@ -1298,7 +1301,7 @@ export default {
 
   organizerTracking: {
     title: 'Liens de suivi',
-    infoNotice: 'Balisez chaque endroit où vous partagez votre événement (une story, un groupe WhatsApp, un flyer) pour savoir d’où vient votre public. Les liens sont enregistrés sur ce téléphone uniquement.',
+    infoNotice: 'Balisez chaque endroit où vous partagez votre événement (une story, un groupe WhatsApp, un flyer) pour savoir d’où vient votre public. Chaque lien compte ses clics, commandes et revenus.',
     newLink: 'Nouveau lien de suivi',
     listTitle: 'Vos liens',
     share: 'Partager',
@@ -1306,6 +1309,14 @@ export default {
     removeA11y: 'Supprimer le lien de suivi : {label}',
     empty: 'Aucun lien de suivi',
     emptySubtitle: 'Créez un lien pour chaque canal où vous publiez, puis partagez-le d’ici.',
+    creating: 'Création…',
+    stats: {
+      clicks: 'Clics',
+      orders: 'Commandes',
+      revenue: 'Revenus',
+      conversion: 'Conversion',
+    },
+    statsNote: 'Les clics sont comptés une fois par appareil toutes les 30 minutes. Commandes et revenus incluent les commandes payantes et gratuites passées après une visite via le lien, chaque devise à part.',
     sheet: {
       title: 'Créer un lien de suivi',
       label: 'Libellé',
@@ -1321,12 +1332,15 @@ export default {
     },
     delete: {
       title: 'Supprimer ce lien ?',
-      message: 'Il quitte cette liste. Toute personne qui l’a déjà peut toujours ouvrir votre événement.',
+      message: 'Il ne comptera plus les clics. Toute personne qui l’a déjà peut toujours ouvrir votre événement, et les billets déjà vendus gardent leur attribution.',
       confirm: 'Supprimer',
     },
     errors: {
       labelRequired: 'Donnez un libellé au lien.',
       sourceRequired: 'La source est obligatoire.',
+      loadFailed: 'Impossible de charger les liens de suivi.',
+      createFailed: 'Impossible de créer ce lien.',
+      deleteFailed: 'Impossible de supprimer ce lien.',
     },
   },
 

@@ -20,6 +20,7 @@ import { formatCurrency } from '../lib/currency';
 import { priceOrder } from '../lib/buyerPricing';
 import { radius } from '../theme/tokens';
 import { classifyCheckoutError, friendlyCheckoutError } from '../lib/checkoutErrors';
+import type { Attribution } from '../lib/attribution';
 
 // Expo Go can't load native modules like Stripe. Detect it reliably via
 // expo-constants. (The old `Platform.constants.expoConfig` check was always
@@ -99,6 +100,8 @@ interface PaymentModalProps {
   promoCodeId?: string;
   /** Promoter ref (`?ref=` on the event link) — resolved and attributed server-side. */
   refCode?: string;
+  /** Tracking-link / utm attribution from the deep link; re-resolved server-side. */
+  attribution?: Attribution | null;
   onSuccess: (paymentMethod: string, transactionId: string) => void;
 }
 
@@ -114,6 +117,7 @@ function PaymentForm({
   tierId,
   promoCodeId,
   refCode,
+  attribution,
   onSuccess,
   onClose,
 }: Omit<PaymentModalProps, 'visible'>) {
@@ -212,6 +216,7 @@ function PaymentForm({
           tierId,
           promoCodeId,
           ...(refCode ? { refCode } : {}),
+          ...(attribution ? { attribution } : {}),
         }),
       });
 
@@ -333,6 +338,7 @@ function PaymentForm({
           tierId,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
+          ...(attribution ? { attribution } : {}),
         }),
       });
 
@@ -366,6 +372,7 @@ function PaymentForm({
           tierId,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
+          ...(attribution ? { attribution } : {}),
           mobileMoneyProvider: 'moncash',
           forceFormPost: true,
         }),
@@ -403,6 +410,7 @@ function PaymentForm({
           tierId,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
+          ...(attribution ? { attribution } : {}),
           mobileMoneyProvider: 'natcash',
           forceFormPost: true,
         }),

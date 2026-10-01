@@ -5,6 +5,7 @@ import { getPaymentProviderForEventCountry, normalizeCountryCode } from '@/lib/p
 import { checkEventCapacity } from '@/lib/capacity'
 import { calculateDiscount, resolvePromoCode, promoHasCapacity, type PromoDoc } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
+import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { resolveEventCountry } from '@/lib/event-country'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import {
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     // `accessCode` is how a GUEST clears a password-protected event: no uid means no
     // grant to hold, so the code rides along and is verified server-side before the
     // order exists.
-    const { eventId, quantity = 1, tierId, promoCode, refCode, tiers, guest, accessCode } = body || {}
+    const { eventId, quantity = 1, tierId, promoCode, refCode, tiers, guest, accessCode, attribution: rawAttribution } = body || {}
 
     if (!eventId) return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
 
@@ -216,6 +217,7 @@ export async function POST(request: Request) {
     // Promoter attribution (optional). Only the RESOLVED doc id is persisted; an
     // unknown or inactive ref attributes nothing and never blocks the sale.
     const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
+    const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
 
     // Total discount applied across the order (event currency), recorded on the redemption.
     let promoDiscountTotal = 0
@@ -272,6 +274,8 @@ export async function POST(request: Request) {
         promo_discount_total: promoDiscountTotal || null,
         promoter_id: promoter?.id || null,
         promoter_code: promoter?.code || null,
+        // Visit attribution; fulfillment stamps it on the tickets and counts the link once.
+        attribution: attribution || null,
         // Guest contact + order key; empty for account purchases. Fulfillment reads the
         // confirmation recipient from here, never from the callback.
         ...guestOrderFields(identity),

@@ -1,13 +1,11 @@
-// Per-event UTM tracking links, mirroring the web's tracking page
-// (app/organizer/events/[id]/tracking). Like the web, nothing is stored on the
-// server: there is no tracking-links collection and no click or sale counter
-// keyed on utm_* anywhere in the backend. The web keeps links in page memory
-// only; here they are kept per event on this device (AsyncStorage) so they
-// survive leaving the screen.
+// Per-event tracking links, mirroring the web's tracking page
+// (app/organizer/events/[id]/tracking). Links live on the server
+// (tracking_links) with click / order / revenue counters that only the click
+// endpoint and fulfillment write. Links an older build kept on this phone
+// (AsyncStorage) are uploaded once, the first time this screen loads.
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link2, Plus, Share2, Trash2 } from 'lucide-react-native';
@@ -24,12 +22,14 @@ import FormSheet, { SheetInput, SheetLabel } from '../../components/organizer/Fo
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { getEventById } from '../../lib/api/organizer';
 import {
-  TrackingLink,
-  buildTrackingUrl,
-  eventPageUrl,
-  parseStoredLinks,
-  trackingStorageKey,
-} from '../../lib/trackingLinks';
+  createTrackingLink,
+  deleteTrackingLink,
+  listTrackingLinks,
+  migrateLocalTrackingLinks,
+} from '../../lib/api/trackingLinks';
+import { TrackingLink, buildTrackingUrl, eventPageUrl, revenueEntries } from '../../lib/trackingLinks';
+import { formatConversion } from '../../lib/attribution';
+import { formatCurrency } from '../../lib/currency';
 import { colors as T, font, radius, spacing } from '../../theme/tokens';
 
 type RouteParams = {
@@ -57,6 +57,7 @@ export default function OrganizerTrackingLinksScreen() {
   const [eventTitle, setEventTitle] = useState('');
   const [links, setLinks] = useState<TrackingLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [label, setLabel] = useState('');
@@ -68,30 +69,24 @@ export default function OrganizerTrackingLinksScreen() {
   const baseUrl = eventPageUrl(eventId);
   const previewUrl = buildTrackingUrl(baseUrl, source, medium, campaign);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [event, raw] = await Promise.all([
-        getEventById(eventId).catch(() => null),
-        AsyncStorage.getItem(trackingStorageKey(eventId)).catch(() => null),
-      ]);
-      if (cancelled) return;
+  const load = useCallback(async () => {
+    const eventPromise = getEventById(eventId).catch(() => null);
+    // Device-local links from older builds go up first, so they appear in the list.
+    await migrateLocalTrackingLinks(eventId);
+    try {
+      const [event, list] = await Promise.all([eventPromise, listTrackingLinks(eventId)]);
       setEventTitle(event?.title || '');
-      setLinks(parseStoredLinks(raw));
+      setLinks(list);
+    } catch {
+      showAlert(t('common.error'), t('organizerTracking.errors.loadFailed'));
+    } finally {
       setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId]);
+    }
+  }, [eventId, showAlert, t]);
 
-  const persist = useCallback(
-    (next: TrackingLink[]) => {
-      setLinks(next);
-      AsyncStorage.setItem(trackingStorageKey(eventId), JSON.stringify(next)).catch(() => undefined);
-    },
-    [eventId]
-  );
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const openSheet = () => {
     setLabel('');
@@ -102,7 +97,8 @@ export default function OrganizerTrackingLinksScreen() {
     setSheetOpen(true);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    if (saving) return;
     if (!label.trim()) {
       setFormError(t('organizerTracking.errors.labelRequired'));
       return;
@@ -111,17 +107,28 @@ export default function OrganizerTrackingLinksScreen() {
       setFormError(t('organizerTracking.errors.sourceRequired'));
       return;
     }
-    const link: TrackingLink = {
-      id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      label: label.trim(),
-      source: source.trim(),
-      medium: medium.trim(),
-      campaign: campaign.trim(),
-      url: buildTrackingUrl(baseUrl, source, medium, campaign),
-      createdAt: Date.now(),
-    };
-    persist([link, ...links]);
-    setSheetOpen(false);
+    setSaving(true);
+    setFormError(null);
+    try {
+      const link = await createTrackingLink(eventId, {
+        label: label.trim(),
+        source: source.trim(),
+        medium: medium.trim(),
+        campaign: campaign.trim(),
+      });
+      setLinks((prev) => [link, ...prev]);
+      setSheetOpen(false);
+    } catch {
+      setFormError(t('organizerTracking.errors.createFailed'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmtRevenue = (link: TrackingLink) => {
+    const entries = revenueEntries(link.revenueByCurrency);
+    if (entries.length === 0) return '—';
+    return entries.map(([cur, cents]) => formatCurrency(cents / 100, cur)).join(' · ');
   };
 
   // The system share sheet carries "Copy" on both platforms, so one action
@@ -142,7 +149,14 @@ export default function OrganizerTrackingLinksScreen() {
       {
         text: t('organizerTracking.delete.confirm'),
         style: 'destructive',
-        onPress: () => persist(links.filter((l) => l.id !== link.id)),
+        onPress: async () => {
+          try {
+            await deleteTrackingLink(eventId, link.id);
+            setLinks((prev) => prev.filter((l) => l.id !== link.id));
+          } catch {
+            showAlert(t('common.error'), t('organizerTracking.errors.deleteFailed'));
+          }
+        },
       },
     ]);
   };
@@ -212,6 +226,26 @@ export default function OrganizerTrackingLinksScreen() {
                   </View>
                 </View>
 
+                <View style={styles.statsRow}>
+                  {(
+                    [
+                      ['clicks', String(link.clicks)],
+                      ['orders', String(link.salesCount)],
+                      ['revenue', fmtRevenue(link)],
+                      ['conversion', formatConversion(link.salesCount, link.clicks)],
+                    ] as const
+                  ).map(([key, value]) => (
+                    <View key={key} style={styles.stat}>
+                      <Text style={styles.statValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+                        {value}
+                      </Text>
+                      <Text style={styles.statLabel} numberOfLines={1}>
+                        {t(`organizerTracking.stats.${key}`)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
                 <View style={styles.urlWell}>
                   <Text style={styles.urlText} numberOfLines={2} selectable>
                     {link.url}
@@ -240,6 +274,7 @@ export default function OrganizerTrackingLinksScreen() {
                 </View>
               </View>
             ))}
+            <Text style={styles.statsNote}>{t('organizerTracking.statsNote')}</Text>
           </View>
         )}
       </ScrollView>
@@ -262,7 +297,12 @@ export default function OrganizerTrackingLinksScreen() {
         footer={
           <>
             {!!formError && <Text style={styles.errorText}>{formError}</Text>}
-            <WhitePillCTA label={t('organizerTracking.sheet.create')} onPress={handleCreate} />
+            <WhitePillCTA
+              label={saving ? t('organizerTracking.creating') : t('organizerTracking.sheet.create')}
+              onPress={handleCreate}
+              loading={saving}
+              disabled={saving}
+            />
           </>
         }
       >
@@ -381,8 +421,41 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       letterSpacing: 0.5,
       color: colors.textSecondary,
     },
-    urlWell: {
+    statsRow: {
+      flexDirection: 'row',
       marginTop: spacing.md,
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceRaised,
+      paddingVertical: 12,
+      paddingHorizontal: 6,
+    },
+    stat: {
+      flex: 1,
+      alignItems: 'center',
+      paddingHorizontal: 4,
+    },
+    statValue: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    statLabel: {
+      marginTop: 3,
+      fontSize: 10,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      color: colors.textTertiary,
+    },
+    statsNote: {
+      marginTop: spacing.sm,
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.textTertiary,
+    },
+    urlWell: {
+      marginTop: spacing.sm,
       borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       paddingHorizontal: 12,

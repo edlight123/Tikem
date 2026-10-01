@@ -1187,6 +1187,9 @@ export default {
       tickets: 'Tikè',
       sales: 'Lavant',
       owed: 'Ou dwe',
+      clicks: 'Klik',
+      orders: 'Kòmand',
+      conversion: 'Konvèsyon',
     },
     commissionPercent: '{value}% sou lavant',
     commissionFlat: '{amount} pa tikè',
@@ -1268,7 +1271,7 @@ export default {
 
   organizerTracking: {
     title: 'Lyen swivi',
-    infoNotice: 'Make chak kote ou pataje evènman ou an (yon story, yon gwoup WhatsApp, yon flyer) pou w konnen ki kote moun jwenn li. Lyen yo anrejistre sou telefòn sa a sèlman.',
+    infoNotice: 'Make chak kote ou pataje evènman ou an (yon story, yon gwoup WhatsApp, yon flyer) pou w konnen ki kote moun jwenn li. Chak lyen konte klik, kòmand ak revni li.',
     newLink: 'Nouvo lyen swivi',
     listTitle: 'Lyen ou yo',
     share: 'Pataje',
@@ -1276,6 +1279,14 @@ export default {
     removeA11y: 'Retire lyen swivi: {label}',
     empty: 'Pa gen lyen swivi',
     emptySubtitle: 'Kreye yon lyen pou chak kanal kote ou poste, epi pataje l isit la.',
+    creating: 'N ap kreye…',
+    stats: {
+      clicks: 'Klik',
+      orders: 'Kòmand',
+      revenue: 'Revni',
+      conversion: 'Konvèsyon',
+    },
+    statsNote: 'Nou konte klik yon fwa pa aparèy chak 30 minit. Kòmand ak revni gen ladan kòmand peye ak gratis ki fèt apre yon vizit sou lyen an, chak lajan apa.',
     sheet: {
       title: 'Kreye yon lyen swivi',
       label: 'Etikèt',
@@ -1291,12 +1302,15 @@ export default {
     },
     delete: {
       title: 'Retire lyen sa a?',
-      message: 'Li soti nan lis sa a. Moun ki deja genyen l ka toujou louvri evènman ou an.',
+      message: 'Li p ap konte klik ankò. Moun ki deja genyen l ka toujou louvri evènman ou an, epi tikè ki deja vann yo kenbe atribisyon yo.',
       confirm: 'Retire',
     },
     errors: {
       labelRequired: 'Bay lyen an yon etikèt.',
       sourceRequired: 'Sous la obligatwa.',
+      loadFailed: 'Nou pa ka chaje lyen swivi yo.',
+      createFailed: 'Nou pa t ka kreye lyen sa a.',
+      deleteFailed: 'Nou pa t ka retire lyen sa a.',
     },
   },
 

@@ -8,6 +8,7 @@ import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Metadata } from 'next'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventDetailsClient from './EventDetailsClient'
+import AttributionBeacon from './AttributionBeacon'
 import { cookies } from 'next/headers'
 import { intlLocaleFor } from '@/lib/dateLocale'
 import { ticketScarcity, isUrgent } from '@/lib/ticketScarcity'
@@ -282,6 +283,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav md:pb-8">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <AttributionBeacon eventId={id} />
       <EventDetailsClient 
         event={serializedEvent}
         user={user}

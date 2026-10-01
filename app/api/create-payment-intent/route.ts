@@ -3,6 +3,8 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { calculateDiscount, resolvePromoCode, promoHasCapacity } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
+import { attributionToStripeMetadata } from '@/lib/attribution'
+import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { 
   isBlacklisted, 
   shouldRateLimit, 
@@ -55,6 +57,9 @@ export async function POST(request: Request) {
       // Promoter attribution: the raw `?ref=` the buyer arrived with. Resolved
       // below; junk is silently dropped and never blocks the sale.
       refCode,
+      // Tracking-link / utm attribution captured on the event page. Re-resolved
+      // below; never blocks the sale.
+      attribution: rawAttribution,
       fingerprint,
       guest,
       // Password-protected events: the code a GUEST is presenting with this order.
@@ -287,6 +292,7 @@ export async function POST(request: Request) {
     // metadata; fulfillment writes the attribution ledger exactly once under its
     // claim. An unknown/inactive code attributes nothing and changes nothing.
     const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
+    const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
 
     // Handle currency conversion for Stripe.
     // Charge currency follows the event's stored currency; when absent, fall back
@@ -424,6 +430,9 @@ export async function POST(request: Request) {
         promoCodeId: resolvedPromoId,
         promoterId: promoter?.id || '',
         promoterCode: promoter?.code || '',
+        // trackingLinkId / utmSource / utmMedium / utmCampaign — read back at
+        // fulfillment, stamped on the tickets and counted on the link once.
+        ...attributionToStripeMetadata(attribution),
         originalPrice: basePriceBeforePromo.toString(),
         finalPrice: finalPrice.toString(),
         // Additive audit trail for fee incidence. `finalPrice` / `originalPrice` /

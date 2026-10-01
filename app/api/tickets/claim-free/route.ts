@@ -19,6 +19,8 @@ import {
   type PromoDoc,
 } from '@/lib/promo-codes'
 import { recordPromoterSale, resolvePromoterCode } from '@/lib/promoters'
+import { ticketAttributionFields } from '@/lib/attribution'
+import { recordAttributedSale, resolveOrderAttribution } from '@/lib/tracking-links'
 import { computeSelectionTotal, toCents } from '@/lib/ticketPricing'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
 import {
@@ -148,7 +150,7 @@ export async function POST(request: Request) {
     // they have no uid to hold a grant, so they present the code with the claim and
     // it is verified server-side before anything is created. A signed-in claimant
     // still unlocks through /api/events/verify-access and is admitted by their grant.
-    const { eventId, quantity = 1, tierId, selections, promoCode, refCode, guest, accessCode } =
+    const { eventId, quantity = 1, tierId, selections, promoCode, refCode, guest, accessCode, attribution: rawAttribution } =
       await request.json()
     const requestedSelections = normalizeSelections(selections)
     const useSelections = requestedSelections.length > 0
@@ -247,6 +249,9 @@ export async function POST(request: Request) {
     // Promoter attribution (optional). Unlike a promo, an unusable ref changes
     // NOTHING about the claim, so it is silently dropped rather than refused.
     const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
+    // Tracking-link / utm attribution — re-resolved against this event; an RSVP
+    // counts as a (zero-revenue) sale on the link.
+    const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
 
     /**
      * What the SERVER says one ticket of this tier costs after the promo.
@@ -549,6 +554,8 @@ export async function POST(request: Request) {
           // plain claim's doc shape unchanged. Free claims earn no commission; the
           // promoter still gets credit for driving the RSVP.
           ...(promoter ? { promoter_id: promoter.id, promoter_code: promoter.code } : {}),
+          // Visit attribution — likewise only when there is any.
+          ...ticketAttributionFields(attribution),
         }
 
         const ticketRef = await adminDb.collection('tickets').add(ticketData)
@@ -590,6 +597,20 @@ export async function POST(request: Request) {
         paymentId: null,
         buyerUserId: identity.isGuest ? null : identity.id,
         buyerEmail: identity.email || null,
+      })
+    }
+
+    // Count the claim on its tracking link. A claim has no gateway id; its first
+    // ticket's id is unique to this one request, so the marker still makes the
+    // count exactly-once.
+    if (attribution?.tracking_link_id && createdTickets.length > 0) {
+      await recordAttributedSale(attribution, {
+        eventId: String(eventId),
+        orderKey: `free_${createdTickets[0].id}`,
+        quantity: ticketQuantity,
+        revenueCents: 0,
+        currency: String(event.currency || 'HTG'),
+        paymentMethod: 'free',
       })
     }
 

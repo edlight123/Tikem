@@ -9,6 +9,7 @@ import {
 } from '@/lib/guest/checkout'
 import { calculateDiscount, resolvePromoCode, promoHasCapacity, type PromoDoc } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
+import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread, sumMoney } from '@/lib/fx/usd-htg'
 import { inferCountryFromEventText } from '@/lib/event-country'
 import { checkEventCapacity } from '@/lib/capacity'
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
       tierId,
       promoCode,
       refCode,
+      attribution: rawAttribution,
       tiers,
       mobileMoneyProvider,
       forceFormPost,
@@ -111,6 +113,8 @@ export async function POST(request: Request) {
       promoCode?: string | null
       /** Promoter attribution (`?ref=`). Resolved below; junk never blocks the sale. */
       refCode?: string | null
+      /** Tracking-link / utm attribution from the event page. Re-resolved below. */
+      attribution?: unknown
       tiers?: TierSelection[]
       mobileMoneyProvider?: string | null
       forceFormPost?: boolean
@@ -199,6 +203,7 @@ export async function POST(request: Request) {
     // Promoter attribution (optional). Only the RESOLVED doc id is persisted on the
     // pending transaction; an unknown or inactive ref attributes nothing.
     const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
+    const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
     // Total discount applied across the order (event currency), recorded on the promo
     // redemption at confirm time. Accumulated as each selection is priced below.
     let promoDiscountTotal = 0
@@ -387,6 +392,8 @@ export async function POST(request: Request) {
       // Fulfillment stamps it onto the tickets and writes the commission ledger.
       promoter_id: promoter?.id || null,
       promoter_code: promoter?.code || null,
+      // Visit attribution; fulfillment stamps it on the tickets and counts the link once.
+      attribution: attribution || null,
       moncash_button_token: null,
       mobile_money_provider: normalizedProvider,
       // For a guest order: name/email/phone + the order key. Fulfillment reads the

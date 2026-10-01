@@ -1066,7 +1066,18 @@
     "create_link": "Créer le lien",
     "generate_utm": "Générez des liens balisés UTM pour suivre le trafic de différentes sources.",
     "new_link": "Nouveau lien",
-    "new_tracking_link": "Nouveau lien de suivi"
+    "new_tracking_link": "Nouveau lien de suivi",
+    "load_failed": "Impossible de charger les liens de suivi",
+    "create_failed": "Impossible de créer le lien",
+    "delete_failed": "Impossible de supprimer le lien",
+    "delete_confirm": "Supprimer ce lien de suivi ? Il ne comptera plus les clics ; les billets déjà vendus gardent leur attribution.",
+    "preview_id_note": "Un court identifiant t= est ajouté à l'enregistrement pour compter les clics et les ventes.",
+    "clicks": "Clics",
+    "sales": "Commandes",
+    "revenue": "Revenus",
+    "conversion": "Conversion",
+    "copy": "Copier",
+    "stats_note": "Les clics sont comptés une fois par navigateur toutes les 30 minutes. Les commandes et revenus incluent les commandes payantes et gratuites passées après une visite via le lien, chaque devise séparément."
   },
   "comps": {
     "complimentary_tickets": "Billets gratuits",
@@ -1092,7 +1103,9 @@
     "tickets": "Billets",
     "add_promoter": "Ajouter un promoteur",
     "add_first_promoter": "Ajoutez votre premier promoteur",
-    "send_via_whatsapp": "Envoyer via WhatsApp"
+    "send_via_whatsapp": "Envoyer via WhatsApp",
+    "clicks": "Clics",
+    "conversion": "Conversion"
   },
   "security": {
     "change_password": "Modifier le mot de passe",

@@ -13,6 +13,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
 import { radius } from '../theme/tokens';
+import type { Attribution } from '../lib/attribution';
 
 /**
  * Refusals caused by the promo code rather than by the tickets themselves. For
@@ -60,6 +61,8 @@ interface FreeTicketModalProps {
   promoCode?: string;
   /** Promoter ref (`?ref=` on the event link) — a free RSVP still credits them. */
   refCode?: string;
+  /** Tracking-link / utm attribution from the deep link; re-resolved server-side. */
+  attribution?: Attribution | null;
   /**
    * Escape hatch for a claim the server refuses on promo grounds (code invalid,
    * spent, or only a partial discount). Lets the buyer continue to normal
@@ -83,6 +86,7 @@ export default function FreeTicketModal({
   lockedQuantity,
   promoCode,
   refCode,
+  attribution,
   onCheckoutFallback,
 }: FreeTicketModalProps) {
   const { colors } = useTheme();
@@ -209,6 +213,7 @@ export default function FreeTicketModal({
             // that anything is free.
             ...(promoCode ? { promoCode } : {}),
             ...(refCode ? { refCode } : {}),
+          ...(attribution ? { attribution } : {}),
           }),
         }
       );
