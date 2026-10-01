@@ -18,6 +18,7 @@ import * as Crypto from 'expo-crypto';
 import { hasPaidTier } from '../ticketPricing';
 import { backendJson } from './backend';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
+import type { LineupRecord } from '../lineup';
 
 /**
  * SHA-256 hex of the trimmed raw access code (trim only; case-sensitive).
@@ -82,7 +83,25 @@ export interface CreateEventData {
     valid_from?: string;
     /** Optional entry-admission end — ISO 8601 datetime; empty/undefined = no upper bound. */
     valid_until?: string;
+    /**
+     * Most of THIS tier one order may hold. '' / undefined = no per-tier cap.
+     * Persisted as `max_per_order` (number | null), the web composer's field.
+     */
+    max_per_order?: string;
+    /** Hidden tiers are persisted as `is_active: false` (web contract). */
+    hidden?: boolean;
+    /** Per-tier waitlist, persisted as `enable_waitlist` (web contract). */
+    waitlist?: boolean;
   }>;
+  /** Online event — venue/address/city are blanked on save (web contract). */
+  is_online?: boolean;
+  /**
+   * Who pays the service fee. Resolved by the caller (organizer's choice, else
+   * the country default) and stamped on the doc, as the web composer does.
+   */
+  fee_incidence?: 'buyer' | 'organizer';
+  /** The lineup, stored on the doc as `guestlist` — see lib/lineup. */
+  guestlist?: LineupRecord[];
   /** Free RSVP event — no paid tiers; a single free tier caps attendance. */
   is_rsvp?: boolean;
   /** When false the event is hidden from Discover/Explore (share-by-link only). */
@@ -196,7 +215,11 @@ function buildTierCollectionDoc(
     description: tier.description || tier.name,
     unlimited: tier.unlimited || false,
     sort_order: index,
-    is_active: true,
+    // Hidden tiers stay sellable by link but never render in the public
+    // selector, which queries is_active == true (web contract).
+    is_active: !tier.hidden,
+    max_per_order: maxPerOrderOf(tier),
+    enable_waitlist: !!tier.waitlist,
     // Per-tier sale/purchase window (ISO 8601 strings, or null for no bound).
     sales_start: tier.sale_start ? tier.sale_start : null,
     sales_end: tier.sale_end ? tier.sale_end : null,
@@ -225,7 +248,38 @@ function buildTierEmbedded(tier: CreateEventData['ticket_tiers'][number]) {
     sales_end: tier.sale_end ? tier.sale_end : null,
     valid_from: tier.valid_from ? tier.valid_from : null,
     valid_until: tier.valid_until ? tier.valid_until : null,
+    is_active: !tier.hidden,
+    max_per_order: maxPerOrderOf(tier),
+    enable_waitlist: !!tier.waitlist,
   };
+}
+
+/** Per-tier order cap as the web stores it: a positive integer, or null. */
+function maxPerOrderOf(tier: CreateEventData['ticket_tiers'][number]): number | null {
+  const n = Math.floor(Number(tier.max_per_order));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Fields the web composer writes that mobile now writes too: the online flag,
+ * the fee incidence, the lineup, and the event-level waitlist flag (kept as
+ * "any tier has one" so older readers of the event-wide flag keep working).
+ * Optional inputs are only written when the caller supplied them, so a caller
+ * that never set them leaves an existing value alone.
+ */
+function webParityFields(eventData: CreateEventData) {
+  return {
+    is_online: !!eventData.is_online,
+    enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
+    ...(eventData.fee_incidence ? { fee_incidence: eventData.fee_incidence } : {}),
+    ...(eventData.guestlist ? { guestlist: eventData.guestlist } : {}),
+  };
+}
+
+/** `location` display string; an online event has no venue to name. */
+function locationOf(eventData: CreateEventData): string {
+  if (eventData.is_online) return '';
+  return `${eventData.venue_name}, ${eventData.city}`;
 }
 
 /**
@@ -406,7 +460,7 @@ export async function createEvent(
         city: eventData.city,
         commune: eventData.commune || '',
         address: eventData.address,
-        location: `${eventData.venue_name}, ${eventData.city}`,
+        location: locationOf(eventData),
         start_datetime: Timestamp.fromDate(startDatetime),
         end_datetime: Timestamp.fromDate(endDatetime),
         timezone: eventData.timezone,
@@ -445,6 +499,7 @@ export async function createEvent(
         // Password gate — public flag only. The secret lives hashed in the
         // private/access subdoc (written below), never on this doc.
         is_password_protected: !!eventData.is_password_protected,
+        ...webParityFields(eventData),
         // Always created as a DRAFT, matching the web composer. Publishing is a
         // separate, server-gated step (publishCreatedEvent below) so a paid event
         // can never go live without passing the payout gate — and so the
@@ -562,7 +617,7 @@ export async function updateEvent(
       city: eventData.city,
       commune: eventData.commune || '',
       address: eventData.address,
-      location: `${eventData.venue_name}, ${eventData.city}`,
+      location: locationOf(eventData),
       start_datetime: Timestamp.fromDate(startDatetime),
       end_datetime: Timestamp.fromDate(endDatetime),
       timezone: eventData.timezone,
@@ -590,6 +645,7 @@ export async function updateEvent(
       // Password gate flag. When toggled OFF this becomes false and the old
       // private/access hash is simply left in place (harmless — the gate is off).
       is_password_protected: !!eventData.is_password_protected,
+      ...webParityFields(eventData),
       updated_at: serverTimestamp(),
       // Publication state is NOT written here. Turning it on has to pass the
       // payout gate, and the Firestore rule refuses a client write that does so
@@ -686,6 +742,15 @@ export async function updateEvent(
 /**
  * Upload event banner image to Firebase Storage
  */
+/**
+ * Upload a lineup portrait picked on the device. Same bucket and owner-prefixed
+ * filename as the poster (storage.rules requires the `{uid}_` prefix), so the
+ * record carries a public https URL by the time the entry is saved.
+ */
+export async function uploadLineupPhoto(ownerUid: string, localUri: string): Promise<string> {
+  return uploadEventImage(ownerUid, localUri);
+}
+
 async function uploadEventImage(
   organizerId: string,
   localUri: string

@@ -22,7 +22,8 @@ import {
   ChevronRight,
   ChevronLeft,
   PlayCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  Globe
 } from 'lucide-react-native';
 import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -58,6 +59,8 @@ import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
 import { useAppAlert } from '../components/AppAlert';
 import { EventDetailSkeleton } from '../components/Skeleton';
+import EventLineupRail from '../components/EventLineupRail';
+import SpotifyTrackCard from '../components/SpotifyTrackCard';
 const { width } = Dimensions.get('window');
 const POSTER_W = width * 0.86;
 // The poster is 4:5, so its height follows from its width. The hero adds a
@@ -762,12 +765,23 @@ export default function EventDetailScreen({ route, navigation }: any) {
               tester marked up twice. Tapping the venue still opens Maps, which
               is what the ⧉ affordance did. */}
           <View style={styles.factList}>
-            <TouchableOpacity onPress={openInMaps} activeOpacity={0.6} style={styles.venueLine}>
-              <Text style={styles.venueText} numberOfLines={2}>
-                {event.venue_name || event.address || event.city}
-              </Text>
-              <ExternalLink size={14} color={colors.textSecondary} />
-            </TouchableOpacity>
+            {/* An online event has no venue to map: say so, and don't offer a
+                Maps hand-off for an empty address. */}
+            {(event as any).is_online && !event.venue_name && !event.address ? (
+              <View style={styles.venueLine}>
+                <Globe size={16} color={colors.textSecondary} />
+                <Text style={styles.venueText} numberOfLines={1}>
+                  {t('eventDetail.onlineEvent')}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={openInMaps} activeOpacity={0.6} style={styles.venueLine}>
+                <Text style={styles.venueText} numberOfLines={2}>
+                  {event.venue_name || event.address || event.city}
+                </Text>
+                <ExternalLink size={14} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
 
             <Text style={styles.whenText}>
               {startValid && safeFormatForLanguage(startValid, 'EEE, MMM d', language)}
@@ -832,15 +846,25 @@ export default function EventDetailScreen({ route, navigation }: any) {
             </TouchableOpacity>
           )}
 
+          {/* Lineup — who is on the bill (event doc `guestlist`, same records
+              the web renders). Renders nothing when there is no lineup. */}
+          <EventLineupRail guestlist={(event as any).guestlist} gutter={18} />
+
+          {/* The song — a track card that opens Spotify. Nothing when unset. */}
+          <SpotifyTrackCard url={(event as any).spotify_url} />
+
           {/* Venue map — foot of the page, directly above the organizer
               (tester ask): by the time you want the map you have decided to go;
-              up top it pushed the description below the fold. */}
-          <VenueStaticMap
-            event={event}
-            onPress={openInMaps}
-            accessibilityLabel={t('eventDetail.maps.title')}
-            style={styles.venueMap}
-          />
+              up top it pushed the description below the fold. An online event
+              has no venue, so no map. */}
+          {!((event as any).is_online && !event.venue_name && !event.address) && (
+            <VenueStaticMap
+              event={event}
+              onPress={openInMaps}
+              accessibilityLabel={t('eventDetail.maps.title')}
+              style={styles.venueMap}
+            />
+          )}
 
           {/* Organizer — back at the FOOT of the page, reversing the
               byline-above-title experiment (tester ask): read the event first,
