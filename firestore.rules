@@ -402,11 +402,14 @@ service cloud.firestore {
         );
 
       allow create: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid;
+        && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid
+        && request.resource.data.get('clicks', 0) == 0;
 
       allow update: if isSignedIn()
         && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
         && request.resource.data.event_id == resource.data.event_id
+        // `clicks` is bumped only by /api/track/click (Admin SDK).
+        && request.resource.data.get('clicks', 0) == resource.data.get('clicks', 0)
         && request.resource.data.get('tickets_sold', 0) == resource.data.get('tickets_sold', 0)
         && request.resource.data.get('orders_count', 0) == resource.data.get('orders_count', 0)
         && request.resource.data.get('gross_cents', 0) == resource.data.get('gross_cents', 0)
@@ -423,6 +426,24 @@ service cloud.firestore {
     // promo_code_usage: never client-writable, never client-readable (it carries
     // buyer keys and money amounts). Dashboards read it via server APIs.
     match /promoter_sales/{saleId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // Tracking links — organizer campaign URLs with click / order / revenue
+    // counters. Created, renamed and deleted through
+    // /api/organizer/events/{id}/tracking-links; counters are incremented only by
+    // /api/track/click and fulfillment (Admin SDK). Clients may READ their own
+    // event's links and can never write one, so no counter is client-forgeable.
+    match /tracking_links/{linkId} {
+      allow read: if isSignedIn()
+        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Per-(link, order) markers that make tracking-link sale counting
+    // exactly-once. Server-only.
+    match /tracking_link_sales/{markerId} {
       allow read: if false;
       allow write: if false;
     }

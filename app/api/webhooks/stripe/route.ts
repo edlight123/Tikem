@@ -5,6 +5,8 @@ import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, isGuestId } from '@/lib/guest/identity'
 import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
+import { attributionFromStripeMetadata, ticketAttributionFields } from '@/lib/attribution'
+import { recordAttributedSale } from '@/lib/tracking-links'
 import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
 import { onSaleCompleted } from '@/lib/notifications/campaigns'
 import { addTicketToEarnings } from '@/lib/earnings'
@@ -118,6 +120,9 @@ export async function POST(request: Request) {
       const exchangeRateUsed = session.metadata.exchangeRate ? parseFloat(session.metadata.exchangeRate) : null
       const payoutProvider = String(session.metadata.payoutProvider || '').toLowerCase()
       const paymentMethod = payoutProvider === 'stripe_connect' ? 'stripe_connect' : 'stripe'
+      // Visit attribution stamped into the session metadata at
+      // create-checkout-session; carried onto every ticket below.
+      const sessionAttribution = attributionFromStripeMetadata(session.metadata)
 
       // Authoritative oversell gate: atomically reserve inventory BEFORE creating tickets. If the
       // event/tier is now full, the customer has paid but we can't honor it — auto-refund and stop.
@@ -166,6 +171,7 @@ export async function POST(request: Request) {
           exchange_rate_used: exchangeRateUsed,
           payment_method: paymentMethod,
           payment_id: session.payment_intent,
+          ...ticketAttributionFields(sessionAttribution),
           status: 'valid',
           qr_code_data: qrCodeData,
           purchased_at: new Date().toISOString(),
@@ -215,6 +221,7 @@ export async function POST(request: Request) {
                 // earnings ledger reads it; a ticket without it predates the
                 // buyer-pays rollout and was organizer-paid.
                 fee_incidence: session.metadata.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
+                ...ticketAttributionFields(sessionAttribution),
                 purchased_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -285,6 +292,20 @@ export async function POST(request: Request) {
         } catch (promoErr) {
           console.error('[stripe] promo redemption failed (checkout.session)', (promoErr as any)?.message)
         }
+      }
+
+      // Count the order on its tracking link — idempotent per (link, order).
+      if (createdTickets.length > 0) {
+        const unitFace =
+          Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket
+        await recordAttributedSale(sessionAttribution, {
+          eventId: session.metadata.eventId,
+          orderKey: String(session.payment_intent || session.id),
+          quantity,
+          revenueCents: Math.round(unitFace * quantity * 100),
+          currency: originalCurrency,
+          paymentMethod,
+        })
       }
 
       // NOTE: inventory was already reserved/incremented up front by reserveInventoryAtomic (the
@@ -425,6 +446,9 @@ export async function POST(request: Request) {
       const exchangeRateUsed = paymentIntent.metadata.exchangeRate ? parseFloat(paymentIntent.metadata.exchangeRate) : null
       const payoutProvider = String(paymentIntent.metadata.payoutProvider || '').toLowerCase()
       const paymentMethod = payoutProvider === 'stripe_connect' ? 'stripe_connect' : 'stripe'
+      // Visit attribution (tracking link + utm + resolved promoter) stamped at
+      // create-payment-intent; carried onto every ticket below.
+      const piAttribution = attributionFromStripeMetadata(paymentIntent.metadata)
 
       // Authoritative oversell gate: atomically reserve inventory BEFORE creating tickets. If the
       // event/tier is now full, the customer has paid but we can't honor it — auto-refund and stop.
@@ -498,6 +522,7 @@ export async function POST(request: Request) {
           payment_id: paymentIntent.id,
           promoter_id: paymentIntent.metadata.promoterId || null,
           promoter_code: paymentIntent.metadata.promoterCode || null,
+          ...ticketAttributionFields(piAttribution),
           status: 'valid',
           qr_code_data: qrCodeData,
           purchased_at: new Date().toISOString(),
@@ -551,6 +576,7 @@ export async function POST(request: Request) {
                 payment_id: paymentIntent.id,
                 promoter_id: paymentIntent.metadata.promoterId || null,
                 promoter_code: paymentIntent.metadata.promoterCode || null,
+                ...ticketAttributionFields(piAttribution),
                 purchased_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -625,6 +651,23 @@ export async function POST(request: Request) {
         // Withhold only what was actually ledgered: if the row failed to record,
         // the organizer keeps the money and the ledger stays reconcilable.
         if (promoterSale.recorded) promoterCommissionCents = promoterSale.commissionCents
+      }
+
+      // Count the order on its tracking link — idempotent per (link, PaymentIntent),
+      // so a redelivery or the client-confirm path can never double count.
+      if (createdTickets.length > 0) {
+        const unitFace =
+          Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0
+            ? priceInOriginalCurrency
+            : pricePerTicket
+        await recordAttributedSale(piAttribution, {
+          eventId: paymentIntent.metadata.eventId,
+          orderKey: paymentIntent.id,
+          quantity,
+          revenueCents: Math.round(unitFace * quantity * 100),
+          currency: originalCurrency,
+          paymentMethod,
+        })
       }
 
       // Update event earnings for embedded payments as well.

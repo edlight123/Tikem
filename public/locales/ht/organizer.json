@@ -1066,7 +1066,18 @@
     "create_link": "Kreye lyen an",
     "generate_utm": "Jenere lyen ak tag UTM pou swiv trafik ki soti nan divès sous.",
     "new_link": "Nouvo lyen",
-    "new_tracking_link": "Nouvo lyen swivi"
+    "new_tracking_link": "Nouvo lyen swivi",
+    "load_failed": "Nou pa t ka chaje lyen swivi yo",
+    "create_failed": "Nou pa t ka kreye lyen an",
+    "delete_failed": "Nou pa t ka efase lyen an",
+    "delete_confirm": "Efase lyen swivi sa a? Li p ap konte klik ankò; tikè ki deja vann yo kenbe atribisyon yo.",
+    "preview_id_note": "Yon ti idantifyan t= ajoute lè w anrejistre, pou nou ka konte klik ak vant.",
+    "clicks": "Klik",
+    "sales": "Kòmand",
+    "revenue": "Revni",
+    "conversion": "Konvèsyon",
+    "copy": "Kopye",
+    "stats_note": "Nou konte klik yon fwa pa navigatè chak 30 minit. Kòmand ak revni yo konte kòmand peye ak gratis ki fèt apre yon vizit sou lyen an, chak lajan apa."
   },
   "comps": {
     "complimentary_tickets": "Tikè gratis",
@@ -1092,7 +1103,9 @@
     "tickets": "Tikè",
     "add_promoter": "Ajoute yon pwomotè",
     "add_first_promoter": "Ajoute premye pwomotè ou",
-    "send_via_whatsapp": "Voye pa WhatsApp"
+    "send_via_whatsapp": "Voye pa WhatsApp",
+    "clicks": "Klik",
+    "conversion": "Konvèsyon"
   },
   "security": {
     "change_password": "Chanje modpas",

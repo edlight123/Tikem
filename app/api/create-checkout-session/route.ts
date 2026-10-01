@@ -14,6 +14,8 @@ import {
   logSuspiciousActivity 
 } from '@/lib/security'
 import { adminDb } from '@/lib/firebase/admin'
+import { attributionToStripeMetadata } from '@/lib/attribution'
+import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
 import { applicationFeeFor, priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventId, quantity = 1, promoCodeId, fingerprint } = await request.json()
+    const { eventId, quantity = 1, promoCodeId, fingerprint, attribution: rawAttribution } = await request.json()
 
     // Get IP address
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -335,6 +337,8 @@ export async function POST(request: Request) {
         // the organizer earnings ledger knows whether a fee was already collected
         // from the buyer or still has to come out of the organizer's gross.
         feeIncidence: buyerPricing.incidence,
+        // Tracking-link / utm attribution, re-resolved against this event.
+        ...attributionToStripeMetadata(await resolveOrderAttribution(String(eventId), rawAttribution, null)),
       },
     })
 

@@ -23,6 +23,8 @@ import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/
 import { onSaleCompleted } from '@/lib/notifications/campaigns'
 import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
+import { sanitizeAttribution, ticketAttributionFields, withResolvedPromoter } from '@/lib/attribution'
+import { recordAttributedSale } from '@/lib/tracking-links'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, isGuestId } from '@/lib/guest/identity'
 
@@ -216,6 +218,12 @@ export async function fulfillPaidOrder(params: {
     pendingTx.exchange_rate_spread_percent != null ? Number(pendingTx.exchange_rate_spread_percent) : null
   const fxProvider = pendingTx.exchange_rate_provider != null ? String(pendingTx.exchange_rate_provider) : null
   const fxFetchedAt = pendingTx.exchange_rate_fetched_at != null ? String(pendingTx.exchange_rate_fetched_at) : null
+  // Visit attribution stored on the order at initiate (already re-resolved there).
+  // Orders created before attribution existed still carry their promoter code.
+  const attribution = withResolvedPromoter(
+    sanitizeAttribution(pendingTx.attribution),
+    pendingTx.promoter_code || null
+  )
 
   // Authoritative oversell gate: atomically re-check capacity and reserve inventory BEFORE issuing
   // any tickets. Under load this is what actually prevents overselling (the initiate-time check is
@@ -277,6 +285,7 @@ export async function fulfillPaidOrder(params: {
         // the server-only promoter_sales ledger.
         promoter_id: pendingTx.promoter_id || null,
         promoter_code: pendingTx.promoter_code || null,
+        ...ticketAttributionFields(attribution),
         status: 'valid',
         purchased_at: new Date().toISOString(),
         tier_name: selection.tierName || 'General Admission',
@@ -354,6 +363,7 @@ export async function fulfillPaidOrder(params: {
               payment_id: transactionId || orderId,
               promoter_id: pendingTx.promoter_id || null,
               promoter_code: pendingTx.promoter_code || null,
+              ...ticketAttributionFields(attribution),
               purchased_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
@@ -424,6 +434,19 @@ export async function fulfillPaidOrder(params: {
       buyerEmail: pendingTx.guest_email || attendee?.email || null,
     })
     if (promoterSale.recorded) promoterCommissionCents = promoterSale.commissionCents
+  }
+
+  // Count the order on its tracking link — idempotent per (link, order id), so a
+  // gateway callback and the reconcile cron racing on one order count it once.
+  if (createdTickets.length > 0) {
+    await recordAttributedSale(attribution, {
+      eventId: String(pendingTx.event_id),
+      orderKey: orderId,
+      quantity: Number(pendingTx.quantity || createdTickets.length || 1),
+      revenueCents: Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100),
+      currency: eventCurrency,
+      paymentMethod,
+    })
   }
 
   // Update Firestore earnings in event currency.

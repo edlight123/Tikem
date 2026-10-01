@@ -29,6 +29,7 @@ import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, dele
 import { db } from '../config/firebase';
 import { backendJson } from '../lib/api/backend';
 import { getPromoterRef, setPromoterRef } from '../lib/promoterRef';
+import { Attribution, attributionFromParams, sendClickOnce } from '../lib/attribution';
 import { goBackOrHome } from '../lib/goBackOrHome';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -93,6 +94,19 @@ export default function EventDetailScreen({ route, navigation }: any) {
       cancelled = true;
     };
   }, [eventId, (route.params as any)?.ref]);
+  // Tracking-link / utm attribution from the same deep link (`?t=` + utm_*).
+  // Held in memory and threaded into every purchase body as `attribution`; the
+  // server re-resolves it. Opening through a link also counts one click
+  // (deduped per device per link for 30 minutes), fire-and-forget.
+  const rp = (route.params || {}) as Record<string, unknown>;
+  const [attribution, setAttribution] = useState<Attribution | null>(null);
+  useEffect(() => {
+    const fromLink = attributionFromParams(rp);
+    if (!fromLink) return;
+    setAttribution(fromLink);
+    sendClickOnce(eventId, fromLink).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, rp.t, rp.ref, rp.utm_source, rp.utm_medium, rp.utm_campaign]);
   const { user, userProfile } = useAuth();
   const { t, language } = useI18n();
   const { colors } = useTheme();
@@ -1050,6 +1064,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         // Unlike promoCode this is never tier-gated: a free RSVP still credits
         // the promoter (with zero commission).
         refCode={refCode}
+        attribution={attribution}
         onCheckoutFallback={selectedTierId ? handleClaimCheckoutFallback : undefined}
         onSuccess={handleFreeTicketSuccess}
       />
@@ -1116,6 +1131,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         tierId={selectedTierId || undefined}
         promoCodeId={promoCode}
         refCode={refCode}
+        attribution={attribution}
         onSuccess={handlePaymentSuccess}
       />
     </SafeAreaView>

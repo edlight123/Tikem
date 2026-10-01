@@ -19,6 +19,8 @@ import {
 } from '@/lib/webhooks/idempotency'
 import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
+import { attributionFromStripeMetadata, ticketAttributionFields } from '@/lib/attribution'
+import { recordAttributedSale } from '@/lib/tracking-links'
 
 // Lazy load Stripe
 function getStripe() {
@@ -161,6 +163,10 @@ export async function POST(request: Request) {
           return attendeeDoc.exists ? attendeeDoc.data() : null
         })()
 
+    // Visit attribution stamped at create-payment-intent (tracking link + utm +
+    // resolved promoter). Carried onto every ticket, counted on the link once.
+    const attribution = attributionFromStripeMetadata(paymentIntent.metadata)
+
     const createdTickets = []
     for (let i = 0; i < quantity; i++) {
       const eventCurrency = String(paymentIntent.metadata.originalCurrency || '').toUpperCase() || 'USD'
@@ -210,6 +216,7 @@ export async function POST(request: Request) {
         // live in the server-only promoter_sales ledger, never on the ticket.
         promoter_id: paymentIntent.metadata.promoterId || null,
         promoter_code: paymentIntent.metadata.promoterCode || null,
+        ...ticketAttributionFields(attribution),
         status: 'valid',
         purchased_at: FieldValue.serverTimestamp(),
         // Stamp the exact tier id at issuance for reliable scan-time tier lookup by id.
@@ -321,6 +328,22 @@ export async function POST(request: Request) {
         paymentId: paymentIntentId,
         buyerUserId: paymentIntent.metadata.isGuest === 'true' ? null : paymentIntent.metadata.userId,
         buyerEmail: paymentIntent.metadata.guestEmail || attendee?.email || null,
+      })
+    }
+
+    // Count the order on its tracking link. Keyed on the PaymentIntent id — the
+    // same key the webhook uses — so whichever path fulfils, it counts once.
+    {
+      const unitFace = parseFloat(
+        paymentIntent.metadata.priceInOriginalCurrency || paymentIntent.metadata.finalPrice || '0'
+      )
+      await recordAttributedSale(attribution, {
+        eventId: paymentIntent.metadata.eventId,
+        orderKey: paymentIntentId,
+        quantity,
+        revenueCents: Math.round((Number.isFinite(unitFace) ? unitFace : 0) * quantity * 100),
+        currency: String(paymentIntent.metadata.originalCurrency || 'USD').toUpperCase(),
+        paymentMethod: 'stripe',
       })
     }
 

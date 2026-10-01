@@ -33,6 +33,7 @@ import InfoNotice from '../../components/organizer/InfoNotice';
 import { getEventById } from '../../lib/api/organizer';
 import { backendJson } from '../../lib/api/backend';
 import { formatCurrency } from '../../lib/currency';
+import { formatConversion } from '../../lib/attribution';
 
 type RouteParams = {
   OrganizerPromoters: {
@@ -50,6 +51,8 @@ type Promoter = {
   isActive: boolean;
   ticketsSold: number;
   ordersCount: number;
+  /** Link visits (deduped per device / browser per 30 minutes). */
+  clicks: number;
   grossCents: number;
   commissionCents: number;
   currency: string;
@@ -396,6 +399,22 @@ export default function OrganizerPromotersScreen() {
                   </View>
                 </View>
 
+                {/* Funnel: link visits → orders. */}
+                <View style={styles.funnelRow}>
+                  <View style={styles.stat}>
+                    <Text style={styles.statValue}>{p.clicks || 0}</Text>
+                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.clicks')}</Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text style={styles.statValue}>{p.ordersCount}</Text>
+                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.orders')}</Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text style={styles.statValue}>{formatConversion(p.ordersCount, p.clicks || 0)}</Text>
+                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.conversion')}</Text>
+                  </View>
+                </View>
+
                 <View style={styles.actionsRow}>
                   <TouchableOpacity style={styles.actionButton} onPress={() => handleSend(p)}>
                     <Text style={styles.actionText}>{t('organizerPromoters.sendLink')}</Text>
@@ -563,6 +582,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingTop: 12,
       borderTopWidth: 1,
       borderTopColor: colors.border,
+    },
+    funnelRow: {
+      flexDirection: 'row',
+      marginTop: 10,
+      paddingVertical: 10,
+      borderRadius: RADIUS.md,
+      backgroundColor: colors.surfaceRaised,
     },
     stat: {
       flex: 1,

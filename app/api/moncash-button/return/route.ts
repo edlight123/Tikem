@@ -25,6 +25,8 @@ import {
 import { addTicketToEarnings } from '@/lib/earnings'
 import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
+import { sanitizeAttribution, ticketAttributionFields, withResolvedPromoter } from '@/lib/attribution'
+import { recordAttributedSale } from '@/lib/tracking-links'
 
 export const runtime = 'nodejs'
 
@@ -525,6 +527,12 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
       return NextResponse.redirect(new URL('/purchase/failed?reason=sold_out', request.url))
     }
 
+    // Visit attribution stored on the order at initiate (already re-resolved there).
+    const attribution = withResolvedPromoter(
+      sanitizeAttribution((pendingTx as any).attribution),
+      pendingTx.promoter_code || null
+    )
+
     // Create tickets
     const createdTickets: any[] = []
 
@@ -560,6 +568,7 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
           // the server-only promoter_sales ledger.
           promoter_id: pendingTx.promoter_id || null,
           promoter_code: pendingTx.promoter_code || null,
+          ...ticketAttributionFields(attribution),
           status: 'valid',
           purchased_at: new Date().toISOString(),
           tier_name: selection.tierName || 'General Admission',
@@ -633,6 +642,7 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
                 payment_id: transactionId || payment.transNumber || orderId,
                 promoter_id: pendingTx.promoter_id || null,
                 promoter_code: pendingTx.promoter_code || null,
+                ...ticketAttributionFields(attribution),
                 purchased_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -704,6 +714,19 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
         buyerEmail: pendingTx.guest_email || attendee?.email || null,
       })
       if (promoterSale.recorded) promoterCommissionCents = promoterSale.commissionCents
+    }
+
+    // Count the order on its tracking link — idempotent per (link, order id), shared
+    // with the reconcile cron's fulfillPaidOrder so the two can never both count it.
+    if (createdTickets.length > 0) {
+      await recordAttributedSale(attribution, {
+        eventId: String(pendingTx.event_id),
+        orderKey: orderId,
+        quantity: Number(pendingTx.quantity || createdTickets.length || 1),
+        revenueCents: Math.round(Number(pendingTx.original_amount || 0) * 100),
+        currency: eventCurrency,
+        paymentMethod: normalizedPaymentMethod,
+      })
     }
 
     // Update Firestore earnings in event currency.

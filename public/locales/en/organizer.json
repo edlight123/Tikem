@@ -1066,7 +1066,18 @@
     "create_link": "Create link",
     "generate_utm": "Generate UTM-tagged links to track traffic from different sources.",
     "new_link": "New link",
-    "new_tracking_link": "New tracking link"
+    "new_tracking_link": "New tracking link",
+    "load_failed": "Couldn't load tracking links",
+    "create_failed": "Couldn't create the link",
+    "delete_failed": "Couldn't delete the link",
+    "delete_confirm": "Delete this tracking link? Its link stops counting clicks; tickets already sold keep their attribution.",
+    "preview_id_note": "A short t= id is added when you save, so clicks and sales can be counted.",
+    "clicks": "Clicks",
+    "sales": "Orders",
+    "revenue": "Revenue",
+    "conversion": "Conversion",
+    "copy": "Copy",
+    "stats_note": "Clicks are counted once per browser every 30 minutes. Orders and revenue count paid and free orders placed after a visit through the link, each currency kept separately."
   },
   "comps": {
     "complimentary_tickets": "Complimentary tickets",
@@ -1092,7 +1103,9 @@
     "tickets": "Tickets",
     "add_promoter": "Add promoter",
     "add_first_promoter": "Add your first promoter",
-    "send_via_whatsapp": "Send via WhatsApp"
+    "send_via_whatsapp": "Send via WhatsApp",
+    "clicks": "Clicks",
+    "conversion": "Conversion"
   },
   "security": {
     "change_password": "Change Password",

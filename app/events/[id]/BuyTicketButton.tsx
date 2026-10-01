@@ -12,6 +12,8 @@ import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
 import GuestCheckoutForm, { type GuestContactInput } from './GuestCheckoutForm'
 import { paymentNavigationMode } from '@/lib/utils/in-app-browser'
+import { captureAttribution } from '@/lib/attribution-client'
+import type { Attribution } from '@/lib/attribution'
 import dynamic from 'next/dynamic'
 
 const EmbeddedStripePayment = dynamic(() => import('./EmbeddedStripePayment'), { ssr: false })
@@ -108,6 +110,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     } catch {
       // Storage unavailable (private mode) — attribution stays best-effort.
     }
+  }, [eventId])
+  // Tracking-link / utm attribution (`?t=` + utm_*), captured the same way and
+  // sent with every purchase body; the server re-resolves it against the event.
+  const [attribution, setAttribution] = useState<Attribution | null>(null)
+  useEffect(() => {
+    setAttribution(captureAttribution(eventId).attribution)
   }, [eventId])
   const [isMonCashPopupOpen, setIsMonCashPopupOpen] = useState(false)
   const moncashPopupRef = useRef<Window | null>(null)
@@ -588,10 +596,18 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 selections: selections.map(s => ({ tierId: s.tierId, quantity: s.quantity })),
                 ...(promoCodeId ? { promoCode: promoCodeId } : {}),
                 ...(refCode ? { refCode } : {}),
+                ...(attribution ? { attribution } : {}),
                 ...(contact ? { guest: contact } : {}),
                 ...accessBody,
               }
-            : { eventId, quantity, ...(refCode ? { refCode } : {}), ...(contact ? { guest: contact } : {}), ...accessBody }
+            : {
+                eventId,
+                quantity,
+                ...(refCode ? { refCode } : {}),
+                ...(attribution ? { attribution } : {}),
+                ...(contact ? { guest: contact } : {}),
+                ...accessBody,
+              }
         ),
       })
 
@@ -746,6 +762,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             tierId: selectedTierId,
             promoCode,
             ...(refCode ? { refCode } : {}),
+            ...(attribution ? { attribution } : {}),
             tiers,
             ...guestBody,
             ...accessBody,
@@ -837,6 +854,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             tierId: selectedTierId,
             promoCode,
             ...(refCode ? { refCode } : {}),
+            ...(attribution ? { attribution } : {}),
             tiers,
             mobileMoneyProvider: method,
             ...guestBody,
@@ -1466,6 +1484,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           tierId={selectedTierId || undefined}
           promoCodeId={promoCode}
           refCode={refCode}
+          attribution={attribution}
           accessCode={accessCodeRef.current}
           onClose={() => {
             setShowEmbeddedPayment(false)

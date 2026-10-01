@@ -34,6 +34,8 @@ function serializePromoter(id: string, data: any, origin: string) {
     claimed: Boolean(data.claimed_by_uid),
     ticketsSold: Number(data.tickets_sold) || 0,
     ordersCount: Number(data.orders_count) || 0,
+    // Link visits, counted by /api/track/click (deduped per browser per 30 min).
+    clicks: Number(data.clicks) || 0,
     grossCents: Number(data.gross_cents) || 0,
     commissionCents: Number(data.commission_cents) || 0,
     currency: data.currency || 'HTG',
