@@ -44,6 +44,9 @@ import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicke
 import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
 import { createEvent, updateEvent, SaveEventOptions } from '../../lib/api/events';
 import { getEventById } from '../../lib/api/organizer';
+import { db } from '../../config/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { isLiveTier, isQuantityBelowSold, soldQuantityOf } from '../../lib/tierReconcile';
 import { RADIUS } from '../../config/brand';
 import { COUNTRIES, CITIES_BY_COUNTRY } from '../../types/filters';
 import { getDeviceLocationInfo } from '../../utils/deviceLocation';
@@ -83,6 +86,10 @@ type RouteParams = {
 // Per-field inline validation errors, keyed by field name.
 export type FieldErrors = Record<string, string>;
 
+// Unlimited tiers have no real cap; store a large sentinel so downstream
+// availability logic (tickets_available, sold-out checks) keeps working.
+const UNLIMITED_SENTINEL = '1000000';
+
 // Event draft shape - single source of truth
 export interface EventDraft {
   // Basics
@@ -108,6 +115,12 @@ export interface EventDraft {
 
   // Tickets
   ticket_tiers: Array<{
+    // The `ticket_tiers` doc this tier was loaded from (edit mode). Saving
+    // updates that doc in place, so its sold count and every ticket's tier_id
+    // survive. Absent for a tier added in this session (or a duplicate).
+    id?: string;
+    // Already sold against `id` — the floor for `quantity`. Read-only.
+    sold_quantity?: number;
     name: string;
     price: string;
     quantity: string;
@@ -556,15 +569,53 @@ export default function CreateEventFlowRefactored() {
           return `${displayHours}:${minutes} ${ampm}`;
         };
 
+        // The tiers come from the `ticket_tiers` COLLECTION — the canonical
+        // copy, with doc ids and sold counts. The array embedded on the event
+        // doc is display data and is missing entirely on web-created events, so
+        // reading only that showed one default tier, and saving it then wiped
+        // the real ones. The embedded array is the fallback when the
+        // collection has nothing; when both exist, a collection doc is merged
+        // over its embedded twin (by id, else name) so no per-tier field is lost.
+        const embeddedTiers: any[] = Array.isArray(event.ticket_tiers) ? event.ticket_tiers : [];
+        let sourceTiers: any[] = embeddedTiers;
+        try {
+          const tierSnap = await getDocs(
+            query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId))
+          );
+          const docs = tierSnap.docs
+            .map((d) => ({ ...(d.data() as any), id: d.id }))
+            // A tier removed in an earlier edit stays (deactivated) for its
+            // sales history; it never comes back into the editor.
+            .filter(isLiveTier)
+            .sort((a: any, b: any) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+          if (docs.length > 0) {
+            sourceTiers = docs.map((d: any) => {
+              const twin =
+                embeddedTiers.find((e) => e?.id && e.id === d.id) ||
+                embeddedTiers.find(
+                  (e) => !e?.id && String(e?.name ?? '').trim() === String(d.name ?? '').trim()
+                );
+              return { ...(twin || {}), ...d };
+            });
+          }
+        } catch (tierError) {
+          console.error('Error loading ticket tiers; using the embedded copy:', tierError);
+        }
+
         // Convert ticket_tiers from database format (numbers) to form format (strings)
-        const formattedTicketTiers = event.ticket_tiers && Array.isArray(event.ticket_tiers) && event.ticket_tiers.length > 0
-          ? event.ticket_tiers.map((tier: any) => {
-              const unlimited = Boolean(tier.unlimited);
+        const formattedTicketTiers = sourceTiers.length > 0
+          ? sourceTiers.map((tier: any) => {
+              const rawQty = tier.total_quantity ?? tier.quantity ?? tier.available ?? 100;
+              const unlimited = Boolean(tier.unlimited) || Number(rawQty) >= Number(UNLIMITED_SENTINEL);
               return {
+                // Only a real collection doc id — an embedded entry's id is
+                // trusted only once it has matched a doc above.
+                ...(sourceTiers !== embeddedTiers && tier.id ? { id: String(tier.id) } : {}),
+                sold_quantity: soldQuantityOf(tier),
                 name: tier.name || 'General Admission',
                 price: String(tier.price ?? 0),
                 // Unlimited tiers store a large sentinel; don't surface it as the field value.
-                quantity: unlimited ? '' : String(tier.quantity ?? tier.available ?? 100),
+                quantity: unlimited ? '' : String(rawQty),
                 description: tier.description || '',
                 unlimited,
                 // Restore any stored sale window (ISO strings) so editing keeps it.
@@ -932,7 +983,8 @@ export default function CreateEventFlowRefactored() {
     updateDraft({
       ticket_tiers: [
         ...eventDraft.ticket_tiers.slice(0, at),
-        { ...source },
+        // A copy is a NEW tier: no doc id, nothing sold.
+        { ...source, id: undefined, sold_quantity: 0 },
         ...eventDraft.ticket_tiers.slice(at),
       ],
     });
@@ -1233,6 +1285,12 @@ export default function CreateEventFlowRefactored() {
     if (eventDraft.is_rsvp) {
       const cap = parseInt(eventDraft.capacity || '0', 10);
       if (!Number.isFinite(cap) || cap <= 0) errs.capacity = t('organizerCreateEventFlow.validation.capacity');
+      else {
+        const rsvpSold = rsvpSourceTier()?.sold_quantity || 0;
+        if (isQuantityBelowSold(cap, rsvpSold)) {
+          errs.capacity = t('organizerCreateEventFlow.validation.tierQuantityBelowSold').replace('{sold}', String(rsvpSold));
+        }
+      }
     } else {
       eventDraft.ticket_tiers.forEach((tier, i) => {
         if (!tier.name.trim()) errs[`tier_${i}_name`] = t('organizerCreateEventFlow.validation.tierName');
@@ -1243,6 +1301,14 @@ export default function CreateEventFlowRefactored() {
         if (!tier.unlimited) {
           const qty = parseInt(tier.quantity || '0', 10);
           if (!Number.isFinite(qty) || qty <= 0) errs[`tier_${i}_quantity`] = t('organizerCreateEventFlow.validation.tierQuantity');
+          // Can't cap a tier below what it has already sold — checkout reads
+          // total - sold, and the tickets already out there still exist.
+          else if (isQuantityBelowSold(qty, tier.sold_quantity || 0)) {
+            errs[`tier_${i}_quantity`] = t('organizerCreateEventFlow.validation.tierQuantityBelowSold').replace(
+              '{sold}',
+              String(tier.sold_quantity || 0)
+            );
+          }
         }
         // Sale window: when both bounds are set, end must be after start.
         if (tier.sale_start && tier.sale_end) {
@@ -1305,9 +1371,12 @@ export default function CreateEventFlowRefactored() {
 
   // Normalize the draft into the CreateEventData shape. RSVP events collapse to
   // a single free tier sized by the attendance cap.
-  // Unlimited tiers have no real cap; store a large sentinel so downstream
-  // availability logic (tickets_available, sold-out checks) keeps working.
-  const UNLIMITED_SENTINEL = '1000000';
+  // Unlimited tiers store UNLIMITED_SENTINEL (module scope, also read back by
+  // loadEventData) so downstream availability logic keeps working.
+  // In edit mode an RSVP event's single tier must save back into the doc it
+  // came from: a loaded tier with an id that is free (an RSVP tier always is).
+  const rsvpSourceTier = () =>
+    eventDraft.ticket_tiers.find((tier) => tier.id && parseFloat(tier.price) === 0);
   const buildEventData = () => {
     const { lineup, fee_incidence, ...draft } = eventDraft;
     // Fields shared by both paths, written in the web composer's shape: the
@@ -1326,7 +1395,14 @@ export default function CreateEventFlowRefactored() {
         ...shared,
         currency: draft.currency || 'HTG',
         ticket_tiers: [
-          { name: 'RSVP', price: '0', quantity: draft.capacity || '0', description: '', unlimited: false },
+          {
+            ...(rsvpSourceTier()?.id ? { id: rsvpSourceTier()!.id } : {}),
+            name: 'RSVP',
+            price: '0',
+            quantity: draft.capacity || '0',
+            description: '',
+            unlimited: false,
+          },
         ],
       };
     }
@@ -2264,6 +2340,20 @@ export default function CreateEventFlowRefactored() {
                           )}
                         </View>
                       </View>
+                      {/* Live, not only on Save: a tier can't drop below what it
+                          has already sold. */}
+                      {!tier.unlimited &&
+                        isQuantityBelowSold(parseInt(tier.quantity || '0', 10), tier.sold_quantity || 0) && (
+                          <View style={styles.scheduleError}>
+                            <Ionicons name="alert-circle" size={16} color={colors.error} />
+                            <Text style={styles.scheduleErrorText}>
+                              {t('organizerCreateEventFlow.validation.tierQuantityBelowSold').replace(
+                                '{sold}',
+                                String(tier.sold_quantity || 0)
+                              )}
+                            </Text>
+                          </View>
+                        )}
 
                       {/* Unlimited-quantity toggle — teal on-state (semantic) */}
                       <View style={styles.tierToggleRow}>

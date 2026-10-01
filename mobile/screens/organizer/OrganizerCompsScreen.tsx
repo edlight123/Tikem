@@ -95,7 +95,10 @@ export default function OrganizerCompsScreen() {
         getEventById(eventId),
         (async () => {
           const snap = await getDocs(query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId)));
-          const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<TicketTier, 'id'>) }));
+          const rows = snap.docs
+            // A tier removed in an edit is kept only for its history (archived).
+            .filter((d) => (d.data() as any)?.archived !== true)
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<TicketTier, 'id'>) }));
           rows.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
           return rows as TicketTier[];
         })(),

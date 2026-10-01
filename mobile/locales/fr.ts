@@ -2079,6 +2079,7 @@ export default {
       tierName: 'Saisissez un nom de type',
       tierPrice: 'Saisissez un prix valide',
       tierQuantity: 'Saisissez une quantité',
+      tierQuantityBelowSold: '{sold} déjà vendus. La quantité ne peut pas être inférieure.',
       capacity: 'Saisissez une limite',
       fixErrors: 'Veuillez corriger {n} champ(s) pour continuer.',
     },
