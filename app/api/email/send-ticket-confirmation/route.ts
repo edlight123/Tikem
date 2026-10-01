@@ -10,11 +10,13 @@
 //  2. It delivers through the same helper every fulfillment path uses
 //     (lib/tickets/confirmation.ts), so a resend is byte-identical to the original —
 //     including SMS for a guest ticket and WhatsApp for an account one.
+//
+// The recipient resolution itself lives in lib/tickets/resend.ts, shared with the
+// organizer's own resend action (/api/resend-ticket).
 
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
-import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
-import { guestTokenFor } from '@/lib/guest/identity'
+import { resendTicketToHolder } from '@/lib/tickets/resend'
 
 export async function POST(request: Request) {
   try {
@@ -43,66 +45,20 @@ export async function POST(request: Request) {
     }
     const event = { id: eventSnap.id, ...(eventSnap.data() as any) }
 
-    // WHO the ticket belongs to. A guest ticket carries its own contact details; an
-    // account ticket resolves the user document behind `attendee_id`.
-    const isGuestTicket = Boolean(ticket.is_guest) || String(ticket.attendee_id || '').startsWith('guest_')
+    const result = await resendTicketToHolder(ticket, event)
 
-    let recipientEmail: string | null = null
-    let recipientName: string | null = null
-    let recipientPhone: string | null = null
-
-    if (isGuestTicket) {
-      recipientEmail = ticket.guest_email || null
-      recipientName = ticket.attendee_name || null
-      recipientPhone = ticket.guest_phone || null
-    } else if (ticket.attendee_id) {
-      const userSnap = await adminDb.collection('users').doc(String(ticket.attendee_id)).get()
-      const profile = userSnap.exists ? (userSnap.data() as any) : null
-      recipientEmail = profile?.email || null
-      recipientName = profile?.full_name || ticket.attendee_name || null
-      recipientPhone = profile?.phone || profile?.phone_number || null
-    }
-
-    if (!recipientEmail) {
+    if (!result.ok && result.reason === 'no_email') {
       return Response.json(
         { error: 'This ticket has no email address on record to send to.' },
         { status: 422 }
       )
     }
-
-    // A guest's link is re-derived from the order key on their guest order, not stored
-    // and not accepted from the caller.
-    let guestToken: string | null = null
-    if (isGuestTicket) {
-      const orders = await adminDb
-        .collection('guest_orders')
-        .where('guest_id', '==', String(ticket.attendee_id))
-        .limit(1)
-        .get()
-      if (!orders.empty) guestToken = guestTokenFor(orders.docs[0].id)
-    }
-
-    const result = await sendTicketConfirmation({
-      ticketId: String(ticket.id),
-      qrPayload: ticket.qr_code_data || ticket.id,
-      event,
-      recipient: {
-        email: recipientEmail,
-        name: recipientName,
-        phone: recipientPhone,
-        isGuest: isGuestTicket,
-      },
-      quantity: 1,
-      tierName: ticket.tier_name || ticket.ticket_type || null,
-      guestToken,
-      logPrefix: '[resend-confirmation]',
-    })
-
-    if (!result.emailSent) {
+    if (!result.ok) {
       return Response.json({ error: 'Failed to send email' }, { status: 500 })
     }
 
-    return Response.json({ success: true, ...result })
+    const { ok: _ok, ...channels } = result
+    return Response.json({ success: true, ...channels })
   } catch (error) {
     console.error('Error in send-ticket-confirmation:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
