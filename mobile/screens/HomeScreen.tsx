@@ -26,6 +26,7 @@ import { elsewhereEvents, isEventInMetro } from '../data/metros';
 
 import { TikemWordmark } from '../components/TikemWordmark';
 import TrendingSection from '../components/TrendingSection';
+import WorldRail from '../components/WorldRail';
 import ThisWeekSection from '../components/ThisWeekSection';
 import AllEventsPreview from '../components/AllEventsPreview';
 import EventRail from '../components/EventRail';
@@ -473,6 +474,16 @@ export default function HomeScreen({ navigation }: any) {
                 />
               </View>
             )}
+
+            {/* Worlds: always present, so browsing by vibe never depends on
+                tonight's inventory. Each tile opens that world's page. */}
+            <View style={styles.section}>
+              <WorldRail
+                onWorldPress={(world, label) =>
+                  navigation.navigate('CategoryEvents', { world, title: label })
+                }
+              />
+            </View>
 
             {/* Near You */}
             {nearYouEvents.length > 0 && (

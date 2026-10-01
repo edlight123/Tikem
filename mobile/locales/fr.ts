@@ -591,6 +591,20 @@ export default {
   },
   home: {
     discoverMoreTitle: 'découvrir plus',
+    worlds: {
+      title: 'univers',
+      subtitle: 'trouvez votre genre de soirée',
+      sub: {
+      'mizik': 'konpa · rabòday · live',
+      'lavi-lannwit': 'soirées · clubs · lounges',
+      'kilti': 'art · théâtre · festivals',
+      'espo': 'football · basket',
+      'gastronomi': 'cuisine · dégustations · brunch',
+      'biznis': 'conférences · networking',
+      'fanmi': 'famille · enfants · communauté',
+      'eksperyans': 'plages · randonnées · escapades',
+      },
+    },
     discoverMoreSubtitle: 'EXPLOREZ LES CATÉGORIES SELON VOTRE AMBIANCE',
     headline: "À l'affiche",
     loading: 'Chargement des événements…',

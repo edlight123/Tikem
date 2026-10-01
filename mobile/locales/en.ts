@@ -927,6 +927,20 @@ export default {
   },
   home: {
     discoverMoreTitle: 'discover more',
+    worlds: {
+      title: 'worlds',
+      subtitle: 'find your kind of night',
+      sub: {
+      'mizik': 'konpa · rabòday · live',
+      'lavi-lannwit': 'parties · clubs · lounges',
+      'kilti': 'art · theatre · festivals',
+      'espo': 'football · basketball',
+      'gastronomi': 'food · tastings · brunch',
+      'biznis': 'talks · networking',
+      'fanmi': 'family · kids · community',
+      'eksperyans': 'beaches · hikes · trips',
+      },
+    },
     discoverMoreSubtitle: 'EXPLORE CATEGORIES TO FIND YOUR VIBE',
     headline: "What's on",
     loading: 'Loading amazing events...',

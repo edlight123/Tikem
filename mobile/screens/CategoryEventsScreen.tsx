@@ -20,7 +20,7 @@ import { useActiveLocationCopy } from '../lib/locationCopy';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
-import { artForWorld, tileArtForCategory } from '../lib/artLibrary';
+import { artForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
 import { withAlpha } from '../theme/tokens';
 import WhenPickerSheet from '../components/WhenPickerSheet';
 import LocationPickerSheet from '../components/LocationPickerSheet';
@@ -46,7 +46,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
   // `feed` opens one of Home's curated rails as a full page; `category` is the
   // original per-category listing. Exactly one of them is set.
-  const { category, feed, city, title, subtitle } = route.params || {};
+  const { category, feed, city, title, subtitle, world } = route.params || {};
 
   // The header floats (OverlayHeader), so the grid reserves its measured height.
   const { height: headerH, onHeight } = useOverlayHeaderInset();
@@ -77,7 +77,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
   useEffect(() => {
     const load = async () => {
-      if (!category && !feed) {
+      if (!category && !feed && !world) {
         setLoading(false);
         return;
       }
@@ -138,7 +138,10 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
         // No limit: this IS the "view all" page, so it is the rail's rule
         // without the slice.
-        setEvents(feed ? applyHomeFeed(local, feed, { city }) : local);
+        // A world page gathers every category in that world (mizik = Concert +
+        // Music…), mapped with the same worldForCategory the tiles use.
+        const scoped = world ? local.filter((e: any) => worldForCategory(e.category) === world) : local;
+        setEvents(feed ? applyHomeFeed(scoped, feed, { city }) : scoped);
         setElsewhere(
           elsewhereEvents(inCountry, activeMetro).sort(
             (a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0)
@@ -152,7 +155,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
     };
 
     load();
-  }, [category, feed, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
+  }, [category, feed, world, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
 
   const { start: dStart, end: dEnd } = getDateRange(dateFilter, pickedDate);
   const visibleEvents = events.filter((e) => {
@@ -199,12 +202,14 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   // photo under a scrim with "( label )" centered — that scrolls away with the
   // grid. Curated-feed pages ("for you", "this week"…) have no category art
   // and keep the blurred overlay header.
-  const isCategoryPage = !!category;
-  const label = (title || getCategoryLabel(t, category) || category || '').toString().toLowerCase();
+  const isCategoryPage = !!category || !!world;
+  const label = (title || (world ? worldLabel(world) : getCategoryLabel(t, category)) || category || '').toString().toLowerCase();
   // The hero wears the category's WORLD art (Tikèm screenprints) when that
   // world has some; a category with no world (religious, wellness) keeps its
   // original photo. Seeded by the world key, so the page always looks the same.
-  const heroArt = tileArtForCategory(category)?.source ?? categoryArt(category);
+  const heroArt = world
+    ? artForWorld(world, world).source
+    : tileArtForCategory(category)?.source ?? categoryArt(category);
 
   const Hero = isCategoryPage ? (
     <View style={styles.hero}>
@@ -252,7 +257,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {(title || getCategoryLabel(t, category) || category || '').toString().toLowerCase()}
+            {label}
           </Text>
           {/* Carries the rail's own subtitle through, so the page reads as the
               same section you tapped rather than an unlabelled list. */}

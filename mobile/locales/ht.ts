@@ -562,6 +562,20 @@ export default {
   },
   home: {
     discoverMoreTitle: 'dekouvri plis',
+    worlds: {
+      title: 'mond yo',
+      subtitle: 'jwenn sa ki fèt pou ou',
+      sub: {
+      'mizik': 'konpa · rabòday · an dirèk',
+      'lavi-lannwit': 'fèt · klib · lounge',
+      'kilti': 'atizay · teyat · festival',
+      'espo': 'foutbòl · baskèt',
+      'gastronomi': 'manje · degistasyon · brunch',
+      'biznis': 'konferans · rezo',
+      'fanmi': 'fanmi · timoun · kominote',
+      'eksperyans': 'plaj · randone · eskapad',
+      },
+    },
     discoverMoreSubtitle: 'EKSPLORE KATEGORI YO POU JWENN ANBYANS OU',
     headline: 'Kisa k ap fèt',
     loading: 'Nap chaje evènman yo…',
