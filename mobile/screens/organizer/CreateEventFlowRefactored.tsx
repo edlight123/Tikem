@@ -69,6 +69,11 @@ import {
 } from '../../lib/countrySupport';
 import { orderCountriesByMarkets, useDeclaredMarkets } from '../../lib/organizerMarkets';
 import { backendFetch, backendJson } from '../../lib/api/backend';
+import StatusChip from '../../components/StatusChip';
+import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
+import LineupEditor from '../../components/organizer/LineupEditor';
+import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
+import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -117,8 +122,25 @@ export interface EventDraft {
     // by the scan/ticket layer to gate check-in ("Not valid yet" / "Expired").
     valid_from?: string;
     valid_until?: string;
+    // Per-tier options, same Firestore fields as the web composer:
+    // max_per_order (number | null), is_active (hidden = false), enable_waitlist.
+    // '' / undefined max = no per-tier cap.
+    max_per_order?: string;
+    hidden?: boolean;
+    waitlist?: boolean;
   }>;
   currency: string;
+
+  // Online event (`is_online`). Venue, address and city are blanked on save,
+  // as the web composer does.
+  is_online: boolean;
+
+  // Who pays the service fee (`fee_incidence`). '' = not chosen, which means
+  // the country default (feeIncidenceForCountry) — resolved and stamped on save.
+  fee_incidence: FeeIncidence | '';
+
+  // The lineup — artists/hosts/DJs/guests, stored on the doc as `guestlist`.
+  lineup: LineupEntry[];
 
   // Free RSVP path — no paid tiers, a single attendance cap instead.
   is_rsvp: boolean;
@@ -482,6 +504,9 @@ export default function CreateEventFlowRefactored() {
     recurrence_end_date: '',
     is_password_protected: false,
     access_code: '',
+    is_online: false,
+    fee_incidence: '',
+    lineup: [],
   });
 
   // Track keyboard visibility AND height. The height drives the canvas's
@@ -548,6 +573,13 @@ export default function CreateEventFlowRefactored() {
                 // Restore any stored entry-validity window (ISO strings).
                 valid_from: tier.valid_from || undefined,
                 valid_until: tier.valid_until || undefined,
+                // Per-tier options — same fallbacks the web composer hydrates with.
+                max_per_order:
+                  Number(tier.max_per_order ?? tier.maxPerOrder ?? 0) > 0
+                    ? String(tier.max_per_order ?? tier.maxPerOrder)
+                    : '',
+                hidden: (tier.hidden ?? tier.is_active === false) === true,
+                waitlist: Boolean(tier.waitlist ?? tier.enable_waitlist ?? (event as any).enable_waitlist),
               };
             })
           : [{ name: 'General Admission', price: '0', quantity: '100', description: '', unlimited: false }];
@@ -601,6 +633,13 @@ export default function CreateEventFlowRefactored() {
           // stays blank (a blank code on save preserves the existing hash).
           is_password_protected: Boolean((event as any).is_password_protected),
           access_code: '',
+          is_online: Boolean((event as any).is_online),
+          // Only an explicit choice counts; anything else follows the country.
+          fee_incidence:
+            (event as any).fee_incidence === 'buyer' || (event as any).fee_incidence === 'organizer'
+              ? (event as any).fee_incidence
+              : '',
+          lineup: lineupFromEvent((event as any).guestlist),
         });
         // Capture the series membership so edit mode can offer "apply to series".
         setSeriesId((event as any).series_id || null);
@@ -869,6 +908,37 @@ export default function CreateEventFlowRefactored() {
     const newTiers = [...eventDraft.ticket_tiers];
     newTiers[index] = { ...newTiers[index], ...patch };
     updateDraft({ ticket_tiers: newTiers });
+  };
+  // Which tiers have their "Ticket options" disclosure open (closed by default,
+  // so the card stays clean — POSH §2.10 progressive disclosure).
+  const [tierOptionsOpen, setTierOptionsOpen] = useState<Record<number, boolean>>({});
+  // Index-keyed UI state must follow a tier inserted at `at`: everything from
+  // `at` on moves down one, and the copy inherits its source's state.
+  const shiftForInsert = (map: Record<number, boolean>, at: number): Record<number, boolean> => {
+    const next: Record<number, boolean> = {};
+    Object.entries(map).forEach(([k, v]) => {
+      const i = Number(k);
+      next[i >= at ? i + 1 : i] = v;
+    });
+    if (map[at - 1] !== undefined) next[at] = map[at - 1];
+    return next;
+  };
+  // Duplicate a tier (GA → VIP → Table): everything is copied and the copy
+  // lands directly after its source, so only the rename and reprice are left.
+  const duplicateTier = (index: number) => {
+    const source = eventDraft.ticket_tiers[index];
+    if (!source) return;
+    const at = index + 1;
+    updateDraft({
+      ticket_tiers: [
+        ...eventDraft.ticket_tiers.slice(0, at),
+        { ...source },
+        ...eventDraft.ticket_tiers.slice(at),
+      ],
+    });
+    setSalePeriodOpen((prev) => shiftForInsert(prev, at));
+    setValidityPeriodOpen((prev) => shiftForInsert(prev, at));
+    setTierOptionsOpen((prev) => ({ ...shiftForInsert(prev, at), [at]: false }));
   };
   // Free-ticket toggle: on → price '0' & disabled; off → clear back to editable.
   const toggleFreeTier = (index: number, isFree: boolean) => {
@@ -1156,7 +1226,7 @@ export default function CreateEventFlowRefactored() {
   const validateForSubmit = (): boolean => {
     const errs: FieldErrors = {};
     if (!eventDraft.title.trim()) errs.title = t('organizerCreateEventFlow.validation.title');
-    if (!eventDraft.venue_name.trim()) errs.venue_name = t('organizerCreateEventFlow.validation.venue');
+    if (!eventDraft.is_online && !eventDraft.venue_name.trim()) errs.venue_name = t('organizerCreateEventFlow.validation.venue');
     if (!eventDraft.start_date || !eventDraft.start_time) errs.start = t('organizerCreateEventFlow.validation.startDate');
     if (!eventDraft.end_date || !eventDraft.end_time) errs.end = t('organizerCreateEventFlow.validation.endDate');
 
@@ -1239,18 +1309,31 @@ export default function CreateEventFlowRefactored() {
   // availability logic (tickets_available, sold-out checks) keeps working.
   const UNLIMITED_SENTINEL = '1000000';
   const buildEventData = () => {
-    if (eventDraft.is_rsvp) {
+    const { lineup, fee_incidence, ...draft } = eventDraft;
+    // Fields shared by both paths, written in the web composer's shape: the
+    // resolved fee incidence (choice, else country default), the lineup as
+    // `guestlist` records, and an online event's blanked location.
+    const shared = {
+      fee_incidence: incidenceForEvent({ country: draft.country, fee_incidence }),
+      guestlist: lineup.filter((g) => g.name.trim()).map(lineupEntryToRecord),
+      ...(draft.is_online
+        ? { venue_name: '', address: '', city: '', commune: '', department: '' }
+        : {}),
+    };
+    if (draft.is_rsvp) {
       return {
-        ...eventDraft,
-        currency: eventDraft.currency || 'HTG',
+        ...draft,
+        ...shared,
+        currency: draft.currency || 'HTG',
         ticket_tiers: [
-          { name: 'RSVP', price: '0', quantity: eventDraft.capacity || '0', description: '', unlimited: false },
+          { name: 'RSVP', price: '0', quantity: draft.capacity || '0', description: '', unlimited: false },
         ],
       };
     }
     return {
-      ...eventDraft,
-      ticket_tiers: eventDraft.ticket_tiers.map((tier) => ({
+      ...draft,
+      ...shared,
+      ticket_tiers: draft.ticket_tiers.map((tier) => ({
         ...tier,
         quantity: tier.unlimited ? UNLIMITED_SENTINEL : tier.quantity,
       })),
@@ -1366,6 +1449,147 @@ export default function CreateEventFlowRefactored() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ── Per-tier options (behind a disclosure) ──────────────────────────────
+  // Max per order, hidden, waitlist and duplicate — the web composer's tier
+  // detail panel. Collapsed, the row reads back what is switched on, so a
+  // configured tier is legible without opening it.
+  const renderTierOptions = (index: number, tier: Tier) => {
+    const open = !!tierOptionsOpen[index];
+    const limitOn = tier.max_per_order !== undefined && tier.max_per_order !== '';
+    const summary = [
+      tier.hidden ? t('organizerCreateEventFlow.canvas.tierOptions.hiddenLabel') : null,
+      limitOn && Number(tier.max_per_order) > 0
+        ? t('organizerCreateEventFlow.canvas.tierOptions.maxLabel', { n: String(tier.max_per_order) })
+        : null,
+      tier.waitlist ? t('organizerCreateEventFlow.canvas.tierOptions.waitlistLabel') : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    const switchProps = {
+      trackColor: { false: colors.border, true: colors.primary },
+      thumbColor: colors.white,
+      ios_backgroundColor: colors.border,
+    };
+    const step = (delta: number) => {
+      const current = parseInt(tier.max_per_order || '0', 10) || 0;
+      patchTier(index, { max_per_order: String(Math.min(999, Math.max(1, current + delta))) });
+    };
+    return (
+      <>
+        <TouchableOpacity
+          style={styles.tierOptionsToggle}
+          onPress={() => setTierOptionsOpen((prev) => ({ ...prev, [index]: !open }))}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+        >
+          <Ionicons name="options-outline" size={17} color={colors.textSecondary} />
+          <Text style={styles.tierOptionsToggleText}>
+            {open
+              ? t('organizerCreateEventFlow.canvas.tierOptions.hide')
+              : t('organizerCreateEventFlow.canvas.tierOptions.show')}
+          </Text>
+          <Text style={styles.tierOptionsSummary} numberOfLines={1}>
+            {!open ? summary : ''}
+          </Text>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {open && (
+          <View style={styles.tierOptionsPanel}>
+            {/* Limit purchase quantity → max_per_order */}
+            <View style={styles.tierOptionRow}>
+              <View style={styles.settingTextCol}>
+                <Text style={styles.tierToggleLabel}>{t('organizerCreateEventFlow.canvas.tierOptions.limitQty')}</Text>
+                <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.tierOptions.limitQtyHint')}</Text>
+              </View>
+              <Switch
+                value={limitOn}
+                onValueChange={(v) => patchTier(index, { max_per_order: v ? '4' : '' })}
+                accessibilityLabel={t('organizerCreateEventFlow.canvas.tierOptions.limitQty')}
+                {...switchProps}
+              />
+            </View>
+            {limitOn && (
+              <View style={styles.tierOptionRow}>
+                <Text style={[styles.stepperLabel, styles.flexOne]}>
+                  {t('organizerCreateEventFlow.canvas.tierOptions.maxPerOrder')}
+                </Text>
+                <View style={styles.stepper}>
+                  <TouchableOpacity
+                    style={styles.stepperBtnOnRaised}
+                    onPress={() => step(-1)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="remove" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={styles.stepperInput}
+                    value={tier.max_per_order}
+                    onChangeText={(text) => patchTier(index, { max_per_order: text.replace(/[^0-9]/g, '') })}
+                    onEndEditing={() => {
+                      if (!(Number(tier.max_per_order) > 0)) patchTier(index, { max_per_order: '1' });
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    selectionColor={colors.primary}
+                    accessibilityLabel={t('organizerCreateEventFlow.canvas.tierOptions.maxPerOrder')}
+                  />
+                  <TouchableOpacity
+                    style={styles.stepperBtnOnRaised}
+                    onPress={() => step(1)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="add" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Hide this ticket → is_active: false */}
+            <View style={styles.tierOptionRow}>
+              <View style={styles.settingTextCol}>
+                <Text style={styles.tierToggleLabel}>{t('organizerCreateEventFlow.canvas.tierOptions.hideTier')}</Text>
+                <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.tierOptions.hideTierHint')}</Text>
+              </View>
+              <Switch
+                value={!!tier.hidden}
+                onValueChange={(v) => patchTier(index, { hidden: v })}
+                accessibilityLabel={t('organizerCreateEventFlow.canvas.tierOptions.hideTier')}
+                {...switchProps}
+              />
+            </View>
+
+            {/* Per-tier waitlist → enable_waitlist */}
+            <View style={styles.tierOptionRow}>
+              <View style={styles.settingTextCol}>
+                <Text style={styles.tierToggleLabel}>{t('organizerCreateEventFlow.canvas.tierOptions.waitlist')}</Text>
+                <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.tierOptions.waitlistHint')}</Text>
+              </View>
+              <Switch
+                value={!!tier.waitlist}
+                onValueChange={(v) => patchTier(index, { waitlist: v })}
+                accessibilityLabel={t('organizerCreateEventFlow.canvas.tierOptions.waitlist')}
+                {...switchProps}
+              />
+            </View>
+
+            {/* Duplicate — a quiet action, not a switch. */}
+            <TouchableOpacity
+              style={styles.tierDuplicateRow}
+              onPress={() => duplicateTier(index)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+            >
+              <Ionicons name="copy-outline" size={17} color={colors.text} />
+              <Text style={styles.tierDuplicateText}>{t('organizerCreateEventFlow.canvas.tierOptions.duplicate')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </>
+    );
   };
 
   if (loadingEvent) {
@@ -1649,19 +1873,47 @@ export default function CreateEventFlowRefactored() {
                 </View>
               )}
 
-              <InlineTextRow
-                colors={colors}
-                placeholder={t('organizerCreateEvent.location.venueName') + ' *'}
-                value={eventDraft.venue_name}
-                onChangeText={(text) => updateDraft({ venue_name: text })}
-                error={!!errors.venue_name}
-              />
-              <InlineTextRow
-                colors={colors}
-                placeholder={t('organizerCreateEvent.location.streetAddress')}
-                value={eventDraft.address}
-                onChangeText={(text) => updateDraft({ address: text })}
-              />
+              {/* Online event — kept compact, like the web composer. When on,
+                  the venue, address and city fields step aside (country stays:
+                  it still decides the currency and the payout rail). */}
+              <View style={styles.settingRow}>
+                <Ionicons name="globe-outline" size={18} color={colors.textSecondary} />
+                <View style={styles.settingTextCol}>
+                  <Text style={styles.onlineLabel}>{t('organizerCreateEventFlow.canvas.online.title')}</Text>
+                  {eventDraft.is_online && (
+                    <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.online.hint')}</Text>
+                  )}
+                </View>
+                <Switch
+                  value={eventDraft.is_online}
+                  onValueChange={(v) => {
+                    updateDraft({ is_online: v });
+                    if (v) setCommuneListOpen(false);
+                  }}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.white}
+                  ios_backgroundColor={colors.border}
+                  accessibilityLabel={t('organizerCreateEventFlow.canvas.online.title')}
+                />
+              </View>
+
+              {!eventDraft.is_online && (
+                <>
+                  <InlineTextRow
+                    colors={colors}
+                    placeholder={t('organizerCreateEvent.location.venueName') + ' *'}
+                    value={eventDraft.venue_name}
+                    onChangeText={(text) => updateDraft({ venue_name: text })}
+                    error={!!errors.venue_name}
+                  />
+                  <InlineTextRow
+                    colors={colors}
+                    placeholder={t('organizerCreateEvent.location.streetAddress')}
+                    value={eventDraft.address}
+                    onChangeText={(text) => updateDraft({ address: text })}
+                  />
+                </>
+              )}
 
               {/* Country + City — kept minimal for Haiti (POSH omits them). */}
               <View style={styles.chipBlock}>
@@ -1700,7 +1952,7 @@ export default function CreateEventFlowRefactored() {
                 ) : null}
               </View>
 
-              {isHaiti ? (
+              {eventDraft.is_online ? null : isHaiti ? (
                 <>
                   {/* Département → City (arrondissement) → Commune cascade (Haiti) */}
                   <View style={styles.chipBlock}>
@@ -1929,9 +2181,19 @@ export default function CreateEventFlowRefactored() {
                     return (
                     <View key={index} style={styles.tierCard}>
                       <View style={styles.tierHeader}>
-                        <Text style={styles.tierTitle}>
-                          {t('organizerCreateEvent.tickets.tier')} {index + 1}
-                        </Text>
+                        <View style={styles.tierTitleRow}>
+                          <Text style={styles.tierTitle}>
+                            {t('organizerCreateEvent.tickets.tier')} {index + 1}
+                          </Text>
+                          {/* A hidden tier says so on the card itself — a dot and
+                              a label, never a filled pill. */}
+                          {!!tier.hidden && (
+                            <StatusChip
+                              status="neutral"
+                              label={t('organizerCreateEventFlow.canvas.tierOptions.hiddenLabel')}
+                            />
+                          )}
+                        </View>
                         {eventDraft.ticket_tiers.length > 1 && (
                           <TouchableOpacity
                             onPress={() => removeTier(index)}
@@ -2110,6 +2372,8 @@ export default function CreateEventFlowRefactored() {
                           )}
                         </>
                       )}
+
+                      {renderTierOptions(index, tier)}
                     </View>
                     );
                   })}
@@ -2118,8 +2382,27 @@ export default function CreateEventFlowRefactored() {
                     <Ionicons name="add" size={20} color={colors.text} />
                     <Text style={styles.addTierText}>{t('organizerCreateEventFlow.canvas.addTicketType')}</Text>
                   </TouchableOpacity>
+
+                  {/* WHO PAYS THE SERVICE FEE — only meaningful once something
+                      costs money (web parity). */}
+                  {hasPaidTier && (
+                    <FeeIncidenceCard
+                      country={selectedCountry}
+                      currency={eventDraft.currency}
+                      feeIncidence={eventDraft.fee_incidence}
+                      paidPrices={eventDraft.ticket_tiers
+                        .map((tier) => parseFloat(tier.price))
+                        .filter((p) => Number.isFinite(p) && p > 0)}
+                      onChange={(fee_incidence) => updateDraft({ fee_incidence })}
+                    />
+                  )}
                 </>
               )}
+            </View>
+
+            {/* Lineup — artists, hosts, DJs and special guests (`guestlist`). */}
+            <View style={styles.canvasPad}>
+              <LineupEditor value={eventDraft.lineup} onChange={(lineup) => updateDraft({ lineup })} />
             </View>
 
             {/* ── Advanced settings disclosure (POSH Show/Hide advanced settings) ── */}
@@ -3013,9 +3296,84 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     paddingTop: 12,
   },
+  tierTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   tierTitle: {
     fontSize: 15,
     fontWeight: '600',
+    color: colors.text,
+  },
+  // ── Per-tier options disclosure ──
+  tierOptionsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+  },
+  tierOptionsToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  tierOptionsSummary: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'right',
+  },
+  // Inset one brightness step up from the tier card (surface → surfaceRaised).
+  tierOptionsPanel: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  tierOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  flexOne: {
+    flex: 1,
+  },
+  // The panel is already surfaceRaised, so its stepper buttons step back down
+  // to `surface` — still a fill, never the page colour.
+  stepperBtnOnRaised: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  stepperInput: {
+    minWidth: 40,
+    paddingVertical: 4,
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  tierDuplicateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 15,
+  },
+  tierDuplicateText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  onlineLabel: {
+    fontSize: 17,
     color: colors.text,
   },
   tierSplit: {

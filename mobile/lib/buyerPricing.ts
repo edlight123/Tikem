@@ -235,6 +235,27 @@ export function priceOrder(
   };
 }
 
+/**
+ * What the ORGANIZER receives for an order. Display only, for the composer's
+ * pass-the-fee switch.
+ *
+ * The capped platform fee covers payment processing in both models, so the
+ * organizer never pays a separate processing cut:
+ *  - buyer pays the fee   → the organizer nets the face value;
+ *  - organizer absorbs it → the organizer nets face − the capped platform fee.
+ */
+export function organizerNet(
+  faceTotal: number,
+  event: PricingEventLike | null | undefined,
+  options?: { quantity?: number }
+): number {
+  const faceMinor = Math.max(0, toMinor(faceTotal));
+  if (faceMinor <= 0) return 0;
+  if (incidenceForEvent(event) === 'buyer') return fromMinor(faceMinor);
+  const quantity = Math.max(1, Math.floor(options?.quantity ?? 1) || 1);
+  return fromMinor(Math.max(0, faceMinor - platformFeeMinor(faceMinor, event, quantity)));
+}
+
 /** The all-in price of a single ticket — what a listing or a headline advertises. */
 export function advertisedPrice(
   faceValue: number,
