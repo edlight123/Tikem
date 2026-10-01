@@ -51,6 +51,8 @@ import OrganizerPayoutSettingsScreen from '../screens/organizer/OrganizerPayoutS
 import OrganizerPromoCodesScreen from '../screens/organizer/OrganizerPromoCodesScreen';
 import OrganizerCompsScreen from '../screens/organizer/OrganizerCompsScreen';
 import OrganizerPromotersScreen from '../screens/organizer/OrganizerPromotersScreen';
+import OrganizerGuestListScreen from '../screens/organizer/OrganizerGuestListScreen';
+import OrganizerTrackingLinksScreen from '../screens/organizer/OrganizerTrackingLinksScreen';
 import OrganizerMessagesScreen from '../screens/organizer/OrganizerMessagesScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
@@ -132,6 +134,8 @@ export type RootStackParamList = {
   OrganizerOrgTeam: undefined;
   OrganizerPromoCodes: { eventId: string };
   OrganizerPromoters: { eventId: string };
+  OrganizerGuestList: { eventId: string };
+  OrganizerTrackingLinks: { eventId: string };
   OrganizerComps: { eventId: string };
   // Attendee questions. No params = the organizer's whole inbox; an eventId
   // scopes it to one event (how the "new message" notification arrives).
@@ -879,6 +883,16 @@ export default function AppNavigator() {
             <Stack.Screen
               name="OrganizerPromoters"
               component={OrganizerPromotersScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="OrganizerGuestList"
+              component={OrganizerGuestListScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="OrganizerTrackingLinks"
+              component={OrganizerTrackingLinksScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

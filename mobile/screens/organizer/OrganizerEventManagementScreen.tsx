@@ -145,6 +145,14 @@ export default function OrganizerEventManagementScreen() {
     navigation.navigate('OrganizerPromoters', { eventId });
   };
 
+  const handleGuestList = () => {
+    navigation.navigate('OrganizerGuestList', { eventId });
+  };
+
+  const handleTrackingLinks = () => {
+    navigation.navigate('OrganizerTrackingLinks', { eventId });
+  };
+
   const handleEditEvent = () => {
     navigation.navigate('EditEvent', { eventId });
   };
@@ -344,6 +352,8 @@ export default function OrganizerEventManagementScreen() {
             { key: 'comps', icon: 'gift-outline', label: t('organizerEventManagement.actions.comps'), onPress: handleViewComps },
             { key: 'promo', icon: 'pricetag-outline', label: t('organizerEventManagement.actions.promoCodes'), onPress: handlePromoCodes },
             { key: 'promoters', icon: 'megaphone-outline', label: t('organizerEventManagement.actions.promoters'), onPress: handlePromoters },
+            { key: 'guestList', icon: 'list-outline', label: t('organizerEventManagement.actions.guestList'), onPress: handleGuestList },
+            { key: 'tracking', icon: 'link-outline', label: t('organizerEventManagement.actions.trackingLinks'), onPress: handleTrackingLinks },
             { key: 'edit', icon: 'create-outline', label: t('organizerEventManagement.actions.editEvent'), onPress: handleEditEvent },
             { key: 'public', icon: 'eye-outline', label: t('organizerEventManagement.actions.viewPublicPage'), onPress: handleViewPublicPage },
           ]}
