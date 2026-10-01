@@ -294,7 +294,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
               all. Stating the rates without this reads as "deducted from you" in every
               market, which is only true where the organizer bears the fee. */}
           <p className="border-t border-white/10 pt-2 text-xs text-white/45">
-            Card and MonCash processing come out of Tikèm's 10%, never out of your money.
+            Card and MonCash processing come out of Tikèm&rsquo;s 10%, never out of your money.
             When the fee is passed to buyers it is added to what they pay, so you receive
             your full ticket price; when you absorb it, the 10% is deducted from your
             proceeds and nothing else.{' '}
