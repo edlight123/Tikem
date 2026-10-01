@@ -21,9 +21,9 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { resolvePosterTheme } from '../lib/posterGradient';
 import EmptyState from '../components/EmptyState';
+import { artByKey } from '../lib/artLibrary';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import StatusChip from '../components/StatusChip';
-import WhitePillCTA from '../components/WhitePillCTA';
 import SegmentedTabs from '../components/organizer/SegmentedTabs';
 import { format } from 'date-fns';
 import { safeFormatForLanguage } from '../lib/dates';
@@ -406,24 +406,16 @@ export default function TicketsScreen({ navigation }: any) {
         }
       >
         {displayedTickets.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            {/* Just the ticket mark on the canvas — no ring, no gradient disc
-                (beta feedback: the circle was too much). */}
-            <Ticket size={40} color={colors.primary} strokeWidth={1.5} style={styles.emptyIcon} />
-            <Text style={styles.emptyTitle}>
-              {activeTab === 'upcoming' ? t('tickets.emptyUpcomingTitle') : t('tickets.emptyPastTitle')}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {activeTab === 'upcoming' ? t('tickets.emptyUpcomingBody') : t('tickets.emptyPastBody')}
-            </Text>
-            {activeTab === 'upcoming' && (
-              <WhitePillCTA
-                label={t('favorites.explore')}
-                onPress={() => navigation.navigate('Discover')}
-                style={styles.emptyCta}
-              />
-            )}
-          </View>
+          // A poster of Tikèm art instead of a lone icon: an empty wallet
+          // should still feel like a night out waiting to happen.
+          <EmptyState
+            icon={Ticket}
+            art={artByKey(activeTab === 'upcoming' ? 'konpa' : 'twoubadou')}
+            title={activeTab === 'upcoming' ? t('tickets.emptyUpcomingTitle') : t('tickets.emptyPastTitle')}
+            subtitle={activeTab === 'upcoming' ? t('tickets.emptyUpcomingBody') : t('tickets.emptyPastBody')}
+            actionLabel={activeTab === 'upcoming' ? t('favorites.explore') : undefined}
+            onAction={activeTab === 'upcoming' ? () => navigation.navigate('Discover') : undefined}
+          />
         ) : (
           sections.map(section => (
             <View key={section.key}>
@@ -623,30 +615,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  emptyWrap: {
-    alignItems: 'center',
-    paddingTop: 72,
-    paddingHorizontal: 32,
-  },
-  emptyIcon: {
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontFamily: font.serif,
-    fontSize: 24,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  emptyCta: {
-    minWidth: 200,
   },
 });

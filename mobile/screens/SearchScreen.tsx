@@ -25,6 +25,7 @@ import { getCategoryLabel } from '../lib/categories';
 import { radius } from '../theme/tokens';
 import EventListCard from '../components/EventListCard';
 import EmptyState from '../components/EmptyState';
+import { artByKey } from '../lib/artLibrary';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import SectionHeader from '../components/SectionHeader';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -366,6 +367,7 @@ export default function SearchScreen({ navigation }: any) {
             // tap — never widen the results on our own.
             <EmptyState
               icon={SearchIcon}
+              art={artByKey('rara')}
               title={t('search.noResults')}
               subtitle={
                 canWidenSearch

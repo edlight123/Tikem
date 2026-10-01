@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import EmptyState from '../components/EmptyState';
+import { artByKey } from '../lib/artLibrary';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import PosterEventCard from '../components/PosterEventCard';
 import { GridSkeleton } from '../components/Skeleton';
@@ -193,6 +194,7 @@ export default function FavoritesScreen({ navigation }: any) {
         {favoriteEvents.length === 0 ? (
           <EmptyState
             icon={Heart}
+            art={artByKey('labadee')}
             title={t('favorites.emptyTitle')}
             subtitle={t('favorites.emptyBody')}
             actionLabel={t('favorites.explore')}

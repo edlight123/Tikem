@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getCategoryLabel } from '../lib/categories';
+import { NO_ART_FILL, tileArtForCategory } from '../lib/artLibrary';
 import { RADIUS } from '../config/brand';
 
 const { width } = Dimensions.get('window');
@@ -16,16 +17,18 @@ interface CategoryGridProps {
   onCategoryPress: (category: string) => void;
 }
 
-// Category mapping matching the web. `name` is the database value.
+// `name` is the database value. The background is the category's world art
+// from lib/artLibrary (bundled, so the grid renders offline), or a dark
+// neutral fill when that world has no art yet.
 const categories = [
-  { name: 'Music', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop' },
-  { name: 'Sports', image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=300&fit=crop' },
-  { name: 'Food & Drink', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop' },
-  { name: 'Business', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop' },
-  { name: 'Arts & Culture', image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop' },
-  { name: 'Party', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop' },
-  { name: 'Religious', image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&h=300&fit=crop' },
-  { name: 'Education', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop' },
+  'Music',
+  'Sports',
+  'Food & Drink',
+  'Business',
+  'Arts & Culture',
+  'Party',
+  'Religious',
+  'Education',
 ];
 
 const CategoryCard = ({
@@ -33,12 +36,13 @@ const CategoryCard = ({
   onPress,
   styles,
 }: {
-  category: { name: string; image: string };
+  category: string;
   onPress: () => void;
   styles: ReturnType<typeof getStyles>;
 }) => {
   const { t } = useI18n();
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const art = tileArtForCategory(category);
 
   const handlePressIn = () =>
     Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
@@ -53,29 +57,23 @@ const CategoryCard = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
+        accessibilityRole="button"
+        accessibilityLabel={getCategoryLabel(t, category)}
       >
-        <Image
-          source={{ uri: category.image }}
-          style={styles.image}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={200}
-          recyclingKey={category.name}
-        />
-        <LinearGradient
-          colors={['rgba(0, 0, 0, 0.55)', 'rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.15)']}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 0, y: 0 }}
-          style={styles.overlay}
-        />
-        <LinearGradient
-          colors={['rgba(15, 118, 110, 0.55)', 'rgba(15, 118, 110, 0.18)', 'transparent']}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 0, y: 0 }}
-          style={styles.overlay}
-        />
+        {art ? (
+          <>
+            <Image source={art.source} style={styles.image} contentFit="cover" cachePolicy="memory" />
+            {/* Bottom-weighted scrim: bright art up top, the label on dark. */}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.78)']}
+              style={styles.overlay}
+            />
+          </>
+        ) : (
+          <LinearGradient colors={NO_ART_FILL} style={styles.overlay} />
+        )}
         <View style={styles.textContainer}>
-          <Text style={styles.categoryText}>{getCategoryLabel(t, category.name)}</Text>
+          <Text style={styles.categoryText}>{getCategoryLabel(t, category).toLowerCase()}</Text>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -90,10 +88,10 @@ export default function CategoryGrid({ onCategoryPress }: CategoryGridProps) {
     <View style={styles.grid}>
       {categories.map((category) => (
         <CategoryCard
-          key={category.name}
+          key={category}
           category={category}
           styles={styles}
-          onPress={() => onCategoryPress(category.name)}
+          onPress={() => onCategoryPress(category)}
         />
       ))}
     </View>
@@ -131,11 +129,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     categoryText: {
       color: '#FFFFFF',
-      fontSize: 13,
+      fontSize: 15,
       fontWeight: '700',
       textAlign: 'center',
       letterSpacing: 0.2,
-      textShadowColor: 'rgba(0, 0, 0, 0.75)',
+      textShadowColor: 'rgba(0, 0, 0, 0.6)',
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 3,
     },

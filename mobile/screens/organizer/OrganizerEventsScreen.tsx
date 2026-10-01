@@ -26,6 +26,7 @@ import { RADIUS } from '../../config/brand';
 import { font, radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
+import { artByKey } from '../../lib/artLibrary';
 import StatusChip from '../../components/StatusChip';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -234,6 +235,7 @@ export default function OrganizerEventsScreen() {
         {events.length === 0 ? (
           <EmptyState
             icon={Calendar}
+            art={artByKey(eventTab === 'upcoming' ? 'kanaval' : 'galri')}
             title={eventTab === 'upcoming' ? t('organizerEvents.emptyUpcomingTitle') : t('organizerEvents.emptyPastTitle')}
             subtitle={eventTab === 'upcoming'
               ? t('organizerEvents.emptyUpcomingBody')

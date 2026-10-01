@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as Crypto from 'expo-crypto';
+import { isDeviceOnlyImageUri } from '../localImageUri';
 import { hasPaidTier } from '../ticketPricing';
 import { backendJson } from './backend';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
@@ -505,7 +506,7 @@ export async function createEvent(
 
     // Upload image to Firebase Storage if it's a local URI
     let coverImageUrl = eventData.banner_image_url;
-    if (eventData.banner_image_url && eventData.banner_image_url.startsWith('file://')) {
+    if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
       coverImageUrl = await uploadEventImage(organizerId, eventData.banner_image_url);
     }
 
@@ -714,7 +715,7 @@ export async function updateEvent(
   try {
     // Upload image to Firebase Storage if it's a new local URI
     let coverImageUrl = eventData.banner_image_url;
-    if (eventData.banner_image_url && eventData.banner_image_url.startsWith('file://')) {
+    if (isDeviceOnlyImageUri(eventData.banner_image_url)) {
       coverImageUrl = await uploadEventImage(organizerId, eventData.banner_image_url);
     }
 

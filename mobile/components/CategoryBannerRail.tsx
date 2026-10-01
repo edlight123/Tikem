@@ -5,7 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getCategoryLabel } from '../lib/categories';
-import { categoryArt, DISCOVER_CATEGORIES } from '../lib/categoryArt';
+import { DISCOVER_CATEGORIES } from '../lib/categoryArt';
+import { NO_ART_FILL, tileArtForCategory } from '../lib/artLibrary';
 import { radius, withAlpha } from '../theme/tokens';
 
 /**
@@ -29,34 +30,44 @@ export default function CategoryBannerRail({
       <Text style={styles.title}>{t('home.discoverMoreTitle')}</Text>
       <Text style={styles.subtitle}>{t('home.discoverMoreSubtitle')}</Text>
       <View style={styles.stack}>
-        {DISCOVER_CATEGORIES.map((cat, i) => (
-          <TouchableOpacity
-            key={cat}
-            style={styles.banner}
-            activeOpacity={0.88}
-            onPress={() => onCategoryPress(cat)}
-            accessibilityRole="button"
-            accessibilityLabel={getCategoryLabel(t, cat)}
-          >
-            <Image
-              source={categoryArt(cat)}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-            />
-            {/* Edge-to-center scrim so the label reads on any art. */}
-            <LinearGradient
-              colors={[withAlpha('#000000', 0.55), withAlpha('#000000', 0.2), withAlpha('#000000', 0.55)]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Text style={styles.index}>{String(i + 1).padStart(2, '0')}</Text>
-            <Text style={styles.label} numberOfLines={1}>
-              {getCategoryLabel(t, cat).toLowerCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {DISCOVER_CATEGORIES.map((cat, i) => {
+          const art = tileArtForCategory(cat);
+          return (
+            <TouchableOpacity
+              key={cat}
+              style={styles.banner}
+              activeOpacity={0.88}
+              onPress={() => onCategoryPress(cat)}
+              accessibilityRole="button"
+              accessibilityLabel={getCategoryLabel(t, cat)}
+            >
+              {art ? (
+                <>
+                  <Image
+                    source={art.source}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory"
+                  />
+                  {/* Even darkening, heavier at the bottom, so the centred
+                      label reads on bright screenprint art. */}
+                  <LinearGradient
+                    colors={[withAlpha('#000000', 0.38), withAlpha('#000000', 0.5), withAlpha('#000000', 0.72)]}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </>
+              ) : (
+                // A world with no art yet: a dark neutral fill, not a photo
+                // from another world.
+                <LinearGradient colors={NO_ART_FILL} style={StyleSheet.absoluteFill} />
+              )}
+              <Text style={styles.index}>{String(i + 1).padStart(2, '0')}</Text>
+              <Text style={styles.label} numberOfLines={1}>
+                {getCategoryLabel(t, cat).toLowerCase()}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );

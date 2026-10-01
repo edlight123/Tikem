@@ -22,6 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
 import EventFiltersSheet from '../components/EventFiltersSheet';
 import EmptyState from '../components/EmptyState';
+import { artByKey } from '../lib/artLibrary';
 import { Skeleton, DiscoverFeedSkeleton } from '../components/Skeleton';
 import { DateFilter } from '../components/DateChips';
 import WhenPickerSheet from '../components/WhenPickerSheet';
@@ -496,10 +497,12 @@ export default function DiscoverScreen({ navigation, route }: any) {
     emptySubtitle: string,
     emptyAction?: { label: string; onAction: () => void },
     emptyIcon: typeof Search = Search,
+    emptyArt?: string,
   ) =>
     list.length === 0 ? (
       <EmptyState
         icon={emptyIcon}
+        art={emptyArt ? artByKey(emptyArt) : undefined}
         title={emptyTitle}
         subtitle={emptySubtitle}
         actionLabel={emptyAction?.label}
@@ -681,6 +684,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
                       t('discover.noEventsFound'),
                       t('discover.tryAdjusting'),
                       { label: t('discover.clearFilters'), onAction: handleClearFilters },
+                      Search,
+                      'rara',
                     )
                   : renderFeed(
                       feedEvents,
@@ -688,6 +693,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
                       locationCopy.emptySubtitle,
                       { label: t('discover.changeLocation'), onAction: () => setWhereSheetOpen(true) },
                       MapPin,
+                      'citadelle',
                     )}
 
                 <ElsewhereRail
@@ -701,6 +707,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
             {discoverTab === 'following' && (
               <EmptyState
                 icon={Users}
+                art={artByKey('diaspora')}
                 title={t('discover.following.emptyTitle')}
                 subtitle={t('discover.following.emptySubtitle')}
                 actionLabel={t('discover.following.syncContacts')}
@@ -709,7 +716,14 @@ export default function DiscoverScreen({ navigation, route }: any) {
             )}
 
             {discoverTab === 'saved' &&
-              renderFeed(savedEvents, t('discover.saved.emptyTitle'), t('discover.saved.emptySubtitle'))}
+              renderFeed(
+                savedEvents,
+                t('discover.saved.emptyTitle'),
+                t('discover.saved.emptySubtitle'),
+                undefined,
+                Search,
+                'bassinbleu',
+              )}
           </>
         )}
       </ScrollView>

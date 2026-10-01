@@ -20,6 +20,7 @@ import { useActiveLocationCopy } from '../lib/locationCopy';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
+import { artForWorld, tileArtForCategory } from '../lib/artLibrary';
 import { withAlpha } from '../theme/tokens';
 import WhenPickerSheet from '../components/WhenPickerSheet';
 import LocationPickerSheet from '../components/LocationPickerSheet';
@@ -200,18 +201,24 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   // and keep the blurred overlay header.
   const isCategoryPage = !!category;
   const label = (title || getCategoryLabel(t, category) || category || '').toString().toLowerCase();
+  // The hero wears the category's WORLD art (Tikèm screenprints) when that
+  // world has some; a category with no world (religious, wellness) keeps its
+  // original photo. Seeded by the world key, so the page always looks the same.
+  const heroArt = tileArtForCategory(category)?.source ?? categoryArt(category);
 
   const Hero = isCategoryPage ? (
     <View style={styles.hero}>
       <Image
-        source={categoryArt(category)}
+        source={heroArt}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
         cachePolicy="memory-disk"
       />
       <LinearGradient
-        colors={[withAlpha('#000000', 0.25), withAlpha('#000000', 0.35), colors.background]}
-        locations={[0, 0.7, 1]}
+        // The screenprints are brighter than the old photos, so the band under
+        // the centred name sits a step darker; it still melts into the canvas.
+        colors={[withAlpha('#000000', 0.4), withAlpha('#000000', 0.48), colors.background]}
+        locations={[0, 0.62, 1]}
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.heroTitleRow}>
@@ -336,6 +343,9 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
           ListEmptyComponent={
             <EmptyState
               icon={MapPin}
+              // Curated pages ("this week", "free"…) get an art poster; a
+              // category page already opens on its world's art in the hero.
+              art={isCategoryPage ? undefined : artForWorld(null, feed || title || '')}
               title={
                 filtersActive
                   ? t('filters.noMatchTitle')
@@ -436,6 +446,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontSize: 34,
       color: '#FFFFFF',
       maxWidth: '80%',
+      textShadowColor: 'rgba(0,0,0,0.45)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 8,
     },
     // posh sets the name inside soft parentheses — quieter than the name.
     heroParen: {

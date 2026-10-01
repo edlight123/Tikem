@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { generalArt } from '../../lib/artLibrary';
 
 /**
  * The auth (login / sign-up) backdrop is a rotating piece of Haitian artwork —
@@ -14,16 +15,10 @@ import { LinearGradient } from 'expo-linear-gradient';
  *  2. a faint upper-left teal wash — the POSH brand accent, sparing.
  *
  * All pieces are BUNDLED assets, so the screen works offline and on first
- * launch; nothing streams. Swap in commissioned artist pieces here later.
+ * launch; nothing streams. The rotation is the art library's general pool
+ * (lib/artLibrary.ts), so a piece added there joins the login screen too.
  */
-const ART = [
-  require('../../assets/art/art1.jpg'), // Jacmel steps at sunset (hero)
-  require('../../assets/art/art2.jpg'), // tap-tap at sunset
-  require('../../assets/art/art3.jpg'), // moonlit fishing village
-  require('../../assets/art/art4.jpg'), // night market
-  require('../../assets/art/art5.jpg'), // beach konpa
-  require('../../assets/art/art6.jpg'), // beach band
-];
+const ART = generalArt();
 
 export function AuthBackground({ children }: { children?: React.ReactNode }) {
   // Pick one piece per mount so users see the collection rotate across opens.
@@ -31,7 +26,12 @@ export function AuthBackground({ children }: { children?: React.ReactNode }) {
 
   return (
     <View style={styles.root}>
-      <Image source={art} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image
+        source={art.source}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        accessibilityIgnoresInvertColors
+      />
 
       {/* 1 — legibility scrim: darker at top (wordmark) and bottom (form),
              letting the art breathe through the middle. */}
