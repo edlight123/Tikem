@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { processStripeRefund } from '@/lib/refunds'
+import { refundTicket } from '@/lib/tickets/refundExecution'
 import { adminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: Request) {
@@ -67,35 +67,48 @@ export async function POST(request: Request) {
       return Response.json({ success: true, message: 'Refund request denied' })
     }
 
-    // Approve refund - process payment refund
-    let refundAmount = ticket.price
+    // Approve: move the money through the same claim -> refund/queue -> record
+    // mechanics as the organizer refund action and event cancellation
+    // (lib/tickets/refundExecution.ts). That reads the fields purchases actually
+    // write (`payment_id`, `charged_amount` / `charged_currency`), refunds card
+    // sales in the charged currency, reverses the transfer + application fee on
+    // destination charges, and queues mobile money for a manual payout. A
+    // failure puts the request back to 'requested' so the organizer can retry.
+    const res = await refundTicket(String(ticketId), {
+      reason: 'organizer_refund',
+      actorId: user.id,
+      event: { id: event.id, title: event.title || null, organizer_id: event.organizer_id || null },
+      onFailure: 'release',
+      keepRefundReason: true,
+    })
 
-    if (ticket.payment_method === 'stripe' && ticket.payment_intent_id) {
-      const stripeRefund = await processStripeRefund(ticket.payment_intent_id, refundAmount)
-      
-      if (!stripeRefund.success) {
-        return Response.json({ error: stripeRefund.error }, { status: 500 })
-      }
-    } else if (ticket.payment_method === 'moncash' && ticket.transaction_id) {
-      // MonCash refunds typically need manual processing
-      // Update the ticket status and notify organizer to process manually
-      refundAmount = ticket.price
-    }
-
-    // Update ticket status
-    const { error: updateError } = await supabase
-      .from('tickets')
-      .update({
-        status: 'refunded',
-        refund_status: 'approved',
-        refund_amount: refundAmount,
-        refund_processed_at: new Date().toISOString()
-      })
-      .eq('id', ticketId)
-
-    if (updateError) {
-      console.error('Error updating ticket:', updateError)
-      return Response.json({ error: 'Failed to process refund' }, { status: 500 })
+    let refundAmount = 0
+    let refundCurrency: string | null = null
+    let manual = false
+    if (res.outcome === 'refunded' || res.outcome === 'queued') {
+      refundAmount = res.amount
+      refundCurrency = res.currency
+      manual = res.outcome === 'queued'
+    } else if (res.outcome === 'skipped' && res.reason === 'free') {
+      // Nothing was charged: approving just retires the ticket.
+      const nowIso = new Date().toISOString()
+      await adminDb.collection('tickets').doc(String(ticketId)).set(
+        {
+          status: 'refunded',
+          refund_status: 'approved',
+          refund_amount: 0,
+          refund_processed_at: nowIso,
+          updated_at: nowIso,
+        },
+        { merge: true }
+      )
+    } else if (res.outcome === 'skipped') {
+      return Response.json(
+        { error: 'This ticket cannot be refunded automatically', code: res.reason },
+        { status: 409 }
+      )
+    } else {
+      return Response.json({ error: res.error || 'Refund failed', code: 'refund_failed' }, { status: 502 })
     }
 
     // Send confirmation email to attendee
@@ -148,10 +161,14 @@ export async function POST(request: Request) {
       // Don't fail the request if email fails
     }
 
-    return Response.json({ 
-      success: true, 
-      message: 'Refund processed successfully',
-      refundAmount 
+    return Response.json({
+      success: true,
+      message: manual
+        ? 'Refund approved; mobile-money refunds are paid out manually'
+        : 'Refund processed successfully',
+      refundAmount,
+      refundCurrency,
+      manual,
     })
   } catch (error) {
     console.error('Refund processing error:', error)

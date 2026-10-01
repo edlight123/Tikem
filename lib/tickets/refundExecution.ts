@@ -57,6 +57,12 @@ export type RefundTicketOptions = {
    * cancellation run left `refund_status: 'failed'` is retried.
    */
   cancellation?: boolean
+  /**
+   * Buyer refund requests keep the buyer's own words in `refund_reason` (the
+   * organizer's queue shows them), so the refund's cause is recorded in
+   * `refund_source` instead of overwriting it.
+   */
+  keepRefundReason?: boolean
 }
 
 const STRIPE_IDEMPOTENCY_PREFIX = 'tikem-ticket-refund-'
@@ -110,6 +116,7 @@ function planForClaim(ticket: Record<string, any>, cancellation: boolean): { pla
 export async function refundTicket(ticketId: string, options: RefundTicketOptions): Promise<TicketRefundResult> {
   const { reason, actorId, event, onFailure } = options
   const cancellation = Boolean(options.cancellation)
+  const reasonFields = options.keepRefundReason ? { refund_source: reason } : { refund_reason: reason }
   const ref = adminDb.collection('tickets').doc(ticketId)
   const nowIso = new Date().toISOString()
 
@@ -161,7 +168,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
           refund_amount: p.amount,
           refund_currency: p.currency,
           refund_id: res.refundId || null,
-          refund_reason: reason,
+          ...reasonFields,
           refund_error: null,
           refunded_by: actorId,
           refund_processed_at: nowIso,
@@ -184,7 +191,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         refund_status: 'manual_required',
         refund_amount: p.amount,
         refund_currency: p.currency,
-        refund_reason: reason,
+        ...reasonFields,
         refund_error: null,
         refunded_by: actorId,
         refund_requested_at: nowIso,
@@ -216,12 +223,14 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
     const error = e?.message || 'refund_failed'
     const release =
       onFailure === 'release'
-        ? { refund_status: null, refund_claimed_at: null }
+        ? // Put back whatever the claim replaced (e.g. a buyer's 'requested'),
+          // so a failed approval leaves the request in the organizer's queue.
+          { refund_status: ticket.refund_status ?? null, refund_claimed_at: null }
         : {
             status: 'refund_pending',
             refund_status: 'failed',
             refund_error: error,
-            refund_reason: reason,
+            ...reasonFields,
             updated_at: nowIso,
           }
     await ref.set(release, { merge: true }).catch(() => undefined)
