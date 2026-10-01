@@ -294,11 +294,10 @@ export function estimateNetPerTicket(ticketPrice: number): {
 //   buyer (US/CA/FR) — the fee is added on top, so the organizer keeps the full
 //     face value and the buyer sees a total above the ticket price.
 //
-// The buyer model needs a GROSS-UP, not an addition. Stripe's percentage is
-// charged on whatever we actually capture, so simply adding today's fee would
-// leave the platform short by the percentage applied to the fee itself. Solving
-// charge = face + platformFee + (charge * stripePct + stripeFixed) for `charge`
-// keeps the organizer whole at exactly face value.
+// The buyer model is a plain ADDITION: charge = face + platformFee. Stripe's
+// processing is absorbed by the platform out of that fee, so the buyer sees the
+// advertised 10% (capped) and nothing more. It was once a gross-up that passed
+// Stripe's cut to the buyer too, which read as "more than 10%" at checkout.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type FeeIncidence = 'organizer' | 'buyer'
@@ -349,10 +348,11 @@ export function calculateBuyerPricing(
     }
   }
 
-  // Gross-up so the organizer nets exactly the face value.
+  // The buyer pays the platform fee and nothing else; Stripe's cut comes out of
+  // it. Destination charges debit processing from the platform balance, so the
+  // organizer still nets exactly the face value.
   const platformFee = calculateCappedPlatformFee(faceValue, feePercentage, cap)
-  const target = faceValue + platformFee + FEE_CONFIG.STRIPE_FEE_FIXED
-  const chargeAmount = Math.ceil(target / (1 - FEE_CONFIG.STRIPE_FEE_PERCENTAGE))
+  const chargeAmount = faceValue + platformFee
   const processingFee = calculateStripeFee(chargeAmount)
 
   return {
@@ -361,8 +361,7 @@ export function calculateBuyerPricing(
     buyerFee: chargeAmount - faceValue,
     platformFee,
     processingFee,
-    // Rounding can leave a cent either way; never report more than was captured.
-    organizerNet: Math.min(faceValue, chargeAmount - platformFee - processingFee),
+    organizerNet: faceValue,
     incidence,
   }
 }

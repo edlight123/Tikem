@@ -1545,7 +1545,7 @@
     "cards_value": "2.9% + HTG 15 pou chak tranzaksyon",
     "moncash_label": "MonCash:",
     "moncash_value": "2.5% pou chak tranzaksyon",
-    "processing_note": "Se patnè peman nou yo (Stripe, MonCash) ki pran frè sa yo. Kote achtè a peye frè a (Ozetazini, Kanada, Lafrans), yo enkli nan total ki parèt nan moman peman an; ann Ayiti, yo dedwi otomatikman nan peman ou.",
+    "processing_note": "Se patnè peman nou yo (Stripe, MonCash) ki pran frè sa yo. Kote achtè a peye frè a (Ozetazini, Kanada, Lafrans), se Tikèm ki peye yo sou pwòp frè li, kidonk achtè a peye sèlman frè sèvis ki parèt nan moman peman an; ann Ayiti, yo dedwi otomatikman nan peman ou.",
     "payout_schedule": "Orè peman",
     "schedule_a": "Peman yo trete",
     "schedule_strong": "7 jou apre evènman ou fini",

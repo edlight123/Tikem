@@ -244,7 +244,7 @@ export default async function PayoutFeesPage() {
               <p className="text-sm text-white/60">
                 {t(
                   'fees_page.processing_note',
-                  'These fees are collected by our payment partners (Stripe, MonCash). Where the buyer pays the fee (United States, Canada, France) they are included in the total shown at checkout; in Haiti they are deducted from your payout automatically.'
+                  'These fees are collected by our payment partners (Stripe, MonCash). Where the buyer pays the fee (United States, Canada, France) Tikèm covers them out of its own fee, so buyers pay only the service fee shown at checkout; in Haiti they are deducted from your payout automatically.'
                 )}
               </p>
             </div>

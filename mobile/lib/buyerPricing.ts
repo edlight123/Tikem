@@ -4,7 +4,7 @@
  * ⚠️ MIRRORS THE WEB. This is the Expo-side twin of `lib/checkout/buyer-pricing.ts`
  * and `lib/fees.ts` in the web app — mobile is a separate bundle and cannot import
  * from it (the same reason `lib/ticketPricing.ts` and `lib/countrySupport.ts` are
- * duplicated here). The RATES, THE CAP TABLE AND THE GROSS-UP MUST STAY IN STEP
+ * duplicated here). The RATES, THE CAP TABLE AND THE ARITHMETIC MUST STAY IN STEP
  * with `types/platform-settings.ts` and `lib/fees.ts`; if you change one, change
  * both. The server is always authoritative — everything here is display.
  *
@@ -23,9 +23,6 @@
 
 export type FeeIncidence = 'organizer' | 'buyer';
 
-/** Stripe's published US rates — the cost the gross-up has to cover. */
-const STRIPE_FEE_PERCENTAGE = 0.029;
-const STRIPE_FEE_FIXED_MINOR = 30;
 /** Floor on the platform fee, in minor units. */
 const PLATFORM_FEE_MIN_MINOR = 50;
 
@@ -225,11 +222,9 @@ export function priceOrder(
     };
   }
 
-  // Gross up so the organizer nets exactly the face value once the processor has
-  // taken its percentage of the fee itself.
+  // The buyer pays the platform fee only; the platform absorbs Stripe's cut.
   const platformFee = platformFeeMinor(faceMinor, event, quantity);
-  const target = faceMinor + platformFee + STRIPE_FEE_FIXED_MINOR;
-  const chargeMinor = Math.ceil(target / (1 - STRIPE_FEE_PERCENTAGE));
+  const chargeMinor = faceMinor + platformFee;
 
   return {
     incidence,

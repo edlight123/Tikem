@@ -14,7 +14,7 @@
  * @jest-environment node
  */
 
-import { calculateFees, calculateStripeFee, calculateCappedPlatformFee } from '@/lib/fees'
+import { calculateFees, calculateCappedPlatformFee } from '@/lib/fees'
 import { DEFAULT_PLATFORM_SETTINGS } from '@/types/platform-settings'
 import { applicationFeeFor, feeOnTopFor, priceOrder, priceOrderCents } from '@/lib/checkout/buyer-pricing'
 
@@ -83,17 +83,15 @@ describe('US/CA/FR — buyer pays, organizer keeps the face value', () => {
     expect(p.faceValue).toBe(20_00)
   })
 
-  it('leaves the organizer with EXACTLY the face value after Stripe takes its cut', () => {
+  it('leaves the organizer with EXACTLY the face value and pays only the platform fee', () => {
     for (const faceCents of [500, 20_00, 75_50, 250_00, 1_000_00]) {
       const p = priceOrderCents(faceCents, 'US')
       const appFee = applicationFeeFor(p)
       // What Stripe actually transfers on a destination charge.
       expect(p.chargeAmount - appFee).toBe(faceCents)
-      // And the platform is never left short: the fee it collects still covers the
-      // real processing cost of the LARGER amount plus its own commission.
-      expect(appFee).toBeGreaterThanOrEqual(
-        p.platformFee + calculateStripeFee(p.chargeAmount)
-      )
+      // The buyer pays the platform fee and nothing more; Stripe's cut is absorbed.
+      expect(appFee).toBe(p.platformFee)
+      expect(p.buyerFee).toBe(p.platformFee)
     }
   })
 

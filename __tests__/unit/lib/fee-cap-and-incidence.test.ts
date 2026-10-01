@@ -64,9 +64,9 @@ describe('buyer pricing with a cap', () => {
     const uncapped = calculateBuyerPricing(10_000, 'buyer', 0.1)
     const capped = calculateBuyerPricing(10_000, 'buyer', 0.1, { capMinorPerTicket: 500 })
     expect(uncapped.chargeAmount).toBeGreaterThan(capped.chargeAmount)
-    // $100 + $5 capped fee + Stripe's cut, grossed up: ceil(10530 / 0.971).
-    expect(capped.chargeAmount).toBe(10_845)
-    expect(capped.buyerFee).toBe(845)
+    // $100 + the $5 capped fee; Stripe's cut is the platform's to absorb.
+    expect(capped.chargeAmount).toBe(10_500)
+    expect(capped.buyerFee).toBe(500)
   })
 
   it('still leaves the organizer exactly the face value', () => {
@@ -165,10 +165,10 @@ describe('what the buyer sees at each price', () => {
     priceOrder(face, { country: 'US', currency: 'USD' }, { quantity: 1, currency: 'USD' }).buyerFee
 
   it('is unchanged by the cap below $50 and reduced above it', () => {
-    expect(feeFor(20)).toBeCloseTo(2.97, 2) // 10% of $20 = $2, under the cap
-    expect(feeFor(50)).toBeCloseTo(6.96, 2) // 10% of $50 = $5, exactly at the cap
-    expect(feeFor(100)).toBeCloseTo(8.45, 2) // capped at $5, not $10
-    expect(feeFor(200)).toBeCloseTo(11.44, 2) // still $5 of platform fee
+    expect(feeFor(20)).toBeCloseTo(2, 2) // 10% of $20, under the cap
+    expect(feeFor(50)).toBeCloseTo(5, 2) // 10% of $50, exactly at the cap
+    expect(feeFor(100)).toBeCloseTo(5, 2) // capped at $5, not $10
+    expect(feeFor(200)).toBeCloseTo(5, 2) // still $5
   })
 
   it('never exceeds Posh on a $100 ticket', () => {

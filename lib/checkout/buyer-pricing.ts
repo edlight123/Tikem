@@ -1,8 +1,7 @@
 /**
  * WHO PAYS THE FEE, applied to a whole order.
  *
- * `lib/fees.ts` owns the arithmetic (`calculateBuyerPricing` — including the
- * gross-up that keeps the organizer whole) and `lib/country-support.ts` owns the
+ * `lib/fees.ts` owns the arithmetic (`calculateBuyerPricing`) and `lib/country-support.ts` owns the
  * policy (`feeIncidenceForCountry`). Neither knows about orders, currencies in
  * major units, or React. This module is the thin seam between them and the
  * checkout surfaces: it converts an order's FACE TOTAL into "what the buyer is
@@ -218,9 +217,8 @@ export function priceOrder(
  *
  * Under organizer incidence this is platformFee + processingFee — bit for bit
  * what the Stripe path collected before fee incidence existed. Under buyer
- * incidence it is whatever the buyer paid above the face value, so the rounding
- * cent the gross-up may create stays with the platform instead of quietly
- * inflating (or shorting) the organizer's payout.
+ * incidence it is the platform fee the buyer paid on top, so the organizer nets
+ * exactly the face value and Stripe's processing comes out of the platform's share.
  */
 export function applicationFeeFor(pricing: BuyerPricing): number {
   return Math.max(0, Math.min(pricing.chargeAmount, pricing.chargeAmount - pricing.organizerNet))

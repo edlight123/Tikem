@@ -16,8 +16,8 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
  *
  * Preferred over anything this component could work out: it is the same object the
  * charge amount was built from, so the "Pay X" button cannot drift from what the
- * card is actually charged — including the gross-up in buyer-pays markets, where
- * the fee is added on top of the face value.
+ * card is actually charged — including buyer-pays markets, where the fee is added
+ * on top of the face value.
  */
 interface ServerPricing {
   currency: string

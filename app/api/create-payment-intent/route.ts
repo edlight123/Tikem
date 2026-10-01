@@ -311,9 +311,7 @@ export async function POST(request: Request) {
     // ── WHO PAYS THE FEE ────────────────────────────────────────────────────────
     // The face value is what the organizer advertised. Whether the buyer is charged
     // that exact amount or that amount PLUS the fee is a property of the event's
-    // country (lib/country-support.ts), and the arithmetic — including the gross-up
-    // that keeps the organizer whole once Stripe takes its percentage of the fee
-    // itself — belongs to lib/fees.ts. Both are called, never reimplemented.
+    // country (lib/country-support.ts), and the arithmetic belongs to lib/fees.ts. Both are called, never reimplemented.
     //
     // Recomputed here from the event's / tier's own stored price every time: the
     // client sends a quantity and a tier, never a total.
@@ -388,7 +386,7 @@ export async function POST(request: Request) {
       // organizer is owed as the Connect application fee. Under organizer incidence
       // that is platform fee + processing fee (unchanged); under buyer incidence it
       // is the fee the buyer paid on top, so the organizer nets the face value to
-      // the cent and the gross-up's rounding stays with the platform.
+      // the cent; Stripe's processing comes out of the platform's share.
       applicationFeeAmount = applicationFeeFor(buyerPricing)
     }
 
