@@ -360,6 +360,16 @@ const readPublishedEvents = unstable_cache(
         // Auto-hidden after repeated user reports, pending admin review
         // (lib/moderation/reports.ts). Discovery skips it; direct links still work.
         hidden_pending_review: data.hidden_pending_review === true,
+        // The admin Feature star. Missing from this whitelist, it never reached
+        // a single listing: the homepage's picks and the relevance sort both
+        // read it and both always saw `undefined`. `is_featured` is legacy
+        // test data.
+        featured: data.featured === true || data.is_featured === true,
+        // The organizer's absorb/pass-on choice. A card's all-in price depends
+        // on it; without it every diaspora card assumed the country default.
+        fee_incidence: typeof data.fee_incidence === 'string' ? data.fee_incidence : undefined,
+        // Who is on the bill — the homepage hero prints it.
+        guestlist: Array.isArray(data.guestlist) ? data.guestlist : undefined,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       } as Event

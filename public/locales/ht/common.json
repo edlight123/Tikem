@@ -671,7 +671,68 @@
     "create_event": "Kreye yon evènman",
     "get_app": "Telechaje app la",
     "outro": "nou wè aswè a.",
-    "outro_sub": "n a wè aswè a, tikèm"
+    "outro_sub": "n a wè aswè a, tikèm",
+    "ticker": {
+      "aria": "Sa k ap pase sou Tikèm",
+      "live": "Ap fèt kounye a",
+      "going": "{{n}} ap vini",
+      "selling_fast": "Y ap vann vit",
+      "left": "{{n}} ki rete"
+    },
+    "city": {
+      "aria": "Chwazi yon vil",
+      "all": "Tout"
+    },
+    "hero": {
+      "aria": "Evènman an vedèt",
+      "featured": "An vedèt",
+      "coming_up": "Ap vini",
+      "lineup": "Atis",
+      "prev": "Evènman anvan an",
+      "next": "Pwochen evènman",
+      "slide": "{{i}} sou {{n}}",
+      "in_city": "{{world}} nan {{city}}"
+    },
+    "week": {
+      "title": "semèn sa a",
+      "today": "Jodi a",
+      "events_one": "{{count}} evènman",
+      "events_other": "{{count}} evènman",
+      "none": "Anyen pwograme"
+    },
+    "worlds": {
+      "title": "mond yo"
+    },
+    "soon": {
+      "title": "pral kòmanse",
+      "starts_in": "Kòmanse nan",
+      "starting": "Ap kòmanse",
+      "tickets": "Tikè"
+    },
+    "org": {
+      "line": "Ou fè fèt la. Nou okipe pòt la.",
+      "fact_fee": "10% tout ladan, frè peman yo ladan tou",
+      "fact_pay": "MonCash an Ayiti, kat bankè nan dyaspora a",
+      "fact_payout": "Lajan ou debloke 24 a 72 èdtan apre evènman an",
+      "cta": "Kòmanse vann",
+      "how": "Kijan sa mache"
+    },
+    "see_all": "wè tout",
+    "country": {
+      "change": "Chanje peyi",
+      "aria": "Chwazi yon peyi",
+      "HT": "Ayiti",
+      "US": "Etazini",
+      "CA": "Kanada",
+      "FR": "Lafrans"
+    },
+    "elsewhere": {
+      "back_home": "lakay",
+      "back_home_desc": "Pwochen evènman an Ayiti",
+      "abroad_link": "Evènman ayisyen lòt bò dlo",
+      "abroad_title": "evènman ayisyen lòt bò dlo"
+    },
+    "empty": "{{place}}: anyen pwograme pou kounye a."
   },
   "resources": {
     "hero_eyebrow": "gid & resous",

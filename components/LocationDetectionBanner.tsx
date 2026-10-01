@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { updateUserProfile } from '@/lib/firestore/user-profile'
+import { normalizeCountry, saveCountryChoice } from '@/lib/home/country'
 
 interface DetectedLocation {
   detected: boolean
@@ -100,6 +101,11 @@ export function LocationDetectionBanner({
         city: location.mapped.city,
         subarea: detectedSubarea
       }))
+
+      // The server reads the country from this cookie, so an anonymous
+      // visitor's "Use" scopes the homepage too, not just localStorage.
+      const chosen = normalizeCountry(location.mapped.countryCode)
+      if (chosen) saveCountryChoice(chosen)
 
       // Mark as accepted
       localStorage.setItem('location-banner-dismissed', 'accepted')

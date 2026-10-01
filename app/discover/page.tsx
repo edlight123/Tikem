@@ -3,6 +3,8 @@
 export const dynamic = 'force-dynamic'
 
 import { Suspense } from 'react'
+import { cookies } from 'next/headers'
+import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/home/country'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -52,7 +54,17 @@ export default async function DiscoverPage({
       console.error('Failed to fetch user profile:', error)
     }
   }
-  
+
+  // The homepage's country scope reaches here too: an explicit ?country=
+  // (its links carry one), else the saved "Change country" choice, else the
+  // profile's. `?country=abroad` is the homepage's "Haitian events abroad"
+  // door: every country except Haiti.
+  const countryParam = typeof params.country === 'string' ? params.country : ''
+  const showAbroad = countryParam.toLowerCase() === 'abroad'
+  const chosenCountry =
+    normalizeCountry(countryParam) || normalizeCountry((await cookies()).get(COUNTRY_COOKIE)?.value)
+  if (chosenCountry) userCountry = chosenCountry
+
   // Parse filters from URL
   const urlParams = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -145,7 +157,9 @@ export default async function DiscoverPage({
     )
   } else {
     // No query: the feed stays local. Events with no country are Haitian, as before.
-    filteredEvents = filteredEvents.filter(e => (e.country || 'HT') === userCountry)
+    filteredEvents = filteredEvents.filter(e =>
+      showAbroad ? (e.country || 'HT') !== 'HT' : (e.country || 'HT') === userCountry
+    )
   }
 
   // Apply sorting rules

@@ -469,6 +469,79 @@ select:-webkit-autofill {
     }
   }
 
+  /* Homepage live ticker: the film strip's -50% loop, slower and quieter.
+     Pauses while read (hover) or tabbed through (focus-within); reduced
+     motion parks it as a swipeable row. */
+  .ticker-track {
+    animation: ticker-scroll 60s linear infinite;
+  }
+  .ticker:hover .ticker-track,
+  .ticker:focus-within .ticker-track {
+    animation-play-state: paused;
+  }
+  @keyframes ticker-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  /* The one teal thing in the bar: a live event's dot breathes. */
+  .ticker-live {
+    animation: ticker-live 2.4s ease-in-out infinite;
+  }
+  @keyframes ticker-live {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  /* Featured hero: a slide arrives (it does not slide in from anywhere). */
+  .hero-arrive {
+    animation: hero-arrive 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .hero-arrive-bg {
+    animation: hero-arrive-bg 0.9s ease-out both;
+  }
+  @keyframes hero-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes hero-arrive-bg {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track {
+      animation: none;
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .ticker-dup {
+      display: none;
+    }
+    .ticker-live,
+    .hero-arrive,
+    .hero-arrive-bg {
+      animation: none;
+    }
+  }
+
   /* Homepage hero collage: a slow ambient drift — the room breathes, barely. */
   .hero-collage-drift {
     animation: hero-drift 36s ease-in-out infinite alternate;

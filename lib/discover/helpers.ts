@@ -123,6 +123,20 @@ export function getCardPriceDisplay(event: EventPricingLike | null | undefined):
 }
 
 /**
+ * An advertised amount: whole numbers stay whole ("2,500"), anything with
+ * cents shows both digits ("49.50", never "49.5" — the fee gross-up makes
+ * odd cents common). Pinned to en-US so the server render and the hydrating
+ * client agree whatever the reader's browser locale.
+ */
+function formatCardAmount(n: number): string {
+  const cents = Math.round(n * 100) % 100 !== 0
+  return n.toLocaleString('en-US', {
+    minimumFractionDigits: cents ? 2 : 0,
+    maximumFractionDigits: 2,
+  })
+}
+
+/**
  * Price label for an event, honest about mixed free/paid tier sets. Pass a
  * translator (client components) to render it in the reader's language;
  * without one it stays English.
@@ -137,11 +151,11 @@ export function getEventPriceLabel(
     case 'free':
       return t ? t('common.free_label', { defaultValue: 'Free' }) : 'Free'
     case 'from': {
-      const price = `${display.price.toLocaleString()} ${curr}`
+      const price = `${formatCardAmount(display.price)} ${curr}`
       return t ? t('events.card_price_from', { price, defaultValue: `From ${price}` }) : `From ${price}`
     }
     case 'range': {
-      const price = `${display.price.toLocaleString()} ${curr}`
+      const price = `${formatCardAmount(display.price)} ${curr}`
       return t ? t('events.card_price_range', { price, defaultValue: `Free – ${price}` }) : `Free – ${price}`
     }
     default:

@@ -15,12 +15,18 @@ export function SectionHeader({
   description,
   href,
   cta,
+  ctaTone = 'accent',
 }: {
   eyebrow?: string
   title: string
   description?: string
   href?: string
   cta?: string
+  /**
+   * 'quiet' sets the link in muted white. The homepage uses it: there teal is
+   * reserved for state (live, the chosen city, today), so a link can't wear it.
+   */
+  ctaTone?: 'accent' | 'quiet'
 }) {
   return (
     <div className="mb-5 flex items-end justify-between gap-4 sm:mb-6">
@@ -42,7 +48,9 @@ export function SectionHeader({
       {href && cta && (
         <Link
           href={href}
-          className="eyebrow group inline-flex shrink-0 items-center gap-1 whitespace-nowrap pb-1 text-[11px] text-brand-400 transition-colors hover:text-brand-300"
+          className={`eyebrow group inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded pb-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+            ctaTone === 'quiet' ? 'text-white/55 hover:text-white' : 'text-brand-400 hover:text-brand-300'
+          }`}
         >
           {cta}
           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />

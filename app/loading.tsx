@@ -1,23 +1,11 @@
 /**
- * Homepage loading skeleton.
+ * Homepage loading skeleton — drawn to the layout that actually arrives, so
+ * navigating home doesn't flash one page and then replace it with another:
+ * nav, the city row, the featured hero (4:5 poster first on a phone, on the
+ * right from lg), the film strip, then the "this week" strip.
  *
- * Rebuilt from measurements of the live page, because the old one was drawing
- * a layout the site no longer has: a `rounded-3xl` featured-hero card and
- * three horizontal poster rails. That hero was retired in the 2026-08-30
- * refactor in favour of the SAK PASE? statement hero, so every navigation to
- * the homepage flashed a completely different page and then replaced it.
- *
- * What actually loads, measured:
- *   402px  — navbar 56 · hero section 682 (min-h-78vh; tagline at y257,
- *            two title lines at y294 h106, search at y485 h52 w370) ·
- *            film strip 224 with 141x176 cards · then the content container
- *   1280px — navbar 64 · hero 734 (title h292, search w576) · film strip ·
- *            content
- *
- * The floating posters are in here too, at the same slots and opacities as
- * HeroPase's first three, because they occupy real space on the right of the
- * hero and leaving them out would make the skeleton read as a much emptier
- * page than the one arriving.
+ * The live ticker is left out on purpose: it only renders when there is
+ * something true to say, so a skeleton bar for it would usually be a lie.
  */
 
 function Bar({ className = '' }: { className?: string }) {
@@ -26,7 +14,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-black pb-mobile-nav">
       {/* Navbar. `flush` on the real homepage means no bottom rule here. */}
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -39,32 +27,30 @@ export default function Loading() {
                 <Bar className="h-4 w-24" />
               </div>
             </div>
-            <Bar className="h-9 w-20 rounded-full" />
+            <Bar className="h-9 w-20 rounded-xl" />
           </div>
         </div>
       </div>
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative isolate flex min-h-[78vh] items-center overflow-hidden sm:min-h-[84vh]">
-        {/* The scatter. Same three slots HeroPase uses at each width, so the
-            right-hand side of the screen is not empty until the real posters
-            arrive. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="skeleton absolute right-[2%] top-[3%] aspect-[4/5] w-[132px] rotate-3 rounded opacity-50 sm:right-[5%] sm:top-[10%] sm:w-[190px] xl:w-[220px]" />
-          <div className="skeleton absolute right-[5%] bottom-[16%] aspect-[4/5] w-[104px] -rotate-6 rounded opacity-30 sm:right-[26%] sm:bottom-[12%] sm:w-[150px]" />
-          <div className="skeleton absolute left-[2%] bottom-[2%] aspect-[4/5] w-[92px] rotate-6 rounded opacity-25 sm:left-auto sm:right-[3%] sm:bottom-[20%] sm:w-[128px]" />
-        </div>
+      {/* City row */}
+      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-4 sm:px-6 lg:px-8">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Bar key={i} className="h-4 w-20 shrink-0" />
+        ))}
+      </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          {/* tagline */}
-          <Bar className="h-4 w-40" />
-          {/* SAK / PASE? — two lines of clamp(56px,12vw,164px) type */}
-          <Bar className="mt-5 h-[48px] w-[58%] max-w-[420px] sm:h-[92px] xl:h-[140px]" />
-          <Bar className="mt-2 h-[48px] w-[70%] max-w-[520px] sm:h-[92px] xl:h-[140px]" />
-          {/* sub */}
-          <Bar className="mt-6 h-5 w-4/5 max-w-xl" />
-          {/* the search field — w-370 on a phone, max-w-xl from sm */}
-          <div className="skeleton mt-9 h-[52px] w-full max-w-xl rounded-2xl" />
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 pb-12 pt-6 sm:px-6 sm:pt-10 lg:grid-cols-12 lg:items-center lg:gap-12 lg:px-8 lg:pb-20 lg:pt-14">
+        <div className="lg:order-2 lg:col-span-5">
+          <div className="skeleton aspect-[4/5] w-[78%] max-w-[340px] rounded sm:w-[60%] lg:ml-auto lg:w-full lg:max-w-[460px]" />
+        </div>
+        <div className="lg:order-1 lg:col-span-7">
+          <Bar className="h-3 w-24" />
+          <Bar className="mt-5 h-[44px] w-[80%] max-w-[520px] lg:h-[100px]" />
+          <Bar className="mt-2 h-[44px] w-[60%] max-w-[420px] lg:h-[100px]" />
+          <Bar className="mt-6 h-6 w-4/5 max-w-xl" />
+          <Bar className="mt-6 h-3 w-3/5 max-w-md" />
+          <div className="skeleton mt-8 h-12 w-36 rounded-xl" />
         </div>
       </section>
 
@@ -72,29 +58,17 @@ export default function Loading() {
       <section aria-hidden className="overflow-hidden bg-white/[0.03] py-6">
         <div className="flex gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="skeleton h-44 w-[141px] shrink-0 rounded sm:h-56 sm:w-[179px]"
-            />
+            <div key={i} className="skeleton h-44 w-[141px] shrink-0 rounded sm:h-56 sm:w-[179px]" />
           ))}
         </div>
       </section>
 
-      {/* ── FIRST CONTENT SECTION ────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 md:py-12">
-        {/* An editorial section header: eyebrow, serif title, description. */}
-        <Bar className="h-2.5 w-20" />
-        <Bar className="mt-3 h-8 w-52 sm:h-9 sm:w-64" />
-        <Bar className="mt-2 h-4 w-64 max-w-full" />
-
-        {/* The card grid the rails resolve to. */}
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i}>
-              <div className="skeleton aspect-[4/5] w-full rounded-xl" />
-              <Bar className="mt-3 h-4 w-3/4" />
-              <Bar className="mt-2 h-3 w-1/2" />
-            </div>
+      {/* ── THIS WEEK ────────────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8">
+        <Bar className="h-8 w-40" />
+        <div className="mt-6 flex gap-2 overflow-hidden lg:grid lg:grid-cols-7">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="skeleton h-56 w-[42vw] max-w-[180px] shrink-0 rounded-lg lg:w-auto lg:max-w-none" />
           ))}
         </div>
       </div>

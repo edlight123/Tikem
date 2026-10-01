@@ -671,7 +671,68 @@
     "create_event": "Create an event",
     "get_app": "Get the app",
     "outro": "nou wè aswè a.",
-    "outro_sub": "see you tonight, tikèm"
+    "outro_sub": "see you tonight, tikèm",
+    "ticker": {
+      "aria": "Happening on Tikèm",
+      "live": "Live now",
+      "going": "{{n}} going",
+      "selling_fast": "Selling fast",
+      "left": "{{n}} left"
+    },
+    "city": {
+      "aria": "Choose a city",
+      "all": "All"
+    },
+    "hero": {
+      "aria": "Featured events",
+      "featured": "Featured",
+      "coming_up": "Coming up",
+      "lineup": "Lineup",
+      "prev": "Previous event",
+      "next": "Next event",
+      "slide": "{{i}} of {{n}}",
+      "in_city": "{{world}} in {{city}}"
+    },
+    "week": {
+      "title": "this week",
+      "today": "Today",
+      "events_one": "{{count}} event",
+      "events_other": "{{count}} events",
+      "none": "Nothing listed"
+    },
+    "worlds": {
+      "title": "worlds"
+    },
+    "soon": {
+      "title": "starting soon",
+      "starts_in": "Starts in",
+      "starting": "Starting now",
+      "tickets": "Tickets"
+    },
+    "org": {
+      "line": "Throw the fèt. We’ll run the door.",
+      "fact_fee": "10% all-in, processing included",
+      "fact_pay": "MonCash in Haiti, cards in the diaspora",
+      "fact_payout": "Payouts released 24–72 hours after your event",
+      "cta": "Start selling",
+      "how": "How it works"
+    },
+    "see_all": "see all",
+    "country": {
+      "change": "Change country",
+      "aria": "Choose a country",
+      "HT": "Haiti",
+      "US": "United States",
+      "CA": "Canada",
+      "FR": "France"
+    },
+    "elsewhere": {
+      "back_home": "back home",
+      "back_home_desc": "Coming up in Haiti",
+      "abroad_link": "Haitian events abroad",
+      "abroad_title": "haitian events abroad"
+    },
+    "empty": "{{place}}: nothing listed right now."
   },
   "resources": {
     "hero_eyebrow": "guides & resources",

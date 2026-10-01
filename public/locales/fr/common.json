@@ -671,7 +671,68 @@
     "create_event": "Créer un événement",
     "get_app": "Télécharger l’app",
     "outro": "nou wè aswè a.",
-    "outro_sub": "à ce soir, tikèm"
+    "outro_sub": "à ce soir, tikèm",
+    "ticker": {
+      "aria": "En ce moment sur Tikèm",
+      "live": "En cours",
+      "going": "{{n}} participants",
+      "selling_fast": "Ça part vite",
+      "left": "Plus que {{n}}"
+    },
+    "city": {
+      "aria": "Choisir une ville",
+      "all": "Toutes"
+    },
+    "hero": {
+      "aria": "Événements à la une",
+      "featured": "À la une",
+      "coming_up": "Bientôt",
+      "lineup": "Line-up",
+      "prev": "Événement précédent",
+      "next": "Événement suivant",
+      "slide": "{{i}} sur {{n}}",
+      "in_city": "{{world}} à {{city}}"
+    },
+    "week": {
+      "title": "cette semaine",
+      "today": "Aujourd’hui",
+      "events_one": "{{count}} événement",
+      "events_other": "{{count}} événements",
+      "none": "Rien au programme"
+    },
+    "worlds": {
+      "title": "univers"
+    },
+    "soon": {
+      "title": "ça commence bientôt",
+      "starts_in": "Début dans",
+      "starting": "Ça commence",
+      "tickets": "Billets"
+    },
+    "org": {
+      "line": "Organisez la fête. On s’occupe de l’entrée.",
+      "fact_fee": "10 % tout compris, frais de paiement inclus",
+      "fact_pay": "MonCash en Haïti, cartes bancaires dans la diaspora",
+      "fact_payout": "Versements débloqués 24 à 72 heures après l’événement",
+      "cta": "Commencer à vendre",
+      "how": "Comment ça marche"
+    },
+    "see_all": "tout voir",
+    "country": {
+      "change": "Changer de pays",
+      "aria": "Choisir un pays",
+      "HT": "Haïti",
+      "US": "États-Unis",
+      "CA": "Canada",
+      "FR": "France"
+    },
+    "elsewhere": {
+      "back_home": "retour au pays",
+      "back_home_desc": "Bientôt en Haïti",
+      "abroad_link": "Événements haïtiens à l’étranger",
+      "abroad_title": "événements haïtiens à l’étranger"
+    },
+    "empty": "{{place}} : rien au programme pour l’instant."
   },
   "resources": {
     "hero_eyebrow": "guides & ressources",
