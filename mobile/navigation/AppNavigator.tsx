@@ -58,6 +58,9 @@ import OrganizerMessagesScreen from '../screens/organizer/OrganizerMessagesScree
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
+import EventOrdersScreen from '../screens/organizer/EventOrdersScreen';
+import EventOrderDetailScreen from '../screens/organizer/EventOrderDetailScreen';
+import EventAnalyticsScreen from '../screens/organizer/EventAnalyticsScreen';
 import SendEventUpdateScreen from '../screens/organizer/SendEventUpdateScreen';
 
 // Staff Screens
@@ -149,6 +152,11 @@ export type RootStackParamList = {
   CreateEvent: undefined;
   TicketScanner: { eventId: string };
   EventAttendees: { eventId: string };
+  // Per-event orders (web: organizer/events/[id]/orders) and one order's detail.
+  EventOrders: { eventId: string; eventTitle?: string };
+  EventOrderDetail: { eventId: string; orderId: string };
+  // Per-event analytics (web: organizer/events/[id]/analytics).
+  EventAnalytics: { eventId: string; eventTitle?: string };
   SendEventUpdate: { eventId: string; eventTitle: string };
   EditEvent: { eventId: string };
   // New screens
@@ -906,6 +914,9 @@ export default function AppNavigator() {
             <Stack.Screen name="CreateEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
             <Stack.Screen name="TicketScanner" component={TicketScannerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="EventOrders" component={EventOrdersScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="EventOrderDetail" component={EventOrderDetailScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="EventAnalytics" component={EventAnalyticsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SendEventUpdate" component={SendEventUpdateScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
             <Stack.Screen name="RefundRequest" component={RefundRequestScreen} options={{ headerShown: false }} />

@@ -125,6 +125,14 @@ export default function OrganizerEventManagementScreen() {
     navigation.navigate('EventAttendees', { eventId });
   };
 
+  const handleViewOrders = () => {
+    navigation.navigate('EventOrders', { eventId, eventTitle: event?.title });
+  };
+
+  const handleViewAnalytics = () => {
+    navigation.navigate('EventAnalytics', { eventId, eventTitle: event?.title });
+  };
+
   const handleViewEarnings = () => {
     navigation.navigate('OrganizerEventEarnings', { eventId });
   };
@@ -347,8 +355,10 @@ export default function OrganizerEventManagementScreen() {
             { key: 'scan', icon: 'qr-code-outline', label: t('organizerEventManagement.actions.scanTickets'), onPress: handleScanTickets },
             { key: 'staff', icon: 'people-outline', label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
             { key: 'attendees', icon: 'people-circle-outline', label: t('organizerEventManagement.actions.viewAttendees'), onPress: handleViewAttendees },
-            { key: 'messages', icon: 'chatbubble-ellipses-outline', label: t('organizerEventManagement.actions.messages'), onPress: handleViewMessages },
+            { key: 'orders', icon: 'receipt-outline', label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
             { key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings },
+            { key: 'analytics', icon: 'bar-chart-outline', label: t('organizerEventManagement.actions.analytics'), onPress: handleViewAnalytics },
+            { key: 'messages', icon: 'chatbubble-ellipses-outline', label: t('organizerEventManagement.actions.messages'), onPress: handleViewMessages },
             { key: 'comps', icon: 'gift-outline', label: t('organizerEventManagement.actions.comps'), onPress: handleViewComps },
             { key: 'promo', icon: 'pricetag-outline', label: t('organizerEventManagement.actions.promoCodes'), onPress: handlePromoCodes },
             { key: 'promoters', icon: 'megaphone-outline', label: t('organizerEventManagement.actions.promoters'), onPress: handlePromoters },
