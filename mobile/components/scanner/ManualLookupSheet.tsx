@@ -35,6 +35,8 @@ interface ManualLookupSheetProps {
   /** True when the guest list could not be loaded (offline with no cache, or
       no attendee-list permission). Code entry still works. */
   listUnavailable?: boolean;
+  /** Door-only staff: the list is the server's door list (name, tier, code; no email). */
+  doorOnly?: boolean;
   /** Runs the SAME validation + check-in path as a camera scan. */
   onSelect: (ticketId: string) => void;
 }
@@ -52,6 +54,7 @@ export default function ManualLookupSheet({
   onClose,
   guests,
   listUnavailable,
+  doorOnly,
   onSelect,
 }: ManualLookupSheetProps) {
   const { t } = useI18n();
@@ -94,7 +97,9 @@ export default function ManualLookupSheet({
 
   const subtitle = listUnavailable
     ? t('doorScanner.lookup.listUnavailable')
-    : t('doorScanner.lookup.guestCount').replace('{count}', String(guests.length));
+    : doorOnly
+      ? t('doorScanner.door.lookupSubtitle').replace('{count}', String(guests.length))
+      : t('doorScanner.lookup.guestCount').replace('{count}', String(guests.length));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -130,7 +135,7 @@ export default function ManualLookupSheet({
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder={t('doorScanner.lookup.placeholder')}
+              placeholder={t(doorOnly ? 'doorScanner.door.placeholder' : 'doorScanner.lookup.placeholder')}
               placeholderTextColor={colors.textTertiary}
               style={styles.searchInput}
               autoFocus

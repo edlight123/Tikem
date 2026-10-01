@@ -2904,6 +2904,18 @@ export default {
       checkedIn: 'Entré',
       notValid: 'Non valide',
     },
+    door: {
+      notOnList: 'Ce billet ne figure pas sur la liste de l’entrée.',
+      noAccess: 'Vous n’avez plus accès au contrôle des entrées pour cet événement.',
+      lookupSubtitle: '{count} invités sur la liste de l’entrée',
+      placeholder: 'Nom ou code du billet',
+    },
+    sync: {
+      pendingOne: '{count} entrée en attente de synchronisation',
+      pendingMany: '{count} entrées en attente de synchronisation',
+      alreadyInElsewhere: 'Déjà entré par une autre porte',
+      refusedOnSync: 'Refusé à la synchronisation',
+    },
   },
 
   // Notification preferences (buyer + organizer).

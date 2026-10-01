@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { Ticket } from 'lucide-react-native';
 import { auth } from '../../config/firebase';
@@ -24,6 +24,7 @@ import WhitePillCTA from '../../components/WhitePillCTA';
 import { Skeleton } from '../../components/Skeleton';
 import { useAppAlert } from '../../components/AppAlert';
 import { radius } from '../../theme/tokens';
+import { flushCheckInQueue } from '../../lib/doorCheckIn';
 
 export default function StaffScanScreen() {
   const { colors } = useTheme();
@@ -37,6 +38,14 @@ export default function StaffScanScreen() {
   const tabBarSpace = useTabBarSpace();
 
   const { events, loading, refreshing, refresh } = useStaffEvents();
+
+  // Check-ins a door-only phone queued while offline are replayed whenever
+  // staff come back here, not only while the scanner is open.
+  useFocusEffect(
+    useCallback(() => {
+      if (uid) flushCheckInQueue(uid).catch(() => {});
+    }, [uid]),
+  );
   const [selectedEvent, setSelectedEvent] = useState<StaffEventSummary | null>(null);
   const [showEventSelector, setShowEventSelector] = useState(false);
 

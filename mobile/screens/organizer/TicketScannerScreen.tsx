@@ -35,6 +35,20 @@ import {
   scanOutcomeFeedback,
   scanReadFeedback,
 } from '../../lib/scanner';
+import { DoorRow, findDoorRow, judgeDoorRow, markRowCheckedIn, DoorVerdict } from '../../lib/doorList';
+import {
+  DoorAccessError,
+  DoorListPayload,
+  clearCachedDoorList,
+  fetchDoorList,
+  flushCheckInQueue,
+  loadCachedDoorList,
+  pendingCount,
+  postCheckIn,
+  queueCheckIn,
+  readCheckInQueue,
+  saveDoorList,
+} from '../../lib/doorCheckIn';
 import { Camera, DoorOpen, Search, Vibrate, VibrateOff } from 'lucide-react-native';
 
 type RouteParams = {
@@ -72,6 +86,16 @@ type ScanResult = {
   /** How this ticket reached the scanner — recorded as check_in_method. */
   method?: CheckInMethod;
 };
+
+/**
+ * 'full'  = owner / staff with view-attendees: reads tickets from Firestore.
+ * 'door'  = staff with check-in only: the server's door list + check-in API,
+ *           because Firestore rules (rightly) refuse them a tickets read.
+ */
+type AccessMode = 'full' | 'door';
+
+/** What a commit did: written (or queued), or refused by the server's re-check. */
+type CommitOutcome = { synced: boolean; refused?: ScanResult };
 
 type RecentScan = {
   key: string;
@@ -188,6 +212,15 @@ export default function TicketScannerScreen() {
   const eventMetaRef = useRef<{ allowReentry: boolean }>({ allowReentry: false });
   const [eventTitle, setEventTitle] = useState<string>('');
 
+  // Door-only access (check-in permission without view-attendees). The ref is
+  // what the scan path reads; the state drives the UI.
+  const [accessMode, setAccessMode] = useState<AccessMode | null>(null);
+  const accessModeRef = useRef<AccessMode | null>(null);
+  const doorRowsRef = useRef<DoorRow[] | null>(null);
+  const doorListAtRef = useRef<string>('');
+  const [pendingSync, setPendingSync] = useState(0);
+  const uid = auth.currentUser?.uid || '';
+
   useEffect(() => {
     if (permission && !permission.granted) {
       requestPermission();
@@ -231,6 +264,15 @@ export default function TicketScannerScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Door-only staff never attempt the tickets read: rules would refuse it.
+      const mode = await resolveAccessMode();
+      if (cancelled) return;
+      if (mode === 'door') {
+        enterDoorMode();
+        await loadDoorList({ isCancelled: () => cancelled });
+        return;
+      }
+      setMode('full');
       try {
         const snap = await getDocs(query(collection(db, 'tickets'), where('event_id', '==', eventId)));
         if (cancelled) return;
@@ -263,7 +305,15 @@ export default function TicketScannerScreen() {
         setGuests(list);
         setListUnavailable(false);
         await AsyncStorage.setItem(`scanner_manifest_${eventId}`, JSON.stringify(manifest));
-      } catch (e) {
+      } catch (e: any) {
+        // Rules refused the read (e.g. an admin, or a member doc we could not
+        // read): this user is door-only here. Switch to the server door list.
+        if (e?.code === 'permission-denied') {
+          if (cancelled) return;
+          enterDoorMode();
+          await loadDoorList({ isCancelled: () => cancelled });
+          return;
+        }
         // No connectivity and nothing cached yet — fall back to any manifest we
         // stored on a previous (online) visit so offline validation still works.
         try {
@@ -299,8 +349,27 @@ export default function TicketScannerScreen() {
     return () => {
       cancelled = true;
       AsyncStorage.removeItem(`scanner_manifest_${eventId}`).catch(() => {});
+      // Same lifetime for the door list. The offline QUEUE is kept: it holds
+      // check-ins that have not reached the server yet.
+      clearCachedDoorList(eventId);
     };
   }, [eventId]);
+
+  // Door mode: replay queued check-ins and refresh the list while the screen is
+  // open. Every 15s try the queue; once a minute (or right after a sync) pull a
+  // fresh list so check-ins made at other doors show as "already in".
+  useEffect(() => {
+    if (accessMode !== 'door' || !uid) return;
+    let ticks = 0;
+    const timer = setInterval(async () => {
+      ticks += 1;
+      const report = await syncQueue();
+      if ((report && report.synced + report.conflicts.length > 0 && report.remaining === 0) || ticks % 4 === 0) {
+        await loadDoorList({ silent: true });
+      }
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [accessMode, uid, eventId]);
 
   const feedback = useCallback(
     (outcome: ScanOutcome) => {
@@ -322,6 +391,254 @@ export default function TicketScannerScreen() {
     setGuests((prev) =>
       prev ? prev.map((g) => (g.ticketId === ticketId ? { ...g, checkedIn: true } : g)) : prev,
     );
+    if (doorRowsRef.current) {
+      doorRowsRef.current = markRowCheckedIn(doorRowsRef.current, ticketId);
+      persistDoorList();
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Door-only access (check-in permission, no view-attendees permission)
+  // ---------------------------------------------------------------------------
+
+  const offlineRef = useRef(false);
+  useEffect(() => {
+    offlineRef.current = isOffline;
+  }, [isOffline]);
+
+  const setMode = (m: AccessMode) => {
+    accessModeRef.current = m;
+    setAccessMode(m);
+  };
+  const enterDoorMode = () => setMode('door');
+
+  /**
+   * The member doc is readable by its own user, so the scanner can tell up
+   * front whether this person may read tickets. Organizer, owner role or
+   * viewAttendees === true keeps the Firestore path; check-in-only staff use
+   * the door list. Anything unreadable starts on the Firestore path, which
+   * drops to the door list if rules deny the read.
+   */
+  const resolveAccessMode = async (): Promise<AccessMode> => {
+    if (!uid) return 'full';
+    try {
+      const eventSnap = await getDoc(doc(db, 'events', eventId));
+      const ev = eventSnap.exists() ? (eventSnap.data() as any) : null;
+      if (ev && (ev.organizer_id === uid || ev.organizerId === uid)) return 'full';
+      const memberSnap = await getDoc(doc(db, 'events', eventId, 'members', uid));
+      if (!memberSnap.exists()) return 'full';
+      const m = memberSnap.data() as any;
+      if (m?.role === 'owner') return 'full';
+      return m?.permissions?.viewAttendees === true ? 'full' : 'door';
+    } catch {
+      return 'full';
+    }
+  };
+
+  const eventTitleRef = useRef('');
+  useEffect(() => {
+    eventTitleRef.current = eventTitle;
+  }, [eventTitle]);
+
+  const persistDoorList = () => {
+    const rows = doorRowsRef.current;
+    if (!rows) return;
+    saveDoorList(eventId, {
+      event: { id: eventId, title: eventTitleRef.current, allowReentry: eventMetaRef.current.allowReentry },
+      rows,
+      generatedAt: doorListAtRef.current || new Date().toISOString(),
+    });
+  };
+
+  const applyDoorList = (payload: DoorListPayload, fromCache: boolean) => {
+    doorRowsRef.current = payload.rows;
+    doorListAtRef.current = payload.generatedAt;
+    eventMetaRef.current = { allowReentry: payload.event.allowReentry };
+    if (payload.event.title) setEventTitle(payload.event.title);
+    // Name and tier only: the door list carries no email to search by.
+    setGuests(
+      payload.rows.map((r) => ({
+        ticketId: r.id,
+        name: r.name,
+        email: '',
+        tier: r.tier,
+        checkedIn: r.checkedIn,
+        live: r.live,
+      })),
+    );
+    setOfflineReady(payload.rows.length);
+    setListUnavailable(false);
+    setIsOffline(fromCache);
+  };
+
+  const loadDoorList = async (opts: { silent?: boolean; isCancelled?: () => boolean } = {}) => {
+    try {
+      const payload = await fetchDoorList(eventId);
+      if (opts.isCancelled?.()) return;
+      // A fresh list does not know about check-ins still sitting in this
+      // device's queue. Keep those guests "in" so a re-scan is not re-admitted.
+      let rows = payload.rows;
+      if (uid) {
+        const queued = (await readCheckInQueue(uid)).filter((q) => q.eventId === eventId);
+        for (const q of queued) rows = markRowCheckedIn(rows, q.ticketId);
+      }
+      applyDoorList({ ...payload, rows }, false);
+      persistDoorList();
+    } catch (e) {
+      if (opts.isCancelled?.()) return;
+      if (e instanceof DoorAccessError) {
+        if (!opts.silent) {
+          setListUnavailable(true);
+          setGuests([]);
+        }
+      } else if (opts.silent) {
+        setIsOffline(true);
+      } else {
+        const cached = await loadCachedDoorList(eventId);
+        if (opts.isCancelled?.()) return;
+        if (cached) {
+          applyDoorList(cached, true);
+        } else {
+          setIsOffline(true);
+          setListUnavailable(true);
+          setGuests([]);
+        }
+      }
+    }
+    if (uid) setPendingSync(await pendingCount(uid, eventId));
+    if (!opts.silent) syncQueue();
+  };
+
+  const syncingRef = useRef(false);
+  const syncQueue = async () => {
+    if (!uid || syncingRef.current) return null;
+    syncingRef.current = true;
+    try {
+      if ((await pendingCount(uid, eventId)) === 0) {
+        setPendingSync(0);
+        return null;
+      }
+      const report = await flushCheckInQueue(uid, eventId);
+      setPendingSync(report.remaining);
+      if (report.synced + report.conflicts.length > 0) setIsOffline(report.remaining > 0);
+      // A guest admitted here offline but refused when it synced (already in at
+      // another door, refunded meanwhile) shows in the recent list.
+      for (const c of report.conflicts) {
+        const elsewhere = c.verdict === 'ALREADY_CHECKED_IN';
+        recordScan(
+          c.item.name,
+          elsewhere ? 'warning' : 'invalid',
+          elsewhere ? t('doorScanner.sync.alreadyInElsewhere') : t('doorScanner.sync.refusedOnSync'),
+        );
+      }
+      return report;
+    } catch {
+      return null;
+    } finally {
+      syncingRef.current = false;
+    }
+  };
+
+  const doorVerdictToResult = (row: DoorRow | null, verdict: DoorVerdict, method: CheckInMethod): ScanResult => {
+    const attendeeName = row?.name || t('common.attendee');
+    const tierName = row?.tier || t('common.generalAdmission');
+    switch (verdict) {
+      case 'NOT_FOUND':
+        return { status: 'NOT_FOUND', message: t('doorScanner.door.notOnList') };
+      case 'WRONG_EVENT':
+        return { status: 'WRONG_EVENT', message: t('organizerTicketScanner.results.wrongEvent') };
+      case 'EXPIRED':
+        return { status: 'EXPIRED', attendeeName, tierName, message: t('organizerTicketScanner.results.expired') };
+      case 'CANCELLED':
+        return { status: 'CANCELLED', attendeeName, tierName, message: t('organizerTicketScanner.results.cancelled') };
+      case 'ALREADY_CHECKED_IN': {
+        const at = row?.checkedInAt ? new Date(row.checkedInAt) : undefined;
+        const checkedInTime = at && !isNaN(at.getTime()) ? at : undefined;
+        return {
+          status: 'ALREADY_CHECKED_IN',
+          attendeeName,
+          tierName,
+          ticketId: row?.id,
+          method,
+          checkedInTime,
+          message: checkedInTime
+            ? `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${checkedInTime.toLocaleString(locale)}`
+            : t('organizerTicketScanner.results.alreadyCheckedIn'),
+        };
+      }
+      case 'OUTSIDE_WINDOW':
+        return {
+          status: 'VALID',
+          attendeeName,
+          tierName,
+          ticketId: row?.id,
+          method,
+          validityBlock:
+            computeTierValidityBlock({ valid_from: row?.validFrom, valid_until: row?.validUntil }, locale, t) ||
+            t('organizerCreateEventFlow.canvas.ticketExpired'),
+        };
+      default:
+        return { status: 'VALID', attendeeName, tierName, ticketId: row?.id, method };
+    }
+  };
+
+  /** Door-mode twin of validateTicket: judged against the door list (works offline). */
+  const validateFromDoorList = async (scanned: string, method: CheckInMethod): Promise<ScanResult> => {
+    let row = doorRowsRef.current ? findDoorRow(doorRowsRef.current, scanned) : null;
+    // Not on the list yet (bought after it loaded): refresh once while online.
+    if (!row && !offlineRef.current) {
+      await loadDoorList({ silent: true });
+      row = doorRowsRef.current ? findDoorRow(doorRowsRef.current, scanned) : null;
+    }
+    if (!doorRowsRef.current) {
+      return { status: 'ERROR', message: t('organizerTicketScanner.results.offlineNotCached') };
+    }
+    const { verdict } = judgeDoorRow(row, { allowReentry: eventMetaRef.current.allowReentry });
+    return doorVerdictToResult(row, verdict, method);
+  };
+
+  /**
+   * Door-mode commit: the server re-judges inside a transaction. If the server
+   * cannot be reached, the check-in is queued on the device (and marked in
+   * locally so a re-scan reads "already in"), then synced when back online.
+   */
+  const commitDoorCheckIn = async (
+    ticketId: string,
+    method: CheckInMethod,
+    opts: { reentry?: boolean; override?: boolean },
+  ): Promise<CommitOutcome> => {
+    const body = {
+      ticketId,
+      method,
+      // The entry point is only chosen in door mode, so only door mode records it.
+      entryPoint: doorMode ? entryPoint : null,
+      reentry: Boolean(opts.reentry),
+      override: Boolean(opts.override),
+    };
+    try {
+      const res = await postCheckIn(eventId, body);
+      setIsOffline(false);
+      if (res.verdict === 'CHECKED_IN' || (res.verdict === 'ALREADY_CHECKED_IN' && res.mine)) {
+        markGuestCheckedIn(ticketId);
+        return { synced: true };
+      }
+      // Refused on the server's re-check (another door got there first, or the
+      // list was stale). The server's row is the truth.
+      if (res.row && doorRowsRef.current) {
+        const fresh = res.row;
+        doorRowsRef.current = doorRowsRef.current.map((r) => (r.id === fresh.id ? fresh : r));
+        if (fresh.checkedIn) markGuestCheckedIn(fresh.id);
+      }
+      return { synced: true, refused: doorVerdictToResult(res.row, res.verdict, method) };
+    } catch (e) {
+      if (e instanceof DoorAccessError) throw new Error(t('doorScanner.door.noAccess'));
+      const name = doorRowsRef.current?.find((r) => r.id === ticketId)?.name || '';
+      const count = uid ? await queueCheckIn(uid, { eventId, name, ...body }) : 0;
+      setPendingSync(count);
+      setIsOffline(true);
+      markGuestCheckedIn(ticketId);
+      return { synced: false };
+    }
   };
 
   /**
@@ -331,6 +648,7 @@ export default function TicketScannerScreen() {
    * window). Offline this is served from the cache warmed on mount.
    */
   const validateTicket = async (ticketId: string, method: CheckInMethod): Promise<ScanResult> => {
+    if (accessModeRef.current === 'door') return validateFromDoorList(ticketId, method);
     try {
       // Get ticket from Firestore. Offline this is served from the in-session
       // cache warmed on mount; `fromCache` tells us we're offline so the banner
@@ -469,6 +787,12 @@ export default function TicketScannerScreen() {
         method,
       };
     } catch (error: any) {
+      // Rules refused this ticket read: this user is door-only here.
+      if (error?.code === 'permission-denied') {
+        enterDoorMode();
+        await loadDoorList();
+        return validateFromDoorList(ticketId, method);
+      }
       console.error('Error checking in ticket:', error);
       // 'unavailable' = offline and this ticket wasn't in the pre-loaded cache
       // (e.g. app relaunched with no signal). Guide staff to reconnect once.
@@ -497,8 +821,9 @@ export default function TicketScannerScreen() {
   const commitCheckIn = async (
     ticketId: string,
     method: CheckInMethod,
-    opts: { reentry?: boolean } = {},
-  ): Promise<{ synced: boolean }> => {
+    opts: { reentry?: boolean; override?: boolean } = {},
+  ): Promise<CommitOutcome> => {
+    if (accessModeRef.current === 'door') return commitDoorCheckIn(ticketId, method, opts);
     const payload: Record<string, any> = {
       checked_in: true,
       checked_in_at: serverTimestamp(),
@@ -556,7 +881,13 @@ export default function TicketScannerScreen() {
     if (!r.ticketId) return;
     const method = r.method ?? 'scan';
     try {
-      const { synced } = await commitCheckIn(r.ticketId, method, opts);
+      const { synced, refused } = await commitCheckIn(r.ticketId, method, opts);
+      if (refused) {
+        feedback(outcomeOf(refused));
+        recordScan(refused.attendeeName || r.attendeeName, outcomeOf(refused), recentLabelOf(refused));
+        setDoorResult(toDoorResult(refused));
+        return;
+      }
       feedback('valid');
       recordScan(r.attendeeName, 'valid', t('doorScanner.recent.admitted'));
       setDoorResult({
@@ -645,11 +976,26 @@ export default function TicketScannerScreen() {
     }, 350);
   };
 
+  /** The server's re-check refused a check-in the sheet offered: show why. */
+  const showRefused = (refused: ScanResult) => {
+    feedback(outcomeOf(refused));
+    recordScan(refused.attendeeName, outcomeOf(refused), recentLabelOf(refused));
+    setScanResult(refused);
+  };
+
   const handleConfirmCheckIn = async () => {
     if (!scanResult || scanResult.status !== 'VALID' || !scanResult.ticketId) return;
 
     try {
-      const { synced } = await commitCheckIn(scanResult.ticketId, scanResult.method ?? 'scan');
+      const { synced, refused } = await commitCheckIn(scanResult.ticketId, scanResult.method ?? 'scan', {
+        // The override button shares this handler. Outside the entry window it
+        // is the only way in, and the server must be told it was deliberate.
+        override: Boolean(scanResult.validityBlock),
+      });
+      if (refused) {
+        showRefused(refused);
+        return;
+      }
       feedback('valid');
       recordScan(scanResult.attendeeName, 'valid', t('doorScanner.recent.admitted'));
 
@@ -678,7 +1024,11 @@ export default function TicketScannerScreen() {
   const handleAllowReentrySheet = async () => {
     if (!scanResult?.ticketId) return;
     try {
-      const { synced } = await commitCheckIn(scanResult.ticketId, scanResult.method ?? 'scan', { reentry: true });
+      const { synced, refused } = await commitCheckIn(scanResult.ticketId, scanResult.method ?? 'scan', { reentry: true });
+      if (refused) {
+        showRefused(refused);
+        return;
+      }
       feedback('valid');
       recordScan(scanResult.attendeeName, 'valid', t('doorScanner.recent.reentry'));
       setScanResult({
@@ -971,6 +1321,20 @@ export default function TicketScannerScreen() {
             </Text>
           </View>
         )}
+
+        {/* Door-only access: check-ins this phone admitted while offline and
+            has not delivered yet. Cleared as the queue syncs. */}
+        {accessMode === 'door' && pendingSync > 0 && (
+          <View style={[styles.statusStrip, { backgroundColor: T.amberMuted }]}>
+            <Ionicons name="sync-outline" size={15} color={T.amber} />
+            <Text style={[styles.statusStripText, { color: T.amber }]} numberOfLines={1}>
+              {(pendingSync === 1 ? t('doorScanner.sync.pendingOne') : t('doorScanner.sync.pendingMany')).replace(
+                '{count}',
+                String(pendingSync),
+              )}
+            </Text>
+          </View>
+        )}
       </View>
 
       <ManualLookupSheet
@@ -978,6 +1342,7 @@ export default function TicketScannerScreen() {
         onClose={() => setShowLookup(false)}
         guests={guests ?? []}
         listUnavailable={listUnavailable}
+        doorOnly={accessMode === 'door'}
         onSelect={handleManualSelect}
       />
 
