@@ -131,7 +131,7 @@ export type RootStackParamList = {
   // `event` seeds the Manage Event screen with the list's already-loaded fields
   // for an instant first paint; it then refreshes the fuller data in the background.
   OrganizerEventManagement: { eventId: string; event?: OrganizerEvent };
-  OrganizerEventEarnings: { eventId: string };
+  OrganizerEventEarnings: { eventId: string; autoWithdraw?: boolean };
   OrganizerEarningsHub: undefined;
   OrganizerPayoutSettings: undefined;
   OrganizerEventStaff: { eventId: string };
@@ -150,7 +150,7 @@ export type RootStackParamList = {
   GovernmentIDUpload: { onComplete?: () => void };
   SelfieUpload: { onComplete?: () => void };
   CreateEvent: undefined;
-  TicketScanner: { eventId: string };
+  TicketScanner: { eventId: string; openLookup?: boolean; doorMode?: boolean };
   EventAttendees: { eventId: string };
   // Per-event orders (web: organizer/events/[id]/orders) and one order's detail.
   EventOrders: { eventId: string; eventTitle?: string };

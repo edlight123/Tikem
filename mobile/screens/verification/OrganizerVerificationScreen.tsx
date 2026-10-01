@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -21,7 +21,10 @@ import {
   type VerificationRequest,
 } from '../../lib/verification';
 import { useAppAlert } from '../../components/AppAlert';
-import OverlayHeader, { useOverlayHeaderInset } from '../../components/OverlayHeader';
+import { useOverlayHeaderInset } from '../../components/OverlayHeader';
+import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
+import SectionHeader from '../../components/SectionHeader';
+import WhitePillCTA from '../../components/WhitePillCTA';
 import StatusChip from '../../components/StatusChip';
 import { radius } from '../../theme/tokens';
 
@@ -45,6 +48,20 @@ export default function OrganizerVerificationScreen() {
   useEffect(() => {
     loadVerificationRequest();
   }, [userProfile?.id]);
+
+  // Coming back from a step screen: refresh, so a finished step shows its
+  // check without relying on the step calling onComplete.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      loadVerificationRequest();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userProfile?.id])
+  );
 
   const loadVerificationRequest = async () => {
     if (!userProfile?.id) return;
@@ -85,13 +102,6 @@ export default function OrganizerVerificationScreen() {
     return getStepStatus(stepId) === 'complete';
   };
 
-  const calculateProgress = () => {
-    if (!request) return 0;
-    const steps = Object.values(request.steps).filter((s: any) => s.required);
-    const completed = steps.filter((s: any) => s.status === 'complete').length;
-    return Math.round((completed / steps.length) * 100);
-  };
-
   const canSubmit = () => {
     if (!request) return false;
     if ((LOCKED_STATUSES as readonly string[]).includes(request.status)) return false;
@@ -126,196 +136,148 @@ export default function OrganizerVerificationScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
         <Text style={styles.errorText}>{t('verification.organizerVerification.alerts.failedToLoad')}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadVerificationRequest}>
-          <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-        </TouchableOpacity>
+        <WhitePillCTA label={t('common.retry')} onPress={loadVerificationRequest} style={{ marginTop: 20 }} />
       </View>
     );
   }
 
+  const requiredSteps = Object.values(request.steps).filter((s: any) => s.required);
+  const doneCount = requiredSteps.filter((s: any) => s.status === 'complete').length;
+  const totalCount = requiredSteps.length;
+
+  const stepRows: Array<{ id: keyof VerificationRequest['steps']; route: string }> = [
+    { id: 'organizerInfo', route: 'OrganizerInfoForm' },
+    { id: 'governmentId', route: 'GovernmentIDUpload' },
+    { id: 'selfie', route: 'SelfieUpload' },
+  ];
+
+  const statusChip = isLocked ? (
+    <StatusChip status="pending" label={t('verification.organizerVerification.status.underReview')} />
+  ) : request.status === 'approved' ? (
+    <StatusChip status="success" label={t('verification.organizerVerification.status.approved')} />
+  ) : isRejected ? (
+    <StatusChip
+      status="declined"
+      label={
+        request.status === 'changes_requested'
+          ? t('verification.organizerVerification.status.changesRequested')
+          : t('verification.organizerVerification.status.rejected')
+      }
+    />
+  ) : null;
+
+  const submit = () => {
+    showAlert(
+      t('verification.organizerVerification.submit.confirmTitle'),
+      t('verification.organizerVerification.submit.confirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('verification.organizerVerification.submit.confirmButton'),
+          onPress: async () => {
+            try {
+              if (!userProfile?.id) return;
+              await submitVerificationForReview(userProfile.id);
+              showAlert(
+                t('common.success'),
+                t('verification.organizerVerification.submit.successBody'),
+                [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
+              );
+            } catch (error: any) {
+              console.error('Error submitting:', error);
+              showAlert(t('common.error'), error?.message || t('verification.organizerVerification.submit.failed'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? colors.surface : colors.white} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      {/* Header */}
-      <OverlayHeader onHeight={onHeight} style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('verification.organizerVerification.title')}</Text>
-        <View style={{ width: 40 }} />
-      </OverlayHeader>
+      {/* The organizer-surface header: left serif title, like every other
+          organizer screen (it used to be a centered sans). */}
+      <OrganizerScreenHeader
+        title={t('verification.organizerVerification.title')}
+        onBack={() => navigation.goBack()}
+        overlay
+        onHeight={onHeight}
+      />
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingTop: headerH, paddingBottom: 24 + insets.bottom }}
+        contentContainerStyle={[styles.content, { paddingTop: headerH + 8, paddingBottom: 24 + insets.bottom }]}
       >
-        {/* Status Card */}
-        <View style={styles.statusCard}>
-          <View style={styles.statusHeader}>
-            <Text style={styles.statusTitle}>{t('verification.organizerVerification.progressTitle')}</Text>
-            <Text style={styles.statusPercentage}>{calculateProgress()}%</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View
-              style={[styles.progressFill, { width: `${calculateProgress()}%` }]}
-            />
-          </View>
-          {isLocked && (
-            <View style={styles.statusRow}>
-              <StatusChip
-                status="pending"
-                label={t('verification.organizerVerification.status.underReview')}
-              />
-            </View>
-          )}
-          {request.status === 'approved' && (
-            <View style={styles.statusRow}>
-              <StatusChip
-                status="success"
-                label={t('verification.organizerVerification.status.approved')}
-              />
-            </View>
-          )}
-          {isRejected && (
-            <View style={styles.statusRow}>
-              <StatusChip
-                status="declined"
-                label={
-                  request.status === 'changes_requested'
-                    ? t('verification.organizerVerification.status.changesRequested')
-                    : t('verification.organizerVerification.status.rejected')
-                }
-              />
-            </View>
-          )}
+        <SectionHeader
+          title={t('verification.organizerVerification.stepsTitle')}
+          subtitle={t('verification.organizerVerification.startMeta')}
+          subtitleLines={2}
+        />
+
+        {/* Progress: one quiet line and a hairline-thin bar, no boxed card. */}
+        <View style={styles.progressRow}>
+          <Text style={styles.progressText}>
+            {t('verification.organizerVerification.progressLine')
+              .replace('{done}', String(doneCount))
+              .replace('{total}', String(totalCount))}
+          </Text>
+          {statusChip}
+        </View>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${totalCount ? Math.round((doneCount / totalCount) * 100) : 0}%` },
+            ]}
+          />
         </View>
 
-        {/* Steps */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('verification.organizerVerification.stepsTitle')}</Text>
-          {/* At-a-glance expectations before starting KYC. */}
-          <View style={styles.startMetaRow}>
-            <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.startMeta}>{t('verification.organizerVerification.startMeta')}</Text>
-          </View>
-
+        {/* The three steps as filled rows: state, title, one grey line, chevron. */}
+        {stepRows.map(({ id, route }) => (
           <TouchableOpacity
-            style={styles.stepCard}
-            onPress={() => (navigation as any).navigate('OrganizerInfoForm', {
-              onComplete: loadVerificationRequest,
-            })}
+            key={id}
+            style={styles.stepRow}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            onPress={() => (navigation as any).navigate(route, { onComplete: loadVerificationRequest })}
           >
-            <View style={styles.stepIcon}>{renderStepIcon('organizerInfo')}</View>
+            <View style={styles.stepIcon}>{renderStepIcon(id)}</View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle} numberOfLines={1}>{t('verification.organizerVerification.steps.organizerInfo.title')}</Text>
-              <Text style={styles.stepDescription} numberOfLines={2}>
-                {t('verification.organizerVerification.steps.organizerInfo.description')}
+              <Text style={styles.stepTitle} numberOfLines={1}>
+                {t(`verification.organizerVerification.steps.${id}.title`)}
+              </Text>
+              <Text style={styles.stepDescription} numberOfLines={1}>
+                {t(`verification.organizerVerification.steps.${id}.description`)}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
+        ))}
 
-          <TouchableOpacity
-            style={styles.stepCard}
-            onPress={() => (navigation as any).navigate('GovernmentIDUpload', {
-              onComplete: loadVerificationRequest,
-            })}
-          >
-            <View style={styles.stepIcon}>{renderStepIcon('governmentId')}</View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle} numberOfLines={1}>{t('verification.organizerVerification.steps.governmentId.title')}</Text>
-              <Text style={styles.stepDescription} numberOfLines={2}>
-                {t('verification.organizerVerification.steps.governmentId.description')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.stepCard}
-            onPress={() => (navigation as any).navigate('SelfieUpload', {
-              onComplete: loadVerificationRequest,
-            })}
-          >
-            <View style={styles.stepIcon}>{renderStepIcon('selfie')}</View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle} numberOfLines={1}>{t('verification.organizerVerification.steps.selfie.title')}</Text>
-              <Text style={styles.stepDescription} numberOfLines={2}>
-                {t('verification.organizerVerification.steps.selfie.description')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Submit Button */}
         {isRejected && request.reviewNotes ? (
-          <View style={[styles.pendingNotice, { backgroundColor: colors.error + '15', borderColor: colors.error + '30' }]}>
-            <Ionicons name="alert-circle-outline" size={24} color={colors.error} />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={[styles.pendingText, { color: colors.error, fontWeight: '600' }]}>
-                {t('verification.organizerVerification.status.reviewNotes')}
-              </Text>
-              <Text style={[styles.pendingText, { color: colors.error, marginTop: 4 }]}>
-                {request.reviewNotes}
-              </Text>
+          <View style={styles.notice}>
+            <Ionicons name="alert-circle-outline" size={20} color={colors.error} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noticeTitle}>{t('verification.organizerVerification.status.reviewNotes')}</Text>
+              <Text style={styles.noticeText}>{request.reviewNotes}</Text>
             </View>
           </View>
         ) : null}
 
         {canSubmit() && !isLocked && (
           <View style={styles.submitSection}>
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={async () => {
-                showAlert(
-                  t('verification.organizerVerification.submit.confirmTitle'),
-                  t('verification.organizerVerification.submit.confirmBody'),
-                  [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                      text: t('verification.organizerVerification.submit.confirmButton'),
-                      onPress: async () => {
-                        try {
-                          if (!userProfile?.id) return;
-                          await submitVerificationForReview(userProfile.id);
-                          showAlert(
-                            t('common.success'),
-                            t('verification.organizerVerification.submit.successBody'),
-                            [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
-                          );
-                        } catch (error: any) {
-                          console.error('Error submitting:', error);
-                          showAlert(
-                            t('common.error'),
-                            error?.message || t('verification.organizerVerification.submit.failed')
-                          );
-                        }
-                      },
-                    },
-                  ]
-                );
-              }}
-            >
-              <Text style={styles.submitButtonText}>{t('verification.organizerVerification.submit.button')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.reviewTimeNote}>
-              {t('verification.organizerVerification.submit.reviewTimeNote')}
-            </Text>
+            {/* The one white pill on this screen. */}
+            <WhitePillCTA label={t('verification.organizerVerification.submit.button')} onPress={submit} />
+            <Text style={styles.reviewTimeNote}>{t('verification.organizerVerification.submit.reviewTimeNote')}</Text>
           </View>
         )}
 
         {isLocked && (
-          <View style={styles.pendingNotice}>
-            <Ionicons name="time-outline" size={24} color={colors.warning} />
-            <Text style={styles.pendingText}>
-              {t('verification.organizerVerification.pendingNotice')}
-            </Text>
+          <View style={styles.notice}>
+            <Ionicons name="time-outline" size={20} color={colors.warning} />
+            <Text style={[styles.noticeText, { flex: 1 }]}>{t('verification.organizerVerification.pendingNotice')}</Text>
           </View>
         )}
       </ScrollView>
@@ -356,157 +318,89 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     textAlign: 'center',
   },
-  retryButton: {
-    marginTop: 20,
-    paddingHorizontal: 24,
-    minHeight: 44,
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
+  content: {
+    paddingHorizontal: 16,
   },
-  retryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // OverlayHeader owns the layout, the safe-area padding and the blurred
-  // backdrop; only the title-centering rule is ours.
-  header: {
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  statusCard: {
-    margin: 16,
-    padding: 20,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statusHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statusTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  statusPercentage: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
-  },
-  // Status reads as a dot + label (StatusChip), never a filled capsule — the
-  // chip owns its own color, so the row here only carries the spacing.
-  statusRow: {
-    marginTop: 12,
-  },
-  section: {
-    margin: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  startMetaRow: {
+  progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: -4,
-    marginBottom: 14,
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 4,
   },
-  startMeta: {
-    flex: 1,
+  progressText: {
     fontSize: 13,
     color: colors.textSecondary,
   },
-  stepCard: {
+  // A thin, quiet line: progress is information, not a feature.
+  progressTrack: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.text,
+  },
+  // Filled rows on the canvas: a fill, never an outlined card.
+  stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.md,
+    marginBottom: 8,
   },
   stepIcon: {
-    marginRight: 12,
+    width: 24,
+    alignItems: 'center',
   },
   stepContent: {
     flex: 1,
   },
   stepTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
   },
   stepDescription: {
-    fontSize: 14,
+    marginTop: 2,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   submitSection: {
-    padding: 16,
-  },
-  submitButton: {
-    backgroundColor: colors.primary,
-    minHeight: 56,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: 20,
   },
   reviewTimeNote: {
     marginTop: 12,
     fontSize: 13,
+    lineHeight: 18,
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  pendingNotice: {
-    margin: 16,
-    padding: 16,
-    backgroundColor: colors.warning + '20',
-    borderRadius: radius.lg,
+  notice: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
   },
-  pendingText: {
-    marginLeft: 12,
-    flex: 1,
+  noticeTitle: {
     fontSize: 14,
-    color: colors.warning,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  noticeText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
   },
 });

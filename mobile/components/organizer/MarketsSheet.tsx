@@ -6,6 +6,7 @@ import { Check, X } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { RADIUS, SPACING } from '../../config/brand';
+import { colors as T } from '../../theme/tokens';
 import { countryName, countrySupport } from '../../lib/countrySupport';
 import { DECLARABLE_MARKETS, railsForMarkets } from '../../lib/organizerMarkets';
 import WhitePillCTA from '../WhitePillCTA';
@@ -17,6 +18,137 @@ interface MarketsSheetProps {
   saving: boolean;
   onClose: () => void;
   onSave: (next: string[]) => void;
+}
+
+/**
+ * A simple colour-square flag: a few flat bands, no artwork. Enough to find
+ * your country at a glance without importing flag images.
+ */
+export function FlagSquare({ code, size = 24 }: { code: string; size?: number }) {
+  const box = { width: size, height: size, borderRadius: 5, overflow: 'hidden' as const };
+  const col = (c: string) => ({ flex: 1, backgroundColor: c });
+  switch (code) {
+    case 'HT':
+      return (
+        <View style={box}>
+          <View style={col('#00209F')} />
+          <View style={col('#D21034')} />
+        </View>
+      );
+    case 'US':
+      return (
+        <View style={box}>
+          {['#B22234', '#FFFFFF', '#B22234', '#FFFFFF', '#B22234'].map((c, i) => (
+            <View key={i} style={col(c)} />
+          ))}
+          <View style={{ position: 'absolute', top: 0, left: 0, width: size * 0.45, height: size * 0.5, backgroundColor: '#3C3B6E' }} />
+        </View>
+      );
+    case 'CA':
+      return (
+        <View style={[box, { flexDirection: 'row' }]}>
+          <View style={col('#D80621')} />
+          <View style={[col('#FFFFFF'), { flex: 2, alignItems: 'center', justifyContent: 'center' }]}>
+            <View style={{ width: size * 0.28, height: size * 0.28, backgroundColor: '#D80621', transform: [{ rotate: '45deg' }] }} />
+          </View>
+          <View style={col('#D80621')} />
+        </View>
+      );
+    case 'FR':
+      return (
+        <View style={[box, { flexDirection: 'row' }]}>
+          <View style={col('#002395')} />
+          <View style={col('#FFFFFF')} />
+          <View style={col('#ED2939')} />
+        </View>
+      );
+    case 'DO':
+      return (
+        <View style={box}>
+          <View style={{ flex: 1, flexDirection: 'row' }}>
+            <View style={col('#002D62')} />
+            <View style={col('#CE1126')} />
+          </View>
+          <View style={{ flex: 1, flexDirection: 'row' }}>
+            <View style={col('#CE1126')} />
+            <View style={col('#002D62')} />
+          </View>
+        </View>
+      );
+    default:
+      return <View style={[box, { backgroundColor: 'rgba(255,255,255,0.12)' }]} />;
+  }
+}
+
+interface MarketsPickerProps {
+  /** The countries currently picked (a draft until the caller saves it). */
+  draft: string[];
+  onToggle: (code: string) => void;
+  disabled?: boolean;
+  /**
+   * Rows on the bare canvas (the payout setup step) use `surface`; inside the
+   * sheet, which is itself `surface`, they step up to `surfaceRaised`.
+   */
+  onCanvas?: boolean;
+  /** Show the "how many setups" hint under the rows. */
+  showHint?: boolean;
+}
+
+/**
+ * The country rows: flag, name, how that country pays out, and a teal check
+ * when picked. Shared by MarketsSheet (Change, from the payout summary) and
+ * step 2 of the payout setup, so the question reads the same wherever it is
+ * asked.
+ */
+export function MarketsPicker({ draft, onToggle, disabled = false, onCanvas = false, showHint = true }: MarketsPickerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { t } = useI18n();
+
+  const rails = railsForMarkets(draft);
+  const hint =
+    draft.length === 0
+      ? t('organizerPayoutSettings.markets.noneHint')
+      : rails.length > 1
+        ? t('organizerPayoutSettings.markets.twoSetupsHint')
+        : t('organizerPayoutSettings.markets.oneSetupHint');
+
+  const railLabel = (code: string) => {
+    const rail = countrySupport(code)?.requiredProfile;
+    if (rail === 'haiti') return t('organizerPayoutSettings.markets.railHaiti');
+    if (rail === 'stripe_connect') return t('organizerPayoutSettings.markets.railStripe');
+    return '';
+  };
+
+  return (
+    <View>
+      {DECLARABLE_MARKETS.map((code) => {
+        const on = draft.includes(code);
+        const sub = railLabel(code);
+        return (
+          <TouchableOpacity
+            key={code}
+            style={[styles.row, onCanvas && styles.rowCanvas, on && styles.rowOn]}
+            onPress={() => onToggle(code)}
+            disabled={disabled}
+            activeOpacity={0.8}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: on }}
+          >
+            <FlagSquare code={code} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>{countryName(code)}</Text>
+              {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+            </View>
+            <View style={styles.checkSlot}>
+              {on ? <Check size={20} color={T.teal} strokeWidth={2.5} /> : null}
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+      {showHint ? <Text style={styles.hint}>{hint}</Text> : null}
+    </View>
+  );
 }
 
 /**
@@ -43,21 +175,6 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
   const dirty =
     draft.length !== markets.length || draft.some((code) => !markets.includes(code));
 
-  const rails = railsForMarkets(draft);
-  const hint =
-    draft.length === 0
-      ? t('organizerPayoutSettings.markets.noneHint')
-      : rails.length > 1
-        ? t('organizerPayoutSettings.markets.twoSetupsHint')
-        : t('organizerPayoutSettings.markets.oneSetupHint');
-
-  const railLabel = (code: string) => {
-    const rail = countrySupport(code)?.requiredProfile;
-    if (rail === 'haiti') return t('organizerPayoutSettings.markets.railHaiti');
-    if (rail === 'stripe_connect') return t('organizerPayoutSettings.markets.railStripe');
-    return '';
-  };
-
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -82,32 +199,8 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
           </View>
 
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-            {DECLARABLE_MARKETS.map((code) => {
-              const on = draft.includes(code);
-              const sub = railLabel(code);
-              return (
-                <TouchableOpacity
-                  key={code}
-                  style={[styles.row, on && styles.rowOn]}
-                  onPress={() => toggle(code)}
-                  disabled={saving}
-                  activeOpacity={0.8}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowTitle}>{countryName(code)}</Text>
-                    {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
-                  </View>
-                  <View style={[styles.check, on && styles.checkOn]}>
-                    {on ? <Check size={14} color={colors.background} strokeWidth={3} /> : null}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            <MarketsPicker draft={draft} onToggle={toggle} disabled={saving} />
           </ScrollView>
-
-          <Text style={styles.hint}>{hint}</Text>
 
           <WhitePillCTA
             label={t('organizerPayoutSettings.markets.save')}
@@ -173,23 +266,23 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     list: {
       flexGrow: 0,
     },
-    // Fill, not a hairline: rows are surfaces; the selected one gets a
-    // brighter fill plus the teal ring, never a ring alone.
+    // Fill, not a hairline: rows are surfaces; a picked row gets a brighter
+    // fill and the teal check, never a ring around an empty box.
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingVertical: 14,
-      paddingHorizontal: 14,
+      gap: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
       borderRadius: RADIUS.md,
       backgroundColor: colors.surfaceRaised,
-      borderWidth: 1,
-      borderColor: 'transparent',
       marginBottom: 8,
+    },
+    rowCanvas: {
+      backgroundColor: colors.surface,
     },
     rowOn: {
       backgroundColor: 'rgba(255,255,255,0.08)',
-      borderColor: colors.primary,
     },
     rowTitle: {
       fontSize: 16,
@@ -197,20 +290,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.text,
     },
     rowSub: {
-      fontSize: 12,
+      fontSize: 13,
       color: colors.textSecondary,
       marginTop: 2,
     },
-    check: {
-      width: 22,
-      height: 22,
-      borderRadius: 6,
-      backgroundColor: 'rgba(255,255,255,0.08)',
+    checkSlot: {
+      width: 24,
       alignItems: 'center',
-      justifyContent: 'center',
-    },
-    checkOn: {
-      backgroundColor: colors.primary,
     },
     hint: {
       fontSize: 12,

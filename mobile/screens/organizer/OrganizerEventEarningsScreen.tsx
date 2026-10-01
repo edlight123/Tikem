@@ -23,7 +23,7 @@ import { getEventById } from '../../lib/api/organizer'
 import { getVerificationRequest } from '../../lib/verification'
 import { getRequiredPayoutProfileIdForEventCountry, normalizeCountryCode } from '../../lib/payment-provider'
 import { RADIUS } from '../../config/brand'
-import { colors as tokenColors, radius } from '../../theme/tokens'
+import { colors as tokenColors, font, radius } from '../../theme/tokens'
 import { formatCurrency as fmtCurrency } from '../../lib/currency'
 import {
   MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
@@ -38,10 +38,13 @@ import InfoNotice from '../../components/organizer/InfoNotice'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
 import { EarningsSkeleton } from '../../components/Skeleton'
 import { useAppAlert } from '../../components/AppAlert'
+import { withdrawableMinor, type EventEarningsRow } from '../../lib/eventEarnings'
 
 type RouteParams = {
   OrganizerEventEarnings: {
     eventId: string
+    /** Open the withdrawal sheet as soon as the screen knows enough (from the Earnings hub's Withdraw). */
+    autoWithdraw?: boolean
   }
 }
 
@@ -53,40 +56,7 @@ type BankDestination = {
   isPrimary: boolean
 }
 
-/**
- * The release ladder's verdict for this event, from the server. Settlement
- * status answers "has the hold period elapsed"; this answers "would a withdrawal
- * actually be accepted right now", which is the stricter and more useful
- * question. Absent when the server could not compute it — treat as unknown.
- */
-type ReleasePreview = {
-  releasedNow: boolean
-  releasableMinor: number
-  availableAt: string | null
-  holdHours: number
-  reason: string
-  tier: 'new' | 'established' | 'pre_event' | string
-  reviewStatus: string | null
-}
-
-type EventEarnings = {
-  availableToWithdraw: number
-  currency?: 'HTG' | 'USD' | 'CAD' | 'EUR'
-  settlementStatus?: 'pending' | 'ready' | 'locked' | string
-  settlementReadyDate?: string | null
-  release?: ReleasePreview | null
-  lastCalculatedAt?: string | null
-  dataSource?: string
-  grossSales?: number
-  netAmount?: number
-  ticketsSold?: number
-  totalEarned?: number
-  withdrawnAmount?: number
-  /** Set when the server holds this balance for admin review — nothing is withdrawable. */
-  withdrawalBlocked?: { code: string; storedCurrency?: string; eventCurrency?: string } | null
-  /** The MonCash 1,000 HTG floor in this event's currency, computed server-side. */
-  moncashMinimum?: { minimumHtgCents: number; minimumMinor: number | null; currency: string; usdToHtgRate: number | null } | null
-}
+type EventEarnings = EventEarningsRow
 
 /** Haiti bank-transfer floor enforced by /api/organizer/withdraw-bank (unchanged). */
 const BANK_MIN_WITHDRAWAL_CENTS = 5000
@@ -96,7 +66,7 @@ export default function OrganizerEventEarningsScreen() {
   const styles = getStyles(colors);
   const route = useRoute<RouteProp<RouteParams, 'OrganizerEventEarnings'>>()
   const navigation = useNavigation<any>()
-  const { eventId } = route.params
+  const { eventId, autoWithdraw } = route.params
 
   const { user } = useAuth()
   const { t, language } = useI18n()
@@ -119,6 +89,10 @@ export default function OrganizerEventEarningsScreen() {
   // null = unknown/loading. When false, guide them to set one up before they
   // can hit the "Haiti payout profile required" wall on withdraw.
   const [hasPayoutMethod, setHasPayoutMethod] = useState<boolean | null>(null)
+  // The Haiti profile's active method ('mobile_money' | 'bank_transfer'), used to
+  // pick which withdrawal sheet the hub's Withdraw opens.
+  const [payoutMethod, setPayoutMethod] = useState<string | null>(null)
+  const [payoutMethodChecked, setPayoutMethodChecked] = useState(false)
 
   const requiresStripeConnect = useMemo(() => {
     const normalized = normalizeCountryCode(eventCountry)
@@ -163,35 +137,7 @@ export default function OrganizerEventEarningsScreen() {
   const [pendingPayload, setPendingPayload] = useState<any | null>(null)
 
   const currency = (earnings?.currency || 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
-  const availableToWithdraw = useMemo(() => {
-    if (!earnings) return 0
-    if (earnings.withdrawalBlocked) return 0
-    if (earnings?.settlementStatus !== 'ready') return 0
-    /**
-     * The release ladder has the final say, and it is stricter than settlement:
-     * an event still inside its post-event hold, one with no end date, or one the
-     * payouts team is reviewing has nothing withdrawable no matter what
-     * settlement says. Showing a figure here that the withdraw button then
-     * refuses is the surprise this guards against.
-     *
-     * `release` absent means the server could not compute it — treat that as
-     * unknown and fall back to the old behaviour rather than blocking a payout.
-     */
-    if (earnings.release && earnings.release.releasedNow === false) return 0
-    if (earnings.release && typeof earnings.release.releasableMinor === 'number') {
-      return Math.max(0, earnings.release.releasableMinor)
-    }
-
-    const net = typeof earnings.netAmount === 'number' && Number.isFinite(earnings.netAmount) ? earnings.netAmount : null
-    const withdrawn = typeof earnings.withdrawnAmount === 'number' && Number.isFinite(earnings.withdrawnAmount) ? earnings.withdrawnAmount : 0
-
-    if (net != null) {
-      return Math.max(0, net - withdrawn)
-    }
-
-    // Backwards-compatible fallback if API doesn't provide netAmount.
-    return Math.max(0, Number(earnings.availableToWithdraw || 0))
-  }, [earnings])
+  const availableToWithdraw = useMemo(() => withdrawableMinor(earnings), [earnings])
 
   const instantPreview = useMemo(() => {
     if (!prefunding?.enabled || !prefunding?.available) return null
@@ -354,9 +300,12 @@ export default function OrganizerEventEarningsScreen() {
     try {
       const cfg = await backendJson<{ method?: string | null }>('/api/organizer/payout-config-summary')
       setHasPayoutMethod(!!cfg?.method)
+      setPayoutMethod(cfg?.method ? String(cfg.method) : null)
     } catch {
       // Unknown — don't block the UI; leave null so withdraw buttons still show.
       setHasPayoutMethod(null)
+    } finally {
+      setPayoutMethodChecked(true)
     }
   }, [user?.uid])
 
@@ -804,6 +753,21 @@ export default function OrganizerEventEarningsScreen() {
     })
   }
 
+  /**
+   * Arrived from the Earnings hub's Withdraw: open the same withdrawal sheet the
+   * buttons below open, once, as soon as identity and earnings are known. It
+   * goes through openWithdraw, so every existing guard (identity, settlement,
+   * minimums, Stripe rail) still runs and explains itself if it refuses.
+   */
+  const autoWithdrawFiredRef = React.useRef(false)
+  useEffect(() => {
+    if (!autoWithdraw || autoWithdrawFiredRef.current) return
+    if (loading || !earnings || identityVerified === null || !payoutMethodChecked) return
+    autoWithdrawFiredRef.current = true
+    openWithdraw(String(payoutMethod || '').includes('bank') ? 'bank' : 'moncash')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoWithdraw, loading, earnings, identityVerified, payoutMethod, payoutMethodChecked])
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -972,48 +936,58 @@ export default function OrganizerEventEarningsScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {method === 'moncash'
-                  ? t('organizerEarnings.modal.titleMoncash')
-                  : t('organizerEarnings.modal.titleBank')}
-              </Text>
-              <TouchableOpacity onPress={() => setShowWithdraw(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              <Text style={styles.withdrawTitle}>{t('organizerEarnings.modal.sheetTitle')}</Text>
+              <TouchableOpacity
+                onPress={() => setShowWithdraw(false)}
+                disabled={submitting}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.withdrawCancel}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.summaryBox}>
-              <View style={styles.rowBetween}>
-                <Text style={styles.metaText}>{t('organizerEarnings.modal.amount')}</Text>
-                <Text style={styles.metaText}>{formatCurrency(availableToWithdraw, currency)}</Text>
+            {/* The amount is the event's full withdrawable balance, the same
+                figure the route validates; it is shown, not edited. */}
+            <Text style={styles.withdrawAmount} numberOfLines={1} adjustsFontSizeToFit>
+              {formatCurrency(availableToWithdraw, currency)}
+            </Text>
+            <Text style={styles.withdrawMeta}>
+              {(method === 'moncash'
+                ? t('organizerEarnings.modal.availableWithMin').replace('{min}', moncashMinLabel)
+                : t('organizerEarnings.modal.availableWithMin').replace('{min}', formatCurrency(BANK_MIN_WITHDRAWAL_CENTS, currency))
+              ).replace('{available}', formatCurrency(availableToWithdraw, currency))}
+            </Text>
+            <Text style={styles.withdrawVia}>
+              {method === 'moncash' ? t('organizerEarnings.modal.viaMoncash') : t('organizerEarnings.modal.viaBank')}
+            </Text>
+
+            {method === 'moncash' && instantPreview ? (
+              <View style={styles.summaryBox}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.metaText}>{t('organizerEarnings.modal.instantFee')}</Text>
+                  <Text style={styles.metaText}>{formatCurrency(instantPreview.feeCents, currency)}</Text>
+                </View>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.metaText}>{t('organizerEarnings.modal.youReceive')}</Text>
+                  <Text style={styles.metaText}>
+                    {currency === 'USD' && instantPreview.payoutAmountHtgCents != null
+                      ? formatCurrency(instantPreview.payoutAmountHtgCents, 'HTG')
+                      : formatCurrency(instantPreview.payoutAmountCents, currency)}
+                  </Text>
+                </View>
+                {currency === 'USD' ? (
+                  <Text style={styles.metaText}>
+                    {instantPreview.payoutAmountHtgCents != null
+                      ? t('organizerEarnings.modal.usdConverted').replace(
+                          '{usd}',
+                          formatCurrency(instantPreview.payoutAmountCents, 'USD')
+                        )
+                      : t('organizerEarnings.modal.usdConvertedNoRate')}
+                  </Text>
+                ) : null}
               </View>
-              {method === 'moncash' && instantPreview ? (
-                <>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.metaText}>{t('organizerEarnings.modal.instantFee')}</Text>
-                    <Text style={styles.metaText}>{formatCurrency(instantPreview.feeCents, currency)}</Text>
-                  </View>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.metaText}>{t('organizerEarnings.modal.youReceive')}</Text>
-                    <Text style={styles.metaText}>
-                      {currency === 'USD' && instantPreview.payoutAmountHtgCents != null
-                        ? formatCurrency(instantPreview.payoutAmountHtgCents, 'HTG')
-                        : formatCurrency(instantPreview.payoutAmountCents, currency)}
-                    </Text>
-                  </View>
-                  {currency === 'USD' ? (
-                    <Text style={styles.metaText}>
-                      {instantPreview.payoutAmountHtgCents != null
-                        ? t('organizerEarnings.modal.usdConverted').replace(
-                            '{usd}',
-                            formatCurrency(instantPreview.payoutAmountCents, 'USD')
-                          )
-                        : t('organizerEarnings.modal.usdConvertedNoRate')}
-                    </Text>
-                  ) : null}
-                </>
-              ) : null}
-            </View>
+            ) : null}
 
             <ScrollView style={{ maxHeight: 420 }}>
               {verificationRequired ? (
@@ -1192,12 +1166,14 @@ export default function OrganizerEventEarningsScreen() {
 
             {!verificationRequired ? (
               <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowWithdraw(false)} disabled={submitting}>
-                  <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
+                {/* One white pill that names the commitment. */}
                 <WhitePillCTA
                   style={styles.footerPill}
-                  label={submitting ? t('organizerEarnings.submitting') : t('common.confirm')}
+                  label={
+                    submitting
+                      ? t('organizerEarnings.submitting')
+                      : t('organizerEarnings.modal.withdrawAmount').replace('{amount}', formatCurrency(availableToWithdraw, currency))
+                  }
                   onPress={submit}
                   loading={submitting}
                   disabled={submitting}
@@ -1212,6 +1188,43 @@ export default function OrganizerEventEarningsScreen() {
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  withdrawTitle: {
+    fontFamily: font.serif,
+    fontSize: 26,
+    color: colors.text,
+  },
+  withdrawCancel: {
+    fontFamily: font.mono,
+    fontSize: 12,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  withdrawAmount: {
+    marginTop: 18,
+    fontSize: 44,
+    lineHeight: 52,
+    fontWeight: '800',
+    letterSpacing: -1,
+    color: colors.text,
+  },
+  withdrawMeta: {
+    marginTop: 8,
+    fontFamily: font.mono,
+    fontSize: 11,
+    lineHeight: 17,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  withdrawVia: {
+    marginTop: 18,
+    fontFamily: font.mono,
+    fontSize: 11,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

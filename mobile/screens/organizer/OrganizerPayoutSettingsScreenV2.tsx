@@ -21,7 +21,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
-import { getVerificationRequest } from '../../lib/verification'
+import { getVerificationRequest, submitVerificationForReview } from '../../lib/verification'
 import { useLocaleFormat } from '../../lib/format'
 import { formatCurrency as fmtCurrency } from '../../lib/currency'
 import {
@@ -31,7 +31,7 @@ import {
   type PrefundingStatus,
 } from '../../lib/moncashPayout'
 import { RADIUS } from '../../config/brand'
-import { radius } from '../../theme/tokens'
+import { font, radius } from '../../theme/tokens'
 import { Skeleton } from '../../components/Skeleton'
 import { useAppAlert } from '../../components/AppAlert'
 import StatusChip from '../../components/StatusChip'
@@ -40,9 +40,8 @@ import EmptyState from '../../components/EmptyState'
 import WhitePillCTA from '../../components/WhitePillCTA'
 import MoneyText from '../../components/MoneyText'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
-import SegmentedTabs from '../../components/organizer/SegmentedTabs'
 import SelectField from '../../components/organizer/SelectField'
-import MarketsSheet from '../../components/organizer/MarketsSheet'
+import MarketsSheet, { FlagSquare, MarketsPicker } from '../../components/organizer/MarketsSheet'
 import { HAITI_BANKS, OTHER_BANK } from '../../data/haitiBanks'
 import { getDeviceLocationInfo } from '../../utils/deviceLocation'
 import { countryName, normalizeSupportedCountry } from '../../lib/countrySupport'
@@ -174,6 +173,20 @@ export default function OrganizerPayoutSettingsScreenV2() {
   // complete (charges + payouts enabled); otherwise the card prompts to finish.
   const [stripeProfile, setStripeProfile] = useState<{ connected: boolean; verified: boolean; country?: string } | null>(null)
   const [identityVerified, setIdentityVerified] = useState(false)
+  // The verification request's own status and per-step state, for the setup's
+  // step 1 rows ("01 Your details" etc.) and the under-review chip.
+  const [identityStatus, setIdentityStatus] = useState<string | null>(null)
+  const [identitySteps, setIdentitySteps] = useState<Record<string, string> | null>(null)
+  // A live server load has landed (state, not a ref, so the setup can react).
+  const [serverLoaded, setServerLoaded] = useState(false)
+
+  // Guided setup: which step is showing (null until live data picks one),
+  // whether the organizer chose to leave it for now, and per-step drafts.
+  const [setupStep, setSetupStep] = useState<1 | 2 | 3 | null>(null)
+  const [setupDone, setSetupDone] = useState(false)
+  const [setupBusy, setSetupBusy] = useState(false)
+  const [marketsDraft, setMarketsDraft] = useState<string[]>([])
+  const [setupMethod, setSetupMethod] = useState<'moncash' | 'bank' | null>(null)
 
   // Methods vs History toggle (History is an additive, read-only view).
   const [activeTab, setActiveTab] = useState<PayoutTab>('methods')
@@ -403,6 +416,10 @@ export default function OrganizerPayoutSettingsScreenV2() {
     try {
       const req = await getVerificationRequest(user.uid)
       setIdentityVerified(req?.status === 'approved')
+      setIdentityStatus(req?.status ? String(req.status) : null)
+      const steps: Record<string, string> = {}
+      for (const [k, v] of Object.entries((req as any)?.steps || {})) steps[k] = String((v as any)?.status || 'incomplete')
+      setIdentitySteps(steps)
     } catch {
       setIdentityVerified(false)
     }
@@ -417,6 +434,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
     try {
       await Promise.all([loadDestinations(), loadIdentityStatus(), loadPrefunding()])
       serverLoadedRef.current = true
+      setServerLoaded(true)
     } finally {
       setLoading(false)
       loadInFlightRef.current = false
@@ -929,425 +947,8 @@ export default function OrganizerPayoutSettingsScreenV2() {
     }
   }, [verificationAsset, selectedDestination, verificationType, loadDestinations, t])
 
-  return (
-    <View style={styles.container}>
-      <OrganizerScreenHeader title={t('organizerPayoutSettings.headerTitle')} onBack={() => navigation.goBack()} />
-
-      <View style={styles.tabsWrap}>
-        <SegmentedTabs
-          tabs={[
-            { key: 'methods', label: t('organizerPayoutSettings.tabs.methods') },
-            { key: 'history', label: t('organizerPayoutSettings.tabs.history') },
-          ]}
-          value={activeTab}
-          onChange={(k) => setActiveTab(k as PayoutTab)}
-        />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
-        }
-      >
-        {/* First-ever load only: header + tabs are already painted above; the
-            content area shows method-card-shaped skeletons. After first paint
-            this branch never shows again — background refreshes keep the data. */}
-        {loading ? (
-          <View>
-            <View style={styles.sectionHeader}>
-              <Skeleton width={130} height={12} radius={5} />
-              <Skeleton width={64} height={28} radius={10} />
-            </View>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.destinationCard}>
-                <View style={styles.destinationHeader}>
-                  <Skeleton width={32} height={32} radius={10} />
-                  <View style={{ flex: 1, marginLeft: 10, gap: 7 }}>
-                    <Skeleton width="52%" height={14} radius={6} />
-                    <Skeleton width="38%" height={11} radius={5} />
-                  </View>
-                  <Skeleton width={72} height={11} radius={5} />
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <>
-        {activeTab === 'methods' && (
-          <>
-        {/*
-          SETUP ROWS, not blocks. Identity used to be an info card stacked on a
-          full-width white button, and markets an open form — together they
-          pushed the actual payout methods off the first screen. Both are
-          one-time decisions, so they read as two rows you tap, and the page
-          becomes what its title says: your payout methods.
-        */}
-        {!identityVerified && (
-          <TouchableOpacity
-            style={styles.setupRow}
-            onPress={() => navigation.navigate('OrganizerVerification')}
-            accessibilityRole="button"
-          >
-            <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
-            <View style={styles.setupRowText}>
-              <Text style={styles.setupRowLabel}>
-                {t('organizerPayoutSettings.identityRowLabel')}
-              </Text>
-              <Text style={styles.setupRowHint} numberOfLines={2}>
-                {t('organizerPayoutSettings.identityNotice')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-
-        {/* Where you run events. Nothing used to ask, so every organizer was
-            shown every rail — a Port-au-Prince organizer was offered Stripe
-            Connect they will never use, and a diaspora organizer got no signal
-            that Haiti and the US are TWO setups. Answering is optional and
-            re-editable; it changes what is OFFERED, never what is allowed.
-
-            A SAVED ANSWER, NOT A FORM. Feedback, repeatedly: "this should be
-            something the organizer edit and saved ... not display all the
-            countries like that, out in the open." So the page only ever shows
-            the answer — one row — and the full country list lives in a sheet
-            behind Change, where picking is a draft until Save. Nothing on this
-            page lays out every country inline any more, in any state. */}
-        <TouchableOpacity
-          style={styles.setupRow}
-          onPress={() => setMarketsSheetOpen(true)}
-          disabled={!marketsLoaded}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel={`${t('organizerPayoutSettings.markets.title')}: ${marketsSummary}`}
-        >
-          <Ionicons name="globe-outline" size={20} color={colors.textSecondary} />
-          <View style={styles.setupRowText}>
-            <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.markets.title')}</Text>
-            <Text
-              style={[styles.setupRowHint, declaredMarkets.length > 0 && styles.setupRowValue]}
-              numberOfLines={1}
-            >
-              {marketsSummary}
-            </Text>
-          </View>
-          <Text style={styles.setupRowAction}>
-            {declaredMarkets.length > 0
-              ? t('organizerPayoutSettings.markets.change')
-              : t('organizerPayoutSettings.markets.choose')}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Cross-border advisory: one connected account, fixed country. It
-            stays on the page (not in the sheet) because it needs action. */}
-        {mismatchedStripeMarkets.length > 0 ? (
-          <View style={styles.marketsWarning}>
-            <Ionicons name="swap-horizontal-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.marketsWarningText}>
-              {t('organizerPayoutSettings.markets.countryMismatch')
-                .replace('{account}', countryName(connectedAccountCountry))
-                .replace(
-                  '{markets}',
-                  mismatchedStripeMarkets.map((code) => countryName(code)).join(', ')
-                )}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={{ height: 10 }} />
-
-        {/* Destinations List */}
-        {destinations.length === 0 && !stripeProfile?.connected ? (
-          <EmptyState
-            icon={Wallet}
-            title={t('organizerPayoutSettings.emptyMethods.title')}
-            subtitle={t('organizerPayoutSettings.emptyMethods.subtitle')}
-            actionLabel={t('organizerPayoutSettings.emptyMethods.action')}
-            onAction={() => setShowAddModal(true)}
-          />
-        ) : (
-          <>
-            {/* The region headings below already say what this list is; a
-                third "PAYOUT METHODS" label above them was chrome. Adding a
-                method now sits at the END of the list, where you look once you
-                have read what you already have. */}
-
-            {/* Two payout REGIONS, not one flat list. Which one an event pays
-                through is decided by the event's country
-                (getRequiredPayoutProfileIdForEventCountry, enforced server-side
-                at publish and withdrawal), so the organizer needs to see that
-                split — and who verifies them on each side — before they build
-                an event they can't get paid for. */}
-            {showStripeRail ? (
-            <>
-            <RegionSection
-              colors={colors}
-              title={t('organizerPayoutSettings.regions.internationalTitle')}
-              blurb={t('organizerPayoutSettings.regions.internationalBlurb')}
-              status={
-                stripeProfile?.connected ? (stripeProfile.verified ? 'ready' : 'pending') : 'none'
-              }
-              t={t}
-            />
-
-            {stripeProfile?.connected ? (
-              // THE CARD IS THE BUTTON. Inline per-card actions (Manage on
-              // Stripe, View Status) made cards different heights depending on
-              // which actions applied, and left the card itself dead to touch.
-              <TouchableOpacity
-                style={styles.destinationCard}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                onPress={() =>
-                  startStripeConnect(
-                    stripeProfile.country === 'CA'
-                      ? 'canada'
-                      : stripeProfile.country === 'FR'
-                        ? 'france'
-                        : 'united_states'
-                  )
-                }
-              >
-                <View style={styles.destinationHeader}>
-                  <View style={styles.methodIconTile}>
-                    <Ionicons name="globe-outline" size={16} color={colors.text} />
-                  </View>
-                  <View style={styles.destinationBody}>
-                    <Text style={styles.destinationTitle} numberOfLines={1}>{t('organizerPayoutSettings.stripe.title')}</Text>
-                    <Text style={styles.destinationSubtitle} numberOfLines={1}>
-                      {stripeProfile.country === 'CA'
-                        ? t('organizerPayoutSettings.countries.canada')
-                        : stripeProfile.country === 'FR'
-                          ? t('organizerPayoutSettings.countries.france')
-                          : t('organizerPayoutSettings.countries.united_states')}{' · '}{t('organizerPayoutSettings.stripeCard.cardPayouts')}
-                    </Text>
-                  </View>
-                  {stripeProfile.verified ? (
-                    <StatusChip status="verified" label={t('organizerPayoutSettings.stripeCard.connected')} />
-                  ) : (
-                    <StatusChip status="pending" label={t('organizerPayoutSettings.stripeCard.finishSetup')} />
-                  )}
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.regionEmpty}>
-                {t('organizerPayoutSettings.regions.emptyInternational')}
-              </Text>
-            )}
-            </>
-            ) : null}
-
-            {showHaitiRail ? (
-            <>
-            <RegionSection
-              colors={colors}
-              title={t('organizerPayoutSettings.regions.haitiTitle')}
-              blurb={t('organizerPayoutSettings.regions.haitiBlurb')}
-              status={
-                destinations.length === 0
-                  ? 'none'
-                  : destinations.some((d) => d.verificationStatus === 'verified')
-                    ? 'ready'
-                    : 'pending'
-              }
-              t={t}
-            />
-
-            {destinations.length === 0 ? (
-              <Text style={styles.regionEmpty}>{t('organizerPayoutSettings.regions.emptyHaiti')}</Text>
-            ) : null}
-
-            {destinations.map((dest) => {
-              const chip = statusChip(dest.verificationStatus)
-              const isBank = dest.type === 'bank'
-
-              return (
-                <TouchableOpacity
-                  key={dest.id}
-                  style={styles.destinationCard}
-                  activeOpacity={dest.verificationStatus !== 'verified' ? 0.75 : 1}
-                  disabled={dest.verificationStatus === 'verified'}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setSelectedDestination(dest)
-                    if (isBank) {
-                      setShowVerificationModal(true)
-                    } else if (identityVerified) {
-                      // MonCash activates on identity verification alone; payouts
-                      // are then reviewed and released manually by our team.
-                      showAlert(
-                        t('organizerPayoutSettings.moncashVerify.readyTitle'),
-                        t('organizerPayoutSettings.moncashVerify.readyBody')
-                      )
-                    } else {
-                      showAlert(
-                        t('organizerPayoutSettings.moncashVerify.title'),
-                        t('organizerPayoutSettings.moncashVerify.body'),
-                        [
-                          { text: t('organizerPayoutSettings.moncashVerify.cancel'), style: 'cancel' },
-                          {
-                            text: t('organizerPayoutSettings.moncashVerify.verifyCta'),
-                            onPress: () => navigation.navigate('OrganizerVerification'),
-                          },
-                        ]
-                      )
-                    }
-                  }}
-                >
-                  <View style={styles.destinationHeader}>
-                    <View style={styles.methodIconTile}>
-                      <Ionicons
-                        name={isBank ? 'card-outline' : 'phone-portrait-outline'}
-                        size={16}
-                        color={colors.text}
-                      />
-                    </View>
-                    <View style={styles.destinationBody}>
-                      <Text style={styles.destinationTitle} numberOfLines={1}>
-                        {isBank ? (dest as BankDestination).bankName : (dest as MoncashDestination).provider}
-                      </Text>
-                      <Text style={styles.destinationSubtitle} numberOfLines={1}>
-                        {isBank ? (dest as BankDestination).accountName : (dest as MoncashDestination).accountName}
-                        <Text style={styles.destinationDigits}>
-                          {'   •••• '}
-                          {isBank
-                            ? (dest as BankDestination).accountNumberLast4
-                            : (dest as MoncashDestination).phoneNumberLast4}
-                        </Text>
-                      </Text>
-                    </View>
-                    <StatusChip status={chip.status} label={chip.label} />
-                  </View>
-
-                </TouchableOpacity>
-              )
-            })}
-
-            {/* Instant MonCash opt-in. Sits under the MonCash method it
-                applies to. Three platform states: live (a real switch),
-                paused (the switch stays visible but locked, so a saved "on"
-                is not misread as lost), and not launched (no switch at all). */}
-            {instantState ? (
-              <View style={styles.instantCard}>
-                <View style={styles.destinationHeader}>
-                  <View style={styles.methodIconTile}>
-                    <Ionicons name="flash-outline" size={16} color={colors.text} />
-                  </View>
-                  <View style={styles.destinationBody}>
-                    <Text style={styles.destinationTitle}>{t('organizerPayoutSettings.instantMoncash.title')}</Text>
-                    <Text style={styles.destinationSubtitle}>
-                      {t('organizerPayoutSettings.instantMoncash.feeLine').replace('{fee}', instantFeeLabel)}
-                    </Text>
-                  </View>
-                  {instantState === 'not_yet' ? (
-                    <Text style={styles.instantStateLabel}>{t('organizerPayoutSettings.instantMoncash.stateNotYet')}</Text>
-                  ) : (
-                    <Switch
-                      value={allowInstantMoncash}
-                      onValueChange={toggleInstantMoncash}
-                      disabled={instantState !== 'available' || savingInstant}
-                      trackColor={{ false: colors.border, true: colors.primary }}
-                      thumbColor={colors.white}
-                      ios_backgroundColor={colors.border}
-                      accessibilityLabel={t('organizerPayoutSettings.instantMoncash.title')}
-                    />
-                  )}
-                </View>
-                <Text style={styles.instantBody}>
-                  {instantState === 'available'
-                    ? t('organizerPayoutSettings.instantMoncash.bodyAvailable').replace('{fee}', instantFeeLabel)
-                    : instantState === 'paused'
-                      ? t('organizerPayoutSettings.instantMoncash.bodyPaused')
-                      : t('organizerPayoutSettings.instantMoncash.bodyNotYet')}
-                </Text>
-                <Text style={styles.instantBody}>{instantMinimumLine}</Text>
-              </View>
-            ) : null}
-            </>
-            ) : null}
-
-            {/* Add sits at the END: you look for it after reading what you
-                already have, and it no longer competes with the section
-                headings for the top of the screen. */}
-            <TouchableOpacity
-              style={styles.addMethodRow}
-              onPress={() => setShowAddModal(true)}
-              accessibilityRole="button"
-            >
-              <Ionicons name="add" size={18} color={colors.text} />
-              <Text style={styles.addMethodRowText}>
-                {t('organizerPayoutSettings.addMethodRow')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* A declaration narrows what is shown; it must never lock anyone
-                out of a rail. The escape hatch sits after the list it widens. */}
-            {someRailHidden ? (
-              <TouchableOpacity
-                onPress={() => setShowAllRails(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{ alignSelf: 'center' }}
-              >
-                <Text style={styles.marketsShowAll}>
-                  {t('organizerPayoutSettings.markets.showAllRails')}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-          </>
-        )}
-          </>
-        )}
-
-        {activeTab === 'history' && (
-          payoutsLoading && !refreshing ? (
-            <View style={{ gap: 12 }}>
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} width="100%" height={72} radius={RADIUS.lg} />
-              ))}
-            </View>
-          ) : payoutsError ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('organizerPayoutSettings.payoutHistory.errorTitle')}</Text>
-              <Text style={styles.metaText}>{t('organizerPayoutSettings.payoutHistory.error')}</Text>
-              <TouchableOpacity style={[styles.secondaryButton, { marginTop: 12 }]} onPress={loadPayouts}>
-                <Text style={styles.secondaryButtonText}>{t('organizerPayoutSettings.payoutHistory.retry')}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : payouts.length === 0 ? (
-            <EmptyState
-              icon={Receipt}
-              title={t('organizerPayoutSettings.payoutHistory.emptyTitle')}
-              subtitle={t('organizerPayoutSettings.payoutHistory.empty')}
-            />
-          ) : (
-            payouts.map((p) => {
-              const meta = payoutStatusMeta(p.status)
-              const label = meta.labelKey
-                ? t(`organizerPayoutSettings.payoutHistory.status.${meta.labelKey}`)
-                : p.status
-              return (
-                <View key={p.id} style={styles.payoutRow}>
-                  <View style={{ flex: 1, marginRight: 12 }}>
-                    <MoneyText
-                      cents={p.amount}
-                      currency={(p.currency as any) || 'HTG'}
-                      style={styles.payoutAmount}
-                    />
-                    <Text style={styles.payoutMeta} numberOfLines={1}>
-                      {[payoutMethodLabel(p.method), formatDate(p.createdAt)].filter(Boolean).join(' · ')}
-                    </Text>
-                  </View>
-                  <StatusChip status={meta.tone} label={label} />
-                </View>
-              )
-            })
-          )
-        )}
-          </>
-        )}
-      </ScrollView>
-
+  const modals = (
+    <>
       {/* Add Method Modal */}
       {/* A bottom sheet, like the markets and location pickers — not a card
           floating mid-screen — so every chooser on this page behaves alike. */}
@@ -1634,6 +1235,748 @@ export default function OrganizerPayoutSettingsScreenV2() {
         onClose={() => setMarketsSheetOpen(false)}
         onSave={saveMarketsDraft}
       />
+    </>
+  )
+
+  // ── Guided setup vs calm summary ──────────────────────────────────────────
+  // The first time (no payout method yet) the screen is a three-step setup,
+  // one decision per screen. Once a method exists it is a summary.
+  const hasAnyMethod = destinations.length > 0 || Boolean(stripeProfile?.connected)
+  const identitySubmitted = (['pending', 'pending_review', 'in_review'] as string[]).includes(String(identityStatus || ''))
+  const showSetup = serverLoaded && marketsLoaded && !hasAnyMethod && !setupDone
+
+  const firstIncompleteStep = useCallback((): 1 | 2 | 3 => {
+    if (!identityVerified) return 1
+    if (declaredMarkets.length === 0) return 2
+    return 3
+  }, [identityVerified, declaredMarkets.length])
+
+  // Pick where the setup starts once, from live data: done steps are skipped.
+  useEffect(() => {
+    if (showSetup && setupStep === null) setSetupStep(firstIncompleteStep())
+  }, [showSetup, setupStep, firstIncompleteStep])
+
+  // Identity approved while the organizer sits on step 1 (they verified in the
+  // hub and came back): that step is done, move on by itself.
+  const prevVerifiedRef = useRef(identityVerified)
+  useEffect(() => {
+    if (setupStep === 1 && identityVerified && !prevVerifiedRef.current) {
+      setSetupStep(declaredMarkets.length === 0 ? 2 : 3)
+    }
+    prevVerifiedRef.current = identityVerified
+  }, [identityVerified, setupStep, declaredMarkets.length])
+
+  // Step 2 edits a draft of the saved answer.
+  useEffect(() => {
+    if (setupStep === 2) setMarketsDraft(declaredMarkets)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setupStep])
+
+  // Step 3: MonCash leads when the Haiti rail is offered.
+  useEffect(() => {
+    if (setupStep === 3 && setupMethod === null) {
+      setSetupMethod(showHaitiRail ? 'moncash' : null)
+      setMoncashForm((s) => ({
+        ...s,
+        accountName: s.accountName || String((userProfile as any)?.full_name || (userProfile as any)?.name || ''),
+      }))
+    }
+  }, [setupStep, setupMethod, showHaitiRail, userProfile])
+
+  const identityStepRows: Array<{ id: 'organizerInfo' | 'governmentId' | 'selfie'; route: string }> = [
+    { id: 'organizerInfo', route: 'OrganizerInfoForm' },
+    { id: 'governmentId', route: 'GovernmentIDUpload' },
+    { id: 'selfie', route: 'SelfieUpload' },
+  ]
+
+  // No verification request yet: the hub creates it, so start there rather
+  // than opening a step screen with nothing behind it.
+  const openIdentityStep = (route: string) => {
+    if (!identitySteps || Object.keys(identitySteps).length === 0) {
+      navigation.navigate('OrganizerVerification')
+      return
+    }
+    navigation.navigate(route, { onComplete: loadIdentityStatus })
+  }
+
+  const continueFromIdentity = useCallback(async () => {
+    if (identityVerified || identitySubmitted) {
+      setSetupStep(declaredMarkets.length === 0 ? 2 : 3)
+      return
+    }
+    const next = identityStepRows.find((r) => identitySteps?.[r.id] !== 'complete')
+    if (next) {
+      openIdentityStep(next.route)
+      return
+    }
+    // Every step is done but not yet sent: send it for review, as the hub's
+    // Submit does, then carry on with the rest of the setup.
+    if (!user?.uid) return
+    setSetupBusy(true)
+    try {
+      await submitVerificationForReview(user.uid)
+      await loadIdentityStatus()
+      setSetupStep(declaredMarkets.length === 0 ? 2 : 3)
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message || t('verification.organizerVerification.submit.failed'))
+    } finally {
+      setSetupBusy(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identityVerified, identitySubmitted, identitySteps, declaredMarkets.length, navigation, loadIdentityStatus, user?.uid, showAlert, t])
+
+  const continueFromMarkets = useCallback(async () => {
+    const dirty =
+      marketsDraft.length !== declaredMarkets.length || marketsDraft.some((c) => !declaredMarkets.includes(c))
+    if (dirty) {
+      try {
+        await saveMarkets(marketsDraft)
+      } catch {
+        showAlert(t('common.error'), t('organizerPayoutSettings.markets.saveFailed'))
+        return
+      }
+    }
+    setSetupStep(3)
+  }, [marketsDraft, declaredMarkets, saveMarkets, showAlert, t])
+
+  const requireIdentity = useCallback((): boolean => {
+    if (identityVerified) return true
+    showAlert(
+      t('organizerPayoutSettings.identityRequired.title'),
+      t('organizerPayoutSettings.identityRequired.body'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('organizerPayoutSettings.verifyIdentity'), onPress: () => setSetupStep(1) },
+      ]
+    )
+    return false
+  }, [identityVerified, showAlert, t])
+
+  const finishSetup = useCallback(async () => {
+    if (setupMethod === 'moncash') {
+      if (!requireIdentity()) return
+      await handleSaveMoncash()
+      return
+    }
+    if (setupMethod === 'bank') {
+      if (!requireIdentity()) return
+      setBankNameChoice('')
+      setShowBankForm(true)
+      return
+    }
+    setSetupDone(true)
+  }, [setupMethod, requireIdentity, handleSaveMoncash])
+
+  const setupBack = () => {
+    if (setupStep && setupStep > 1) setSetupStep((setupStep - 1) as 1 | 2)
+    else navigation.goBack()
+  }
+  const setupLater = () => {
+    if (setupStep === 1) setSetupStep(2)
+    else if (setupStep === 2) setSetupStep(3)
+    else setSetupDone(true)
+  }
+
+  const renderStepHeader = (step: number) => (
+    <View style={[styles.stepHeader, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.stepHeaderRow}>
+        <TouchableOpacity
+          onPress={setupBack}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('organizerPayoutSettings.setup.back')}
+          style={styles.stepHeaderSide}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.stepCount}>
+          {t('organizerPayoutSettings.setup.stepOf').replace('{n}', String(step)).replace('{total}', '3')}
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          style={[styles.stepHeaderSide, { alignItems: 'flex-end' }]}
+        >
+          <Text style={styles.stepCancel}>{t('organizerPayoutSettings.setup.cancel')}</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.stepSegments}>
+        {[1, 2, 3].map((n) => (
+          <View key={n} style={[styles.stepSegment, n <= step && styles.stepSegmentOn]} />
+        ))}
+      </View>
+    </View>
+  )
+
+  const renderStepFooter = (label: string, onPress: () => void, opts: { disabled?: boolean; loading?: boolean; note?: string } = {}) => (
+    <View style={[styles.stepFooter, { paddingBottom: insets.bottom + 12 }]}>
+      {opts.note ? <Text style={styles.stepFooterNote}>{opts.note}</Text> : null}
+      <WhitePillCTA label={label} onPress={onPress} disabled={opts.disabled} loading={opts.loading} />
+      <TouchableOpacity onPress={setupLater} style={styles.stepLater} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Text style={styles.stepLaterText}>{t('organizerPayoutSettings.setup.later')}</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  const identityRowIndicator = (status: string | undefined, isNext: boolean) => {
+    if (status === 'complete') return <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />
+    if (status === 'needs_attention') return <View style={[styles.stepDot, { backgroundColor: colors.warning }]} />
+    return <View style={[styles.stepDot, isNext ? { backgroundColor: colors.primary } : null]} />
+  }
+
+  const renderSetup = () => {
+    const step = setupStep ?? 1
+
+    if (step === 1) {
+      const nextId = identityStepRows.find((r) => identitySteps?.[r.id] !== 'complete')?.id
+      return (
+        <>
+          {renderStepHeader(1)}
+          <ScrollView contentContainerStyle={styles.stepBody}>
+            <Text style={styles.stepTitle}>{t('organizerPayoutSettings.setup.identity.title')}</Text>
+            <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.identity.lead')}</Text>
+            {identityVerified ? (
+              <View style={styles.stepStatus}>
+                <StatusChip status="verified" label={t('organizerPayoutSettings.status.verified')} />
+              </View>
+            ) : identitySubmitted ? (
+              <View style={styles.stepStatus}>
+                <StatusChip status="pending" label={t('organizerPayoutSettings.status.underReview')} />
+              </View>
+            ) : null}
+            {identityStepRows.map((row, i) => {
+              const status = identityVerified ? 'complete' : identitySteps?.[row.id]
+              const isNext = !identityVerified && row.id === nextId
+              const muted = !identityVerified && status !== 'complete' && !isNext
+              return (
+                <TouchableOpacity
+                  key={row.id}
+                  style={styles.numberedRow}
+                  activeOpacity={0.75}
+                  disabled={identityVerified || identitySubmitted}
+                  onPress={() => openIdentityStep(row.route)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.rowNumber}>{String(i + 1).padStart(2, '0')}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.numberedTitle, muted && styles.mutedText]}>
+                      {t(`organizerPayoutSettings.setup.identity.${row.id}Title`)}
+                    </Text>
+                    <Text style={styles.numberedSub}>{t(`organizerPayoutSettings.setup.identity.${row.id}Sub`)}</Text>
+                  </View>
+                  {identityRowIndicator(status, isNext)}
+                </TouchableOpacity>
+              )
+            })}
+            <View style={styles.privacyNote}>
+              <Ionicons name="lock-closed-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.privacyText}>{t('organizerPayoutSettings.setup.identity.privacy')}</Text>
+            </View>
+          </ScrollView>
+          {renderStepFooter(t('organizerPayoutSettings.setup.continue'), continueFromIdentity, { loading: setupBusy })}
+        </>
+      )
+    }
+
+    if (step === 2) {
+      return (
+        <>
+          {renderStepHeader(2)}
+          <ScrollView contentContainerStyle={styles.stepBody}>
+            <Text style={styles.stepTitle}>{t('organizerPayoutSettings.setup.markets.title')}</Text>
+            <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.markets.lead')}</Text>
+            <Text style={styles.monoLabel}>{t('organizerPayoutSettings.setup.markets.pickAll')}</Text>
+            <MarketsPicker
+              draft={marketsDraft}
+              onToggle={(code) =>
+                setMarketsDraft((d) => (d.includes(code) ? d.filter((c) => c !== code) : [...d, code]))
+              }
+              disabled={savingMarkets}
+              onCanvas
+              showHint={false}
+            />
+          </ScrollView>
+          {renderStepFooter(t('organizerPayoutSettings.setup.continue'), continueFromMarkets, {
+            disabled: marketsDraft.length === 0 || savingMarkets,
+            loading: savingMarkets,
+          })}
+        </>
+      )
+    }
+
+    const stripeMarkets = marketsForRail('stripe_connect', declaredMarkets)
+    const stripeLabel =
+      stripeMarkets.length > 0
+        ? stripeMarkets.map((code) => countryName(code)).join(', ')
+        : t('organizerPayoutSettings.regions.internationalTitle')
+
+    return (
+      <>
+        {renderStepHeader(3)}
+        <ScrollView contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
+          <Text style={styles.stepTitle}>{t('organizerPayoutSettings.setup.method.title')}</Text>
+          <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.method.lead')}</Text>
+
+          {showHaitiRail ? (
+            <>
+              <Text style={styles.monoLabel}>{t('organizerPayoutSettings.setup.method.haitiLabel')}</Text>
+              <TouchableOpacity
+                style={[styles.methodPick, setupMethod === 'moncash' && styles.methodPickOn]}
+                activeOpacity={0.85}
+                onPress={() => setSetupMethod('moncash')}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: setupMethod === 'moncash' }}
+              >
+                <View style={styles.methodPickHead}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.methodPickTitleRow}>
+                      <Text style={styles.methodPickTitle}>MonCash</Text>
+                      <Text style={styles.recommended}>{t('organizerPayoutSettings.setup.method.recommended')}</Text>
+                    </View>
+                    <Text style={styles.methodPickSub}>{t('organizerPayoutSettings.setup.method.moncashSub')}</Text>
+                  </View>
+                  <View style={[styles.radio, setupMethod === 'moncash' && styles.radioOn]}>
+                    {setupMethod === 'moncash' ? <View style={styles.radioDot} /> : null}
+                  </View>
+                </View>
+                {setupMethod === 'moncash' ? (
+                  <View style={styles.inlineFields}>
+                    <Text style={styles.monoLabelSmall}>{t('organizerPayoutSettings.setup.method.nameLabel')}</Text>
+                    <TextInput
+                      style={styles.inlineInput}
+                      value={moncashForm.accountName}
+                      onChangeText={(v) => setMoncashForm((s) => ({ ...s, accountName: v }))}
+                      placeholder={t('organizerPayoutSettings.bankForm.fullNamePlaceholder')}
+                      placeholderTextColor={colors.textTertiary}
+                      selectionColor={colors.primary}
+                    />
+                    <Text style={[styles.monoLabelSmall, { marginTop: 14 }]}>
+                      {t('organizerPayoutSettings.setup.method.numberLabel')}
+                    </Text>
+                    <TextInput
+                      style={[styles.inlineInput, styles.inlineInputMono]}
+                      value={moncashForm.phoneNumber}
+                      onChangeText={(v) => setMoncashForm((s) => ({ ...s, phoneNumber: v }))}
+                      placeholder="+509..."
+                      placeholderTextColor={colors.textTertiary}
+                      selectionColor={colors.primary}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.methodPick, setupMethod === 'bank' && styles.methodPickOn]}
+                activeOpacity={0.85}
+                onPress={() => setSetupMethod('bank')}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: setupMethod === 'bank' }}
+              >
+                <View style={styles.methodPickHead}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.methodPickTitle}>{t('organizerPayoutSettings.setup.method.bankTitle')}</Text>
+                    <Text style={styles.methodPickSub}>{t('organizerPayoutSettings.setup.method.bankSub')}</Text>
+                  </View>
+                  <View style={[styles.radio, setupMethod === 'bank' && styles.radioOn]}>
+                    {setupMethod === 'bank' ? <View style={styles.radioDot} /> : null}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : null}
+
+          {showStripeRail ? (
+            <>
+              <Text style={[styles.monoLabel, showHaitiRail && { marginTop: 24 }]}>
+                {t('organizerPayoutSettings.setup.method.stripeLabel').replace('{countries}', stripeLabel)}
+              </Text>
+              <TouchableOpacity style={styles.methodPick} activeOpacity={0.85} onPress={handleAddStripe} accessibilityRole="button">
+                <View style={styles.methodPickHead}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.methodPickTitle}>Stripe</Text>
+                    <Text style={styles.methodPickSub}>{t('organizerPayoutSettings.setup.method.stripeSub')}</Text>
+                  </View>
+                  <Text style={styles.connectLink}>{t('organizerPayoutSettings.setup.method.connect')}</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : null}
+
+          {someRailHidden ? (
+            <TouchableOpacity onPress={() => setShowAllRails(true)} style={{ alignSelf: 'center' }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.marketsShowAll}>{t('organizerPayoutSettings.markets.showAllRails')}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </ScrollView>
+        {renderStepFooter(t('organizerPayoutSettings.setup.finish'), finishSetup, {
+          loading: savingMoncash,
+          disabled: savingMoncash,
+          note: t('organizerPayoutSettings.setup.method.addMoreLater'),
+        })}
+      </>
+    )
+  }
+
+  const openChangeMethod = (dest: PayoutDestination) => {
+    if (!requireIdentity()) return
+    if (dest.type === 'moncash') {
+      const m = dest as MoncashDestination
+      setMoncashForm({ provider: m.provider || 'moncash', accountName: m.accountName || '', phoneNumber: m.phoneNumber || '+509 ' })
+      setShowMoncashForm(true)
+    } else {
+      setBankNameChoice('')
+      setShowBankForm(true)
+    }
+  }
+
+  if (showSetup) {
+    return (
+      <View style={styles.container}>
+        {renderSetup()}
+        {modals}
+      </View>
+    )
+  }
+
+  const inHistory = activeTab === 'history'
+
+  return (
+    <View style={styles.container}>
+      <OrganizerScreenHeader
+        title={inHistory ? t('organizerPayoutSettings.payoutHistory.title') : t('organizerPayoutSettings.headerTitle')}
+        onBack={() => (inHistory ? setActiveTab('methods') : navigation.goBack())}
+      />
+
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
+        }
+      >
+        {/* First-ever load only. After first paint this branch never shows
+            again; background refreshes keep the data on screen. */}
+        {loading || (!serverLoaded && !hasAnyMethod) ? (
+          <View>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.destinationCard}>
+                <View style={styles.destinationHeader}>
+                  <Skeleton width={32} height={32} radius={10} />
+                  <View style={{ flex: 1, marginLeft: 10, gap: 7 }}>
+                    <Skeleton width="52%" height={14} radius={6} />
+                    <Skeleton width="38%" height={11} radius={5} />
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : !inHistory ? (
+          <>
+            {/* Identity, only while it still needs doing. */}
+            {!identityVerified && (
+              <TouchableOpacity
+                style={styles.setupRow}
+                onPress={() => navigation.navigate('OrganizerVerification')}
+                accessibilityRole="button"
+              >
+                <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} />
+                <View style={styles.setupRowText}>
+                  <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.identityRowLabel')}</Text>
+                  <StatusChip
+                    status={identitySubmitted ? 'pending' : 'actionneeded'}
+                    label={identitySubmitted ? t('organizerPayoutSettings.status.underReview') : t('organizerPayoutSettings.summary.actionNeeded')}
+                  />
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+
+            {/* Where you run events: the saved answer as one row. */}
+            <View style={{ marginTop: 8 }}>
+              <SectionHeader title={t('organizerPayoutSettings.markets.title')} />
+            </View>
+            <View style={styles.setupRow}>
+              <View style={styles.flagStack}>
+                {declaredMarkets.length > 0 ? (
+                  declaredMarkets.slice(0, 3).map((code) => <FlagSquare key={code} code={code} size={20} />)
+                ) : (
+                  <Ionicons name="globe-outline" size={20} color={colors.textSecondary} />
+                )}
+              </View>
+              <Text
+                style={[styles.setupRowHint, { flex: 1 }, declaredMarkets.length > 0 && styles.setupRowValue]}
+                numberOfLines={1}
+              >
+                {marketsSummary}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setMarketsSheetOpen(true)}
+                disabled={!marketsLoaded}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('organizerPayoutSettings.markets.title')}: ${marketsSummary}`}
+              >
+                <Text style={styles.changeLink}>
+                  {declaredMarkets.length > 0
+                    ? t('organizerPayoutSettings.markets.change')
+                    : t('organizerPayoutSettings.markets.choose')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Cross-border advisory: one connected account, fixed country. */}
+            {mismatchedStripeMarkets.length > 0 ? (
+              <View style={styles.marketsWarning}>
+                <Ionicons name="swap-horizontal-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.marketsWarningText}>
+                  {t('organizerPayoutSettings.markets.countryMismatch')
+                    .replace('{account}', countryName(connectedAccountCountry))
+                    .replace('{markets}', mismatchedStripeMarkets.map((code) => countryName(code)).join(', '))}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* The payout methods, by region: which one an event pays through
+                is decided by the event's country, server-side. */}
+            {showStripeRail ? (
+              <>
+                <RegionSection
+                  colors={colors}
+                  title={t('organizerPayoutSettings.regions.internationalTitle')}
+                  blurb={t('organizerPayoutSettings.regions.internationalBlurb')}
+                  status={stripeProfile?.connected ? (stripeProfile.verified ? 'ready' : 'pending') : 'none'}
+                  t={t}
+                />
+                {stripeProfile?.connected ? (
+                  <View style={styles.destinationCard}>
+                    <View style={styles.destinationHeader}>
+                      <View style={styles.methodIconTile}>
+                        <Ionicons name="globe-outline" size={16} color={colors.text} />
+                      </View>
+                      <View style={styles.destinationBody}>
+                        <Text style={styles.destinationTitle} numberOfLines={1}>{t('organizerPayoutSettings.stripe.title')}</Text>
+                        <Text style={styles.destinationSubtitle} numberOfLines={1}>
+                          {stripeProfile.country === 'CA'
+                            ? t('organizerPayoutSettings.countries.canada')
+                            : stripeProfile.country === 'FR'
+                              ? t('organizerPayoutSettings.countries.france')
+                              : t('organizerPayoutSettings.countries.united_states')}
+                        </Text>
+                        <View style={styles.destinationStatus}>
+                          {stripeProfile.verified ? (
+                            <StatusChip status="verified" label={t('organizerPayoutSettings.stripeCard.connected')} />
+                          ) : (
+                            <StatusChip status="pending" label={t('organizerPayoutSettings.stripeCard.finishSetup')} />
+                          )}
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        onPress={() =>
+                          startStripeConnect(
+                            stripeProfile.country === 'CA' ? 'canada' : stripeProfile.country === 'FR' ? 'france' : 'united_states'
+                          )
+                        }
+                      >
+                        <Text style={styles.changeLink}>
+                          {stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.setupRow} onPress={handleAddStripe} accessibilityRole="button">
+                    <Text style={[styles.setupRowHint, { flex: 1 }]}>{t('organizerPayoutSettings.regions.emptyInternational')}</Text>
+                    <Text style={styles.changeLink}>{t('organizerPayoutSettings.setup.method.connect')}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : null}
+
+            {showHaitiRail ? (
+              <>
+                <RegionSection
+                  colors={colors}
+                  title={t('organizerPayoutSettings.regions.haitiTitle')}
+                  blurb={t('organizerPayoutSettings.regions.haitiBlurb')}
+                  status={
+                    destinations.length === 0
+                      ? 'none'
+                      : destinations.some((d) => d.verificationStatus === 'verified')
+                        ? 'ready'
+                        : 'pending'
+                  }
+                  t={t}
+                />
+                {destinations.length === 0 ? (
+                  <Text style={styles.regionEmpty}>{t('organizerPayoutSettings.regions.emptyHaiti')}</Text>
+                ) : null}
+
+                {destinations.map((dest) => {
+                  const chip = statusChip(dest.verificationStatus)
+                  const isBank = dest.type === 'bank'
+                  return (
+                    <TouchableOpacity
+                      key={dest.id}
+                      style={styles.destinationCard}
+                      activeOpacity={dest.verificationStatus !== 'verified' ? 0.75 : 1}
+                      disabled={dest.verificationStatus === 'verified'}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setSelectedDestination(dest)
+                        if (isBank) {
+                          setShowVerificationModal(true)
+                        } else if (identityVerified) {
+                          showAlert(
+                            t('organizerPayoutSettings.moncashVerify.readyTitle'),
+                            t('organizerPayoutSettings.moncashVerify.readyBody')
+                          )
+                        } else {
+                          showAlert(t('organizerPayoutSettings.moncashVerify.title'), t('organizerPayoutSettings.moncashVerify.body'), [
+                            { text: t('organizerPayoutSettings.moncashVerify.cancel'), style: 'cancel' },
+                            {
+                              text: t('organizerPayoutSettings.moncashVerify.verifyCta'),
+                              onPress: () => navigation.navigate('OrganizerVerification'),
+                            },
+                          ])
+                        }
+                      }}
+                    >
+                      <View style={styles.destinationHeader}>
+                        <View style={styles.methodIconTile}>
+                          <Ionicons name={isBank ? 'card-outline' : 'phone-portrait-outline'} size={16} color={colors.text} />
+                        </View>
+                        <View style={styles.destinationBody}>
+                          <Text style={styles.destinationTitle} numberOfLines={1}>
+                            {isBank ? (dest as BankDestination).bankName : (dest as MoncashDestination).provider === 'natcash' ? 'NatCash' : 'MonCash'}
+                            <Text style={styles.destinationDigits}>
+                              {'  •••• '}
+                              {isBank ? (dest as BankDestination).accountNumberLast4 : (dest as MoncashDestination).phoneNumberLast4}
+                            </Text>
+                          </Text>
+                          <Text style={styles.destinationSubtitle} numberOfLines={1}>
+                            {isBank ? (dest as BankDestination).accountName : (dest as MoncashDestination).accountName}
+                          </Text>
+                          <View style={styles.destinationStatus}>
+                            <StatusChip status={chip.status} label={chip.label} />
+                          </View>
+                        </View>
+                        <TouchableOpacity
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityRole="button"
+                          onPress={() => openChangeMethod(dest)}
+                        >
+                          <Text style={styles.changeLink}>{t('organizerPayoutSettings.markets.change')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+                  )
+                })}
+
+                {/* Instant MonCash opt-in, under the MonCash method it applies to. */}
+                {instantState ? (
+                  <View style={styles.instantCard}>
+                    <View style={styles.destinationHeader}>
+                      <View style={styles.methodIconTile}>
+                        <Ionicons name="flash-outline" size={16} color={colors.text} />
+                      </View>
+                      <View style={styles.destinationBody}>
+                        <Text style={styles.destinationTitle}>{t('organizerPayoutSettings.instantMoncash.title')}</Text>
+                        <Text style={styles.destinationSubtitle}>
+                          {t('organizerPayoutSettings.instantMoncash.feeLine').replace('{fee}', instantFeeLabel)}
+                        </Text>
+                      </View>
+                      {instantState === 'not_yet' ? (
+                        <Text style={styles.instantStateLabel}>{t('organizerPayoutSettings.instantMoncash.stateNotYet')}</Text>
+                      ) : (
+                        <Switch
+                          value={allowInstantMoncash}
+                          onValueChange={toggleInstantMoncash}
+                          disabled={instantState !== 'available' || savingInstant}
+                          trackColor={{ false: colors.border, true: colors.primary }}
+                          thumbColor={colors.white}
+                          ios_backgroundColor={colors.border}
+                          accessibilityLabel={t('organizerPayoutSettings.instantMoncash.title')}
+                        />
+                      )}
+                    </View>
+                    <Text style={styles.instantBody}>
+                      {instantState === 'available'
+                        ? t('organizerPayoutSettings.instantMoncash.bodyAvailable').replace('{fee}', instantFeeLabel)
+                        : instantState === 'paused'
+                          ? t('organizerPayoutSettings.instantMoncash.bodyPaused')
+                          : t('organizerPayoutSettings.instantMoncash.bodyNotYet')}
+                    </Text>
+                    <Text style={styles.instantBody}>{instantMinimumLine}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
+            {/* Adding a method is its own sub-flow (the sheet below). */}
+            <TouchableOpacity style={styles.addMethodRow} onPress={() => setShowAddModal(true)} accessibilityRole="button">
+              <Ionicons name="add" size={18} color={colors.text} />
+              <Text style={styles.addMethodRowText}>{t('organizerPayoutSettings.addMethodRow')}</Text>
+            </TouchableOpacity>
+
+            {/* History is a row now, not a tab. */}
+            <TouchableOpacity style={[styles.setupRow, { marginTop: 10 }]} onPress={() => setActiveTab('history')} accessibilityRole="button">
+              <Ionicons name="receipt-outline" size={20} color={colors.textSecondary} />
+              <View style={styles.setupRowText}>
+                <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.payoutHistory.title')}</Text>
+                <Text style={styles.setupRowHint}>{t('organizerPayoutSettings.summary.historySub')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
+
+            {someRailHidden ? (
+              <TouchableOpacity onPress={() => setShowAllRails(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'center' }}>
+                <Text style={styles.marketsShowAll}>{t('organizerPayoutSettings.markets.showAllRails')}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        ) : payoutsLoading && !refreshing ? (
+          <View style={{ gap: 12 }}>
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} width="100%" height={72} radius={RADIUS.lg} />
+            ))}
+          </View>
+        ) : payoutsError ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('organizerPayoutSettings.payoutHistory.errorTitle')}</Text>
+            <Text style={styles.metaText}>{t('organizerPayoutSettings.payoutHistory.error')}</Text>
+            <TouchableOpacity style={[styles.secondaryButton, { marginTop: 12 }]} onPress={loadPayouts}>
+              <Text style={styles.secondaryButtonText}>{t('organizerPayoutSettings.payoutHistory.retry')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : payouts.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title={t('organizerPayoutSettings.payoutHistory.emptyTitle')}
+            subtitle={t('organizerPayoutSettings.payoutHistory.empty')}
+          />
+        ) : (
+          payouts.map((p) => {
+            const meta = payoutStatusMeta(p.status)
+            const label = meta.labelKey ? t(`organizerPayoutSettings.payoutHistory.status.${meta.labelKey}`) : p.status
+            return (
+              <View key={p.id} style={styles.payoutRow}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <MoneyText cents={p.amount} currency={(p.currency as any) || 'HTG'} style={styles.payoutAmount} />
+                  <Text style={styles.payoutMeta} numberOfLines={1}>
+                    {[payoutMethodLabel(p.method), formatDate(p.createdAt)].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+                <StatusChip status={meta.tone} label={label} />
+              </View>
+            )
+          })
+        )}
+      </ScrollView>
+
+      {modals}
     </View>
   )
 }
@@ -1643,11 +1986,244 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
-  tabsWrap: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 8,
-    paddingTop: 4,
+  // ── Guided setup ──
+  stepHeader: {
+    paddingHorizontal: 20,
+  },
+  stepHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 40,
+  },
+  stepHeaderSide: {
+    width: 80,
+  },
+  stepCount: {
+    fontFamily: font.mono,
+    fontSize: 12,
+    letterSpacing: 2,
+    color: colors.textSecondary,
+  },
+  stepCancel: {
+    fontFamily: font.mono,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  stepSegments: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 14,
+  },
+  stepSegment: {
+    flex: 1,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.surfaceRaised,
+  },
+  stepSegmentOn: {
+    backgroundColor: colors.text,
+  },
+  stepBody: {
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 24,
+  },
+  stepTitle: {
+    fontFamily: font.serif,
+    fontSize: 34,
+    lineHeight: 40,
+    color: colors.text,
+  },
+  stepLead: {
+    marginTop: 10,
+    marginBottom: 24,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textSecondary,
+  },
+  stepStatus: {
+    marginTop: -12,
+    marginBottom: 18,
+  },
+  numberedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    marginBottom: 10,
+  },
+  rowNumber: {
+    fontFamily: font.mono,
+    fontSize: 12,
+    color: colors.textTertiary,
+    alignSelf: 'flex-start',
+    marginTop: 3,
+  },
+  numberedTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  numberedSub: {
+    marginTop: 3,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  mutedText: {
+    color: colors.textSecondary,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 7,
+    backgroundColor: colors.textTertiary,
+  },
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingHorizontal: 4,
+  },
+  privacyText: {
+    flex: 1,
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  monoLabel: {
+    fontFamily: font.mono,
+    fontSize: 11,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  monoLabelSmall: {
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  methodPick: {
+    padding: 18,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    marginBottom: 10,
+  },
+  methodPickOn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  methodPickHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  methodPickTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  methodPickTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  methodPickSub: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  recommended: {
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.primary,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOn: {
+    backgroundColor: 'rgba(20,184,166,0.18)',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  inlineFields: {
+    marginTop: 16,
+  },
+  inlineInput: {
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.text,
+    backgroundColor: colors.surfaceRaised,
+    fontSize: 16,
+  },
+  inlineInputMono: {
+    fontFamily: font.mono,
+    letterSpacing: 1,
+  },
+  connectLink: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  stepFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  stepFooterNote: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  stepLater: {
+    alignSelf: 'center',
+    paddingVertical: 14,
+  },
+  stepLaterText: {
+    fontFamily: font.mono,
+    fontSize: 12,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  // ── Summary ──
+  flagStack: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  changeLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+    textDecorationLine: 'underline',
+  },
+  destinationStatus: {
+    marginTop: 6,
   },
   payoutRow: {
     flexDirection: 'row',

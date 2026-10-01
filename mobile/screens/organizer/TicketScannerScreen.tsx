@@ -54,6 +54,10 @@ import { Camera, DoorOpen, Search, Vibrate, VibrateOff } from 'lucide-react-nati
 type RouteParams = {
   TicketScanner: {
     eventId: string;
+    /** Open the find-a-guest sheet on arrival (Scan screen's "Find a guest by name"). */
+    openLookup?: boolean;
+    /** Start in door mode (Scan screen's "Door mode"). */
+    doorMode?: boolean;
   };
 };
 
@@ -175,7 +179,7 @@ export default function TicketScannerScreen() {
   const route = useRoute<RouteProp<RouteParams, 'TicketScanner'>>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { eventId } = route.params;
+  const { eventId, openLookup, doorMode: startInDoorMode } = route.params;
 
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
@@ -237,7 +241,15 @@ export default function TicketScannerScreen() {
         if (typeof p.hapticsOn === 'boolean') setHapticsOn(p.hapticsOn);
         if (ENTRY_POINTS.some((e) => e.value === p.entryPoint)) setEntryPoint(p.entryPoint);
       })
-      .catch(() => {});
+      .catch(() => {})
+      // An explicit "Door mode" from the Scan screen wins over the saved pref.
+      .finally(() => {
+        if (startInDoorMode) setDoorMode(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (openLookup) setShowLookup(true);
   }, []);
 
   useEffect(() => {
