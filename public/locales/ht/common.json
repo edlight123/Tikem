@@ -607,9 +607,9 @@
     "selling_fast": "Ap vann vit"
   },
   "app_cta": {
-    "title": "Jwenn aplikasyon Tikèm nan",
-    "subtitle": "Dekouvri evènman epi achte tikè pi vit sou iPhone ak Android.",
-    "get": "Jwenn aplikasyon an",
+    "title": "Aplikasyon Tikèm nan",
+    "subtitle": "iPhone ak Android",
+    "get": "Jwenn li",
     "dismiss": "Pita"
   },
   "footer": {
@@ -624,7 +624,9 @@
     "refunds": "Ranbousman",
     "tagline_short": "kote ayiti soti.",
     "vision": "Vizyon",
-    "language": "Lang"
+    "language": "Lang",
+    "instagram": "Tikèm sou Instagram",
+    "built_by": "Se {{labs}} ki bati l"
   },
   "admin": {
     "search_placeholder": "Chèche evènman...",

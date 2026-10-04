@@ -13,6 +13,7 @@ import {
   artByKey,
   artForCategory,
   artForPicker,
+  artForPlace,
   artForWorld,
   artInWorld,
   generalArt,
@@ -148,5 +149,29 @@ describe('isDeviceOnlyImageUri (what the poster upload must upload)', () => {
     expect(isDeviceOnlyImageUri('http://example.com/a.jpg')).toBe(false)
     expect(isDeviceOnlyImageUri('')).toBe(false)
     expect(isDeviceOnlyImageUri(undefined)).toBe(false)
+  })
+})
+
+describe('artForPlace', () => {
+  const { findMetro } = require('../mobile/data/metros')
+  it('gives each city a fitting piece', () => {
+    expect(artForPlace(findMetro('Port-au-Prince', 'HT')).key).toBe('art2')
+    expect(artForPlace(findMetro('Pétion-Ville', 'HT')).key).toBe('art2')
+    expect(artForPlace(findMetro('Cap-Haïtien', 'HT')).key).toBe('citadelle')
+    expect(artForPlace(findMetro('Jacmel', 'HT')).key).toBe('kanaval')
+    expect(artForPlace(findMetro('Brooklyn', 'US')).key).toBe('diaspora')
+  })
+  it('matches loose strings and aliases', () => {
+    expect(artForPlace('Okap').key).toBe('citadelle')
+    expect(artForPlace('PETION-VILLE, Ouest').key).toBe('art2')
+    expect(artForPlace(null, 'Delmas 33').key).toBe('art2')
+    expect(artForPlace('Labadee').key).toBe('labadee')
+  })
+  it('never names a wrong landmark elsewhere and keeps the default with no place', () => {
+    for (const c of ['Miami, FL', 'Montréal', 'Paris', 'Boston']) {
+      expect(['citadelle', 'diaspora', 'kanaval', 'art2']).not.toContain(artForPlace(c).key)
+    }
+    expect(artForPlace(null).key).toBe('citadelle')
+    expect(artForPlace('').key).toBe('citadelle')
   })
 })

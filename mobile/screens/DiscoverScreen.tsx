@@ -22,7 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
 import EventFiltersSheet from '../components/EventFiltersSheet';
 import EmptyState from '../components/EmptyState';
-import { artByKey } from '../lib/artLibrary';
+import { artByKey, artForPlace } from '../lib/artLibrary';
 import { Skeleton, DiscoverFeedSkeleton } from '../components/Skeleton';
 import { DateFilter } from '../components/DateChips';
 import WhenPickerSheet from '../components/WhenPickerSheet';
@@ -693,7 +693,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
                       locationCopy.emptySubtitle,
                       { label: t('discover.changeLocation'), onAction: () => setWhereSheetOpen(true) },
                       MapPin,
-                      'citadelle',
+                      artForPlace(activeMetro, activeCity).key,
                     )}
 
                 <ElsewhereRail

@@ -5,6 +5,12 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { TikemWordmark } from '@/components/ui/TikemLogo'
+import { Instagram } from 'lucide-react'
+
+// Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
+// technology division of EdLight Initiative, not a separate company.
+const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/'
+const EDLIGHT_LABS_URL = 'https://www.edlight.org/labs'
 
 interface FooterLink {
   href: string
@@ -27,6 +33,7 @@ export default function Footer() {
   }
 
   const year = new Date().getFullYear()
+  const builtBy = t('footer.built_by', { labs: '%LABS%', defaultValue: 'Built by {{labs}}' }).split('%LABS%')
 
   const discoverLinks: FooterLink[] = [
     { href: '/discover', label: t('nav.home', { defaultValue: 'Events' }) },
@@ -107,11 +114,37 @@ export default function Footer() {
           </nav>
         </div>
 
-        {/* Bottom row */}
-        <div className="mt-14 pt-2">
+        {/* Bottom row: copyright, then where to follow us and who builds it. */}
+        <div className="mt-14 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-white/40">
             {t('footer.copyright', { year, defaultValue: '© {{year}} Tikèm' })}
           </p>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-white/40">
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('footer.instagram', { defaultValue: 'Tikèm on Instagram' })}
+              className="inline-flex items-center gap-1.5 text-white/60 transition-colors duration-200 hover:text-brand-300"
+            >
+              <Instagram size={14} aria-hidden="true" />
+              @tikem.co
+            </a>
+            {/* One translatable sentence; the brand name is spliced in as a link
+                so each language can put it where its grammar wants it. */}
+            <span>
+              {builtBy[0]}
+              <a
+                href={EDLIGHT_LABS_URL}
+                target="_blank"
+                rel="noopener"
+                className="text-white/60 transition-colors duration-200 hover:text-brand-300"
+              >
+                EdLight Labs
+              </a>
+              {builtBy[1]}
+            </span>
+          </div>
         </div>
       </div>
     </footer>

@@ -202,6 +202,106 @@ export function artForPicker(category: string | null | undefined): ArtPiece[] {
   return [...own, ...ART.filter((a) => !ownKeys.has(a.key))];
 }
 
+// ---------------------------------------------------------------------------
+// Art for a PLACE (the big "nothing here yet" empty states on Home / Discover)
+// ---------------------------------------------------------------------------
+
+/**
+ * Which piece fits the active metro / city, so an empty Port-au-Prince feed no
+ * longer wears the Citadelle (a Cap-Haïtien landmark). 2026-10-04 feedback:
+ * "i like the citadelle - but that is more okap ... and so for each of the
+ * cities".
+ *
+ * Keyed by metro id (data/metros.ts) first, then by a normalised town name
+ * (accents stripped, lowercased, ", ST" suffix dropped) for aliases that are
+ * not metro towns (Okap, Potoprens, Labadee…). A place we know but have no
+ * landmark for gets PLACE_ART_GENERAL, which names no landmark, so it is never
+ * wrong. No place at all keeps the old default (the Citadelle).
+ *
+ * STILL MISSING a dedicated landmark piece (add the art to ART, then change one
+ * line below):
+ * - Port-au-Prince: uses art2 (tap-tap at sunset). Wanted: the Marché en Fer /
+ *   Iron Market, the Champ de Mars and the Palais, Pétion-Ville at night,
+ *   the view from Boutilliers / Kenscoff.
+ * - Les Cayes / Jérémie: uses art3 (moonlit fishing village). Wanted: Île-à-
+ *   Vache, Pointe Sable, the Grand'Anse coast.
+ * - Gonaïves, Saint-Marc, Port-de-Paix, Fort-Liberté: general. Wanted: the
+ *   Place d'Armes of Gonaïves (Independence), the Saint-Marc bay.
+ * - Miami: general. Wanted: the Little Haiti Cultural Complex, Little Haiti
+ *   murals on NE 2nd Ave, a Miami Beach night.
+ * - Boston, Atlanta, Orlando, Tampa, Chicago, Houston, Los Angeles: general.
+ * - Montréal: general. Wanted: Saint-Michel / Rivière-des-Prairies, the Mount
+ *   Royal tam-tams, Old Port in winter.
+ * - Toronto, Ottawa, Vancouver, Calgary: general.
+ * - Paris: general. Wanted: a Haitian night in Saint-Denis or the canal Saint-
+ *   Martin, Sacré-Cœur steps.
+ * - Dominican Republic metros: general. Wanted: the Malecón of Santo Domingo.
+ * New York already has its own (diaspora: the Brooklyn Bridge).
+ */
+const PLACE_ART_DEFAULT = 'citadelle';
+const PLACE_ART_GENERAL = 'konpa';
+
+// prettier-ignore
+const PLACE_ART_BY_METRO: Record<string, string> = {
+  'ht-port-au-prince': 'art2',     // tap-tap at sunset
+  'ht-cap-haitien':    'citadelle',
+  'ht-jacmel':         'kanaval',  // Jacmel kanaval
+  'ht-les-cayes':      'art3',     // moonlit fishing village
+  'ht-jeremie':        'art3',
+  'us-new-york':       'diaspora', // the Brooklyn Bridge
+};
+
+// Normalised town names and nicknames, for places outside the metro list.
+// prettier-ignore
+const PLACE_ART_BY_NAME: Record<string, string> = {
+  'okap': 'citadelle', 'au cap': 'citadelle', 'le cap': 'citadelle', 'cap haitien': 'citadelle',
+  'milot': 'citadelle', 'labadee': 'labadee', 'labadie': 'labadee',
+  'jacmel': 'kanaval', 'jakmel': 'kanaval', 'bassin bleu': 'bassinbleu',
+  'port au prince': 'art2', 'potoprens': 'art2', 'pap': 'art2',
+  'petion ville': 'art2', 'petyonvil': 'art2', 'delmas': 'art2',
+  'new york': 'diaspora', 'nyc': 'diaspora', 'brooklyn': 'diaspora', 'queens': 'diaspora',
+};
+
+const normPlace = (value: unknown): string =>
+  fold(String(value ?? '').split(',')[0])
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+/**
+ * The art for the active place. Accepts a Metro (or anything with an `id`,
+ * `label` and `cities`), a city string, or nothing. Always returns a piece.
+ */
+export function artForPlace(
+  place: { id?: string; label?: string; cities?: string[] } | string | null | undefined,
+  city?: string | null
+): ArtPiece {
+  const pick = (key: string | undefined) => (key ? BY_KEY[key] : undefined);
+
+  const names: string[] = [];
+  if (place && typeof place === 'object') {
+    const byMetro = pick(place.id ? PLACE_ART_BY_METRO[place.id] : undefined);
+    if (byMetro) return byMetro;
+    if (place.label) names.push(place.label);
+    if (Array.isArray(place.cities)) names.push(...place.cities);
+  } else if (typeof place === 'string') {
+    names.push(place);
+  }
+  if (city) names.unshift(city);
+
+  const normalised = names.map(normPlace).filter(Boolean);
+  for (const n of normalised) {
+    const exact = pick(PLACE_ART_BY_NAME[n]);
+    if (exact) return exact;
+    // "Delmas 33", "Brooklyn NY": a known name followed by more words.
+    for (const [name, key] of Object.entries(PLACE_ART_BY_NAME)) {
+      if (n.startsWith(`${name} `)) return BY_KEY[key];
+    }
+  }
+
+  if (!normalised.length) return BY_KEY[PLACE_ART_DEFAULT];
+  return BY_KEY[PLACE_ART_GENERAL];
+}
+
 const fold = (s: string) =>
   s
     .normalize('NFD')

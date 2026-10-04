@@ -64,6 +64,22 @@ export default {
     clearSearch: 'Effacer la recherche',
     noAreasMatch: 'Aucune zone ne correspond',
   },
+  // La carte « vous êtes ici ? » en haut de l'accueil. {inCountry} porte sa
+  // propre préposition.
+  locationBanner: {
+    title: 'On dirait que vous êtes {inCountry}',
+    subtitle: 'Voir les événements à {city} ?',
+    yes: 'Oui',
+    change: 'Changer',
+    notNow: 'Plus tard',
+    inCountry: {
+      HT: 'en Haïti',
+      US: 'aux États-Unis',
+      CA: 'au Canada',
+      FR: 'en France',
+      DO: 'en République dominicaine',
+    },
+  },
   calendar: {
     addToCalendar: 'Ajouter au calendrier',
     apple: 'Calendrier Apple',
@@ -401,6 +417,10 @@ export default {
     terms: 'Conditions',
     privacy: 'Confidentialité',
     refundPolicy: 'Politique de remboursement',
+    about: 'À propos',
+    instagram: 'Suivez-nous sur Instagram',
+    builtBy: 'Conçu par EdLight Labs',
+    version: 'Version',
   },
 
   contentPage: {

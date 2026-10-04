@@ -37,6 +37,21 @@ export default {
     clearSearch: 'Efase rechèch la',
     noAreasMatch: 'Pa gen zòn ki koresponn',
   },
+  // Kat « ou la a? » anlè paj Akèy la. {inCountry} gen prepozisyon pa l.
+  locationBanner: {
+    title: 'Sanble ou {inCountry}',
+    subtitle: 'Wè evènman nan {city}?',
+    yes: 'Wi',
+    change: 'Chanje',
+    notNow: 'Pita',
+    inCountry: {
+      HT: 'ann Ayiti',
+      US: 'Ozetazini',
+      CA: 'Okanada',
+      FR: 'an Frans',
+      DO: 'nan Repiblik Dominikèn',
+    },
+  },
   calendar: {
     addToCalendar: 'Ajoute nan kalandriye',
     apple: 'Kalandriye Apple',
@@ -374,6 +389,10 @@ export default {
     terms: 'Tèm',
     privacy: 'Konfidansyalite',
     refundPolicy: 'Politik ranbousman',
+    about: 'Konsènan Tikèm',
+    instagram: 'Swiv nou sou Instagram',
+    builtBy: 'Se EdLight Labs ki bati l',
+    version: 'Vèsyon',
   },
 
   contentPage: {

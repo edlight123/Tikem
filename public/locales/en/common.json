@@ -608,8 +608,8 @@
   },
   "app_cta": {
     "title": "Get the Tikèm app",
-    "subtitle": "Discover events and buy tickets faster on iPhone and Android.",
-    "get": "Get the app",
+    "subtitle": "iPhone & Android",
+    "get": "Get",
     "dismiss": "Not now"
   },
   "footer": {
@@ -624,7 +624,9 @@
     "refunds": "Refunds",
     "tagline_short": "where haiti goes out.",
     "vision": "Vision",
-    "language": "Language"
+    "language": "Language",
+    "instagram": "Tikèm on Instagram",
+    "built_by": "Built by {{labs}}"
   },
   "admin": {
     "search_placeholder": "Search events...",

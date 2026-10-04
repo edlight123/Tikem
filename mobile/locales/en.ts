@@ -37,6 +37,22 @@ export default {
     clearSearch: 'Clear search',
     noAreasMatch: 'No areas match',
   },
+  // The "are you here?" card at the top of Home when the device region and
+  // the saved country disagree. {inCountry} carries its own preposition.
+  locationBanner: {
+    title: 'Looks like you’re {inCountry}',
+    subtitle: 'Show events in {city}?',
+    yes: 'Yes',
+    change: 'Change',
+    notNow: 'Not now',
+    inCountry: {
+      HT: 'in Haiti',
+      US: 'in the United States',
+      CA: 'in Canada',
+      FR: 'in France',
+      DO: 'in the Dominican Republic',
+    },
+  },
   calendar: {
     addToCalendar: 'Add to Calendar',
     apple: 'Apple Calendar',
@@ -374,6 +390,10 @@ export default {
     terms: 'Terms',
     privacy: 'Privacy',
     refundPolicy: 'Refund Policy',
+    about: 'About',
+    instagram: 'Follow us on Instagram',
+    builtBy: 'Built by EdLight Labs',
+    version: 'Version',
   },
 
   contentPage: {

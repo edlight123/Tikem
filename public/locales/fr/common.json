@@ -607,9 +607,9 @@
     "selling_fast": "Se vend vite"
   },
   "app_cta": {
-    "title": "Obtenez l'application Tikèm",
-    "subtitle": "Découvrez des événements et achetez des billets plus vite sur iPhone et Android.",
-    "get": "Obtenir l'application",
+    "title": "L'app Tikèm",
+    "subtitle": "iPhone et Android",
+    "get": "Obtenir",
     "dismiss": "Plus tard"
   },
   "footer": {
@@ -624,7 +624,9 @@
     "refunds": "Remboursements",
     "tagline_short": "là où haïti sort.",
     "vision": "Vision",
-    "language": "Langue"
+    "language": "Langue",
+    "instagram": "Tikèm sur Instagram",
+    "built_by": "Conçu par {{labs}}"
   },
   "admin": {
     "search_placeholder": "Rechercher des événements...",

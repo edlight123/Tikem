@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   Image,
+  Linking,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -13,8 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
-import { Bell, BookOpen, Briefcase, ChevronRight, Compass, FileText, Heart, HelpCircle, LogOut, MapPin, RotateCcw, Settings, Shield, Trash2, Users } from 'lucide-react-native';
+import { Bell, BookOpen, Briefcase, ChevronRight, Compass, ExternalLink, FileText, Heart, HelpCircle, Instagram, LogOut, MapPin, RotateCcw, Settings, Shield, Trash2, Users } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
 
@@ -46,6 +48,13 @@ import { Skeleton, PosterCardSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import DeleteAccountSheet from '../components/DeleteAccountSheet';
 import { findMetro } from '../data/metros';
+
+// Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
+// technology division of EdLight Initiative, not a separate company. The
+// https Instagram URL is a universal link, so it opens the Instagram app when
+// it is installed and the browser when it is not.
+const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/';
+const EDLIGHT_LABS_URL = 'https://www.edlight.org/labs';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Two-column poster wall inside the 16px-padded scroll content (12px gutter).
@@ -1024,6 +1033,25 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{t('profile.about')}</Text>
+
+          <TouchableOpacity
+            style={styles.rowButton}
+            onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => {})}
+            accessibilityRole="link"
+          >
+            <View style={styles.rowLeft}>
+              <Instagram size={18} color={colors.primary} />
+              <Text style={styles.rowText}>{t('profile.instagram')}</Text>
+            </View>
+            <View style={styles.rowLeft}>
+              <Text style={styles.aboutHandle}>@tikem.co</Text>
+              <ExternalLink size={15} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{t('profile.preferences')}</Text>
 
           <View style={styles.languageRow}>
@@ -1074,6 +1102,21 @@ export default function ProfileScreen() {
             <Text style={styles.deleteAccountText}>{t('profile.deleteAccount.row')}</Text>
           </TouchableOpacity>
         ) : null}
+        {/* Colophon: who builds Tikèm, and which build this is. */}
+        <TouchableOpacity
+          style={styles.colophon}
+          onPress={() =>
+            navigation.navigate('InAppWebView', { url: EDLIGHT_LABS_URL, title: 'EdLight Labs' })
+          }
+          accessibilityRole="link"
+        >
+          <Text style={styles.colophonText}>{t('profile.builtBy')}</Text>
+          {Constants.expoConfig?.version ? (
+            <Text style={styles.colophonMeta}>
+              {t('profile.version')} {Constants.expoConfig.version}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
         <DeleteAccountSheet visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
       </ScrollView>
     </SafeAreaView>
@@ -1504,6 +1547,27 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  aboutHandle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textTertiary,
+  },
+  colophon: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 24,
+    gap: 4,
+  },
+  colophonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    color: colors.textSecondary,
+  },
+  colophonMeta: {
+    fontSize: 11,
+    color: colors.textTertiary,
   },
   deleteAccountText: {
     fontSize: 13,

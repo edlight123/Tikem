@@ -31,7 +31,7 @@ import ThisWeekSection from '../components/ThisWeekSection';
 import AllEventsPreview from '../components/AllEventsPreview';
 import EventRail from '../components/EventRail';
 import EmptyState from '../components/EmptyState';
-import { artByKey } from '../lib/artLibrary';
+import { artForPlace } from '../lib/artLibrary';
 import { HomeFeedSkeleton } from '../components/Skeleton';
 import ChromeBlur from '../components/ChromeBlur';
 import { isBudgetFriendlyTicketPrice } from '../lib/pricing';
@@ -366,7 +366,7 @@ export default function HomeScreen({ navigation }: any) {
       />
       
       {/* Location Detection Banner */}
-      <LocationDetectionBanner />
+      <LocationDetectionBanner onChangeLocation={() => setLocationSheetOpen(true)} />
 
       {/* Floating brand + location header */}
       <Animated.View
@@ -567,7 +567,7 @@ export default function HomeScreen({ navigation }: any) {
               // silent widening — see fetchEvents.
               <EmptyState
                 icon={MapPin}
-                art={artByKey('citadelle')}
+                art={artForPlace(activeMetro, activeCity)}
                 title={locationCopy.emptyTitle}
                 subtitle={locationCopy.emptySubtitle}
                 actionLabel={t('discover.changeLocation')}
