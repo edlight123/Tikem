@@ -8,7 +8,8 @@
   "empty": {
     "title": "Pas encore de notifications",
     "description": "Quand vous recevrez des notifications, elles apparaîtront ici.",
-    "cta": "Découvrir des événements"
+    "cta": "Découvrir des événements",
+    "eyebrow": "Tout est calme"
   },
   "view_details": "Voir les détails",
   "mark_read": "Marquer comme lu",
@@ -36,5 +37,13 @@
     "missing_details": "Détails de l'invitation manquants. Veuillez ouvrir le lien d'invitation.",
     "accept_failed": "Échec de l'acceptation de l'invitation",
     "decline_failed": "Échec du refus de l'invitation"
+  },
+  "filters": {
+    "label": "Filtrer les notifications",
+    "all": "Tout",
+    "tickets": "Billets",
+    "events": "Événements",
+    "payouts": "Paiements",
+    "other": "Autres"
   }
 }

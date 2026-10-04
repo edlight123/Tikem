@@ -8,7 +8,8 @@
   "empty": {
     "title": "Poko gen notifikasyon",
     "description": "Lè w resevwa notifikasyon, y ap parèt la a.",
-    "cta": "Jwenn evènman"
+    "cta": "Jwenn evènman",
+    "eyebrow": "Pa gen anyen pou kounye a"
   },
   "view_details": "Gade detay",
   "mark_read": "Make kòm li",
@@ -36,5 +37,13 @@
     "missing_details": "Detay envitasyon an manke. Tanpri louvri lyen envitasyon an.",
     "accept_failed": "Nou pa t ka aksepte envitasyon an",
     "decline_failed": "Nou pa t ka refize envitasyon an"
+  },
+  "filters": {
+    "label": "Filtre notifikasyon yo",
+    "all": "Tout",
+    "tickets": "Tikè",
+    "events": "Evènman",
+    "payouts": "Peman",
+    "other": "Lòt"
   }
 }

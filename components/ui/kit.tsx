@@ -81,12 +81,15 @@ export function Chip({
   onClick,
   children,
   className = '',
+  pressed,
 }: {
   active?: boolean
   href?: string
   onClick?: () => void
   children: React.ReactNode
   className?: string
+  /** For a button used as a filter toggle: exposes the state as aria-pressed. */
+  pressed?: boolean
 }) {
   const base = `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
     active
@@ -101,7 +104,7 @@ export function Chip({
     )
   }
   return (
-    <button type="button" onClick={onClick} className={base}>
+    <button type="button" onClick={onClick} aria-pressed={pressed} className={base}>
       {children}
     </button>
   )

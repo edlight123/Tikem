@@ -8,7 +8,8 @@
   "empty": {
     "title": "No notifications yet",
     "description": "When you get notifications, they'll show up here.",
-    "cta": "Find events"
+    "cta": "Find events",
+    "eyebrow": "Quiet for now"
   },
   "view_details": "View details",
   "mark_read": "Mark as read",
@@ -36,5 +37,13 @@
     "missing_details": "Missing invite details. Please open the invite link.",
     "accept_failed": "Failed to accept invite",
     "decline_failed": "Failed to decline invite"
+  },
+  "filters": {
+    "label": "Filter notifications",
+    "all": "All",
+    "tickets": "Tickets",
+    "events": "Events",
+    "payouts": "Payouts",
+    "other": "Other"
   }
 }
