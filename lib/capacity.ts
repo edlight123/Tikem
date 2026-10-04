@@ -22,6 +22,15 @@ export async function checkEventCapacity(
     .eq('id', eventId)
     .single()
 
+  return capacityFromEvent(event, requestedQuantity)
+}
+
+/**
+ * The same capacity verdict as checkEventCapacity, computed from an event doc the
+ * caller has ALREADY loaded — so a checkout route that just read the event does not
+ * pay a second Firestore round trip for the identical document.
+ */
+export function capacityFromEvent(event: any, requestedQuantity: number = 1): CapacityCheck {
   // Capacity sources (0 / missing ⇒ unlimited).
   const capacity = Number(event?.max_tickets ?? event?.capacity ?? event?.total_tickets ?? 0)
   if (!event || !Number.isFinite(capacity) || capacity <= 0) {

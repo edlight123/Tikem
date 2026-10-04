@@ -290,6 +290,37 @@ true;
 // then bring the payment card into view.
 const PAGE_FIT_JS = FIT_VIEWPORT_JS + '\n' + REVEAL_CARD_JS
 
+// Tells the screen the page's DOM is parsed — i.e. it can paint — so the loading
+// skeleton can come off THEN, not at onLoadEnd. onLoadEnd waits for the window
+// `load` event: every font, image and @import on the page. Digicel's MonCash page
+// pulls Google Fonts via a CSS @import plus Font Awesome/Glyphicons webfonts, all
+// served `Cache-Control: no-store` (re-downloaded on every visit), so on a Haitian
+// mobile connection `load` lands well after the form is already usable. onLoadEnd
+// stays wired up as the fallback if this message never arrives.
+const PAGE_READY_JS = `
+(function () {
+  try {
+    var sent = false
+    function ready() {
+      if (sent) return
+      sent = true
+      try {
+        window.ReactNativeWebView &&
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({ source: 'tikem', type: 'page_ready' })
+          )
+      } catch (e) {}
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ready)
+    } else {
+      ready()
+    }
+  } catch (e) {}
+})();
+true;
+`
+
 // Hosts we may attach the Firebase bearer to. The MonCash checkout page needs
 // the token to render its form — if the host isn't trusted, the header is
 // withheld and the page comes back BLANK (exactly the "stuck on a white page"
@@ -562,7 +593,13 @@ export default function PaymentWebViewScreen() {
             const raw = event?.nativeEvent?.data
             if (!raw) return
             const parsed = JSON.parse(String(raw))
-            if (parsed?.source !== 'tikem' || parsed?.type !== 'purchase_result') return
+            if (parsed?.source !== 'tikem') return
+            if (parsed?.type === 'page_ready') {
+              // First paint is possible: show the page instead of the skeleton.
+              setLoading(false)
+              return
+            }
+            if (parsed?.type !== 'purchase_result') return
 
             if (parsed?.status === 'success') {
               finishWithSuccess()
@@ -576,7 +613,9 @@ export default function PaymentWebViewScreen() {
             // ignore
           }
         }}
-        startInLoadingState
+        // No startInLoadingState: it stacks the library's own white spinner over
+        // the page until onLoadEnd (full `load`), hiding it even after our
+        // skeleton lifts at DOMContentLoaded. Our skeleton is the loading state.
         javaScriptEnabled
         domStorageEnabled
         // Keep the checkout form steady when the number/PIN fields are focused:
@@ -588,7 +627,7 @@ export default function PaymentWebViewScreen() {
         hideKeyboardAccessoryView
         // Pin the viewport as early as possible (before-load), then again after
         // load in case the page rewrote its own <head>. Both runs are idempotent.
-        injectedJavaScriptBeforeContentLoaded={PAGE_FIT_JS}
+        injectedJavaScriptBeforeContentLoaded={PAGE_FIT_JS + '\n' + PAGE_READY_JS}
         injectedJavaScript={PAGE_FIT_JS}
       />
 

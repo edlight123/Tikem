@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import {
@@ -12,7 +12,7 @@ import { resolvePromoterCode } from '@/lib/promoters'
 import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread, sumMoney } from '@/lib/fx/usd-htg'
 import { inferCountryFromEventText } from '@/lib/event-country'
-import { checkEventCapacity } from '@/lib/capacity'
+import { capacityFromEvent } from '@/lib/capacity'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import { isPaidAllowed, countrySupport } from '@/lib/country-support'
 import {
@@ -20,6 +20,7 @@ import {
   getMonCashButtonRedirectUrl,
   isMonCashButtonConfigured,
 } from '@/lib/moncash-button'
+import { prewarmMonCashAccessToken } from '@/lib/moncash'
 
 import crypto from 'crypto'
 
@@ -88,8 +89,6 @@ export async function POST(request: Request) {
     // supplying `guest: { name, email, phone }` — resolved below, once the event is
     // loaded, because the rules depend on the event (phone is required for Haiti, and
     // password-protected events still demand a real account).
-    const user = await getCurrentUser()
-
     if (!isMonCashButtonConfigured()) {
       return NextResponse.json({ error: 'MonCash Button is not configured' }, { status: 500 })
     }
@@ -132,11 +131,12 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .single()
+    // Latency: the session check (Firebase token verify + profile read) and the event
+    // read are independent, so they run together instead of back to back.
+    const [user, { data: event, error: eventError }] = await Promise.all([
+      getCurrentUser(),
+      Promise.resolve(supabase.from('events').select('*').eq('id', eventId).single()),
+    ])
 
     if (eventError || !event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -194,16 +194,35 @@ export async function POST(request: Request) {
     // the raw code. We only apply the discount when the promo still has capacity; the "first N
     // buyers" cap is enforced atomically at CONFIRM time (in the return handler), so an
     // abandoned redirect never consumes a slot and a full promo just charges full price.
-    let promo: PromoDoc | null = null
-    if (promoCode) {
-      const resolved = await resolvePromoCode(String(eventId), String(promoCode))
-      if (resolved && promoHasCapacity(resolved)) promo = resolved
-    }
-
+    //
     // Promoter attribution (optional). Only the RESOLVED doc id is persisted on the
     // pending transaction; an unknown or inactive ref attributes nothing.
-    const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
-    const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
+    //
+    // Latency: the promo, promoter/attribution and ticket-tier lookups are independent
+    // Firestore reads, so they are issued together rather than one after another. The
+    // validation below still runs in the original order on their results.
+    const multiTier = Array.isArray(tiers) && tiers.length > 0
+    const validSelections = multiTier
+      ? (tiers as TierSelection[]).filter((sel) => sel?.tierId && sel.quantity && sel.quantity > 0)
+      : []
+    const readTier = (id: string) =>
+      Promise.resolve(supabase.from('ticket_tiers').select('*').eq('id', id).single()).then(
+        ({ data }) => data as any
+      )
+    const [promo, { promoter, attribution }, tierDocs, singleTier] = await Promise.all([
+      (async (): Promise<PromoDoc | null> => {
+        if (!promoCode) return null
+        const resolved = await resolvePromoCode(String(eventId), String(promoCode))
+        return resolved && promoHasCapacity(resolved) ? resolved : null
+      })(),
+      (async () => {
+        const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
+        const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
+        return { promoter, attribution }
+      })(),
+      Promise.all(validSelections.map((sel) => readTier(sel.tierId))),
+      !multiTier && tierId ? readTier(tierId) : Promise.resolve(null),
+    ])
     // Total discount applied across the order (event currency), recorded on the promo
     // redemption at confirm time. Accumulated as each selection is priced below.
     let promoDiscountTotal = 0
@@ -212,16 +231,11 @@ export async function POST(request: Request) {
     let normalizedSelections: { tierId: string | null; tierName: string; quantity: number; unitPrice: number }[] = []
     const now = new Date()
 
-    if (Array.isArray(tiers) && tiers.length > 0) {
+    if (multiTier) {
       // Multi-tier selection
-      for (const selection of tiers) {
-        if (!selection?.tierId || !selection.quantity || selection.quantity <= 0) continue
-
-        const { data: tier } = await supabase
-          .from('ticket_tiers')
-          .select('*')
-          .eq('id', selection.tierId)
-          .single()
+      for (let i = 0; i < validSelections.length; i++) {
+        const selection = validSelections[i]
+        const tier = tierDocs[i]
 
         if (!tier) continue
 
@@ -262,11 +276,7 @@ export async function POST(request: Request) {
       let resolvedTierId: string | null = null
 
       if (tierId) {
-        const { data: tier } = await supabase
-          .from('ticket_tiers')
-          .select('*')
-          .eq('id', tierId)
-          .single()
+        const tier = singleTier
 
         if (tier) {
           const onSale = tierIsOnSale(tier, now)
@@ -311,7 +321,8 @@ export async function POST(request: Request) {
     // Best-effort only (never blocks on its own errors); the atomic reserve at fulfillment is the
     // authoritative oversell guard.
     try {
-      const capacity = await checkEventCapacity(String(eventId), totalQuantity)
+      // Computed from the event doc read above — same counters, no second read.
+      const capacity = capacityFromEvent(event, totalQuantity)
       if (!capacity.available) {
         return NextResponse.json(
           { error: capacity.isSoldOut ? 'This event is sold out.' : `Only ${capacity.remaining} ticket(s) remaining.` },
@@ -460,6 +471,14 @@ export async function POST(request: Request) {
         redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}${guestLinkParam}`
       }
     }
+    // The buyer's WebView opens /api/moncash-button/checkout next, which needs a
+    // Digicel OAuth token before it can call CreatePayment. Mint it now, after this
+    // response is on its way: when the checkout request lands on this same warm
+    // instance it finds the token cached instead of paying that round trip itself.
+    if (normalizedProvider === 'moncash') {
+      after(() => prewarmMonCashAccessToken())
+    }
+
     const response = NextResponse.json({ redirectUrl })
     // Correlate browser redirect back from MonCash to our pending transaction.
     // This prevents false "missing_order" failures when the gateway doesn't include orderId

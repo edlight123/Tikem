@@ -51,6 +51,21 @@ function shouldRetryWithFreshToken(status: number, bodyText: string): boolean {
   return text.includes('invalid_token') || text.includes('expired')
 }
 
+/**
+ * The token request already in flight, if any. Concurrent callers (the checkout
+ * route's prewarm racing its own CreatePayment, or two buyers hitting one warm
+ * instance) share it instead of each paying a separate OAuth round trip to Digicel.
+ */
+let tokenInFlight: Promise<string> | null = null
+
+/**
+ * Index (into the attempts list below) of the auth/scope variant that last
+ * minted a token. Digicel environments differ on Basic-vs-body credentials and
+ * scope separators; once one works we try it FIRST, so a refresh does not burn
+ * a 401 round trip per rejected variant before reaching the one that works.
+ */
+let preferredTokenAttempt = 0
+
 async function getAccessToken(): Promise<string> {
   // Return cached token if still valid
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
@@ -58,6 +73,31 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.token
   }
 
+  if (!tokenInFlight) {
+    tokenInFlight = fetchAccessToken().finally(() => {
+      tokenInFlight = null
+    })
+  }
+  return tokenInFlight
+}
+
+/**
+ * Start minting the gateway OAuth token in the background so a request that is
+ * about to call CreatePayment finds it cached (or in flight) instead of paying
+ * the Digicel round trip serially. Never throws: a failure here is ignored and
+ * the real call fetches (and reports) on its own. The returned promise always
+ * resolves; hand it to after()/waitUntil when the response is already sent.
+ */
+export function prewarmMonCashAccessToken(): Promise<void> {
+  if (!isMonCashConfigured()) return Promise.resolve()
+  if (cachedToken && cachedToken.expiresAt > Date.now()) return Promise.resolve()
+  return getAccessToken().then(
+    () => undefined,
+    () => undefined
+  )
+}
+
+async function fetchAccessToken(): Promise<string> {
   const rawClientId = process.env.MONCASH_CLIENT_ID
   const rawSecretKey = process.env.MONCASH_SECRET_KEY
   const mode = (process.env.MONCASH_MODE || 'sandbox').trim().toLowerCase()
@@ -114,19 +154,28 @@ async function getAccessToken(): Promise<string> {
     { auth: 'body', scope: 'read,write' },
     { auth: 'body', scope: 'read write' },
   ]
+  // Last known-good variant first; the rest keep their original order.
+  const order = [
+    preferredTokenAttempt,
+    ...attempts.map((_, i) => i).filter((i) => i !== preferredTokenAttempt),
+  ]
 
   let response: Response | null = null
   let lastErrorText: string | null = null
   let lastStatus: number | null = null
   let lastAttempt: { auth: 'basic' | 'body'; scope: string } | null = null
 
-  for (const attempt of attempts) {
+  for (const index of order) {
+    const attempt = attempts[index]
     lastAttempt = attempt
     response = await tryTokenRequest(attempt)
     lastStatus = response.status
     console.log('[MonCash] Token response status:', response.status)
 
-    if (response.ok) break
+    if (response.ok) {
+      preferredTokenAttempt = index
+      break
+    }
 
     // Only bother trying fallbacks for auth failures; otherwise fail fast.
     if (response.status !== 401) {
@@ -292,14 +341,16 @@ export async function initiateMonCashPayment({
     let response = await doRequest()
 
     if (!response.ok) {
-      const errorText = await response.text()
-      if (shouldRetryWithFreshToken(response.status, errorText)) {
+      // A Response body can be read once: keep the first read and only re-read
+      // the RETRIED response, or the error is masked by "Body is unusable".
+      let errorText2 = await response.text()
+      if (shouldRetryWithFreshToken(response.status, errorText2)) {
         cachedToken = null
         response = await doRequest()
+        if (!response.ok) errorText2 = await response.text()
       }
 
       if (!response.ok) {
-        const errorText2 = await response.text()
         throw new Error(`MonCash payment initiation failed: ${errorText2}`)
       }
     }
@@ -356,14 +407,15 @@ export async function checkPaymentStatus(
     let response = await doRequest()
 
     if (!response.ok) {
-      const errorText = await response.text()
-      if (shouldRetryWithFreshToken(response.status, errorText)) {
+      // Read each Response body once (see initiateMonCashPayment).
+      let errorText2 = await response.text()
+      if (shouldRetryWithFreshToken(response.status, errorText2)) {
         cachedToken = null
         response = await doRequest()
+        if (!response.ok) errorText2 = await response.text()
       }
 
       if (!response.ok) {
-        const errorText2 = await response.text()
         throw new Error(`Failed to check payment status: ${errorText2}`)
       }
     }
@@ -464,13 +516,15 @@ export async function createMonCashGatewayPayment({
 
   let response = await doRequest()
   if (!response.ok) {
-    const errorText = await response.text()
-    if (shouldRetryWithFreshToken(response.status, errorText)) {
+    // Read each Response body once: re-reading the first one threw
+    // "Body is unusable" and hid Digicel's real error message.
+    let errorText2 = await response.text()
+    if (shouldRetryWithFreshToken(response.status, errorText2)) {
       cachedToken = null
       response = await doRequest()
+      if (!response.ok) errorText2 = await response.text()
     }
     if (!response.ok) {
-      const errorText2 = await response.text()
       throw new Error(`MonCash CreatePayment failed (${response.status}): ${errorText2}`)
     }
   }
@@ -550,14 +604,17 @@ async function retrieveGatewayPayment(
 
   let response = await doRequest()
   if (!response.ok) {
-    const errorText = await response.text()
-    if (shouldRetryWithFreshToken(response.status, errorText)) {
+    // Read each Response body once. Re-reading the first (un-retried) response
+    // threw "Body is unusable: Body has already been read" in production, which
+    // made the 404 "not settled" answer below unreachable — the reconcile cron
+    // logged every such order as "gateway unreachable" and left it pending.
+    let errorText2 = await response.text()
+    if (shouldRetryWithFreshToken(response.status, errorText2)) {
       cachedToken = null
       response = await doRequest()
+      if (!response.ok) errorText2 = await response.text()
     }
     if (!response.ok) {
-      const errorText2 = await response.text()
-
       // A 404 is Digicel's ANSWER, not a transport failure: it is how the gateway
       // says "this order has not settled". Both flavours arrive this way —
       // "Transaction Not Found" for an order nobody paid, and the account-level

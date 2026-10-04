@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import {
@@ -6,7 +6,11 @@ import {
   createMonCashButtonCheckoutFormPost,
   isMonCashButtonConfigured,
 } from '@/lib/moncash-button'
-import { createMonCashGatewayPayment, isMonCashConfigured } from '@/lib/moncash'
+import {
+  createMonCashGatewayPayment,
+  isMonCashConfigured,
+  prewarmMonCashAccessToken,
+} from '@/lib/moncash'
 import { verifyGuestToken } from '@/lib/guest/identity'
 import crypto from 'crypto'
 
@@ -25,13 +29,29 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: Request) {
   try {
-    const user = await getCurrentUser()
-
     const url = new URL(request.url)
     const orderId = url.searchParams.get('orderId') || ''
     if (!orderId) {
       return new NextResponse('Missing orderId', { status: 400 })
     }
+
+    // Latency: this route sits between the buyer tapping Pay and the MonCash page
+    // appearing, and used to run strictly in sequence — session check, order read,
+    // Digicel OAuth, CreatePayment, order write — before redirecting. The OAuth
+    // token and the order read do not depend on the session, so they start now and
+    // overlap with it. Authorization below is unchanged: nothing is returned or
+    // charged until the session (or guest token) has been checked against the order.
+    void prewarmMonCashAccessToken()
+    const supabase = await createClient()
+    // Promise.resolve() runs the (lazy, re-executing) query builder exactly once
+    // and gives us a real promise to await later.
+    const pendingRead = Promise.resolve(
+      supabase.from('pending_transactions').select('*').eq('order_id', orderId).single()
+    )
+    // Never leave a rejected read unobserved if we return early on auth.
+    pendingRead.catch(() => {})
+
+    const user = await getCurrentUser()
 
     // A GUEST has no session to prove this order is theirs, so the initiate route
     // appended their signed retrieval token to this URL. Verifying it here (and
@@ -44,12 +64,7 @@ export async function GET(request: Request) {
 
     const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
 
-    const supabase = await createClient()
-    const { data: pending, error } = await supabase
-      .from('pending_transactions')
-      .select('*')
-      .eq('order_id', orderId)
-      .single()
+    const { data: pending, error } = await pendingRead
 
     if (error || !pending) {
       return new NextResponse('Pending transaction not found', { status: 404 })
@@ -107,18 +122,24 @@ export async function GET(request: Request) {
       // base64url, padding stripped), and the Return handler looks the order up by
       // `moncash_button_token_variants`. Writing only the raw token left that
       // fallback permanently empty on this rail.
-      try {
-        await supabase
-          .from('pending_transactions')
-          .update({
-            moncash_button_token: token,
-            moncash_button_token_variants: buildTokenVariants(token),
-            moncash_token_expires_at: expiresAt,
-          })
-          .eq('order_id', orderId)
-      } catch {
-        /* non-fatal */
-      }
+      //
+      // Written AFTER the redirect is sent (after() keeps the function alive until it
+      // lands) so the buyer is not held on a Firestore round trip. The Return handler
+      // only needs it once the buyer has finished paying on MonCash's page.
+      after(async () => {
+        try {
+          await supabase
+            .from('pending_transactions')
+            .update({
+              moncash_button_token: token,
+              moncash_button_token_variants: buildTokenVariants(token),
+              moncash_token_expires_at: expiresAt,
+            })
+            .eq('order_id', orderId)
+        } catch {
+          /* non-fatal */
+        }
+      })
 
       const response = NextResponse.redirect(redirectUrl, 303)
       response.headers.set('Cache-Control', 'no-store')
