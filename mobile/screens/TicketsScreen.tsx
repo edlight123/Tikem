@@ -410,7 +410,7 @@ export default function TicketsScreen({ navigation }: any) {
           // should still feel like a night out waiting to happen.
           <EmptyState
             icon={Ticket}
-            art={artByKey(activeTab === 'upcoming' ? 'konpa' : 'twoubadou')}
+            art={artByKey(activeTab === 'upcoming' ? 'domino' : 'twoubadou')}
             title={activeTab === 'upcoming' ? t('tickets.emptyUpcomingTitle') : t('tickets.emptyPastTitle')}
             subtitle={activeTab === 'upcoming' ? t('tickets.emptyUpcomingBody') : t('tickets.emptyPastBody')}
             actionLabel={activeTab === 'upcoming' ? t('favorites.explore') : undefined}

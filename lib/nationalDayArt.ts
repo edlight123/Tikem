@@ -26,6 +26,10 @@ export const NATIONAL_DAY_ART: Record<string, NationalDayArt> = {
   lakou:         { src: '/art/national-days/lakou.jpg',         alt: 'A lakou at night with a tap-tap, string lights and the Haitian flag' },
   mache:         { src: '/art/national-days/mache.jpg',         alt: "An artisans' market and community workshop" },
   labadeenight:  { src: '/art/national-days/labadeenight.jpg',  alt: 'The cove at Labadee under a full moon', place: 'Labadee' },
+  kap:           { src: '/art/national-days/kap.jpg',           alt: 'Families flying handmade kap kites on a hillside at Easter', place: 'Monte kap · Pak', scrim: 'strong' },
+  konbit:        { src: '/art/national-days/konbit.jpg',        alt: 'A konbit: neighbours working a hillside field together to the drum and the lanbi', place: 'Konbit' },
+  kanavalchar:   { src: '/art/national-days/kanavalchar.jpg',   alt: 'A kanaval float with a konpa band, masks and a lanse kòd at night', place: 'Kanaval' },
+  tontonnwel:    { src: '/art/national-days/tontonnwel.jpg',    alt: 'Tonton Nwèl handing out gifts on a porch as children carry glowing fanals', place: 'Tonton Nwèl' },
 }
 
 export function nationalDayArt(day: NationalDay): NationalDayArt {

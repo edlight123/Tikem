@@ -194,7 +194,7 @@ export default function FavoritesScreen({ navigation }: any) {
         {favoriteEvents.length === 0 ? (
           <EmptyState
             icon={Heart}
-            art={artByKey('labadee')}
+            art={artByKey('tekemab')}
             title={t('favorites.emptyTitle')}
             subtitle={t('favorites.emptyBody')}
             actionLabel={t('favorites.explore')}

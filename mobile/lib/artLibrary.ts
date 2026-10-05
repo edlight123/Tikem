@@ -103,6 +103,24 @@ export const ART: ArtPiece[] = [
   { key: 'catherineflon', source: require('../assets/art/catherineflon.jpg'), alt: 'Catherine Flon sewing the first blue and red flag by lamplight at Arcahaie', worlds: ['kilti'], general: false, place: 'Catherine Flon · Arcahaie, 18 May 1803' },
   { key: 'christophe',    source: require('../assets/art/christophe.jpg'),    alt: 'Henri Christophe on the ramparts of the Citadelle at dusk', worlds: ['kilti'], general: false, place: 'Henri Christophe · Citadelle' },
 
+  // Holidays: shown on their national day, and in their worlds / the picker.
+  { key: 'kap',         source: require('../assets/art/kap.jpg'),         alt: 'Families flying handmade kap kites on a hillside at Easter', worlds: ['fanmi'], general: false, place: 'Monte kap · Pak', scrim: 'strong' },
+  { key: 'konbit',      source: require('../assets/art/konbit.jpg'),      alt: 'A konbit: neighbours working a hillside field together to the drum and the lanbi', worlds: ['kilti'], general: false, place: 'Konbit' },
+  { key: 'kanavalchar', source: require('../assets/art/kanavalchar.jpg'), alt: 'A kanaval float with a konpa band, masks and a lanse kòd at night', worlds: ['kilti', 'lavi-lannwit'], general: false, place: 'Kanaval' },
+  { key: 'tontonnwel',  source: require('../assets/art/tontonnwel.jpg'),  alt: 'Tonton Nwèl handing out gifts on a porch as children carry glowing fanals', worlds: ['fanmi'], general: false, place: 'Tonton Nwèl' },
+
+  // Lavi chak jou: everyday Haitian life. Captioned with their Kreyòl name.
+  { key: 'domino',      source: require('../assets/art/domino.jpg'),      alt: 'Men slamming dominoes under a mango tree at night', worlds: ['lavi-lannwit'], place: 'Domino' },
+  { key: 'kafe',        source: require('../assets/art/kafe.jpg'),        alt: 'Kafe ak pen by a kerosene lamp on a porch before dawn', worlds: ['gastronomi'], place: 'Kafe ak pen' },
+  { key: 'akasan',      source: require('../assets/art/akasan.jpg'),      alt: 'An akasan vendor serving workers from a steaming pot before dawn', worlds: ['gastronomi'], place: 'Akasan' },
+  { key: 'tekemab',     source: require('../assets/art/tekemab.jpg'),     alt: 'Kids shooting marbles in the dirt at dusk', worlds: ['fanmi'], place: 'Teke mab', scrim: 'strong' },
+  { key: 'woulesek',    source: require('../assets/art/woulesek.jpg'),    alt: 'Kids rolling bicycle rims down a cobbled lane toward the bay', worlds: ['fanmi'], place: 'Woule sèk' },
+  { key: 'taptappenti', source: require('../assets/art/taptappenti.jpg'), alt: 'A painter hand-painting a portrait on the back of a tap-tap at night', worlds: ['kilti'], place: 'Pent tap-tap', scrim: 'strong' },
+  { key: 'fresko',      source: require('../assets/art/fresko.jpg'),      alt: 'A fresco cart with glowing syrup bottles and kids lined up at dusk', worlds: ['gastronomi', 'fanmi'], place: 'Fresko' },
+  { key: 'lavandye',    source: require('../assets/art/lavandye.jpg'),    alt: 'Two washerwomen crossing river stones at blue hour', worlds: ['kilti'], place: 'Lavandyè' },
+  { key: 'banboch',     source: require('../assets/art/banboch.jpg'),     alt: 'A rooftop banbòch with a DJ, dancers and the city lights below', worlds: ['lavi-lannwit'], place: 'Banbòch' },
+  { key: 'bolet',       source: require('../assets/art/bolet.jpg'),       alt: 'A painted bòlèt kiosk on a street at night', worlds: [], place: 'Bòlèt' },
+
   // The original login pieces: general pool only, no world.
   { key: 'art1', source: require('../assets/art/art1.jpg'), alt: 'Jacmel steps at sunset', worlds: [] },
   { key: 'art2', source: require('../assets/art/art2.jpg'), alt: 'A tap-tap at sunset', worlds: [] },

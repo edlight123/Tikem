@@ -129,7 +129,7 @@ describe('flyer picker ordering and search', () => {
 
   it('searches keys, descriptions and accented world labels', () => {
     expect(searchArt(ART, 'espò').map((a) => a.key)).toContain('espo')
-    expect(searchArt(ART, 'KANAVAL').map((a) => a.key)).toEqual(['kanaval'])
+    expect(searchArt(ART, 'KANAVAL').map((a) => a.key)).toEqual(['kanaval', 'kanavalchar'])
     expect(searchArt(ART, '')).toHaveLength(ART.length)
     expect(artByKey('nope')).toBeUndefined()
   })

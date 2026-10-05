@@ -49,9 +49,13 @@ describe('the calendar itself', () => {
   })
 
   it('days without dedicated art fall back to an existing piece', () => {
+    const morts = NATIONAL_DAYS.find((d) => d.key === 'morts')!
+    expect(morts.artKey).toBeUndefined()
+    expect(nationalDayArtKey(morts, () => true)).toBe('saintpierre')
+    // A day whose dedicated piece is missing still falls back.
     const noel = NATIONAL_DAYS.find((d) => d.key === 'noel')!
-    expect(noel.artKey).toBeUndefined()
-    expect(nationalDayArtKey(noel, () => true)).toBe('lakou')
+    expect(nationalDayArtKey(noel, () => true)).toBe('tontonnwel')
+    expect(nationalDayArtKey(noel, (k) => k !== 'tontonnwel')).toBe('lakou')
     const vert = NATIONAL_DAYS.find((d) => d.key === 'vertieres')!
     expect(nationalDayArtKey(vert, () => true)).toBe('vertieres')
     expect(nationalDayArtKey({ ...vert, fallbackArtKey: 'citadelle' }, () => false)).toBe('citadelle')

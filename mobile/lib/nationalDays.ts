@@ -128,7 +128,7 @@ export const NATIONAL_DAYS: NationalDay[] = [
       2029: { start: '2029-02-11', end: '2029-02-13' },
       2030: { start: '2030-03-03', end: '2030-03-05' },
     },
-    artKey: 'kanaval', fallbackArtKey: 'kanaval', eventTag: 'kanaval',
+    artKey: 'kanavalchar', fallbackArtKey: 'kanaval', eventTag: 'kanaval',
     title: { ht: 'Kanaval', fr: 'Carnaval', en: 'Kanaval' },
     message: {
       ht: 'Mask yo deyò, mizik la cho. Bon kanaval!',
@@ -146,7 +146,7 @@ export const NATIONAL_DAYS: NationalDay[] = [
       2029: { start: '2029-03-30', end: '2029-04-01' },
       2030: { start: '2030-04-19', end: '2030-04-21' },
     },
-    fallbackArtKey: 'saintpierre', eventTag: 'easter',
+    artKey: 'kap', fallbackArtKey: 'saintpierre', eventTag: 'easter',
     title: { ht: 'Pak', fr: 'Pâques', en: 'Easter' },
     message: {
       ht: 'Bòn fèt Pak pou tout fanmi an.',
@@ -166,7 +166,7 @@ export const NATIONAL_DAYS: NationalDay[] = [
   },
   {
     key: 'labour', month: 5, day: 1, leadDays: 0, lowKey: true,
-    fallbackArtKey: 'mache', eventTag: 'labour',
+    artKey: 'konbit', fallbackArtKey: 'mache', eventTag: 'labour',
     title: { ht: 'Fèt Travay', fr: 'Fête du Travail', en: 'Labor Day' },
     message: {
       ht: 'Bòn fèt agrikilti ak travay!',
@@ -248,7 +248,7 @@ export const NATIONAL_DAYS: NationalDay[] = [
   },
   {
     key: 'noel', month: 12, day: 25, leadDays: 7,
-    fallbackArtKey: 'lakou', eventTag: 'noel',
+    artKey: 'tontonnwel', fallbackArtKey: 'lakou', eventTag: 'noel',
     title: { ht: 'Nwèl', fr: 'Noël', en: 'Christmas' },
     message: {
       ht: 'Bòn fèt Nwèl! Limyè, fanmi ak bon manje.',

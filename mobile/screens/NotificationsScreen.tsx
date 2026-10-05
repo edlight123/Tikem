@@ -28,6 +28,7 @@ import {
 import { addStaffEventId } from '../lib/staffAssignments';
 import { backendJson } from '../lib/api/backend';
 import EmptyState from '../components/EmptyState';
+import { artByKey } from '../lib/artLibrary';
 import { NotificationsSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import type { Notification } from '../types/notifications';
@@ -444,6 +445,7 @@ export default function NotificationsScreen() {
           <View style={styles.emptyContainer}>
             <EmptyState
               icon={Bell}
+              art={artByKey('kafe')}
               title={t('notifications.emptyTitle')}
               subtitle={t('notifications.emptyBody')}
             />
