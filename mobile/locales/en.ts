@@ -3072,6 +3072,8 @@ export default {
       discoveryBody: 'A pick of new events in your city.',
       fillingFast: 'Selling fast',
       fillingFastBody: 'When an event you follow is close to selling out.',
+      nationalDay: 'Haitian holidays',
+      nationalDayBody: 'A short note on the morning of a national day.',
     },
     organizer: {
       section: 'For organizers',

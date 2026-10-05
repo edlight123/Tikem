@@ -37,7 +37,8 @@ import { colors, font, radius, spacing } from '../theme/tokens';
  * rather than offered as switches.
  *
  * Buyer switches write the users/{uid} fields the server's policy reads
- * (notify_discovery, notify_filling_fast). Organizer switches write the same
+ * (notify_discovery, notify_filling_fast, notify_national_day). Organizer
+ * switches write the same
  * organizers/{uid}/notificationPreferences/main document as the web's
  * NotificationsForm, through the same PUT /api/organizer/settings/notifications,
  * plus the two organizer-side discretionary fields on users/{uid}
@@ -48,6 +49,7 @@ import { colors, font, radius, spacing } from '../theme/tokens';
 type UserPrefKey =
   | 'notify_discovery'
   | 'notify_filling_fast'
+  | 'notify_national_day'
   | 'notify_organizer_milestones'
   | 'notify_organizer_nudges';
 
@@ -80,6 +82,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
   const [userPrefs, setUserPrefs] = useState<Record<UserPrefKey, boolean>>({
     notify_discovery: true,
     notify_filling_fast: true,
+    notify_national_day: true,
     notify_organizer_milestones: true,
     notify_organizer_nudges: true,
   });
@@ -121,6 +124,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
           setUserPrefs({
             notify_discovery: data.notify_discovery ?? true,
             notify_filling_fast: data.notify_filling_fast ?? true,
+            notify_national_day: data.notify_national_day ?? true,
             notify_organizer_milestones: data.notify_organizer_milestones ?? true,
             notify_organizer_nudges: data.notify_organizer_nudges ?? true,
           });
@@ -302,7 +306,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
             subtitleLines={3}
           />
           {loading ? (
-            <Skeleton width="100%" height={136} radius={radius.lg} />
+            <Skeleton width="100%" height={204} radius={radius.lg} />
           ) : (
             <View style={styles.card}>
               <PrefRow
@@ -317,6 +321,13 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 body={t('notificationSettings.fromTikem.fillingFastBody')}
                 value={userPrefs.notify_filling_fast}
                 onChange={(v) => toggleUserPref('notify_filling_fast', v)}
+              />
+              <PrefRow
+                divided
+                title={t('notificationSettings.fromTikem.nationalDay')}
+                body={t('notificationSettings.fromTikem.nationalDayBody')}
+                value={userPrefs.notify_national_day}
+                onChange={(v) => toggleUserPref('notify_national_day', v)}
               />
             </View>
           )}

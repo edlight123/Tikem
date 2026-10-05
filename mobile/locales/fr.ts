@@ -3092,6 +3092,8 @@ export default {
       discoveryBody: 'Une sélection de nouveaux événements dans votre ville.',
       fillingFast: 'Bientôt complet',
       fillingFastBody: 'Quand un événement que vous suivez est presque complet.',
+      nationalDay: 'Fêtes haïtiennes',
+      nationalDayBody: "Un petit mot le matin d'une fête nationale.",
     },
     organizer: {
       section: 'Pour les organisateurs',

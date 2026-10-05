@@ -739,7 +739,8 @@
       "today": "Aujourd’hui",
       "tomorrow": "Demain",
       "in_days": "Dans {{count}} jours",
-      "see_events": "Voir les événements"
+      "see_events": "Voir les événements",
+      "dismiss": "Masquer cette bannière"
     }
   },
   "resources": {

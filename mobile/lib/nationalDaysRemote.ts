@@ -21,6 +21,7 @@ import { artByKey, type ArtPiece } from './artLibrary';
 import {
   activeNationalDay,
   nationalDayArtKey,
+  nationalDayDismissId,
   type ActiveNationalDay,
   type NationalDay,
   type NationalDayConfig,
@@ -120,7 +121,8 @@ export function useNationalDay(): ActiveNationalDay | null {
  * it closed through the lead days, and the banner comes back once on the day
  * itself. Closing it on the day keeps it closed for that day.
  */
-const dismissKey = (a: ActiveNationalDay) => `${DISMISS_PREFIX}${a.day.key}.${a.start}.${a.phase}`;
+// Same id the web banner stores under (nationalDayDismissId).
+const dismissKey = (a: ActiveNationalDay) => `${DISMISS_PREFIX}${nationalDayDismissId(a)}`;
 
 export async function isNationalDayDismissed(a: ActiveNationalDay): Promise<boolean> {
   try {

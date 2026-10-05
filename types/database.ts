@@ -11,6 +11,8 @@ export type NotificationType =
   | 'city_discovery'
   | 'organizer_milestone'
   | 'organizer_nudge'
+  // The one 09:00 note on a Haitian holiday (app/api/cron/national-day-push).
+  | 'national_day'
   | 'ticket_purchased' 
   | 'ticket_transfer'
   | 'event_updated' 

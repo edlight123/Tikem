@@ -22,7 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
 import { artForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
 import { withAlpha } from '../theme/tokens';
-import { eventMatchesNationalDay, resolveNationalDays } from '../lib/nationalDays';
+import { eventMatchesNationalDay, nationalDayName, resolveNationalDays } from '../lib/nationalDays';
 import { nationalDayArt } from '../lib/nationalDaysRemote';
 import WhenPickerSheet from '../components/WhenPickerSheet';
 import LocationPickerSheet from '../components/LocationPickerSheet';
@@ -212,7 +212,17 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   // grid. Curated-feed pages ("for you", "this week"…) have no category art
   // and keep the blurred overlay header.
   const isCategoryPage = !!category || !!world || !!nationalDayDef;
-  const label = (title || (world ? worldLabel(world) : getCategoryLabel(t, category)) || category || '').toString().toLowerCase();
+  // A national-day page opened from the push carries only the key, so the
+  // day's own name stands in for the title Home passes.
+  const label = (
+    title ||
+    (nationalDayDef ? nationalDayName(nationalDayDef, language) : '') ||
+    (world ? worldLabel(world) : getCategoryLabel(t, category)) ||
+    category ||
+    ''
+  )
+    .toString()
+    .toLowerCase();
   // The hero wears the category's WORLD art (Tikèm screenprints) when that
   // world has some; a category with no world (religious, wellness) keeps its
   // original photo. Seeded by the world key, so the page always looks the same.

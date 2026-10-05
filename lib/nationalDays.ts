@@ -63,6 +63,12 @@ export interface NationalDay {
   lowKey?: boolean
   /** Optional accent for the banner CTA (Flag Day's blue). */
   accent?: string
+  /**
+   * `false` silences the day's one push (the 09:00 note on the day itself,
+   * app/api/cron/national-day-push) while keeping the banner and rail. Absent
+   * means the day may push, unless it is low-key: low-key days never push.
+   */
+  push?: boolean
 }
 
 export type NationalDayPhase = 'upcoming' | 'today'
@@ -386,6 +392,7 @@ export function resolveNationalDays(
       if (typeof o.fallbackArtKey === 'string' && o.fallbackArtKey) next.fallbackArtKey = o.fallbackArtKey
       if (typeof o.eventTag === 'string' && o.eventTag) next.eventTag = o.eventTag
       if (typeof o.lowKey === 'boolean') next.lowKey = o.lowKey
+      if (typeof o.push === 'boolean') next.push = o.push
       if (typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent)) next.accent = o.accent
       next.title = mergeLocalized(d.title, o.title)
       next.message = mergeLocalized(d.message, o.message)
@@ -552,6 +559,23 @@ export function nationalDayText(day: NationalDay, lang: string | null | undefine
 /** The day's short name for running copy ("Part of Vertières?"): the title before any " · date". */
 export function nationalDayName(day: NationalDay, lang: string | null | undefined): string {
   return nationalDayText(day, lang).title.split(' · ')[0].trim()
+}
+
+/**
+ * True when this activation earns the day's one push: the day itself (never
+ * the lead days), not a low-key day, and not silenced with `push: false`.
+ */
+export function nationalDayPushable(active: ActiveNationalDay | null | undefined): active is ActiveNationalDay {
+  return !!active && active.phase === 'today' && !active.day.lowKey && active.day.push !== false
+}
+
+/**
+ * The id a dismissal is remembered under: the occurrence (its start, so the
+ * year is in it) and the phase. Closing the "in 3 days" banner keeps it closed
+ * through the lead days; it comes back once on the day itself.
+ */
+export function nationalDayDismissId(active: ActiveNationalDay): string {
+  return `${active.day.key}.${active.start}.${active.phase}`
 }
 
 /** Every eventTag a client may write to `national_day`. */

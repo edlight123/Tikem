@@ -18,6 +18,10 @@ export const LINKING_CONFIG = {
     Notifications: 'notifications',
     TicketDetail: 'tickets/:ticketId',
     EventDetail: 'events/:eventId',
+    // The national-day push's deepLink (tikem://national-day/vertieres) opens
+    // the day's themed event list. App scheme only: there is no such web path,
+    // so it is not in the AASA or the Android intent filters.
+    CategoryEvents: 'national-day/:nationalDay',
   },
 };
 

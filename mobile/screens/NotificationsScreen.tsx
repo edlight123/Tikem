@@ -368,6 +368,11 @@ export default function NotificationsScreen() {
       const eventId = notification.eventId || (notification.metadata as any)?.eventId;
       return { screen: 'OrganizerMessages', params: eventId ? { eventId } : undefined };
     }
+    // The national-day note opens the day's themed event list.
+    if ((notification.type as string) === 'national_day') {
+      const key = (notification.metadata as any)?.nationalDay;
+      if (typeof key === 'string' && key) return { screen: 'CategoryEvents', params: { nationalDay: key } };
+    }
     if (notification.ticketId) {
       return { screen: 'TicketDetail', params: { ticketId: notification.ticketId } };
     }

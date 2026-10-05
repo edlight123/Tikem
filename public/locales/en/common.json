@@ -739,7 +739,8 @@
       "today": "Today",
       "tomorrow": "Tomorrow",
       "in_days": "In {{count}} days",
-      "see_events": "See events"
+      "see_events": "See events",
+      "dismiss": "Hide this banner"
     }
   },
   "resources": {

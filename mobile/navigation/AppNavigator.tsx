@@ -122,6 +122,10 @@ export type RootStackParamList = {
     city?: string;
     title?: string;
     subtitle?: string;
+    world?: string;
+    // A national day key (lib/nationalDays): the events tagged for it. Also
+    // reached from the national-day push via tikem://national-day/<key>.
+    nationalDay?: string;
   };
   EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };

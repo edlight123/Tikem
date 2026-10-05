@@ -44,12 +44,13 @@ describe('linking config', () => {
   // React Navigation v7 ships ESM-only, which this Jest setup cannot load, so
   // getStateFromPath(path, LINKING_CONFIG) was checked with plain node instead:
   // every configured path yields [Main, <screen>] (previously [<screen>]).
-  it('keeps the four deep-linkable paths mapped', () => {
+  it('keeps the deep-linkable paths mapped', () => {
     expect(LINKING_CONFIG.screens).toEqual({
       InviteRedeem: 'invite',
       Notifications: 'notifications',
       TicketDetail: 'tickets/:ticketId',
       EventDetail: 'events/:eventId',
+      CategoryEvents: 'national-day/:nationalDay',
     })
   })
 })

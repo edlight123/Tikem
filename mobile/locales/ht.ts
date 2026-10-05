@@ -3060,6 +3060,8 @@ export default {
       discoveryBody: 'Yon seleksyon nouvo evènman nan vil ou.',
       fillingFast: 'Ap vann vit',
       fillingFastBody: 'Lè yon evènman w ap swiv prèske fin vann.',
+      nationalDay: 'Fèt ayisyen yo',
+      nationalDayBody: 'Yon ti mo nan maten yon jou fèt nasyonal.',
     },
     organizer: {
       section: 'Pou òganizatè',

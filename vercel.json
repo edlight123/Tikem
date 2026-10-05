@@ -58,6 +58,10 @@
       "schedule": "0 17 * * 4"
     },
     {
+      "path": "/api/cron/national-day-push",
+      "schedule": "0 * * * *"
+    },
+    {
       "path": "/api/cron/organizer-nudge",
       "schedule": "0 14 * * *"
     },
