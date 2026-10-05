@@ -5,11 +5,11 @@ import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
 import { normalizeCurrency } from '@/lib/money'
 import {
   determinePayoutStatus,
-  getOrganizerBalance,
   getOrganizerIdentityVerificationStatus,
   hasPayoutMethod,
 } from '@/lib/firestore/payout'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
 import OrganizerDashboardClient from './OrganizerDashboardClient'
 import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
 
@@ -76,7 +76,12 @@ export default async function OrganizerDashboard({
       getOrganizerStats(user.id, 'lifetime'),
       getPayoutProfile(user.id, 'haiti'),
       getPayoutProfile(user.id, 'stripe_connect'),
-      getOrganizerBalance(user.id),
+      // The shared availability (lib/payouts/availability.ts), reduced to ONE
+      // currency's figure for the widget — never a sum across currencies.
+      loadOrganizerAvailability(user.id).then(({ totals, events }) => {
+        const primary = totals.find((t) => t.pendingMinor + t.availableNowMinor > 0) || totals[0]
+        return { pending: primary?.pendingMinor ?? 0, currency: primary?.currency ?? events[0]?.currency ?? 'HTG' }
+      }),
       getOrganizerIdentityVerificationStatus(user.id),
     ])
   } catch (err) {

@@ -1,18 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
-import { getOrganizerBalance, getAvailableTicketsForPayout } from '@/lib/firestore/payout'
-import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
-import { gateHaitiWithdrawal, loadOrganizerReleaseContext } from '@/lib/payouts/withdrawal-gate'
+import { getPayoutProfile, getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
+import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
+import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
+import { batchPayoutReserves, normalizeCurrencyCode } from '@/lib/payouts/availability'
+import { getOrCreateEventEarnings, storedEarningsCurrencyMismatch } from '@/lib/earnings'
+import { FEE_CONFIG } from '@/types/earnings'
 
-const MINIMUM_PAYOUT = 5000 // $50.00 in cents
+/** Shared with the finance page's button gate (EarningsView) — one threshold. */
+const MINIMUM_PAYOUT = FEE_CONFIG.MINIMUM_PAYOUT_AMOUNT
 
-/** Platform cut applied by getAvailableTicketsForPayout when it totals a batch. */
-const BATCH_PLATFORM_FEE_PERCENT = 10
+/** A refusal raised inside the debit transaction — a 409, not a crash. */
+class BatchRefused extends Error {}
 
+/**
+ * Batch payout request (finance page "Request payout").
+ *
+ * Pays, in ONE currency, every event whose money the shared availability
+ * function (lib/payouts/availability.ts) says is released right now — the same
+ * figure the finance page shows and the per-event withdraw routes validate. It
+ * used to run its own engine (flat uncapped 10%, a 7-day delay, Invalid Date on
+ * Timestamp end dates, HTG and USD summed into one number) and never debited
+ * the per-event ledger, so an event paid here could be withdrawn again through
+ * MonCash.
+ *
+ * Now, atomically, it debits each event's event_earnings.withdrawnAmount (the
+ * ledger every payout path shares) and records the payout with its ticketIds
+ * (idempotency), its per-event amounts, and `debitedEventEarnings: true`.
+ */
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('session')?.value
 
@@ -23,125 +41,103 @@ export async function POST(request: NextRequest) {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
 
-    // IDEMPOTENCY CHECK 1: Verify no pending/processing payout exists
-    const existingPayoutsSnapshot = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payouts')
-      .where('status', 'in', ['pending', 'processing'])
-      .get()
+    const body = await request.json().catch(() => ({}))
+    const requestedCurrency = body?.currency ? normalizeCurrencyCode(body.currency) : null
 
-    if (!existingPayoutsSnapshot.empty) {
-      const existingPayout = existingPayoutsSnapshot.docs[0].data()
+    // IDEMPOTENCY CHECK 1: one open request at a time. `approved` is open too —
+    // it used to be missed here, so a second request could be filed beside it.
+    const payoutsCol = adminDb.collection('organizers').doc(organizerId).collection('payouts')
+    const existingSnap = await payoutsCol.get()
+    const open = existingSnap.docs.find((d: any) => {
+      const st = String(d.data()?.status || 'pending').toLowerCase()
+      return batchPayoutReserves(st) && st !== 'completed'
+    })
+    if (open) {
+      const existingPayout = open.data()
       return NextResponse.json(
-        { 
+        {
           error: 'Payout already in progress',
-          message: `You have a ${existingPayout.status} payout request for ${(existingPayout.amount / 100).toFixed(2)} ${existingPayout.currency || 'HTG'}. Please wait for it to be processed.`,
-          existingPayoutId: existingPayoutsSnapshot.docs[0].id
+          message: `You have a ${existingPayout.status} payout request for ${(Number(existingPayout.amount || 0) / 100).toFixed(2)} ${existingPayout.currency || 'HTG'}. Please wait for it to be processed.`,
+          existingPayoutId: open.id,
         },
         { status: 400 }
       )
     }
 
-    // Get current balance and available tickets
-    const balance = await getOrganizerBalance(organizerId)
-    const { tickets, totalAmount, periodStart, periodEnd } = await getAvailableTicketsForPayout(organizerId)
+    // The ONE availability figure, per event.
+    const { events, context } = await loadOrganizerAvailability(organizerId)
 
-    // Validate minimum payout amount
-    if (balance.available < MINIMUM_PAYOUT) {
+    // This is the Haiti rail (MonCash / Haitian bank). Stripe Connect markets
+    // are paid by Stripe and never batched here.
+    const eligible = events.filter(
+      (e) => e.availableNowMinor > 0 && getRequiredPayoutProfileIdForEventCountry(e.country) === 'haiti'
+    )
+    const currencies = Array.from(new Set(eligible.map((e) => e.currency)))
+    const currency = requestedCurrency || (currencies.length === 1 ? currencies[0] : null)
+
+    if (!currency && currencies.length > 1) {
       return NextResponse.json(
-        { 
+        {
+          error: 'Choose a currency',
+          code: 'currency_required',
+          message: `You have released funds in ${currencies.join(' and ')}. Request each currency separately.`,
+          currencies,
+        },
+        { status: 400 }
+      )
+    }
+
+    const batch = eligible.filter((e) => e.currency === currency)
+    const totalAmount = batch.reduce((sum, e) => sum + e.availableNowMinor, 0)
+    const label = currency || 'HTG'
+
+    if (totalAmount < MINIMUM_PAYOUT) {
+      return NextResponse.json(
+        {
           error: 'Insufficient balance',
-          message: `Minimum payout amount is $50.00. Current available balance: $${(balance.available / 100).toFixed(2)}`
+          message: `Minimum payout amount is ${(MINIMUM_PAYOUT / 100).toFixed(2)} ${label}. Current available balance: ${(totalAmount / 100).toFixed(2)} ${label}`,
         },
         { status: 400 }
       )
     }
 
-    // Validate we have tickets (double-check against balance calculation)
-    if (tickets.length === 0 || totalAmount === 0) {
-      return NextResponse.json(
-        { error: 'No available earnings to withdraw' },
-        { status: 400 }
-      )
-    }
-
-    // Get payout config
     const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
 
     if (!haitiProfile) {
-      return NextResponse.json(
-        { error: 'Payout method not configured' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Payout method not configured' }, { status: 400 })
     }
 
     if (haitiProfile.status !== 'active') {
       return NextResponse.json(
-        { 
+        {
           error: 'Payout account not active',
-          message: 'Please complete verification before requesting a payout'
+          message: 'Please complete verification before requesting a payout',
         },
         { status: 400 }
       )
     }
 
     /**
-     * The payout release ladder, applied to this legacy BATCH path too.
-     *
-     * This route pays one lump sum assembled from many events' tickets, so the
-     * ladder is evaluated per contributing event and the whole batch is refused if
-     * any one of them is not releasable. It deliberately does NOT quietly drop the
-     * offending event and pay a smaller amount: the recorded `ticketIds` are what
-     * stops a ticket being paid twice, so the set that is judged has to be exactly
-     * the set that is paid.
-     *
-     * In practice this adds three things the ticket filter in
-     * getAvailableTicketsForPayout never checked: a cancelled or payout-frozen
-     * event, the review signals (large first event, mostly-manual door, near-empty
-     * room, admin high-risk flag), and the tier ladder. Its own event-ended + 7 day
-     * filter is already stricter than any tier hold, so a plain hold is unlikely
-     * here — but it is enforced rather than assumed.
+     * The payout release ladder, per contributing event, unchanged: the whole
+     * batch is refused if any one event is not releasable (it does not quietly
+     * drop the event and pay less — the recorded set must be the set judged).
+     * Fed the same inputs the shared availability used.
      */
-    const releaseContext = await loadOrganizerReleaseContext(organizerId)
-
-    const byEvent = new Map<string, { event: any; grossMinor: number }>()
-    for (const ticket of tickets) {
-      const eventIdForTicket = String(ticket?.event_id || ticket?.event?.id || '')
-      if (!eventIdForTicket) continue
-      const grossMinor = Math.max(0, Math.round(Number(ticket?.price_paid || 0) * 100))
-      const bucket = byEvent.get(eventIdForTicket) || { event: ticket?.event || {}, grossMinor: 0 }
-      bucket.grossMinor += grossMinor
-      byEvent.set(eventIdForTicket, bucket)
-    }
-
-    for (const [gatedEventId, bucket] of Array.from(byEvent.entries())) {
-      // What this event contributes to the batch total, using the same net maths
-      // getAvailableTicketsForPayout used to build `totalAmount`.
-      const netMinor = Math.floor(bucket.grossMinor * (1 - BATCH_PLATFORM_FEE_PERCENT / 100))
-
-      // An event that contributes no money to this batch (a free/RSVP show whose
-      // tickets are in the set at zero) has nothing to release, so it must not be
-      // able to block the paid events it is batched with.
-      if (netMinor <= 0) continue
-
+    for (const e of batch) {
       const gate = await gateHaitiWithdrawal({
-        eventId: gatedEventId,
+        eventId: e.eventId,
         organizerId,
-        eventData: bucket.event,
-        grossMinor: bucket.grossMinor,
-        // The batch only ever includes `valid` tickets, so refunded tickets are
-        // already out of the gross above — subtracting them again would under-pay.
-        refundedMinor: 0,
-        currency: bucket.event?.currency || balance.currency || null,
-        availableMinor: netMinor,
-        requestedAmountMinor: netMinor,
+        eventData: e.eventData,
+        grossMinor: e.gateInputs.grossMinor,
+        refundedMinor: e.gateInputs.refundedMinor,
+        currency: e.currency,
+        availableMinor: e.balanceMinor,
+        requestedAmountMinor: e.availableNowMinor,
         method: 'batch',
-        context: releaseContext,
+        context: context.releaseContext,
       })
-
       if (!gate.allowed) {
-        return NextResponse.json({ ...gate.body, eventId: gatedEventId }, { status: gate.status })
+        return NextResponse.json({ ...gate.body, eventId: e.eventId }, { status: gate.status })
       }
     }
 
@@ -152,16 +148,21 @@ export async function POST(request: NextRequest) {
     nextFriday.setDate(now.getDate() + daysUntilFriday)
     nextFriday.setHours(17, 0, 0, 0)
 
-    // IDEMPOTENCY SAFEGUARD: Store ticket IDs to prevent double-counting
-    const ticketIds = tickets.map(t => t.id)
+    // IDEMPOTENCY SAFEGUARD: the ticket ids this payout covers.
+    const ticketIds = Array.from(new Set(batch.flatMap((e) => e.unpaidTicketIds)))
+    const starts = batch.map((e) => e.periodStart).filter(Boolean) as string[]
+    const ends = batch.map((e) => e.periodEnd).filter(Boolean) as string[]
+    const periodStart = starts.length ? starts.sort()[0] : null
+    const periodEnd = ends.length ? ends.sort()[ends.length - 1] : null
+    const eventAmounts: Record<string, number> = {}
+    for (const e of batch) eventAmounts[e.eventId] = e.availableNowMinor
 
-    // Create payout request with complete tracking
-    const payoutRef = adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payouts')
-      .doc()
+    // Ledger rows to debit (created, seeded from tickets, if missing).
+    const ledgerRefs = await Promise.all(
+      batch.map(async (e) => ({ e, ref: (await getOrCreateEventEarnings(e.eventId, { seedFromTickets: true })).ref }))
+    )
 
+    const payoutRef = payoutsCol.doc()
     const payout = {
       organizerId,
       amount: totalAmount,
@@ -170,23 +171,57 @@ export async function POST(request: NextRequest) {
       scheduledDate: nextFriday.toISOString(),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      
-      // NEW: Idempotency & tracking fields
       requestedBy: organizerId,
-      ticketIds,              // ✅ Prevents double-counting
+      ticketIds,
+      eventAmounts,
+      debitedEventEarnings: true,
       periodStart,
       periodEnd,
-      currency: balance.currency,
+      currency: label,
     }
 
-    await payoutRef.set(payout)
+    try {
+      await adminDb.runTransaction(async (tx: any) => {
+        const snaps = await Promise.all(ledgerRefs.map(({ ref }) => tx.get(ref)))
+        // Every read before any write (Firestore transaction rule).
+        snaps.forEach((snap: any, i: number) => {
+          const { e } = ledgerRefs[i]
+          const cur = snap.exists ? (snap.data() as any) : {}
+          if (storedEarningsCurrencyMismatch(cur?.currency, e.eventData?.currency)) {
+            throw new BatchRefused(`Earnings for "${e.title}" need a review by the payouts team before they can be paid.`)
+          }
+          const withdrawn = Math.max(0, Number(cur?.withdrawnAmount || 0) || 0)
+          if (Math.max(0, e.ceilingMinor - withdrawn) < e.availableNowMinor) {
+            throw new BatchRefused('Your balance changed while this request was being made. Please refresh and try again.')
+          }
+        })
+        snaps.forEach((snap: any, i: number) => {
+          const { e, ref } = ledgerRefs[i]
+          const cur = snap.exists ? (snap.data() as any) : {}
+          const withdrawn = Math.max(0, Number(cur?.withdrawnAmount || 0) || 0)
+          const remaining = Math.max(0, e.ceilingMinor - withdrawn - e.availableNowMinor)
+          tx.update(ref, {
+            withdrawnAmount: withdrawn + e.availableNowMinor,
+            availableToWithdraw: remaining,
+            settlementStatus: remaining === 0 ? 'locked' : 'ready',
+            updatedAt: now.toISOString(),
+          })
+        })
+        tx.set(payoutRef, payout)
+      })
+    } catch (e: any) {
+      if (e instanceof BatchRefused) {
+        return NextResponse.json({ error: e.message }, { status: 409 })
+      }
+      throw e
+    }
 
     return NextResponse.json({
       success: true,
       payout: {
         id: payoutRef.id,
         ...payout,
-        ticketCount: tickets.length,
+        ticketCount: ticketIds.length,
       },
     })
   } catch (error: any) {

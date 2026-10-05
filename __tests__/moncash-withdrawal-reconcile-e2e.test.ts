@@ -142,9 +142,22 @@ jest.mock('@/lib/firestore/payout', () => ({
 jest.mock('@/lib/payouts/withdrawal-gate', () => ({
   gateHaitiWithdrawal: jest.fn(async () => ({ allowed: true, reviewStatus: null })),
   previewRelease: jest.fn(),
+  // The shared availability (lib/payouts/availability-server.ts) asks for the
+  // organizer's release context; an established organizer, so the ladder
+  // releases an event that ended weeks ago.
+  loadOrganizerReleaseContext: jest.fn(async (organizerId: string) => ({
+    organizerId,
+    platformConfig: {},
+    override: { forceEstablished: true },
+    endedEventIds: new Set<string>(),
+    lifetimeGrossMinorByCurrency: {},
+    fxWarnings: [],
+  })),
 }))
 jest.mock('@/lib/currency', () => ({ fetchUsdToHtgRate: jest.fn(async () => 130) }))
-jest.mock('@/lib/admin/platform-settings', () => ({ getPlatformSettings: jest.fn() }))
+jest.mock('@/lib/admin/platform-settings', () => ({
+  getPlatformSettings: jest.fn(async () => jest.requireActual('@/types/platform-settings').DEFAULT_PLATFORM_SETTINGS),
+}))
 jest.mock('@/lib/promoters', () => ({ getFundedCommissionForEvent: jest.fn(async () => 0) }))
 jest.mock('@/lib/admin/audit-log', () => ({ logAdminAction: jest.fn(async () => {}) }))
 
@@ -242,6 +255,26 @@ import {
 const NET = 100_000
 const MIN = 60 * 1000
 
+/**
+ * The tickets behind a stored net. Withdrawals are now judged against the
+ * ticket-derived figure (lib/payouts/availability.ts), so each fixture's ledger
+ * row is backed by a sale that nets exactly that amount: buyer incidence (the
+ * fee was paid on top, so net = face), checked in by scan.
+ */
+function backingTicket(netMinor: number, over: Record<string, any> = {}) {
+  return {
+    event_id: 'evt1',
+    status: 'valid',
+    price_paid: netMinor / 100,
+    fee_incidence: 'buyer',
+    payment_method: 'moncash',
+    payment_id: 'pay_backing',
+    checked_in: true,
+    check_in_method: 'scan',
+    ...over,
+  }
+}
+
 function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
   const ended = '2026-09-01T23:00:00.000Z'
@@ -257,6 +290,7 @@ function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
     settlementStatus: 'pending',
     settlementReadyDate: ended,
   }
+  coll('tickets').t0 = backingTicket(NET)
   coll('config').payouts = {
     prefunding: { enabled: true, available: true },
     ...(opts.autoReleaseNotFound ? { reconcile: { autoReleaseNotFound: true } } : {}),

@@ -13,7 +13,7 @@ export interface EventEarnings {
 
   // Metadata
   // Indicates where the earnings values were sourced from (stored record vs derived from tickets).
-  dataSource?: 'event_earnings' | 'tickets_derived' | 'unknown'
+  dataSource?: 'event_earnings' | 'tickets_derived' | 'availability' | 'unknown'
   
   // Revenue tracking (all in cents)
   grossSales: number             // Total ticket revenue

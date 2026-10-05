@@ -70,6 +70,12 @@ function docRef(name: string, id?: string): any {
     get: async () => snapOf(name, docId),
     set: async (data: any, opts?: any) => writeDoc(name, docId, data, opts),
     update: async (patch: any) => updateDoc(name, docId, patch),
+    // Subcollections (organizers/{id}/payouts) are flat collections named by path.
+    collection: (sub: string) => ({
+      doc: (subId?: string) => docRef(`${name}/${docId}/${sub}`, subId),
+      get: () => query(`${name}/${docId}/${sub}`).get(),
+      where: (f: string, op: string, v: any) => query(`${name}/${docId}/${sub}`).where(f, op, v),
+    }),
   }
 }
 function query(name: string, filters: Array<[string, any]> = [], lim = Infinity): any {
@@ -147,12 +153,27 @@ jest.mock('@/lib/firestore/payout', () => ({
 }))
 
 const gateMock = jest.fn(async (_input: any): Promise<any> => ({ allowed: true, reviewStatus: null }))
-jest.mock('@/lib/payouts/withdrawal-gate', () => ({ gateHaitiWithdrawal: (i: any) => gateMock(i) }))
+jest.mock('@/lib/payouts/withdrawal-gate', () => ({
+  gateHaitiWithdrawal: (i: any) => gateMock(i),
+  // The shared availability (lib/payouts/availability-server.ts) asks for the
+  // organizer's release context; an established organizer, so the ladder
+  // releases an event that ended weeks ago.
+  loadOrganizerReleaseContext: jest.fn(async (organizerId: string) => ({
+    organizerId,
+    platformConfig: {},
+    override: { forceEstablished: true },
+    endedEventIds: new Set<string>(),
+    lifetimeGrossMinorByCurrency: {},
+    fxWarnings: [],
+  })),
+}))
 
 jest.mock('@/lib/currency', () => ({ fetchUsdToHtgRate: jest.fn(async () => 130) }))
 
 // lib/earnings imports these; nothing on the withdrawal path calls them.
-jest.mock('@/lib/admin/platform-settings', () => ({ getPlatformSettings: jest.fn() }))
+jest.mock('@/lib/admin/platform-settings', () => ({
+  getPlatformSettings: jest.fn(async () => jest.requireActual('@/types/platform-settings').DEFAULT_PLATFORM_SETTINGS),
+}))
 jest.mock('@/lib/promoters', () => ({ getFundedCommissionForEvent: jest.fn(async () => 0) }))
 
 // ---------------------------------------------------------------------------
@@ -236,6 +257,26 @@ import { GET as quote } from '@/app/api/organizer/withdraw-moncash/quote/route'
 
 const NET = 100_000 // 1,000.00 HTG available
 
+/**
+ * The tickets behind a stored net. Withdrawals are now judged against the
+ * ticket-derived figure (lib/payouts/availability.ts), so each fixture's ledger
+ * row is backed by a sale that nets exactly that amount: buyer incidence (the
+ * fee was paid on top, so net = face), checked in by scan.
+ */
+function backingTicket(netMinor: number, over: Record<string, any> = {}) {
+  return {
+    event_id: 'evt1',
+    status: 'valid',
+    price_paid: netMinor / 100,
+    fee_incidence: 'buyer',
+    payment_method: 'moncash',
+    payment_id: 'pay_backing',
+    checked_in: true,
+    check_in_method: 'scan',
+    ...over,
+  }
+}
+
 function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: string; enabled?: boolean; available?: boolean; optedIn?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
   const ended = '2026-09-01T23:00:00.000Z'
@@ -253,6 +294,7 @@ function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: str
     settlementStatus: opts.storedStatus ?? 'pending',
     settlementReadyDate: ended,
   }
+  coll('tickets').t0 = backingTicket(opts.net ?? NET)
   coll('config').payouts = { prefunding: { enabled: opts.enabled ?? true, available: opts.available ?? true } }
   profiles.org1 = {
     status: 'active',

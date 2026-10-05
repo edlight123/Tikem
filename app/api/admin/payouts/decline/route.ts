@@ -46,14 +46,41 @@ export async function POST(request: NextRequest) {
         return { conflict: true, payout: { id: payoutDoc.id, ...payoutData } }
       }
 
+      // A batch written since the shared availability ledger debited each
+      // event's event_earnings.withdrawnAmount at request time. Declining it
+      // must credit those amounts back — in this same transaction, and only on
+      // the pending → cancelled transition, so it can happen once. (Reads first:
+      // Firestore transactions refuse a read after a write.)
+      const credits: Array<{ ref: any; withdrawn: number; amount: number }> = []
+      if (payoutData.debitedEventEarnings === true && payoutData.eventAmounts) {
+        for (const [eventId, raw] of Object.entries(payoutData.eventAmounts as Record<string, number>)) {
+          const amount = Math.max(0, Math.round(Number(raw) || 0))
+          if (!amount) continue
+          const snap = await transaction.get(
+            adminDb.collection('event_earnings').where('eventId', '==', eventId).limit(1)
+          )
+          if (snap.empty) throw new Error(`Earnings row for event ${eventId} not found; cannot restore`)
+          const doc = snap.docs[0]
+          credits.push({ ref: doc.ref, withdrawn: Math.max(0, Number(doc.data()?.withdrawnAmount || 0) || 0), amount })
+        }
+      }
+
       // Update payout status
       const now = new Date().toISOString()
+      for (const c of credits) {
+        transaction.update(c.ref, {
+          withdrawnAmount: Math.max(0, c.withdrawn - c.amount),
+          settlementStatus: 'ready',
+          updatedAt: now,
+        })
+      }
       transaction.update(payoutRef, {
         status: 'cancelled',  // Using 'cancelled' instead of 'declined' to match Payout type
         declinedBy: user.id,
         declinedAt: now,
         declineReason: reason,
         updatedAt: now,
+        ...(credits.length ? { earningsRestoredAt: now } : {}),
       })
 
       return {

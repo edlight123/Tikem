@@ -5,9 +5,9 @@ import {
   EARNINGS_CURRENCY_REVIEW_CODE,
   EARNINGS_CURRENCY_REVIEW_MESSAGE,
   flagEarningsCurrencyReview,
-  getEventEarnings,
   withdrawFromEarnings,
 } from '@/lib/earnings'
+import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import {
   addSecondaryBankDestination,
   getDecryptedBankDestination,
@@ -112,23 +112,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify earnings and settlement status (normalized against event end time)
-    const earnings = await getEventEarnings(String(eventId))
-    if (!earnings) {
-      return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
-    }
-
-    if (earnings.settlementStatus !== 'ready') {
-      return NextResponse.json(
-        { error: 'Earnings are not yet available for withdrawal' },
-        { status: 400 }
-      )
+    // What this event can pay out — the one shared figure
+    // (lib/payouts/availability.ts), the same number the earnings screens show.
+    const availability = await loadEventAvailability({ eventId: String(eventId), eventData })
+    if (!availability) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
     // Same refusal as the MonCash route: a stored row in another currency than
     // the event's reads as 0 available, which would otherwise surface as a
     // misleading "Insufficient balance".
-    if (earnings.withdrawalBlocked?.code === EARNINGS_CURRENCY_REVIEW_CODE) {
+    if (availability.reason === EARNINGS_CURRENCY_REVIEW_CODE) {
       await flagEarningsCurrencyReview(String(eventId), { lastRefusedWithdrawalAt: new Date().toISOString() })
       return NextResponse.json(
         { error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true },
@@ -136,11 +130,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Amount comes in cents, availableToWithdraw is also in cents
-    const availableBalance = earnings.availableToWithdraw || 0
+    // Owed and unpaid, in cents, regardless of timing; the gate below decides when.
+    const availableBalance = availability.balanceMinor
     if (amount > availableBalance) {
       return NextResponse.json(
-        { error: `Insufficient balance. Available: ${(availableBalance / 100).toFixed(2)} ${earnings.currency || 'HTG'}` },
+        { error: `Insufficient balance. Available: ${(availableBalance / 100).toFixed(2)} ${availability.currency}` },
         { status: 400 }
       )
     }
@@ -149,11 +143,9 @@ export async function POST(req: NextRequest) {
      * The payout release ladder — the same lib/payouts/release-rules.ts decision
      * the Stripe cron makes, applied here because this rail has no cron to gate.
      *
-     * `settlementStatus === 'ready'` above is NOT a hold: the Haiti settlement
-     * hold is 0 days and an undated event settles off created_at, so it used to
-     * clear the moment a draft existed. This is where "not before the event ends,
-     * then N hours by tier" is actually enforced, and where a 'review' verdict is
-     * routed into the shared admin queue.
+     * This is where "not before the event ends, then N hours by tier" is
+     * enforced, and where a 'review' verdict is routed into the shared admin
+     * queue. Fed the same gross/refund figures the shared availability used.
      *
      * It deliberately runs BEFORE the bank-destination block below, which both
      * writes (a saved destination) and consumes a one-time email code. Refusing
@@ -164,12 +156,9 @@ export async function POST(req: NextRequest) {
       eventId: String(eventId),
       organizerId: user.id,
       eventData,
-      grossMinor: Number(earnings.grossSales || 0),
-      // A stored event_earnings row is never decremented on refund, so its gross
-      // is refund-inclusive and refunds must be subtracted; the tickets-derived
-      // view already drops refunded tickets, so subtracting again would under-pay.
-      refundedMinor: String((earnings as any).dataSource || 'event_earnings') === 'tickets_derived' ? 0 : null,
-      currency: earnings.currency || null,
+      grossMinor: availability.gateInputs.grossMinor,
+      refundedMinor: availability.gateInputs.refundedMinor,
+      currency: availability.currency,
       availableMinor: availableBalance,
       requestedAmountMinor: Number(amount),
       method: 'bank',
@@ -243,8 +232,7 @@ export async function POST(req: NextRequest) {
     // Create withdrawal request. Preserve the event's real currency in the record;
     // a CAD/EUR event would withdraw via Stripe (not this Haiti bank rail), so never
     // silently rewrite CAD/EUR to HTG.
-    const rawCurrency = String(earnings.currency || 'HTG').toUpperCase()
-    const currency = (['USD', 'CAD', 'EUR'].includes(rawCurrency) ? rawCurrency : 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
+    const currency = availability.currency
 
     const accountNumber = String(resolvedBankDetails.accountNumber)
     const maskedAccountNumber = accountNumber.length > 4 ? `****${accountNumber.slice(-4)}` : accountNumber
@@ -277,7 +265,9 @@ export async function POST(req: NextRequest) {
     // (double submit, balance moved since the check, currency review) must not
     // leave a pending request behind: an admin would pay out money that was
     // never taken off the balance.
-    const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+    const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
+      ceilingMinor: availability.ceilingMinor,
+    })
     if (!debit?.success) {
       await withdrawalRef.update({
         status: 'failed',

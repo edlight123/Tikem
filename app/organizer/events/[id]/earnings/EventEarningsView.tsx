@@ -93,7 +93,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     if (!earnings) return 0
     if (earnings.withdrawalBlocked) return 0
     if (earnings.settlementStatus !== 'ready') return 0
-    return Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
+    // The server's figure (lib/payouts/availability.ts), release ladder applied —
+    // what withdraw-moncash / withdraw-bank will accept. Recomputing net −
+    // withdrawn here ignored the post-event hold and offered money too early.
+    return Math.max(0, Number(earnings.availableToWithdraw || 0))
   }, [earnings])
 
   const isInstantPrefundingAvailable = useMemo(() => {
@@ -425,7 +428,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           {getStatusBadge(earnings.settlementStatus)}
         </div>
         <div className="mt-1 text-xs text-white/70">
-          Revenue source: {earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
+          Revenue source: {earnings.dataSource === 'availability' ? 'Ticket sales (capped fee, refunds excluded)' : earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
           {earnings.lastCalculatedAt ? ` • Last calculated: ${new Date(earnings.lastCalculatedAt).toLocaleString('en-US')}` : ''}
         </div>
       </div>

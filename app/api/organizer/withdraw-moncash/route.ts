@@ -5,11 +5,11 @@ import {
   EARNINGS_CURRENCY_REVIEW_CODE,
   EARNINGS_CURRENCY_REVIEW_MESSAGE,
   flagEarningsCurrencyReview,
-  getEventEarnings,
   getOrCreateEventEarnings,
   storedEarningsCurrencyMismatch,
   withdrawFromEarnings,
 } from '@/lib/earnings'
+import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
@@ -145,23 +145,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify earnings and settlement status (normalized against event end time)
-    const earnings = await getEventEarnings(String(eventId))
-    if (!earnings) {
-      return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
+    // What this event can pay out — the one shared figure
+    // (lib/payouts/availability.ts): ticket-derived net with the capped fee
+    // checkout charged, refunds and every earlier withdrawal or batch payout
+    // out. The earnings screens show this same number.
+    const availability = await loadEventAvailability({ eventId: String(eventId), eventData })
+    if (!availability) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Preserve the event's real currency in the record. This is the Haiti rail
-    // (MonCash executes in HTG; USD earnings are converted at withdrawal below).
-    // A CAD/EUR event would withdraw via Stripe, not here — but if one reaches
-    // this route we must NOT silently rewrite CAD/EUR to HTG.
-    const rawCurrency = String(earnings.currency || 'HTG').toUpperCase()
-    const currency = (['USD', 'CAD', 'EUR'].includes(rawCurrency) ? rawCurrency : 'HTG') as 'HTG' | 'USD' | 'CAD' | 'EUR'
+    // The event's real currency. This is the Haiti rail (MonCash executes in
+    // HTG; USD earnings are converted at withdrawal below). A CAD/EUR event
+    // would withdraw via Stripe, not here — but if one reaches this route we
+    // must NOT silently rewrite CAD/EUR to HTG.
+    const currency = availability.currency
 
-    // A stored row in another currency than the event's: its figures can be
+    // A stored row in another currency than the event's: its withdrawals can be
     // neither validated nor debited safely, so nothing moves until an admin
     // corrects it (lib/earnings.ts storedEarningsCurrencyMismatch).
-    if (earnings.withdrawalBlocked?.code === EARNINGS_CURRENCY_REVIEW_CODE) {
+    if (availability.reason === EARNINGS_CURRENCY_REVIEW_CODE) {
       await flagEarningsCurrencyReview(String(eventId), { lastRefusedWithdrawalAt: new Date().toISOString() })
       return NextResponse.json(
         { error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true },
@@ -189,15 +191,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (earnings.settlementStatus !== 'ready') {
-      return NextResponse.json(
-        { error: 'Earnings are not yet available for withdrawal' },
-        { status: 400 }
-      )
-    }
-
-    // Amount comes in cents, availableToWithdraw is also in cents
-    const availableBalance = earnings.availableToWithdraw || 0
+    // Owed and unpaid, regardless of timing (cents). WHEN it may leave is the
+    // release ladder's decision, made by the gate below.
+    const availableBalance = availability.balanceMinor
     if (amount > availableBalance) {
       return NextResponse.json(
         { error: `Insufficient balance. Available: ${(availableBalance / 100).toFixed(2)} ${currency}` },
@@ -208,24 +204,18 @@ export async function POST(req: NextRequest) {
     /**
      * The payout release ladder — the same lib/payouts/release-rules.ts decision
      * the Stripe cron makes, applied here because this rail has no cron to gate.
-     *
-     * `settlementStatus === 'ready'` above is NOT a hold: the Haiti settlement
-     * hold is 0 days and an undated event settles off created_at, so it used to
-     * clear the moment a draft existed. This is where "not before the event ends,
-     * then N hours by tier" is actually enforced, and where a 'review' verdict is
-     * routed into the shared admin queue. It runs BEFORE any reservation, debit or
-     * MonCash call, so a refusal moves no money and writes no request.
+     * It runs BEFORE any reservation, debit or MonCash call, so a refusal moves
+     * no money and writes no request. Fed the same gross/refund figures the
+     * shared availability computed, so the screen's "available now" and this
+     * verdict come from identical inputs.
      */
     const gate = await gateHaitiWithdrawal({
       eventId: String(eventId),
       organizerId: user.id,
       eventData,
-      grossMinor: Number(earnings.grossSales || 0),
-      // A stored event_earnings row is never decremented on refund, so its gross
-      // is refund-inclusive and refunds must be subtracted; the tickets-derived
-      // view already drops refunded tickets, so subtracting again would under-pay.
-      refundedMinor: String((earnings as any).dataSource || 'event_earnings') === 'tickets_derived' ? 0 : null,
-      currency: earnings.currency || null,
+      grossMinor: availability.gateInputs.grossMinor,
+      refundedMinor: availability.gateInputs.refundedMinor,
+      currency,
       availableMinor: availableBalance,
       requestedAmountMinor: Number(amount),
       method: 'moncash',
@@ -326,7 +316,7 @@ export async function POST(req: NextRequest) {
       // transferring money without deducting the organizer's available balance.
       // The transaction serializes concurrent submits on the earnings doc: the
       // second one sees the reduced balance and is refused.
-      const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId))
+      const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId), { seedFromTickets: true })
 
       try {
         await adminDb.runTransaction(async (tx: any) => {
@@ -345,24 +335,17 @@ export async function POST(req: NextRequest) {
           }
 
           const earningsData = earningsSnap.data() as any
-          const settlementStatus = String(earningsData?.settlementStatus || '')
-          const netAmount = Math.max(0, Number(earningsData?.netAmount || 0) || 0)
           const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
 
-          // Readiness was decided above by getEventEarnings, which normalizes it
-          // against the event's end time on READ without persisting it — so a
-          // stored 'pending' here is routinely stale. 'locked' (fully withdrawn)
-          // is the only stored state that refuses. Availability is recomputed
-          // from this snapshot, exactly as withdrawFromEarnings' sync does.
-          if (settlementStatus === 'locked') {
-            throw new ReservationRefused('Earnings are not yet available for withdrawal')
-          }
           // Re-checked on the snapshot being debited: validation above read the
           // same row, and must have read it in the same currency.
           if (storedEarningsCurrencyMismatch(earningsData?.currency, eventData?.currency)) {
             throw new ReservationRefused(EARNINGS_CURRENCY_REVIEW_MESSAGE, EARNINGS_CURRENCY_REVIEW_CODE)
           }
-          const availableToWithdraw = Math.max(0, netAmount - withdrawnAmount)
+          // The shared ceiling (net − legacy batch payouts) minus what THIS
+          // snapshot says is already withdrawn: a concurrent submit that debited
+          // first is seen here and this one is refused.
+          const availableToWithdraw = Math.max(0, availability.ceilingMinor - withdrawnAmount)
 
           if (availableToWithdraw < amount) {
             throw new ReservationRefused(
@@ -503,7 +486,9 @@ export async function POST(req: NextRequest) {
     // Standard (manual) MonCash request. The debit is the real guard: if it is
     // refused (a concurrent submit already took the balance), the request we
     // just filed must not stay 'pending' for an admin to pay out a second time.
-    const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+    const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
+      ceilingMinor: availability.ceilingMinor,
+    })
     if (!debit.success) {
       await withdrawalRef.set(
         { status: 'failed', failureReason: debit.error || 'Earnings debit refused', updatedAt: new Date() },

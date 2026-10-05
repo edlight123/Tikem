@@ -3,7 +3,9 @@ import { requireAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { adminDb } from '@/lib/firebase/admin'
-import { getEventEarnings, getEventTierSalesBreakdown } from '@/lib/earnings'
+import { getEventTierSalesBreakdown } from '@/lib/earnings'
+import { loadEventAvailability } from '@/lib/payouts/availability-server'
+import { toEarningsRow } from '@/lib/payouts/availability'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
 import { isAdmin } from '@/lib/admin'
@@ -56,7 +58,15 @@ export default async function EventEarningsPage({
   }
 
   // Fetch earnings
-  const earnings = await getEventEarnings(eventId)
+  // The money figures come from the shared availability function — the same
+  // call the withdraw routes validate with — so the amount this page offers is
+  // the amount a withdrawal will accept. Null when nothing has sold.
+  const availability = await loadEventAvailability({ eventId, eventData })
+  const earnings =
+    availability &&
+    (availability.ticketsSold > 0 || availability.withdrawnMinor > 0 || availability.batchReservedMinor > 0)
+      ? toEarningsRow(availability)
+      : null
 
   const tierBreakdown = await getEventTierSalesBreakdown(eventId)
 

@@ -10,6 +10,8 @@ interface PayoutRequestModalProps {
   onClose: () => void
   /** Human-readable available balance, e.g. "HTG 2,250.00". */
   availableLabel: string
+  /** The one currency this request pays out — balances are never mixed. */
+  currency: string
   /** Optional: name of the destination payout method. */
   methodLabel?: string
 }
@@ -20,7 +22,7 @@ interface PayoutRequestModalProps {
  * next Friday — so this is a clear review/confirm step (not an amount-entry form),
  * which matches the actual money logic. Reuses the existing endpoint as-is.
  */
-export function PayoutRequestModal({ open, onClose, availableLabel, methodLabel }: PayoutRequestModalProps) {
+export function PayoutRequestModal({ open, onClose, availableLabel, currency, methodLabel }: PayoutRequestModalProps) {
   const { t } = useTranslation('organizer')
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -41,7 +43,11 @@ export function PayoutRequestModal({ open, onClose, availableLabel, methodLabel 
     setStatus('loading')
     setMessage('')
     try {
-      const res = await fetch('/api/organizer/request-payout', { method: 'POST' })
+      const res = await fetch('/api/organizer/request-payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency }),
+      })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data?.error) {
         setStatus('error')

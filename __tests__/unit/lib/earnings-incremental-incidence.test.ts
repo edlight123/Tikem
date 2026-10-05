@@ -72,8 +72,8 @@ jest.mock('@/lib/firebase/admin', () => {
 // Percentage is a FRACTION (0.10), matching DEFAULT_PLATFORM_SETTINGS.
 jest.mock('@/lib/admin/platform-settings', () => ({
   getPlatformSettings: async () => ({
-    haiti: { platformFeePercentage: 0.1, settlementHoldDays: 0 },
-    usCanada: { platformFeePercentage: 0.1, settlementHoldDays: 0 },
+    haiti: { platformFeePercentage: 0.1, settlementHoldDays: 0, platformFeeCapMinorByCurrency: { HTG: 75_000, USD: 500 } },
+    usCanada: { platformFeePercentage: 0.1, settlementHoldDays: 0, platformFeeCapMinorByCurrency: { USD: 500 } },
   }),
 }))
 
@@ -182,5 +182,17 @@ describe('addTicketToEarnings fee incidence', () => {
 
     expect(earnings().platformFee).toBeGreaterThan(0)
     expect(earnings().netAmount).toBeLessThan(2_000)
+  })
+
+  it('records the CAPPED fee checkout charged: 750 HTG per ticket, scaled by quantity', async () => {
+    seed('HT')
+    // Two 10,000 HTG tickets in one order: 10% would be 2,000 HTG; the cap is 2 × 750.
+    await addTicketToEarnings('evt_1', 2_000_000, 2, {
+      currency: 'HTG',
+      paymentMethod: 'moncash',
+      feeIncidence: 'organizer',
+    })
+    expect(earnings().platformFee).toBe(150_000)
+    expect(earnings().netAmount).toBe(1_850_000)
   })
 })

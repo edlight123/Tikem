@@ -35,6 +35,7 @@ import {
   type PayoutReleaseOverride,
 } from '@/types/platform-settings'
 import { FX_SNAPSHOT_DOC, resolveReferenceRates, type FxSnapshot } from '@/lib/payouts/fx-rates'
+import { ticketFactsFromDocs, type TicketFacts } from '@/lib/payouts/availability'
 import {
   decideRelease,
   holdHoursFor,
@@ -117,12 +118,6 @@ function toDateOrNull(value: any): Date | null {
 function toMinor(value: unknown): number {
   const n = Number(value || 0)
   return Number.isFinite(n) ? Math.round(n) : 0
-}
-
-/** Major-unit money (ticket prices) → minor units. */
-function majorToMinor(value: unknown): number {
-  const n = Number(value || 0)
-  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0
 }
 
 function formatMoney(minor: number, currency: string | null | undefined): string {
@@ -211,14 +206,6 @@ export async function loadOrganizerReleaseContext(
 
 // ── Per-event ticket facts ──────────────────────────────────────────────────
 
-type TicketFacts = {
-  liveTickets: number
-  checkedInTickets: number
-  manualCheckIns: number
-  methodKnownCheckIns: number
-  refundedMinor: number
-}
-
 /**
  * One pass over the event's tickets for the attendance signals and refund total.
  *
@@ -235,38 +222,9 @@ async function loadTicketFacts(eventId: string): Promise<TicketFacts> {
     .select('status', 'checked_in', 'check_in_method', 'price_paid', 'pricePaid', 'refund_status', 'refund_amount')
     .get()
 
-  const facts: TicketFacts = {
-    liveTickets: 0,
-    checkedInTickets: 0,
-    manualCheckIns: 0,
-    methodKnownCheckIns: 0,
-    refundedMinor: 0,
-  }
-
-  for (const doc of snapshot.docs) {
-    const data = (doc.data() || {}) as any
-    const status = String(data.status || '').toLowerCase()
-    const refundStatus = String(data.refund_status || '').toLowerCase()
-
-    if (status === 'refunded' || refundStatus === 'approved') {
-      facts.refundedMinor += majorToMinor(data.refund_amount ?? data.price_paid ?? data.pricePaid)
-      continue
-    }
-
-    if (status && status !== 'valid' && status !== 'confirmed') continue
-
-    facts.liveTickets += 1
-    if (data.checked_in === true) {
-      facts.checkedInTickets += 1
-      const method = String(data.check_in_method || '').toLowerCase()
-      if (method === 'manual' || method === 'scan') {
-        facts.methodKnownCheckIns += 1
-        if (method === 'manual') facts.manualCheckIns += 1
-      }
-    }
-  }
-
-  return facts
+  // One definition, shared with lib/payouts/availability.ts, so the figure a
+  // screen shows and the decision this gate takes are fed identical facts.
+  return ticketFactsFromDocs(snapshot.docs.map((doc: any) => doc.data() || {}))
 }
 
 // ── Shared, side-effect-free decision assembly ──────────────────────────────

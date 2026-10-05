@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { getOrganizerEarningsSummary } from '@/lib/earnings'
-import { getOrganizerBalance } from '@/lib/firestore/payout'
+import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
+import { summaryFromAvailability } from '@/lib/payouts/availability'
 import { PageHeader } from '@/components/organizer/ui'
 import { TranslatedPageHeader } from '@/components/organizer/ui/TranslatedPageHeader'
 import EarningsView from '../earnings/EarningsView'
@@ -23,26 +23,16 @@ export default async function FinancePage() {
   const role = userDoc.exists ? userDoc.data()?.role : null
   if (role !== 'organizer') redirect('/organizer?redirect=/organizer/finance')
 
-  // TWO different balances, deliberately both fetched.
-  //
-  // `summary` comes from the `event_earnings` collection and is the earnings
-  // HISTORY — gross sales, fees, per-event breakdown.
-  //
-  // `balance` comes from the same function /api/organizer/request-payout
-  // validates against: tickets joined to events, minus already-paid ticket ids.
-  // They are separate implementations with different settlement delays, so they
-  // can and do disagree — this page used to show the first number and enable
-  // "Request payout" from it, while the request was judged against the second.
-  // An organizer was shown 2,250.00 HTG available and got "Insufficient
-  // balance" on every attempt, because the earnings doc behind that figure
-  // pointed at an event no longer in their account.
-  //
-  // The withdrawable figure must be the one the money path honours, so the hero
-  // and the button now come from `balance`.
-  const [summary, balance] = await Promise.all([
-    getOrganizerEarningsSummary(user.id),
-    getOrganizerBalance(user.id),
-  ])
+  // ONE source of truth for every money figure on this page: the shared
+  // availability function (lib/payouts/availability.ts) that
+  // /api/organizer/request-payout, withdraw-moncash and withdraw-bank all
+  // validate with. The page used to mix the event_earnings aggregate (history,
+  // including a row for an event no longer in the account) with a second,
+  // tickets-based engine — and showed 2,250.00 HTG available while every
+  // withdrawal was refused. Totals stay per currency; HTG and USD are never
+  // added together.
+  const availability = await loadOrganizerAvailability(user.id)
+  const summary = summaryFromAvailability(availability.events)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -65,11 +55,7 @@ export default async function FinancePage() {
           <EarningsView
             summary={summary}
             organizerId={user.id}
-            withdrawable={{
-              available: balance.available,
-              pending: balance.pending,
-              currency: balance.currency,
-            }}
+            withdrawable={{ totals: availability.totals }}
           />
         </div>
       </div>

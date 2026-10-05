@@ -48,9 +48,15 @@ jest.mock('@/lib/firestore/payout', () => ({
   consumePayoutDetailsChangeVerification: jest.fn(),
 }))
 
-const earningsState: { current: Doc } = { current: {} }
+const availabilityState: { current: Doc } = { current: {} }
 const debitResult: { current: any } = { current: { success: true } }
+const debitCalls: any[] = []
 const flagged: string[] = []
+
+// The route's balance comes from the ONE shared availability function.
+jest.mock('@/lib/payouts/availability-server', () => ({
+  loadEventAvailability: async () => availabilityState.current,
+}))
 
 jest.mock('@/lib/earnings', () => {
   const actual = jest.requireActual('@/lib/earnings')
@@ -60,8 +66,10 @@ jest.mock('@/lib/earnings', () => {
     flagEarningsCurrencyReview: async (eventId: string) => {
       flagged.push(eventId)
     },
-    getEventEarnings: async () => earningsState.current,
-    withdrawFromEarnings: async () => debitResult.current,
+    withdrawFromEarnings: async (...args: any[]) => {
+      debitCalls.push(args)
+      return debitResult.current
+    },
   }
 })
 
@@ -74,17 +82,25 @@ const call = (amount = 200_000) =>
 beforeEach(() => {
   requests.clear()
   flagged.length = 0
-  earningsState.current = { settlementStatus: 'ready', availableToWithdraw: 500_000, currency: 'HTG' }
+  availabilityState.current = {
+    eventId: 'evt1',
+    currency: 'HTG',
+    reason: 'eligible',
+    balanceMinor: 500_000,
+    ceilingMinor: 500_000,
+    availableNowMinor: 500_000,
+    gateInputs: { grossMinor: 555_556, refundedMinor: 0, availableMinor: 500_000 },
+  }
   debitResult.current = { success: true }
+  debitCalls.length = 0
 })
 
 describe('withdraw-bank refusals', () => {
   it('says "under review" for a currency-flagged earnings row, and creates no request', async () => {
-    earningsState.current = {
-      settlementStatus: 'ready',
-      availableToWithdraw: 0,
-      currency: 'HTG',
-      withdrawalBlocked: { code: EARNINGS_CURRENCY_REVIEW_CODE },
+    availabilityState.current = {
+      ...availabilityState.current,
+      reason: EARNINGS_CURRENCY_REVIEW_CODE,
+      availableNowMinor: 0,
     }
     const res = await call()
     const body = await res.json()
@@ -104,9 +120,19 @@ describe('withdraw-bank refusals', () => {
     expect(rows[0].status).toBe('failed')
   })
 
-  it('still submits normally when the debit succeeds', async () => {
+  it('still submits normally when the debit succeeds, debiting against the shared ceiling', async () => {
     const res = await call()
     expect(res.status).toBe(200)
     expect(Array.from(requests.values())[0].status).not.toBe('failed')
+    expect(debitCalls).toHaveLength(1)
+    expect(debitCalls[0][3]).toEqual({ ceilingMinor: 500_000 })
+  })
+
+  it('refuses above the shared balance before writing anything', async () => {
+    const res = await call(500_001)
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toMatch(/Insufficient balance. Available: 5000.00 HTG/)
+    expect(requests.size).toBe(0)
+    expect(debitCalls).toHaveLength(0)
   })
 })

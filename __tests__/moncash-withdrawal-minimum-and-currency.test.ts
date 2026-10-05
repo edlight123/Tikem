@@ -57,6 +57,12 @@ function docRef(name: string, id?: string): any {
     get: async () => snapOf(name, docId),
     set: async (data: any, opts?: any) => writeDoc(name, docId, data, opts),
     update: async (patch: any) => updateDoc(name, docId, patch),
+    // Subcollections (organizers/{id}/payouts) are flat collections named by path.
+    collection: (sub: string) => ({
+      doc: (subId?: string) => docRef(`${name}/${docId}/${sub}`, subId),
+      get: () => query(`${name}/${docId}/${sub}`).get(),
+      where: (f: string, op: string, v: any) => query(`${name}/${docId}/${sub}`).where(f, op, v),
+    }),
   }
 }
 function query(name: string, filters: Array<[string, any]> = [], lim = Infinity): any {
@@ -135,6 +141,17 @@ const gateMock = jest.fn(async (_input: any): Promise<any> => ({ allowed: true, 
 jest.mock('@/lib/payouts/withdrawal-gate', () => ({
   gateHaitiWithdrawal: (i: any) => gateMock(i),
   previewRelease: jest.fn(async () => null),
+  // The shared availability (lib/payouts/availability-server.ts) asks for the
+  // organizer's release context; an established organizer, so the ladder
+  // releases an event that ended weeks ago.
+  loadOrganizerReleaseContext: jest.fn(async (organizerId: string) => ({
+    organizerId,
+    platformConfig: {},
+    override: { forceEstablished: true },
+    endedEventIds: new Set<string>(),
+    lifetimeGrossMinorByCurrency: {},
+    fxWarnings: [],
+  })),
 }))
 
 const USD_TO_HTG = 130
@@ -237,6 +254,26 @@ import {
 const MIN = MONCASH_MIN_WITHDRAWAL_HTG_CENTS // 1,000.00 HTG
 const USD_MIN = Math.ceil(MIN / USD_TO_HTG) // 770 cents = $7.70 → 1,001 HTG
 
+/**
+ * The tickets behind a stored net. Withdrawals are now judged against the
+ * ticket-derived figure (lib/payouts/availability.ts), so each fixture's ledger
+ * row is backed by a sale that nets exactly that amount: buyer incidence (the
+ * fee was paid on top, so net = face), checked in by scan.
+ */
+function backingTicket(netMinor: number, over: Record<string, any> = {}) {
+  return {
+    event_id: 'evt1',
+    status: 'valid',
+    price_paid: netMinor / 100,
+    fee_incidence: 'buyer',
+    payment_method: 'moncash',
+    payment_id: 'pay_backing',
+    checked_in: true,
+    check_in_method: 'scan',
+    ...over,
+  }
+}
+
 function seed(
   opts: {
     currency?: 'HTG' | 'USD'
@@ -266,7 +303,8 @@ function seed(
   const storedCurrency = opts.storedCurrency === undefined ? currency : opts.storedCurrency
   if (storedCurrency) stored.currency = storedCurrency
   coll('event_earnings').earn1 = stored
-  for (const [i, t] of (opts.tickets || []).entries()) coll('tickets')[`t${i}`] = { event_id: 'evt1', status: 'valid', ...t }
+  const tickets = opts.tickets ?? [backingTicket(opts.net ?? MIN)]
+  for (const [i, t] of tickets.entries()) coll('tickets')[`t${i}`] = { event_id: 'evt1', status: 'valid', ...t }
   const instant = opts.instant ?? true
   coll('config').payouts = { prefunding: { enabled: instant, available: instant } }
   profiles.org1 = {
@@ -514,7 +552,7 @@ describe('stored earnings row in a different currency than the event', () => {
 
   it('withdrawFromEarnings itself refuses a mismatched row (backstop for other callers, e.g. bank)', async () => {
     mismatched()
-    const r = await withdrawFromEarnings('evt1', MIN, 'payout_x')
+    const r = await withdrawFromEarnings('evt1', MIN, 'payout_x', { ceilingMinor: 300_000 })
     expect(r).toMatchObject({ success: false, code: 'earnings_currency_review' })
     expect(earnings().withdrawnAmount).toBe(0)
   })
@@ -560,5 +598,83 @@ describe('validation and debit read the same row', () => {
 
     // And the balance is now spent: a second request is refused.
     expect((await withdraw(post(body(MIN)))).status).toBe(400)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// One figure: what the screens show is what the withdrawal accepts
+// ---------------------------------------------------------------------------
+describe('display and validation agree (lib/payouts/availability.ts)', () => {
+  // A 10,000 HTG ticket absorbed by the organizer (fee capped at 750 HTG →
+  // nets 9,250 HTG), a refunded 2,000 HTG ticket, and a 1,000 HTG ticket that
+  // an APPROVED legacy batch payout already covers. The stored ledger row says
+  // something else entirely (an uncapped 10%, refunds never removed) — it must
+  // not matter.
+  const EXPECTED = 925_000
+  // The shipped fee settings (10%, 750 HTG cap) rather than this file's 5% stub.
+  const { getPlatformSettings } = jest.requireMock('@/lib/admin/platform-settings')
+  let stub: any
+  beforeEach(() => {
+    stub = getPlatformSettings.getMockImplementation()
+    getPlatformSettings.mockImplementation(async () => jest.requireActual('@/types/platform-settings').DEFAULT_PLATFORM_SETTINGS)
+  })
+  afterEach(() => getPlatformSettings.mockImplementation(stub))
+
+  const seedMixed = (instant: boolean) => {
+    seed({
+      net: 1_080_000, // the stale event_earnings figure
+      instant,
+      tickets: [
+        backingTicket(0, { price_paid: 10_000, fee_incidence: 'organizer', payment_id: 'p1' }),
+        backingTicket(0, { price_paid: 2_000, payment_id: 'p2', status: 'refunded', refund_status: 'approved', refund_amount: 2_000 }),
+        backingTicket(0, { price_paid: 1_000, fee_incidence: 'organizer', payment_id: 'p3' }),
+      ],
+    })
+    coll('organizers/org1/payouts').po1 = { status: 'approved', ticketIds: ['t2'], amount: 90_000, currency: 'HTG' }
+  }
+
+  it.each([[true], [false]])('earnings API, mobile, quote and route all agree on one number (instant=%s)', async (instant) => {
+    seedMixed(instant)
+    const api = await (await eventEarningsApi({} as any, { params: Promise.resolve({ id: 'evt1' }) })).json()
+    expect(api.earnings).toMatchObject({
+      availableToWithdraw: EXPECTED,
+      netAmount: 1_015_000,
+      withdrawnAmount: 90_000,
+      platformFee: 85_000,
+      refundedAmount: 200_000,
+      settlementStatus: 'ready',
+      dataSource: 'availability',
+      release: { releasedNow: true, releasableMinor: EXPECTED },
+    })
+    // The mobile hub/per-event screen read exactly this field chain.
+    const { withdrawableMinor } = jest.requireActual('../mobile/lib/eventEarnings')
+    expect(withdrawableMinor(api.earnings)).toBe(EXPECTED)
+
+    const q = await (await quote(get('http://x/q?eventId=evt1'))).json()
+    expect(q.quote.amountCents).toBe(EXPECTED)
+
+    // One cent more is refused, nothing written.
+    const over = await withdraw(post(body(EXPECTED + 1)))
+    expect(over.status).toBe(400)
+    expect((await over.json()).error).toMatch(/Available: 9250\.00 HTG/)
+    expect(withdrawals()).toEqual([])
+
+    // Exactly the displayed figure is accepted, and debited once.
+    const ok = await withdraw(post(body(EXPECTED)))
+    expect(ok.status).toBe(200)
+    expect(earnings().withdrawnAmount).toBe(EXPECTED)
+
+    // Afterwards every surface agrees there is nothing left.
+    const after = await (await eventEarningsApi({} as any, { params: Promise.resolve({ id: 'evt1' }) })).json()
+    expect(after.earnings.availableToWithdraw).toBe(0)
+    expect((await withdraw(post(body(MIN)))).status).toBe(400)
+  })
+
+  it('the gate is fed the same gross / refund / balance figures the screen used', async () => {
+    seedMixed(false)
+    await withdraw(post(body(EXPECTED)))
+    expect(gateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ grossMinor: 1_300_000, refundedMinor: 200_000, availableMinor: EXPECTED, requestedAmountMinor: EXPECTED })
+    )
   })
 })

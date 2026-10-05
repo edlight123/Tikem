@@ -22,13 +22,15 @@ interface EarningsViewProps {
   summary: EarningsSummary
   organizerId: string
   /**
-   * The balance the WITHDRAWAL is judged against, from the same function
-   * /api/organizer/request-payout calls. `summary` is the earnings history from
-   * a different collection and the two can disagree, so the hero figure and the
-   * button gate must come from here — otherwise the page invites a request the
-   * money path will refuse.
+   * The withdrawable balance PER CURRENCY, from lib/payouts/availability.ts —
+   * the same function /api/organizer/request-payout (and the per-event
+   * withdraw routes) validate with. Required: there is no fallback to a second
+   * engine, because that fallback is how the page once offered money the
+   * request then refused.
    */
-  withdrawable?: { available: number; pending: number; currency: string }
+  withdrawable: {
+    totals: Array<{ currency: string; availableNowMinor: number; pendingMinor: number; withdrawnMinor: number; nextAvailableAt?: string | null }>
+  }
 }
 
 // The single minimum, shared with the server so the button and the route can
@@ -106,11 +108,6 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
     locked: 'neutral',
   }
 
-  // Net funds that are neither available to withdraw yet nor already withdrawn
-  // (i.e. held until settlement). Used to surface the available-vs-pending split.
-  const heldBack = (net: number, avail: number, withdrawn: number) =>
-    Math.max(0, net - avail - withdrawn)
-
   const usd = summary.totalsByCurrency?.USD
   const htg = summary.totalsByCurrency?.HTG
   const isMixed = summary.currency === 'mixed' && !!summary.totalsByCurrency
@@ -143,37 +140,26 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
     return <span className={`font-mono tabular-nums text-2xl font-bold ${valueClass}`}>{formatCurrency(single)}</span>
   }
 
-  const pendingPick = (t?: CurrencyTotals) =>
-    heldBack(t?.totalNetAmount ?? 0, t?.totalAvailableToWithdraw ?? 0, t?.totalWithdrawn ?? 0)
-
-  const pendingLabel = isMixed
-    ? mixedInline(pendingPick)
-    : formatCurrency(heldBack(summary.totalNetAmount, summary.totalAvailableToWithdraw, summary.totalWithdrawn))
-
-  const withdrawnLabel = isMixed
-    ? mixedInline((t) => t?.totalWithdrawn ?? 0)
-    : formatCurrency(summary.totalWithdrawn)
-
   /* ------------------------------------------------------------------------
-   * The withdrawable balance.
+   * The withdrawable balance, one figure per currency.
    *
-   * When the server passed one, it is authoritative: it is the figure
-   * /api/organizer/request-payout will re-derive and judge. Falling back to the
-   * earnings summary keeps this component usable on its own, but a page that
-   * offers the button should always pass it.
+   * Straight from the server's shared availability: what the payout request
+   * will re-derive and judge. Never summed across currencies.
    * ---------------------------------------------------------------------- */
-  const availableForPayout = withdrawable
-    ? withdrawable.available
-    : summary.totalAvailableToWithdraw
+  const asCode = (c: string): 'HTG' | 'USD' | 'CAD' | 'EUR' | undefined =>
+    c === 'HTG' || c === 'USD' || c === 'CAD' || c === 'EUR' ? c : undefined
 
-  const payoutCurrency = (() => {
-    const c = withdrawable?.currency
-    return c === 'HTG' || c === 'USD' || c === 'CAD' || c === 'EUR' ? c : undefined
-  })()
+  const balances = withdrawable.totals.length
+    ? withdrawable.totals
+    : [{ currency: summary.currency === 'mixed' ? 'HTG' : String(summary.currency || 'HTG'), availableNowMinor: 0, pendingMinor: 0, withdrawnMinor: 0 }]
 
-  // `>=`, matching meetsMinimumPayout on the server. The old `>` refused a
-  // balance of exactly the minimum that the API would have accepted.
-  const canWithdraw = availableForPayout >= MIN_PAYOUT_CENTS
+  // `>=`, matching the server. The old `>` refused a balance of exactly the
+  // minimum that the API would have accepted.
+  const requestable = balances.filter((b) => b.availableNowMinor >= MIN_PAYOUT_CENTS)
+  const [payoutCurrencyChoice, setPayoutCurrencyChoice] = useState<string | null>(null)
+  const payoutRow = balances.find((b) => b.currency === payoutCurrencyChoice) || requestable[0] || balances[0]
+  const canWithdraw = requestable.length > 0
+  const anyAvailable = balances.some((b) => b.availableNowMinor > 0)
 
   const totalFeesLabel = isMixed
     ? mixedInline((t) => (t?.totalPlatformFees ?? 0) + (t?.totalProcessingFees ?? 0))
@@ -200,11 +186,17 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
               <span className="eyebrow">{tx('earnings.available_to_withdraw')}</span>
             </div>
 
-            {/* One figure, from the authoritative balance. The old mixed-currency
-                split came from the earnings summary and could contradict what
-                the payout route would pay. */}
-            <div className="mt-3 font-mono tabular-nums text-[clamp(32px,6vw,52px)] leading-none">
-              {formatCurrency(availableForPayout, payoutCurrency)}
+            {/* One figure per currency, from the shared availability. HTG and
+                USD are separate balances with separate payout paths. */}
+            <div className="mt-3 space-y-2">
+              {balances.map((b) => (
+                <div
+                  key={b.currency}
+                  className={`font-mono tabular-nums leading-none ${balances.length > 1 ? 'text-[clamp(26px,4.5vw,40px)]' : 'text-[clamp(32px,6vw,52px)]'}`}
+                >
+                  {formatCurrency(b.availableNowMinor, asCode(b.currency))}
+                </div>
+              ))}
             </div>
 
             <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/55">
@@ -212,26 +204,40 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
                 <Clock className="h-3.5 w-3.5" />
                 Pending&nbsp;
                 <span className="font-mono tabular-nums font-semibold text-white">
-                  {withdrawable ? formatCurrency(withdrawable.pending, payoutCurrency) : pendingLabel}
+                  {balances.map((b) => formatCurrency(b.pendingMinor, asCode(b.currency))).join(' · ')}
                 </span>
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <ArrowDownCircle className="h-3.5 w-3.5" />
-                Withdrawn&nbsp;<span className="font-mono tabular-nums font-semibold text-white">{withdrawnLabel}</span>
+                Withdrawn&nbsp;
+                <span className="font-mono tabular-nums font-semibold text-white">
+                  {balances.map((b) => formatCurrency(b.withdrawnMinor, asCode(b.currency))).join(' · ')}
+                </span>
               </span>
             </div>
           </div>
 
           <div className="shrink-0">
+            {requestable.length > 1 && (
+              <div className="mb-2 flex gap-2">
+                {requestable.map((b) => (
+                  <button
+                    key={b.currency}
+                    type="button"
+                    onClick={() => setPayoutCurrencyChoice(b.currency)}
+                    className={`rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium ${payoutRow.currency === b.currency ? 'bg-white text-black' : 'bg-white/[0.06] text-white/70'}`}
+                  >
+                    {b.currency}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setPayoutOpen(true)}
               disabled={!canWithdraw}
-              // The states were inverted: enabled was `bg-white/[0.03]` (near
-              // black) while disabled was `bg-white/70` — and a white fill is
-              // this product's PRIMARY button, so the unusable state looked
-              // like the call to action and the usable one looked like a hole.
-              // Enabled is now white; disabled is a dim, obviously-inert fill.
+              // Enabled is white (this product's primary button); disabled is a
+              // dim, obviously-inert fill.
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-bold text-gray-900 shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/40 disabled:shadow-none lg:w-auto"
             >
               {tx('actions.request_payout')}
@@ -240,9 +246,9 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
             <p className="mt-2 max-w-[14rem] text-xs text-white/55 lg:text-right">
               {canWithdraw
                 ? 'Paid to your configured method, batched to the next Friday.'
-                : availableForPayout > 0
-                  ? `You need at least ${formatCurrency(MIN_PAYOUT_CENTS, payoutCurrency)} to request a payout.`
-                  : 'Nothing to withdraw yet. Funds appear here about a week after each event ends.'}
+                : anyAvailable
+                  ? `You need at least ${formatCurrency(MIN_PAYOUT_CENTS, asCode(payoutRow.currency))} to request a payout.`
+                  : 'Nothing to withdraw yet. Funds are released 24–72 hours after each event ends.'}
             </p>
           </div>
         </div>
@@ -487,7 +493,8 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
       <PayoutRequestModal
         open={payoutOpen}
         onClose={() => setPayoutOpen(false)}
-        availableLabel={formatCurrency(availableForPayout, payoutCurrency)}
+        currency={payoutRow.currency}
+        availableLabel={formatCurrency(payoutRow.availableNowMinor, asCode(payoutRow.currency))}
       />
     </div>
   )

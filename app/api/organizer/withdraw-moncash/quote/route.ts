@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { EARNINGS_CURRENCY_REVIEW_CODE, EARNINGS_CURRENCY_REVIEW_MESSAGE, getEventEarnings } from '@/lib/earnings'
+import { EARNINGS_CURRENCY_REVIEW_CODE, EARNINGS_CURRENCY_REVIEW_MESSAGE } from '@/lib/earnings'
+import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import { fetchUsdToHtgRate } from '@/lib/currency'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { PREFUNDING_FEE_PERCENT, computePrefundedPayout } from '@/lib/payouts/moncash-prefunded'
@@ -47,19 +48,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
     }
 
-    const earnings = await getEventEarnings(eventId)
-    if (!earnings) {
-      return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
+    // The one availability figure (lib/payouts/availability.ts): what the POST
+    // validates and debits, with the release ladder applied — so the quote can
+    // never offer an amount the withdrawal will refuse.
+    const availability = await loadEventAvailability({ eventId, eventData })
+    if (!availability) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
     // A row held for admin review has nothing withdrawable — the POST refuses it.
-    const blocked = earnings.withdrawalBlocked?.code === EARNINGS_CURRENCY_REVIEW_CODE
-    const availableToWithdraw =
-      !blocked && earnings.settlementStatus === 'ready'
-        ? Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
-        : 0
+    const blocked = availability.reason === EARNINGS_CURRENCY_REVIEW_CODE
+    const availableToWithdraw = blocked ? 0 : availability.availableNowMinor
 
-    const currency = (String(earnings.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
+    const currency = (availability.currency === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
 
     // Determine whether instant prefunding is available for this organizer.
     const [platformConfigDoc, haitiProfile] = await Promise.all([

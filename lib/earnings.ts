@@ -5,11 +5,12 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
-import { calculateFees, calculateSettlementDate, isSettlementReady, calculatePlatformFeeWithPercentage, calculateSettlementDateWithHoldDays } from '@/lib/fees'
+import { calculateFees, calculateSettlementDate, isSettlementReady, calculateCappedPlatformFee, calculateSettlementDateWithHoldDays } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 import { getEventLocation } from '@/types/platform-settings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
@@ -50,6 +51,17 @@ function normalizePaymentMethod(raw: unknown): PaymentMethod {
  */
 export const MONCASH_COLLECTION_FEE_RATE = 0.02
 
+/** The platform fee rate when no location setting is supplied (types/earnings FEE_CONFIG). */
+const FEE_PERCENT_DEFAULT = 0.1
+
+/** The location's per-ticket fee cap for this currency, or null when uncapped. */
+function capFromSettings(locationConfig: any, currency: string): number | null {
+  const table = locationConfig?.platformFeeCapMinorByCurrency || {}
+  if (!Object.prototype.hasOwnProperty.call(table, currency)) return null
+  const n = Number(table[currency])
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
 /**
  * The MonCash fee is taken on the HTG actually charged; express it in the
  * event's currency (fxRate is charged-per-event, so divide).
@@ -76,6 +88,12 @@ function calculateEventCurrencyFees(options: {
   fxRate?: number | null
   platformFeePercentage?: number
   feeIncidence?: FeeIncidence
+  /**
+   * Per-ticket platform-fee ceiling in the event currency's minor units, and the
+   * order's ticket count — the same cap checkout applies. Absent = uncapped.
+   */
+  capMinorPerTicket?: number | null
+  quantity?: number
 }): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number; absorbedProcessingFee: number } {
   const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
   if (grossEventCents <= 0) {
@@ -102,9 +120,13 @@ function calculateEventCurrencyFees(options: {
 
   // Platform fee is always calculated on organizer-facing gross (event currency).
   // Use dynamic fee percentage if provided, otherwise use default from calculateFees
-  const platformFee = options.platformFeePercentage !== undefined
-    ? calculatePlatformFeeWithPercentage(grossEventCents, options.platformFeePercentage)
-    : calculateFees(grossEventCents).platformFee
+  // Capped per ticket exactly as checkout caps it (lib/fees.ts), so the ledger
+  // records the fee the organizer was actually charged, not an uncapped 10%.
+  const platformFee = calculateCappedPlatformFee(
+    grossEventCents,
+    options.platformFeePercentage !== undefined ? options.platformFeePercentage : FEE_PERCENT_DEFAULT,
+    { capMinorPerTicket: options.capMinorPerTicket ?? null, quantity: options.quantity }
+  )
 
   // Processing fee depends on the payment rail.
   // Stripe fees are in charged/settlement currency, so convert them back to event currency when needed.
@@ -134,7 +156,7 @@ function calculateEventCurrencyFees(options: {
   }
 }
 
-async function findEventEarningsDoc(eventId: string) {
+export async function findEventEarningsDoc(eventId: string) {
   // Current schema: eventId field.
   const byEventId = await adminDb
     .collection('event_earnings')
@@ -173,6 +195,10 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   const platformFeePercentage = eventLocation === 'haiti'
     ? platformSettings.haiti.platformFeePercentage
     : platformSettings.usCanada.platformFeePercentage
+  const capMinorPerTicket = capFromSettings(
+    eventLocation === 'haiti' ? platformSettings.haiti : platformSettings.usCanada,
+    normalizeCurrency(event.currency || 'HTG')
+  )
   const settlementHoldDays = eventLocation === 'haiti'
     ? platformSettings.haiti.settlementHoldDays
     : platformSettings.usCanada.settlementHoldDays
@@ -205,9 +231,10 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
 
   for (const ticketDoc of ticketsSnapshot.docs) {
     const ticket = ticketDoc.data() || {}
-    // Accept both legacy "valid" and standard "confirmed" tickets.
-    const status = String(ticket.status || '').toLowerCase()
-    if (status && status !== 'valid' && status !== 'confirmed') continue
+    // One status vocabulary (lib/tickets/status.ts): valid | confirmed | active.
+    // Listing two of them here hid 'active' sales from the history view.
+    if (!isLiveTicketStatus(ticket.status)) continue
+    if (String(ticket.refund_status || '').toLowerCase() === 'approved') continue
 
     const pricePaid = Number(ticket.price_paid ?? ticket.pricePaid ?? 0)
     const grossEventCents = Math.round(pricePaid * 100)
@@ -287,6 +314,8 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       fxRate: group.fxRate,
       platformFeePercentage, // Pass dynamic platform fee
       feeIncidence: group.feeIncidence,
+      capMinorPerTicket,
+      quantity: group.ticketCount,
     })
     grossSales += fees.grossAmount
     platformFee += fees.platformFee
@@ -586,7 +615,17 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
  * @param eventId - Event ID
  * @returns EventEarnings document reference
  */
-export async function getOrCreateEventEarnings(eventId: string): Promise<{
+export async function getOrCreateEventEarnings(
+  eventId: string,
+  opts?: {
+    /**
+     * Seed a NEW row from the event's tickets. Only the withdrawal paths ask for
+     * this: the sale path (addTicketToEarnings) runs after its tickets are
+     * written, so seeding there would count the first sale twice.
+     */
+    seedFromTickets?: boolean
+  }
+): Promise<{
   ref: FirebaseFirestore.DocumentReference
   data: EventEarnings | null
 }> {
@@ -615,16 +654,22 @@ export async function getOrCreateEventEarnings(eventId: string): Promise<{
     new Date()
   const settlementDate = calculateSettlementDate(eventEndDate)
 
+  // An event that sold before the ledger existed (or whose row was never
+  // written) has its history in the tickets. Seed the new row from them, or the
+  // first withdrawal would replace a real history with zeros on every screen.
+  const seed = opts?.seedFromTickets ? await deriveEventEarningsFromTickets(eventId).catch(() => null) : null
+
   const newEarningsRef = adminDb.collection('event_earnings').doc()
   const newEarnings: Omit<EventEarnings, 'id'> = {
     eventId,
     organizerId: event.organizer_id,
-    grossSales: 0,
-    ticketsSold: 0,
-    platformFee: 0,
-    processingFees: 0,
-    absorbedProcessingFees: 0,
-    netAmount: 0,
+    grossSales: seed?.grossSales || 0,
+    ticketsSold: seed?.ticketsSold || 0,
+    platformFee: seed?.platformFee || 0,
+    processingFees: seed?.processingFees || 0,
+    absorbedProcessingFees: seed?.absorbedProcessingFees || 0,
+    ...(seed ? { promoterCommission: seed.promoterCommission || 0, seededFromTickets: true } : {}),
+    netAmount: seed?.netAmount || 0,
     availableToWithdraw: 0,
     withdrawnAmount: 0,
     settlementStatus: 'pending',
@@ -702,6 +747,11 @@ export async function addTicketToEarnings(
     fxRate,
     platformFeePercentage, // Pass dynamic platform fee
     feeIncidence: options?.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
+    capMinorPerTicket: capFromSettings(
+      eventLocation === 'haiti' ? platformSettings.haiti : platformSettings.usCanada,
+      normalizeCurrency(event?.currency || options?.currency || 'HTG')
+    ),
+    quantity: Math.max(1, Math.floor(Number(quantity) || 1)),
   })
 
   // Promoter commission comes out of the organizer's net under BOTH incidences:
@@ -733,104 +783,53 @@ export async function addTicketToEarnings(
 }
 
 /**
- * Process withdrawal from event earnings
- * Decreases availableToWithdraw and increases withdrawnAmount
- * 
- * @param eventId - Event ID
- * @param amount - Amount to withdraw in cents
- * @param payoutId - Payout request ID for tracking
- * @returns Success status
+ * Debit one event's ledger for a withdrawal — the atomic guard on every per-event
+ * payout path (MonCash, Haitian bank, and the batch request).
+ *
+ * WHAT is withdrawable is no longer this row's own running total. The caller
+ * passes `ceilingMinor` from lib/payouts/availability.ts (ticket-derived net,
+ * capped fee, refunds out, legacy batch payouts out), and the transaction checks
+ * `ceilingMinor − withdrawnAmount` with withdrawnAmount read INSIDE the
+ * transaction — so two concurrent submits still serialize and the second sees
+ * the first's debit. WHEN it is withdrawable is the release ladder's call, made
+ * by the caller (gateHaitiWithdrawal) before this runs; the old settlement-date
+ * recompute here (0-day hold off start/created_at) is gone, and a stored
+ * 'locked' status no longer refuses — it was never cleared when new tickets
+ * sold, so it froze an event's later sales forever.
+ *
+ * Creates the row (seeded from the tickets) when the event has none, so the
+ * debit has somewhere to land.
  */
 export async function withdrawFromEarnings(
   eventId: string,
   amount: number,
-  payoutId: string
+  payoutId: string,
+  opts: { ceilingMinor: number }
 ): Promise<{ success: boolean; error?: string; code?: string }> {
-  const { ref, data } = await getOrCreateEventEarnings(eventId)
+  const ceilingMinor = Math.max(0, Math.round(Number(opts?.ceilingMinor) || 0))
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return { success: false, error: 'Amount must be a positive whole number of cents' }
+  }
+
+  const { ref, data } = await getOrCreateEventEarnings(eventId, { seedFromTickets: true })
 
   if (!data) {
     return { success: false, error: 'Earnings not found' }
   }
 
   // Never debit a row whose units are ambiguous (see storedEarningsCurrencyMismatch).
-  // getEventEarnings reports its balance as 0, so the callers' validation and
-  // this debit agree; this is the backstop for any caller that skipped it.
   const eventForCurrency = await adminDb.collection('events').doc(eventId).get()
   const eventCurrencyRaw = eventForCurrency.exists ? (eventForCurrency.data() as any)?.currency : null
   if (storedEarningsCurrencyMismatch((data as any).currency, eventCurrencyRaw)) {
     return { success: false, error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE }
   }
 
-  const netAmount = Math.max(0, Number((data as any).netAmount || 0) || 0)
-  const withdrawnAmount = Math.max(0, Number((data as any).withdrawnAmount || 0) || 0)
-
-  // Recompute settlement/availability on demand so policy changes (e.g. hold days -> 0)
-  // take effect immediately, without waiting for cron to update stored docs.
-  let effectiveSettlementStatus: SettlementStatus = data.settlementStatus
-  let effectiveSettlementReadyDateIso: string | null = (data as any).settlementReadyDate || null
-  let effectiveAvailableToWithdraw = Math.max(0, Number((data as any).availableToWithdraw || 0) || 0)
-
-  if (data.settlementStatus !== 'locked') {
-    const eventDoc = await adminDb.collection('events').doc(eventId).get()
-    const eventData = eventDoc.exists ? (eventDoc.data() as any) : null
-    const eventEndDate =
-      toDateOrNull(eventData?.end_datetime || eventData?.endDateTime) ||
-      toDateOrNull(eventData?.start_datetime || eventData?.startDateTime || eventData?.date_time || eventData?.date) ||
-      toDateOrNull(eventData?.created_at)
-
-    const storedReadyDate = toDateOrNull((data as any).settlementReadyDate)
-    const computedFromEventEnd = eventEndDate ? calculateSettlementDate(eventEndDate) : null
-
-    const chosen = (() => {
-      if (storedReadyDate && computedFromEventEnd) {
-        return storedReadyDate.getTime() <= computedFromEventEnd.getTime() ? storedReadyDate : computedFromEventEnd
-      }
-      return storedReadyDate || computedFromEventEnd
-    })()
-
-    effectiveSettlementReadyDateIso = chosen ? chosen.toISOString() : null
-    effectiveSettlementStatus =
-      effectiveSettlementReadyDateIso && isSettlementReady(effectiveSettlementReadyDateIso) ? 'ready' : 'pending'
-
-    effectiveAvailableToWithdraw =
-      effectiveSettlementStatus === 'ready' ? Math.max(0, netAmount - withdrawnAmount) : 0
-
-    const needsSync =
-      (data as any).settlementReadyDate !== effectiveSettlementReadyDateIso ||
-      data.settlementStatus !== effectiveSettlementStatus ||
-      Number((data as any).availableToWithdraw || 0) !== effectiveAvailableToWithdraw ||
-      Number((data as any).withdrawnAmount || 0) !== withdrawnAmount
-
-    if (needsSync && effectiveSettlementReadyDateIso) {
-      await ref.update({
-        settlementReadyDate: effectiveSettlementReadyDateIso,
-        settlementStatus: effectiveSettlementStatus,
-        availableToWithdraw: effectiveAvailableToWithdraw,
-        withdrawnAmount,
-        netAmount,
-        updatedAt: new Date().toISOString(),
-      })
-    }
-  }
-
-  // Fail-fast on the recomputed settlement policy before opening a transaction.
-  if (effectiveSettlementStatus !== 'ready') {
-    return {
-      success: false,
-      error: `Funds not yet available. Settlement status: ${effectiveSettlementStatus}`,
-    }
-  }
-
-  // Atomic debit: re-read availableToWithdraw INSIDE a transaction and decrement it there, so two
-  // concurrent double-submits can't both pass the availability check and each debit the balance
-  // (which would authorize a double payout). Firestore serializes transactions touching the same
-  // doc, so the second attempt observes the reduced balance and is refused.
   try {
     const result = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
       const cur = snap.exists ? (snap.data() as any) : {}
-      const available = Math.max(0, Number(cur?.availableToWithdraw || 0) || 0)
       const withdrawn = Math.max(0, Number(cur?.withdrawnAmount || 0) || 0)
+      const available = Math.max(0, ceilingMinor - withdrawn)
 
       if (storedEarningsCurrencyMismatch(cur?.currency, eventCurrencyRaw)) {
         return {
@@ -848,10 +847,10 @@ export async function withdrawFromEarnings(
       }
 
       const remaining = Math.max(0, available - amount)
-      const newWithdrawn = withdrawn + amount
       tx.update(ref, {
+        // A cache of the shared figure after this debit, for legacy readers.
         availableToWithdraw: remaining,
-        withdrawnAmount: newWithdrawn,
+        withdrawnAmount: withdrawn + amount,
         settlementStatus: remaining === 0 ? 'locked' : 'ready',
         updatedAt: new Date().toISOString(),
       })
@@ -956,7 +955,13 @@ export async function updateSettlementStatus(eventId: string): Promise<Settlemen
 }
 
 /**
- * Get earnings summary for an organizer
+ * Get earnings summary for an organizer — HISTORY ONLY.
+ *
+ * @deprecated for any "available" figure or button gate. Its availability is
+ * the stored ledger's (uncapped fee, refunds never removed, rows for deleted
+ * events included, legacy batch payouts ignored). Use
+ * lib/payouts/availability-server.ts (loadOrganizerAvailability) instead —
+ * nothing in the app calls this any more.
  * 
  * @param organizerId - Organizer user ID
  * @returns Summary of all earnings
@@ -1076,6 +1081,9 @@ export async function getOrganizerEarningsSummary(
 }
 
 /**
+ * @deprecated — reads the stored ledger's availability; use
+ * lib/payouts/availability-server.ts. Unused.
+ *
  * Get available events for withdrawal
  * Returns events with settlement status 'ready' and available balance > 0
  * 
