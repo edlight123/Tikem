@@ -94,6 +94,15 @@ export const ART: ArtPiece[] = [
   { key: 'flatbush', source: require('../assets/art/flatbush.jpg'), alt: 'A rara band and a giant Haitian flag on Nostrand Avenue, Flatbush', worlds: ['kilti'], place: 'Flatbush · Brooklyn' },
   { key: 'dyaspora', source: require('../assets/art/dyaspora.jpg'), alt: 'A Haitian block party with a sound system, the flag and griot on the table', worlds: ['fanmi', 'lavi-lannwit'] },
 
+  // Heroes of the Revolution: scenes, never invented faces; 1803 flag where it
+  // belongs. Out of the general pool so they stay special: they appear in the
+  // kilti world, the flyer picker and on their own national days.
+  { key: 'vertieres',     source: require('../assets/art/vertieres.jpg'),     alt: 'Capois-La-Mort charging up the hill at the Battle of Vertières', worlds: ['kilti'], general: false, place: 'Vertières · 18 Nov 1803' },
+  { key: 'toussaint',     source: require('../assets/art/toussaint.jpg'),     alt: 'Toussaint Louverture on his grey horse above the army camp at dusk', worlds: ['kilti'], general: false, place: 'Toussaint Louverture' },
+  { key: 'dessalines',    source: require('../assets/art/dessalines.jpg'),    alt: 'The proclamation of independence at Gonaïves at sunrise, 1 January 1804', worlds: ['kilti'], general: false, place: 'Gonaïves · 1 Jan 1804' },
+  { key: 'catherineflon', source: require('../assets/art/catherineflon.jpg'), alt: 'Catherine Flon sewing the first blue and red flag by lamplight at Arcahaie', worlds: ['kilti'], general: false, place: 'Catherine Flon · Arcahaie, 18 May 1803' },
+  { key: 'christophe',    source: require('../assets/art/christophe.jpg'),    alt: 'Henri Christophe on the ramparts of the Citadelle at dusk', worlds: ['kilti'], general: false, place: 'Henri Christophe · Citadelle' },
+
   // The original login pieces: general pool only, no world.
   { key: 'art1', source: require('../assets/art/art1.jpg'), alt: 'Jacmel steps at sunset', worlds: [] },
   { key: 'art2', source: require('../assets/art/art2.jpg'), alt: 'A tap-tap at sunset', worlds: [] },

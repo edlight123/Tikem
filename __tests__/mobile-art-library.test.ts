@@ -200,3 +200,14 @@ describe('artForPlace', () => {
     }
   })
 })
+
+describe('heroes', () => {
+  it('are captioned, live in kilti and stay out of the general pool', () => {
+    for (const k of ['vertieres', 'toussaint', 'dessalines', 'catherineflon', 'christophe']) {
+      const a = artByKey(k)
+      expect(a?.place).toBeTruthy()
+      expect(a?.worlds).toContain('kilti')
+      expect(generalArt().map((g) => g.key)).not.toContain(k)
+    }
+  })
+})
