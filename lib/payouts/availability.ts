@@ -147,6 +147,21 @@ export function isRefundInFlight(ticket: any): boolean {
   return (REFUND_IN_FLIGHT_STATUSES as readonly string[]).includes(refundStatus)
 }
 
+/**
+ * A buyer has ASKED for a refund that nobody has decided yet. The vocabulary
+ * lives on the ticket (app/api/refunds/request writes refund_status
+ * 'requested'; app/api/refunds/process moves it to 'denied', or through
+ * lib/tickets/refundExecution to 'processing' / 'manual_required' / 'approved').
+ * 'pending' is accepted as a synonym. There is no separate refund_requests
+ * collection.
+ */
+export const REFUND_REQUESTED_STATUSES = ['requested', 'pending'] as const
+
+export function isRefundRequested(ticket: any): boolean {
+  const refundStatus = String(ticket?.refund_status ?? ticket?.refundStatus ?? '').toLowerCase().trim()
+  return (REFUND_REQUESTED_STATUSES as readonly string[]).includes(refundStatus)
+}
+
 /** Paid straight into the organizer's own Stripe account (destination charge). */
 export function isStripeConnectTicket(ticket: any): boolean {
   return String(ticket?.payment_method ?? '').toLowerCase().trim() === 'stripe_connect'
@@ -334,6 +349,8 @@ export type EventAvailability = {
   refundedMinor: number
   /** Refunds being executed right now — held, not withdrawable. */
   refundInFlightMinor: number
+  /** Net of live tickets with an undecided refund request — held, not withdrawable. */
+  refundRequestedMinor: number
   /** Platform fee on the live (un-refunded) Tikèm-held tickets. */
   platformFeeMinor: number
   promoterCommissionMinor: number
@@ -415,6 +432,8 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   // ── classify tickets ─────────────────────────────────────────────────────
   type Order = { grossMinor: number; count: number; incidence: 'buyer' | 'organizer'; legacyGrossMinor: number; legacyCount: number }
   const orders = new Map<string, Order>()
+  // Live tickets whose buyer has an undecided refund request: their net is held.
+  const requestedTickets: Array<{ key: string; price: number }> = []
   const connectOrders = new Map<string, { grossMinor: number; count: number; incidence: 'buyer' | 'organizer' }>()
   let grossMinor = 0
   let refundedMinor = 0
@@ -483,6 +502,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     if (!reservedTicketIds.has(id)) unpaid.push({ id, at: ticketPurchasedAt(ticket) })
 
     const key = orderKey
+    if (isRefundRequested(ticket)) requestedTickets.push({ key, price })
     const order = orders.get(key) || { grossMinor: 0, count: 0, incidence: ticketIncidence(ticket), legacyGrossMinor: 0, legacyCount: 0 }
     order.grossMinor += price
     order.count += 1
@@ -517,6 +537,19 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     }
   }
 
+  // A requested refund holds THAT ticket's organizer net (its face less its
+  // share of its order's fee) until the request is decided: approved moves it
+  // to refunded/in-flight (excluded from net, so never counted twice), denied
+  // releases it. The share is rounded so the hold errs high, never low.
+  let refundRequestedMinor = 0
+  for (const r of requestedTickets) {
+    const order = orders.get(r.key)
+    if (!order) continue
+    const orderFee = feeFor(order.grossMinor, order.count, order.incidence)
+    const feeShare = Math.floor((orderFee * r.price) / Math.max(1, order.grossMinor))
+    refundRequestedMinor += Math.max(0, r.price - feeShare)
+  }
+
   // Connect sales are reported as what the organizer netted in their own Stripe
   // account (face − the capped application fee), never as withdrawable here.
   let heldByStripeGrossMinor = 0
@@ -544,7 +577,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   // Debits compare against the PRIMARY row's withdrawnAmount (read in their
   // transaction), so anything paid beyond it is taken off the ceiling here.
   const paidElsewhere = Math.max(0, withdrawnMinor - primaryWithdrawn)
-  const ceilingMinor = Math.max(0, netMinor - batchReservedMinor - paidElsewhere)
+  const ceilingMinor = Math.max(0, netMinor - batchReservedMinor - paidElsewhere - refundRequestedMinor)
   const balanceMinor = Math.max(0, ceilingMinor - primaryWithdrawn)
 
   unpaid.sort((a, b) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0))
@@ -559,6 +592,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     grossMinor,
     refundedMinor,
     refundInFlightMinor,
+    refundRequestedMinor,
     platformFeeMinor,
     promoterCommissionMinor,
     netMinor,
@@ -747,13 +781,16 @@ export function toEarningsRow(a: EventAvailability, now: Date = new Date()) {
     availableToWithdraw: a.availableNowMinor,
     grossSales: Math.max(0, a.grossMinor - a.refundedMinor) + a.heldByStripeGrossMinor,
     totalEarned: Math.max(0, a.grossMinor - a.refundedMinor) + a.heldByStripeGrossMinor,
-    netAmount: a.netMinor,
+    // Less the net held for undecided refund requests, so that on every
+    // screen net − withdrawn is exactly the balance a withdrawal is judged on.
+    netAmount: Math.max(0, a.netMinor - a.refundRequestedMinor),
     withdrawnAmount,
     ticketsSold: a.ticketsSold,
     platformFee: a.platformFeeMinor,
     promoterCommission: a.promoterCommissionMinor,
     refundedAmount: a.refundedMinor,
     refundInFlightAmount: a.refundInFlightMinor,
+    refundRequestedAmount: a.refundRequestedMinor,
     heldByStripeAmount: a.heldByStripeMinor,
     currency: a.currency,
     settlementStatus,

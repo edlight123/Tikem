@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { FEE_CONFIG, type EarningsSummary } from '@/types/earnings'
+import type { EarningsSummary } from '@/types/earnings'
 import { StatusChip, type ChipTone } from '@/components/ui/kit'
-import { PayoutRequestModal } from '@/components/organizer/PayoutRequestModal'
 import {
   DollarSign,
   TrendingUp,
@@ -23,8 +22,7 @@ interface EarningsViewProps {
   organizerId: string
   /**
    * The withdrawable balance PER CURRENCY, from lib/payouts/availability.ts —
-   * the same function /api/organizer/request-payout (and the per-event
-   * withdraw routes) validate with. Required: there is no fallback to a second
+   * the same function the per-event withdraw routes validate with. Required: there is no fallback to a second
    * engine, because that fallback is how the page once offered money the
    * request then refused.
    */
@@ -33,11 +31,6 @@ interface EarningsViewProps {
   }
 }
 
-// The single minimum, shared with the server so the button and the route can
-// never disagree about the threshold. It was previously duplicated here as a
-// literal 5000 and compared with `>`, while the server used `>=` — so a balance
-// of exactly the minimum was refused by the UI and accepted by the API.
-const MIN_PAYOUT_CENTS = FEE_CONFIG.MINIMUM_PAYOUT_AMOUNT
 
 type CurrencyTotals = {
   totalGrossSales: number
@@ -77,7 +70,6 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
   const { t: tx } = useTranslation('organizer')
 
   const [filter, setFilter] = useState<'all' | 'ready' | 'pending' | 'locked'>('all')
-  const [payoutOpen, setPayoutOpen] = useState(false)
 
   const formatCurrency = (cents: number, currencyOverride?: 'HTG' | 'USD' | 'CAD' | 'EUR') => {
     const amount = cents / 100
@@ -153,12 +145,6 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
     ? withdrawable.totals
     : [{ currency: summary.currency === 'mixed' ? 'HTG' : String(summary.currency || 'HTG'), availableNowMinor: 0, pendingMinor: 0, withdrawnMinor: 0 }]
 
-  // `>=`, matching the server. The old `>` refused a balance of exactly the
-  // minimum that the API would have accepted.
-  const requestable = balances.filter((b) => b.availableNowMinor >= MIN_PAYOUT_CENTS)
-  const [payoutCurrencyChoice, setPayoutCurrencyChoice] = useState<string | null>(null)
-  const payoutRow = balances.find((b) => b.currency === payoutCurrencyChoice) || requestable[0] || balances[0]
-  const canWithdraw = requestable.length > 0
   const anyAvailable = balances.some((b) => b.availableNowMinor > 0)
 
   const totalFeesLabel = isMixed
@@ -217,38 +203,24 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
             </div>
           </div>
 
+          {/* Withdrawals are made PER EVENT (withdraw-moncash / withdraw-bank),
+              from each event's earnings page. The batch "Request payout" was
+              retired (owner decision 2026-10-05): it duplicated that flow on a
+              second ledger. */}
           <div className="shrink-0">
-            {requestable.length > 1 && (
-              <div className="mb-2 flex gap-2">
-                {requestable.map((b) => (
-                  <button
-                    key={b.currency}
-                    type="button"
-                    onClick={() => setPayoutCurrencyChoice(b.currency)}
-                    className={`rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium ${payoutRow.currency === b.currency ? 'bg-white text-black' : 'bg-white/[0.06] text-white/70'}`}
-                  >
-                    {b.currency}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setPayoutOpen(true)}
-              disabled={!canWithdraw}
-              // Enabled is white (this product's primary button); disabled is a
-              // dim, obviously-inert fill.
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-bold text-gray-900 shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/40 disabled:shadow-none lg:w-auto"
+            <a
+              href="#events-earnings"
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold transition lg:w-auto ${
+                anyAvailable ? 'bg-white text-gray-900 shadow-sm hover:opacity-90' : 'bg-white/15 text-white/60'
+              }`}
             >
-              {tx('actions.request_payout')}
+              Withdraw from an event
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </a>
             <p className="mt-2 max-w-[14rem] text-xs text-white/55 lg:text-right">
-              {canWithdraw
-                ? 'Paid to your configured method, batched to the next Friday.'
-                : anyAvailable
-                  ? `You need at least ${formatCurrency(MIN_PAYOUT_CENTS, asCode(payoutRow.currency))} to request a payout.`
-                  : 'Nothing to withdraw yet. Funds are released 24–72 hours after each event ends.'}
+              {anyAvailable
+                ? 'Open an event below and withdraw its released funds to MonCash or your bank.'
+                : 'Nothing to withdraw yet. Funds are released 24–72 hours after each event ends.'}
             </p>
           </div>
         </div>
@@ -314,7 +286,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
         </div>
       </details>
 
-      <div className="overflow-hidden rounded-2xl bg-white/[0.03] shadow-soft">
+      <div id="events-earnings" className="scroll-mt-24 overflow-hidden rounded-2xl bg-white/[0.03] shadow-soft">
         {/* Filter Tabs */}
         <div className="border-b border-white/10 px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -488,14 +460,6 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
         </div>
       </div>
 
-      {/* The confirmation must restate the SAME figure the request will be
-          judged against, not the earnings-summary one. */}
-      <PayoutRequestModal
-        open={payoutOpen}
-        onClose={() => setPayoutOpen(false)}
-        currency={payoutRow.currency}
-        availableLabel={formatCurrency(payoutRow.availableNowMinor, asCode(payoutRow.currency))}
-      />
     </div>
   )
 }

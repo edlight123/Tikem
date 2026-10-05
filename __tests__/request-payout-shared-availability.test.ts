@@ -1,6 +1,7 @@
 /**
- * The finance page's batch "Request payout" and the per-event withdraw routes
- * now share ONE availability figure and ONE paid ledger.
+ * The batch "Request payout" is RETIRED (410). Batch payouts filed before
+ * retirement still count against availability, and the admin decline / cancel
+ * routes still credit them back.
  *
  * Runs the REAL request-payout and admin decline routes over the REAL
  * lib/payouts/availability(-server) and lib/earnings, with an in-memory
@@ -158,93 +159,62 @@ beforeAll(() => {
   jest.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
-describe('finance page figures == what the batch request pays', () => {
-  it('per-currency totals; a mixed-currency request must name its currency', async () => {
+/**
+ * A batch payout as the (now retired) request route filed it: the payout doc
+ * with ticketIds + per-event amounts, and each event's ledger debited.
+ */
+function fileHistoricalBatch(status: string, eventAmounts: Record<string, number>, ticketIds: string[]) {
+  for (const [eventId, amount] of Object.entries(eventAmounts)) {
+    const row =
+      (Object.values(coll('event_earnings')).find((r: any) => r.eventId === eventId) as any) ||
+      (coll('event_earnings')[eventId] = { eventId, organizerId: 'org1', currency: 'HTG', withdrawnAmount: 0 })
+    row.withdrawnAmount = (Number(row.withdrawnAmount) || 0) + amount
+  }
+  const id = `po${Object.keys(coll('organizers/org1/payouts')).length + 1}`
+  coll('organizers/org1/payouts')[id] = {
+    organizerId: 'org1',
+    status,
+    amount: Object.values(eventAmounts).reduce((a, b) => a + b, 0),
+    currency: 'HTG',
+    ticketIds,
+    eventAmounts,
+    debitedEventEarnings: true,
+  }
+  return id
+}
+
+describe('batch "Request payout" is retired', () => {
+  it('POST answers 410 Gone, points to per-event withdrawal, and writes nothing', async () => {
+    seed()
+    const res = await requestPayout()
+    expect(res.status).toBe(410)
+    const out = await res.json()
+    expect(out).toMatchObject({ code: 'batch_payout_retired' })
+    expect(out.message).toMatch(/per event/i)
+    expect(payouts()).toEqual([])
+    expect(coll('event_earnings')).toEqual({})
+  })
+
+  it('finance totals stay per currency', async () => {
     seed()
     const { totals, events } = await loadOrganizerAvailability('org1')
     expect(totals).toEqual([
       expect.objectContaining({ currency: 'HTG', availableNowMinor: 925_000 + 90_000 }),
       expect.objectContaining({ currency: 'USD', availableNowMinor: 9_500 }),
     ])
-    // The table rows come from the same figures.
     const summary = summaryFromAvailability(events)
     expect(summary.currency).toBe('mixed')
     expect(summary.totalsByCurrency?.HTG?.totalAvailableToWithdraw).toBe(1_015_000)
-
-    const res = await requestPayout(req())
-    expect(res.status).toBe(400)
-    expect((await res.json()).code).toBe('currency_required')
-    expect(payouts()).toEqual([])
   })
+})
 
-  it('pays exactly the shown HTG figure, debits each event’s ledger, records ticketIds + per-event amounts', async () => {
+describe('historical batch payouts still count', () => {
+  it.each([['pending'], ['approved'], ['completed']])('a ledger-debited batch in status %s leaves nothing to withdraw twice', async (status) => {
     seed()
-    const res = await requestPayout(req({ currency: 'HTG' }))
-    const out = await res.json()
-    expect(res.status).toBe(200)
-    expect(out.payout).toMatchObject({
-      amount: 1_015_000,
-      currency: 'HTG',
-      status: 'pending',
-      debitedEventEarnings: true,
-      eventAmounts: { htg1: 925_000, htg2: 90_000 },
-    })
-    expect(out.payout.ticketIds.sort()).toEqual(['t1', 't2'])
-    expect(ledger('htg1').withdrawnAmount).toBe(925_000)
-    expect(ledger('htg2').withdrawnAmount).toBe(90_000)
-    // USD untouched — never summed into an HTG payout.
-    expect(ledger('usd1')).toBeUndefined()
-
-    // The gate saw each event with the same inputs the screen used.
-    expect(gateMock).toHaveBeenCalledTimes(2)
-    expect(gateMock).toHaveBeenCalledWith(expect.objectContaining({ eventId: 'htg1', requestedAmountMinor: 925_000, availableMinor: 925_000, method: 'batch' }))
-
-    // No double pay through the per-event MonCash/bank routes afterwards.
-    const after = await loadEventAvailability({ eventId: 'htg1' })
-    expect(after?.balanceMinor).toBe(0)
-    expect(after?.availableNowMinor).toBe(0)
-  })
-
-  it('an approved (not yet completed) payout blocks a second request — the old check missed `approved`', async () => {
-    seed()
-    await requestPayout(req({ currency: 'HTG' }))
-    const [p] = payouts()
-    coll('organizers/org1/payouts')[p.id].status = 'approved'
-    sell('htg2', 5_000) // a new sale since
-    const res = await requestPayout(req({ currency: 'HTG' }))
-    expect(res.status).toBe(400)
-    expect((await res.json()).error).toBe('Payout already in progress')
-    expect(payouts()).toHaveLength(1)
-  })
-
-  it('a later sale is payable once the earlier batch completes — only the new money', async () => {
-    seed()
-    await requestPayout(req({ currency: 'HTG' }))
-    const [p] = payouts()
-    coll('organizers/org1/payouts')[p.id].status = 'completed'
-    sell('htg2', 1_000)
-    const res = await requestPayout(req({ currency: 'HTG' }))
-    const out = await res.json()
-    expect(res.status).toBe(200)
-    expect(out.payout.amount).toBe(90_000)
-    expect(out.payout.eventAmounts).toEqual({ htg2: 90_000 })
-  })
-
-  it('admin decline credits the ledger back, once', async () => {
-    seed()
-    await requestPayout(req({ currency: 'HTG' }))
-    const [p] = payouts()
-    const decline = () => declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'wrong number' }))
-
-    expect((await decline()).status).toBe(200)
-    expect(ledger('htg1').withdrawnAmount).toBe(0)
-    expect(ledger('htg2').withdrawnAmount).toBe(0)
-    const back = await loadEventAvailability({ eventId: 'htg1' })
-    expect(back?.availableNowMinor).toBe(925_000)
-
-    // Idempotent: a second decline is a no-op, not a second credit.
-    expect((await decline()).status).toBe(200)
-    expect(ledger('htg1').withdrawnAmount).toBe(0)
+    fileHistoricalBatch(status, { htg1: 925_000 }, ['t1'])
+    const a = await loadEventAvailability({ eventId: 'htg1' })
+    expect(a?.balanceMinor).toBe(0)
+    expect(a?.availableNowMinor).toBe(0)
   })
 
   it('a legacy payout (no ledger debit) in any open status still reduces what is available', async () => {
@@ -253,76 +223,53 @@ describe('finance page figures == what the batch request pays', () => {
     const a = await loadEventAvailability({ eventId: 'htg1' })
     expect(a?.batchReservedMinor).toBe(925_000)
     expect(a?.availableNowMinor).toBe(0)
-    const res = await requestPayout(req({ currency: 'HTG' }))
-    expect((await res.json()).payout.amount).toBe(90_000)
-  })
-
-  it('below the minimum is refused with the currency named', async () => {
-    for (const k of Object.keys(db)) delete db[k]
-    coll('events').small = { organizer_id: 'org1', title: 'S', currency: 'HTG', country: 'HT', end_datetime: ENDED }
-    sell('small', 10) // 9.00 HTG net
-    const res = await requestPayout(req())
-    expect(res.status).toBe(400)
-    expect((await res.json()).message).toMatch(/50\.00 HTG.*9\.00 HTG/)
   })
 })
 
-describe('admin cancel of a batch payout (F3, F4)', () => {
+describe('admin decline / cancel of a historical batch (credit-back)', () => {
+  it('admin decline credits the ledger back, once', async () => {
+    seed()
+    const id = fileHistoricalBatch('pending', { htg1: 925_000, htg2: 90_000 }, ['t1', 't2'])
+    const decline = () => declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'wrong number' }))
+
+    expect((await decline()).status).toBe(200)
+    expect(ledger('htg1').withdrawnAmount).toBe(0)
+    expect(ledger('htg2').withdrawnAmount).toBe(0)
+    expect((await loadEventAvailability({ eventId: 'htg1' }))?.availableNowMinor).toBe(925_000)
+
+    // Idempotent: a second decline is a no-op, not a second credit.
+    expect((await decline()).status).toBe(200)
+    expect(ledger('htg1').withdrawnAmount).toBe(0)
+  })
+
   it('credits back a LEGACY ledger row keyed by event_id (the old eventId-only lookup skipped it)', async () => {
     seed()
-    await requestPayout(req({ currency: 'HTG' }))
-    // Re-key htg1's row the legacy way.
-    const [rowId, row] = Object.entries(coll('event_earnings')).find(([, r]: any) => r.eventId === 'htg1') as any
-    delete coll('event_earnings')[rowId]
-    const legacy = { ...row }
-    delete legacy.eventId
-    legacy.event_id = 'htg1'
-    coll('event_earnings').legacy_row = legacy
-    const [p] = payouts()
-    expect((await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x' }))).status).toBe(200)
+    coll('event_earnings').legacy_row = { event_id: 'htg1', organizerId: 'org1', currency: 'HTG', withdrawnAmount: 0 }
+    // File against the legacy row directly.
+    coll('event_earnings').legacy_row.withdrawnAmount = 925_000
+    coll('organizers/org1/payouts').po1 = {
+      organizerId: 'org1', status: 'pending', amount: 925_000, currency: 'HTG',
+      ticketIds: ['t1'], eventAmounts: { htg1: 925_000 }, debitedEventEarnings: true,
+    }
+    expect((await declinePayout(req({ organizerId: 'org1', payoutId: 'po1', reason: 'x' }))).status).toBe(200)
     expect(coll('event_earnings').legacy_row.withdrawnAmount).toBe(0)
   })
 
   it('an APPROVED batch can be cancelled only with confirmNotPaid, and is then credited back once', async () => {
     seed()
-    await requestPayout(req({ currency: 'HTG' }))
-    const [p] = payouts()
-    coll('organizers/org1/payouts')[p.id].status = 'approved'
+    const id = fileHistoricalBatch('approved', { htg1: 925_000 }, ['t1'])
 
-    const refused = await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x' }))
+    const refused = await declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'x' }))
     expect(refused.status).toBe(409)
     expect(ledger('htg1').withdrawnAmount).toBe(925_000)
 
-    const ok = await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x', confirmNotPaid: true }))
+    const ok = await declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'x', confirmNotPaid: true }))
     expect(ok.status).toBe(200)
     expect(ledger('htg1').withdrawnAmount).toBe(0)
-    expect(coll('organizers/org1/payouts')[p.id]).toMatchObject({ status: 'cancelled', cancelledAfterApproval: true })
+    expect(coll('organizers/org1/payouts')[id]).toMatchObject({ status: 'cancelled', cancelledAfterApproval: true })
 
     // Completed payouts can never be cancelled.
-    coll('organizers/org1/payouts')[p.id].status = 'completed'
-    expect((await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x', confirmNotPaid: true }))).status).toBe(409)
-  })
-})
-
-describe('integrity-flagged events are never paid through the batch', () => {
-  it('a ticket sold in another currency than the event now shows: whole batch refused, nothing debited', async () => {
-    seed()
-    coll('events').htg2.currency = 'USD' // re-labelled after an HTG sale
-    const res = await requestPayout(req({ currency: 'HTG' }))
-    const out = await res.json()
-    expect(res.status).toBe(409)
-    expect(out).toMatchObject({ code: 'ticket_currency_review', eventId: 'htg2', needsAdminReview: true })
-    expect(payouts()).toEqual([])
-    expect(Object.keys(coll('event_earnings'))).toEqual([])
-  })
-
-  it('ticket gross above a complete ledger gross: refused, nothing debited', async () => {
-    seed()
-    coll('event_earnings').htg1 = { eventId: 'htg1', organizerId: 'org1', currency: 'HTG', grossSales: 500_000, grossSalesComplete: true, withdrawnAmount: 0 }
-    const res = await requestPayout(req({ currency: 'HTG' }))
-    expect(res.status).toBe(409)
-    expect((await res.json()).code).toBe('ledger_gross_exceeded')
-    expect(payouts()).toEqual([])
-    expect(coll('event_earnings').htg1.withdrawnAmount).toBe(0)
+    coll('organizers/org1/payouts')[id].status = 'completed'
+    expect((await declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'x', confirmNotPaid: true }))).status).toBe(409)
   })
 })

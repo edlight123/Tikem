@@ -486,3 +486,45 @@ describe('withdrawn = max(all ledger rows, independent payment records)', () => 
     expect(a.availableNowMinor).toBe(50_000)
   })
 })
+
+describe('requested refunds hold that ticket’s net until decided', () => {
+  it('a requested refund holds only that ticket’s organizer net, not the event', () => {
+    const a = run({ tickets: [ticket(1_000), ticket(10_000, { refund_status: 'requested' })] })
+    // 10,000 HTG ticket nets 9,250 (fee capped at 750) — that is what is held.
+    expect(a.refundRequestedMinor).toBe(925_000)
+    expect(a.netMinor).toBe(90_000 + 925_000)
+    expect(a.availableNowMinor).toBe(90_000)
+    const row = toEarningsRow(a, NOW)
+    expect(row.netAmount - row.withdrawnAmount).toBe(a.balanceMinor)
+    expect(row.refundRequestedAmount).toBe(925_000)
+  })
+
+  it('a ticket inside a multi-ticket order holds its share of the order fee only', () => {
+    const a = run({ tickets: [ticket(1_000, { payment_id: 'p' }), ticket(1_000, { payment_id: 'p', refund_status: 'pending' })] })
+    expect(a.refundRequestedMinor).toBe(90_000)
+    expect(a.availableNowMinor).toBe(90_000)
+  })
+
+  it('denied (or none) releases the hold', () => {
+    for (const st of ['denied', 'none', null]) {
+      const a = run({ tickets: [ticket(1_000), ticket(1_000, { refund_status: st })] })
+      expect(a.refundRequestedMinor).toBe(0)
+      expect(a.availableNowMinor).toBe(180_000)
+    }
+  })
+
+  it('approved is excluded as refunded — never counted twice', () => {
+    const a = run({ tickets: [ticket(1_000), ticket(1_000, { status: 'refunded', refund_status: 'approved' })] })
+    expect(a.refundRequestedMinor).toBe(0)
+    expect(a.availableNowMinor).toBe(90_000)
+    // processing / manual_required: in flight, also not double-counted
+    const b = run({ tickets: [ticket(1_000), ticket(1_000, { refund_status: 'processing' })] })
+    expect(b.refundRequestedMinor).toBe(0)
+    expect(b.availableNowMinor).toBe(90_000)
+  })
+
+  it('the debit ceiling carries the hold too', () => {
+    const a = run({ tickets: [ticket(1_000), ticket(1_000, { refund_status: 'requested' })], ledger: { withdrawnMinor: 0 } })
+    expect(a.ceilingMinor).toBe(90_000)
+  })
+})

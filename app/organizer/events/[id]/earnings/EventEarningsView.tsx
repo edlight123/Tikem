@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
-import { formatCurrency, calculateSettlementDate } from '@/lib/fees'
+import { formatCurrency } from '@/lib/fees'
 import type { EventEarnings } from '@/types/earnings'
 import type { EventTierSalesBreakdownRow } from '@/lib/earnings'
 import { MetricCard, StatusChip, type ChipTone } from '@/components/organizer/ui'
@@ -245,11 +245,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
   const eventDateRaw = event.end_datetime || event.endDateTime || event.start_datetime || event.startDateTime || event.date_time || event.date || event.created_at
   const eventDate = eventDateRaw ? new Date(eventDateRaw) : null
 
-  const settlementDate = earnings.settlementReadyDate
-    ? new Date(earnings.settlementReadyDate)
-    : eventDate
-      ? calculateSettlementDate(eventDate)
-      : null
+  // The release date comes from the server's release rules (availableAt). No
+  // local fallback: the old one added the 0-day settlement hold to the event
+  // date and promised a day the release ladder would then refuse.
+  const settlementDate = earnings.settlementReadyDate ? new Date(earnings.settlementReadyDate) : null
 
   const settlementTone: Record<string, ChipTone> = {
     ready: 'success',

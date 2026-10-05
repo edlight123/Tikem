@@ -25,7 +25,7 @@ export default async function FinancePage() {
 
   // ONE source of truth for every money figure on this page: the shared
   // availability function (lib/payouts/availability.ts) that
-  // /api/organizer/request-payout, withdraw-moncash and withdraw-bank all
+  // the per-event withdraw-moncash and withdraw-bank routes
   // validate with. The page used to mix the event_earnings aggregate (history,
   // including a row for an event no longer in the account) with a second,
   // tickets-based engine — and showed 2,250.00 HTG available while every

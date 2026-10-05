@@ -754,3 +754,28 @@ describe('withdrawFromEarnings never throws, and files nothing when it fails', (
     expect(coll('withdrawal_requests').wr_x).toBeUndefined()
   })
 })
+
+// ---------------------------------------------------------------------------
+// A buyer's undecided refund request holds that ticket's net on every surface
+// ---------------------------------------------------------------------------
+describe('requested refunds are held on screens and at withdrawal', () => {
+  it('the requested ticket’s net is not withdrawable; the rest is', async () => {
+    seed({
+      net: 300_000,
+      instant: false,
+      tickets: [
+        backingTicket(200_000, { payment_id: 'p1' }),
+        backingTicket(100_000, { payment_id: 'p2', refund_status: 'requested' }),
+      ],
+    })
+    const api = await (await eventEarningsApi({} as any, { params: Promise.resolve({ id: 'evt1' }) })).json()
+    expect(api.earnings).toMatchObject({ availableToWithdraw: 200_000, refundRequestedAmount: 100_000 })
+    expect((await withdraw(post(body(200_001)))).status).toBe(400)
+    expect((await withdraw(post(body(200_000)))).status).toBe(200)
+
+    // Denied: released.
+    coll('tickets').t1.refund_status = 'denied'
+    const after = await (await eventEarningsApi({} as any, { params: Promise.resolve({ id: 'evt1' }) })).json()
+    expect(after.earnings.availableToWithdraw).toBe(100_000)
+  })
+})
