@@ -280,7 +280,13 @@ export type EventAvailabilityInput = {
    * money truth here. Null when the event has no row yet (nothing withdrawn).
    */
   ledger?: {
+    /** withdrawnAmount summed across EVERY earnings row of this event. */
     withdrawnMinor: number
+    /**
+     * withdrawnAmount of the ONE row debits land on (findEventEarningsDoc's).
+     * Defaults to withdrawnMinor. Differs only when duplicate rows exist.
+     */
+    primaryWithdrawnMinor?: number
     /** Stored row is in another currency than the event: hold everything. */
     currencyBlocked?: boolean
     /**
@@ -295,6 +301,13 @@ export type EventAvailabilityInput = {
   } | null
   /** All of this organizer's batch payouts; ones for other events are ignored. */
   batchPayouts?: BatchPayout[]
+  /**
+   * Sum of this event's live withdrawal_requests (pending / processing /
+   * completed — reservedCents, else amount). An independent record of what was
+   * paid: withdrawn is the larger of it (plus ledger-debited batches) and the
+   * ledger, so a lost or duplicated ledger row can only under-state the balance.
+   */
+  liveRequestsMinor?: number
   /** Release ladder facts. Null → cannot judge → nothing released (fail closed). */
   release: ReleaseInputs | null
   now?: Date
@@ -515,9 +528,24 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
 
   const promoterCommissionMinor = nonNegativeMinor(input.promoterCommissionMinor)
   const netMinor = Math.max(0, liveGrossMinor - platformFeeMinor - promoterCommissionMinor)
-  const withdrawnMinor = nonNegativeMinor(input.ledger?.withdrawnMinor)
-  const ceilingMinor = Math.max(0, netMinor - batchReservedMinor)
-  const balanceMinor = Math.max(0, ceilingMinor - withdrawnMinor)
+  // What has been paid out per-event: the larger of the ledger (all rows) and
+  // the independent records (live requests + batches that debited the ledger).
+  let debitedBatchMinor = 0
+  for (const payout of input.batchPayouts || []) {
+    if (!batchPayoutReserves(payout?.status) || !payout?.debitedEventEarnings) continue
+    const amt = payout?.eventAmounts?.[eventId]
+    if (typeof amt === 'number' && Number.isFinite(amt)) debitedBatchMinor += Math.max(0, Math.round(amt))
+  }
+  const ledgerWithdrawn = nonNegativeMinor(input.ledger?.withdrawnMinor)
+  const withdrawnMinor = Math.max(ledgerWithdrawn, nonNegativeMinor(input.liveRequestsMinor) + debitedBatchMinor)
+  const primaryWithdrawn = input.ledger?.primaryWithdrawnMinor != null
+    ? nonNegativeMinor(input.ledger.primaryWithdrawnMinor)
+    : ledgerWithdrawn
+  // Debits compare against the PRIMARY row's withdrawnAmount (read in their
+  // transaction), so anything paid beyond it is taken off the ceiling here.
+  const paidElsewhere = Math.max(0, withdrawnMinor - primaryWithdrawn)
+  const ceilingMinor = Math.max(0, netMinor - batchReservedMinor - paidElsewhere)
+  const balanceMinor = Math.max(0, ceilingMinor - primaryWithdrawn)
 
   unpaid.sort((a, b) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0))
   const dated = unpaid.filter((u) => u.at)

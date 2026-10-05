@@ -99,6 +99,17 @@ describe('firestore.rules — events (S2)', () => {
     expect(events).toContain("request.resource.data.get('payouts_frozen', false) == resource.data.get('payouts_frozen', false)")
     expect(events).toContain("(resource.data.get('status', '') != 'cancelled' || request.resource.data.get('status', '') == 'cancelled')")
   })
+  it('tickets_sold is the server counter: created at 0, never changed by a client', () => {
+    const create = events.slice(events.indexOf('allow create'), events.indexOf('allow update'))
+    expect(create).toContain("request.resource.data.get('tickets_sold', 0) == 0")
+    expect(events).toContain("request.resource.data.get('tickets_sold', 0) == resource.data.get('tickets_sold', 0)")
+  })
+  it('an event that sold, was cancelled or frozen cannot be deleted (and re-created clean)', () => {
+    const del = events.slice(events.indexOf('allow delete'))
+    expect(del).toContain("resource.data.get('tickets_sold', 0) == 0")
+    expect(del).toContain("resource.data.get('status', '') != 'cancelled'")
+    expect(del).toContain("resource.data.get('payouts_frozen', false) != true")
+  })
   it('currency and country are fixed once tickets have sold', () => {
     expect(events).toContain("resource.data.get('tickets_sold', 0) == 0 ||")
     expect(events).toContain("request.resource.data.get('currency', null) == resource.data.get('currency', null)")

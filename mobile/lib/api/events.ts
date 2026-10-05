@@ -711,6 +711,24 @@ export async function createEvent(
 }
 
 /**
+ * Once an event has sold (tickets_sold, the server's counter), its country and
+ * currency are what the sales were made in: firestore.rules refuses to change
+ * them, and payouts value each sale in that currency. The edit form defaults a
+ * missing country to 'HT' and currency to 'USD', so without this an ordinary
+ * edit of a sold event was refused (or, before the rule, silently relabelled).
+ * Before any sale the organizer's choice stands.
+ */
+function withStoredMoneyFields(update: Record<string, any>, stored: any): Record<string, any> {
+  if (!stored || Number(stored.tickets_sold || 0) <= 0) return update;
+  const out: Record<string, any> = { ...update };
+  for (const key of ['country', 'currency']) {
+    if (stored[key] !== undefined && stored[key] !== null) out[key] = stored[key];
+    else delete out[key];
+  }
+  return out;
+}
+
+/**
  * Update an existing event in Firestore
  */
 export async function updateEvent(
@@ -804,9 +822,11 @@ export async function updateEvent(
       // — it goes through the server route below instead.
     };
 
-    // Update the event document
+    // Update the event document — with the money-defining fields taken from
+    // the STORED doc once it has sold (see withStoredMoneyFields).
     const eventRef = doc(db, 'events', eventId);
-    await updateDoc(eventRef, updateData);
+    const storedSnap = await getDoc(eventRef);
+    await updateDoc(eventRef, withStoredMoneyFields(updateData, storedSnap.exists() ? storedSnap.data() : null));
 
     // ── Apply edits to the whole series ────────────────────────────────────
     // When the caller opts in AND this event belongs to a series, propagate the
@@ -836,7 +856,10 @@ export async function updateEvent(
             eventData.ticket_tiers,
             tierDocsBefore
           );
-          await updateDoc(sibling.ref, { ...seriesShared, ticket_tiers: sibEmbedded });
+          await updateDoc(
+            sibling.ref,
+            withStoredMoneyFields({ ...seriesShared, ticket_tiers: sibEmbedded }, sibling.data())
+          );
         }
         console.log(`Series ${seriesId}: applied edits to ${processed} sibling event(s).`);
       }
@@ -1002,6 +1025,14 @@ export async function cancelEvent(eventId: string, reason?: string): Promise<Can
  * Delete an event and all related data
  */
 export async function deleteEvent(eventId: string): Promise<void> {
+  // firestore.rules refuses to delete an event that has sold, been cancelled or
+  // had payouts frozen. Check first, so the tiers below are not deleted out from
+  // under an event whose own delete is then refused.
+  const existing = await getDoc(doc(db, 'events', eventId));
+  const data: any = existing.exists() ? existing.data() : null;
+  if (data && (Number(data.tickets_sold || 0) > 0 || data.status === 'cancelled' || data.payouts_frozen === true)) {
+    throw new Error('This event has sales or was cancelled, so it cannot be deleted. Cancel it instead.');
+  }
   try {
     // Delete ticket_tiers
     const tiersQuery = query(

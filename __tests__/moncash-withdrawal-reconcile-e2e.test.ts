@@ -655,7 +655,9 @@ describe('sync route + admin endpoint notifications', () => {
     expect(row(id).status).toBe('completed')
 
     // A second, rejected request.
-    Object.assign(earnings(), { withdrawnAmount: 0, availableToWithdraw: NET, settlementStatus: 'ready' })
+    // New money for a second request: another sale. (Resetting the ledger no
+    // longer works — the completed request is an independent record of payment.)
+    coll('tickets').t1 = backingTicket(NET, { payment_id: 'pay_second' })
     session.admin = false
     const out2 = await (await withdraw(post({ eventId: 'evt1', amount: NET, moncashNumber: '+509 3700 7294' }))).json()
     session.admin = true
@@ -672,7 +674,8 @@ describe('sync route + admin endpoint notifications', () => {
       payeeReasonCode: 'details_mismatch',
       failureReason: "The payout details don't match your verified identity.",
     })
-    expect(earnings().withdrawnAmount).toBe(0)
+    // The rejected request is credited back; the first, completed one stays paid.
+    expect(earnings().withdrawnAmount).toBe(NET)
   })
 
   it('localizes preset reasons, keeps internal notes out, and requires text for "other"', async () => {
@@ -729,5 +732,23 @@ describe('admin reject credits a legacy event_id-keyed ledger row', () => {
     expect(res.status).toBe(200)
     expect(earnings().withdrawnAmount).toBe(0)
     expect(Object.keys(coll('event_earnings'))).toEqual(['earn1'])
+  })
+})
+
+// Item 3: a request that carries no reservation is never credited back.
+describe('admin reject credits back only reserved requests', () => {
+  it('skips the credit for a request without reservedAt/reservedCents', async () => {
+    seed()
+    coll('config').payouts = { prefunding: { enabled: false, available: false } }
+    Object.assign(earnings(), { withdrawnAmount: 30_000 })
+    coll('withdrawal_requests').unreserved = {
+      organizerId: 'org1', eventId: 'evt1', amount: NET, currency: 'HTG', method: 'moncash', status: 'pending',
+      createdAt: new Date(), updatedAt: new Date(),
+    }
+    session.admin = true
+    const res = await adminPOST(post({ withdrawalId: 'unreserved', action: 'reject', payeeReasonCode: 'details_mismatch' }))
+    expect(res.status).toBe(200)
+    expect(row('unreserved')).toMatchObject({ status: 'failed', creditBackSkipped: 'no_reservation_recorded' })
+    expect(earnings().withdrawnAmount).toBe(30_000)
   })
 })

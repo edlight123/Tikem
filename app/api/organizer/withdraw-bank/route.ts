@@ -267,23 +267,15 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date()
     }
 
-    const withdrawalRef = await adminDb
-      .collection('withdrawal_requests')
-      .add(withdrawalRequest)
-
-    // Update earnings record (amount is already in cents). A refused debit
-    // (double submit, balance moved since the check, currency review) must not
-    // leave a pending request behind: an admin would pay out money that was
-    // never taken off the balance.
+    // Filed in the SAME transaction as the debit (lib/earnings.ts
+    // withdrawFromEarnings): a request exists only if its money was reserved,
+    // so a refused or failed debit leaves nothing for an admin to pay.
+    const withdrawalRef = adminDb.collection('withdrawal_requests').doc()
     const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
       ceilingMinor: availability.ceilingMinor,
+      fileRequest: { ref: withdrawalRef, data: withdrawalRequest as any },
     })
     if (!debit?.success) {
-      await withdrawalRef.update({
-        status: 'failed',
-        failureReason: debit?.error || 'Balance could not be reserved',
-        updatedAt: new Date().toISOString(),
-      })
       const isReview = debit?.code === EARNINGS_CURRENCY_REVIEW_CODE
       return NextResponse.json(
         {

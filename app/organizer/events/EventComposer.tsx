@@ -64,6 +64,7 @@ import {
 import GuestlistVisibilityPicker from '@/components/organizer/GuestlistVisibility'
 import { DatePicker, TimePicker } from '@/components/ui/DateTimePickers'
 import { normalizeEventCurrencyForCountry, getAllowedEventCurrencies, type EventCurrency } from '@/lib/currency-policy'
+import { withStoredMoneyFields } from '@/lib/events/stored-money-fields'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
@@ -1487,7 +1488,13 @@ export default function EventComposer({
           })
           return
         }
-        const { error } = await (await getShim()).from('events').update(data).eq('id', event.id)
+        // Never relabel an existing event's country (this composer only offers
+        // Haiti, so it used to stamp 'HT' over US/CA events), and never change
+        // the currency of an event that has sold: firestore.rules refuses both
+        // once tickets_sold > 0, and payouts value each sale in the currency it
+        // was sold in. A field missing on the stored doc stays missing.
+        const editData = withStoredMoneyFields(data, event)
+        const { error } = await (await getShim()).from('events').update(editData).eq('id', event.id)
         if (error) throw error
         const tierDocIds = tiers.map((tr) => tr.docId)
         const { before: sourceTiers, rowDocIds } = await syncTiers(event.id, cleanTiers, isRsvp, {
@@ -1515,7 +1522,9 @@ export default function EventComposer({
           for (const sib of list) {
             if (!sib?.id || sib.id === event.id) continue
             if (seriesApplied >= MAX_RECURRENCE_COUNT) break
-            const { error: sibErr } = await (await getShim()).from('events').update(sharedData).eq('id', sib.id)
+            // Each sibling keeps its own stored country, and its currency once it has sold.
+            const sibData = withStoredMoneyFields(sharedData, sib)
+            const { error: sibErr } = await (await getShim()).from('events').update(sibData).eq('id', sib.id)
             if (sibErr) throw sibErr
             await syncTiers(sib.id, cleanTiers, isRsvp, { docIds: tierDocIds, source: sourceTiers })
             await writeAccessHash(sib.id)

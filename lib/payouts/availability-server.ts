@@ -119,12 +119,17 @@ export async function loadEventAvailability(args: {
       ? args.context
       : await loadOrganizerAvailabilityContext(organizerId, now)
 
-  const [ticketsSnap, earningsDoc, canonicalSnap, promoterCommissionMinor, reviewSnap] = await Promise.all([
+  const [ticketsSnap, earningsDoc, canonicalSnap, byEventIdSnap, byLegacySnap, requestsSnap, promoterCommissionMinor, reviewSnap] = await Promise.all([
     adminDb.collection('tickets').where('event_id', '==', eventId).get(),
     findEventEarningsDoc(eventId),
     // lib/events/cancel.ts stamps event_earnings/{eventId}; on events whose
     // ledger row has a random id that stamp lives on a second doc. Read it too.
     adminDb.collection('event_earnings').doc(eventId).get(),
+    // EVERY ledger row for the event, by all three keys — duplicates from the
+    // pre-deterministic-id era must all count as paid.
+    adminDb.collection('event_earnings').where('eventId', '==', eventId).get(),
+    adminDb.collection('event_earnings').where('event_id', '==', eventId).get(),
+    adminDb.collection('withdrawal_requests').where('eventId', '==', eventId).get(),
     // No fallbacks: a commission or review lookup that fails must fail the
     // whole figure, never quietly report the promoter's money or a held event
     // as the organizer's to take.
@@ -133,6 +138,26 @@ export async function loadEventAvailability(args: {
   ])
 
   const earnings = earningsDoc ? ((earningsDoc.data() as any) || {}) : null
+  const allRows = new Map<string, any>()
+  for (const d of [...byEventIdSnap.docs, ...byLegacySnap.docs]) allRows.set(d.id, d.data() || {})
+  if (canonicalSnap?.exists) allRows.set(canonicalSnap.id ?? eventId, canonicalSnap.data() || {})
+  const ledgerWithdrawnAll = Array.from(allRows.values()).reduce(
+    (sum, r) => sum + Math.max(0, Number(r?.withdrawnAmount || 0) || 0),
+    0
+  )
+  const anyRowCurrencyBlocked = Array.from(allRows.values()).some((r) =>
+    Boolean(storedEarningsCurrencyMismatch(r?.currency, eventData?.currency))
+  )
+  // Organizer withdrawal requests that are not void. Promoter wallet
+  // withdrawals live in the same collection but never debit an event.
+  const VOID_REQUEST = new Set(['failed', 'cancelled', 'canceled', 'rejected', 'declined'])
+  const liveRequestsMinor = requestsSnap.docs.reduce((sum: number, d: any) => {
+    const r = d.data() || {}
+    if (r.payee_type === 'promoter') return sum
+    if (VOID_REQUEST.has(String(r.status || '').toLowerCase())) return sum
+    const amt = Number(r.reservedCents ?? r.amount ?? 0)
+    return sum + (Number.isFinite(amt) && amt > 0 ? Math.round(amt) : 0)
+  }, 0)
   const canonical = canonicalSnap?.exists ? ((canonicalSnap.data() as any) || {}) : null
   const cancelledStamp = (row: any) =>
     Boolean(row && (String(row.settlementStatus || '') === 'cancelled' || row.cancelledAt))
@@ -154,14 +179,16 @@ export async function loadEventAvailability(args: {
     promoterCommissionMinor: Number(promoterCommissionMinor) || 0,
     ledger: earnings
       ? {
-          withdrawnMinor: Number(earnings.withdrawnAmount || 0) || 0,
-          currencyBlocked: Boolean(storedEarningsCurrencyMismatch(earnings.currency, eventData?.currency)),
+          withdrawnMinor: ledgerWithdrawnAll,
+          primaryWithdrawnMinor: Number(earnings.withdrawnAmount || 0) || 0,
+          currencyBlocked: anyRowCurrencyBlocked,
           grossMinor: ledgerGross !== null && Number.isFinite(ledgerGross) ? ledgerGross : null,
           cancelled: cancelledStamp(earnings) || cancelledStamp(canonical),
         }
       : cancelledStamp(canonical)
         ? { withdrawnMinor: 0, cancelled: true }
         : null,
+    liveRequestsMinor,
     batchPayouts: context.batchPayouts,
     release: {
       history: historyFor(context.releaseContext, eventId, currency),

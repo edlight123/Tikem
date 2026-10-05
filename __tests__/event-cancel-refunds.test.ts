@@ -255,3 +255,42 @@ describe('cancelEventWithRefunds', () => {
     expect(entry![1]).toMatchObject({ needsReview: true, amount: 1500, currency: 'HTG', transactionId: 'pi_card' })
   })
 })
+
+describe('the payout-ledger cancellation stamp fails loudly', () => {
+  it('retries, then reports ledgerStampFailed — refunds still run', async () => {
+    seed()
+    const realCollection = db.collection.bind(db)
+    let attempts = 0
+    const spy = jest.spyOn(db, 'collection').mockImplementation(((name: string) => {
+      const c: any = realCollection(name)
+      if (name !== 'event_earnings') return c
+      return {
+        ...c,
+        doc: (id: string) => ({
+          ...c.doc(id),
+          set: async () => {
+            attempts++
+            throw new Error('ledger unavailable')
+          },
+        }),
+      }
+    }) as any)
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const out = await cancelEventWithRefunds({ eventId: 'ev1', actor })
+      expect(attempts).toBe(3)
+      expect(out.ledgerStampFailed).toBe('ledger unavailable')
+      expect(out.ticketsAffected).toBeGreaterThan(0)
+    } finally {
+      spy.mockRestore()
+      errSpy.mockRestore()
+    }
+  })
+
+  it('a successful stamp reports no failure', async () => {
+    seed()
+    const out = await cancelEventWithRefunds({ eventId: 'ev1', actor })
+    expect(out.ledgerStampFailed).toBeUndefined()
+    expect(db.store.get('event_earnings/ev1')).toMatchObject({ settlementStatus: 'cancelled' })
+  })
+})

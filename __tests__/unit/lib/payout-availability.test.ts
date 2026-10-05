@@ -451,3 +451,38 @@ describe('server-authoritative money inputs (S2)', () => {
     expect(gateEventData({ status: 'published' }, a).status).toBe('cancelled')
   })
 })
+
+describe('withdrawn = max(all ledger rows, independent payment records)', () => {
+  it('duplicate ledger rows: every row counts, and the debit ceiling is cut accordingly', () => {
+    // Two rows (pre-deterministic-id), 30k withdrawn on each; debits land on one.
+    const a = run({ tickets: [ticket(1_000)], ledger: { withdrawnMinor: 60_000, primaryWithdrawnMinor: 30_000 } })
+    expect(a.withdrawnMinor).toBe(60_000)
+    expect(a.balanceMinor).toBe(30_000)
+    // ceiling − primary row withdrawn (what the debit transaction checks) = balance
+    expect(a.ceilingMinor - 30_000).toBe(a.balanceMinor)
+  })
+
+  it('live withdrawal requests above the ledger win (a lost ledger debit cannot re-open money)', () => {
+    const a = run({ tickets: [ticket(1_000)], ledger: { withdrawnMinor: 0 }, liveRequestsMinor: 50_000 })
+    expect(a.withdrawnMinor).toBe(50_000)
+    expect(a.availableNowMinor).toBe(40_000)
+    expect(a.ceilingMinor).toBe(40_000) // primary row shows 0 withdrawn
+  })
+
+  it('ledger-debited batches count on the records side too', () => {
+    const a = run({
+      tickets: [ticket(1_000, { id: 'x' })],
+      ledger: { withdrawnMinor: 0 },
+      liveRequestsMinor: 10_000,
+      batchPayouts: [{ id: 'b', status: 'approved', ticketIds: ['x'], eventAmounts: { evt1: 70_000 }, debitedEventEarnings: true }],
+    })
+    expect(a.withdrawnMinor).toBe(80_000)
+    expect(a.availableNowMinor).toBe(10_000)
+  })
+
+  it('records below the ledger change nothing', () => {
+    const a = run({ tickets: [ticket(1_000)], ledger: { withdrawnMinor: 40_000 }, liveRequestsMinor: 10_000 })
+    expect(a.withdrawnMinor).toBe(40_000)
+    expect(a.availableNowMinor).toBe(50_000)
+  })
+})

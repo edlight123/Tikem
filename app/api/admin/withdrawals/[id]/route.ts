@@ -102,7 +102,16 @@ export async function POST(req: NextRequest) {
           return
         }
 
-        const amountInCents = normalizeAmountToCents(withdrawal.amount)
+        // Credit back ONLY a request that was actually debited: every live path
+        // files the request in the debit's transaction and stamps reservedAt /
+        // reservedCents. A request without them reserved nothing, and crediting
+        // it would hand the organizer money twice.
+        const reserved = Number(withdrawal.reservedCents)
+        if (!withdrawal.reservedAt || !Number.isFinite(reserved) || reserved <= 0) {
+          updates.creditBackSkipped = 'no_reservation_recorded'
+          return
+        }
+        const amountInCents = Math.round(reserved)
         // Same three-way lookup the read path uses — legacy rows keyed by
         // event_id (or by doc id) used to miss the credit-back silently.
         const found = await findEventEarningsDocInTransaction(tx, String(withdrawal.eventId))

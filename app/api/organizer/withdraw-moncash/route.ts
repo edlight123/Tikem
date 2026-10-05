@@ -490,20 +490,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create withdrawal request for manual processing.
-    await withdrawalRef.set(baseWithdrawalRequest)
-
-    // Standard (manual) MonCash request. The debit is the real guard: if it is
-    // refused (a concurrent submit already took the balance), the request we
-    // just filed must not stay 'pending' for an admin to pay out a second time.
+    // Standard (manual) MonCash request: filed in the SAME transaction as the
+    // debit, so a request exists only if its money was reserved. A refused
+    // debit (a concurrent submit already took the balance) writes nothing.
     const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
       ceilingMinor: availability.ceilingMinor,
+      fileRequest: { ref: withdrawalRef, data: baseWithdrawalRequest as any },
     })
     if (!debit.success) {
-      await withdrawalRef.set(
-        { status: 'failed', failureReason: debit.error || 'Earnings debit refused', updatedAt: new Date() },
-        { merge: true }
-      )
       return NextResponse.json(
         { error: debit.error || 'Insufficient balance for this withdrawal', ...(debit.code ? { code: debit.code } : {}) },
         { status: 409 }

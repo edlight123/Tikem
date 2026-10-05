@@ -481,14 +481,15 @@ describe('no double debit at the minimum', () => {
     expect(earnings().withdrawnAmount).toBe(MIN)
   })
 
-  it('two concurrent manual requests: one pending, loser failed, one debit', async () => {
+  it('two concurrent manual requests: one pending, loser writes nothing, one debit', async () => {
     seed({ net: 150_000, instant: false })
     const [a, b] = await Promise.all([withdraw(post(body(MIN))), withdraw(post(body(MIN)))])
     expect([a.status, b.status].sort()).toEqual([200, 409])
     expect(earnings().withdrawnAmount).toBe(MIN)
+    // The loser wrote nothing: requests are filed inside the debit transaction.
     const rows = withdrawals()
-    expect(rows.filter((w) => w.status === 'pending')).toHaveLength(1)
-    expect(rows.filter((w) => w.status === 'failed')).toHaveLength(1)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ status: 'pending', reservedCents: rows[0].amount })
   })
 })
 
@@ -741,5 +742,15 @@ describe('route refuses integrity-flagged events', () => {
     expect(gateMock).toHaveBeenCalledWith(
       expect.objectContaining({ eventData: expect.objectContaining({ end_datetime: '2026-09-30T23:00:00.000Z' }) })
     )
+  })
+})
+
+describe('withdrawFromEarnings never throws, and files nothing when it fails', () => {
+  it('an event that cannot be loaded: refusal, no request written', async () => {
+    seed({ net: MIN })
+    const ref = { _c: 'withdrawal_requests', id: 'wr_x', get: async () => ({ exists: false }), set: async () => { throw new Error('must not write') } }
+    const r = await withdrawFromEarnings('no_such_event', MIN, 'wr_x', { ceilingMinor: MIN, fileRequest: { ref, data: { status: 'pending' } } })
+    expect(r.success).toBe(false)
+    expect(coll('withdrawal_requests').wr_x).toBeUndefined()
   })
 })

@@ -77,6 +77,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
     }
 
+    if (outcome.ledgerStampFailed) {
+      // Refunds ran; the payout ledger did not record the cancellation. Loud,
+      // so the caller retries (the cancel is resumable and re-applies it).
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'cancel_ledger_stamp_failed',
+          error: 'The event was cancelled, but recording it on the payout ledger failed. Please retry the cancellation.',
+          ...outcome,
+        },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json({ success: true, ...outcome })
   } catch (error: any) {
     const status = Number(error?.status) || 500

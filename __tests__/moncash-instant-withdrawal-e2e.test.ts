@@ -493,14 +493,15 @@ describe('double submit', () => {
     expect(withdrawals().filter((w) => w.status === 'completed')).toHaveLength(1)
   })
 
-  it('two concurrent manual requests: one pending, the loser marked failed (not left pending)', async () => {
+  it('two concurrent manual requests: one pending, the loser writes no request', async () => {
     seed({ enabled: false, available: false })
     const [a, b] = await Promise.all([withdraw(post(body())), withdraw(post(body()))])
     expect([a.status, b.status].sort()).toEqual([200, 409])
     expect(earnings().withdrawnAmount).toBe(NET)
+    // The loser wrote nothing: requests are filed inside the debit transaction.
     const rows = withdrawals()
-    expect(rows.filter((w) => w.status === 'pending')).toHaveLength(1)
-    expect(rows.filter((w) => w.status === 'failed')).toHaveLength(1)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ status: 'pending', reservedCents: rows[0].amount })
   })
 })
 

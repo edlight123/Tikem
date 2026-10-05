@@ -54,6 +54,11 @@ export type CancelOutcome = {
   alreadyHandled: number
   notified: number
   failures: { ticketId: string; reason: string }[]
+  /**
+   * Set when the server-side cancellation stamp on event_earnings could not be
+   * written after retries. The event doc is still frozen; re-run the cancel.
+   */
+  ledgerStampFailed?: string
 }
 
 type BuyerNotice =
@@ -105,18 +110,29 @@ export async function cancelEventWithRefunds({
   // 2. Nothing left to withdraw. Refunded tickets are already excluded when
   // earnings are derived from tickets, but the STORED doc is what withdrawals
   // read, so it has to be zeroed explicitly. Re-applying it on a resume is harmless.
-  try {
-    await adminDb.collection('event_earnings').doc(eventId).set(
-      {
-        availableToWithdraw: 0,
-        settlementStatus: 'cancelled',
-        ...(alreadyCancelled ? {} : { cancelledAt: nowIso }),
-        updatedAt: nowIso,
-      },
-      { merge: true }
-    )
-  } catch (e) {
-    console.error('[cancelEvent] failed to zero earnings', eventId, e)
+  //
+  // This stamp is also the SERVER-SIDE record of the cancellation that the payout
+  // availability reads (lib/payouts/availability-server.ts), so it must not be
+  // swallowed. Retried; if it still fails the outcome says so and the route
+  // answers 500 — the sweep is resumable, so re-running the cancel re-applies it.
+  let ledgerStampError: string | null = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await adminDb.collection('event_earnings').doc(eventId).set(
+        {
+          availableToWithdraw: 0,
+          settlementStatus: 'cancelled',
+          ...(alreadyCancelled ? {} : { cancelledAt: nowIso }),
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      )
+      ledgerStampError = null
+      break
+    } catch (e: any) {
+      ledgerStampError = String(e?.message || e)
+      console.error('[cancelEvent] failed to stamp the earnings ledger', { eventId, attempt, message: ledgerStampError })
+    }
   }
 
   // 3. Refund every live ticket.
@@ -133,6 +149,7 @@ export async function cancelEventWithRefunds({
     alreadyHandled: 0,
     notified: 0,
     failures: [],
+    ...(ledgerStampError ? { ledgerStampFailed: ledgerStampError } : {}),
   }
 
   const refundEvent = { id: eventId, title: event?.title || null, organizer_id: event?.organizer_id || null }

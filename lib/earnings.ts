@@ -862,32 +862,48 @@ export async function withdrawFromEarnings(
   eventId: string,
   amount: number,
   payoutId: string,
-  opts: { ceilingMinor: number }
+  opts: {
+    ceilingMinor: number
+    /**
+     * The withdrawal request to FILE in the same transaction as the debit, so
+     * a request exists if and only if its money was reserved. Without this the
+     * routes wrote a pending request first and a debit that failed (or threw)
+     * left a payable request with no reservation behind it.
+     */
+    fileRequest?: { ref: any; data: Record<string, any> }
+  }
 ): Promise<{ success: boolean; error?: string; code?: string }> {
-  const ceilingMinor = Math.max(0, Math.round(Number(opts?.ceilingMinor) || 0))
-  if (!Number.isInteger(amount) || amount <= 0) {
-    return { success: false, error: 'Amount must be a positive whole number of cents' }
-  }
-
-  const { ref, data } = await getOrCreateEventEarnings(eventId, { seedFromTickets: true })
-
-  if (!data) {
-    return { success: false, error: 'Earnings not found' }
-  }
-
-  // Never debit a row whose units are ambiguous (see storedEarningsCurrencyMismatch).
-  const eventForCurrency = await adminDb.collection('events').doc(eventId).get()
-  const eventCurrencyRaw = eventForCurrency.exists ? (eventForCurrency.data() as any)?.currency : null
-  if (storedEarningsCurrencyMismatch((data as any).currency, eventCurrencyRaw)) {
-    return { success: false, error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE }
-  }
-
+  // Never throws: every failure is a refusal the caller can report, and with
+  // fileRequest nothing was written.
   try {
+    const ceilingMinor = Math.max(0, Math.round(Number(opts?.ceilingMinor) || 0))
+    if (!Number.isInteger(amount) || amount <= 0) {
+      return { success: false, error: 'Amount must be a positive whole number of cents' }
+    }
+
+    const { ref, data } = await getOrCreateEventEarnings(eventId, { seedFromTickets: true })
+
+    if (!data) {
+      return { success: false, error: 'Earnings not found' }
+    }
+
+    // Never debit a row whose units are ambiguous (see storedEarningsCurrencyMismatch).
+    const eventForCurrency = await adminDb.collection('events').doc(eventId).get()
+    const eventCurrencyRaw = eventForCurrency.exists ? (eventForCurrency.data() as any)?.currency : null
+    if (storedEarningsCurrencyMismatch((data as any).currency, eventCurrencyRaw)) {
+      return { success: false, error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE }
+    }
+
     const result = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
+      const requestSnap = opts.fileRequest ? await tx.get(opts.fileRequest.ref) : null
       const cur = snap.exists ? (snap.data() as any) : {}
       const withdrawn = Math.max(0, Number(cur?.withdrawnAmount || 0) || 0)
       const available = Math.max(0, ceilingMinor - withdrawn)
+
+      if (requestSnap?.exists) {
+        return { success: false, error: 'Withdrawal request already exists' } as { success: boolean; error?: string; code?: string }
+      }
 
       if (storedEarningsCurrencyMismatch(cur?.currency, eventCurrencyRaw)) {
         return {
@@ -905,13 +921,19 @@ export async function withdrawFromEarnings(
       }
 
       const remaining = Math.max(0, available - amount)
+      const now = new Date()
       tx.update(ref, {
         // A cache of the shared figure after this debit, for legacy readers.
         availableToWithdraw: remaining,
         withdrawnAmount: withdrawn + amount,
         settlementStatus: remaining === 0 ? 'locked' : 'ready',
-        updatedAt: new Date().toISOString(),
+        updatedAt: now.toISOString(),
       })
+      if (opts.fileRequest) {
+        // reservedAt/reservedCents mark the request as backed by a debit: the
+        // admin reject path credits back only requests that carry them.
+        tx.set(opts.fileRequest.ref, { ...opts.fileRequest.data, reservedAt: now, reservedCents: amount })
+      }
       return { success: true } as { success: boolean; error?: string; code?: string }
     })
 
@@ -920,7 +942,7 @@ export async function withdrawFromEarnings(
     }
     return result
   } catch (err) {
-    console.error(`❌ withdrawFromEarnings transaction failed for event ${eventId}:`, err)
+    console.error(`❌ withdrawFromEarnings failed for event ${eventId}:`, err)
     return { success: false, error: 'Failed to process withdrawal' }
   }
 }

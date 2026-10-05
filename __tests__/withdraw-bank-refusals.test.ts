@@ -111,21 +111,23 @@ describe('withdraw-bank refusals', () => {
     expect(requests.size).toBe(0)
   })
 
-  it('marks the request failed (never pending) when the debit is refused', async () => {
+  it('writes NO request when the debit is refused (the request is filed inside the debit transaction)', async () => {
     debitResult.current = { success: false, error: 'Insufficient available balance' }
     const res = await call()
     expect(res.status).toBe(409)
-    const rows = Array.from(requests.values())
-    expect(rows).toHaveLength(1)
-    expect(rows[0].status).toBe('failed')
+    expect(requests.size).toBe(0)
+    expect(debitCalls).toHaveLength(1)
   })
 
   it('still submits normally when the debit succeeds, debiting against the shared ceiling', async () => {
     const res = await call()
     expect(res.status).toBe(200)
-    expect(Array.from(requests.values())[0].status).not.toBe('failed')
     expect(debitCalls).toHaveLength(1)
-    expect(debitCalls[0][3]).toEqual({ ceilingMinor: 500_000 })
+    // The pending request is handed to the debit, to be written in its transaction.
+    expect(debitCalls[0][3]).toMatchObject({
+      ceilingMinor: 500_000,
+      fileRequest: { data: expect.objectContaining({ status: 'pending', amount: 200_000, method: 'bank' }) },
+    })
   })
 
   it('refuses above the shared balance before writing anything', async () => {

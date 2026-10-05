@@ -520,6 +520,9 @@ export async function POST(request: Request) {
           exchange_rate_used: exchangeRateUsed,
           payment_method: paymentMethod,
           payment_id: paymentIntent.id,
+          // Who paid the fee, from the PaymentIntent that took the money — the
+          // payout availability reads it (only on the Stripe rails).
+          fee_incidence: paymentIntent.metadata.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
           promoter_id: paymentIntent.metadata.promoterId || null,
           promoter_code: paymentIntent.metadata.promoterCode || null,
           ...ticketAttributionFields(piAttribution),
@@ -574,6 +577,7 @@ export async function POST(request: Request) {
                 charged_currency: String(paymentIntent.currency || 'usd').toUpperCase(),
                 payment_method: paymentMethod,
                 payment_id: paymentIntent.id,
+                fee_incidence: paymentIntent.metadata.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
                 promoter_id: paymentIntent.metadata.promoterId || null,
                 promoter_code: paymentIntent.metadata.promoterCode || null,
                 ...ticketAttributionFields(piAttribution),

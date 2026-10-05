@@ -212,6 +212,9 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.organizer_id == request.auth.uid
         && request.resource.data.get('is_published', false) == false
+        // A new event has sold nothing. tickets_sold is the server's sales
+        // counter (lib/tickets/inventory.ts); a client may only start it at 0.
+        && request.resource.data.get('tickets_sold', 0) == 0
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -226,6 +229,10 @@ service cloud.firestore {
           // Auto-hide after repeated reports (lib/moderation/reports.ts) is
           // likewise admin-only: an organizer must not un-hide their own event.
           request.resource.data.get('hidden_pending_review', false) == resource.data.get('hidden_pending_review', false) &&
+          // tickets_sold is the Admin SDK's sales counter: capacity checks and the
+          // currency/country lock below read it, so a client may never change it
+          // (writing 0 would unlock the currency and re-open sold-out capacity).
+          request.resource.data.get('tickets_sold', 0) == resource.data.get('tickets_sold', 0) &&
           // Payout safety (lib/payouts/availability.ts): a cancellation and its
           // payout freeze are set by lib/events/cancel.ts on the Admin SDK and
           // must not be undone from a client — un-cancelling would re-open money
@@ -270,7 +277,13 @@ service cloud.firestore {
         !(request.resource.data.country != resource.data.country || request.resource.data.currency != resource.data.currency)
         || isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency)
       );
-      allow delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid;
+      // An event that has sold, been cancelled or had its payouts frozen keeps
+      // its record: deleting it and re-creating the same id as a clean draft
+      // would shed the cancellation, the freeze and the sales counter.
+      allow delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid
+        && resource.data.get('tickets_sold', 0) == 0
+        && resource.data.get('status', '') != 'cancelled'
+        && resource.data.get('payouts_frozen', false) != true;
 
       // Event members - event-scoped staff/owner roles
       match /members/{memberId} {
