@@ -43,6 +43,13 @@ export interface ArtPiece {
   worlds: WorldKey[];
   /** Part of the login rotation / general pool. Defaults to true. */
   general?: boolean;
+  /**
+   * For a real landmark: the caption shown on the poster ("Fort Jacques ·
+   * Kenscoff"), so every empty screen also names a place in Haiti.
+   */
+  place?: string;
+  /** A bright lower third (a lit plaza, a bonfire): text needs a heavier scrim. */
+  scrim?: 'strong';
 }
 
 // prettier-ignore
@@ -54,13 +61,31 @@ export const ART: ArtPiece[] = [
   { key: 'rara',      source: require('../assets/art/rara.jpg'),      alt: 'A rara band with vaksen horns and drums on a country road at dusk', worlds: ['kilti'] },
   { key: 'table',     source: require('../assets/art/table.jpg'),     alt: 'Family and friends at a long table under a mango tree and lanterns', worlds: ['gastronomi'] },
   { key: 'labadee',   source: require('../assets/art/labadee.jpg'),   alt: 'A beach party with a DJ under the palms at sunset', worlds: ['eksperyans'] },
-  { key: 'citadelle', source: require('../assets/art/citadelle.jpg'), alt: 'The Citadelle Laferrière above the clouds', worlds: ['eksperyans'] },
+  { key: 'citadelle', source: require('../assets/art/citadelle.jpg'), alt: 'The Citadelle Laferrière above the clouds', worlds: ['eksperyans'], place: 'Citadelle Laferrière · Milot' },
   { key: 'espo',       source: require('../assets/art/espo.jpg'),       alt: 'A night football match under stadium lights', worlds: ['espo'] },
   { key: 'biznis',     source: require('../assets/art/biznis.jpg'),     alt: 'Rooftop networking around a speaker at dusk', worlds: ['biznis'] },
   { key: 'fanmi',      source: require('../assets/art/fanmi.jpg'),      alt: 'A family flying kites on a hill by the sea', worlds: ['fanmi'] },
   { key: 'galri',      source: require('../assets/art/galri.jpg'),      alt: 'A gallery opening hung with Haitian paintings', worlds: ['kilti'] },
   { key: 'bassinbleu', source: require('../assets/art/bassinbleu.jpg'), alt: 'The turquoise waterfall pools of Bassin Bleu', worlds: ['eksperyans'] },
   { key: 'mache',      source: require('../assets/art/mache.jpg'),      alt: "An artisans' market and community workshop", worlds: ['biznis', 'fanmi'] },
+
+  // Tikèm Landmarks (2026-10). Real places, researched before they were drawn,
+  // all in the app's night palette. `place` is the caption on the poster.
+  { key: 'champdemars',     source: require('../assets/art/champdemars.jpg'),     alt: 'The Nèg Mawon statue blowing a conch on the Champ de Mars at night', worlds: ['kilti'], place: 'Nèg Mawon · Champ de Mars' },
+  { key: 'tour2004',        source: require('../assets/art/tour2004.jpg'),        alt: 'The Tour 2004 bicentennial monument lit up on the Champ de Mars', worlds: ['kilti'], place: 'Tour 2004 · Champ de Mars', scrim: 'strong' },
+  { key: 'viaducdelmas',    source: require('../assets/art/viaducdelmas.jpg'),    alt: 'Tap-taps and vendors under the Delmas viaduct at night', worlds: ['lavi-lannwit'], place: 'Viaduc de Delmas' },
+  { key: 'saintpierre',     source: require('../assets/art/saintpierre.jpg'),     alt: 'Église Saint-Pierre on Place Saint-Pierre at night, with a flower vendor', worlds: ['kilti'], place: 'Église Saint-Pierre · Pétion-Ville' },
+  { key: 'fortjacques',     source: require('../assets/art/fortjacques.jpg'),     alt: 'Fort Jacques lit by lanterns on the pine ridge above the city', worlds: ['eksperyans'], place: 'Fort Jacques · Kenscoff' },
+  { key: 'fortalexandre',   source: require('../assets/art/fortalexandre.jpg'),   alt: 'The ruined walls of Fort Alexandre on the ridge at night', worlds: ['eksperyans'], place: 'Fort Alexandre · Kenscoff' },
+  { key: 'sautdeau',        source: require('../assets/art/sautdeau.jpg'),        alt: "Pilgrims in white with candles at the Saut d'Eau waterfall", worlds: ['eksperyans'], place: "Saut d'Eau · Ville-Bonheur" },
+  { key: 'foretdespins',    source: require('../assets/art/foretdespins.jpg'),    alt: 'A campfire under tall pines in the Forêt des Pins at dusk', worlds: ['eksperyans'], place: 'Forêt des Pins' },
+  { key: 'sanssouci',       source: require('../assets/art/sanssouci.jpg'),       alt: 'The grand staircase and arches of the Sans-Souci palace at dusk', worlds: ['kilti'], place: 'Palais Sans-Souci · Milot' },
+  { key: 'jacmel',          source: require('../assets/art/jacmel.jpg'),          alt: 'Cast-iron gingerbread balconies down to the sea in Jacmel at night', worlds: ['kilti'], place: 'Jacmel' },
+  { key: 'portsalut',       source: require('../assets/art/portsalut.jpg'),       alt: 'Fishing boats and a bonfire on the beach at Port-Salut at dusk', worlds: ['eksperyans'], place: 'Port-Salut', scrim: 'strong' },
+  { key: 'labadeenight',    source: require('../assets/art/labadeenight.jpg'),    alt: 'The cove at Labadee under a full moon', worlds: ['eksperyans'], place: 'Labadee' },
+  { key: 'bassinbleunight', source: require('../assets/art/bassinbleunight.jpg'), alt: 'The turquoise pools of Bassin Bleu glowing in the gorge at night', worlds: ['eksperyans'], place: 'Bassin Bleu · Jacmel' },
+  { key: 'lakou',           source: require('../assets/art/lakou.jpg'),           alt: 'A lakou at night with a tap-tap, string lights and the Haitian flag', worlds: ['fanmi'] },
+
   // The original login pieces: general pool only, no world.
   { key: 'art1', source: require('../assets/art/art1.jpg'), alt: 'Jacmel steps at sunset', worlds: [] },
   { key: 'art2', source: require('../assets/art/art2.jpg'), alt: 'A tap-tap at sunset', worlds: [] },
@@ -207,60 +232,54 @@ export function artForPicker(category: string | null | undefined): ArtPiece[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Which piece fits the active metro / city, so an empty Port-au-Prince feed no
- * longer wears the Citadelle (a Cap-Haïtien landmark). 2026-10-04 feedback:
- * "i like the citadelle - but that is more okap ... and so for each of the
- * cities".
+ * Which piece fits the active metro / city, so an empty feed shows a landmark
+ * of the place you are browsing (2026-10-04 feedback: "i like the citadelle -
+ * but that is more okap ... and so for each of the cities").
  *
- * Keyed by metro id (data/metros.ts) first, then by a normalised town name
- * (accents stripped, lowercased, ", ST" suffix dropped) for aliases that are
- * not metro towns (Okap, Potoprens, Labadee…). A place we know but have no
- * landmark for gets PLACE_ART_GENERAL, which names no landmark, so it is never
- * wrong. No place at all keeps the old default (the Citadelle).
+ * A town name (Pétion-Ville, Delmas, Kenscoff…) wins over its metro, so a
+ * Pétion-Ville feed shows Saint-Pierre rather than downtown. A list rotates
+ * once a day. A Haitian place with no landmark of its own gets the lakou; a
+ * place elsewhere with none gets PLACE_ART_GENERAL, which names no landmark,
+ * so it is never wrong. No place at all keeps the Citadelle.
  *
- * STILL MISSING a dedicated landmark piece (add the art to ART, then change one
- * line below):
- * - Port-au-Prince: uses art2 (tap-tap at sunset). Wanted: the Marché en Fer /
- *   Iron Market, the Champ de Mars and the Palais, Pétion-Ville at night,
- *   the view from Boutilliers / Kenscoff.
- * - Les Cayes / Jérémie: uses art3 (moonlit fishing village). Wanted: Île-à-
- *   Vache, Pointe Sable, the Grand'Anse coast.
- * - Gonaïves, Saint-Marc, Port-de-Paix, Fort-Liberté: general. Wanted: the
- *   Place d'Armes of Gonaïves (Independence), the Saint-Marc bay.
- * - Miami: general. Wanted: the Little Haiti Cultural Complex, Little Haiti
- *   murals on NE 2nd Ave, a Miami Beach night.
- * - Boston, Atlanta, Orlando, Tampa, Chicago, Houston, Los Angeles: general.
- * - Montréal: general. Wanted: Saint-Michel / Rivière-des-Prairies, the Mount
- *   Royal tam-tams, Old Port in winter.
- * - Toronto, Ottawa, Vancouver, Calgary: general.
- * - Paris: general. Wanted: a Haitian night in Saint-Denis or the canal Saint-
- *   Martin, Sacré-Cœur steps.
- * - Dominican Republic metros: general. Wanted: the Malecón of Santo Domingo.
- * New York already has its own (diaspora: the Brooklyn Bridge).
+ * STILL WANTED (one line here once the art exists): Gonaïves (Place d'Armes),
+ * Saint-Marc, Île-à-Vache, Miami (Little Haiti Cultural Complex), Boston
+ * (Mattapan), Montréal (Saint-Michel), Paris (Saint-Denis), Santo Domingo
+ * (the Malecón).
  */
 const PLACE_ART_DEFAULT = 'citadelle';
 const PLACE_ART_GENERAL = 'konpa';
+const PLACE_ART_HAITI = 'lakou';
 
 // prettier-ignore
-const PLACE_ART_BY_METRO: Record<string, string> = {
-  'ht-port-au-prince': 'art2',     // tap-tap at sunset
+const PLACE_ART_BY_METRO: Record<string, string | string[]> = {
+  'ht-port-au-prince': ['champdemars', 'tour2004'],
   'ht-cap-haitien':    'citadelle',
-  'ht-jacmel':         'kanaval',  // Jacmel kanaval
-  'ht-les-cayes':      'art3',     // moonlit fishing village
-  'ht-jeremie':        'art3',
+  'ht-jacmel':         'jacmel',
+  'ht-les-cayes':      'portsalut',
+  'ht-jeremie':        'portsalut',
   'us-new-york':       'diaspora', // the Brooklyn Bridge
 };
 
-// Normalised town names and nicknames, for places outside the metro list.
+// Normalised town names and nicknames. Checked before the metro.
 // prettier-ignore
-const PLACE_ART_BY_NAME: Record<string, string> = {
+const PLACE_ART_BY_NAME: Record<string, string | string[]> = {
   'okap': 'citadelle', 'au cap': 'citadelle', 'le cap': 'citadelle', 'cap haitien': 'citadelle',
-  'milot': 'citadelle', 'labadee': 'labadee', 'labadie': 'labadee',
-  'jacmel': 'kanaval', 'jakmel': 'kanaval', 'bassin bleu': 'bassinbleu',
-  'port au prince': 'art2', 'potoprens': 'art2', 'pap': 'art2',
-  'petion ville': 'art2', 'petyonvil': 'art2', 'delmas': 'art2',
+  'milot': 'sanssouci', 'labadee': 'labadeenight', 'labadie': 'labadeenight',
+  'jacmel': 'jacmel', 'jakmel': 'jacmel', 'bassin bleu': 'bassinbleunight',
+  'port au prince': ['champdemars', 'tour2004'], 'potoprens': ['champdemars', 'tour2004'], 'pap': ['champdemars', 'tour2004'],
+  'champ de mars': 'champdemars',
+  'petion ville': 'saintpierre', 'petionville': 'saintpierre', 'petyonvil': 'saintpierre',
+  'delmas': 'viaducdelmas',
+  'kenscoff': ['fortjacques', 'fortalexandre'], 'kenskof': ['fortjacques', 'fortalexandre'], 'fermathe': 'fortjacques',
+  'saut d eau': 'sautdeau', 'sodo': 'sautdeau', 'ville bonheur': 'sautdeau', 'mirebalais': 'sautdeau',
+  'foret des pins': 'foretdespins', 'fonds verrettes': 'foretdespins',
+  'port salut': 'portsalut', 'ile a vache': 'portsalut', 'les cayes': 'portsalut', 'okay': 'portsalut',
   'new york': 'diaspora', 'nyc': 'diaspora', 'brooklyn': 'diaspora', 'queens': 'diaspora',
 };
+
+/** Today as a seed, so a rotating place changes once a day, not per render. */
+const daySeed = () => new Date().toISOString().slice(0, 10);
 
 const normPlace = (value: unknown): string =>
   fold(String(value ?? '').split(',')[0])
@@ -272,33 +291,50 @@ const normPlace = (value: unknown): string =>
  * `label` and `cities`), a city string, or nothing. Always returns a piece.
  */
 export function artForPlace(
-  place: { id?: string; label?: string; cities?: string[] } | string | null | undefined,
-  city?: string | null
+  place: { id?: string; label?: string; cities?: string[]; country?: string } | string | null | undefined,
+  city?: string | null,
+  seed: string = daySeed()
 ): ArtPiece {
-  const pick = (key: string | undefined) => (key ? BY_KEY[key] : undefined);
+  const pick = (entry: string | string[] | undefined): ArtPiece | undefined => {
+    if (!entry) return undefined;
+    const key = Array.isArray(entry) ? entry[hashSeed(seed) % entry.length] : entry;
+    return BY_KEY[key];
+  };
+  const byName = (n: string): ArtPiece | undefined => {
+    const exact = pick(PLACE_ART_BY_NAME[n]);
+    if (exact) return exact;
+    // "Delmas 33", "Brooklyn NY": a known name followed by more words.
+    for (const [name, entry] of Object.entries(PLACE_ART_BY_NAME)) {
+      if (n.startsWith(`${name} `)) return pick(entry);
+    }
+    return undefined;
+  };
+
+  // The town you picked beats the metro it belongs to.
+  const town = city ? normPlace(city) : '';
+  const byTown = town ? byName(town) : undefined;
+  if (byTown) return byTown;
 
   const names: string[] = [];
+  let haiti = false;
   if (place && typeof place === 'object') {
     const byMetro = pick(place.id ? PLACE_ART_BY_METRO[place.id] : undefined);
     if (byMetro) return byMetro;
+    haiti = place.country === 'HT' || !!place.id?.startsWith('ht-');
     if (place.label) names.push(place.label);
     if (Array.isArray(place.cities)) names.push(...place.cities);
   } else if (typeof place === 'string') {
     names.push(place);
   }
-  if (city) names.unshift(city);
 
   const normalised = names.map(normPlace).filter(Boolean);
   for (const n of normalised) {
-    const exact = pick(PLACE_ART_BY_NAME[n]);
-    if (exact) return exact;
-    // "Delmas 33", "Brooklyn NY": a known name followed by more words.
-    for (const [name, key] of Object.entries(PLACE_ART_BY_NAME)) {
-      if (n.startsWith(`${name} `)) return BY_KEY[key];
-    }
+    const found = byName(n);
+    if (found) return found;
   }
 
-  if (!normalised.length) return BY_KEY[PLACE_ART_DEFAULT];
+  if (haiti) return BY_KEY[PLACE_ART_HAITI];
+  if (!town && !normalised.length) return BY_KEY[PLACE_ART_DEFAULT];
   return BY_KEY[PLACE_ART_GENERAL];
 }
 

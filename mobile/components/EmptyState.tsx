@@ -73,12 +73,23 @@ export default function EmptyState({
           {/* Bottom-weighted scrim: the art breathes at the top, the words
               sit on near-black at the bottom. No box behind the text. */}
           <LinearGradient
-            colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.35)', 'rgba(10,10,10,0.92)']}
-            locations={[0.35, 0.6, 1]}
+            colors={
+              art.scrim === 'strong'
+                ? ['rgba(10,10,10,0)', 'rgba(10,10,10,0.55)', 'rgba(10,10,10,0.96)']
+                : ['rgba(10,10,10,0)', 'rgba(10,10,10,0.35)', 'rgba(10,10,10,0.92)']
+            }
+            locations={art.scrim === 'strong' ? [0.25, 0.55, 1] : [0.35, 0.6, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
           <View style={styles.posterText}>
+            {/* A landmark names itself, so every empty screen also shows a
+                piece of Haiti and says where it is. */}
+            {!!art.place && (
+              <Text style={styles.artPlace} numberOfLines={1}>
+                {art.place.toUpperCase()}
+              </Text>
+            )}
             <Text style={styles.artTitle}>{title}</Text>
             {!!subtitle && <Text style={styles.artSubtitle}>{subtitle}</Text>}
           </View>
@@ -163,6 +174,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     posterText: {
       paddingHorizontal: 20,
       paddingBottom: 20,
+    },
+    artPlace: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.6,
+      color: 'rgba(255,255,255,0.62)',
+      marginBottom: 8,
     },
     // Fixed white: the text sits on the dark scrim in every theme.
     artTitle: {
