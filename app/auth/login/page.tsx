@@ -12,6 +12,12 @@ import { BRAND } from '@/config/brand'
 import { TikemWordmark } from '@/components/ui/TikemLogo'
 import { isDemoMode, isDemoEmail } from '@/lib/demo'
 import { demoLogin } from '../actions'
+import { PhoneLoginPanel } from '@/components/auth/PhoneLoginPanel'
+import { safeSameOriginPath } from '@/lib/safeUrl'
+
+// Phone (WhatsApp code) sign-in on the web. Build-time flag, default off; when
+// on, the panel still hides itself unless the server reports the feature live.
+const PHONE_AUTH_WEB = process.env.NEXT_PUBLIC_PHONE_AUTH_ENABLED === 'true'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,12 +28,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Same-origin paths only. The old startsWith('/') && !startsWith('//') check
+  // let "/\evil.com" through, which browsers read as protocol-relative.
   function sanitizeRedirectTarget(target: string | null): string {
-    if (!target) return '/'
-    // Only allow same-origin relative paths to prevent open redirects.
-    if (!target.startsWith('/')) return '/'
-    if (target.startsWith('//')) return '/'
-    return target
+    return safeSameOriginPath(target, window.location.origin)
   }
 
   // Resolve the redirect target AFTER mount. Reading window.location/localStorage
@@ -162,6 +166,8 @@ export default function LoginPage() {
             {t('login.title')}
           </h2>
         </div>
+
+        {PHONE_AUTH_WEB ? <PhoneLoginPanel redirectTo={redirectTo} /> : null}
 
         <form className="space-y-5" onSubmit={handleLogin}>
           {error && (

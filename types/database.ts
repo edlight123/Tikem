@@ -37,6 +37,9 @@ export type NotificationType =
   // A MonCash withdrawal outcome (sent / in review / confirming / failed / paid).
   // Transactional (policy category 'payout'): never suppressed by marketing prefs.
   | 'withdrawal_update'
+  // A sign-in method (a phone number) was added to the account. Transactional
+  // security notice: never suppressed (lib/auth/otp/notify.ts).
+  | 'account_security'
   // Admin-only: an unconfirmed instant withdrawal could not be settled automatically.
   | 'withdrawal_escalated'
   // Admin-only: a user reported an event or organizer (App Store 1.2 moderation queue).

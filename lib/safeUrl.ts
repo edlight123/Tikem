@@ -44,3 +44,25 @@ export function externalUrlLabel(href: string): string {
     return href
   }
 }
+
+/**
+ * A post-login redirect target reduced to a same-origin path, or '/'.
+ *
+ * Resolved against `origin` with the URL parser, so every trick a browser would
+ * honour is judged the way the browser will judge it: `//evil.com`,
+ * `/\evil.com` (backslash is a slash in http URLs), `https://evil.com`,
+ * `javascript:alert(1)`. Anything that does not land on `origin` is refused.
+ * Returns pathname + search + hash, never an absolute URL.
+ */
+export function safeSameOriginPath(raw: string | null | undefined, origin: string): string {
+  if (typeof raw !== 'string' || !raw.trim()) return '/'
+  try {
+    const base = new URL(origin)
+    const url = new URL(raw.trim(), base.origin)
+    if (url.origin !== base.origin) return '/'
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return '/'
+    return `${url.pathname}${url.search}${url.hash}` || '/'
+  } catch {
+    return '/'
+  }
+}

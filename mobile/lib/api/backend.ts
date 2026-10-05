@@ -10,6 +10,9 @@ const API_URL = String(
     'https://www.tikem.co'
 ).replace(/\/$/, '')
 
+/** The API origin, for the few unauthenticated calls made with plain fetch. */
+export const API_BASE_URL = API_URL
+
 const DEBUG_API = process.env.EXPO_PUBLIC_DEBUG_API === 'true'
 
 let sessionCookieValue: string | null = null

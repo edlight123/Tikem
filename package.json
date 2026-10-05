@@ -32,6 +32,7 @@
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",
     "lenis": "^1.3.26",
+    "libphonenumber-js": "^1.13.14",
     "lucide-react": "0.554.0",
     "next": "^15.5.25",
     "passkit-generator": "^3.1.2",

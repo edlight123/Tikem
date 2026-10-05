@@ -24,6 +24,8 @@ import { TermsAgreement } from '../../components/auth/TermsAgreement';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
+import { PhoneCodeFlow } from '../../components/auth/PhoneCodeFlow';
+import { requestPhoneCode, usePhoneAuthEnabled } from '../../lib/phoneAuth';
 
 // Map a Firebase auth error code to a localized message key. We never surface
 // error.message (raw English) — unknown codes fall back to a generic string.
@@ -51,14 +53,22 @@ function firebaseErrorKey(code?: string): string {
 }
 
 export default function LoginScreen({ navigation }: any) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle, signInWithApple, appleAuthAvailable } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signInWithPhoneCode } = useAuth();
   const passwordRef = useRef<TextInput>(null);
+
+  // Phone (WhatsApp code) sign-in. OFF unless the remote switch and the server
+  // both say on; while off, the email form below renders exactly as before.
+  const phoneAuthOn = usePhoneAuthEnabled();
+  const [preferEmail, setPreferEmail] = useState(false);
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<'phone' | 'code'>('phone');
+  const phoneMode = phoneAuthOn && !preferEmail;
 
   // Entrance animations — headline settles first, then the form cluster rises.
   const headlineAnim = useRef(new Animated.Value(0)).current;
@@ -165,6 +175,40 @@ export default function LoginScreen({ navigation }: any) {
 
           {/* Lower cluster — form + auth buttons grouped tight, left-aligned */}
           <Animated.View style={{ transform: [{ translateY: formAnim }], opacity: formOpacity }}>
+            {phoneMode ? (
+            <View style={styles.form}>
+              <PhoneCodeFlow
+                ctaLabel={t('auth.phone.continueWithWhatsApp')}
+                onRequestCode={(phone, iso) => requestPhoneCode(phone, iso, language)}
+                onVerify={(phone, iso, code) => signInWithPhoneCode(phone, iso, code, language)}
+                onBusyChange={setPhoneBusy}
+                onStepChange={setPhoneStep}
+              />
+              {phoneStep === 'phone' ? (
+                <>
+                  <SocialSignInRow
+                    orLabel={t('auth.login.or')}
+                    googleLabel={t('auth.login.continueWithGoogle')}
+                    appleLabel={t('auth.apple.title')}
+                    onGoogle={handleGoogleSignIn}
+                    onApple={handleAppleSignIn}
+                    showApple={appleAuthAvailable}
+                    disabled={loading || phoneBusy}
+                  />
+                  <TermsAgreement />
+                  <Pressable
+                    onPress={() => setPreferEmail(true)}
+                    disabled={loading || phoneBusy}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.linkText}>{t('auth.phone.useEmail')}</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+            ) : (
             <View style={styles.form}>
               <AuthInput
                 icon={Mail}
@@ -240,7 +284,20 @@ export default function LoginScreen({ navigation }: any) {
                   <Text style={styles.linkTextBold}>{t('auth.login.signUp')}</Text>
                 </Text>
               </Pressable>
+
+              {phoneAuthOn ? (
+                <Pressable
+                  onPress={() => setPreferEmail(false)}
+                  disabled={loading}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  style={styles.linkButton}
+                >
+                  <Text style={styles.linkText}>{t('auth.phone.usePhone')}</Text>
+                </Pressable>
+              ) : null}
             </View>
+            )}
           </Animated.View>
       </ScrollView>
       </KeyboardAvoidingView>

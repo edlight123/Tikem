@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
-import { Bell, BookOpen, Briefcase, ChevronRight, Compass, ExternalLink, FileText, Heart, HelpCircle, Instagram, LogOut, MapPin, RotateCcw, Settings, Shield, Trash2, Users } from 'lucide-react-native';
+import { Bell, BookOpen, Briefcase, ChevronRight, Compass, ExternalLink, FileText, Heart, HelpCircle, Instagram, LogOut, MapPin, Phone, RotateCcw, Settings, Shield, Trash2, Users } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -47,6 +47,8 @@ import EmptyState from '../components/EmptyState';
 import { Skeleton, PosterCardSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import DeleteAccountSheet from '../components/DeleteAccountSheet';
+import PhoneLinkSheet from '../components/auth/PhoneLinkSheet';
+import { usePhoneAuthEnabled } from '../lib/phoneAuth';
 import { findMetro } from '../data/metros';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
@@ -66,6 +68,11 @@ export default function ProfileScreen() {
   const navigation: any = useNavigation();
   const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  // "Add phone number" (WhatsApp code), behind the phone-auth flag; hidden
+  // once the account has a verified phone.
+  const phoneAuthOn = usePhoneAuthEnabled();
+  const [showPhoneLink, setShowPhoneLink] = useState(false);
+  const canAddPhone = phoneAuthOn && !isDemoMode && !!user && !user.phoneNumber;
   const { mode, setMode } = useAppMode();
   const { language, setLanguage, t } = useI18n();
   const { setUserCountry, setActiveCity } = useFilters();
@@ -1079,6 +1086,16 @@ export default function ProfileScreen() {
             </View>
             <ChevronRight size={18} color={colors.textTertiary} />
           </TouchableOpacity>
+
+          {canAddPhone ? (
+            <TouchableOpacity style={styles.rowButton} onPress={() => setShowPhoneLink(true)}>
+              <View style={styles.rowLeft}>
+                <Phone size={18} color={colors.primary} />
+                <Text style={styles.rowText}>{t('auth.phone.link.row')}</Text>
+              </View>
+              <ChevronRight size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.sectionCard}>
@@ -1118,6 +1135,9 @@ export default function ProfileScreen() {
           ) : null}
         </TouchableOpacity>
         <DeleteAccountSheet visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
+        {canAddPhone || showPhoneLink ? (
+          <PhoneLinkSheet visible={showPhoneLink} onClose={() => setShowPhoneLink(false)} />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

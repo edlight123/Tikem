@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithCredential, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithCredential, signInWithCustomToken, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isDemoMode } from '../config/firebase';
 import { syncPublicProfile } from '../lib/publicProfile';
@@ -11,6 +11,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 import type { SocialLinks, PrivacySettings } from '../types/social';
+import { verifyPhoneCode } from '../lib/phoneAuth';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -44,6 +45,12 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   appleAuthAvailable: boolean;
+  /**
+   * Phone sign-in (behind the phone-auth flag): the server checks the WhatsApp
+   * code, finds or creates the account and returns a custom token, which this
+   * signs in with. Throws PhoneAuthError (code) on a bad code or limit.
+   */
+  signInWithPhoneCode: (phone: string, country: string, code: string, locale: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** Which sign-in method re-authentication will use for the current user. */
@@ -367,6 +374,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithPhoneCode = async (phone: string, country: string, code: string, locale: string) => {
+    const token = await verifyPhoneCode(phone, country, code, locale);
+    // The users/{uid} profile is created server-side before the token is
+    // returned, so onAuthStateChanged's profile refresh finds it.
+    await signInWithCustomToken(auth, token);
+  };
+
   const signUp = async (email: string, password: string, fullName: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
@@ -434,7 +448,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signUp, signOut, reauthMethod, reauthenticate, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signInWithApple, appleAuthAvailable, signInWithPhoneCode, signUp, signOut, reauthMethod, reauthenticate, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
