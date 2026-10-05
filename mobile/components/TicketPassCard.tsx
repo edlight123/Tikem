@@ -11,6 +11,7 @@ import AddToWalletButton from './AddToWalletButton';
 import { ticketOrderRef, ticketTierLabel, ticketQrValue, ticketStatusKey } from '../lib/ticket';
 import { addToCalendar, openDirections } from '../lib/postPurchaseActions';
 import { radius } from '../theme/tokens';
+import { isLiveTicket } from '../lib/orderDisplay';
 
 interface TicketPassCardProps {
   ticket: any;
@@ -56,6 +57,9 @@ export default function TicketPassCard({
   const end = toDate(event?.end_datetime);
   const isExpired = end ? new Date() > end : false;
   const isUsed = !!ticket?.checked_in_at || String(ticket?.status || '').toLowerCase() === 'used';
+  // Refunded / cancelled / transferred-away tickets keep the QR for reference
+  // but must not offer Wallet or Transfer.
+  const isLive = isLiveTicket(ticket?.status);
 
   const eventTitle = event?.title || ticket?.event_title || t('common.event');
   const dateLabel = safeDate(start, 'EEE, MMM d · h:mm a', language);
@@ -115,15 +119,17 @@ export default function TicketPassCard({
 
       {/* Post-purchase action stack */}
       <View style={styles.actions}>
-        <AddToWalletButton
-          ticketId={ticket?.id}
-          qrCodeData={ticketQrValue(ticket)}
-          eventTitle={eventTitle}
-          eventDate={dateLabel || ''}
-          venueName={event?.venue_name || ''}
-          ticketNumber={ticketNumber}
-          totalTickets={ticket?.quantity || 1}
-        />
+        {isLive && (
+          <AddToWalletButton
+            ticketId={ticket?.id}
+            qrCodeData={ticketQrValue(ticket)}
+            eventTitle={eventTitle}
+            eventDate={dateLabel || ''}
+            venueName={event?.venue_name || ''}
+            ticketNumber={ticketNumber}
+            totalTickets={ticket?.quantity || 1}
+          />
+        )}
 
         <View style={styles.secondaryRow}>
           <TouchableOpacity style={styles.secondaryButton} onPress={handleCalendar} activeOpacity={0.8}>
@@ -137,7 +143,7 @@ export default function TicketPassCard({
         </View>
 
         <View style={styles.secondaryRow}>
-          {onTransferPress && !isUsed && (
+          {onTransferPress && !isUsed && isLive && (
             <TouchableOpacity style={styles.secondaryButton} onPress={onTransferPress} activeOpacity={0.8}>
               <Send size={18} color={colors.text} />
               <Text style={styles.secondaryButtonText}>{t('ticketPass.transfer')}</Text>

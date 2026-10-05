@@ -129,6 +129,8 @@ export interface PricingEventLike {
   currency?: string | null;
   /** The organizer's own absorb/pass-on choice, when they made one. */
   fee_incidence?: string | null;
+  /** Camel-case alias some docs carry. The server reads both, so display does too. */
+  feeIncidence?: string | null;
 }
 
 /**
@@ -136,7 +138,8 @@ export interface PricingEventLike {
  * default when they have not made one.
  */
 export function incidenceForEvent(event: PricingEventLike | null | undefined): FeeIncidence {
-  const chosen = String(event?.fee_incidence || '').toLowerCase();
+  // Same precedence as the server's `incidenceForEvent` (lib/checkout/buyer-pricing.ts).
+  const chosen = String(event?.fee_incidence ?? event?.feeIncidence ?? '').toLowerCase();
   if (chosen === 'buyer' || chosen === 'organizer') return chosen;
   return feeIncidenceForCountry(event?.country);
 }

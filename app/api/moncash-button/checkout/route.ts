@@ -81,6 +81,20 @@ export async function GET(request: Request) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
+    // Only a still-PENDING order may start a payment. Re-opening this link on a
+    // completed (or processing, failed, refund-flagged) order used to create a FRESH
+    // gateway payment for it — a second charge for tickets already issued.
+    if (String(pending.status || '').toLowerCase() !== 'pending' || pending.needs_refund === true) {
+      console.warn('[moncash_button] checkout: refusing to start payment for a non-pending order', {
+        orderHash,
+        status: pending.status,
+      })
+      return new NextResponse('This order can no longer be paid. Please start a new checkout.', {
+        status: 409,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
     const provider = String(pending.mobile_money_provider || pending.payment_method || 'moncash').toLowerCase()
     const amount = Number(pending.amount) || 0
 

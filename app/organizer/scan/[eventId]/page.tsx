@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { DoorModeInterface } from '@/components/scan/DoorModeInterface'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -74,8 +75,14 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     // ok
   }
 
-  // Fetch all confirmed tickets for this event (supports legacy `eventId` field too)
-  const ticketDocs = await loadTicketDocsForEvent(eventId, { status: 'confirmed' })
+  // Every LIVE ticket for this event (supports legacy `eventId` field too), plus
+  // ones already checked in so the counts are right. This used to filter on
+  // status 'confirmed' alone, which hid every Stripe sale (written 'valid') from
+  // manual lookup and the remaining count.
+  const ticketDocs = (await loadTicketDocsForEvent(eventId)).filter((doc: any) => {
+    const data = doc.data() || {}
+    return isLiveTicketStatus(data.status) || Boolean(data.checked_in || data.checked_in_at)
+  })
 
   // Batch fetch all attendee users (instead of N+1 queries)
   const attendeeIds = Array.from(new Set(

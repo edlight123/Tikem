@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronLeft, Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, Send, Star, RotateCcw, CalendarPlus, Navigation } from 'lucide-react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { db } from '../config/firebase';
+import { auth, db } from '../config/firebase';
 import { useTheme } from '../contexts/ThemeContext';
 import { safeFormatForLanguage } from '../lib/dates';
 import TransferTicketModal from '../components/TransferTicketModal';
@@ -11,7 +11,7 @@ import AddToWalletButton from '../components/AddToWalletButton';
 import TicketQRCard from '../components/TicketQRCard';
 import StatusChip from '../components/StatusChip';
 import { useI18n } from '../contexts/I18nContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { font, radius } from '../theme/tokens';
 import { formatCurrency } from '../lib/currency';
 import { ticketOrderRef, ticketTierLabel, ticketQrValue, ticketStatusKey } from '../lib/ticket';
@@ -20,6 +20,7 @@ import { TicketDetailSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import { useMaxBrightnessWhileFocused } from '../lib/useMaxBrightness';
 import { goBackOrHome } from '../lib/goBackOrHome';
+import { isActiveTicketStatus } from '../lib/orderDisplay';
 
 export default function TicketDetailScreen({ route }: any) {
   const { colors } = useTheme();
@@ -38,10 +39,15 @@ export default function TicketDetailScreen({ route }: any) {
   // ticket's tier NAME. Null until (and unless) a window is found.
   const [tierValidity, setTierValidity] = useState<{ from?: Date; until?: Date } | null>(null);
 
-  useEffect(() => {
-    fetchTicketDetails();
-    fetchPendingTransfer();
-  }, [ticketId]);
+  // Reload on every focus, not just mount: returning from RefundRequest (or a
+  // transfer) must pick up the new refund_status so the button disappears.
+  useFocusEffect(
+    useCallback(() => {
+      fetchTicketDetails();
+      fetchPendingTransfer();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ticketId])
+  );
 
   const cacheKey = `ticket_cache_${ticketId}`;
 
@@ -134,7 +140,9 @@ export default function TicketDetailScreen({ route }: any) {
       const transfersQuery = query(
         collection(db, 'ticket_transfers'),
         where('ticket_id', '==', ticketId),
-        where('status', '==', 'pending')
+        where('status', '==', 'pending'),
+        // The read rule only lets the sender list their own transfers.
+        where('from_user_id', '==', auth.currentUser?.uid ?? '')
       );
       const transfersSnapshot = await getDocs(transfersQuery);
       
@@ -204,13 +212,17 @@ export default function TicketDetailScreen({ route }: any) {
   const now = new Date();
   const eventEnd = new Date(ticket.end_datetime || ticket.event_date || ticket.start_datetime);
   const isExpired = now > eventEnd;
+  const isActive = isActiveTicketStatus(ticket.status);
 
   const statusLabel = (() => {
     if (isExpired) return t('ticketDetail.status.expired');
     const raw = String(ticket.status || '').toLowerCase();
-    if (raw === 'confirmed') return t('ticketDetail.status.confirmed');
-    if (raw === 'used') return t('ticketDetail.status.used');
+    // 'valid' is what the server writes for MonCash / SogePay / free / comp.
+    if (raw === 'confirmed' || raw === 'valid') return t('ticketDetail.status.confirmed');
+    if (raw === 'used' || raw === 'checked_in') return t('ticketDetail.status.used');
     if (raw === 'active') return t('ticketDetail.status.active');
+    if (raw === 'refunded') return t('ticketDetail.status.refunded');
+    if (raw === 'cancelled') return t('ticketDetail.status.cancelled');
     return String(ticket.status || '').toUpperCase();
   })();
 
@@ -258,7 +270,7 @@ export default function TicketDetailScreen({ route }: any) {
           </View>
 
           {/* Transfer Button */}
-          {(ticket.status === 'confirmed' || ticket.status === 'active') && (
+          {isActive && (
             <>
               {/* Pending Transfer Status */}
               {pendingTransfer && (
@@ -392,7 +404,7 @@ export default function TicketDetailScreen({ route }: any) {
           </View>
 
           {/* Add to Wallet + post-purchase action stack */}
-          {(ticket.status === 'confirmed' || ticket.status === 'active') && (
+          {isActive && (
             <View style={styles.walletSection}>
               <AddToWalletButton
                 ticketId={ticket.id}
@@ -444,8 +456,8 @@ export default function TicketDetailScreen({ route }: any) {
           {/* Action Buttons */}
           <View style={styles.actionButtonsSection}>
             {/* Request Refund Button - Only show for upcoming events */}
-            {!isExpired && (ticket.status === 'confirmed' || ticket.status === 'active') && 
-             !ticket.refund_status && (
+            {!isExpired && isActive &&
+             (!ticket.refund_status || ticket.refund_status === 'none') && (
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => navigation.navigate('RefundRequest', { ticketId: ticket.id })}
@@ -483,7 +495,7 @@ export default function TicketDetailScreen({ route }: any) {
             )}
 
             {/* Leave Review Button - Only show for past events */}
-            {isExpired && (ticket.status === 'used' || ticket.status === 'confirmed') && (
+            {isExpired && (isActive || ticket.status === 'used' || ticket.status === 'checked_in') && (
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => navigation.navigate('Review', { 

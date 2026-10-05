@@ -32,6 +32,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BANNER_DISMISSED_KEY = 'location_banner_dismissed';
 const BANNER_DISMISSED_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+const BANNER_ACCEPTED_KEY = 'location_banner_accepted';
+// Written by FiltersContext; the country the user last browsed.
+const RESOLVED_COUNTRY_KEY = 'resolved_user_country';
 
 /** ISO-2 country code to its flag emoji ("US" -> regional indicators U+S). */
 function flagFor(code: string | null): string {
@@ -54,91 +57,101 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
   const { t } = useI18n();
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
-  const { user, userProfile, updateUserProfile } = useAuth();
+  const { user, userProfile, loading: authLoading, updateUserProfile } = useAuth();
   const { setUserCountry, setActiveCity } = useFilters();
 
   const [visible, setVisible] = useState(false);
+  const visibleRef = useRef(false);
+  visibleRef.current = visible;
   const [detectedCountry, setDetectedCountry] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   // 0 = hidden above the screen, 1 = resting in place.
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Wait for auth to settle: before the profile loads, a signed-in user who
+    // already said "Yes" would read as the HT default and get asked again.
+    // A signed-in user's profile arrives after auth settles; wait for it too.
+    if (authLoading || (user && !userProfile)) return;
     checkLocationMismatch();
-  }, [userProfile]);
+  }, [authLoading, user, userProfile?.default_country]);
 
   const checkLocationMismatch = async () => {
     try {
-      // Check if banner was recently dismissed
-      const dismissedData = await AsyncStorage.getItem(BANNER_DISMISSED_KEY);
-      if (dismissedData) {
-        const { timestamp, country } = JSON.parse(dismissedData);
-        const now = Date.now();
-        if (now - timestamp < BANNER_DISMISSED_EXPIRY) {
-          // Still within dismiss period for same country
-          const deviceInfo = getDeviceLocationInfo();
-          if (deviceInfo.country === country) {
-            return;
-          }
-        }
-      }
-
-      // Get device location
       const deviceInfo = getDeviceLocationInfo();
       const deviceCountry = deviceInfo.country;
 
-      // Compare with user's saved country
-      const profileCountry = userProfile?.default_country || 'HT';
+      // The user already confirmed this country ("Yes"). Remembered on the
+      // device, so it also holds for guests and if the profile write failed.
+      const accepted = await AsyncStorage.getItem(BANNER_ACCEPTED_KEY);
+      if (accepted === deviceCountry) return hideIfShown();
 
-      console.log('[LocationBanner] Device country:', deviceCountry, 'Profile country:', profileCountry);
-
-      // Show banner if device country differs from profile
-      if (deviceCountry !== profileCountry && deviceInfo.isSupported) {
-        setDetectedCountry(deviceCountry);
-        setVisible(true);
-
-        // Animate in
-        Animated.spring(progress, {
-          toValue: 1,
-          useNativeDriver: true,
-          tension: 60,
-          friction: 9,
-        }).start();
+      // Check if banner was recently dismissed for this same country
+      const dismissedData = await AsyncStorage.getItem(BANNER_DISMISSED_KEY);
+      if (dismissedData) {
+        const { timestamp, country } = JSON.parse(dismissedData);
+        if (Date.now() - timestamp < BANNER_DISMISSED_EXPIRY && deviceCountry === country) {
+          return hideIfShown();
+        }
       }
+
+      // Compare with the user's saved country; guests fall back to the country
+      // they last browsed (persisted by FiltersContext), then to Haiti.
+      const profileCountry =
+        userProfile?.default_country ||
+        (await AsyncStorage.getItem(RESOLVED_COUNTRY_KEY)) ||
+        'HT';
+
+      if (deviceCountry === profileCountry || !deviceInfo.isSupported) {
+        return hideIfShown();
+      }
+
+      setDetectedCountry(deviceCountry);
+      setVisible(true);
+      Animated.spring(progress, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 60,
+        friction: 9,
+      }).start();
     } catch (error) {
       console.error('[LocationBanner] Error checking location:', error);
     }
+  };
+
+  const hideIfShown = () => {
+    if (visibleRef.current) hideBanner();
   };
 
   const handleAccept = async () => {
     if (!detectedCountry) return;
 
     setUpdating(true);
-    try {
-      const defaultCity = DEFAULT_CITIES[detectedCountry] || '';
+    const defaultCity = DEFAULT_CITIES[detectedCountry] || '';
+    // Remember the answer on the device first, so "Yes" sticks even for a
+    // guest or when the profile write below fails.
+    await AsyncStorage.setItem(BANNER_ACCEPTED_KEY, detectedCountry).catch(() => {});
 
-      // Update user profile if logged in
-      if (user) {
+    // Move the ONE active location to the detected country. setUserCountry
+    // owns this: it drops the old town (its metro does not exist here) and
+    // forgets the persisted one, so the next launch cannot restore a
+    // Port-au-Prince scope under a US country.
+    setUserCountry(detectedCountry);
+    setActiveCity(defaultCity);
+
+    if (user) {
+      try {
         await updateUserProfile({
           default_country: detectedCountry,
           default_city: defaultCity,
         });
+      } catch (error) {
+        console.error('[LocationBanner] Error updating location:', error);
       }
-
-      // Move the ONE active location to the detected country. setUserCountry
-      // owns this now: it drops the old town (its metro does not exist here)
-      // and forgets the persisted one, so the next launch cannot restore a
-      // Port-au-Prince scope under a US country.
-      setUserCountry(detectedCountry);
-      setActiveCity(defaultCity);
-
-      // Dismiss banner
-      hideBanner();
-    } catch (error) {
-      console.error('[LocationBanner] Error updating location:', error);
-    } finally {
-      setUpdating(false);
     }
+
+    setUpdating(false);
+    hideBanner();
   };
 
   const rememberDismissal = async () => {

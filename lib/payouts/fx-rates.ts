@@ -65,27 +65,27 @@ export function resolveReferenceRates(
   for (const code of Object.keys(rates)) sources[code] = 'manual'
 
   if (!snapshot) {
-    warnings.push('No FX snapshot found — using the admin-maintained rates.')
+    warnings.push('No FX snapshot found. Using the admin-maintained rates.')
     return { rates, sources, snapshotAgeHours: null, warnings }
   }
 
   const fetchedAt = new Date(snapshot.fetchedAt)
   if (Number.isNaN(fetchedAt.getTime())) {
-    warnings.push('FX snapshot has an unreadable timestamp — using manual rates.')
+    warnings.push('FX snapshot has an unreadable timestamp. Using manual rates.')
     return { rates, sources, snapshotAgeHours: null, warnings }
   }
 
   const ageHours = (now.getTime() - fetchedAt.getTime()) / 3_600_000
   if (ageHours > FX_SNAPSHOT_MAX_AGE_DAYS * 24) {
     warnings.push(
-      `FX snapshot is ${Math.round(ageHours / 24)} days old (max ${FX_SNAPSHOT_MAX_AGE_DAYS}) — using manual rates.`
+      `FX snapshot is ${Math.round(ageHours / 24)} days old (max ${FX_SNAPSHOT_MAX_AGE_DAYS}). Using manual rates.`
     )
     return { rates, sources, snapshotAgeHours: ageHours, warnings }
   }
 
   if ((snapshot.thresholdCurrency || 'USD').toUpperCase() !== thresholdCurrency) {
     warnings.push(
-      `FX snapshot is quoted in ${snapshot.thresholdCurrency} but thresholds are in ${thresholdCurrency} — using manual rates.`
+      `FX snapshot is quoted in ${snapshot.thresholdCurrency} but thresholds are in ${thresholdCurrency}. Using manual rates.`
     )
     return { rates, sources, snapshotAgeHours: ageHours, warnings }
   }
@@ -95,7 +95,7 @@ export function resolveReferenceRates(
     if (code === thresholdCurrency) continue
     const value = Number(rawValue)
     if (!Number.isFinite(value) || value <= 0) {
-      warnings.push(`FX snapshot rate for ${code} is not usable — kept the manual rate.`)
+      warnings.push(`FX snapshot rate for ${code} is not usable, so the manual rate was kept.`)
       continue
     }
     rates[code] = value
@@ -103,11 +103,11 @@ export function resolveReferenceRates(
   }
 
   if (snapshot.missing?.length) {
-    warnings.push(`FX provider did not return: ${snapshot.missing.join(', ')} — those use manual rates.`)
+    warnings.push(`FX provider did not return: ${snapshot.missing.join(', ')}. Those use manual rates.`)
   }
   if (snapshot.rejected && Object.keys(snapshot.rejected).length) {
     warnings.push(
-      `FX rates rejected by the sanity guard: ${Object.keys(snapshot.rejected).join(', ')} — previous values kept.`
+      `FX rates rejected by the sanity guard: ${Object.keys(snapshot.rejected).join(', ')}. Previous values kept.`
     )
   }
 

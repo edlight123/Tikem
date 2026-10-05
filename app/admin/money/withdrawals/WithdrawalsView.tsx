@@ -496,7 +496,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
             {/* Instant (prefunded) transfer whose outcome is unknown */}
             {selectedWithdrawal.needsReconciliation && (
               <div className="mb-6 rounded-lg bg-console-ground p-4">
-                <div className="font-bold text-console-red mb-1">Needs reconciliation — do not fail blindly</div>
+                <div className="font-bold text-console-red mb-1">Needs reconciliation: do not fail blindly</div>
                 <div className="text-sm text-console-mut">
                   An instant MonCash transfer was sent (reference <span className="font-mono">{selectedWithdrawal.id}</span>) but its outcome
                   is unknown, so the organizer&apos;s balance is still reserved. Check this reference in the MonCash
@@ -555,7 +555,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-console-mut mb-2">
-                    Internal note — admins only (optional)
+                    Internal note (admins only, optional)
                   </label>
                   <textarea
                     value={actionNote}

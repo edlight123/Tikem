@@ -335,7 +335,14 @@
     "trailer": "trailer",
     "select_payment_description_one": "Select how you'd like to pay for your {{count}} ticket",
     "select_payment_description_other": "Select how you'd like to pay for your {{count}} tickets",
-    "select_payment_description_plural": "Select how you'd like to pay for your {{count}} tickets"
+    "select_payment_description_plural": "Select how you'd like to pay for your {{count}} tickets",
+    "not_found_title": "Event not found",
+    "not_found_detail": "This event may have ended, been removed, or the link may be wrong.",
+    "claim_already_claimed": "You already claimed tickets for this event. Check your email for them.",
+    "claim_promo_already_used": "You have already used this promo code.",
+    "claim_event_cancelled": "This event has been cancelled.",
+    "claim_event_unavailable": "This event is not available right now.",
+    "claim_event_ended": "This event has already ended."
   },
   "favorites": {
     "title": "My Favorites",
@@ -1560,7 +1567,8 @@
   "location_banner": {
     "near_place": "Events near {{place}}?",
     "use": "Use",
-    "not_now_aria": "Not now"
+    "not_now_aria": "Not now",
+    "region_aria": "Location suggestion"
   },
   "invite": {
     "title": "Event Invite",
@@ -1622,7 +1630,7 @@
     "cards_value": "2.9% + HTG 15 per transaction",
     "moncash_label": "MonCash:",
     "moncash_value": "2.5% per transaction",
-    "processing_note": "Tikèm pays these out of its own fee, in every country and whoever bears the fee — they are never added to your buyer's total or deducted from your payout.",
+    "processing_note": "Tikèm pays these out of its own fee, in every country and whoever bears the fee. They are never added to your buyer's total or deducted from your payout.",
     "payout_schedule": "Payout schedule",
     "schedule_a": "Payouts are processed",
     "schedule_strong": "7 days after your event ends",
@@ -1767,7 +1775,7 @@
     "blocked_title": "Resolve these first",
     "blocked_body": "Your account still has buyers or money attached. Once these are resolved, you can delete it.",
     "obligation_events": "Cancel and refund your upcoming events that have sold tickets:",
-    "obligation_event": "{{title}} — {{count}} sold",
+    "obligation_event": "{{title}}: {{count}} sold",
     "obligation_balance": "Withdraw your remaining balance: {{amounts}}",
     "obligation_withdrawals": "Wait for your withdrawals in progress to finish ({{count}})",
     "obligation_promoter": "Withdraw your promoter earnings: {{amounts}}",
@@ -1799,7 +1807,7 @@
     "report_organizer": "Report organizer",
     "report_event_title": "Report this event",
     "report_organizer_title": "Report this organizer",
-    "report_intro": "What's wrong? Reports are private — the organizer is never told who sent one.",
+    "report_intro": "What's wrong? Reports are private. The organizer is never told who sent one.",
     "reasons": {
       "spam": "Spam",
       "scam_or_fraud": "Scam or fraud",

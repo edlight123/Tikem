@@ -8,8 +8,13 @@ export async function getServerSession() {
 
     // Mobile app support: allow Firebase ID token auth.
     // The mobile client can send `Authorization: Bearer <firebase_id_token>`.
-    if (!sessionCookie) {
-      const headerStore = await headers()
+    // An explicit token outranks any cookie: a stale or other-account cookie
+    // riding along must never decide who the caller is.
+    const headerStore = await headers()
+    const hasTokenHeader = Boolean(
+      headerStore.get('authorization')?.startsWith('Bearer ') || headerStore.get('x-firebase-token')
+    )
+    if (!sessionCookie || hasTokenHeader) {
       const authHeader = headerStore.get('authorization') || headerStore.get('Authorization')
       const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : null
 

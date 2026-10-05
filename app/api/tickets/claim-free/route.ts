@@ -13,7 +13,7 @@ import {
 import {
   calculateDiscount,
   promoBuyerKey,
-  promoHasCapacity,
+  promoCanCoverOrder,
   redeemPromoInTransaction,
   resolvePromoCode,
   type PromoDoc,
@@ -29,6 +29,14 @@ import {
   type CheckoutIdentity,
 } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, guestTicketUrl } from '@/lib/guest/identity'
+import {
+  checkEventPurchasable,
+  invalidQuantityRefusal,
+  normalizeTierLines,
+  parseTicketQuantity,
+} from '@/lib/tickets/purchasable'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
+import crypto from 'crypto'
 
 /** Hard cap on how many free tickets one claim may issue, across all tiers. */
 const MAX_FREE_TICKETS_PER_CLAIM = 10
@@ -54,23 +62,59 @@ interface TierClaim {
 }
 
 /**
- * Normalize and merge a `selections: [{ tierId, quantity }]` payload.
- * Duplicate tier ids are summed so "2 + 3 of the same tier" is one line of 5, and
- * non-positive / unparseable quantities are dropped rather than silently issued.
+ * The once-per-event free-claim lock for this claimant.
+ *
+ * `create()` on a deterministic doc id is atomic: of two concurrent claims by the
+ * same account (or the same guest email) exactly one gets the lock, which closes the
+ * check-then-act gap between the "already holds a free ticket?" query and the
+ * reservation below. A guest is keyed on a HASH of their email, so the lock doc
+ * never stores the address itself.
  */
-function normalizeSelections(
-  raw: unknown
-): Array<{ tierId: string; quantity: number }> {
-  if (!Array.isArray(raw)) return []
-  const merged = new Map<string, number>()
-  for (const entry of raw) {
-    const tierId = String((entry as any)?.tierId ?? '').trim()
-    const qty = Math.trunc(Number((entry as any)?.quantity ?? 0))
-    if (!tierId || !Number.isFinite(qty) || qty <= 0) continue
-    merged.set(tierId, (merged.get(tierId) || 0) + qty)
+function freeClaimLockId(eventId: string, identity: CheckoutIdentity): string {
+  if (identity.isGuest) {
+    const email = String(identity.email || '').trim().toLowerCase()
+    const digest = crypto.createHash('sha256').update(email).digest('hex').slice(0, 40)
+    return `${eventId}__guest_${digest}`
   }
-  return Array.from(merged.entries()).map(([tierId, quantity]) => ({ tierId, quantity }))
+  return `${eventId}__${identity.id}`
 }
+
+/**
+ * A legacy lock (no recorded ticket_ids) younger than this is a claim in flight:
+ * the double tap the lock exists for.
+ */
+const FREE_CLAIM_LOCK_IN_FLIGHT_MS = 2 * 60 * 1000
+
+/** The claimant's LIVE free tickets for this event (lib/tickets/status vocabulary). */
+function liveFreeTicketsFor(docs: any[], eventId: string): any[] {
+  return docs
+    .map((d: any) => ({ id: d.id, ...d.data() }))
+    .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status))
+}
+
+/** Statuses that void a free ticket for good. Anything else (transferred, unknown) is not void. */
+const VOIDED_FREE_TICKET_STATUSES = new Set(['refunded', 'cancelled', 'canceled', 'voided', 'void'])
+
+/** True only for a ticket that was refunded / cancelled and never used at the door. */
+function isVoidedFreeTicket(t: any): boolean {
+  if (t?.checked_in === true || t?.checked_in_at) return false
+  const status = String(t?.status ?? '').toLowerCase().trim()
+  if (isLiveTicketStatus(status)) return false
+  return VOIDED_FREE_TICKET_STATUSES.has(status)
+}
+
+function isAlreadyExists(err: any): boolean {
+  return err?.code === 6 || /ALREADY_EXISTS|already exists/i.test(String(err?.message || ''))
+}
+
+/**
+ * A guest who has already claimed gets a NEUTRAL answer. The email they typed is
+ * unverified, so echoing the earlier order's tickets (QR payloads, phone number)
+ * would hand anyone who knows an address that person's tickets. The real owner
+ * already has them in their inbox.
+ */
+const GUEST_ALREADY_CLAIMED_MESSAGE =
+  'You already claimed a ticket for this event. Check your email for your tickets.'
 
 /**
  * Sale-window / active / sold-out gate for a tier, mirroring the paid initiate
@@ -152,7 +196,15 @@ export async function POST(request: Request) {
     // still unlocks through /api/events/verify-access and is admitted by their grant.
     const { eventId, quantity = 1, tierId, selections, promoCode, refCode, guest, accessCode, attribution: rawAttribution } =
       await request.json()
-    const requestedSelections = normalizeSelections(selections)
+    // Whole-number quantities only. A line with quantity 0 is dropped (selectors send
+    // untouched tiers at 0); any other non-integer refuses the claim rather than being
+    // truncated into an order the claimant did not ask for. The 10-ticket cap below
+    // keeps its own message.
+    const selectionLines = normalizeTierLines(selections, Number.MAX_SAFE_INTEGER)
+    if (!selectionLines.ok) {
+      return fail(selectionLines.error, selectionLines.code, selectionLines.status)
+    }
+    const requestedSelections = selectionLines.lines
     const useSelections = requestedSelections.length > 0
     const requestedPromo = String(promoCode ?? '').trim()
     console.log(
@@ -183,9 +235,22 @@ export async function POST(request: Request) {
         400
       )
     }
-    const ticketQuantity = useSelections
-      ? selectionsTotal
-      : Math.min(Math.max(1, quantity), MAX_FREE_TICKETS_PER_CLAIM)
+    // Shape 1 keeps its frozen clamp to 1..10 for WHOLE numbers; a fractional or
+    // non-numeric quantity is refused (it used to reserve 1.5 seats and issue 2).
+    let singleQuantity = 1
+    if (!useSelections) {
+      const asNumber = typeof quantity === 'string' ? Number(quantity) : quantity
+      if (typeof asNumber !== 'number' || !Number.isInteger(asNumber)) {
+        const refusal = invalidQuantityRefusal(MAX_FREE_TICKETS_PER_CLAIM)
+        return fail(refusal.error, refusal.code, refusal.status)
+      }
+      singleQuantity = Math.min(Math.max(1, asNumber), MAX_FREE_TICKETS_PER_CLAIM)
+    }
+    const ticketQuantity = useSelections ? selectionsTotal : singleQuantity
+    if (parseTicketQuantity(ticketQuantity, MAX_FREE_TICKETS_PER_CLAIM) === null) {
+      const refusal = invalidQuantityRefusal(MAX_FREE_TICKETS_PER_CLAIM)
+      return fail(refusal.error, refusal.code, refusal.status)
+    }
     console.log('Validated quantity:', ticketQuantity)
 
     // Fetch event details from Firestore
@@ -198,6 +263,12 @@ export async function POST(request: Request) {
     }
 
     const event = { id: eventDoc.id, ...eventDoc.data() } as any
+
+    // Cancelled, unpublished, rejected or finished events issue nothing.
+    const purchasable = checkEventPurchasable(event)
+    if (!purchasable.ok) {
+      return fail(purchasable.error, purchasable.code, purchasable.status)
+    }
 
     // Resolve the claimant: the signed-in user, or a validated guest contact record.
     // A guest gets a `guest_…` id and a signed retrieval token; everything below treats
@@ -240,8 +311,16 @@ export async function POST(request: Request) {
       if (!resolved) {
         return fail('This promo code is not valid for this event.', 'promo_invalid', 400)
       }
-      if (!promoHasCapacity(resolved)) {
-        return fail('This promo code has reached its usage limit.', 'promo_exhausted', 400)
+      // Same pricing-time mirror of the redemption caps the paid routes use: the
+      // whole claim's quantity, and this claimant's per-buyer allowance.
+      const cover = await promoCanCoverOrder(resolved, {
+        qty: ticketQuantity,
+        buyerKey: promoBuyerKey(identity),
+      })
+      if (!cover.ok) {
+        return cover.reason === 'cap'
+          ? fail('This promo code has reached its usage limit.', 'promo_exhausted', 400)
+          : fail('You have already used this promo code.', 'promo_already_used', 400)
       }
       promo = resolved
     }
@@ -429,17 +508,148 @@ export async function POST(request: Request) {
     const userTicketsSnap = identity.isGuest
       ? await adminDb.collection('tickets').where('guest_email', '==', identity.email).get()
       : await adminDb.collection('tickets').where('attendee_id', '==', identity.id).get()
-    const existing = userTicketsSnap.docs
-      .map((d: any) => ({ id: d.id, ...d.data() }))
-      .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0)
+    // A signed-in claimant is deduped on their LIVE free tickets only: one that
+    // was refunded, cancelled or voided no longer holds the claim. (A guest's
+    // answer is neutral either way, so any earlier ticket still counts.)
+    const existing = identity.isGuest
+      ? userTicketsSnap.docs
+          .map((d: any) => ({ id: d.id, ...d.data() }))
+          .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0)
+      : liveFreeTicketsFor(userTicketsSnap.docs, String(eventId))
     if (existing.length > 0) {
       console.log('User already has free ticket(s) for event:', eventId, 'count:', existing.length)
+      if (identity.isGuest) {
+        return fail(GUEST_ALREADY_CLAIMED_MESSAGE, 'already_claimed', 409)
+      }
       return NextResponse.json({
         success: true,
         tickets: existing,
         count: existing.length,
         message: 'You already claimed a ticket for this event.',
       })
+    }
+
+    // Take the once-per-event lock BEFORE reserving, so two simultaneous claims by
+    // the same claimant cannot both pass the query above and both be issued.
+    const lockRef = adminDb.collection('free_claim_locks').doc(freeClaimLockId(String(eventId), identity))
+    let lockHeld = false
+    try {
+      await lockRef.create({
+        event_id: String(eventId),
+        kind: identity.isGuest ? 'guest' : 'account',
+        created_at: new Date().toISOString(),
+      })
+      lockHeld = true
+    } catch (lockErr: any) {
+      if (isAlreadyExists(lockErr)) {
+        console.log('[claim-free] concurrent/previous claim holds the lock', { eventId })
+        if (identity.isGuest) {
+          return fail(GUEST_ALREADY_CLAIMED_MESSAGE, 'already_claimed', 409)
+        }
+        // Signed in: the claim reopens ONLY when every ticket it issued has been
+        // voided (refunded / cancelled). A ticket transferred to someone else
+        // still holds it, or a claimant could farm free tickets: claim, transfer,
+        // claim again. Decided inside a transaction on the lock:
+        //  - the lock records its ticket_ids → read each by id; any one still live
+        //    (whoever holds it now) or checked in, or missing → the claim holds
+        //  - a legacy lock (no ticket_ids) → the claimant's tickets for this
+        //    event by their claimant fields; any live one holds it, and if none
+        //    can be found the claim also holds (it cannot be shown to be void)
+        //  - a fresh lock with nothing issued yet → a concurrent claim mid-way
+        // When the claim holds, the claimant's own live tickets come back, or a
+        // 409 — never "success" with zero tickets (build 44 read that as
+        // "N tickets claimed").
+        const takeover = await adminDb.runTransaction(async (tx: any) => {
+          const lockSnap = await tx.get(lockRef)
+          const ownSnap = await tx.get(
+            adminDb.collection('tickets').where('attendee_id', '==', identity.id)
+          )
+          const ownLive = liveFreeTicketsFor(ownSnap?.docs || [], String(eventId))
+          const held = () =>
+            ownLive.length > 0
+              ? ({ outcome: 'has_tickets' as const, tickets: ownLive })
+              : ({ outcome: 'held' as const })
+
+          const lock = lockSnap?.exists ? lockSnap.data() || {} : null
+          if (!lock) {
+            // Released between our create() and now: take it fresh.
+            tx.set(lockRef, {
+              event_id: String(eventId),
+              kind: 'account',
+              created_at: new Date().toISOString(),
+            })
+            return { outcome: 'taken' as const }
+          }
+
+          const recordedIds: string[] = Array.isArray(lock.ticket_ids)
+            ? lock.ticket_ids.map((id: any) => String(id)).filter(Boolean)
+            : []
+          let issuedTickets: any[]
+          if (recordedIds.length > 0) {
+            const snaps = await Promise.all(
+              recordedIds.map((id) => tx.get(adminDb.collection('tickets').doc(id)))
+            )
+            // A recorded ticket that no longer exists cannot be shown void.
+            if (snaps.some((snap: any) => !snap?.exists)) return held()
+            issuedTickets = snaps.map((snap: any) => snap.data() || {})
+          } else {
+            const createdAt = lock.created_at ? new Date(lock.created_at).getTime() : NaN
+            if (Number.isFinite(createdAt) && Date.now() - createdAt < FREE_CLAIM_LOCK_IN_FLIGHT_MS) {
+              return held()
+            }
+            const eventTicketsSnap = await tx.get(
+              adminDb.collection('tickets').where('event_id', '==', String(eventId))
+            )
+            issuedTickets = (eventTicketsSnap?.docs || [])
+              .map((d: any) => d.data() || {})
+              .filter(
+                (t: any) =>
+                  t.event_id === String(eventId) &&
+                  Number(t.price_paid ?? 0) === 0 &&
+                  [t.attendee_id, t.user_id, t.original_attendee_id, t.claimed_by].some(
+                    (v: any) => v != null && String(v) === String(identity.id)
+                  )
+              )
+            if (issuedTickets.length === 0) return held()
+          }
+          if (!issuedTickets.every(isVoidedFreeTicket)) return held()
+
+          tx.set(lockRef, {
+            event_id: String(eventId),
+            kind: 'account',
+            created_at: new Date().toISOString(),
+            replaced_voided_claim_at: new Date().toISOString(),
+            previous_ticket_ids: recordedIds,
+          })
+          return { outcome: 'taken' as const }
+        })
+        if (takeover.outcome === 'has_tickets') {
+          return NextResponse.json({
+            success: true,
+            tickets: takeover.tickets,
+            count: takeover.tickets.length,
+            message: 'You already claimed a ticket for this event.',
+          })
+        }
+        if (takeover.outcome === 'held') {
+          return fail('You already claimed a ticket for this event.', 'already_claimed', 409)
+        }
+        lockHeld = true
+      } else {
+        // A transient failure to write the lock must not block a legitimate claim;
+        // the per-claimant query above already ran.
+        console.warn('[claim-free] could not take claim lock (continuing)', { message: lockErr?.message })
+      }
+    }
+    /** Give the claimant their one claim back when this attempt issues nothing. */
+    const releaseLock = async () => {
+      if (!lockHeld) return
+      lockHeld = false
+      try {
+        await lockRef.delete()
+      } catch (e) {
+        console.warn('[claim-free] failed to release claim lock', { message: (e as any)?.message })
+      }
     }
 
     // Atomic capacity gate + increment (same helper the paid paths use). Reserving BEFORE issuing
@@ -461,6 +671,7 @@ export async function POST(request: Request) {
       logPrefix: '[claim-free]',
     })
     if (!reservation.ok) {
+      await releaseLock()
       const remaining = Number(reservation.remaining ?? 0)
       if (remaining <= 0) {
         return fail('No tickets available', 'no_tickets_available', 400)
@@ -498,6 +709,7 @@ export async function POST(request: Request) {
         discountApplied: promoDiscountCents / 100,
       })
       if (!redeem.redeemed) {
+        await releaseLock()
         await releaseInventoryReservation({
           eventId,
           quantity: ticketQuantity,
@@ -520,57 +732,86 @@ export async function POST(request: Request) {
 
     // Create tickets one at a time to ensure each gets a unique ID, tier by tier so
     // every ticket carries the tier it was actually claimed against.
-    const createdTickets = []
-    for (const claim of claims) {
-      for (let i = 0; i < claim.quantity; i++) {
-        const ticketData = {
-          event_id: eventId,
-          attendee_id: identity.id,
-          attendee_name: identity.name || identity.email || 'Guest',
-          // A guest ticket carries its buyer's contact details so support and refunds
-          // can find it by email or phone without a uid to join on.
-          ...(identity.isGuest
-            ? { is_guest: true, guest_email: identity.email, guest_phone: identity.phone || null }
-            : {}),
-          status: 'valid',
-          price_paid: 0,
-          currency: event.currency || 'HTG',
-          payment_method: 'free',
-          purchased_at: FieldValue.serverTimestamp(),
-          tier_name: claim.tierName || 'General Admission',
-          tier_id: claim.tierId,
-          // Include event date fields for scanner
-          start_datetime: event.start_datetime || null,
-          end_datetime: event.end_datetime || null,
-          event_date: event.start_datetime || null,
-          venue_name: event.venue_name || null,
-          city: event.city || null,
-          // Audit trail for a promo-zeroed ticket. Added ONLY when a promo actually
-          // paid for it, so a plain free claim keeps its exact historical doc shape.
-          ...(promo && promoDiscountCents > 0
-            ? { promo_code_id: promo.id, original_price: claim.unitPrice }
-            : {}),
-          // Promoter attribution — added only when a valid ref arrived, keeping the
-          // plain claim's doc shape unchanged. Free claims earn no commission; the
-          // promoter still gets credit for driving the RSVP.
-          ...(promoter ? { promoter_id: promoter.id, promoter_code: promoter.code } : {}),
-          // Visit attribution — likewise only when there is any.
-          ...ticketAttributionFields(attribution),
+    const createdTickets: any[] = []
+    try {
+      for (const claim of claims) {
+        for (let i = 0; i < claim.quantity; i++) {
+          const ticketData = {
+            event_id: eventId,
+            attendee_id: identity.id,
+            attendee_name: identity.name || identity.email || 'Guest',
+            // A guest ticket carries its buyer's contact details so support and refunds
+            // can find it by email or phone without a uid to join on.
+            ...(identity.isGuest
+              ? { is_guest: true, guest_email: identity.email, guest_phone: identity.phone || null }
+              : {}),
+            status: 'valid',
+            price_paid: 0,
+            currency: event.currency || 'HTG',
+            payment_method: 'free',
+            purchased_at: FieldValue.serverTimestamp(),
+            tier_name: claim.tierName || 'General Admission',
+            tier_id: claim.tierId,
+            // Include event date fields for scanner
+            start_datetime: event.start_datetime || null,
+            end_datetime: event.end_datetime || null,
+            event_date: event.start_datetime || null,
+            venue_name: event.venue_name || null,
+            city: event.city || null,
+            // Audit trail for a promo-zeroed ticket. Added ONLY when a promo actually
+            // paid for it, so a plain free claim keeps its exact historical doc shape.
+            ...(promo && promoDiscountCents > 0
+              ? { promo_code_id: promo.id, original_price: claim.unitPrice }
+              : {}),
+            // Promoter attribution — added only when a valid ref arrived, keeping the
+            // plain claim's doc shape unchanged. Free claims earn no commission; the
+            // promoter still gets credit for driving the RSVP.
+            ...(promoter ? { promoter_id: promoter.id, promoter_code: promoter.code } : {}),
+            // Visit attribution — likewise only when there is any.
+            ...ticketAttributionFields(attribution),
+          }
+
+          const ticketRef = await adminDb.collection('tickets').add(ticketData)
+
+          // Now update with QR code data using the actual ticket ID
+          await ticketRef.update({ qr_code_data: ticketRef.id })
+
+          const createdTicketDoc = await ticketRef.get()
+          const createdTicket = { id: createdTicketDoc.id, ...createdTicketDoc.data() }
+          createdTickets.push(createdTicket)
+          console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
         }
-
-        const ticketRef = await adminDb.collection('tickets').add(ticketData)
-
-        // Now update with QR code data using the actual ticket ID
-        await ticketRef.update({ qr_code_data: ticketRef.id })
-
-        const createdTicketDoc = await ticketRef.get()
-        const createdTicket = { id: createdTicketDoc.id, ...createdTicketDoc.data() }
-        createdTickets.push(createdTicket)
-        console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
       }
+    } catch (issueErr) {
+      // Nothing issued: hand the seats and the claimant's one claim back so a retry
+      // can succeed. (A partial issue keeps both — the claimant holds tickets.)
+      if (createdTickets.length === 0) {
+        await releaseInventoryReservation({
+          eventId,
+          quantity: ticketQuantity,
+          tierIncrements,
+          logPrefix: '[claim-free]',
+        })
+        await releaseLock()
+      }
+      throw issueErr
     }
     
     console.log('Created tickets:', createdTickets.length)
+
+    // Record WHICH tickets this claim issued. A later claim reads exactly these by
+    // id and reopens only once every one is refunded / cancelled (see the takeover
+    // above); one transferred away keeps the claim taken.
+    if (lockHeld) {
+      try {
+        await lockRef.set(
+          { issued_at: new Date().toISOString(), ticket_ids: createdTickets.map((t: any) => String(t.id)) },
+          { merge: true }
+        )
+      } catch (e) {
+        console.warn('[claim-free] failed to stamp claim lock', { message: (e as any)?.message })
+      }
+    }
 
     // NOTE: inventory was already reserved/incremented atomically by reserveInventoryAtomic above,
     // so we intentionally do NOT increment tickets_sold again here.

@@ -135,6 +135,9 @@ export async function shouldRateLimit(
   return { limited: false }
 }
 
+/** Ticket statuses that hold a seat (see ticket-status vocabulary). */
+const LIVE_TICKET_STATUSES = new Set(['valid', 'confirmed', 'active'])
+
 /**
  * Check if user has exceeded per-event ticket limit
  */
@@ -156,14 +159,25 @@ export async function checkTicketLimit(
 
   const maxAllowed = event.max_tickets_per_user || 10
 
-  // Count user's existing tickets for this event
-  const { data: tickets } = await supabase
-    .from('tickets')
-    .select('id')
-    .eq('event_id', eventId)
-    .eq('user_id', userId)
+  // Count the user's LIVE tickets for this event. Card tickets issued by the
+  // Stripe webhook historically carried only `attendee_id` (no `user_id`), so a
+  // count on user_id alone missed them and the limit never bit; refunded or
+  // cancelled tickets must not count against the buyer either. Two equality
+  // queries (one per field) merged by id — no composite index needed.
+  const ids = new Set<string>()
+  for (const field of ['attendee_id', 'user_id']) {
+    const snap = await adminDb
+      .collection('tickets')
+      .where('event_id', '==', eventId)
+      .where(field, '==', userId)
+      .get()
+    snap.docs.forEach((d: any) => {
+      const status = String(d.data()?.status ?? '').toLowerCase().trim()
+      if (LIVE_TICKET_STATUSES.has(status)) ids.add(d.id)
+    })
+  }
 
-  const currentCount = tickets?.length || 0
+  const currentCount = ids.size
 
   return {
     exceeded: currentCount >= maxAllowed,

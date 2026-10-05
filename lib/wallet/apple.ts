@@ -143,7 +143,7 @@ export async function buildApplePkpass(
       // updates the existing one instead of stacking duplicates in Wallet.
       serialNumber: ticket.id,
       organizationName: config.organizationName,
-      description: `${ticket.eventTitle} — ${ticket.tierName}`,
+      description: `${ticket.eventTitle} · ${ticket.tierName}`,
       // NO logoText: `logo.png` is the Tikèm wordmark, so setting logoText too
       // printed "tikèm" as art and "Tikèm" as text side by side in the header.
       backgroundColor: 'rgb(10, 10, 10)',

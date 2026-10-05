@@ -42,8 +42,13 @@ const state: any = {
     organizer_id: 'org1',
     currency: 'HTG',
     ticket_price: 0,
-    start_datetime: '2026-09-01T18:00:00.000Z',
-  },
+    // Purchasable: published and in the future (lib/tickets/purchasable.ts).
+    is_published: true,
+    status: 'published',
+    start_datetime: '2099-09-01T18:00:00.000Z',
+  } as any,
+  /** Once-per-event claim locks (`free_claim_locks`), keyed by doc id. */
+  locks: {} as Record<string, any>,
 }
 
 jest.mock('@/lib/firebase-db/server', () => ({ createClient: jest.fn() }))
@@ -140,6 +145,10 @@ jest.mock('@/lib/firebase/admin', () => {
             state.promos[ref.id] = { ...state.promos[ref.id], ...patch }
           },
           set: (ref: any, data: any) => {
+            if (ref.isLock) {
+              state.locks[ref.id] = data
+              return
+            }
             state.usageWrites.push({ id: ref.id, ...data })
           },
         }),
@@ -147,6 +156,29 @@ jest.mock('@/lib/firebase/admin', () => {
         if (name === 'events') {
           return {
             doc: () => ({ get: async () => ({ exists: true, id: 'evt1', data: () => state.event }) }),
+          }
+        }
+        if (name === 'free_claim_locks') {
+          return {
+            doc: (id: string) => ({
+              id,
+              isLock: true,
+              get: async () => ({ exists: Boolean(state.locks[id]), id, data: () => state.locks[id] }),
+              set: async (data: any, opts?: any) => {
+                state.locks[id] = opts?.merge ? { ...(state.locks[id] || {}), ...data } : data
+              },
+              create: async (data: any) => {
+                if (state.locks[id]) {
+                  const err: any = new Error('6 ALREADY_EXISTS: Document already exists')
+                  err.code = 6
+                  throw err
+                }
+                state.locks[id] = data
+              },
+              delete: async () => {
+                delete state.locks[id]
+              },
+            }),
           }
         }
         if (name === 'ticket_tiers') {
@@ -179,9 +211,19 @@ jest.mock('@/lib/firebase/admin', () => {
         }
         if (name === 'tickets') {
           return {
-            where: () => ({
+            doc: (id: string) => ({
+              id,
+              get: async () => {
+                const found = [...state.existingTickets, ...state.added].find((t: any) => t.id === id)
+                return { exists: Boolean(found), id, data: () => found }
+              },
+            }),
+            // Single-field equality, as the route queries (attendee_id / guest_email / event_id).
+            where: (field: string, _op: string, value: any) => ({
               get: async () => ({
-                docs: state.existingTickets.map((t: any) => ({ id: t.id, data: () => t })),
+                docs: state.existingTickets
+                  .filter((t: any) => t[field] === value)
+                  .map((t: any) => ({ id: t.id, data: () => t })),
               }),
             }),
             add: async (data: any) => {
@@ -221,6 +263,7 @@ function reset() {
     { id: 'paidA', event_id: 'evt1', name: 'General Admission', price: 1500, total_quantity: 100, sold_quantity: 0 },
   ]
   state.existingTickets = []
+  state.locks = {}
   state.added = []
   state.reserveCalls = []
   state.releaseCalls = []
@@ -380,7 +423,7 @@ describe('LEGACY shape {eventId, tierId, quantity} — mobile build 10, must not
   })
 
   it('still returns the existing free tickets on a repeat claim (per-user limit)', async () => {
-    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0 }]
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1' }]
     const body = await (await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 2 }))).json()
     expect(body.message).toBe('You already claimed a ticket for this event.')
     expect(body.count).toBe(1)
@@ -484,7 +527,7 @@ describe('NEW shape {eventId, selections}', () => {
   })
 
   it('applies the same per-user free-claim limit', async () => {
-    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0 }]
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1' }]
     const body = await (await POST(req({ eventId: 'evt1', selections: [{ tierId: 'freeA', quantity: 2 }] }))).json()
     expect(body.message).toBe('You already claimed a ticket for this event.')
     expect(state.added).toHaveLength(0)
@@ -615,18 +658,18 @@ describe('PROMO-ZEROED claims {…, promoCode}', () => {
     expect(state.added[0].promo_code_id).toBeUndefined()
   })
 
-  it('refuses and RELEASES the reservation when the atomic cap check loses the race', async () => {
-    // max_uses 1 passes the soft capacity check, but 3 tickets cannot be redeemed.
+  it('refuses a promo that cannot cover the whole claim BEFORE reserving anything', async () => {
+    // max_uses 1 cannot cover 3 tickets. The pricing-time check is now quantity-aware
+    // (promoCanCoverOrder), so this is refused up front instead of reserving and
+    // then releasing when the atomic redemption loses.
     const res = await POST(req({ eventId: 'evt1', tierId: 'paidA', quantity: 3, promoCode: 'LASTONE' }))
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('promo_exhausted')
     expect(state.added).toHaveLength(0)
     expect(state.promos.promoOneLeft.uses_count).toBe(0)
     expect(state.usageWrites).toHaveLength(0)
-    // Inventory reserved a moment earlier must be handed back.
-    expect(state.releaseCalls).toEqual([
-      { eventId: 'evt1', quantity: 3, tierIncrements: [{ tierId: 'paidA', quantity: 3 }], logPrefix: '[claim-free]' },
-    ])
+    expect(state.reserveCalls).toHaveLength(0)
+    expect(state.releaseCalls).toEqual([])
   })
 
   it('keeps every non-promo guard: a promo cannot rescue a sold-out or closed tier', async () => {
@@ -653,7 +696,7 @@ describe('PROMO-ZEROED claims {…, promoCode}', () => {
   })
 
   it('still honors the per-user free-claim limit on the promo path', async () => {
-    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0 }]
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1' }]
     const body = await (await POST(req({ eventId: 'evt1', tierId: 'paidA', quantity: 1, promoCode: 'FREE100' }))).json()
     expect(body.message).toBe('You already claimed a ticket for this event.')
     expect(state.added).toHaveLength(0)
@@ -889,17 +932,183 @@ describe('guest claim — no account required', () => {
     expect(state.added).toHaveLength(0)
   })
 
-  it('dedupes a repeat guest claim on the EMAIL, since there is no uid to key on', async () => {
+  it('dedupes a repeat guest claim on the EMAIL, with a NEUTRAL answer (no tickets leaked)', async () => {
     state.existingTickets = [
-      { id: 'old1', event_id: 'evt1', price_paid: 0, guest_email: 'marie@example.com' },
+      {
+        id: 'old1',
+        event_id: 'evt1',
+        price_paid: 0,
+        guest_email: 'marie@example.com',
+        guest_phone: '+50937000000',
+        qr_code_data: 'old1',
+      },
     ]
     asGuest()
-    const body = await (
-      await POST(
-        req({ eventId: 'evt1', tierId: 'freeA', guest: { name: 'Marie', email: 'marie@example.com' } })
-      )
-    ).json()
-    expect(body.message).toBe('You already claimed a ticket for this event.')
+    const res = await POST(
+      req({ eventId: 'evt1', tierId: 'freeA', guest: { name: 'Marie', email: 'marie@example.com' } })
+    )
+    const body = await res.json()
+    expect(res.status).toBe(409)
+    expect(body.code).toBe('already_claimed')
+    expect(body.error).toMatch(/Check your email/)
+    // Whoever typed this address learns nothing about the earlier order.
+    expect(body.tickets).toBeUndefined()
+    expect(JSON.stringify(body)).not.toContain('old1')
+    expect(JSON.stringify(body)).not.toContain('+50937000000')
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('a second simultaneous guest claim loses the lock and issues nothing', async () => {
+    asGuest()
+    const body = { eventId: 'evt1', tierId: 'freeA', guest: { name: 'Marie', email: 'marie@example.com' } }
+    const first = await POST(req(body))
+    expect(first.status).toBe(200)
+    // The query dedup would find the tickets anyway; prove the LOCK alone holds.
+    state.existingTickets = []
+    asGuest()
+    const second = await POST(req(body))
+    expect(second.status).toBe(409)
+    expect((await second.json()).code).toBe('already_claimed')
+    expect(state.reserveCalls).toHaveLength(1)
+  })
+})
+
+/**
+ * Money-path hardening: whole quantities only, and only for a live event.
+ */
+describe('quantity and event-state gates', () => {
+  beforeEach(() => {
+    reset()
+    state.event.status = 'published'
+    state.event.is_published = true
+    state.event.start_datetime = '2099-09-01T18:00:00.000Z'
+    delete state.event.end_datetime
+    delete state.event.rejected
+  })
+
+  it.each([0.01, 1.5, 1.01, 'abc'])('refuses a fractional / non-numeric legacy quantity %p', async (q) => {
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: q }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('invalid_quantity')
+    expect(state.added).toHaveLength(0)
+    expect(state.reserveCalls).toHaveLength(0)
+  })
+
+  it('refuses a fractional selection line instead of truncating it', async () => {
+    const res = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'freeA', quantity: 1.5 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('invalid_quantity')
+    expect(state.added).toHaveLength(0)
+  })
+
+  it.each([
+    ['cancelled', { status: 'cancelled' }, 'event_cancelled'],
+    ['unpublished', { is_published: false, status: 'draft' }, 'event_unavailable'],
+    ['rejected', { rejected: true, is_published: false }, 'event_unavailable'],
+    ['ended', { start_datetime: '2026-01-01T18:00:00Z', end_datetime: '2026-01-02T02:00:00Z' }, 'event_ended'],
+  ])('refuses a %s event', async (_label, patch, code) => {
+    Object.assign(state.event, patch)
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA' }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe(code)
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('gives the claim lock back when the reservation is refused, so a retry can succeed', async () => {
+    state.reserveResult = { ok: false, reason: 'tier_capacity', remaining: 0 }
+    expect((await POST(req({ eventId: 'evt1', tierId: 'freeA' }))).status).toBe(400)
+    expect(Object.keys(state.locks)).toHaveLength(0)
+    state.reserveResult = { ok: true }
+    expect((await POST(req({ eventId: 'evt1', tierId: 'freeA' }))).status).toBe(200)
+  })
+})
+
+/**
+ * The once-per-event lock reopens ONLY when every ticket the claim issued was
+ * voided. A ticket transferred away still holds it (claim, transfer, claim again
+ * would farm free tickets), and the route never answers success with no tickets.
+ */
+describe('free claim lock: stale vs held', () => {
+  const LOCK_ID = 'evt1__u1'
+  beforeEach(() => {
+    reset()
+    state.event.status = 'published'
+    state.event.is_published = true
+    state.event.start_datetime = '2099-09-01T18:00:00.000Z'
+    delete state.event.end_datetime
+    delete state.event.rejected
+  })
+
+  it('records the issued ticket ids on the lock', async () => {
+    expect((await POST(req({ eventId: 'evt1', tierId: 'freeA' }))).status).toBe(200)
+    expect(state.locks[LOCK_ID].ticket_ids).toEqual(state.added.map((t: any) => t.id))
+    expect(state.locks[LOCK_ID].issued_at).toBeTruthy()
+  })
+
+  it('a ticket transferred away keeps the claim taken: 409, nothing issued', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: '2026-01-01T00:00:00Z', issued_at: 'x', ticket_ids: ['t1'] }
+    state.existingTickets = [{ id: 't1', event_id: 'evt1', price_paid: 0, attendee_id: 'friend', status: 'valid' }]
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA' }))
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(body.code).toBe('already_claimed')
+    expect(body.success).toBeUndefined()
+    expect(state.added).toHaveLength(0)
+    expect(state.reserveCalls).toHaveLength(0)
+  })
+
+  it('a checked-in, since-cancelled ticket still holds the claim', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: '2026-01-01T00:00:00Z', ticket_ids: ['t1'] }
+    state.existingTickets = [{ id: 't1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'cancelled', checked_in: true }]
+    expect((await POST(req({ eventId: 'evt1', tierId: 'freeA' }))).status).toBe(409)
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('every issued ticket refunded / cancelled reopens the claim', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: '2026-01-01T00:00:00Z', issued_at: 'x', ticket_ids: ['t1', 't2'] }
+    state.existingTickets = [
+      { id: 't1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'refunded' },
+      { id: 't2', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'cancelled' },
+    ]
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA' }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.tickets.length).toBeGreaterThan(0)
+    expect(state.added).toHaveLength(1)
+    expect(state.locks[LOCK_ID].ticket_ids).toEqual([state.added[0].id])
+  })
+
+  it('returns the claimant’s own live tickets when they still hold the claim', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: '2026-01-01T00:00:00Z', ticket_ids: ['t1'] }
+    state.existingTickets = [{ id: 't1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'valid' }]
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA' }))
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.count).toBe(1)
+    expect(body.tickets[0].id).toBe('t1')
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('legacy lock (no ticket ids): all of the claimant’s tickets refunded reopens it', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: '2026-01-01T00:00:00Z' }
+    state.existingTickets = [{ id: 'old1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'refunded' }]
+    expect((await POST(req({ eventId: 'evt1', tierId: 'freeA' }))).status).toBe(200)
+    expect(state.added).toHaveLength(1)
+  })
+
+  it('legacy lock with no findable tickets stays taken (cannot be shown void)', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: '2026-01-01T00:00:00Z' }
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA' }))
+    expect(res.status).toBe(409)
+    expect((await res.json()).code).toBe('already_claimed')
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('a fresh lock with nothing issued yet (concurrent claim) is refused, never success with zero tickets', async () => {
+    state.locks[LOCK_ID] = { event_id: 'evt1', created_at: new Date().toISOString() }
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA' }))
+    expect(res.status).toBe(409)
     expect(state.added).toHaveLength(0)
   })
 })

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { collectionGroup, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { backendJson } from '../lib/api/backend';
 import { useI18n } from '../contexts/I18nContext';
 import { getStaffEventIds } from '../lib/staffAssignments';
 
@@ -35,8 +36,11 @@ export interface UseStaffEventsResult {
  * in `screens/staff/StaffEventsScreen` and `screens/staff/StaffScanScreen`.
  *
  * Mirrors those screens exactly:
- *  1. Discover assignments via the `members` collectionGroup (keyed by uid).
- *  2. Merge locally persisted eventIds (added on successful invite redeem).
+ *  1. Discover assignments from the server (GET /api/staff/events, an Admin
+ *     SDK `members` collectionGroup query on `uid`), so an event assigned on
+ *     another device shows up here.
+ *  2. Merge locally persisted eventIds (added on successful invite redeem);
+ *     these are the offline fallback when the server cannot be reached.
  *  3. Verify per-event access by reading the direct member doc; a member with
  *     `permissions.checkin === false` is excluded (missing → allowed, back-compat).
  *  4. Hydrate each allowed event's summary from its `events/{id}` doc.
@@ -66,17 +70,19 @@ export function useStaffEvents(): UseStaffEventsResult {
       try {
         const eventIds: string[] = [];
 
-        // Primary path: discover assignments from members collectionGroup.
+        // Primary path: the server's view of every assignment for this uid.
+        // The client-side collectionGroup query this replaced filtered on
+        // `__name__ == uid`, which Firestore rejects for a collection group (it
+        // needs a full document path), so it always failed and only events
+        // redeemed on THIS device ever appeared.
         try {
-          const memberQuery = query(collectionGroup(db, 'members'), where('__name__', '==', uid));
-          const memberSnap = await getDocs(memberQuery);
-          memberSnap.forEach((d) => {
-            const data = d.data() as StaffMemberDoc;
-            const derivedEventId = String(data?.eventId || d.ref.parent?.parent?.id || '');
-            if (derivedEventId) eventIds.push(derivedEventId);
-          });
-        } catch {
-          // If a collectionGroup query fails (rules/data edge cases), fall back below.
+          const res = await backendJson<{ eventIds?: string[] }>('/api/staff/events');
+          for (const id of Array.isArray(res?.eventIds) ? res.eventIds : []) {
+            if (id) eventIds.push(String(id));
+          }
+        } catch (e) {
+          // Offline or server error: the locally persisted list below still works.
+          console.warn('[useStaffEvents] /api/staff/events failed; using local assignments', e);
         }
 
         // Fallback: include locally persisted eventIds (added on successful invite redeem).
@@ -87,13 +93,20 @@ export function useStaffEvents(): UseStaffEventsResult {
 
         // Verify access per event by reading the direct member doc. The reads
         // are independent per id, so fan them out in parallel instead of awaiting
-        // each in sequence.
+        // each in sequence. One unreadable id (a stale local entry, an event
+        // deleted since) must not take the whole list down with it.
         const memberSnaps = await Promise.all(
-          uniqueEventIds.map((eventId) => getDoc(doc(db, 'events', eventId, 'members', uid)))
+          uniqueEventIds.map((eventId) =>
+            getDoc(doc(db, 'events', eventId, 'members', uid)).catch(() => null)
+          )
         );
+        // Every read failed (offline with nothing cached): an error, not "none".
+        if (memberSnaps.length > 0 && memberSnaps.every((snap) => snap === null)) {
+          throw new Error('Could not read any staff assignment');
+        }
         const allowedEventIds: string[] = [];
         memberSnaps.forEach((memberSnap, i) => {
-          if (!memberSnap.exists()) return;
+          if (!memberSnap || !memberSnap.exists()) return;
           const member = memberSnap.data() as StaffMemberDoc;
           const checkinFlag = member?.permissions?.checkin;
           // Back-compat: missing permissions should not hide assigned events.
@@ -103,11 +116,11 @@ export function useStaffEvents(): UseStaffEventsResult {
 
         // Hydrate each allowed event's summary — again independent per id.
         const eventSnaps = await Promise.all(
-          allowedEventIds.map((eventId) => getDoc(doc(db, 'events', eventId)))
+          allowedEventIds.map((eventId) => getDoc(doc(db, 'events', eventId)).catch(() => null))
         );
         const loaded: StaffEventSummary[] = [];
         eventSnaps.forEach((eventSnap) => {
-          if (!eventSnap.exists()) return;
+          if (!eventSnap || !eventSnap.exists()) return;
           const data = eventSnap.data() as any;
           loaded.push({
             id: eventSnap.id,

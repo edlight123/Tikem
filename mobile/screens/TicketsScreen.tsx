@@ -173,6 +173,10 @@ export default function TicketsScreen({ navigation }: any) {
         getDocs(query(collection(db, 'tickets'), where('user_id', '==', user.uid))),
         getDocs(query(collection(db, 'tickets'), where('attendee_id', '==', user.uid))),
       ]);
+      // Firestore runs on a memory-only cache here: offline, getDocs does not
+      // throw, it resolves with whatever the session cache holds (often
+      // nothing). Track that so an offline read never wipes the list.
+      let fromCache = byUserId.metadata.fromCache || byAttendeeId.metadata.fromCache;
       const ticketDocsById = new Map<string, any>();
       [...byUserId.docs, ...byAttendeeId.docs].forEach(doc => {
         if (!ticketDocsById.has(doc.id)) ticketDocsById.set(doc.id, doc);
@@ -191,6 +195,9 @@ export default function TicketsScreen({ navigation }: any) {
       // Group tickets by event
       const ticketsByEvent = new Map();
       ticketsData.forEach(ticket => {
+        // A ticket with no event_id would put `undefined` in the `in` query
+        // below and fail the whole list, so skip it.
+        if (!ticket.event_id) return;
         if (!ticketsByEvent.has(ticket.event_id)) {
           ticketsByEvent.set(ticket.event_id, []);
         }
@@ -210,6 +217,7 @@ export default function TicketsScreen({ navigation }: any) {
           where(documentId(), 'in', chunk)
         );
         const eventsSnapshot = await getDocs(eventsQuery);
+        if (eventsSnapshot.metadata.fromCache) fromCache = true;
         eventsSnapshot.docs.forEach(eventDoc => {
           const eventData = eventDoc.data();
           const eventTickets = ticketsByEvent.get(eventDoc.id) || [];
@@ -241,6 +249,26 @@ export default function TicketsScreen({ navigation }: any) {
         })
         .sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime());
       
+      if (fromCache) {
+        // Offline (or a partial session-cache read): prefer the last saved
+        // copy, and never overwrite it with this possibly empty result.
+        let restored = false;
+        try {
+          const raw = await AsyncStorage.getItem(ticketsCacheKey(user.uid));
+          if (raw) {
+            const c = JSON.parse(raw);
+            setUpcomingTickets(reviveEvents(c.upcoming));
+            setPastTickets(reviveEvents(c.past));
+            restored = true;
+          }
+        } catch {}
+        if (!restored && eventsData.length > 0) {
+          setUpcomingTickets(upcoming);
+          setPastTickets(past);
+        }
+        return;
+      }
+
       setUpcomingTickets(upcoming);
       setPastTickets(past);
 

@@ -36,7 +36,7 @@ export async function POST() {
     const stripeAccountId = (profile as any)?.stripeAccountId
     if (!stripeAccountId) {
       return NextResponse.json(
-        { error: 'No Stripe account yet — start onboarding first.', code: 'no_account' },
+        { error: 'No Stripe account yet. Start onboarding first.', code: 'no_account' },
         { status: 409 }
       )
     }

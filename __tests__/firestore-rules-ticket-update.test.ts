@@ -58,7 +58,7 @@ describe('firestore.rules — tickets (S1)', () => {
   })
 
   it('no money field is writable by a client', () => {
-    for (const f of ['price_paid', 'status', 'fee_incidence', 'payment_id', 'payment_method', 'refund_status', 'currency', 'original_currency', 'end_datetime']) {
+    for (const f of ['price_paid', 'status', 'fee_incidence', 'buyer_fee_charged', 'refund_face_amount', 'payment_id', 'payment_method', 'refund_status', 'currency', 'original_currency', 'end_datetime']) {
       expect(update).not.toContain(`'${f}'`)
     }
   })
@@ -68,27 +68,16 @@ describe('firestore.rules — tickets (S1)', () => {
     expect(block).not.toMatch(/allow (delete|write)/)
   })
 
-  it('every client ticket write in the mobile app fits the whitelist', () => {
-    const files = ['mobile/screens/organizer/TicketScannerScreen.tsx', 'mobile/screens/organizer/EventAttendeesScreen.tsx']
-    for (const f of files) {
+  // Check-in now goes through the transactional server endpoint
+  // (POST /api/staff/events/:id/check-in), so current mobile code writes no
+  // ticket fields itself. The rule's check-in whitelist stays for builds
+  // already in the field.
+  it('the current mobile app makes no direct client ticket writes', () => {
+    for (const f of ['mobile/screens/organizer/TicketScannerScreen.tsx', 'mobile/screens/organizer/EventAttendeesScreen.tsx']) {
       const src = read(f)
-      const idx = src.indexOf("updateDoc(doc(db, 'tickets'")
-      expect(idx).toBeGreaterThan(-1)
+      expect(src).not.toMatch(/(updateDoc|setDoc|deleteDoc)\(doc\(db, 'tickets'/)
+      expect(src).toContain('postCheckIn')
     }
-    // Scanner payload keys.
-    const scanner = read('mobile/screens/organizer/TicketScannerScreen.tsx')
-    const payload = scanner.slice(scanner.indexOf('const payload: Record<string, any> = {'), scanner.indexOf("const writePromise = updateDoc(doc(db, 'tickets'"))
-    const scannerKeys = new Set(
-      Array.from(payload.matchAll(/^\s*([a-z_]+):/gm)).map((m) => m[1]).concat(Array.from(payload.matchAll(/payload\.([a-z_]+)\s*=/g)).map((m) => m[1]))
-    )
-    for (const k of Array.from(scannerKeys)) expect(CHECK_IN_FIELDS).toContain(k)
-    // Manual check-in payload keys.
-    const attendees = read('mobile/screens/organizer/EventAttendeesScreen.tsx')
-    const call = attendees.slice(attendees.indexOf("await updateDoc(doc(db, 'tickets', attendee.id), {"))
-    const body = call.slice(0, call.indexOf('});'))
-    const keys = Array.from(body.matchAll(/^\s*([a-z_]+):/gm)).map((m) => m[1])
-    expect(keys.length).toBeGreaterThan(0)
-    for (const k of keys) expect(CHECK_IN_FIELDS).toContain(k)
   })
 })
 
@@ -117,16 +106,38 @@ describe('firestore.rules — events (S2)', () => {
 })
 
 describe('Haitian rails stamp fee_incidence from the payment (F2)', () => {
-  it.each([
-    ['lib/tickets/fulfillment.ts', 2],
-    ['app/api/moncash-button/return/route.ts', 2],
-  ])('%s stamps organizer incidence on every ticket write', (file, n) => {
-    const src = read(file as string)
-    expect(src.match(/fee_incidence: 'organizer',/g)).toHaveLength(n as number)
+  // Pass-on now reaches MonCash: initiate prices the buyer total and stamps the
+  // incidence on the ORDER; fulfillment reads it from there. It must never come
+  // from the event's client-editable setting.
+  it('fulfillment stamps the ORDER-recorded incidence on every ticket write', () => {
+    const src = read('lib/tickets/fulfillment.ts')
+    expect(src.match(/fee_incidence: feeIncidence,/g)).toHaveLength(2)
+    expect(src).toContain("pendingTx.fee_incidence === 'buyer'")
+    expect(src).not.toContain('incidenceForEvent')
+    expect(src).not.toMatch(/eventDetails\??\.fee_incidence/)
   })
-  it('the MonCash callback no longer copies the event setting', () => {
+  it('every ticket write also carries the server-only buyer_fee_charged proof the payout engine requires', () => {
+    const src = read('lib/tickets/fulfillment.ts')
+    expect(src.match(/buyer_fee_charged: buyerFeeChargedMinor,/g)).toHaveLength(2)
+    // 'buyer' is stamped only when the proof is there.
+    expect(src).toContain("const feeIncidence: 'buyer' | 'organizer' = buyerFeeChargedMinor > 0 ? 'buyer' : 'organizer'")
+  })
+  it('SogePay initiate prices pass-on and records it on the order like MonCash', () => {
+    const src = read('app/api/sogepay/initiate/route.ts')
+    expect(src).toContain('priceOrderCents(')
+    expect(src).toContain('fee_incidence: feeIncidence,')
+    expect(src).toContain('buyer_fee_original:')
+    expect(src).toContain('amount: chargeAmount,')
+  })
+  it('the MonCash return issues tickets only through the shared pipeline', () => {
+    const src = read('app/api/moncash-button/return/route.ts')
+    expect(src).toContain('fulfillPaidOrder(')
+    expect(src).not.toContain('fee_incidence')
+  })
+  it('the MonCash callback no longer issues tickets itself or reads the event setting', () => {
     const src = read('app/api/moncash/callback/route.ts')
     expect(src).not.toContain('incidenceForEvent')
-    expect(src).toContain("const feeIncidence = 'organizer' as const")
+    expect(src).toContain('fulfillPaidOrder(')
+    expect(src).not.toContain("from('tickets').insert")
   })
 })

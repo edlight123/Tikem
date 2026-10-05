@@ -244,7 +244,7 @@ export default async function PayoutFeesPage() {
               <p className="text-sm text-white/60">
                 {t(
                   'fees_page.processing_note',
-                  'Tikèm pays these out of its own fee, in every country and whoever bears the fee — they are never added to your buyer\'s total or deducted from your payout.'
+                  'Tikèm pays these out of its own fee, in every country and whoever bears the fee. They are never added to your buyer\'s total or deducted from your payout.'
                 )}
               </p>
             </div>

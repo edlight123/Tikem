@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     // precisely so this check can hold the line even if refunds are still running.
     if (eventData?.status === 'cancelled' || eventData?.payouts_frozen === true) {
       return NextResponse.json(
-        { error: 'This event was cancelled — its earnings are reserved for refunds.', code: 'cancelled_event' },
+        { error: 'This event was cancelled, so its earnings are reserved for refunds.', code: 'cancelled_event' },
         { status: 400 }
       )
     }
@@ -279,7 +279,7 @@ export async function POST(req: NextRequest) {
       const isReview = debit?.code === EARNINGS_CURRENCY_REVIEW_CODE
       return NextResponse.json(
         {
-          error: debit?.error || 'Your balance changed — please refresh and try again.',
+          error: debit?.error || 'Your balance changed. Please refresh and try again.',
           ...(isReview ? { code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true } : {}),
         },
         { status: 409 }

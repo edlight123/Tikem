@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore'
 import { unstable_cache } from 'next/cache'
 import { getCityMatchGroup } from '@/lib/filters/config'
+import { eventHasEnded } from '@/lib/home/feed'
 
 export interface Event {
   id: string
@@ -331,7 +332,54 @@ const readPublishedEvents = unstable_cache(
       snapshot = await buildBaseQuery('status').get()
     }
 
-    return snapshot.docs.map((doc: any) => {
+    // The base query above is ordered OLDEST first and capped, so once the
+    // catalogue holds more than `fetchLimit` published events it returns past
+    // events only and the upcoming ones fall off the end. Worse, start_datetime
+    // is stored as a Timestamp by mobile and as an ISO string by the web
+    // composer, and Firestore sorts every Timestamp before any string, so the
+    // string-dated (web-created) events are the first to be cut.
+    //
+    // So also read the upcoming window directly, once per stored type: a range
+    // on a Date matches only Timestamps, a range on an ISO string matches only
+    // strings. The window opens a week back so a multi-day event that started
+    // earlier but has not ended is still read; ended events are cut by the
+    // caller. A failing read (e.g. a missing index) degrades to the base query
+    // instead of emptying the feed.
+    const windowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const upcomingQuery = (bound: Date | string) => {
+      let q: any = adminDb
+        .collection('events')
+        .where('is_published', '==', true)
+        .where('start_datetime', '>=', bound)
+      if (city) {
+        const cityGroup = getCityMatchGroup(city)
+        q = cityGroup.length > 1 ? q.where('city', 'in', cityGroup) : q.where('city', '==', city)
+      }
+      if (category) q = q.where('category', '==', category)
+      return q
+        .orderBy('start_datetime', 'asc')
+        .limit(fetchLimit)
+        .get()
+        .catch((err: unknown) => {
+          console.warn('Upcoming events window read failed; using the base query only:', err)
+          return null
+        })
+    }
+    const windows = await Promise.all([
+      upcomingQuery(windowStart),
+      upcomingQuery(windowStart.toISOString()),
+    ])
+    const seen = new Set<string>()
+    const docs: any[] = []
+    for (const snap of [...windows, snapshot]) {
+      for (const d of snap?.docs || []) {
+        if (seen.has(d.id)) continue
+        seen.add(d.id)
+        docs.push(d)
+      }
+    }
+
+    return docs.map((doc: any) => {
       const data = doc.data()
       return {
         id: doc.id,
@@ -344,6 +392,8 @@ const readPublishedEvents = unstable_cache(
         commune: data.commune,
         address: data.address,
         country: data.country || 'HT', // Default to Haiti for events without country
+        // The zone cards print times in (lib/home/feed eventZone).
+        timezone: typeof data.timezone === 'string' ? data.timezone : undefined,
         status: data.status || 'draft',
         start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
         end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
@@ -396,11 +446,10 @@ export async function getDiscoverEvents(
     try {
       const now = new Date()
 
-      // NOTE: We intentionally avoid a default Firestore inequality filter on `start_datetime`.
-      // In this project, historical data may have mixed Firestore field types (Timestamp vs string),
-      // and Firestore queries are type-sensitive; a `>= Date` constraint can return zero docs.
-      // Instead, fetch a reasonable window of recent events (newest first), then filter in memory.
-      // Reduced from 200 to 50 for better performance - homepage only needs ~20-30 events
+      // start_datetime is stored with mixed types (Timestamp vs ISO string) and
+      // Firestore range filters are type-sensitive, so readPublishedEvents reads
+      // the upcoming window once per type and merges; ended events are cut in
+      // memory below.
       const fetchLimit = Math.min(Math.max(pageSize * 2, 50), 100)
 
       let events = await readPublishedEvents(
@@ -449,28 +498,11 @@ export async function getDiscoverEvents(
         }
       }
 
-      // Lenient filter: show events that are upcoming, ongoing, or recently started
-      // Events that started within the past week could still be ongoing (multi-day events)
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-
-      events = events.filter((event: Event) => {
-        const start = new Date(event.start_datetime)
-        const end = event.end_datetime ? new Date(event.end_datetime) : null
-
-        // If event has an end time, show if it hasn't ended yet
-        if (end && !Number.isNaN(end.getTime())) {
-          return end.getTime() >= now.getTime()
-        }
-
-        // If no end time, show if started within the last week (could be ongoing)
-        // or if it's in the future
-        if (!Number.isNaN(start.getTime())) {
-          return start.getTime() >= oneWeekAgo.getTime()
-        }
-
-        // If no valid dates, show it anyway
-        return true
-      })
+      // Drop ended events: past their end, or, with no end stored, past start
+      // plus the default run (lib/home/feed). This used to keep anything that
+      // started within the last WEEK, so a one-night event dated Oct 3 was
+      // still listed on Oct 5.
+      events = events.filter((event: Event) => !eventHasEnded(event as any, now.getTime()))
 
       // Return soonest upcoming first (query is already ASC, but keep this deterministic)
       events = events

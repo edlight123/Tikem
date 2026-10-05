@@ -106,7 +106,13 @@ export default function FreeTicketModal({
   const tf = (key: string, fallback: string) => (t(key) === key ? fallback : t(key));
 
   const isLocked = typeof lockedQuantity === 'number' && lockedQuantity > 0;
-  const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0);
+  // The web stores total_tickets 0 (or leaves it unset) to mean UNLIMITED, so
+  // only a positive cap limits the claim.
+  const totalCap = Number(event.total_tickets) || 0;
+  const isUnlimited = totalCap <= 0;
+  const remainingTickets = isUnlimited
+    ? Infinity
+    : totalCap - (Number(event.tickets_sold) || 0);
   const maxQuantity = Math.min(10, remainingTickets);
   // The quantity actually claimed: the upstream selection when locked, else the
   // stepper value.
@@ -160,6 +166,16 @@ export default function FreeTicketModal({
         return tf('freeTicket.errors.salesNotStarted', 'Ticket sales have not started yet.');
       case 'tier_sales_ended':
         return tf('freeTicket.errors.salesEnded', 'Ticket sales have ended.');
+      case 'already_claimed':
+        return tf('freeTicket.errors.alreadyClaimed', "You already claimed tickets for this event. Check your email for them.");
+      case 'promo_already_used':
+        return tf('freeTicket.errors.promoAlreadyUsed', "You have already used this promo code.");
+      case 'event_cancelled':
+        return tf('freeTicket.errors.eventCancelled', "This event has been cancelled.");
+      case 'event_unavailable':
+        return tf('freeTicket.errors.eventUnavailable', "This event is not available right now.");
+      case 'event_ended':
+        return tf('freeTicket.errors.eventEnded', "This event has already ended.");
       case 'tier_sold_out':
       case 'no_tickets_available':
         return t('freeTicket.soldOutBody');
@@ -312,9 +328,11 @@ export default function FreeTicketModal({
           <View style={styles.quantitySection}>
             <View style={styles.quantityHeader}>
               <Text style={styles.sectionLabel}>{t('freeTicket.quantityLabel')}</Text>
-              <Text style={styles.availabilityText}>
-                {rc('freeTicket.availableCount', remainingTickets)}
-              </Text>
+              {!isUnlimited && (
+                <Text style={styles.availabilityText}>
+                  {rc('freeTicket.availableCount', remainingTickets)}
+                </Text>
+              )}
             </View>
 
             {isLocked ? (

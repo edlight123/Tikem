@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   try {
     const ip = (request.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim()
     if (throttled(ip)) {
-      return NextResponse.json({ error: 'Too many uploads — try again in a few minutes.' }, { status: 429 })
+      return NextResponse.json({ error: 'Too many uploads. Try again in a few minutes.' }, { status: 429 })
     }
 
     const form = await request.formData()

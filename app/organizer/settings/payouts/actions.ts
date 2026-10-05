@@ -6,6 +6,13 @@ import { updatePayoutConfig as updatePayoutConfigLib, updatePayoutProfileConfig 
 import type { PayoutConfig, PayoutProfileId } from '@/lib/firestore/payout'
 import { setDeclaredMarkets } from '@/lib/firestore/organizer-markets'
 
+// The Stripe account is set only by the Connect onboarding route; a browser
+// payload must never be able to point an organizer's sales at another account.
+function withoutStripeAccount(updates: Partial<PayoutConfig>): Partial<PayoutConfig> {
+  const { stripeAccountId: _ignored, ...rest } = (updates || {}) as any
+  return rest
+}
+
 export async function updatePayoutConfig(
   updates: Partial<PayoutConfig>
 ): Promise<{ success: boolean; error?: string; requiresVerification?: boolean }> {
@@ -18,7 +25,7 @@ export async function updatePayoutConfig(
 
   try {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const result = await updatePayoutConfigLib(decodedClaims.uid, updates)
+    const result = await updatePayoutConfigLib(decodedClaims.uid, withoutStripeAccount(updates))
     if (!result?.success) {
       const message = String(result?.error || 'Failed to update payout configuration')
       if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
@@ -50,7 +57,7 @@ export async function updatePayoutProfileConfig(
 
   try {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const result = await updatePayoutProfileConfigLib(decodedClaims.uid, profileId, updates)
+    const result = await updatePayoutProfileConfigLib(decodedClaims.uid, profileId, withoutStripeAccount(updates))
     if (!result?.success) {
       const message = String(result?.error || 'Failed to update payout configuration')
       if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {

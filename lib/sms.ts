@@ -139,7 +139,7 @@ export function getTicketConfirmationSms(params: {
 }) {
   const qty = Math.max(1, Number(params.quantity || 1))
   const plural = qty > 1 ? `${qty} tickets` : 'Your ticket'
-  return `🎟️ Tikem — ${plural} for ${params.eventTitle}
+  return `🎟️ Tikem: ${plural} for ${params.eventTitle}
 
 📅 ${params.eventDate}
 

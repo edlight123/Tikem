@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import {
+  maxTierPriceCentsForEvent,
   mintPromoterStatsKey,
   normalizePromoterCode,
   promoterTokenFor,
@@ -105,6 +106,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     if (commissionType === 'percentage' && commissionValue > 50) {
       return NextResponse.json({ error: 'Commission percentage is capped at 50%' }, { status: 400 })
+    }
+    if (commissionType === 'flat_per_ticket') {
+      // A flat fee above the priciest ticket can never be earned in full; it only
+      // ever reads as "the whole sale goes to the promoter". Per-order the
+      // commission is also capped at the gross minus Tikèm's fee
+      // (calculateCommissionCents), so this is the up-front guard.
+      const maxTierCents = await maxTierPriceCentsForEvent(id, ownership.event)
+      if (maxTierCents !== null && Math.round(commissionValue * 100) > maxTierCents) {
+        return NextResponse.json(
+          { error: 'A flat commission cannot be more than the ticket price' },
+          { status: 400 }
+        )
+      }
     }
 
     // One code per event — same dupe rule as promo codes.

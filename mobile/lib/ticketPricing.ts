@@ -170,9 +170,15 @@ export interface TotalSelection {
 }
 
 export interface TotalDiscount {
-  /** Percentage off the subtotal, e.g. 10 for 10%. */
+  /** Percentage off EACH ticket, e.g. 10 for 10%. */
   percentage?: number | null;
-  /** Flat amount off the subtotal, in MAJOR units. Applied only when no percentage. */
+  /**
+   * Flat amount off EACH ticket, in MAJOR units. Applied only when no percentage.
+   * Per ticket, not per order: that is how the server prices a promo (see
+   * `calculateDiscount` in the web app's lib/promo-codes.ts, applied to the unit
+   * price and then multiplied by the quantity), so a 500 HTG code on 3 tickets
+   * takes 1,500 HTG off.
+   */
   amount?: number | null;
 }
 
@@ -180,24 +186,32 @@ export interface TotalDiscount {
  * Total for a set of selections, in MAJOR units, computed on integer cents so
  * repeated adds and a percentage discount can't accumulate binary-float error.
  * Never returns a negative total.
+ *
+ * The discount is applied to each UNIT price exactly as the server does it: the
+ * per-ticket discount is clamped to the ticket's price, the discounted unit price
+ * is rounded to the cent, and only then multiplied by the quantity. Rounding per
+ * unit (not on the order total) is what keeps this equal to the amount charged.
  */
 export function computeSelectionTotal(
   selections: TotalSelection[],
   discount?: TotalDiscount | null
 ): number {
+  const pct = Number(discount?.percentage ?? 0);
+  const flat = Number(discount?.amount ?? 0);
+  const hasPct = Number.isFinite(pct) && pct > 0;
+  const hasFlat = !hasPct && Number.isFinite(flat) && flat > 0;
+
   let cents = 0;
   for (const s of selections) {
     const qty = Math.max(0, Math.trunc(Number(s.quantity) || 0));
     if (qty === 0) continue;
-    cents += toCents(s.price) * qty;
-  }
-
-  const pct = Number(discount?.percentage ?? 0);
-  const flat = Number(discount?.amount ?? 0);
-  if (Number.isFinite(pct) && pct > 0) {
-    cents = Math.round(cents * (1 - pct / 100));
-  } else if (Number.isFinite(flat) && flat > 0) {
-    cents = cents - toCents(flat);
+    const unitCents = toCents(s.price);
+    let offCents = 0;
+    if (hasPct) offCents = (unitCents * pct) / 100;
+    else if (hasFlat) offCents = toCents(flat);
+    offCents = Math.min(Math.max(0, offCents), unitCents);
+    const discountedUnitCents = Math.max(0, Math.round(unitCents - offCents));
+    cents += discountedUnitCents * qty;
   }
 
   return fromCents(Math.max(0, cents));

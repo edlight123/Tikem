@@ -100,8 +100,12 @@ export async function applySoldCountIncrements(params: {
 export interface InventoryReservationResult {
   /** Whether inventory was successfully reserved (and incremented). */
   ok: boolean
-  /** Why a reservation was refused (only set when ok === false), or 'error' on a fail-open. */
-  reason?: 'event_capacity' | 'tier_capacity' | 'error'
+  /**
+   * Why a reservation was refused (only set when ok === false), or 'error' on a fail-open.
+   *  - invalid_quantity: a fractional / non-integer seat count (never reserved, never issued)
+   *  - tier_mismatch:    a tier that belongs to a DIFFERENT event than the order
+   */
+  reason?: 'event_capacity' | 'tier_capacity' | 'invalid_quantity' | 'tier_mismatch' | 'error'
   /** The tier that was sold out (only for reason === 'tier_capacity'). */
   tierId?: string | null
   /** How many were still available for the blocking resource. */
@@ -152,6 +156,13 @@ export async function reserveInventoryAtomic(params: {
 
   const validTierIncrements = (tierIncrements || []).filter((t) => t?.tierId && t.quantity > 0)
 
+  // Seats are whole. A fractional count is how a 0.01-ticket order got a full ticket:
+  // refuse it here too, so no fulfillment path can issue against it.
+  if (!Number.isInteger(qty) || validTierIncrements.some((t) => !Number.isInteger(Number(t.quantity)))) {
+    console.error(`${logPrefix} refusing to reserve a non-integer quantity`, { eventId, quantity: qty })
+    return { ok: false, reason: 'invalid_quantity', requested: qty }
+  }
+
   try {
     return await adminDb.runTransaction(async (tx: any) => {
       const eventRef = adminDb.collection('events').doc(String(eventId))
@@ -187,6 +198,16 @@ export async function reserveInventoryAtomic(params: {
         const inc = tierRefs[i].inc
         if (!snap.exists) continue
         const tier = snap.data() || {}
+        // A tier from ANOTHER event must never be sold (or counted) under this one.
+        const tierEventId = tier.event_id ?? tier.eventId
+        if (tierEventId != null && String(tierEventId) !== String(eventId)) {
+          return {
+            ok: false,
+            reason: 'tier_mismatch',
+            tierId: inc.tierId,
+            requested: inc.quantity,
+          } as InventoryReservationResult
+        }
         const total = Number(tier.total_quantity ?? tier.quantity ?? 0)
         if (Number.isFinite(total) && total > 0) {
           const sold = Number(tier.sold_quantity || 0)
@@ -208,7 +229,11 @@ export async function reserveInventoryAtomic(params: {
         { tickets_sold: FieldValue.increment(qty), updated_at: new Date().toISOString() },
         { merge: true }
       )
-      for (const t of tierRefs) {
+      for (let i = 0; i < tierRefs.length; i++) {
+        const t = tierRefs[i]
+        // Never conjure a tier doc that does not exist (a merge-set would create one
+        // holding only a sold counter).
+        if (!tierSnaps[i].exists) continue
         tx.set(
           t.ref,
           { sold_quantity: FieldValue.increment(t.inc.quantity), updated_at: new Date().toISOString() },

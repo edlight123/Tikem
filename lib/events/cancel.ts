@@ -1,6 +1,12 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
-import { refundTicket, resolveBuyerContact, type TicketRefundResult } from '@/lib/tickets/refundExecution'
+import {
+  refundTicket,
+  resolveBuyerContact,
+  reversePromoterCommission,
+  type TicketRefundResult,
+} from '@/lib/tickets/refundExecution'
+import { notifyAdminsOfQueuedRefunds, type QueuedRefundNotice } from '@/lib/tickets/manualRefundQueue'
 
 /**
  * Cancelling an event is a MONEY operation, not a status flag.
@@ -24,6 +30,9 @@ import { refundTicket, resolveBuyerContact, type TicketRefundResult } from '@/li
  *        - MonCash / NatCash / SogePay voided and queued for an admin
  *        - free / comp voided, nothing to refund
  *   4. tell every affected buyer, in-app and by email
+ *   5. reverse promoter commission on every voided ticket (refundTicket does it
+ *      for refunded/queued ones; free and failed-held ones are done here), and
+ *      send the admins ONE summary of the mobile-money refunds queued by hand
  *
  * IDEMPOTENT: re-running on an already-cancelled event resumes the sweep
  * instead of refusing. Each ticket is claimed in a transaction before money
@@ -153,6 +162,7 @@ export async function cancelEventWithRefunds({
   }
 
   const refundEvent = { id: eventId, title: event?.title || null, organizer_id: event?.organizer_id || null }
+  const queuedForAdmins: QueuedRefundNotice[] = []
 
   for (const doc of ticketsSnap.docs) {
     const res = await refundTicket(doc.id, {
@@ -161,6 +171,8 @@ export async function cancelEventWithRefunds({
       event: refundEvent,
       onFailure: 'hold',
       cancellation: true,
+      // One summary email for the whole sweep, sent below.
+      notifyAdmins: false,
     })
 
     let notice: BuyerNotice | null = null
@@ -170,9 +182,21 @@ export async function cancelEventWithRefunds({
     } else if (res.outcome === 'queued') {
       outcome.refundsQueuedManual += 1
       notice = { kind: 'manual', amount: res.amount, currency: res.currency }
+      queuedForAdmins.push({
+        ticketId: doc.id,
+        eventTitle: refundEvent.title,
+        amount: res.amount,
+        currency: res.currency,
+        method: String(res.ticket?.payment_method || 'moncash').toLowerCase(),
+        reason: 'event_cancelled',
+        needsReview: res.needsReview,
+      })
     } else if (res.outcome === 'failed') {
       outcome.refundsFailed += 1
       outcome.failures.push({ ticketId: doc.id, reason: res.error })
+      // The ticket is held void ('hold'), so the sale is dead even though its
+      // money is still being chased: no commission on it.
+      await reversePromoterCommission(doc.id, 'event_cancelled_refund_failed')
       // A retry that fails again was already announced by the first run.
       if (String(res.ticket?.refund_status || '').toLowerCase() !== 'failed') notice = { kind: 'pending' }
     } else if (res.reason === 'free') {
@@ -185,6 +209,7 @@ export async function cancelEventWithRefunds({
         )
         outcome.freeTicketsVoided += 1
         notice = { kind: 'free' }
+        await reversePromoterCommission(doc.id, 'event_cancelled_free')
       } catch (e: any) {
         outcome.refundsFailed += 1
         outcome.failures.push({ ticketId: doc.id, reason: e?.message || 'void_failed' })
@@ -204,6 +229,10 @@ export async function cancelEventWithRefunds({
       outcome.notified += 1
     }
   }
+
+  // 5. One admin email for every refund this sweep queued for a manual payout.
+  // Best-effort (never throws); the queue docs are the record.
+  if (queuedForAdmins.length > 0) await notifyAdminsOfQueuedRefunds(queuedForAdmins)
 
   return outcome
 }

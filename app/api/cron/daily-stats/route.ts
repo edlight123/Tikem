@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
       .collection('tickets')
       .where('purchased_at', '>=', yesterday)
       .where('purchased_at', '<', today)
-      .where('status', '==', 'confirmed')
+      .where('status', 'in', liveTicketStatusesForQuery())
       .get()
 
     // Calculate GMV (Gross Merchandise Value)

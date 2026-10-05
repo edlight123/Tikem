@@ -82,6 +82,31 @@ export async function registerForPushNotificationsIfPossible(): Promise<string |
   return token
 }
 
+/**
+ * Sign-out: detach this device's Expo token from the signed-in account so the
+ * previous user's pushes stop arriving here, and forget the cached token so the
+ * next account re-registers it. Must run BEFORE Firebase sign-out (the call is
+ * authenticated). Never throws and never waits more than a few seconds: an
+ * offline phone still signs out (the next registration on this device detaches
+ * the token server-side anyway).
+ */
+export async function unregisterPushTokenOnSignOut(timeoutMs = 3000): Promise<void> {
+  let token: string | null = null
+  try {
+    token = await AsyncStorage.getItem(STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+  if (token) {
+    const call = backendJson('/api/push/unregister-expo', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }).catch(() => {})
+    await Promise.race([call, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))])
+  }
+  await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {})
+}
+
 export function addPushNotificationListeners(onUrl?: (url: string) => void) {
   const receivedSub = Notifications.addNotificationReceivedListener(() => {
     // no-op (UI handled by OS)

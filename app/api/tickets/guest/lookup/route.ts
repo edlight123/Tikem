@@ -71,7 +71,7 @@ export async function POST(request: Request) {
               <p style="margin:24px 0">
                 <a href="${encodeURI(url)}" style="background:#0f172a;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600">View my ticket</a>
               </p>
-              <p style="font-size:12px;color:#64748b">Keep this link private — anyone with it can view your ticket.</p>
+              <p style="font-size:12px;color:#64748b">Keep this link private: anyone with it can view your ticket.</p>
             </div>
           `,
         })
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         try {
           await sendSms({
             to: order.phone,
-            message: `🎟️ Tikem — your ticket for ${title}: ${url}`,
+            message: `🎟️ Your Tikem ticket for ${title}: ${url}`,
           })
         } catch (err) {
           console.error('[guest-lookup] SMS failed', (err as any)?.message)

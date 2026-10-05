@@ -51,6 +51,27 @@ const getPayoutChangeVerificationRef = (organizerId: string) =>
     .collection('security')
     .doc(PAYOUT_CHANGE_VERIFICATION_DOC_ID)
 
+/**
+ * Fields of a payout config/profile that only the server may decide.
+ *
+ * updatePayoutConfig / updatePayoutProfileConfig are reachable from the
+ * organizer's own browser through the server actions in
+ * app/organizer/settings/payouts/actions.ts, which forward the client's object
+ * as-is. Spreading it unfiltered let an organizer write
+ * verificationStatus.identity = 'verified' (activating payouts without KYC),
+ * clear the 24h `on_hold` that follows a destination change by sending
+ * status / payoutHoldUntil, or backdate createdAt. These are computed here
+ * (status, hold) or derived from verification records (verificationStatus),
+ * so callers never need to pass them.
+ */
+const SERVER_OWNED_PAYOUT_FIELDS = ['status', 'payoutHoldUntil', 'verificationStatus', 'createdAt', 'updatedAt'] as const
+
+function stripServerOwnedPayoutFields(updates: Partial<PayoutConfig> | null | undefined): Partial<PayoutConfig> {
+  const out: Record<string, unknown> = { ...(updates || {}) }
+  for (const key of SERVER_OWNED_PAYOUT_FIELDS) delete out[key]
+  return out as Partial<PayoutConfig>
+}
+
 const isSensitivePayoutDetailsUpdate = (updates: Partial<PayoutConfig>): boolean => {
   if (!updates) return false
 
@@ -389,9 +410,12 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     const finalVerificationStatus = {
       // For identity: prioritize organizer verification check, then payout-specific verification, then config data
       identity: verificationStatus.identity,
-      // For bank/phone: use verification docs first, then config data
-      bank: verificationStatus.bank !== 'pending' ? verificationStatus.bank : (data?.verificationStatus?.bank || 'pending'),
-      phone: verificationStatus.phone !== 'pending' ? verificationStatus.phone : (data?.verificationStatus?.phone || 'pending'),
+      // For bank/phone: verification docs only. payoutConfig/main was
+      // client-writable until the rules were locked, and nothing on the server
+      // ever writes its verificationStatus, so a stored value there is a
+      // self-asserted claim, not a verification.
+      bank: verificationStatus.bank,
+      phone: verificationStatus.phone,
     }
 
     const baseConfig: PayoutConfig = {
@@ -448,7 +472,7 @@ export async function updatePayoutConfig(
       normalizedLocation === 'canada'
 
     // US/CA payouts are handled via Stripe Connect, so we should not store bank/mobile-money details.
-    const sanitizedUpdates: Partial<PayoutConfig> = { ...updates }
+    const sanitizedUpdates: Partial<PayoutConfig> = stripServerOwnedPayoutFields(updates)
     if (isStripeConnectAccount) {
       delete (sanitizedUpdates as any).bankDetails
       delete (sanitizedUpdates as any).mobileMoneyDetails
@@ -581,7 +605,7 @@ export async function updatePayoutProfileConfig(
       normalizedLocation === 'canada'
 
     // Stripe Connect profile should never store bank/mobile money details.
-    const sanitizedUpdates: Partial<PayoutConfig> = { ...updates }
+    const sanitizedUpdates: Partial<PayoutConfig> = stripServerOwnedPayoutFields(updates)
     if (isStripeConnectAccount) {
       delete (sanitizedUpdates as any).bankDetails
       delete (sanitizedUpdates as any).mobileMoneyDetails

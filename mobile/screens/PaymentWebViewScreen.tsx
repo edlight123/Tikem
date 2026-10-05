@@ -438,6 +438,37 @@ export default function PaymentWebViewScreen() {
     [handledTerminal]
   )
 
+  // The gateway return routes report a machine code (`?reason=sold_out`). Showing
+  // it raw put "Reason: amount_mismatch" in front of buyers; map the known codes
+  // to translated copy and keep the raw code in the log for support.
+  const failureReasonMessage = useCallback(
+    (reason: string): string | undefined => {
+      if (!reason) return undefined
+      console.warn('[PaymentWebView] payment failed:', reason)
+      const known = [
+        'payment_failed',
+        'sold_out',
+        'capacity_exceeded',
+        'amount_mismatch',
+        'ticket_creation_failed',
+        'missing_order',
+        'missing_transaction',
+        'transaction_not_found',
+        'processing_error',
+        // Sent by moncash-button/return and moncash/callback when a paid order is
+        // flagged for refund or cannot be fulfilled.
+        'refund_pending',
+        'refused',
+        'invalid_order',
+      ]
+      const code = reason.trim().toLowerCase()
+      return known.includes(code)
+        ? t(`screens.payment.reasons.${code}`)
+        : t('screens.payment.reasons.generic')
+    },
+    [t]
+  )
+
   const handleTryAgain = useCallback(() => {
     setFailure(null)
     setHandledTerminal(false)
@@ -485,10 +516,10 @@ export default function PaymentWebViewScreen() {
             return ''
           }
         })()
-        finishWithFailure(reason ? `${t('screens.payment.reasonPrefix')}${reason}` : undefined)
+        finishWithFailure(failureReasonMessage(reason))
       }
     },
-    [finishWithFailure, finishWithSuccess, handledTerminal, t]
+    [failureReasonMessage, finishWithFailure, finishWithSuccess, handledTerminal]
   )
 
   // Shared header: close (with cancel-confirm) + a secure-payment trust cue.
@@ -607,7 +638,7 @@ export default function PaymentWebViewScreen() {
             }
             if (parsed?.status === 'failed') {
               const reason = typeof parsed?.reason === 'string' ? parsed.reason : ''
-              finishWithFailure(reason ? `${t('screens.payment.reasonPrefix')}${reason}` : undefined)
+              finishWithFailure(failureReasonMessage(reason))
             }
           } catch {
             // ignore

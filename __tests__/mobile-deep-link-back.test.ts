@@ -51,6 +51,13 @@ describe('linking config', () => {
       TicketDetail: 'tickets/:ticketId',
       EventDetail: 'events/:eventId',
       CategoryEvents: 'national-day/:nationalDay',
+      // Push notification targets (lib/pushNotifications maps relative URLs to tikem://).
+      EventTickets: 'tickets/event/:eventId',
+      EventAttendees: 'organizer/events/:eventId/attendees',
+      OrganizerEventManagement: 'organizer/events/:eventId',
+      OrganizerEarningsHub: 'organizer/payouts',
+      OrganizerPayoutSettings: 'organizer/settings/payouts',
+      Main: { screens: { Discover: 'discover' } },
     })
   })
 })

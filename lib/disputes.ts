@@ -705,16 +705,16 @@ export function getDisputeOpenedEmail(params: {
                     <div style="background: #f8fafc; border-radius: 14px; padding: 20px; margin-bottom: 28px;">
                       <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">What helps us win this</div>
                       <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #475569; line-height: 1.9;">
-                        <li>Proof the buyer showed up — a scan record or a signed door list</li>
+                        <li>Proof the buyer showed up, such as a scan record or a signed door list</li>
                         <li>Anything they sent you: messages, a name at the door, a transfer</li>
                         <li>Your event page, terms and refund policy as the buyer saw them</li>
-                        <li>If this looks like a genuine mistake, tell us — a refund now costs less than a lost dispute</li>
+                        <li>If this looks like a genuine mistake, tell us. A refund now costs less than a lost dispute</li>
                       </ul>
                     </div>
 
                     <div style="font-size: 14px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      Tikèm is the merchant of record for this sale, so we file the response to the bank —
-                      you cannot answer it directly in Stripe. Reply to this email or contact support with your
+                      Tikèm is the merchant of record for this sale, so we file the response to the bank.
+                      You cannot answer it directly in Stripe. Reply to this email or contact support with your
                       evidence and we will submit it for you.
                     </div>
 
@@ -759,9 +759,9 @@ function getDisputeAdminEmail(record: DisputeRecord, eventType: string): string 
     [
       'Attributed to',
       a.attributed
-        ? `${escapeHtml(a.eventTitle || a.eventId || 'event')} — organizer ${escapeHtml(
+        ? `${escapeHtml(a.eventTitle || a.eventId || 'event')} (organizer ${escapeHtml(
             a.organizerName || a.organizerId || 'unknown'
-          )}`
+          )})`
         : `<strong style="color:#b91c1c">UNATTRIBUTED (${escapeHtml(
             a.unattributedReason || 'unknown'
           )})</strong>`,
@@ -782,7 +782,7 @@ function getDisputeAdminEmail(record: DisputeRecord, eventType: string): string 
   </table>
   ${
     a.lookupFailed
-      ? `<p style="margin:16px 0 0;color:#b45309;font-size:13px">⚠️ A ticket lookup ERRORED while attributing this dispute — "unattributed" here may be a Firestore failure, not a missing order.</p>`
+      ? `<p style="margin:16px 0 0;color:#b45309;font-size:13px">⚠️ A ticket lookup ERRORED while attributing this dispute, so "unattributed" here may be a Firestore failure, not a missing order.</p>`
       : ''
   }
   <p style="margin:20px 0 0"><a href="${appUrl}/admin/disputes" style="color:#ef4444;font-weight:600">Open the disputes log</a></p>
@@ -881,7 +881,7 @@ async function emailAdmins(record: DisputeRecord, eventType: string): Promise<bo
     recipients.map((to) =>
       sendEmail({
         to,
-        subject: `[Tikèm] Chargeback opened — ${amount} on ${label}`,
+        subject: `[Tikèm] Chargeback opened: ${amount} on ${label}`,
         html,
       }).catch((err) => {
         console.error('[disputes] admin email failed', { to, message: err?.message })

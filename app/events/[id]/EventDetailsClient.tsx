@@ -19,12 +19,13 @@ import SpotifyEmbed from '@/components/events/SpotifyEmbed'
 import VenueMap from '@/components/events/VenueMap'
 import EventLineup from '@/components/events/EventLineup'
 import { Shield } from 'lucide-react'
-import { format } from 'date-fns'
+import { formatInZone } from '@/lib/home/format'
+import { eventZone } from '@/lib/home/feed'
 import Image from 'next/image'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { resolveEventPricing } from '@/lib/ticketPricing'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
-import { dateLocaleFor } from '@/lib/dateLocale'
+import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
 
 interface EventDetailsClientProps {
   event: any
@@ -37,6 +38,11 @@ interface EventDetailsClientProps {
 export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents }: EventDetailsClientProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
+  const numLocale = intlLocaleFor(i18n.language)
+  // Every date on this page prints in the EVENT's zone. Formatting in the
+  // runtime's zone printed UTC on the server and the reader's zone in the
+  // browser, a hydration mismatch (React #418) on every event page.
+  const zone = eventZone(event)
   const startDate = new Date(event.start_datetime)
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
@@ -253,10 +259,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 <div>
                   <p className="eyebrow mb-1.5 text-[10px] text-white/50">{t('events.date_time')}</p>
                   <p className="text-[15px] text-white" suppressHydrationWarning>
-                    {format(new Date(event.start_datetime), 'EEE, MMM d, yyyy', { locale: dfLocale })}
+                    {formatInZone(event.start_datetime, zone, 'EEE, MMM d, yyyy', { locale: dfLocale })}
                   </p>
                   <p className="text-[13px] text-white/60" suppressHydrationWarning>
-                    {format(new Date(event.start_datetime), 'h:mm a', { locale: dfLocale })}
+                    {formatInZone(event.start_datetime, zone, 'h:mm a', { locale: dfLocale })}
                   </p>
                 </div>
                 <div className="min-w-0 max-w-[260px]">
@@ -333,6 +339,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
 
       <MobileKeyFacts
         startDate={event.start_datetime}
+        zone={zone}
         venueName={event.venue_name}
         city={event.city}
         address={event.address || ''}
@@ -358,6 +365,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         city={event.city}
         startDatetime={event.start_datetime}
         endDatetime={event.end_datetime || event.start_datetime}
+        zone={zone}
         organizerName={organizerLabel}
         organizerId={event.organizer_id}
         isVerified={event.users?.is_verified || false}
@@ -373,7 +381,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           <ShareButtonInline
             eventId={event.id}
             eventTitle={event.title}
-            eventDate={format(new Date(event.start_datetime), 'MMM d, yyyy', { locale: dfLocale })}
+            eventDate={formatInZone(event.start_datetime, zone, 'MMM d, yyyy', { locale: dfLocale })}
             eventVenue={`${event.venue_name}, ${event.city}`}
           />
         }
@@ -482,10 +490,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 <div>
                   <p className="eyebrow mb-1.5 text-[10px] text-white/50">{t('events.start')}</p>
                   <p className="text-[15px] text-white" suppressHydrationWarning>
-                    {format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
+                    {formatInZone(event.start_datetime, zone, 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
                   </p>
                   <p className="text-[13px] text-white/60" suppressHydrationWarning>
-                    {format(new Date(event.start_datetime), 'h:mm a', { locale: dfLocale })}
+                    {formatInZone(event.start_datetime, zone, 'h:mm a', { locale: dfLocale })}
                   </p>
                 </div>
                 {/* Same rule as the mobile accordion: an end equal to the
@@ -496,10 +504,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <div>
                     <p className="eyebrow mb-1.5 text-[10px] text-white/50">{t('events.end')}</p>
                     <p className="text-[15px] text-white" suppressHydrationWarning>
-                      {format(new Date(event.end_datetime), 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
+                      {formatInZone(event.end_datetime, zone, 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
                     </p>
                     <p className="text-[13px] text-white/60" suppressHydrationWarning>
-                      {format(new Date(event.end_datetime), 'h:mm a', { locale: dfLocale })}
+                      {formatInZone(event.end_datetime, zone, 'h:mm a', { locale: dfLocale })}
                     </p>
                   </div>
                 )}
@@ -559,7 +567,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     <p className="font-grotesk text-3xl font-bold text-white">
                       {t('common.free')}
                       <span className="text-white/40">, </span>
-                      <span className="text-base font-medium text-white/50">{event.currency || 'HTG'}</span> {headlineDisplayPrice.toLocaleString()}
+                      <span className="text-base font-medium text-white/50">{event.currency || 'HTG'}</span> {headlineDisplayPrice.toLocaleString(numLocale)}
                     </p>
                     <p className="mt-1.5 text-[13px] text-white/50">{t('events.per_ticket', { defaultValue: 'per ticket' })}</p>
                     {showHeadlineFee && (
@@ -571,14 +579,14 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 ) : (
                   <div>
                     <p className="font-grotesk text-3xl font-bold text-white">
-                      <span className="text-base font-medium text-white/50">{event.currency || 'HTG'}</span> {headlineDisplayPrice.toLocaleString()}
+                      <span className="text-base font-medium text-white/50">{event.currency || 'HTG'}</span> {headlineDisplayPrice.toLocaleString(numLocale)}
                     </p>
                     <p className="mt-1.5 text-[13px] text-white/50">{t('events.per_ticket', { defaultValue: 'per ticket' })}</p>
                     {showHeadlineFee && (
                       <p className="mt-1 text-[12px] text-white/40">
                         {t('events.fees_included_detail', {
-                          defaultValue: `Includes ${headlineAllIn.buyerFee.toLocaleString()} ${event.currency || 'HTG'} fee`,
-                          fee: headlineAllIn.buyerFee.toLocaleString(),
+                          defaultValue: `Includes ${headlineAllIn.buyerFee.toLocaleString(numLocale)} ${event.currency || 'HTG'} fee`,
+                          fee: headlineAllIn.buyerFee.toLocaleString(numLocale),
                           currency: event.currency || 'HTG',
                         })}
                       </p>

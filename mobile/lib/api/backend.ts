@@ -16,6 +16,14 @@ export const API_BASE_URL = API_URL
 const DEBUG_API = process.env.EXPO_PUBLIC_DEBUG_API === 'true'
 
 let sessionCookieValue: string | null = null
+// The account the captured cookie belongs to; a cookie is never sent for anyone else.
+let sessionCookieUid: string | null = null
+
+/** Forget the web session cookie. Called on sign-out. */
+export function resetWebSessionCookie() {
+  sessionCookieValue = null
+  sessionCookieUid = null
+}
 
 type FetchInit = Omit<RequestInit, 'headers'> & { headers?: Record<string, string> }
 
@@ -52,6 +60,7 @@ async function ensureWebSessionCookie(idToken: string): Promise<boolean> {
       const match = setCookie.match(/(?:^|\s|;)session=([^;]+)/)
       if (match?.[1]) {
         sessionCookieValue = match[1]
+        sessionCookieUid = auth.currentUser?.uid ?? null
         if (DEBUG_API) {
           console.warn('[ensureWebSessionCookie] captured session cookie', {
             hasSessionCookie: true,
@@ -95,6 +104,12 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
     ...(init.headers || {}),
   }
 
+  // A cookie captured for another account (sign-out, then sign-in as someone
+  // else) must never ride along.
+  if (sessionCookieValue && sessionCookieUid !== (currentUser?.uid ?? null)) {
+    resetWebSessionCookie()
+  }
+
   // Attach session cookie (webapp auth) if we have one.
   if (sessionCookieValue && !headers['Cookie'] && !headers['cookie']) {
     headers['Cookie'] = `session=${sessionCookieValue}`
@@ -118,7 +133,7 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
     let res = await fetch(url, {
       ...init,
       headers,
-      credentials: init.credentials ?? 'include',
+      credentials: init.credentials ?? 'omit',
     })
 
     if (res.status === 401) {
@@ -144,7 +159,7 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
           res = await fetch(url, {
             ...init,
             headers: retryHeaders,
-            credentials: init.credentials ?? 'include',
+            credentials: init.credentials ?? 'omit',
           })
         }
       } catch {
@@ -178,7 +193,7 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
           res = await fetch(url, {
             ...init,
             headers: retryHeaders,
-            credentials: init.credentials ?? 'include',
+            credentials: init.credentials ?? 'omit',
           })
         }
       }

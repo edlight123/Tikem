@@ -403,7 +403,7 @@ export function InlineCalendar({
           aria-expanded={mode === 'months'}
           // The visible month has to survive into the accessible name (WCAG
           // Label in Name), so the hint is appended rather than substituted.
-          aria-label={`${format(view, 'LLLL yyyy', { locale })} — ${t('pickers.choose_month', {
+          aria-label={`${format(view, 'LLLL yyyy', { locale })}, ${t('pickers.choose_month', {
             defaultValue: 'Choose month and year',
           })}`}
           className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-semibold capitalize text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-brand-400/40"

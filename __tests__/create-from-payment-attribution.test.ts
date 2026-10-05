@@ -49,6 +49,9 @@ jest.mock('@/lib/webhooks/idempotency', () => ({
 }))
 jest.mock('@/lib/promo-codes', () => ({ promoBuyerKey: jest.fn(), redeemPromoInTransaction: jest.fn() }))
 jest.mock('@/lib/promoters', () => ({ recordPromoterSale: jest.fn(async () => ({ recorded: true, commissionCents: 0 })) }))
+jest.mock('@/lib/earnings', () => ({ addTicketToEarnings: jest.fn(async () => undefined) }))
+jest.mock('@/lib/notifications/campaigns', () => ({ onSaleCompleted: jest.fn(async () => undefined) }))
+jest.mock('@/lib/tickets/refundExecution', () => ({ reversePromoterCommission: jest.fn(async () => false) }))
 
 const LINK = 'LinkAAAAAAAAAAAAAAAA'
 

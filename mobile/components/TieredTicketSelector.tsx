@@ -31,14 +31,14 @@ interface TicketTier {
   sales_start: string | null;
   sales_end: string | null;
   unlimited?: boolean;
+  /** Organizer switched this tier off. The server refuses it, so it is never offered. */
+  is_active?: boolean;
 }
 
-interface GroupDiscount {
-  id: string;
-  min_quantity: number;
-  discount_percentage: number;
-  is_active: boolean;
-}
+// Group discounts used to be fetched and applied here, but neither checkout route
+// (create-payment-intent, moncash-button/initiate) applies them and the web
+// checkout never shows them, so a buyer saw a lower total than they were charged.
+// They stay out of the buyer's total until the server prices them.
 
 interface PromoCodeValidation {
   valid: boolean;
@@ -121,7 +121,6 @@ export default function TieredTicketSelector({
   /** True when the tier fetch itself failed, as opposed to an event that
    *  genuinely has no tiers. The two look identical without it. */
   const [loadError, setLoadError] = useState(false);
-  const [groupDiscounts, setGroupDiscounts] = useState<GroupDiscount[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Store quantity per tier
@@ -138,7 +137,6 @@ export default function TieredTicketSelector({
   useEffect(() => {
     if (visible) {
       fetchTiers();
-      fetchGroupDiscounts();
     }
   }, [visible, eventId]);
 
@@ -155,10 +153,13 @@ export default function TieredTicketSelector({
       );
       
       const tiersSnapshot = await getDocs(tiersQuery);
-      const tiersData = tiersSnapshot.docs.map(doc => ({
+      const tiersData = (tiersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-      })) as TicketTier[];
+      })) as TicketTier[])
+        // A tier the organizer deactivated is refused by both checkout routes
+        // ("This ticket tier is not available."), so it is not offered at all.
+        .filter(tier => tier.is_active !== false);
       
       console.log('[TieredTicketSelector] Fetched tiers:', tiersData.length);
       setTiers(tiersData);
@@ -174,29 +175,6 @@ export default function TieredTicketSelector({
       setLoadError(true);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchGroupDiscounts = async () => {
-    try {
-      console.log('[TieredTicketSelector] Fetching group discounts for event:', eventId);
-      
-      const discountsQuery = query(
-        collection(db, 'group_discounts'),
-        where('event_id', '==', eventId),
-        where('is_active', '==', true)
-      );
-      
-      const discountsSnapshot = await getDocs(discountsQuery);
-      const discountsData = discountsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as GroupDiscount[];
-      
-      console.log('[TieredTicketSelector] Fetched group discounts:', discountsData.length);
-      setGroupDiscounts(discountsData);
-    } catch (error) {
-      console.error('[TieredTicketSelector] Error fetching group discounts:', error);
     }
   };
 
@@ -217,18 +195,38 @@ export default function TieredTicketSelector({
         `${apiUrl}/api/promo-codes?eventId=${eventId}&code=${encodeURIComponent(promoCode)}`
       );
       const data = await response.json();
-
-      setPromoValidation(normalizePromoValidationResponse(data));
+      const normalized = normalizePromoValidationResponse(data);
+      if (!normalized.valid) {
+        // The server's wording is English and developer-facing; keep it in the log
+        // and show the buyer a translated message instead.
+        console.warn('[TieredTicketSelector] promo code rejected:', normalized.error);
+        setPromoValidation({ valid: false, error: promoErrorMessage(normalized.error) });
+      } else {
+        setPromoValidation(normalized);
+      }
     } catch (error) {
       console.error('Error validating promo code:', error);
-      setPromoValidation({ valid: false, error: 'Failed to validate promo code' });
+      setPromoValidation({ valid: false, error: t('ticketSelector.promoErrors.failed') });
     } finally {
       setValidatingPromo(false);
     }
   };
 
+  /** Map the validation endpoint's English refusal to translated copy. */
+  const promoErrorMessage = (raw?: string): string => {
+    const text = String(raw || '').toLowerCase();
+    if (text.includes('expired')) return t('ticketSelector.promoErrors.expired');
+    if (text.includes('maximum uses')) return t('ticketSelector.promoErrors.maxUses');
+    if (text.includes('not yet valid')) return t('ticketSelector.promoErrors.notYetValid');
+    if (text.includes('inactive')) return t('ticketSelector.promoErrors.inactive');
+    if (text.includes('invalid') || text.includes('not found')) return t('ticketSelector.promoErrors.invalid');
+    return t('ticketSelector.promoErrors.failed');
+  };
+
   const isTierAvailable = (tier: TicketTier): boolean => {
     const now = new Date();
+
+    if (tier.is_active === false) return false;
     
     // Check sales period
     if (tier.sales_start && new Date(tier.sales_start) > now) {
@@ -255,20 +253,6 @@ export default function TieredTicketSelector({
     return tier.total_quantity - tier.sold_quantity;
   };
 
-  const getApplicableGroupDiscount = (): GroupDiscount | null => {
-    if (promoValidation?.valid) {
-      return null; // Don't apply group discount if promo code is used
-    }
-
-    const totalQty = getTotalQuantity();
-    
-    const applicable = groupDiscounts
-      .filter(d => d.is_active && d.min_quantity <= totalQty)
-      .sort((a, b) => b.discount_percentage - a.discount_percentage);
-    
-    return applicable[0] || null;
-  };
-
   const getTotalQuantity = (): number => {
     return Object.values(tierQuantities).reduce((sum, qty) => sum + qty, 0);
   };
@@ -284,7 +268,8 @@ export default function TieredTicketSelector({
       .map(tier => ({ price: tier.price, quantity: tierQuantities[tier.id] || 0 }))
       .filter(s => s.quantity > 0);
 
-    // Promo code wins over the group discount (same precedence as before).
+    // Only a code the server has validated changes the price. The discount is
+    // per ticket, matching how both checkout routes price a promo.
     if (promoValidation?.valid) {
       return computeSelectionTotal(selections, {
         percentage: promoValidation.discount_percentage,
@@ -292,15 +277,7 @@ export default function TieredTicketSelector({
       });
     }
 
-    const totalQty = getTotalQuantity();
-    const groupDiscount = groupDiscounts
-      .filter(d => d.min_quantity <= totalQty && d.is_active)
-      .sort((a, b) => b.discount_percentage - a.discount_percentage)[0];
-
-    return computeSelectionTotal(
-      selections,
-      groupDiscount ? { percentage: groupDiscount.discount_percentage } : null
-    );
+    return computeSelectionTotal(selections);
   };
 
   const updateTierQuantity = (tierId: string, delta: number) => {
@@ -335,7 +312,12 @@ export default function TieredTicketSelector({
     // Undiscounted total, on integer cents like every other amount here.
     const grossPrice = computeSelectionTotal([{ price: firstTierWithQty.price, quantity }]);
 
-    onPurchase(firstTierWithQty.id, finalPrice, quantity, promoCode || undefined, {
+    // Only a code that validated is sent on. A rejected or never-applied code
+    // would otherwise travel to checkout, where the server might still discount
+    // it (or redeem it) while the buyer was shown the full price.
+    const appliedPromo = promoValidation?.valid ? promoCode.trim() || undefined : undefined;
+
+    onPurchase(firstTierWithQty.id, finalPrice, quantity, appliedPromo, {
       tierName: firstTierWithQty.name,
       // A 0 total (a free tier, or a 100%-off promo on a paid one) must not reach
       // a gateway — the caller uses this to pick the free-claim path.
@@ -561,7 +543,11 @@ export default function TieredTicketSelector({
                           placeholderTextColor={colors.textTertiary}
                           selectionColor={colors.primary}
                           value={promoCode}
-                          onChangeText={setPromoCode}
+                          onChangeText={(text) => {
+                            setPromoCode(text);
+                            // An edited code is no longer the code that validated.
+                            if (promoValidation) setPromoValidation(null);
+                          }}
                           autoCapitalize="characters"
                           onSubmitEditing={validatePromoCode}
                         />

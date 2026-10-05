@@ -214,7 +214,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     // Add a summary table at the end (still CSV) showing each distinct price level per tier.
     rows.push('')
-    rows.push(csvEscape('LISTED PRICE BREAKDOWN (Tier price at purchase time — NO FX / NO SPREAD)'))
+    rows.push(csvEscape('LISTED PRICE BREAKDOWN (Tier price at purchase time, NO FX / NO SPREAD)'))
     rows.push(
       ['Tier ID', 'Tier Name', 'Listed Unit Price', 'Listed Currency', 'Tickets Sold', 'Gross Sales (listed cents)', 'First Purchase At', 'Last Purchase At']
         .map(csvEscape)

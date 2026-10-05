@@ -859,7 +859,7 @@
     "moncash_note": "Votre retrait sera envoyé sur votre compte MonCash (généralement sous 24 heures).",
     "moncash_below_minimum": "Les retraits MonCash commencent à {{min}}. Votre solde disponible est de {{balance}}.",
     "bank_below_minimum": "Les virements bancaires commencent à {{min}}.",
-    "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé — aucun argent n'a été déplacé."
+    "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé. Aucun argent n'a été déplacé."
   },
   "events_filters": {
     "alphabetical": "Alphabétique",
@@ -970,7 +970,7 @@
     "profile_removed": "Votre profil d'organisateur sera supprimé",
     "deactivate": "Désactiver",
     "delete_account": "Supprimer le compte",
-    "export_desc": "Téléchargez une copie de toutes vos données — événements, billets et versements — au format JSON.",
+    "export_desc": "Téléchargez une copie de toutes vos données (événements, billets et versements) au format JSON.",
     "delete_desc": "Supprimez définitivement votre compte et toutes les données associées. Cette action est irréversible.",
     "deactivate_desc": "Désactivez temporairement votre compte. Vous pouvez le réactiver sous 30 jours. Vos événements seront masqués.",
     "deactivate_confirm": "Votre compte sera désactivé et vos événements masqués. Vous pouvez le réactiver sous 30 jours en vous reconnectant."
@@ -1453,7 +1453,7 @@
     "event_deleted_or_wrong_link": "Cet événement a peut-être été supprimé, ou le lien est incorrect.",
     "back_to_events": "Retour aux événements",
     "no_ticket_types_yet": "Aucun type de billet",
-    "add_ticket_types_desc": "Ajoutez des types de billets — RSVP gratuit ou paliers payants — pour que le public puisse s'inscrire.",
+    "add_ticket_types_desc": "Ajoutez des types de billets (RSVP gratuit ou paliers payants) pour que le public puisse s'inscrire.",
     "add_tickets": "Ajouter des billets",
     "edit_tickets": "Modifier les billets",
     "total_codes": "Total des codes",

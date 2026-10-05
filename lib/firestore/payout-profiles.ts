@@ -30,7 +30,7 @@ function convertTimestamp(value: any, fallback: string = new Date().toISOString(
   }
 }
 
-async function computeVerificationStatus(organizerId: string, raw: any | null): Promise<PayoutConfig['verificationStatus']> {
+async function computeVerificationStatus(organizerId: string): Promise<PayoutConfig['verificationStatus']> {
   const organizerIdentityStatus = await getOrganizerIdentityVerificationStatus(organizerId)
 
   const verificationDocs = await adminDb
@@ -85,10 +85,17 @@ async function computeVerificationStatus(organizerId: string, raw: any | null): 
   if (primaryBankStatus) derived.bank = primaryBankStatus
   else if (legacyBankStatus) derived.bank = legacyBankStatus
 
+  // Verification comes ONLY from the records an admin/server writes
+  // (verification_requests via getOrganizerIdentityVerificationStatus, and
+  // verificationDocuments). A `verificationStatus` stored on the profile doc
+  // itself is never trusted: no server path writes it, payoutConfig/main was
+  // owner-writable under the old rules, and the payout server actions used to
+  // spread the client's object into the profile — so any value there is a
+  // self-asserted claim.
   return {
     identity: derived.identity,
-    bank: derived.bank !== 'pending' ? derived.bank : (raw?.verificationStatus?.bank || 'pending'),
-    phone: derived.phone !== 'pending' ? derived.phone : (raw?.verificationStatus?.phone || 'pending'),
+    bank: derived.bank,
+    phone: derived.phone,
   }
 }
 
@@ -112,6 +119,12 @@ function normalizeProfile(raw: any | null): PayoutConfig {
 
 /**
  * Load a payout profile. Falls back to legacy payoutConfig/main when the profile doc does not exist.
+ *
+ * Trust: the profile's verificationStatus is always recomputed from server-owned
+ * records (computeVerificationStatus), for both profiles and for the legacy
+ * fallback — never read from the stored doc. payoutConfig/main is server-only
+ * under firestore.rules now, but was owner-writable before, so its contents
+ * are treated as untrusted input for anything that grants trust.
  */
 export async function getPayoutProfile(organizerId: string, profileId: PayoutProfileId): Promise<PayoutConfig | null> {
   const profileSnap = await getPayoutProfileRef(organizerId, profileId).get()
@@ -144,9 +157,9 @@ export async function getPayoutProfile(organizerId: string, profileId: PayoutPro
 
   const base = normalizeProfile(raw)
 
-  // Only Haiti profile uses internal verification documents.
-  const verificationStatus =
-    profileId === 'haiti' ? await computeVerificationStatus(organizerId, raw) : base.verificationStatus
+  // Always derived server-side; see computeVerificationStatus. (Stripe Connect
+  // previously echoed the stored value, which nothing legitimate ever wrote.)
+  const verificationStatus = await computeVerificationStatus(organizerId)
 
   const merged: PayoutConfig = {
     ...base,

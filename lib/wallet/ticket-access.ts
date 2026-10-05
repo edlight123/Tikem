@@ -147,10 +147,10 @@ export async function loadWalletTicket(
     ok: true,
     ticket: {
       id: snapshot.id,
-      // The EXISTING code, in the same precedence the app and the scanner use
-      // (mobile/lib/ticket.ts:32, app/api/tickets/scan/route.ts:22): scanners
-      // resolve this value to a ticket, so minting a new one would be rejected
-      // at the gate.
+      // The EXISTING code, in the same precedence the app and the door use
+      // (mobile/lib/ticket.ts:32; lib/scan/doorService.ts resolveTicketRef reads
+      // the ticket id, then qr_code_data, then qr_code): scanners resolve this
+      // value to a ticket, so minting a new one would be rejected at the gate.
       qrPayload: firstString(ticket?.qr_code_data, ticket?.qr_code, snapshot.id),
       eventId,
       eventTitle: firstString(event?.title, ticket?.event_title, 'Event'),

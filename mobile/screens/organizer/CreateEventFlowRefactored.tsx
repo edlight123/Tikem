@@ -399,6 +399,19 @@ function GridCanvas({ lineColor, columns = 5, rows = 8 }: { lineColor: string; c
   );
 }
 
+/**
+ * YYYY-MM-DD from the device's LOCAL calendar date. toISOString() is UTC, so an
+ * evening event west of UTC (20:00 in Haiti is 00:00Z next day) read back a day
+ * late, and a date picked east of UTC (local midnight is the previous day in
+ * UTC) saved a day early. The draft's times are local, so its dates must be too.
+ */
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function CreateEventFlowRefactored() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -567,7 +580,11 @@ export default function CreateEventFlowRefactored() {
       if (event) {
         // Convert event data to draft format
         const startDate = new Date(event.start_datetime);
-        const endDate = new Date(event.end_datetime);
+        // Events with no end date leave the end blank: an Invalid Date here
+        // used to throw on toISOString() and crash edit mode.
+        const endDate = event.end_datetime ? new Date(event.end_datetime) : null;
+        const hasStart = !isNaN(startDate.getTime());
+        const hasEnd = !!endDate && !isNaN(endDate.getTime());
 
         const formatTime = (date: Date) => {
           const hours = date.getHours();
@@ -665,10 +682,10 @@ export default function CreateEventFlowRefactored() {
           city: storedCity,
           commune: event.commune || '',
           address: event.address || '',
-          start_date: startDate.toISOString().split('T')[0],
-          start_time: formatTime(startDate),
-          end_date: endDate.toISOString().split('T')[0],
-          end_time: formatTime(endDate),
+          start_date: hasStart ? toLocalDateString(startDate) : '',
+          start_time: hasStart ? formatTime(startDate) : '',
+          end_date: hasEnd ? toLocalDateString(endDate!) : '',
+          end_time: hasEnd ? formatTime(endDate!) : '',
           timezone: 'America/Port-au-Prince',
           ticket_tiers: formattedTicketTiers,
           currency: event.currency || 'USD',
@@ -1138,8 +1155,15 @@ export default function CreateEventFlowRefactored() {
   }, [eventDraft.start_date]);
 
   // When a start time is set, push the end time to +1 hour (and keep end date valid).
+  // In edit mode the first start we see is the saved one being loaded; keep the
+  // saved end time instead of overwriting it.
+  const skipEndSyncRef = useRef(isEditMode);
   useEffect(() => {
     if (eventDraft.start_date && eventDraft.start_time) {
+      if (skipEndSyncRef.current) {
+        skipEndSyncRef.current = false;
+        return;
+      }
       const oneHourLater = addOneHour(eventDraft.start_time);
       const shouldUpdateEndDate = !eventDraft.end_date || eventDraft.end_date < eventDraft.start_date;
       updateDraft({
@@ -1187,7 +1211,7 @@ export default function CreateEventFlowRefactored() {
 
   const combineDateAndTime = (dateStr: string, timeStr: string): Date => {
     const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (!match) return new Date(dateStr);
+    if (!match) return new Date(dateStr + 'T00:00:00');
     let hours = parseInt(match[1]);
     const minutes = parseInt(match[2]);
     const period = match[3].toUpperCase();
@@ -1218,16 +1242,16 @@ export default function CreateEventFlowRefactored() {
 
   const handleStartDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowStartDate(false);
-    if (selectedDate) updateDraft({ start_date: selectedDate.toISOString().split('T')[0] });
+    if (selectedDate) updateDraft({ start_date: toLocalDateString(selectedDate) });
   };
   const handleEndDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowEndDate(false);
-    if (selectedDate) updateDraft({ end_date: selectedDate.toISOString().split('T')[0] });
+    if (selectedDate) updateDraft({ end_date: toLocalDateString(selectedDate) });
   };
   // Recurring "until date" — stores an ISO date (YYYY-MM-DD) in recurrence_end_date.
   const handleRecurrenceEndDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowRecurrenceEndDate(false);
-    if (selectedDate) updateDraft({ recurrence_end_date: selectedDate.toISOString().split('T')[0] });
+    if (selectedDate) updateDraft({ recurrence_end_date: toLocalDateString(selectedDate) });
   };
   const handleStartTimeChange = (event: any, selectedTime?: Date) => {
     if (Platform.OS === 'android') setShowStartTime(false);
@@ -2853,7 +2877,7 @@ export default function CreateEventFlowRefactored() {
         'date',
         handleEndDateChange,
         () => setShowEndDate(false),
-        eventDraft.start_date ? new Date(eventDraft.start_date) : undefined
+        eventDraft.start_date ? getDateValue(eventDraft.start_date) : undefined
       )}
       {renderPickerModal(
         showStartTime,
@@ -2880,7 +2904,7 @@ export default function CreateEventFlowRefactored() {
         <DateTimePicker value={getTimeValue(eventDraft.start_time)} mode="time" is24Hour={false} display="default" onChange={handleStartTimeChange} />
       )}
       {Platform.OS === 'android' && showEndDate && (
-        <DateTimePicker value={getDateValue(eventDraft.end_date)} mode="date" display="default" onChange={handleEndDateChange} minimumDate={eventDraft.start_date ? new Date(eventDraft.start_date) : undefined} />
+        <DateTimePicker value={getDateValue(eventDraft.end_date)} mode="date" display="default" onChange={handleEndDateChange} minimumDate={eventDraft.start_date ? getDateValue(eventDraft.start_date) : undefined} />
       )}
       {Platform.OS === 'android' && showEndTime && (
         <DateTimePicker value={getTimeValue(eventDraft.end_time)} mode="time" is24Hour={false} display="default" onChange={handleEndTimeChange} />
@@ -2921,7 +2945,7 @@ export default function CreateEventFlowRefactored() {
         'date',
         handleRecurrenceEndDateChange,
         () => setShowRecurrenceEndDate(false),
-        eventDraft.start_date ? new Date(eventDraft.start_date) : undefined
+        eventDraft.start_date ? getDateValue(eventDraft.start_date) : undefined
       )}
       {Platform.OS === 'android' && showRecurrenceEndDate && (
         <DateTimePicker
@@ -2929,7 +2953,7 @@ export default function CreateEventFlowRefactored() {
           mode="date"
           display="default"
           onChange={handleRecurrenceEndDateChange}
-          minimumDate={eventDraft.start_date ? new Date(eventDraft.start_date) : undefined}
+          minimumDate={eventDraft.start_date ? getDateValue(eventDraft.start_date) : undefined}
         />
       )}
 

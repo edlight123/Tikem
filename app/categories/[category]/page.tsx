@@ -7,11 +7,34 @@ import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/bl
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import CategoryPageContent from './CategoryPageContent'
+import type { Metadata } from 'next'
+import { CATEGORIES } from '@/lib/filters/config'
 
 export const revalidate = 120
 
 // Reads auth cookies for personalization / Navbar context.
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string }>
+}): Promise<Metadata> {
+  const { category: rawCategory } = await params
+  let decoded = rawCategory
+  try {
+    decoded = decodeURIComponent(rawCategory)
+  } catch {
+    // A malformed escape still gets a readable title.
+  }
+  const label =
+    CATEGORIES.find((c) => c.toLowerCase() === decoded.trim().toLowerCase()) ||
+    decoded.trim().replace(/[-_]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+  return {
+    title: `${label} events | Tikèm`,
+    description: `${label} events in Haiti and across the diaspora. Find dates and get tickets on Tikèm.`,
+  }
+}
 
 export default async function CategoryPage({
   params,

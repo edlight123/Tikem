@@ -17,7 +17,8 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { format } from 'date-fns'
+import { formatInZone } from '@/lib/home/format'
+import { dayKey } from '@/lib/home/feed'
 import Badge from '@/components/ui/Badge'
 import PromoVideo from '@/components/events/PromoVideo'
 import { dateLocaleFor } from '@/lib/dateLocale'
@@ -44,6 +45,8 @@ interface MobileSectionsProps {
   city: string
   startDatetime: string
   endDatetime: string
+  /** The event's IANA zone (lib/home/feed eventZone): times print in it. */
+  zone: string
   organizerName: string
   organizerId: string
   isVerified: boolean
@@ -68,6 +71,7 @@ export default function MobileSections({
   city,
   startDatetime,
   endDatetime,
+  zone,
   organizerName,
   organizerId,
   isVerified,
@@ -84,8 +88,7 @@ export default function MobileSections({
   const startMs = new Date(startDatetime).getTime()
   const endMs = new Date(endDatetime).getTime()
   const hasEnd = Number.isFinite(endMs) && endMs > startMs
-  const sameDay =
-    hasEnd && new Date(startDatetime).toDateString() === new Date(endDatetime).toDateString()
+  const sameDay = hasEnd && dayKey(startDatetime, zone) === dayKey(endDatetime, zone)
 
   // Dividers between sections, softened, and no rule at the bottom. Four
   // `white/10` hairlines down a phone screen plus the container's own closing
@@ -129,22 +132,22 @@ export default function MobileSections({
           carry no end_datetime at all), so the range collapses to a single
           time rather than printing a fake one. */}
       <Section title={t('events.date_time')}>
-        {/* The server renders in UTC and the browser in the reader's zone, so
-            a formatted time legitimately differs between the two passes. */}
-        <div suppressHydrationWarning>
+        {/* Printed in the event's zone: a runtime-zone format rendered UTC on
+            the server and the reader's zone in the browser (React #418). */}
+        <div>
           <p className="text-[17px] font-medium leading-snug text-white">
-            {format(new Date(startDatetime), 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
+            {formatInZone(startDatetime, zone, 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
           </p>
           <p className="mt-1 text-[15px] text-white/70">
-            {format(new Date(startDatetime), 'h:mm a', { locale: dfLocale })}
+            {formatInZone(startDatetime, zone, 'h:mm a', { locale: dfLocale })}
             {hasEnd && (
               <>
                 {' – '}
                 {/* Same day: the time alone. A different day needs its date,
                     or "2:00 PM – 2:00 AM" silently loses the overnight. */}
                 {sameDay
-                  ? format(new Date(endDatetime), 'h:mm a', { locale: dfLocale })
-                  : format(new Date(endDatetime), 'EEE, MMM d · h:mm a', { locale: dfLocale })}
+                  ? formatInZone(endDatetime, zone, 'h:mm a', { locale: dfLocale })
+                  : formatInZone(endDatetime, zone, 'EEE, MMM d · h:mm a', { locale: dfLocale })}
               </>
             )}
           </p>

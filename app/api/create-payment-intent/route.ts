@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import { calculateDiscount, resolvePromoCode, promoHasCapacity } from '@/lib/promo-codes'
+import { calculateDiscount, resolvePromoCode, promoBuyerKey, promoCanCoverOrder } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
 import { attributionToStripeMetadata } from '@/lib/attribution'
 import { resolveOrderAttribution } from '@/lib/tracking-links'
@@ -35,6 +35,13 @@ import {
   type CheckoutIdentity,
 } from '@/lib/guest/checkout'
 import { guestTicketUrl, validateGuestContact } from '@/lib/guest/identity'
+import {
+  checkEventPurchasable,
+  checkTierForEvent,
+  invalidQuantityRefusal,
+  parseTicketQuantity,
+  pickTierWhenUnspecified,
+} from '@/lib/tickets/purchasable'
 
 // Lazy load Stripe
 function getStripe() {
@@ -51,7 +58,7 @@ export async function POST(request: Request) {
 
     const {
       eventId,
-      quantity = 1,
+      quantity: rawQuantity = 1,
       tierId,
       promoCodeId,
       // Promoter attribution: the raw `?ref=` the buyer arrived with. Resolved
@@ -67,6 +74,15 @@ export async function POST(request: Request) {
       // admitted by their stored grant, exactly as before.
       accessCode,
     } = await request.json()
+
+    // A whole number of tickets, 1..MAX_TICKETS_PER_ORDER. A fractional quantity used
+    // to be charged pro rata (0.01 → 1% of a ticket) while fulfillment still issued a
+    // whole ticket; refuse anything that is not a plain integer instead of rounding.
+    const quantity = parseTicketQuantity(rawQuantity)
+    if (quantity === null) {
+      const refusal = invalidQuantityRefusal()
+      return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
+    }
 
     // A missing session is not fatal: a guest may buy by supplying
     // `guest: { name, email, phone }`. The contact is shape-checked HERE so the
@@ -149,6 +165,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
+    // Cancelled, unpublished, rejected or finished events do not take money.
+    const purchasable = checkEventPurchasable(event)
+    if (!purchasable.ok) {
+      await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+      return NextResponse.json(
+        { error: purchasable.error, code: purchasable.code },
+        { status: purchasable.status }
+      )
+    }
+
     // Resolve the buyer now that the event (and therefore the country's phone rule and
     // the password gate) is known. For a signed-in user this is their own identity,
     // unchanged; for a guest it mints the `guest_…` id and the signed retrieval token.
@@ -228,47 +254,69 @@ export async function POST(request: Request) {
     // Track the pre-discount price so metadata/originalPrice is accurate.
     let basePriceBeforePromo = finalPrice
 
+    // The tier must belong to THIS event and be active. It used to be read by id
+    // alone, so another event's cheaper tier could price this one, and an unknown id
+    // silently fell back to `event.ticket_price` (the event's LOWEST tier price).
+    let tier: any = null
     if (tierId) {
-      const { data: tier } = await supabase
+      const { data } = await supabase
         .from('ticket_tiers')
         .select('*')
-        .eq('id', tierId)
+        .eq('id', String(tierId))
         .single()
-
-      if (tier) {
-        const now = new Date()
-        const salesStart = tier.sales_start ? new Date(tier.sales_start) : null
-        const salesEnd = tier.sales_end ? new Date(tier.sales_end) : null
-
-        if (tier.is_active === false) {
-          await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-          return NextResponse.json({ error: 'This ticket tier is not available.' }, { status: 400 })
-        }
-        if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
-          await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-          return NextResponse.json({ error: 'Ticket sales for this tier have not started yet.' }, { status: 400 })
-        }
-        if (salesEnd && !Number.isNaN(salesEnd.getTime()) && salesEnd < now) {
-          await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-          return NextResponse.json({ error: 'Ticket sales for this tier have ended.' }, { status: 400 })
-        }
-
-        const sold = Number(tier.sold_quantity || 0)
-        const total = Number(tier.total_quantity || 0)
-        const remaining = Math.max(0, total - sold)
-        if (remaining <= 0) {
-          await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-          return NextResponse.json({ error: 'This ticket tier is sold out.' }, { status: 400 })
-        }
-        if (quantity > remaining) {
-          await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-          return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
-        }
-
-        finalPrice = tier.price
-        basePriceBeforePromo = finalPrice
-        tierName = tier.name
+      const tierCheck = checkTierForEvent(data, String(eventId))
+      if (!tierCheck.ok) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
       }
+      tier = data
+    } else {
+      const { data: eventTiers } = await supabase
+        .from('ticket_tiers')
+        .select('*')
+        .eq('event_id', String(eventId))
+      const picked = pickTierWhenUnspecified(eventTiers as any[], String(eventId))
+      if (!picked.ok) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: picked.error, code: picked.code }, { status: picked.status })
+      }
+      tier = picked.tier
+    }
+    const resolvedTierId: string = tier ? String(tier.id) : ''
+
+    if (tier) {
+      const now = new Date()
+      const salesStart = tier.sales_start ? new Date(tier.sales_start) : null
+      const salesEnd = tier.sales_end ? new Date(tier.sales_end) : null
+
+      if (tier.is_active === false) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: 'This ticket tier is not available.' }, { status: 400 })
+      }
+      if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: 'Ticket sales for this tier have not started yet.' }, { status: 400 })
+      }
+      if (salesEnd && !Number.isNaN(salesEnd.getTime()) && salesEnd < now) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: 'Ticket sales for this tier have ended.' }, { status: 400 })
+      }
+
+      const sold = Number(tier.sold_quantity || 0)
+      const total = Number(tier.total_quantity || 0)
+      const remaining = Math.max(0, total - sold)
+      if (remaining <= 0) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: 'This ticket tier is sold out.' }, { status: 400 })
+      }
+      if (quantity > remaining) {
+        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
+      }
+
+      finalPrice = tier.price
+      basePriceBeforePromo = finalPrice
+      tierName = tier.name
     }
 
     // Apply promo code if provided (Firestore). resolvePromoCode accepts either the
@@ -281,7 +329,9 @@ export async function POST(request: Request) {
     let resolvedPromoId = ''
     if (promoCodeId) {
       const promo = await resolvePromoCode(String(eventId), String(promoCodeId))
-      if (promo && promoHasCapacity(promo)) {
+      // Discount only when confirm-time redemption can honour it for THIS order's
+      // quantity and buyer (same key the fulfillment redeem uses).
+      if (promo && (await promoCanCoverOrder(promo, { qty: quantity, buyerKey: promoBuyerKey(identity) })).ok) {
         resolvedPromoId = promo.id
         const { discountedPrice } = calculateDiscount(finalPrice, promo)
         finalPrice = discountedPrice
@@ -425,7 +475,7 @@ export async function POST(request: Request) {
           : {}),
         eventTitle: event.title,
         quantity: quantity.toString(),
-        tierId: tierId || '',
+        tierId: resolvedTierId,
         tierName,
         promoCodeId: resolvedPromoId,
         promoterId: promoter?.id || '',

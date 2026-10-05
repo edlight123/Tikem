@@ -2,7 +2,8 @@
  * Helper utilities for the Discover page
  */
 
-import { format, isToday, isTomorrow, isThisWeek, parseISO } from 'date-fns'
+import { addDays, format, isSameDay, isSameWeek, parseISO } from 'date-fns'
+import { wallClock } from '@/lib/home/format'
 import type { Database } from '@/types/database'
 import { isBudgetFriendlyTicketPrice } from '@/lib/pricing'
 import { resolveEventPricing, type EventPricingLike } from '@/lib/ticketPricing'
@@ -39,10 +40,21 @@ export function coerceEventDate(v: any): Date | null {
  */
 export type Translate = (key: string, opts?: Record<string, any>) => string
 
-export function formatEventDate(datetime: string, t?: Translate, lng?: string): string {
-  const date = parseISO(datetime)
+/**
+ * "Today at 8:00 PM" / "Friday at 8:00 PM" / "Oct 10 at 8:00 PM".
+ *
+ * Pass `zone` (lib/home/feed eventZone) to read the time, and "today", in the
+ * event's zone: that is what the event page prints, and it renders the same
+ * on the server and in the browser. Without it the runtime's zone is used.
+ */
+export function formatEventDate(datetime: string, t?: Translate, lng?: string, zone?: string): string {
+  const date = zone ? wallClock(datetime, zone) : parseISO(datetime)
+  const now = zone ? wallClock(Date.now(), zone) : new Date()
   const locale = dateLocaleFor(lng)
   const time = format(date, 'h:mm a', { locale })
+  const isToday = (d: Date) => isSameDay(d, now)
+  const isTomorrow = (d: Date) => isSameDay(d, addDays(now, 1))
+  const isThisWeek = (d: Date) => isSameWeek(d, now)
 
   if (isToday(date)) {
     return t ? t('events.card_today_at', { time, defaultValue: `Today at ${time}` }) : `Today at ${time}`

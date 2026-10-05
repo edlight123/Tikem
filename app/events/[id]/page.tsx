@@ -9,6 +9,8 @@ import type { Metadata } from 'next'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventDetailsClient from './EventDetailsClient'
 import AttributionBeacon from './AttributionBeacon'
+import { buildEventJsonLd, serializeJsonLd } from './eventJsonLd'
+import { CANONICAL_SITE_URL } from '@/lib/site-url'
 import { cookies } from 'next/headers'
 import { intlLocaleFor } from '@/lib/dateLocale'
 import { ticketScarcity, isUrgent } from '@/lib/ticketScarcity'
@@ -27,10 +29,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     event = await getEventById(id)
   }
 
-  if (!event) {
-    return {
-      title: 'Event Not Found',
-    }
+  // An unknown id is a real 404 (not a 200 page that says "not found"), and a
+  // draft's title must not leak through the <title> to anyone but its
+  // organizer: the same visibility rule the page applies below. Throwing here,
+  // before the page streams, is what lets crawlers receive the 404 status.
+  if (!event) notFound()
+  if (!isDemoMode() && !(event.is_published || event.status === 'published')) {
+    const viewer = await getCurrentUser()
+    if (event.organizer_id !== viewer?.id) notFound()
   }
 
   // The og:title/description language follows the visitor's cookie-set language,
@@ -232,6 +238,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         city: data.city,
         commune: data.commune,
         address: data.address,
+        // The card prints its time in the event's zone (lib/home/feed eventZone).
+        country: data.country || 'HT',
+        timezone: typeof data.timezone === 'string' ? data.timezone : undefined,
         start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
         end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
         ticket_price: data.ticket_price,
@@ -280,9 +289,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const serializedEvent = serializeData(event)
   const serializedRelatedEvents = serializeData(relatedEvents)
 
+  // schema.org Event for rich results. Only for public events: a draft shown
+  // to its own organizer is not something to describe to crawlers. The CSP
+  // allows inline scripts, and ld+json is a data block browsers never execute.
+  const isPublic = Boolean(serializedEvent.is_published || serializedEvent.status === 'published')
+  const jsonLd = isPublic
+    ? buildEventJsonLd(serializedEvent, CANONICAL_SITE_URL)
+    : null
+
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav md:pb-8">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+        />
+      )}
       <AttributionBeacon eventId={id} />
       <EventDetailsClient 
         event={serializedEvent}

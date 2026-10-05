@@ -3,10 +3,23 @@ import { getCurrentUser } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
 
 /**
+ * A developer tool: off in production. The GET served a public test page, and
+ * the POST lets any signed-in account send Tikèm-branded mail to an arbitrary
+ * address. Previews and local dev keep it.
+ */
+function isDisabled(): boolean {
+  return process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV !== 'preview'
+}
+
+const notFound = () => NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+/**
  * GET /api/test-email
  * Show test email form
  */
 export async function GET() {
+  if (isDisabled()) return notFound()
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -218,6 +231,8 @@ export async function GET() {
  * Test email sending functionality
  */
 export async function POST(request: Request) {
+  if (isDisabled()) return notFound()
+
   try {
     const user = await getCurrentUser()
     

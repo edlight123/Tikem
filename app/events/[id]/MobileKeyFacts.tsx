@@ -8,12 +8,14 @@
 // ("open_in_maps →") on the page organizers share the most.
 
 import { useTranslation } from 'react-i18next'
-import { dateLocaleFor } from '@/lib/dateLocale'
-import { format } from 'date-fns'
+import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
+import { formatInZone } from '@/lib/home/format'
 import { scarcityCopy, isUrgent, type Scarcity } from '@/lib/ticketScarcity'
 
 interface MobileKeyFactsProps {
   startDate: string
+  /** The event's IANA zone (lib/home/feed eventZone): times print in it. */
+  zone: string
   venueName: string
   city: string
   address: string
@@ -44,6 +46,7 @@ interface MobileKeyFactsProps {
 
 export default function MobileKeyFacts({
   startDate,
+  zone,
   venueName,
   city,
   address,
@@ -71,13 +74,13 @@ export default function MobileKeyFacts({
 
   const priceLine = isFree
     ? t('common.free')
-    : `${hasFreeOption ? `${t('common.free')}, ` : ''}${ticketPrice.toLocaleString()} ${currency}`
+    : `${hasFreeOption ? `${t('common.free')}, ` : ''}${ticketPrice.toLocaleString(intlLocaleFor(i18n.language))} ${currency}`
 
   return (
     <div className="md:hidden border-b border-white/10 px-4 py-5">
-      {/* suppressHydrationWarning: server renders UTC, client renders local. */}
-      <p className="text-[15px] font-medium text-white" suppressHydrationWarning>
-        {format(new Date(startDate), 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
+      {/* Printed in the event's zone, so the server and the browser agree. */}
+      <p className="text-[15px] font-medium text-white">
+        {formatInZone(startDate, zone, 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
       </p>
 
       <p className="mt-1.5 text-[14px] text-white/60">

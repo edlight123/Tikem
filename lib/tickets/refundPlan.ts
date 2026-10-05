@@ -121,3 +121,18 @@ export function sumRefundsByCurrency(plans: RefundPlan[]): { currency: string; a
     .map(([currency, amount]) => ({ currency, amount: roundMoney(amount) }))
     .sort((a, b) => b.amount - a.amount)
 }
+
+function positiveMoney(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+/**
+ * The FACE value a whole-ticket refund takes out of the organizer's gross, in
+ * the EVENT currency (major units). `refund_amount` is what the buyer gets back
+ * in the CHARGED currency, buyer fee included; the payout engine
+ * (lib/payouts/availability.ts ticketRefundedFaceMinor) subtracts this instead.
+ */
+export function refundFaceAmount(ticket: Record<string, any> | null | undefined): number {
+  return Math.round(positiveMoney(ticket?.price_paid ?? ticket?.pricePaid ?? ticket?.price) * 100) / 100
+}

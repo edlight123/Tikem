@@ -74,6 +74,26 @@ export default function EventTicketsScreen({ route, navigation }: any) {
 
   const cacheKey = `event_tickets_cache_${eventId}_${user?.uid ?? ''}`;
 
+  // Paint the last saved event + tickets. Returns true when a copy was found.
+  const restoreFromCache = async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(cacheKey);
+      if (!raw) return false;
+      const c = JSON.parse(raw);
+      if (c?.event) {
+        setEvent({
+          ...c.event,
+          start_datetime: c.event.start_datetime ? new Date(c.event.start_datetime) : null,
+          end_datetime: c.event.end_datetime ? new Date(c.event.end_datetime) : null,
+        });
+      }
+      if (Array.isArray(c?.tickets)) setTickets(c.tickets);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const fetchEventAndTickets = async () => {
     if (!user) {
       setLoading(false);
@@ -89,6 +109,9 @@ export default function EventTicketsScreen({ route, navigation }: any) {
       const eventSnapshot = await getDocs(eventQuery);
 
       let resolvedEvent: any = null;
+      // Firestore runs on a memory-only cache here: offline, getDocs resolves
+      // from the (often empty) session cache instead of throwing.
+      let fromCache = eventSnapshot.metadata.fromCache;
       if (!eventSnapshot.empty) {
         const eventDoc = eventSnapshot.docs[0];
         const eventData = eventDoc.data();
@@ -116,6 +139,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           where('attendee_id', '==', user.uid)
         )),
       ]);
+      if (byUserId.metadata.fromCache || byAttendeeId.metadata.fromCache) fromCache = true;
       const ticketDocsById = new Map<string, any>();
       [...byUserId.docs, ...byAttendeeId.docs].forEach(doc => {
         if (!ticketDocsById.has(doc.id)) ticketDocsById.set(doc.id, doc);
@@ -124,6 +148,15 @@ export default function EventTicketsScreen({ route, navigation }: any) {
         id: doc.id,
         ...doc.data(),
       }));
+
+      if (fromCache) {
+        // Offline: prefer the saved copy so the passes still open at the door,
+        // and never overwrite it with this possibly empty read.
+        const restored = await restoreFromCache();
+        if (!restored && ticketsData.length) setTickets(ticketsData);
+        return;
+      }
+
       setTickets(ticketsData);
 
       // Cache event + tickets so the QR passes still open with no signal.
@@ -143,20 +176,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
       console.error('Error fetching event and tickets:', error);
       // Offline (or no session cache) — fall back to the last cached copy so the
       // attendee can still pull up their pass/QR at the door.
-      try {
-        const raw = await AsyncStorage.getItem(cacheKey);
-        if (raw) {
-          const c = JSON.parse(raw);
-          if (c?.event) {
-            setEvent({
-              ...c.event,
-              start_datetime: c.event.start_datetime ? new Date(c.event.start_datetime) : null,
-              end_datetime: c.event.end_datetime ? new Date(c.event.end_datetime) : null,
-            });
-          }
-          if (Array.isArray(c?.tickets)) setTickets(c.tickets);
-        }
-      } catch {}
+      await restoreFromCache();
     } finally {
       setLoading(false);
     }

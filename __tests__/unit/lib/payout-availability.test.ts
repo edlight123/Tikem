@@ -152,6 +152,24 @@ describe('live statuses and refunds', () => {
     expect(a.gateInputs).toEqual({ grossMinor: 200_000, refundedMinor: 100_000, availableMinor: 90_000 })
   })
 
+  it('refunds come out of gross at FACE value in the event currency, never the charged amount', () => {
+    // USD event sold over MonCash in HTG with a pass-on fee: the buyer got 14,850 HTG back.
+    const usdEvent = { id: 'evt1', organizer_id: 'org1', currency: 'USD', country: 'HT', status: 'published', end_datetime: endedHoursAgo(200) }
+    const usd = (over: Record<string, any> = {}) => ticket(100, { currency: 'USD', original_currency: 'USD', ...over })
+    const refundedFields = { status: 'refunded', refund_status: 'approved', refund_amount: 14_850, refund_currency: 'HTG' }
+    const stamped = run({ event: usdEvent, fee: USD_RULE, tickets: [usd(), usd({ ...refundedFields, refund_face_amount: 100 })] })
+    expect(stamped.refundedMinor).toBe(10_000)
+    // Legacy doc (no refund_face_amount), refund in another currency: the full face price.
+    const legacyOther = run({ event: usdEvent, fee: USD_RULE, tickets: [usd(), usd(refundedFields)] })
+    expect(legacyOther.refundedMinor).toBe(10_000)
+    // Legacy, same currency, buyer fee included in the refund: capped at face.
+    const legacySame = run({ tickets: [ticket(1_000), ticket(1_000, { status: 'refunded', refund_status: 'approved', refund_amount: 1_100, refund_currency: 'HTG' })] })
+    expect(legacySame.refundedMinor).toBe(100_000)
+    // Legacy, same currency, a smaller refund counts as recorded.
+    const partial = run({ tickets: [ticket(1_000, { status: 'refunded', refund_status: 'approved', refund_amount: 400, refund_currency: 'HTG' })] })
+    expect(partial.refundedMinor).toBe(40_000)
+  })
+
   it('refund_status approved alone (status still valid) is treated as refunded', () => {
     const a = run({ tickets: [ticket(1_000, { refund_status: 'approved' })] })
     expect(a.netMinor).toBe(0)
@@ -438,10 +456,21 @@ describe('server-authoritative money inputs (S2)', () => {
     expect(postponed.reason).toBe('event_not_over')
   })
 
-  it('a "buyer" stamp on a MonCash/SogePay ticket does not waive the fee (only Stripe prices it on top)', () => {
+  it('a "buyer" stamp WITHOUT the server proof does not waive the fee off the Stripe rails', () => {
     expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'moncash' })] }).platformFeeMinor).toBe(10_000)
     expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'sogepay' })] }).platformFeeMinor).toBe(10_000)
+    expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'moncash', buyer_fee_charged: 0 })] }).platformFeeMinor).toBe(10_000)
     expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'stripe' })] }).platformFeeMinor).toBe(0)
+  })
+
+  it('a MonCash / NatCash / SogePay ticket with the buyer_fee_charged proof waives the fee (the buyer paid it)', () => {
+    for (const method of ['moncash', 'moncash_button', 'natcash', 'sogepay']) {
+      const a = run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: method, buyer_fee_charged: 10_000 })] })
+      expect(a.platformFeeMinor).toBe(0)
+      expect(a.netMinor).toBe(100_000)
+    }
+    // The proof alone, with an organizer stamp, waives nothing.
+    expect(run({ tickets: [ticket(1_000, { fee_incidence: 'organizer', buyer_fee_charged: 10_000 })] }).platformFeeMinor).toBe(10_000)
   })
 
   it('a server-side cancellation on the ledger holds everything even if the event doc was "un-cancelled"', () => {
@@ -526,5 +555,32 @@ describe('requested refunds hold that ticket’s net until decided', () => {
   it('the debit ceiling carries the hold too', () => {
     const a = run({ tickets: [ticket(1_000), ticket(1_000, { refund_status: 'requested' })], ledger: { withdrawnMinor: 0 } })
     expect(a.ceilingMinor).toBe(90_000)
+  })
+})
+
+import { ticketFactsFromDocs, ticketRefundedFaceMinor } from '@/lib/payouts/availability'
+import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
+
+describe('refund face value and fee incidence helpers', () => {
+  it('ticketFactsFromDocs counts refunds at face value in the ticket’s sale currency', () => {
+    const facts = ticketFactsFromDocs([
+      { status: 'refunded', price_paid: 100, currency: 'USD', refund_amount: 14_850, refund_currency: 'HTG' },
+      { status: 'refunded', price_paid: 100, currency: 'USD', refund_amount: 14_850, refund_currency: 'HTG', refund_face_amount: 100 },
+      { status: 'refunded', price_paid: 500, currency: 'HTG', refund_amount: 550, refund_currency: 'HTG' },
+    ])
+    expect(facts.refundedMinor).toBe(10_000 + 10_000 + 50_000)
+  })
+
+  it('ticketRefundedFaceMinor never exceeds the face price', () => {
+    expect(ticketRefundedFaceMinor({ price_paid: 10, refund_face_amount: 25 })).toBe(1_000)
+    expect(ticketRefundedFaceMinor({ price_paid: 10 })).toBe(1_000)
+    expect(ticketRefundedFaceMinor({ price_paid: 0, refund_amount: 0 })).toBe(0)
+  })
+
+  it('ticketFeeIncidence: buyer only on Stripe or with the proof', () => {
+    expect(ticketFeeIncidence({ fee_incidence: 'buyer', payment_method: 'stripe_connect' })).toBe('buyer')
+    expect(ticketFeeIncidence({ fee_incidence: 'buyer', payment_method: 'moncash' })).toBe('organizer')
+    expect(ticketFeeIncidence({ fee_incidence: 'buyer', payment_method: 'moncash', buyer_fee_charged: 1 })).toBe('buyer')
+    expect(ticketFeeIncidence({ payment_method: 'stripe' })).toBe('organizer')
   })
 })

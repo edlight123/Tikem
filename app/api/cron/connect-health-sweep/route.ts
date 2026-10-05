@@ -163,7 +163,7 @@ async function notifyOrganizer(
   verdict: Verdict,
   autoUnpublish: boolean
 ): Promise<void> {
-  const title = autoUnpublish ? 'Ticket sales paused — payout account' : 'Your event can’t take payments'
+  const title = autoUnpublish ? 'Ticket sales paused: payout account' : 'Your event can’t take payments'
   const message =
     `${event.title || 'Your event'}: ${verdict.error}` +
     (autoUnpublish ? ' Your event has been moved to draft until this is fixed.' : '')

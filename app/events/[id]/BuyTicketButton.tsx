@@ -243,6 +243,16 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         })
       case 'tier_sales_ended':
         return t('events.claim_sales_ended', { defaultValue: 'Ticket sales have ended.' })
+      case 'already_claimed':
+        return t('events.claim_already_claimed', { defaultValue: "You already claimed tickets for this event. Check your email for them." })
+      case 'promo_already_used':
+        return t('events.claim_promo_already_used', { defaultValue: "You have already used this promo code." })
+      case 'event_cancelled':
+        return t('events.claim_event_cancelled', { defaultValue: "This event has been cancelled." })
+      case 'event_unavailable':
+        return t('events.claim_event_unavailable', { defaultValue: "This event is not available right now." })
+      case 'event_ended':
+        return t('events.claim_event_ended', { defaultValue: "This event has already ended." })
       case 'tier_sold_out':
       case 'no_tickets_available':
         return t('events.claim_sold_out', { defaultValue: 'These tickets are sold out.' })

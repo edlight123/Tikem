@@ -3,6 +3,8 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as fireba
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isDemoMode } from '../config/firebase';
 import { syncPublicProfile } from '../lib/publicProfile';
+import { resetWebSessionCookie } from '../lib/api/backend';
+import { unregisterPushTokenOnSignOut } from '../lib/pushNotifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -67,6 +69,57 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+// AsyncStorage keys holding the signed-in account's data, removed on sign-out.
+// Everything else (tikem:language, location_banner_*, resolved_user_country,
+// browse_city, tikem_welcome_seen_v1, scanner prefs, fee/national-day config,
+// door_checkin_queue_<uid>, ...) is device state and is kept. The cached push
+// token (tikem:expo_push_token) is removed by unregisterPushTokenOnSignOut.
+const USER_SCOPED_KEYS = [
+  '@Tikem:appMode',
+  '@Tikem:pendingPayment',
+  '@Tikem:pendingInvite',
+  '@Tikem:ticketsRefreshHint',
+  'tikem:staffEventIds',
+];
+const USER_SCOPED_PREFIXES = [
+  'tickets_cache_',
+  'ticket_cache_',
+  'event_tickets_cache_',
+  'payout_settings_cache_',
+  'organizer_markets_',
+  'scanner_manifest_',
+  'door_list_',
+];
+
+/** The `sub` claim of a JWT, or null if it cannot be read (no verification: a pre-check only). */
+function jwtSubject(jwt: string): string | null {
+  try {
+    const part = jwt.split('.')[1];
+    if (!part || typeof atob !== 'function') return null;
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
+    const sub = JSON.parse(atob(b64))?.sub;
+    return typeof sub === 'string' ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
+async function clearUserScopedStorage() {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const doomed = keys.filter(
+      (k) =>
+        USER_SCOPED_KEYS.includes(k) ||
+        USER_SCOPED_PREFIXES.some((p) => k.startsWith(p)) ||
+        // The organizer checklist cache, but not its per-account "hidden" flag.
+        (k.startsWith('tikem_org_checklist_') && !k.startsWith('tikem_org_checklist_hidden_')),
+    );
+    if (doomed.length) await AsyncStorage.multiRemove(doomed);
+  } catch (e) {
+    console.warn('[Auth] Could not clear user storage on sign-out', e);
+  }
+}
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -158,19 +211,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   // A Google response produced by a re-authentication belongs to it — the
-  // sign-in effect below must never also sign in with it (a different account
-  // picked in the sheet would otherwise switch the session). The flag covers the
-  // prompt while open; the consumed id_token covers the effect firing after it.
-  const googleReauthInFlight = useRef(false);
+  // sign-in effect below must never sign in with it (a different account picked
+  // in the sheet would otherwise switch the session). `googleFlow` marks the
+  // prompt as a re-auth from before it opens until its response is consumed —
+  // on iOS that is AFTER promptAsync resolves, once the code exchange lands —
+  // so even a late response (waiter timed out) is dropped, never signed in.
+  // The consumed id_token is a second guard against a re-fired effect.
+  const googleFlow = useRef<'reauth' | null>(null);
   const googleReauthIdToken = useRef<string | null>(null);
+
+  // iOS Google settles in two steps: promptAsync resolves with an authorization
+  // CODE, and the id_token only arrives later on `response` once
+  // expo-auth-session has exchanged it. signInWithGoogle / reauthenticate park
+  // their promise here so the effect below can resolve (with the id_token) or
+  // reject it, and the caller's screen shows the error.
+  const googleSignInPending = useRef<{ resolve: (idToken: string) => void; reject: (e: any) => void; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const settleGoogleSignIn = (error?: any, idToken = '') => {
+    const pending = googleSignInPending.current;
+    if (!pending) {
+      if (error) console.error('Google Sign-In error:', error);
+      return;
+    }
+    googleSignInPending.current = null;
+    clearTimeout(pending.timer);
+    if (error) pending.reject(error);
+    else pending.resolve(idToken);
+  };
+  const googleSignInError = (message: string) =>
+    Object.assign(new Error(message), { code: 'auth/google-sign-in-failed' });
+  /** Wait for the effect below to settle the current prompt (capped: the code exchange has no failure callback upstream). */
+  const waitForGoogleResponse = (timeoutError: () => Error) =>
+    new Promise<string>((resolve, reject) => {
+      googleSignInPending.current = {
+        resolve,
+        reject,
+        timer: setTimeout(() => {
+          if (googleSignInPending.current?.resolve === resolve) {
+            googleSignInPending.current = null;
+            reject(timeoutError());
+          }
+        }, 30000),
+      };
+    });
 
   // Handle Google Sign-In response
   useEffect(() => {
-    if (googleReauthInFlight.current) return;
+    if (!response) return;
+    if (googleFlow.current === 'reauth') {
+      // Hand the token to the re-auth waiter; NEVER signInWithCredential here.
+      googleFlow.current = null;
+      const idToken = response.type === 'success' ? (response as any).params?.id_token : '';
+      if (idToken) settleGoogleSignIn(undefined, idToken);
+      else settleGoogleSignIn(Object.assign(new Error('Re-authentication cancelled'), { code: 'auth/cancelled' }));
+      return;
+    }
     if (response?.type === 'success' && (response as any).params?.id_token === googleReauthIdToken.current) return;
     if (response?.type === 'success') {
       const { id_token } = response.params;
-      handleGoogleSignInSuccess(id_token);
+      if (!id_token) {
+        settleGoogleSignIn(googleSignInError('Google Sign-In returned no ID token.'));
+        return;
+      }
+      handleGoogleSignInSuccess(id_token).then(
+        () => settleGoogleSignIn(),
+        (error) => settleGoogleSignIn(error),
+      );
+    } else if (response?.type === 'error') {
+      settleGoogleSignIn(response.error || googleSignInError('Google Sign-In failed.'));
     }
   }, [response]);
 
@@ -265,6 +372,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await setDoc(userDocRef, newUserDoc);
         // H4: seed the cross-user-readable projection (best-effort; PII stripped).
         await syncPublicProfile(user.uid, newUserDoc);
+        // onAuthStateChanged's profile fetch can run before this write lands and
+        // find nothing; load the profile now that it exists.
+        await refreshUserProfile(user.uid);
       }
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
@@ -306,7 +416,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (idToken) await handleGoogleSignInSuccess(idToken);
         return;
       }
-      await promptAsync();
+      // A stale prompt (e.g. the sheet was dismissed by backgrounding) must not
+      // leave an earlier caller hanging.
+      settleGoogleSignIn();
+      googleFlow.current = null;
+      const result = await promptAsync();
+      if (result?.type === 'error') {
+        throw (result as any).error || googleSignInError('Google Sign-In failed.');
+      }
+      // Cancelled / dismissed: nothing to report, same as the Android picker.
+      if (result?.type !== 'success') return;
+      // Wait for the code exchange + Firebase sign-in, settled by the effect above.
+      await waitForGoogleResponse(() => googleSignInError('Google Sign-In timed out.'));
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
       throw error;
@@ -368,6 +489,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await setDoc(doc(db, 'users', uid), newUserDoc);
         // H4: seed the cross-user-readable projection (best-effort; PII stripped).
         await syncPublicProfile(uid, newUserDoc);
+        // The auth-state profile fetch may have raced this write; reload it.
+        await refreshUserProfile(uid);
       }
     } catch (e) {
       console.warn('Apple sign-in: could not seed user profile', e);
@@ -395,11 +518,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await setDoc(doc(db, 'users', userCredential.user.uid), newUserDoc);
     // H4: seed the cross-user-readable projection (best-effort; PII stripped).
     await syncPublicProfile(userCredential.user.uid, newUserDoc);
+    // onAuthStateChanged fired on account creation, before this write, so its
+    // profile fetch found no document. Load it now that it exists.
+    await refreshUserProfile(userCredential.user.uid);
   };
 
   const signOut = async () => {
+    // Detach this device's push token from the account first (needs auth; capped
+    // at a few seconds and never throws, so an offline phone still signs out).
+    await unregisterPushTokenOnSignOut();
+    resetWebSessionCookie();
     await firebaseSignOut(auth);
-    await AsyncStorage.clear();
+    // Remove only what belongs to the signed-out account. AsyncStorage.clear()
+    // also wiped device-wide state: the language choice, the location banner and
+    // first-run welcome flags, and the door scanner's unsent offline check-in
+    // queue (door_checkin_queue_<uid>, which must survive to sync later).
+    await clearUserScopedStorage();
   };
 
   const reauthMethod = (): 'password' | 'google' | 'apple' | null => {
@@ -429,17 +563,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await current.getIdToken(true);
         return;
       }
-      googleReauthInFlight.current = true;
-      try {
-        const result = await promptAsync();
-        if (result?.type !== 'success' || !(result as any).params?.id_token) {
-          throw Object.assign(new Error('Re-authentication cancelled'), { code: 'auth/cancelled' });
-        }
-        googleReauthIdToken.current = (result as any).params.id_token;
-        await reauthenticateWithCredential(current, GoogleAuthProvider.credential((result as any).params.id_token));
-      } finally {
-        googleReauthInFlight.current = false;
+      const cancelled = () => Object.assign(new Error('Re-authentication cancelled'), { code: 'auth/cancelled' });
+      settleGoogleSignIn();
+      googleFlow.current = 'reauth';
+      const result = await promptAsync();
+      if (result?.type !== 'success') {
+        // Leave googleFlow set: the matching (dismiss/error) response consumes
+        // it, so nothing from this prompt can reach the sign-in path.
+        throw cancelled();
       }
+      // iOS: the result carries only a code; the id_token comes from the code
+      // exchange on `response`, handed over by the effect. Web-style flows
+      // return it directly.
+      const directToken: string | undefined = (result as any).params?.id_token;
+      const idToken = directToken || (await waitForGoogleResponse(cancelled));
+      googleReauthIdToken.current = idToken;
+      // Must be the SAME Google account. Firebase also rejects a mismatch
+      // (auth/user-mismatch) without switching users; this fails fast first.
+      const googleUid = (current.providerData || []).find((p) => p?.providerId === 'google.com')?.uid;
+      const sub = jwtSubject(idToken);
+      if (googleUid && sub && googleUid !== sub) {
+        throw Object.assign(new Error('Signed in with a different Google account'), { code: 'auth/user-mismatch' });
+      }
+      await reauthenticateWithCredential(current, GoogleAuthProvider.credential(idToken));
     } else {
       throw new Error('This sign-in method cannot be re-verified here.');
     }

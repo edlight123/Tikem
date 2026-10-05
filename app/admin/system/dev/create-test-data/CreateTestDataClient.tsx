@@ -488,7 +488,7 @@ export default function CreateTestDataClient() {
 
       <ConsoleSection>Note</ConsoleSection>
       <p className="text-[13px] text-console-mut">
-        Temporary admin page — this should be deleted after testing. It&apos;s only for development
+        Temporary admin page. This should be deleted after testing. It&apos;s only for development
         purposes.
       </p>
     </>

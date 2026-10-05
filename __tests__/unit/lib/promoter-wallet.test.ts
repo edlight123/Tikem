@@ -8,6 +8,8 @@
 jest.mock('@/lib/firebase/admin', () => ({ adminDb: { collection: jest.fn() } }))
 jest.mock('@/lib/payouts/withdrawal-gate', () => ({ previewRelease: jest.fn() }))
 jest.mock('@/lib/earnings', () => ({ getEventEarnings: jest.fn() }))
+jest.mock('@/lib/payouts/availability-server', () => ({ loadEventAvailability: jest.fn() }))
+jest.mock('@/lib/promoters', () => ({ excludeStripeConnectSales: jest.fn(async (rows: any[]) => rows) }))
 jest.mock('@/lib/moncash', () => ({ moncashPrefundedTransfer: jest.fn() }))
 jest.mock('@/lib/currency', () => ({ fetchUsdToHtgRate: jest.fn() }))
 
@@ -15,6 +17,7 @@ import {
   computeWalletBuckets,
   computeWithdrawalFee,
   PROMOTER_WITHDRAWAL_FEE_PERCENT,
+  promoterHoldFromAvailability,
 } from '@/lib/promoter-wallet'
 
 describe('computeWalletBuckets', () => {
@@ -69,5 +72,22 @@ describe('computeWithdrawalFee', () => {
   it('handles zero and junk safely', () => {
     expect(computeWithdrawalFee(0)).toEqual({ feeCents: 0, payoutCents: 0 })
     expect(computeWithdrawalFee(NaN as any)).toEqual({ feeCents: 0, payoutCents: 0 })
+  })
+})
+
+describe('promoterHoldFromAvailability', () => {
+  const clear = { reason: 'eligible', refundRequestedMinor: 0, refundInFlightMinor: 0 } as any
+  it('passes a clean event through to the ladder', () => {
+    expect(promoterHoldFromAvailability(clear)).toBeNull()
+    expect(promoterHoldFromAvailability({ ...clear, reason: 'nothing_owed' })).toBeNull()
+  })
+  it('holds on integrity, cancellation, freeze and review', () => {
+    for (const reason of ['payouts_frozen', 'event_cancelled', 'ticket_currency_review', 'ledger_gross_exceeded', 'earnings_currency_review', 'payout_under_review', 'release_unknown']) {
+      expect(promoterHoldFromAvailability({ ...clear, reason })).toBe(reason)
+    }
+  })
+  it('holds while any refund is requested or in flight', () => {
+    expect(promoterHoldFromAvailability({ ...clear, refundRequestedMinor: 1 })).toBe('refund_requested')
+    expect(promoterHoldFromAvailability({ ...clear, refundInFlightMinor: 1 })).toBe('refund_in_flight')
   })
 })

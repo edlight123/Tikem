@@ -285,8 +285,14 @@ export async function getOrganizerStats(
   }
 }
 
+/** An event with no end date counts as running this long after it starts. */
+const NO_END_RUNNING_WINDOW_MS = 12 * 60 * 60 * 1000;
+
 /**
- * Get today's events for organizer
+ * Get today's events for organizer: anything starting today, plus anything
+ * still running now. A party that starts at 22:00 and runs past midnight must
+ * stay scannable the next morning, so an event that has started and not yet
+ * ended (end_datetime when present, else start + 12h) is included too.
  */
 export async function getTodayEvents(
   organizerId: string
@@ -298,12 +304,17 @@ export async function getTodayEvents(
     const endOfDay = new Date(startOfDay);
     endOfDay.setDate(endOfDay.getDate() + 1);
 
-    // Filter events happening today (exclude cancelled events)
+    // Filter events happening today or still running (exclude cancelled events)
     const todayEvents = events.filter((e) => {
-      const eventDate = new Date(e.start_datetime);
-      const isToday = eventDate >= startOfDay && eventDate < endOfDay;
-      const isCancelled = e.status === 'cancelled';
-      return isToday && !isCancelled;
+      if (e.status === 'cancelled') return false;
+      const start = new Date(e.start_datetime);
+      if (isNaN(start.getTime())) return false;
+      const isToday = start >= startOfDay && start < endOfDay;
+      const end = e.end_datetime ? new Date(e.end_datetime) : null;
+      const endMs =
+        end && !isNaN(end.getTime()) ? end.getTime() : start.getTime() + NO_END_RUNNING_WINDOW_MS;
+      const isRunning = start.getTime() <= now.getTime() && now.getTime() < endMs;
+      return isToday || isRunning;
     });
 
     // Get ticket data for each event

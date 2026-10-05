@@ -54,6 +54,7 @@
 
 import { calculateCappedPlatformFee } from '@/lib/fees'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
 import {
   decideRelease,
   holdHoursFor,
@@ -172,18 +173,12 @@ export function ticketPriceMinor(ticket: any): number {
 }
 
 /**
- * Who paid the platform fee. 'buyer' is honoured ONLY on the Stripe rails —
- * the only checkout that prices a fee on top of face value. MonCash, MonCash
- * button and SogePay charge face value, so a 'buyer' stamp there (which the
- * MonCash callback used to copy from the client-editable event setting) would
- * waive a fee nobody paid.
+ * Who paid the platform fee: lib/payouts/fee-incidence.ts, the rule the derived
+ * earnings view (lib/earnings.ts) also uses. A 'buyer' stamp counts only on the
+ * Stripe rails or with the server-stamped `buyer_fee_charged` proof (MonCash /
+ * NatCash / SogePay pass-on); any other 'buyer' stamp stays 'organizer'.
  */
-const BUYER_FEE_RAILS = new Set(['stripe', 'stripe_connect'])
-function ticketIncidence(ticket: any): 'buyer' | 'organizer' {
-  const stamped = String(ticket?.fee_incidence ?? ticket?.feeIncidence ?? '').toLowerCase()
-  const rail = String(ticket?.payment_method ?? '').toLowerCase().trim()
-  return stamped === 'buyer' && BUYER_FEE_RAILS.has(rail) ? 'buyer' : 'organizer'
-}
+const ticketIncidence = ticketFeeIncidence
 
 /**
  * The currency a ticket was SOLD in, as the payment path stamped it
@@ -195,13 +190,43 @@ export function ticketSaleCurrency(ticket: any): string | null {
 }
 
 /**
+ * The FACE value (event currency, minor units) a refunded ticket takes back out
+ * of gross. Gross is face value in the event currency, so the refund must be
+ * too: `refund_amount` is what the BUYER got back, in the CHARGED currency, and
+ * includes any pass-on fee — subtracting it from face gross mixed currencies.
+ *
+ * Every refund writer now stamps `refund_face_amount` (event-currency major
+ * units, never including the buyer fee). Legacy docs without it: a refund in
+ * the event's own currency counts its refund_amount capped at the face price;
+ * a refund in another currency (or of unknown currency) counts the full face
+ * price, since every refund path refunds whole tickets.
+ */
+export function ticketRefundedFaceMinor(ticket: any, eventCurrency?: string | null): number {
+  const price = ticketPriceMinor(ticket)
+  const recordedFace = ticket?.refund_face_amount
+  if (recordedFace !== undefined && recordedFace !== null && recordedFace !== '' && Number.isFinite(Number(recordedFace))) {
+    return Math.min(price, majorToMinor(recordedFace))
+  }
+  const refundAmount = ticket?.refund_amount
+  if (refundAmount === undefined || refundAmount === null || refundAmount === '' || !Number.isFinite(Number(refundAmount))) {
+    return price
+  }
+  const eventCode = String(eventCurrency || ticketSaleCurrency(ticket) || '').trim().toUpperCase()
+  const refundCode = String(ticket?.refund_currency ?? '').trim().toUpperCase()
+  if (eventCode && refundCode && refundCode === eventCode) {
+    return Math.min(price, majorToMinor(refundAmount))
+  }
+  return price
+}
+
+/**
  * Attendance and refund facts, computed EXACTLY as the Haiti withdrawal gate
  * computes them (lib/payouts/withdrawal-gate.ts loadTicketFacts delegates
  * here), so a screen and the gate feed decideRelease() identical numbers.
  *
- * Note this deliberately keeps the gate's own definition of "live" for the
- * ATTENDANCE ratio ('valid' | 'confirmed' | empty) — it is a review signal, not
- * money, and changing it would move a review threshold.
+ * "Live" here is the one shared vocabulary (lib/tickets/status.ts: valid |
+ * confirmed | active | empty). It used to omit 'active', which undercounted the
+ * attendance ratio for those sales.
  */
 export type TicketFacts = {
   liveTickets: number
@@ -224,11 +249,11 @@ export function ticketFactsFromDocs(tickets: any[]): TicketFacts {
     const refundStatus = String(data?.refund_status || '').toLowerCase()
 
     if (status === 'refunded' || refundStatus === 'approved') {
-      facts.refundedMinor += majorToMinor(data?.refund_amount ?? data?.price_paid ?? data?.pricePaid)
+      facts.refundedMinor += ticketRefundedFaceMinor(data)
       continue
     }
 
-    if (status && status !== 'valid' && status !== 'confirmed') continue
+    if (!isLiveTicketStatus(status)) continue
 
     facts.liveTickets += 1
     if (data?.checked_in === true) {
@@ -466,7 +491,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     if (isRefundedTicket(ticket)) {
       if (!isStripeConnectTicket(ticket)) {
         grossMinor += price
-        refundedMinor += majorToMinor(ticket.refund_amount ?? ticket.price_paid ?? ticket.pricePaid)
+        refundedMinor += ticketRefundedFaceMinor(ticket, eventCurrencyCode)
       }
       continue
     }

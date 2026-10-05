@@ -3,7 +3,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { getPaymentProviderForEventCountry, normalizeCountryCode } from '@/lib/payment-provider'
 import { checkEventCapacity } from '@/lib/capacity'
-import { calculateDiscount, resolvePromoCode, promoHasCapacity, type PromoDoc } from '@/lib/promo-codes'
+import { calculateDiscount, resolvePromoCode, promoBuyerKey, promoCanCoverOrder, type PromoDoc } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
 import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { resolveEventCountry } from '@/lib/event-country'
@@ -14,6 +14,18 @@ import {
   identityFromUser,
   type CheckoutIdentity,
 } from '@/lib/guest/checkout'
+import {
+  checkEventPurchasable,
+  checkTierForEvent,
+  invalidQuantityRefusal,
+  normalizeTierLines,
+  parseTicketQuantity,
+  pickTierWhenUnspecified,
+} from '@/lib/tickets/purchasable'
+import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
+import { getPlatformSettings } from '@/lib/admin/platform-settings'
+import { fromCents } from '@/lib/ticketPricing'
+import { sumMoney } from '@/lib/fx/usd-htg'
 
 export const runtime = 'nodejs'
 
@@ -36,6 +48,22 @@ export async function POST(request: Request) {
 
     if (!eventId) return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
 
+    // Whole-number quantities only, on every line (see lib/tickets/purchasable.ts):
+    // rounding 0.4 → 0 / 1.6 → 2 here priced an order the buyer never asked for.
+    const multiTier = Array.isArray(tiers) && tiers.length > 0
+    const tierLines = normalizeTierLines(multiTier ? tiers : [])
+    if (!tierLines.ok) {
+      return NextResponse.json({ error: tierLines.error, code: tierLines.code }, { status: tierLines.status })
+    }
+    if (multiTier && tierLines.lines.length === 0) {
+      return NextResponse.json({ error: 'No valid ticket tiers selected' }, { status: 400 })
+    }
+    const singleQuantity = multiTier ? 0 : parseTicketQuantity(quantity)
+    if (singleQuantity === null) {
+      const refusal = invalidQuantityRefusal()
+      return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
+    }
+
     const supabase = await createClient()
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -45,6 +73,15 @@ export async function POST(request: Request) {
 
     if (eventError || !event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    // Cancelled, unpublished, rejected or finished events do not take money.
+    const purchasable = checkEventPurchasable(event)
+    if (!purchasable.ok) {
+      return NextResponse.json(
+        { error: purchasable.error, code: purchasable.code },
+        { status: purchasable.status }
+      )
     }
 
     // Resolve the buyer: the signed-in user, or a validated guest contact record.
@@ -117,22 +154,31 @@ export async function POST(request: Request) {
 
     let selections: { tierId: string | null; tierName: string; quantity: number; unitPrice: number }[] = []
 
-    if (Array.isArray(tiers) && tiers.length > 0) {
-      const tierIds = tiers.map((t: any) => String(t?.tierId || '')).filter(Boolean)
-      const { data: tierRows } = await supabase
-        .from('ticket_tiers')
-        .select('*')
-        .in('id', tierIds)
+    if (multiTier) {
+      // Read each tier by DOCUMENT id (an `in` query on a stored `id` field misses
+      // tier docs that never carried one).
+      const tierRows = await Promise.all(
+        tierLines.lines.map((l) =>
+          Promise.resolve(supabase.from('ticket_tiers').select('*').eq('id', l.tierId).single()).then(
+            ({ data }) => data as any
+          )
+        )
+      )
 
       const byId = new Map<string, any>()
-      ;(tierRows || []).forEach((row: any) => byId.set(String(row.id), row))
+      tierRows.forEach((row: any, i: number) => {
+        if (row) byId.set(tierLines.lines[i].tierId, row)
+      })
 
-      for (const selection of tiers) {
-        const id = String(selection?.tierId || '')
-        const qty = Math.max(0, Math.round(Number(selection?.quantity || 0)))
-        if (!id || qty <= 0) continue
+      for (const line of tierLines.lines) {
+        const id = line.tierId
+        const qty = line.quantity
         const tierRow = byId.get(id)
-        if (!tierRow) continue
+        // Must exist, belong to THIS event and be active — never skipped silently.
+        const tierCheck = checkTierForEvent(tierRow, String(eventId))
+        if (!tierCheck.ok) {
+          return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
+        }
 
         const onSale = tierIsOnSale(tierRow)
         if (!onSale.ok) return NextResponse.json({ error: onSale.reason }, { status: 400 })
@@ -154,18 +200,36 @@ export async function POST(request: Request) {
           unitPrice: Number(tierRow.price || 0),
         })
       }
-    } else if (tierId) {
-      const { data: tierRow } = await supabase
-        .from('ticket_tiers')
-        .select('*')
-        .eq('id', tierId)
-        .single()
+    } else {
+      let tierRow: any = null
+      if (tierId) {
+        const { data } = await supabase
+          .from('ticket_tiers')
+          .select('*')
+          .eq('id', String(tierId))
+          .single()
+        const tierCheck = checkTierForEvent(data, String(eventId))
+        if (!tierCheck.ok) {
+          return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
+        }
+        tierRow = data
+      } else {
+        const { data: eventTiers } = await supabase
+          .from('ticket_tiers')
+          .select('*')
+          .eq('event_id', String(eventId))
+        const picked = pickTierWhenUnspecified(eventTiers as any[], String(eventId))
+        if (!picked.ok) {
+          return NextResponse.json({ error: picked.error, code: picked.code }, { status: picked.status })
+        }
+        tierRow = picked.tier
+      }
 
       if (tierRow) {
         const onSale = tierIsOnSale(tierRow)
         if (!onSale.ok) return NextResponse.json({ error: onSale.reason }, { status: 400 })
 
-        const qty = Math.max(1, Math.round(Number(quantity || 1)))
+        const qty = singleQuantity
         const sold = Number(tierRow.sold_quantity || 0)
         const total = Number(tierRow.total_quantity || 0)
         const remaining = Math.max(0, total - sold)
@@ -188,8 +252,8 @@ export async function POST(request: Request) {
     }
 
     if (selections.length === 0) {
-      // Fallback to single base ticket price.
-      const qty = Math.max(1, Math.round(Number(quantity || 1)))
+      // Legacy event with no tier docs at all: the event's own single price.
+      const qty = singleQuantity
       selections = [
         {
           tierId: null,
@@ -208,7 +272,12 @@ export async function POST(request: Request) {
     let promo: PromoDoc | null = null
     if (promoCode) {
       const resolved = await resolvePromoCode(String(eventId), String(promoCode))
-      if (resolved && promoHasCapacity(resolved)) promo = resolved
+      // Discount only when confirm-time redemption can honour it for this order's
+      // quantity and buyer (the same key fulfillment redeems under).
+      const orderQty = selections.reduce((sum, s) => sum + s.quantity, 0)
+      if (resolved && (await promoCanCoverOrder(resolved, { qty: orderQty, buyerKey: promoBuyerKey(identity) })).ok) {
+        promo = resolved
+      }
     }
     // Resolved promo doc id stored on the pending transaction so the confirm-time redeem targets
     // the exact promo; null when no discount was applied (nothing to redeem).
@@ -248,6 +317,22 @@ export async function POST(request: Request) {
       console.warn('[sogepay] capacity pre-check failed (continuing)', { message: (e as any)?.message })
     }
 
+    // WHO PAYS THE FEE: priced exactly as moncash-button/initiate and
+    // create-payment-intent price it (lib/checkout/buyer-pricing on the post-promo
+    // face total, the stored Haiti platform settings). Sogepay charges in the event
+    // currency, so the fee needs no conversion. The incidence and fee are stamped on
+    // the ORDER; fulfillment derives the tickets' buyer_fee_charged proof from them.
+    const platformSettings = await getPlatformSettings()
+    const buyerPricing = priceOrderCents(Math.round(originalAmount * 100), event, {
+      quantity: totalQuantity,
+      currency: originalCurrency,
+      config: platformSettings.haiti,
+    })
+    const feeIncidence: 'buyer' | 'organizer' =
+      buyerPricing.incidence === 'buyer' && buyerPricing.buyerFee > 0 ? 'buyer' : 'organizer'
+    const buyerFee = feeIncidence === 'buyer' ? fromCents(buyerPricing.buyerFee) : 0
+    const chargeAmount = sumMoney([originalAmount, buyerFee])
+
     // Store pending transaction so we can reconcile a future Sogepay callback/webhook.
     // Note: we intentionally do NOT invent a Sogepay signature/redirect format here.
     const orderId = `${Date.now() % 1_000_000_000}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`
@@ -262,7 +347,13 @@ export async function POST(request: Request) {
         user_id: identity.id,
         event_id: eventId,
         quantity: totalQuantity,
-        amount: originalAmount,
+        // What the buyer is charged: face value + any fee passed on to them.
+        amount: chargeAmount,
+        // Fee incidence, fixed at purchase; `original_amount` stays the FACE total.
+        fee_incidence: feeIncidence,
+        face_amount: originalAmount,
+        buyer_fee: buyerFee || 0,
+        buyer_fee_original: buyerFee || 0,
         payment_method: 'sogepay',
         status: 'pending',
         currency: originalCurrency,

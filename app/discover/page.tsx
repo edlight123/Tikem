@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/home/country'
 import { getCurrentUser } from '@/lib/auth'
@@ -32,10 +33,17 @@ import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/bl
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { eventMatchesNationalDay, nationalDayText, resolveNationalDays } from '@/lib/nationalDays'
 import { getNationalDayConfig } from '@/lib/nationalDaysServer'
-import { resolveServerLanguage } from '@/lib/serverT'
+import { resolveServerLanguage, tServer } from '@/lib/serverT'
+import { eventHasEnded } from '@/lib/home/feed'
 
 // Revalidate every 30 seconds for discover page (frequently updated)
 export const revalidate = 30
+
+export const metadata: Metadata = {
+  title: 'Discover events | Tikèm',
+  description: 'Find concerts, parties, festivals and culture in Haiti and across the diaspora, and get your tickets on Tikèm.',
+  alternates: { canonical: '/discover' },
+}
 
 export default async function DiscoverPage({
   searchParams,
@@ -106,31 +114,16 @@ export default async function DiscoverPage({
   if (nationalDay) {
     filteredEvents = filteredEvents.filter((e: any) => eventMatchesNationalDay(e, nationalDay))
   }
-  const nationalDayTitle = nationalDay ? nationalDayText(nationalDay, await resolveServerLanguage()).title : ''
+  const serverLang = await resolveServerLanguage()
+  const nationalDayTitle = nationalDay ? nationalDayText(nationalDay, serverLang).title : ''
+  const pageHeading = tServer(serverLang, 'nav.discover', 'Discover')
 
-  // Filter out events that have definitively ended
-  // Be lenient: show events that are ongoing or haven't started yet
-  const now = new Date()
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  
-  const notDefinitelyEnded = (event: any) => {
-    const start = event?.start_datetime ? new Date(event.start_datetime) : null
-    const end = event?.end_datetime ? new Date(event.end_datetime) : null
-
-    // If event has an end time, check if it's passed
-    if (end && !Number.isNaN(end.getTime())) {
-      return end.getTime() >= now.getTime()
-    }
-    
-    // If no end time but has start, show if started within last week (could be ongoing)
-    // or hasn't started yet
-    if (start && !Number.isNaN(start.getTime())) {
-      return start.getTime() >= oneWeekAgo.getTime()
-    }
-    
-    // If no valid dates, show it anyway
-    return true
-  }
+  // Filter out ended events: the same rule the homepage applies (its end, or
+  // start plus the default run when no end is stored). This used to keep any
+  // event that started within the last week, so a one-night event from two
+  // days ago still led the For You feed.
+  const nowMs = Date.now()
+  const notDefinitelyEnded = (event: any) => !eventHasEnded(event, nowMs)
 
   filteredEvents = filteredEvents.filter(notDefinitelyEnded)
   
@@ -250,11 +243,16 @@ export default async function DiscoverPage({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {nationalDay && (
+        {nationalDay ? (
           // The national day this list is for, named in the editorial voice.
           <h1 className="mb-6 font-display lowercase italic !text-[clamp(28px,4.4vw,44px)] !leading-[1.02] text-white/90">
             {nationalDayTitle}
           </h1>
+        ) : (
+          // The feed's design has no visible title (the filter bar is the
+          // header), but the page still needs one heading for screen readers
+          // and outline-based navigation.
+          <h1 className="sr-only">{pageHeading}</h1>
         )}
         <Suspense fallback={<DiscoverContentSkeleton />}>
           <DiscoverPageContent

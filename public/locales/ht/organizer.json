@@ -859,7 +859,7 @@
     "moncash_note": "Retrè ou a ap voye sou kont MonCash ou (anjeneral nan 24 èdtan).",
     "moncash_below_minimum": "Retrè MonCash kòmanse a {{min}}. Balans ou ki disponib se {{balance}}.",
     "bank_below_minimum": "Transfè labank kòmanse a {{min}}.",
-    "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l — pa gen okenn lajan ki deplase."
+    "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l. Pa gen okenn lajan ki deplase."
   },
   "events_filters": {
     "alphabetical": "Alfabetik",
@@ -970,7 +970,7 @@
     "profile_removed": "Pwofil òganizatè ou a ap retire",
     "deactivate": "Dezaktive",
     "delete_account": "Efase kont lan",
-    "export_desc": "Telechaje yon kopi tout done ou yo — evènman, tikè ak peman — nan fòma JSON.",
+    "export_desc": "Telechaje yon kopi tout done ou yo (evènman, tikè ak peman) nan fòma JSON.",
     "delete_desc": "Efase kont ou ak tout done ki mache avè l nèt. Ou p ap ka defè aksyon sa a.",
     "deactivate_desc": "Dezaktive kont ou pou yon ti tan. Ou ka reaktive l nan 30 jou. Evènman ou yo ap kache.",
     "deactivate_confirm": "Kont ou ap dezaktive e evènman ou yo ap kache. Ou ka reaktive l nan 30 jou si w konekte ankò."
@@ -1439,7 +1439,7 @@
   },
   "payout_history": {
     "payout_history": "Istorik peman",
-    "view_all_payouts": "Gade tout peman ou yo — sa ki fèt ak sa ki annatant.",
+    "view_all_payouts": "Gade tout peman ou yo: sa ki fèt ak sa ki annatant.",
     "no_history_yet": "Poko gen istorik peman",
     "payouts_appear_after": "Peman ou yo ap parèt isit la apre evènman ou yo fini.",
     "completed": "Fini",
@@ -1453,7 +1453,7 @@
     "event_deleted_or_wrong_link": "Petèt yo efase evènman sa a, oswa lyen an pa bon.",
     "back_to_events": "Retounen nan evènman yo",
     "no_ticket_types_yet": "Poko gen tip tikè",
-    "add_ticket_types_desc": "Ajoute tip tikè — RSVP gratis oswa nivo peyan — pou moun ka enskri nan evènman ou.",
+    "add_ticket_types_desc": "Ajoute tip tikè (RSVP gratis oswa nivo peyan) pou moun ka enskri nan evènman ou.",
     "add_tickets": "Ajoute tikè",
     "edit_tickets": "Modifye tikè yo",
     "total_codes": "Total kòd",

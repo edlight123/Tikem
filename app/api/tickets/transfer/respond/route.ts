@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { DocumentReference, Transaction } from 'firebase-admin/firestore'
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     const nowIso = new Date().toISOString()
 
     // Perform update atomically
-    const { ticketId, fromUserId, toEmailLower, status, expiresAt, ticketEventId } = await adminDb.runTransaction(
+    const outcome = await adminDb.runTransaction(
       async (tx: Transaction) => {
         const transferSnap = await tx.get(transferRef)
         if (!transferSnap.exists) {
@@ -81,10 +82,10 @@ export async function POST(request: NextRequest) {
 
         const exp = toDate(transfer?.expires_at)
         if (exp && exp < new Date()) {
+          // Return (not throw) so the 'expired' write actually commits — a
+          // throw inside runTransaction rolls every write back.
           tx.update(transferRef, { status: 'expired', updated_at: nowIso })
-          const err: any = new Error('Transfer has expired')
-          err.status = 400
-          throw err
+          return { expired: true as const }
         }
 
         const ticketId = String(transfer?.ticket_id || '')
@@ -107,7 +108,22 @@ export async function POST(request: NextRequest) {
         const ticketStatus = ticket?.status
         const checkedIn = !!ticket?.checked_in || !!ticket?.checked_in_at
 
-        if ((ticketStatus !== 'active' && ticketStatus !== 'valid') || checkedIn) {
+        // The ticket must still belong to the person who offered it. Without
+        // this, a transfer naming any ticket id (or one whose holder changed
+        // after the offer) would move someone else's ticket to the recipient.
+        // Same ownership predicate the request route applies when the offer is
+        // made (attendee OR buyer), re-checked here inside the transaction.
+        const ownsTicket = ticket?.attendee_id === fromUserId || ticket?.user_id === fromUserId
+        if (!ownsTicket) {
+          const err: any = new Error('Ticket is no longer available for transfer')
+          err.status = 400
+          throw err
+        }
+
+        // Same live set the request route accepts (valid | confirmed | active).
+        // An absent status counts as live in isLiveTicketStatus; request refuses
+        // those, so require a non-empty status here too.
+        if (!ticketStatus || !isLiveTicketStatus(ticketStatus) || checkedIn) {
           const err: any = new Error('Ticket is no longer available for transfer')
           err.status = 400
           throw err
@@ -133,6 +149,7 @@ export async function POST(request: NextRequest) {
         }
 
         return {
+          expired: false as const,
           ticketId,
           fromUserId,
           toEmailLower: toEmail,
@@ -142,6 +159,11 @@ export async function POST(request: NextRequest) {
         }
       }
     )
+
+    if (outcome.expired) {
+      return NextResponse.json({ error: 'Transfer has expired' }, { status: 400 })
+    }
+    const { ticketId, fromUserId, toEmailLower, status, expiresAt, ticketEventId } = outcome
 
     // Fetch event + sender/recipient for messages (best-effort)
     let eventTitle = 'Event'

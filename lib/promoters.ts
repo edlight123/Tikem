@@ -20,6 +20,9 @@
 
 import crypto from 'crypto'
 import { adminDb } from '@/lib/firebase/admin'
+import { calculateCappedPlatformFee } from '@/lib/fees'
+import { getPlatformSettings } from '@/lib/admin/platform-settings'
+import { getEventLocation } from '@/types/platform-settings'
 
 export interface PromoterDoc {
   id: string
@@ -118,24 +121,100 @@ export async function resolvePromoterCode(
  *
  * Free orders earn 0 under BOTH types: a flat fee on a zero-revenue ticket would
  * obligate money the organizer never received.
+ *
+ * Capped at the order's gross MINUS the platform fee: the commission is withheld
+ * from the organizer's net, and the net is what is left after Tikèm's fee. A cap
+ * at the gross alone let a large flat fee push the organizer's net negative, so
+ * the promoter was paid out of money that was never the organizer's.
  */
 export function calculateCommissionCents(
   promoter: Pick<PromoterDoc, 'commission_type' | 'commission_value'>,
   orderGrossCents: number,
-  quantity: number
+  quantity: number,
+  platformFeeCents: number = 0
 ): number {
   const gross = Math.max(0, Math.round(Number(orderGrossCents) || 0))
   const qty = Math.max(0, Math.round(Number(quantity) || 0))
   const value = Number(promoter?.commission_value)
   if (gross <= 0 || qty <= 0 || !Number.isFinite(value) || value <= 0) return 0
 
+  const fee = Math.max(0, Math.round(Number(platformFeeCents) || 0))
+  const ceiling = Math.max(0, gross - fee)
+  if (ceiling <= 0) return 0
+
   if (promoter.commission_type === 'flat_per_ticket') {
-    // value is event-currency cents per ticket; never exceed the order's gross.
-    return Math.min(gross, Math.round(value) * qty)
+    // value is event-currency cents per ticket.
+    return Math.min(ceiling, Math.round(value) * qty)
   }
   // Default: percentage of the order's face value (after promo discounts).
   const pct = Math.min(100, value)
-  return Math.min(gross, Math.round((gross * pct) / 100))
+  return Math.min(ceiling, Math.round((gross * pct) / 100))
+}
+
+/**
+ * The platform fee Tikèm takes on this order, in event-currency cents, computed
+ * the way checkout and the earnings ledger compute it (rate + per-ticket cap for
+ * the event's location and currency).
+ *
+ * The buyer-pays incidence (US/CA/FR) is deliberately NOT special-cased: the
+ * ticket's incidence is not known here, and assuming the fee comes out of the
+ * organizer's share only makes the commission ceiling stricter, never looser.
+ * On any lookup failure this falls back to the default 10% uncapped, which is
+ * likewise the conservative (largest-fee) answer.
+ */
+export async function platformFeeCentsForOrder(
+  eventId: string,
+  orderGrossCents: number,
+  quantity: number
+): Promise<number> {
+  const gross = Math.max(0, Math.round(Number(orderGrossCents) || 0))
+  if (gross <= 0) return 0
+  const qty = Math.max(1, Math.round(Number(quantity) || 1))
+  try {
+    const eventSnap = await adminDb.collection('events').doc(String(eventId)).get()
+    const event: any = eventSnap?.exists ? eventSnap.data() || {} : {}
+    const settings = await getPlatformSettings()
+    const cfg: any = getEventLocation(String(event?.country || 'HT')) === 'haiti' ? settings?.haiti : settings?.usCanada
+    const rateRaw = Number(cfg?.platformFeePercentage)
+    const rate = Number.isFinite(rateRaw) && rateRaw >= 0 && rateRaw < 1 ? rateRaw : DEFAULT_PLATFORM_FEE_RATE
+    const currency = String(event?.currency || 'HTG').toUpperCase()
+    const table = cfg?.platformFeeCapMinorByCurrency || {}
+    const capRaw = Object.prototype.hasOwnProperty.call(table, currency) ? Number(table[currency]) : null
+    const capMinorPerTicket = capRaw !== null && Number.isFinite(capRaw) && capRaw >= 0 ? capRaw : null
+    return calculateCappedPlatformFee(gross, rate, { capMinorPerTicket, quantity: qty })
+  } catch (err: any) {
+    console.warn('[promoters] platform-fee lookup failed; assuming the default rate uncapped', {
+      eventId,
+      message: err?.message,
+    })
+    return calculateCappedPlatformFee(gross, DEFAULT_PLATFORM_FEE_RATE, null)
+  }
+}
+
+const DEFAULT_PLATFORM_FEE_RATE = 0.1
+
+/**
+ * Highest paid tier price for an event, in event-currency CENTS, or null when no
+ * tier price is known. A flat per-ticket commission above this cannot be earned
+ * on any ticket the event sells, so create/update reject it.
+ */
+export async function maxTierPriceCentsForEvent(eventId: string, eventData?: any): Promise<number | null> {
+  const prices: number[] = []
+  const push = (raw: unknown) => {
+    const n = Number(raw)
+    if (Number.isFinite(n) && n > 0) prices.push(Math.round(n * 100))
+  }
+  try {
+    const snap = await adminDb.collection('ticket_tiers').where('event_id', '==', String(eventId)).get()
+    snap.docs.forEach((d: any) => push(d.data()?.price))
+  } catch (err: any) {
+    console.warn('[promoters] tier lookup failed', { eventId, message: err?.message })
+  }
+  if (prices.length === 0 && Array.isArray(eventData?.ticket_tiers)) {
+    for (const t of eventData.ticket_tiers) push(t?.price)
+  }
+  if (prices.length === 0) push(eventData?.ticket_price)
+  return prices.length > 0 ? Math.max(...prices) : null
 }
 
 // ── Stats-page token (guest-link pattern) ─────────────────────────────────────
@@ -229,6 +308,21 @@ export interface RecordPromoterSaleParams {
   /** Stable buyer identity for support/audit: a uid, else a normalized email. */
   buyerUserId?: string | null
   buyerEmail?: string | null
+  /**
+   * Platform fee on this order in event-currency cents, when the caller already
+   * knows it. Omitted, it is computed from the event's fee rule.
+   */
+  platformFeeCents?: number | null
+  /**
+   * Default true. Pass false when Tikèm holds none of this order's money (a
+   * Stripe Connect DESTINATION charge: the organizer's account already received
+   * the full net). The row is then informational — the organizer settles with
+   * the promoter directly — and is written unfunded in the same transaction, so
+   * there is never a moment where the promoter could withdraw it from the pool.
+   */
+  funded?: boolean
+  /** Why an unfunded row is unfunded, e.g. 'destination_charge'. */
+  unfundedReason?: string | null
 }
 
 /**
@@ -247,6 +341,13 @@ export async function recordPromoterSale(
     const promoterRef = adminDb.collection('event_promoters').doc(String(params.promoterId))
     const saleRef = adminDb.collection('promoter_sales').doc()
 
+    const feeQuantity = Math.max(1, Math.round(Number(params.quantity) || 1))
+    const feeGross = Math.max(0, Math.round(Number(params.orderGrossCents) || 0))
+    const platformFeeCents =
+      params.platformFeeCents != null && Number.isFinite(Number(params.platformFeeCents))
+        ? Math.max(0, Math.round(Number(params.platformFeeCents)))
+        : await platformFeeCentsForOrder(params.eventId, feeGross, feeQuantity)
+
     let commissionCents = 0
     await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(promoterRef)
@@ -258,7 +359,7 @@ export async function recordPromoterSale(
 
       const quantity = Math.max(1, Math.round(Number(params.quantity) || 1))
       const orderGrossCents = Math.max(0, Math.round(Number(params.orderGrossCents) || 0))
-      commissionCents = calculateCommissionCents(promoter, orderGrossCents, quantity)
+      commissionCents = calculateCommissionCents(promoter, orderGrossCents, quantity, platformFeeCents)
 
       const buyerUid = String(params.buyerUserId || '').trim()
       const buyerEmail = String(params.buyerEmail || '').trim().toLowerCase()
@@ -273,8 +374,10 @@ export async function recordPromoterSale(
         // organizer's earnings accrual and becomes withdrawable from the
         // promoter's wallet once the event's funds release. Rows written before
         // the wallet shipped lack this flag and stay informational (organizer
-        // settles those directly).
-        funded: true,
+        // settles those directly). Callers pass funded:false for destination
+        // charges, where Tikèm holds none of the money.
+        funded: params.funded !== false,
+        ...(params.funded === false ? { unfunded_reason: params.unfundedReason || 'not_held_by_tikem' } : {}),
         promoter_id: promoterRef.id,
         event_id: String(params.eventId),
         organizer_id: String(promoter.organizer_id || ''),
@@ -314,10 +417,44 @@ export async function recordPromoterSale(
 }
 
 /**
+ * Drop promoter_sales rows for Stripe Connect orders. Those funds settle in the
+ * organizer's own Stripe account, so Tikèm can neither withhold the commission
+ * from them nor pay it out of its own pool.
+ *
+ * Going forward Connect rows are written `funded: false`. Rows written earlier
+ * say `funded: true`; they are recognised by `payment_method === 'stripe_connect'`
+ * (the webhook path), or, for rows the client-confirm path recorded as plain
+ * 'stripe', by the first sold ticket's payment_method, which both paths stamp
+ * as 'stripe_connect' for a destination charge.
+ *
+ * Throws if a ticket lookup fails: guessing either way moves money wrongly.
+ */
+export async function excludeStripeConnectSales<T extends Record<string, any>>(sales: T[]): Promise<T[]> {
+  const isConnect = (v: unknown) => String(v || '').toLowerCase() === 'stripe_connect'
+  const verdicts = await Promise.all(
+    sales.map(async (sale) => {
+      if (sale?.funded === false) return false
+      if (isConnect(sale?.payment_method) || isConnect(sale?.payout_provider)) return false
+      if (String(sale?.payment_method || '').toLowerCase() !== 'stripe') return true
+      const firstTicketId = Array.isArray(sale?.ticket_ids) && sale.ticket_ids.length > 0 ? String(sale.ticket_ids[0]) : ''
+      if (!firstTicketId) return true
+      const ticketSnap = await adminDb.collection('tickets').doc(firstTicketId).get()
+      const ticket: any = ticketSnap?.exists ? ticketSnap.data() || {} : {}
+      return !isConnect(ticket?.payment_method) && !isConnect(ticket?.payout_provider)
+    })
+  )
+  return sales.filter((_, i) => verdicts[i])
+}
+
+/**
  * Total FUNDED, still-accrued promoter commission for an event, in
  * event-currency cents. The derived earnings view deducts this so an organizer's
- * net matches what the incremental withholding produced. Never throws — earnings
- * derivation must not break because the ledger is briefly unreachable.
+ * net matches what the incremental withholding produced.
+ *
+ * THROWS when the ledger is unreachable. Returning 0 on a Firestore blip used to
+ * report the promoter's money as the organizer's, and the withdrawal paths
+ * (lib/payouts/availability-server.ts) would then let the organizer take it.
+ * Callers must fail the figure, not default it.
  */
 export async function getFundedCommissionForEvent(eventId: string): Promise<number> {
   try {
@@ -326,61 +463,145 @@ export async function getFundedCommissionForEvent(eventId: string): Promise<numb
       .where('event_id', '==', String(eventId))
       .where('funded', '==', true)
       .get()
+    const accrued = snap.docs
+      .map((d: any) => d.data() || {})
+      .filter((s: any) => s.funded === true && s.status === 'accrued')
+    // Connect sales never reach Tikèm's balance (they settle in the organizer's
+    // own Stripe account), so a commission on one cannot be withheld from the
+    // Tikèm-held net. The promoter wallet excludes the same rows.
+    const sales = await excludeStripeConnectSales(accrued)
     let total = 0
-    snap.docs.forEach((d: any) => {
-      const s = d.data()
-      if (s.status === 'accrued') total += Math.max(0, Number(s.commission_cents) || 0)
-    })
+    for (const s of sales) total += Math.max(0, Number(s.commission_cents) || 0)
     return total
   } catch (err: any) {
-    console.error('[promoters] funded-commission lookup failed; deducting 0', {
+    console.error('[promoters] funded-commission lookup failed', {
       eventId,
       message: err?.message,
     })
-    return 0
+    throw err
   }
 }
 
 /**
- * Reverse the promoter accrual for a refunded/cancelled ticket's order.
- * Marks the matching accrued `promoter_sales` row reversed and decrements the
- * promoter's counters. v1 reverses whole orders — partial-quantity refunds do
- * not exist in the product.
+ * The share of an order's figure that stays accrued after `reversedCount` of its
+ * `ticketCount` tickets were reversed. Cumulative rounding (round(total·k/n)), so
+ * every partial step is within a cent of exact and the LAST ticket takes the
+ * exact remainder: the reversed shares always sum to the original, no drift.
+ */
+export function remainingAfterReversal(total: number, reversedCount: number, ticketCount: number): number {
+  const t = Math.max(0, Math.round(Number(total) || 0))
+  const n = Math.max(1, Math.round(Number(ticketCount) || 1))
+  const k = Math.min(n, Math.max(0, Math.round(Number(reversedCount) || 0)))
+  if (k >= n) return 0
+  return t - Math.round((t * k) / n)
+}
+
+/**
+ * Reverse ONE ticket's share of the promoter accrual on its order.
+ *
+ * Refunding 1 ticket of a 4-ticket order takes back a quarter of the order's
+ * commission (and of its gross and quantity), not all of it. v1 reversed the
+ * whole order on the first refunded ticket, so a single refund wiped the
+ * promoter's commission on seats that were still sold.
+ *
+ * The sale doc keeps its ORIGINAL figures in `original_*` (stamped on the first
+ * reversal) and its live `commission_cents` / `order_gross_cents` / `quantity`
+ * are reduced to what is still accrued — every reader that sums accrued rows
+ * (lib/promoter-wallet, getFundedCommissionForEvent, the stats page) stays
+ * right without changes. `reversed_ticket_ids` makes repeat calls for the same
+ * ticket no-ops. When the last ticket goes the row becomes `status: 'reversed'`
+ * with its original figures restored (how fully reversed rows always looked) and
+ * the promoter's orders_count drops by one.
+ *
+ * The denominator is the order's ticket_ids (one doc per seat); the promoter's
+ * counters move by exactly the delta this call removed.
  */
 export async function reversePromoterSaleForTicket(ticketId: string): Promise<boolean> {
+  const id = String(ticketId)
   try {
     const snap = await adminDb
       .collection('promoter_sales')
-      .where('ticket_ids', 'array-contains', String(ticketId))
+      .where('ticket_ids', 'array-contains', id)
       .limit(1)
       .get()
     if (snap.empty) return false
 
     const saleDoc = snap.docs[0]
-    const sale = saleDoc.data() as any
-    if (sale.status !== 'accrued') return false
+    const first = saleDoc.data() as any
+    if (first.status !== 'accrued') return false
 
-    const promoterRef = adminDb.collection('event_promoters').doc(String(sale.promoter_id))
-    await adminDb.runTransaction(async (tx: any) => {
+    const promoterRef = adminDb.collection('event_promoters').doc(String(first.promoter_id))
+    return await adminDb.runTransaction(async (tx: any) => {
       const fresh = await tx.get(saleDoc.ref)
-      if (!fresh.exists || (fresh.data() as any).status !== 'accrued') return
+      if (!fresh.exists) return false
+      const sale = (fresh.data() as any) || {}
+      if (sale.status !== 'accrued') return false
+
+      const ticketIds: string[] = Array.isArray(sale.ticket_ids) ? sale.ticket_ids.map(String) : []
+      if (!ticketIds.includes(id)) return false
+      const already: string[] = Array.isArray(sale.reversed_ticket_ids) ? sale.reversed_ticket_ids.map(String) : []
+      if (already.includes(id)) return false
+
       const promoterSnap = await tx.get(promoterRef)
 
-      tx.update(saleDoc.ref, { status: 'reversed', reversed_at: new Date().toISOString() })
+      const n = Math.max(1, ticketIds.length)
+      const reversedIds = [...already, id]
+      const k = Math.min(n, reversedIds.length)
+      const full = k >= n
+
+      const origCommission = Number(sale.original_commission_cents ?? sale.commission_cents) || 0
+      const origGross = Number(sale.original_order_gross_cents ?? sale.order_gross_cents) || 0
+      const origQuantity = Number(sale.original_quantity ?? sale.quantity) || 0
+
+      const curCommission = Number(sale.commission_cents) || 0
+      const curGross = Number(sale.order_gross_cents) || 0
+      const curQuantity = Number(sale.quantity) || 0
+
+      const nextCommission = remainingAfterReversal(origCommission, k, n)
+      const nextGross = remainingAfterReversal(origGross, k, n)
+      const nextQuantity = remainingAfterReversal(origQuantity, k, n)
+
+      const deltaCommission = Math.max(0, curCommission - nextCommission)
+      const deltaGross = Math.max(0, curGross - nextGross)
+      const deltaQuantity = Math.max(0, curQuantity - nextQuantity)
+      const nowIso = new Date().toISOString()
+
+      tx.update(saleDoc.ref, {
+        original_commission_cents: origCommission,
+        original_order_gross_cents: origGross,
+        original_quantity: origQuantity,
+        reversed_ticket_ids: reversedIds,
+        reversed_commission_cents: origCommission - nextCommission,
+        ...(full
+          ? {
+              status: 'reversed',
+              reversed_at: nowIso,
+              // A fully reversed row reads as it always did: the original order.
+              commission_cents: origCommission,
+              order_gross_cents: origGross,
+              quantity: origQuantity,
+            }
+          : {
+              commission_cents: nextCommission,
+              order_gross_cents: nextGross,
+              quantity: nextQuantity,
+              partially_reversed_at: nowIso,
+            }),
+      })
       if (promoterSnap.exists) {
         const p = promoterSnap.data() as PromoterDoc
         tx.update(promoterRef, {
-          tickets_sold: Math.max(0, (Number(p.tickets_sold) || 0) - (Number(sale.quantity) || 0)),
-          orders_count: Math.max(0, (Number(p.orders_count) || 0) - 1),
-          gross_cents: Math.max(0, (Number(p.gross_cents) || 0) - (Number(sale.order_gross_cents) || 0)),
-          commission_cents: Math.max(0, (Number(p.commission_cents) || 0) - (Number(sale.commission_cents) || 0)),
-          updated_at: new Date().toISOString(),
+          tickets_sold: Math.max(0, (Number(p.tickets_sold) || 0) - deltaQuantity),
+          orders_count: Math.max(0, (Number(p.orders_count) || 0) - (full ? 1 : 0)),
+          gross_cents: Math.max(0, (Number(p.gross_cents) || 0) - deltaGross),
+          commission_cents: Math.max(0, (Number(p.commission_cents) || 0) - deltaCommission),
+          updated_at: nowIso,
         })
       }
+      return true
     })
-    return true
   } catch (err: any) {
-    console.error('[promoters] failed to reverse sale', { ticketId, message: err?.message })
+    console.error('[promoters] failed to reverse sale', { ticketId: id, message: err?.message })
     return false
   }
 }

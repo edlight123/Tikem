@@ -44,6 +44,7 @@ import PaymentModal from '../components/PaymentModal';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { advertisedPrice } from '../lib/buyerPricing';
+import { setTicketsRefreshHint } from '../lib/ticketsRefreshHint';
 import { resolvePosterTheme } from '../lib/posterGradient';
 import FreeTicketModal from '../components/FreeTicketModal';
 import AddToCalendarButton from '../components/AddToCalendarButton';
@@ -217,9 +218,21 @@ export default function EventDetailScreen({ route, navigation }: any) {
       } else {
         setAccessError(t('eventAccess.wrongCode'));
       }
-    } catch (err) {
-      // backendJson throws on non-2xx (403 wrong code) — treat as incorrect.
-      setAccessError(t('eventAccess.wrongCode'));
+    } catch (err: any) {
+      // backendJson throws on non-2xx. Only a 403 means the code was wrong;
+      // telling someone with no signal (or a server hiccup) that their correct
+      // code is "incorrect" sends them hunting for a different one.
+      const status = Number(err?.status || 0);
+      console.warn('[EventDetail] verify-access failed:', status || 'network', err?.message);
+      if (status === 403) {
+        setAccessError(t('eventAccess.wrongCode'));
+      } else if (status === 429) {
+        setAccessError(t('eventAccess.tooManyAttempts'));
+      } else if (!status) {
+        setAccessError(t('eventAccess.networkError'));
+      } else {
+        setAccessError(t('eventAccess.verifyFailed'));
+      }
     } finally {
       setUnlocking(false);
     }
@@ -467,6 +480,16 @@ export default function EventDetailScreen({ route, navigation }: any) {
       return;
     }
 
+    // Drafts, rejected and cancelled events are not on sale. The CTA is already
+    // disabled for them; this guards any other path into the purchase flow.
+    if (notOnSale) {
+      showAlert(
+        isCancelled ? t('eventDetail.floating.eventCancelled') : t('eventDetail.floating.notOnSale'),
+        isCancelled ? t('eventDetail.purchase.cancelledBody') : t('eventDetail.purchase.notOnSaleBody')
+      );
+      return;
+    }
+
     // Password gate — a protected event with no access grant must be unlocked
     // (code verified server-side) before any purchase flow opens.
     if (event.is_password_protected && accessGranted !== true) {
@@ -552,6 +575,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
     // Was a bare OS alert, which is the least celebratory way to confirm a
     // purchase and offered nothing but "OK". Same sheet as the free path.
     fetchEventDetails();
+    // Tell My Tickets a purchase just landed so it refetches (and keeps polling
+    // for the webhook-issued ticket) instead of showing its cached list. The
+    // MonCash path does the same in PaymentWebViewScreen.
+    setTicketsRefreshHint({ reason: 'payment', createdAt: Date.now() }).catch(() => {});
     // Same reason as the free path: dismiss the payment modal before the sheet.
     setShowPaymentModal(false);
     setSuccessQuantity(ticketQuantity || 1);
@@ -595,6 +622,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
   // Prevent purchase only after the event has ended (not after it has started).
   const purchaseCutoffDate = event.end_datetime || event.start_datetime;
   const isPastEvent = purchaseCutoffDate && new Date(purchaseCutoffDate) < new Date();
+  // Same visibility test the server uses (drafts and rejected events are not
+  // public), plus cancellation. Any of these means nothing can be bought here,
+  // even if the screen was reached through a direct link.
+  const isCancelled = ['cancelled', 'canceled'].includes(String(event.status || '').toLowerCase());
+  const notOnSale = event.is_published === false || event.rejected === true || isCancelled;
   
   // Premium badge logic (matching PWA)
   // isVIP removed: it was computed here and never rendered.
@@ -988,6 +1020,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
             <Text style={styles.ctaDisabledText}>{t('eventDetail.floating.eventEnded')}</Text>
           </View>
+        ) : notOnSale ? (
+          <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
+            <Text style={styles.ctaDisabledText}>
+              {isCancelled ? t('eventDetail.floating.eventCancelled') : t('eventDetail.floating.notOnSale')}
+            </Text>
+          </View>
         ) : isSoldOut ? (
           <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
             <Text style={styles.ctaDisabledText}>{t('badges.soldout')}</Text>
@@ -1015,7 +1053,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         currency={event?.currency || 'HTG'}
         // Decides whether the service fee is added to the total the buyer reads.
         country={event?.country}
-        feeIncidence={(event as any)?.fee_incidence}
+        feeIncidence={(event as any)?.fee_incidence ?? (event as any)?.feeIncidence}
       />
 
       <PurchaseSuccessSheet
@@ -1128,6 +1166,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
         totalAmount={selectedTierPrice || event?.ticket_price || 0}
         currency={event?.currency || 'HTG'}
         country={event?.country || ''}
+        // The organizer's absorb/pass-on choice. Without it the fee line fell
+        // back to the country default and could disagree with the selector and
+        // with what the server charges (it reads the same field).
+        feeIncidence={(event as any)?.fee_incidence ?? (event as any)?.feeIncidence}
         tierId={selectedTierId || undefined}
         promoCodeId={promoCode}
         refCode={refCode}

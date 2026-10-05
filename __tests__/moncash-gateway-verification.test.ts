@@ -106,4 +106,25 @@ describe('retrieveMonCashOrderPayment', () => {
     expect(result.cost).toBe(50)
     expect(result.reference).toBe('504914281769')
   })
+
+  it('does NOT treat a bare HTTP 200 envelope as paid', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      gatewayResponse(200, {
+        payment: { reference: '504914281769', transaction_id: '1234567', cost: 50 },
+        status: 200,
+      })
+    ) as unknown as typeof fetch
+
+    const result = await retrieveMonCashOrderPayment('504914281769')
+
+    expect(result.success).toBe(false)
+  })
+
+  it('does NOT treat a 200 with a non-success message as paid', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      gatewayResponse(200, { payment: { reference: 'r', message: 'pending' }, status: 200 })
+    ) as unknown as typeof fetch
+
+    expect((await retrieveMonCashOrderPayment('r')).success).toBe(false)
+  })
 })

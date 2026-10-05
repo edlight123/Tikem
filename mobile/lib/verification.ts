@@ -372,7 +372,7 @@ export async function uploadLivenessVideo(userId: string, uri: string): Promise<
   const response = await fetch(uri);
   if (!response.ok) throw new Error(`Failed to read recording: ${response.statusText}`);
   const blob = await response.blob();
-  if (!blob || blob.size === 0) throw new Error('The recording was empty — please try again');
+  if (!blob || blob.size === 0) throw new Error('The recording was empty. Please try again');
 
   const extension = uri.split('.').pop()?.toLowerCase() || 'mp4';
   const storagePath = `verification/${userId}/liveness_${Date.now()}.${extension}`;

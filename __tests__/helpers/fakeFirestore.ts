@@ -13,6 +13,7 @@ export class FakeFirestore {
       _path: path,
       get: async () => self.snap(path),
       set: async (data: Doc, opts?: { merge?: boolean }) => self.write(path, data, opts),
+      update: async (data: Doc) => self.write(path, data, { merge: true }),
       collection: (name: string) => self.collection(`${path}/${name}`),
     }
   }
@@ -36,13 +37,19 @@ export class FakeFirestore {
         self.write(ref._path, data)
         return ref
       },
-      where: (field: string, _op: string, value: unknown) => ({
-        get: async () => ({
-          docs: Array.from(self.store.entries())
-            .filter(([p, d]) => p.startsWith(`${name}/`) && p.split('/').length === name.split('/').length + 1 && d[field] === value)
-            .map(([p]) => self.snap(p)),
-        }),
-      }),
+      where: (field: string, op: string, value: unknown) => {
+        const match = (v: any) =>
+          op === '>' ? typeof v === 'number' && v > (value as number)
+          : op === 'array-contains' ? Array.isArray(v) && v.includes(value)
+          : v === value
+        const get = async () => {
+          const docs = Array.from(self.store.entries())
+            .filter(([p, d]) => p.startsWith(`${name}/`) && p.split('/').length === name.split('/').length + 1 && match(d[field]))
+            .map(([p]) => self.snap(p))
+          return { docs, empty: docs.length === 0 }
+        }
+        return { get, limit: () => ({ get }) }
+      },
     }
   }
 
@@ -52,11 +59,16 @@ export class FakeFirestore {
     )
   }
 
+  async getAll(...refs: any[]) {
+    return refs.map((r) => this.snap(r._path))
+  }
+
   async runTransaction(fn: (tx: any) => Promise<any>) {
     const writes: [string, Doc, any][] = []
     const tx = {
       get: async (ref: any) => this.snap(ref._path),
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
+      update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true }]),
     }
     const result = await fn(tx)
     for (const [p, d, o] of writes) this.write(p, d, o)

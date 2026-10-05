@@ -1,8 +1,9 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 
 /**
- * The name the door sees.
+ * The name the door sees — a NAME, never a contact detail.
  *
  * The ticket document is the authority — it already carries `attendee_name`, stamped
  * at issuance. That matters for GUEST tickets, whose `attendee_id` is a `guest_…` id
@@ -10,8 +11,9 @@ import { FieldValue } from 'firebase-admin/firestore'
  * a nameless "Guest". The user lookup remains as the fallback for older account
  * tickets that were written before the name was denormalized onto them.
  *
- * Check-in itself has never needed a session — it reads the ticket, and that is
- * exactly why a guest ticket scans like any other.
+ * Door staff may hold check-in permission WITHOUT viewAttendees, so this used to
+ * leak the buyer's email (profile email, then guest_email) whenever no name was
+ * on file. It no longer falls back to any address: no name means "Guest".
  */
 async function resolveAttendeeName(ticketData: any): Promise<string> {
   const onTicket = String(ticketData?.attendee_name || '').trim()
@@ -21,11 +23,44 @@ async function resolveAttendeeName(ticketData: any): Promise<string> {
   if (attendeeId && !String(attendeeId).startsWith('guest_')) {
     const userDoc = await adminDb.collection('users').doc(String(attendeeId)).get()
     if (userDoc.exists) {
-      return userDoc.data()?.full_name || userDoc.data()?.email || 'Guest'
+      const name = String(userDoc.data()?.full_name || '').trim()
+      if (name) return name
     }
   }
 
-  return String(ticketData?.guest_email || '').trim() || 'Guest'
+  return 'Guest'
+}
+
+/**
+ * Why this ticket must NOT be admitted, or null when its status admits it.
+ *
+ * An ALLOWLIST (lib/tickets/status isLiveTicketStatus: valid | confirmed | active,
+ * or a legacy empty status), not a denylist: the old checks named refunded,
+ * cancelled and pending one by one, so `refund_pending` — a mobile-money ticket
+ * already voided and queued for a refund — walked straight in. A ticket whose
+ * refund is in flight or done (refund_status processing / approved /
+ * manual_required) is refused too, even if its status has not caught up yet.
+ *
+ * A status of `checked_in` is passed through: the caller's already-checked-in
+ * branch answers it.
+ *
+ * Shared by the normal scan and the re-entry override, so the override can never
+ * re-admit a refunded or cancelled ticket.
+ */
+export function ticketBlockReason(
+  ticketData: Record<string, any>
+): 'REFUNDED' | 'CANCELLED' | 'PENDING_PAYMENT' | null {
+  const status = String(ticketData?.status ?? '').toLowerCase().trim()
+  const refundStatus = String(ticketData?.refund_status ?? '').toLowerCase().trim()
+
+  if (status === 'refunded' || status === 'refund_pending') return 'REFUNDED'
+  if (refundStatus === 'processing' || refundStatus === 'approved' || refundStatus === 'manual_required') {
+    return 'REFUNDED'
+  }
+  if (status === 'pending') return 'PENDING_PAYMENT'
+  if (status === 'checked_in') return null
+  if (!isLiveTicketStatus(status)) return 'CANCELLED'
+  return null
 }
 
 export type CheckInResult = 
@@ -82,28 +117,13 @@ export async function checkInTicket(params: CheckInParams): Promise<CheckInResul
         } as CheckInResult
       }
 
-      // Check ticket status
-      if (ticketData.status === 'refunded') {
+      // Check ticket status (allowlist — see ticketBlockReason)
+      const blocked = ticketBlockReason(ticketData)
+      if (blocked) {
         return {
           success: false,
           type: 'INVALID',
-          reason: 'REFUNDED',
-        } as CheckInResult
-      }
-
-      if (ticketData.status === 'cancelled') {
-        return {
-          success: false,
-          type: 'INVALID',
-          reason: 'CANCELLED',
-        } as CheckInResult
-      }
-
-      if (ticketData.status === 'pending') {
-        return {
-          success: false,
-          type: 'INVALID',
-          reason: 'PENDING_PAYMENT',
+          reason: blocked,
         } as CheckInResult
       }
 
@@ -160,54 +180,57 @@ export async function checkInTicket(params: CheckInParams): Promise<CheckInResul
 }
 
 /**
- * Override check-in for re-entry (admin only)
+ * Override check-in for re-entry: admits a ticket that is ALREADY checked in.
+ *
+ * It overrides the "already in" verdict only. It used to skip every status check,
+ * so a refunded, cancelled or refund-pending ticket could be re-admitted with one
+ * tap; the same ticketBlockReason gate as the normal scan now runs first, inside
+ * a transaction so a refund landing mid-tap is seen.
  */
 export async function overrideCheckIn(params: CheckInParams): Promise<CheckInResult> {
   const { ticketId, eventId, entryPoint, scannedBy } = params
 
   try {
     const ticketRef = adminDb.collection('tickets').doc(ticketId)
-    const ticketDoc = await ticketRef.get()
 
-    if (!ticketDoc.exists) {
-      return {
-        success: false,
-        type: 'INVALID',
-        reason: 'NOT_FOUND',
+    return await adminDb.runTransaction(async (transaction: any) => {
+      const ticketDoc = await transaction.get(ticketRef)
+
+      if (!ticketDoc.exists) {
+        return { success: false, type: 'INVALID', reason: 'NOT_FOUND' } as CheckInResult
       }
-    }
 
-    const ticketData = ticketDoc.data()!
+      const ticketData = ticketDoc.data()!
 
-    if (ticketData.event_id !== eventId) {
-      return {
-        success: false,
-        type: 'INVALID',
-        reason: 'WRONG_EVENT',
+      if (ticketData.event_id !== eventId) {
+        return { success: false, type: 'INVALID', reason: 'WRONG_EVENT' } as CheckInResult
       }
-    }
 
-    // Fetch attendee info
-    const attendeeName = await resolveAttendeeName(ticketData)
+      const blocked = ticketBlockReason(ticketData)
+      if (blocked) {
+        return { success: false, type: 'INVALID', reason: blocked } as CheckInResult
+      }
 
-    // Update with override flag
-    await ticketRef.update({
-      checked_in: true,
-      checked_in_at: FieldValue.serverTimestamp(),
-      checked_in_by: scannedBy,
-      entry_point: entryPoint,
-      reentry_override: true,
-      updated_at: FieldValue.serverTimestamp(),
+      const attendeeName = await resolveAttendeeName(ticketData)
+
+      transaction.update(ticketRef, {
+        checked_in: true,
+        checked_in_at: FieldValue.serverTimestamp(),
+        checked_in_by: scannedBy,
+        entry_point: entryPoint,
+        reentry_override: true,
+        updated_at: FieldValue.serverTimestamp(),
+      })
+
+      return {
+        success: true,
+        type: 'VALID',
+        attendeeName,
+        ticketType: ticketData.ticket_type || 'General Admission',
+        quantity: ticketData.quantity || 1,
+        entryPoint,
+      } as CheckInResult
     })
-
-    return {
-      success: true,
-      type: 'VALID',
-      attendeeName,
-      ticketType: ticketData.ticket_type || 'General Admission',
-      quantity: ticketData.quantity || 1,
-      entryPoint,
-    }
   } catch (error) {
     console.error('Override check-in error:', error)
     return {

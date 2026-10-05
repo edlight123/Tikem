@@ -859,7 +859,7 @@
     "moncash_note": "Your withdrawal will be sent to your MonCash account (typically within 24 hours).",
     "moncash_below_minimum": "MonCash withdrawals start at {{min}}. Your available balance is {{balance}}.",
     "bank_below_minimum": "Bank transfers start at {{min}}.",
-    "needs_admin_review": "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it — no money has moved."
+    "needs_admin_review": "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it, and no money has moved."
   },
   "events_filters": {
     "alphabetical": "Alphabetical",

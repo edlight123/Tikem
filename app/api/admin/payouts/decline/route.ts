@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       return adminError(
         'Confirm no money was sent',
         409,
-        'This payout is approved. Cancel it only if no transfer was made for it, and resend with confirmNotPaid: true — its amounts will be credited back to the organizer.'
+        'This payout is approved. Cancel it only if no transfer was made for it, and resend with confirmNotPaid: true. Its amounts will be credited back to the organizer.'
       )
     }
 

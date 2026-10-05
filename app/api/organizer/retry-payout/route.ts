@@ -1,79 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
-  try {
-    // Verify authentication
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const organizerId = decodedClaims.uid
-
-    const { payoutId } = await request.json()
-
-    if (!payoutId) {
-      return NextResponse.json({ error: 'Payout ID required' }, { status: 400 })
-    }
-
-    // Get the payout
-    const payoutRef = adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payouts')
-      .doc(payoutId)
-
-    const payoutDoc = await payoutRef.get()
-
-    if (!payoutDoc.exists) {
-      return NextResponse.json({ error: 'Payout not found' }, { status: 404 })
-    }
-
-    const payout = payoutDoc.data()!
-
-    // Verify it's a failed payout
-    if (payout.status !== 'failed') {
-      return NextResponse.json(
-        { error: 'Only failed payouts can be retried' },
-        { status: 400 }
-      )
-    }
-
-    // Verify ownership
-    if (payout.organizerId !== organizerId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    // Calculate next Friday at 5:00 PM
-    const now = new Date()
-    const nextFriday = new Date(now)
-    const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7
-    nextFriday.setDate(now.getDate() + daysUntilFriday)
-    nextFriday.setHours(17, 0, 0, 0)
-
-    // Update payout to retry
-    await payoutRef.update({
-      status: 'pending',
-      scheduledDate: nextFriday.toISOString(),
-      failureReason: null,
-      updatedAt: new Date().toISOString(),
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Payout scheduled for retry',
-      scheduledDate: nextFriday.toISOString(),
-    })
-  } catch (error: any) {
-    console.error('Error retrying payout:', error)
-    return NextResponse.json(
-      { error: 'Failed to retry payout', message: error.message },
-      { status: 500 }
-    )
-  }
+/**
+ * RETIRED. Batch payouts were retired in commit bf02e5c9 ("retire batch payout").
+ *
+ * This route flipped a failed `organizers/{uid}/payouts/{id}` doc back to
+ * 'pending' with a new scheduled date, which would revive a payout that no
+ * longer runs through any current engine, outside the withdrawal gate
+ * (lib/payouts/withdrawal-gate.ts) and the release rules. It had no callers.
+ * Organizers now request money through /api/organizer/withdraw-bank and
+ * /api/organizer/withdraw-moncash; admins act on failed payouts in /admin/money.
+ *
+ * Kept as an explicit 410 rather than deleted so any stale client gets a clear
+ * answer instead of a 404 that looks like a deploy problem.
+ */
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: 'Payout retry has been retired. Request a new withdrawal from your earnings page instead.',
+      code: 'retired',
+    },
+    { status: 410 }
+  )
 }

@@ -1,6 +1,8 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
-import { planTicketRefund, type RefundIneligibleReason, type RefundPlan } from '@/lib/tickets/refundPlan'
+import { planTicketRefund, refundFaceAmount, type RefundIneligibleReason, type RefundPlan } from '@/lib/tickets/refundPlan'
+import { reversePromoterSaleForTicket } from '@/lib/promoters'
+import { notifyAdminsOfQueuedRefunds, MANUAL_REFUND_QUEUE } from '@/lib/tickets/manualRefundQueue'
 
 /**
  * Refund ONE ticket: claim it, move the money (or queue it), record the result.
@@ -23,6 +25,14 @@ import { planTicketRefund, type RefundIneligibleReason, type RefundPlan } from '
  *   3. On failure, either release the claim (the organizer can retry) or hold
  *      the ticket void with `refund_status: 'failed'` (cancellation — a ticket
  *      for a dead event must not scan while its money is being chased).
+ *      EXCEPT once Stripe has accepted the refund: the money has left, so the
+ *      claim is never released. The result is recorded with retries, and if
+ *      that still fails the ticket is flagged `refund_needs_reconciliation`
+ *      and a `refund_reconciliation/{ticketId}` doc is written for an admin.
+ *   4. On refunded / queued, reverse the promoter commission accrued on the
+ *      order (lib/promoters reversePromoterSaleForTicket). Best-effort, logged.
+ *   5. On queued, email the admins (unless the caller batches that itself, as
+ *      cancellation does) — the queue is worked at /admin/money/refunds.
  */
 
 export type RefundReason = 'organizer_refund' | 'event_cancelled'
@@ -36,7 +46,16 @@ export type RefundEventRef = {
 type Eligible = Extract<RefundPlan, { eligible: true }>
 
 export type TicketRefundResult =
-  | { outcome: 'refunded'; ticketId: string; ticket: Record<string, any>; amount: number; currency: string; refundId: string | null }
+  | {
+      outcome: 'refunded'
+      ticketId: string
+      ticket: Record<string, any>
+      amount: number
+      currency: string
+      refundId: string | null
+      /** Stripe refunded but the ticket could not be updated; flagged for reconciliation. */
+      recordFailed?: boolean
+    }
   | { outcome: 'queued'; ticketId: string; ticket: Record<string, any>; amount: number; currency: string; needsReview: boolean }
   | { outcome: 'skipped'; ticketId: string; ticket: Record<string, any>; reason: RefundIneligibleReason }
   | { outcome: 'failed'; ticketId: string; ticket: Record<string, any>; error: string }
@@ -63,9 +82,75 @@ export type RefundTicketOptions = {
    * `refund_source` instead of overwriting it.
    */
   keepRefundReason?: boolean
+  /**
+   * Email the admins when this ticket is queued for a manual payout. Default
+   * true. Cancellation passes false and sends ONE summary for the whole sweep.
+   */
+  notifyAdmins?: boolean
 }
 
 const STRIPE_IDEMPOTENCY_PREFIX = 'tikem-ticket-refund-'
+const RECORD_ATTEMPTS = 3
+
+/**
+ * Take the promoter's commission back for a refunded/voided ticket's order.
+ * Never throws: a ledger hiccup must not fail a refund that already moved money.
+ * reversePromoterSaleForTicket is idempotent (it only reverses an `accrued` row),
+ * so a re-run or a second ticket of the same order is a no-op.
+ */
+export async function reversePromoterCommission(ticketId: string, context: string): Promise<boolean> {
+  try {
+    const reversed = await reversePromoterSaleForTicket(ticketId)
+    if (reversed) console.info('[refund] promoter commission reversed', { ticketId, context })
+    return reversed
+  } catch (err: any) {
+    console.error('[refund] promoter commission reversal failed', { ticketId, context, message: err?.message })
+    return false
+  }
+}
+
+/**
+ * Write the outcome of a refund whose money has ALREADY moved. Retried; on
+ * final failure the ticket keeps its 'processing' claim (so nothing retries the
+ * refund or scans the ticket) and a reconciliation record is left for an admin.
+ */
+async function recordSettledRefund(
+  ref: any,
+  ticketId: string,
+  fields: Record<string, any>,
+  context: Record<string, any>
+): Promise<boolean> {
+  let lastError: string | null = null
+  for (let attempt = 1; attempt <= RECORD_ATTEMPTS; attempt++) {
+    try {
+      await ref.set(fields, { merge: true })
+      return true
+    } catch (e: any) {
+      lastError = String(e?.message || e)
+      console.error('[refund] Stripe refunded but recording failed', { ticketId, attempt, message: lastError })
+    }
+  }
+  const nowIso = new Date().toISOString()
+  await ref
+    .set(
+      { refund_needs_reconciliation: true, refund_record_error: lastError, updated_at: nowIso },
+      { merge: true }
+    )
+    .catch(() => undefined)
+  await adminDb
+    .collection('refund_reconciliation')
+    .doc(ticketId)
+    .set({ ticketId, ...context, intended: fields, error: lastError, createdAt: nowIso, resolved: false }, { merge: true })
+    .catch((e: any) =>
+      // Last line of defence: the log is all that is left.
+      console.error('[refund] RECONCILE BY HAND: refund moved money but nothing could be recorded', {
+        ticketId,
+        ...context,
+        message: e?.message,
+      })
+    )
+  return false
+}
 
 function positive(value: unknown): number {
   const n = Number(value)
@@ -149,8 +234,9 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
   const p = plan as Eligible
 
   // 2. Move the money (or queue it).
-  try {
-    if (p.rail === 'stripe' || p.rail === 'stripe_connect') {
+  if (p.rail === 'stripe' || p.rail === 'stripe_connect') {
+    let refundId: string | null = null
+    try {
       const paymentIntentId = String(p.paymentRef)
       // `payment_method` under-reports destination charges on older tickets, so
       // a plain 'stripe' sale is checked against Stripe itself.
@@ -161,28 +247,49 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         idempotencyKey: `${STRIPE_IDEMPOTENCY_PREFIX}${ticketId}`,
       })
       if (!res.success) throw new Error(res.error || 'Stripe refund failed')
-      await ref.set(
-        {
-          status: 'refunded',
-          refund_status: 'approved',
-          refund_amount: p.amount,
-          refund_currency: p.currency,
-          refund_id: res.refundId || null,
-          ...reasonFields,
-          refund_error: null,
-          refunded_by: actorId,
-          refund_processed_at: nowIso,
-          updated_at: nowIso,
-        },
-        { merge: true }
-      )
-      return { outcome: 'refunded', ticketId, ticket, amount: p.amount, currency: p.currency, refundId: res.refundId || null }
+      refundId = res.refundId || null
+    } catch (e: any) {
+      // Stripe did NOT accept the refund: no money moved, safe to release/hold.
+      return failWith(e)
     }
 
-    // Mobile money has no refund API: void now, queue the payout for an admin.
-    // One queue doc per ticket (deterministic id) and one batch, so a re-run
-    // can't queue the same ticket twice and the ticket can't be marked
-    // manual_required with nothing in the queue.
+    // Stripe accepted it. From here on the money is gone: never undo the claim.
+    const recorded = await recordSettledRefund(
+      ref,
+      ticketId,
+      {
+        status: 'refunded',
+        refund_status: 'approved',
+        refund_amount: p.amount,
+        refund_currency: p.currency,
+        refund_face_amount: refundFaceAmount(ticket),
+        refund_id: refundId,
+        ...reasonFields,
+        refund_error: null,
+        refunded_by: actorId,
+        refund_processed_at: nowIso,
+        updated_at: nowIso,
+      },
+      { eventId: event.id, amount: p.amount, currency: p.currency, refundId, actorId, reason }
+    )
+    await reversePromoterCommission(ticketId, reason)
+    return {
+      outcome: 'refunded',
+      ticketId,
+      ticket,
+      amount: p.amount,
+      currency: p.currency,
+      refundId,
+      ...(recorded ? {} : { recordFailed: true }),
+    }
+  }
+
+  // Mobile money has no refund API: void now, queue the payout for an admin.
+  // One queue doc per ticket (deterministic id) and one batch, so a re-run
+  // can't queue the same ticket twice and the ticket can't be marked
+  // manual_required with nothing in the queue.
+  try {
+    const method = String(ticket.payment_method || 'moncash').toLowerCase()
     const batch = adminDb.batch()
     batch.set(
       ref,
@@ -191,6 +298,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         refund_status: 'manual_required',
         refund_amount: p.amount,
         refund_currency: p.currency,
+        refund_face_amount: refundFaceAmount(ticket),
         ...reasonFields,
         refund_error: null,
         refunded_by: actorId,
@@ -199,7 +307,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       },
       { merge: true }
     )
-    batch.set(adminDb.collection('manual_refund_queue').doc(`ticket_${ticketId}`), {
+    batch.set(adminDb.collection(MANUAL_REFUND_QUEUE).doc(`ticket_${ticketId}`), {
       ticketId,
       eventId: event.id,
       eventTitle: event.title || null,
@@ -207,7 +315,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       userId: ticket.user_id || ticket.attendee_id || null,
       amount: p.amount,
       currency: p.currency,
-      method: String(ticket.payment_method || 'moncash').toLowerCase(),
+      method,
       transactionId: p.paymentRef,
       reason,
       requestedBy: actorId,
@@ -218,8 +326,19 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       createdAt: nowIso,
     })
     await batch.commit()
+
+    await reversePromoterCommission(ticketId, reason)
+    if (options.notifyAdmins !== false) {
+      await notifyAdminsOfQueuedRefunds([
+        { ticketId, eventTitle: event.title || null, amount: p.amount, currency: p.currency, method, reason, needsReview },
+      ])
+    }
     return { outcome: 'queued', ticketId, ticket, amount: p.amount, currency: p.currency, needsReview }
   } catch (e: any) {
+    return failWith(e)
+  }
+
+  async function failWith(e: any): Promise<TicketRefundResult> {
     const error = e?.message || 'refund_failed'
     const release =
       onFailure === 'release'

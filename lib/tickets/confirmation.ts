@@ -119,7 +119,7 @@ export async function sendTicketConfirmation(params: {
             ? {
                 ticketsUrl: guestUrl,
                 ticketsUrlNote:
-                  'This private link is your ticket — keep this email. You can create a Tikèm account from that page to keep your tickets in the app.',
+                  'This private link is your ticket, so keep this email. You can create a Tikèm account from that page to keep your tickets in the app.',
               }
             : {}),
         }),

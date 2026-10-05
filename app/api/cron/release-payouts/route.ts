@@ -20,6 +20,8 @@ import {
   type ReleaseDecision,
 } from '@/lib/payouts/release-rules'
 import type { PayoutReleaseOverride } from '@/types/platform-settings'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { ticketRefundedFaceMinor } from '@/lib/payouts/availability'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -78,12 +80,6 @@ function toDateOrNull(value: any): Date | null {
 function toMinor(value: unknown): number {
   const n = Number(value || 0)
   return Number.isFinite(n) ? Math.round(n) : 0
-}
-
-/** Major-unit money (ticket prices) → minor units. */
-function majorToMinor(value: unknown): number {
-  const n = Number(value || 0)
-  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0
 }
 
 // ── Candidate discovery ─────────────────────────────────────────────────────
@@ -317,7 +313,11 @@ type TicketFacts = {
  * are excluded from the denominator rather than counted as scans — inferring
  * "scan" from silence would clear exactly the doors this signal exists to catch.
  */
-async function loadTicketFacts(eventId: string, openDisputePaymentRefs: Set<string>): Promise<TicketFacts> {
+async function loadTicketFacts(
+  eventId: string,
+  openDisputePaymentRefs: Set<string>,
+  eventCurrency: string | null
+): Promise<TicketFacts> {
   const snapshot = await adminDb
     .collection('tickets')
     .where('event_id', '==', eventId)
@@ -329,6 +329,11 @@ async function loadTicketFacts(eventId: string, openDisputePaymentRefs: Set<stri
       'pricePaid',
       'refund_status',
       'refund_amount',
+      // Refunds count at face value in the event currency (ticketRefundedFaceMinor).
+      'refund_face_amount',
+      'refund_currency',
+      'currency',
+      'original_currency',
       'payment_id',
       'payment_intent_id'
     )
@@ -360,11 +365,11 @@ async function loadTicketFacts(eventId: string, openDisputePaymentRefs: Set<stri
     }
 
     if (status === 'refunded' || refundStatus === 'approved') {
-      facts.refundedMinor += majorToMinor(data.refund_amount ?? data.price_paid ?? data.pricePaid)
+      facts.refundedMinor += ticketRefundedFaceMinor(data, eventCurrency)
       continue
     }
 
-    if (status && status !== 'valid' && status !== 'confirmed') continue
+    if (!isLiveTicketStatus(status)) continue
 
     facts.liveTickets += 1
     if (data.checked_in === true) {
@@ -540,7 +545,7 @@ export async function GET(request: Request) {
           continue
         }
 
-        const facts = await loadTicketFacts(eventId, account.openDisputePaymentRefs)
+        const facts = await loadTicketFacts(eventId, account.openDisputePaymentRefs, earningsCurrency || null)
 
         const grossMinor = Math.max(0, toMinor(earnings.grossSales))
 

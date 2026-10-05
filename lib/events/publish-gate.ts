@@ -192,7 +192,7 @@ export async function checkPaidPublishGate(params: {
       payoutCurrency: payoutCurrency || null,
       message:
         `This event is in ${countrySupport(eventCountryCode)?.name || eventCountryCode}, but your connected payout account is registered in ` +
-        `${countrySupport(accountCountry)?.name || accountCountry}. You'll still be paid — into that account, in ` +
+        `${countrySupport(accountCountry)?.name || accountCountry}. You'll still be paid into that account, in ` +
         `${payoutCurrency || 'its own currency'}, with a currency conversion applied. ` +
         `Being paid locally would require a separate connected account for ${countrySupport(eventCountryCode)?.name || eventCountryCode}, which Tikèm doesn't support yet.`,
     })

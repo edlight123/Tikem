@@ -11,7 +11,8 @@ import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/e
 import { getEventLocation } from '@/types/platform-settings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
-import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { isLiveTicketStatus, liveTicketStatusesForQuery } from '@/lib/tickets/status'
+import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
@@ -286,10 +287,10 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       return grossEventCents
     })()
 
-    // Absent on every ticket sold before the buyer-pays rollout, and on every
-    // Haiti sale — both are organizer-paid, which is exactly the default.
-    const feeIncidence: FeeIncidence =
-      String(ticket.fee_incidence ?? ticket.feeIncidence ?? '') === 'buyer' ? 'buyer' : 'organizer'
+    // The payout engine's rule (lib/payouts/fee-incidence.ts), so this view and
+    // lib/payouts/availability.ts agree on every ticket: 'buyer' only on the
+    // Stripe rails or with the server-stamped buyer_fee_charged proof.
+    const feeIncidence: FeeIncidence = ticketFeeIncidence(ticket)
 
     const paymentId = String(ticket.payment_id ?? ticket.paymentId ?? 'unknown')
     const current =
@@ -389,7 +390,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
 export const EARNINGS_CURRENCY_REVIEW_CODE = 'earnings_currency_review' as const
 
 export const EARNINGS_CURRENCY_REVIEW_MESSAGE =
-  "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it — no money has moved."
+  "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it, and no money has moved."
 
 /**
  * A stored event_earnings row whose currency is not the event's.
@@ -565,7 +566,7 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
     let queryRef = adminDb
       .collection('tickets')
       .where('event_id', '==', eventId)
-      .where('status', '==', 'confirmed')
+      .where('status', 'in', liveTicketStatusesForQuery())
       .orderBy('purchased_at', 'desc')
       .select(
         'tier_id',

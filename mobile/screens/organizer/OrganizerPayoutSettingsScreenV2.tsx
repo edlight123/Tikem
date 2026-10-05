@@ -169,6 +169,9 @@ export default function OrganizerPayoutSettingsScreenV2() {
   // Dedupes overlapping loads (mount focus + pull-to-refresh, etc.).
   const loadInFlightRef = useRef(false)
   const [destinations, setDestinations] = useState<PayoutDestination[]>([])
+  // Latest list for loadDestinations' merge (its callback must not go stale).
+  const destinationsRef = useRef<PayoutDestination[]>([])
+  destinationsRef.current = destinations
   // Stripe Connect (US/CA/FR) live status. `verified` = onboarding fully
   // complete (charges + payouts enabled); otherwise the card prompts to finish.
   const [stripeProfile, setStripeProfile] = useState<{ connected: boolean; verified: boolean; country?: string } | null>(null)
@@ -331,15 +334,19 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const loadDestinations = useCallback(async () => {
     if (!user?.uid) return
 
-    const combined: PayoutDestination[] = []
+    // null = that source could not be loaded (network blip, server error).
+    // A failed source keeps what we already had instead of reading as "no
+    // methods", which used to wipe the list (and its cache) and invite the
+    // organizer to set MonCash or a bank up a second time.
+    let bankRows: PayoutDestination[] | null = null
+    let mobileMoneyRows: PayoutDestination[] | null = null
 
     try {
       // Load bank destinations from backend
       const bankRes = await backendFetch('/api/organizer/payout-destinations/bank')
       if (bankRes.ok) {
         const data = await bankRes.json()
-        const list = (data?.destinations || []) as BankDestination[]
-        combined.push(...list)
+        bankRows = (data?.destinations || []) as BankDestination[]
       }
     } catch (e) {
       console.error('Failed to load destinations:', e)
@@ -357,11 +364,12 @@ export default function OrganizerPayoutSettingsScreenV2() {
           setAllowInstantMoncash(Boolean(data?.profile?.allowInstantMoncash))
         }
         const mm = data?.profile?.mobileMoneyDetails
+        mobileMoneyRows = []
         if (mm && (mm.phoneNumber || mm.accountName)) {
           const phone = String(mm.phoneNumber || '')
           const digits = phone.replace(/\D/g, '')
           const last4 = (digits || phone).slice(-4)
-          combined.push({
+          mobileMoneyRows.push({
             id: 'haiti-mobile-money',
             type: 'moncash',
             provider: String(mm.provider || 'moncash'),
@@ -395,6 +403,22 @@ export default function OrganizerPayoutSettingsScreenV2() {
     } catch (e) {
       console.error('Failed to load Stripe status:', e)
     }
+
+    // Fill a failed source from what is on screen, else from the saved cache
+    // (the cache seed may not have painted yet on a cold open).
+    let previous = destinationsRef.current
+    if ((bankRows === null || mobileMoneyRows === null) && previous.length === 0) {
+      try {
+        const raw = await AsyncStorage.getItem(payoutCacheKey(user.uid))
+        const cached = raw ? JSON.parse(raw) : null
+        if (Array.isArray(cached?.destinations)) previous = cached.destinations
+      } catch {}
+    }
+    const isMobileMoneyRow = (d: PayoutDestination) => d.id === 'haiti-mobile-money'
+    const combined: PayoutDestination[] = [
+      ...(bankRows ?? previous.filter((d) => !isMobileMoneyRow(d))),
+      ...(mobileMoneyRows ?? previous.filter(isMobileMoneyRow)),
+    ]
 
     setDestinations(combined)
     return combined

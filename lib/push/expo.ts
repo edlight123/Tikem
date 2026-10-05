@@ -1,5 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, type QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
 
@@ -52,6 +52,31 @@ export async function registerUserExpoPushToken(userId: string, token: string) {
       },
       { merge: true }
     )
+
+  // An Expo token identifies a DEVICE, not a person. If another account last
+  // used this phone (and its sign-out could not reach us, e.g. offline), it
+  // still holds the token and would keep receiving pushes here. Detach it from
+  // every other user. Best-effort: the registration itself already succeeded.
+  try {
+    const holders = await adminDb
+      .collection('users')
+      .where('expo_push_tokens', 'array-contains', token)
+      .limit(20)
+      .get()
+    await Promise.all(
+      holders.docs
+        .filter((d: QueryDocumentSnapshot) => d.id !== userId)
+        .map((d: QueryDocumentSnapshot) => d.ref.update({ expo_push_tokens: FieldValue.arrayRemove(token) }))
+    )
+  } catch (error) {
+    console.warn('Expo push token dedupe failed:', error)
+  }
+}
+
+/** Detach this device's token from the user (sign-out). No-op for a bad token. */
+export async function unregisterUserExpoPushToken(userId: string, token: string) {
+  if (!isExpoPushToken(token)) return
+  await removeUserExpoPushToken(userId, token)
 }
 
 export async function sendExpoPushNotificationToUser(

@@ -27,6 +27,7 @@ import { sanitizeAttribution, ticketAttributionFields, withResolvedPromoter } fr
 import { recordAttributedSale } from '@/lib/tracking-links'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, isGuestId } from '@/lib/guest/identity'
+import { validateStoredOrderLines } from '@/lib/tickets/purchasable'
 
 // Window after which a stuck "processing" claim is considered stale and may be re-claimed
 // (e.g. if a previous fulfillment attempt crashed mid-way).
@@ -37,6 +38,23 @@ export type FulfillmentClaim =
   | { outcome: 'already_completed'; ticketId: string | null }
   | { outcome: 'in_progress' }
   | { outcome: 'not_found' }
+  | { outcome: 'refused'; reason: string }
+
+/**
+ * Order states that must NEVER be fulfilled, whatever the gateway now says.
+ *
+ * `needs_refund` is set when a paid order could not be honoured (sold out, amount
+ * mismatch, invalid order). Fulfilling it later — e.g. the buyer reloads the return
+ * URL after a seat freed up — would issue tickets AND leave the order in the refund
+ * queue, so the buyer gets both.
+ */
+export function fulfillmentBlockedReason(data: Record<string, any> | null | undefined): string | null {
+  if (!data) return null
+  if (data.needs_refund === true) return 'needs_refund'
+  const status = String(data.status || '').toLowerCase()
+  if (status === 'refunded' || status === 'cancelled' || status === 'canceled') return status
+  return null
+}
 
 /**
  * Atomically claim a pending transaction (looked up by order_id) for fulfillment.
@@ -62,6 +80,12 @@ export async function claimOrderForFulfillment(orderId: string): Promise<Fulfill
 
     if (data.status === 'completed' && data.ticket_id) {
       return { outcome: 'already_completed', ticketId: String(data.ticket_id) } as FulfillmentClaim
+    }
+
+    // Checked INSIDE the transaction so a refund flag set concurrently is honoured.
+    const blocked = fulfillmentBlockedReason(data)
+    if (blocked) {
+      return { outcome: 'refused', reason: blocked } as FulfillmentClaim
     }
 
     if (data.status === 'processing' && data.fulfillment_started_at) {
@@ -109,7 +133,13 @@ export interface FulfillPaidOrderResult {
     | 'not_found'
     | 'ticket_creation_failed'
     | 'capacity_exceeded'
+    /** The order is flagged for refund (or refunded/cancelled): never issue tickets. */
+    | 'refused'
+    /** The stored order is malformed (e.g. a fractional quantity): flagged for refund. */
+    | 'invalid_order'
   ticketId: string | null
+  /** Set when outcome === 'refused' | 'invalid_order'. */
+  reason?: string
   /** Set when outcome === 'capacity_exceeded' so the caller can refund/flag the paid order. */
   capacity?: { reason?: string; tierId?: string | null; remaining?: number }
 }
@@ -138,6 +168,12 @@ export async function fulfillPaidOrder(params: {
   transactionId?: string | null
   payer?: string | null
   logPrefix?: string
+  /**
+   * Extra provider fields written onto the order when it is marked completed (e.g.
+   * MonCash's `moncash_trans_number`). Never used for anything the fulfillment
+   * itself decides on.
+   */
+  completionFields?: Record<string, unknown>
 }): Promise<FulfillPaidOrderResult> {
   const { orderId, paymentMethod } = params
   const transactionId = params.transactionId || null
@@ -152,6 +188,10 @@ export async function fulfillPaidOrder(params: {
   }
   if (claim.outcome === 'not_found') {
     return { outcome: 'not_found', ticketId: null }
+  }
+  if (claim.outcome === 'refused') {
+    console.warn(`${logPrefix} refusing to fulfil a blocked order`, { orderId, reason: claim.reason })
+    return { outcome: 'refused', ticketId: null, reason: claim.reason }
   }
   // claim.outcome === 'claimed': we own fulfillment for this order from here on.
 
@@ -209,6 +249,23 @@ export async function fulfillPaidOrder(params: {
           },
         ]
 
+  // Re-validate the stored order before anything is issued: every line a whole
+  // number of tickets, adding up to the order's quantity. Initiate refuses these
+  // now, but an order written before that (or by any future path) must not turn a
+  // 0.01-ticket payment into a whole ticket. Paid, so it is flagged for refund.
+  const lineCheck = validateStoredOrderLines(tierSelections, pendingTx.quantity ?? 1)
+  if (!lineCheck.ok) {
+    console.error(`${logPrefix} refusing to fulfil an order with an invalid quantity`, {
+      orderId,
+      quantity: pendingTx.quantity,
+    })
+    await supabase
+      .from('pending_transactions')
+      .update({ status: 'failed', failure_reason: 'invalid_quantity', needs_refund: true })
+      .eq('order_id', orderId)
+    return { outcome: 'invalid_order', ticketId: null, reason: 'invalid_quantity' }
+  }
+
   const eventCurrency =
     String(pendingTx.original_currency || pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
   const chargedCurrency = String(pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
@@ -218,6 +275,38 @@ export async function fulfillPaidOrder(params: {
     pendingTx.exchange_rate_spread_percent != null ? Number(pendingTx.exchange_rate_spread_percent) : null
   const fxProvider = pendingTx.exchange_rate_provider != null ? String(pendingTx.exchange_rate_provider) : null
   const fxFetchedAt = pendingTx.exchange_rate_fetched_at != null ? String(pendingTx.exchange_rate_fetched_at) : null
+
+  // WHO paid the platform fee — read from the ORDER, which recorded it when the
+  // buyer was charged (moncash-button/initiate and sogepay/initiate price pass-on
+  // exactly like the card path). Never from the event's current, client-editable
+  // `fee_incidence`: that could be flipped after the sale. An order without the
+  // stamp (every order before pass-on reached the Haitian rails) charged the face
+  // value only, so the organizer absorbed the fee.
+  const orderBuyerFee = Number(pendingTx.buyer_fee || 0)
+  const orderChargedBuyerFee =
+    pendingTx.fee_incidence === 'buyer' && Number.isFinite(orderBuyerFee) && orderBuyerFee > 0 ? orderBuyerFee : 0
+  const orderQuantityForFee = Math.max(1, Number(pendingTx.quantity || 1))
+  /** The buyer fee carried by ONE ticket, in the charged currency. */
+  const perTicketBuyerFee =
+    orderChargedBuyerFee > 0 ? Math.round((orderChargedBuyerFee / orderQuantityForFee) * 100) / 100 : 0
+  // The same fee in the EVENT currency (initiate records it as buyer_fee_original;
+  // when nothing was converted the charged figure is already in it).
+  const orderBuyerFeeOriginal = (() => {
+    if (orderChargedBuyerFee <= 0) return 0
+    const recorded = Number(pendingTx.buyer_fee_original)
+    if (Number.isFinite(recorded) && recorded > 0) return recorded
+    return eventCurrency === chargedCurrency ? orderChargedBuyerFee : 0
+  })()
+  /**
+   * Server-only proof the buyer was charged the fee: ONE ticket's share of it,
+   * in event-currency minor units (the units lib/payouts/availability.ts works
+   * in). The payout engine honours a 'buyer' stamp off the Stripe rails only
+   * with this > 0 (lib/payouts/fee-incidence.ts), so the organizer is not
+   * charged the fee a second time. Clients cannot write it (firestore.rules).
+   */
+  const buyerFeeChargedMinor =
+    orderBuyerFeeOriginal > 0 ? Math.max(1, Math.round((orderBuyerFeeOriginal * 100) / orderQuantityForFee)) : 0
+  const feeIncidence: 'buyer' | 'organizer' = buyerFeeChargedMinor > 0 ? 'buyer' : 'organizer'
   // Visit attribution stored on the order at initiate (already re-resolved there).
   // Orders created before attribution existed still carry their promoter code.
   const attribution = withResolvedPromoter(
@@ -274,16 +363,16 @@ export async function fulfillPaidOrder(params: {
         attendee_id: pendingTx.user_id,
         attendee_name: attendee?.full_name || attendee?.email || 'Guest',
         price_paid: organizerUnitPrice,
-        // WHO paid the platform fee: the organizer. The Haitian rails (MonCash,
-        // MonCash button, SogePay) charge the buyer the face value only — no fee
-        // is added on top (only the Stripe paths price buyer incidence) — so the
-        // fee comes out of the organizer's proceeds. Stamped from the PAYMENT,
-        // never from the event's client-editable fee_incidence setting.
-        fee_incidence: 'organizer',
+        // WHO paid the platform fee, stamped from the PAYMENT (see feeIncidence),
+        // with its server-only proof (see buyerFeeChargedMinor).
+        fee_incidence: feeIncidence,
+        buyer_fee_charged: buyerFeeChargedMinor,
         currency: eventCurrency,
         original_currency: eventCurrency,
         exchange_rate_used: fxRate,
-        charged_amount: selection.unitPrice,
+        // What the buyer actually paid for this ticket: face + its share of any fee
+        // passed on to them.
+        charged_amount: Math.round((Number(selection.unitPrice) + perTicketBuyerFee) * 100) / 100,
         charged_currency: chargedCurrency,
         payment_method: paymentMethod,
         payment_id: transactionId || orderId,
@@ -349,12 +438,10 @@ export async function fulfillPaidOrder(params: {
               ticket_type: selection.tierName || 'General Admission',
               tier_id: selection.tierId || '',
               price_paid: organizerUnitPrice,
-              // WHO paid the platform fee: the organizer. The Haitian rails (MonCash,
-              // MonCash button, SogePay) charge the buyer the face value only — no fee
-              // is added on top (only the Stripe paths price buyer incidence) — so the
-              // fee comes out of the organizer's proceeds. Stamped from the PAYMENT,
-              // never from the event's client-editable fee_incidence setting.
-              fee_incidence: 'organizer',
+              // WHO paid the platform fee, stamped from the PAYMENT (see feeIncidence),
+              // with its server-only proof (see buyerFeeChargedMinor).
+              fee_incidence: feeIncidence,
+              buyer_fee_charged: buyerFeeChargedMinor,
               currency: eventCurrency,
               ...(guestRecipient
                 ? {
@@ -369,7 +456,7 @@ export async function fulfillPaidOrder(params: {
               exchange_rate_spread_percent: fxSpreadPercent,
               exchange_rate_provider: fxProvider,
               exchange_rate_fetched_at: fxFetchedAt,
-              charged_amount: selection.unitPrice,
+              charged_amount: Math.round((Number(selection.unitPrice) + perTicketBuyerFee) * 100) / 100,
               charged_currency: chargedCurrency,
               payment_method: paymentMethod,
               payment_id: transactionId || orderId,
@@ -470,6 +557,8 @@ export async function fulfillPaidOrder(params: {
       chargedAmountCents: Math.round(Number(pendingTx.amount || 0) * 100),
       fxRate,
       chargedCurrency,
+      // Pass-on: the buyer paid the fee on top, so the organizer nets the face value.
+      feeIncidence,
       promoterCommissionCents,
     })
   } catch (e) {
@@ -488,6 +577,7 @@ export async function fulfillPaidOrder(params: {
       ticket_id: ticket?.id || null,
       transaction_id: transactionId || null,
       payer: params.payer || null,
+      ...(params.completionFields || {}),
     })
     .eq('order_id', orderId)
 

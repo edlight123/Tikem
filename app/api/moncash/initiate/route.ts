@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createMonCashPayment } from '@/lib/moncash'
+import { checkEventPurchasable, invalidQuantityRefusal, parseTicketQuantity } from '@/lib/tickets/purchasable'
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +25,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventId, quantity = 1, phoneNumber } = await request.json()
+    const { eventId, quantity: rawQuantity = 1, phoneNumber } = await request.json()
+
+    const quantity = parseTicketQuantity(rawQuantity)
+    if (quantity === null) {
+      const refusal = invalidQuantityRefusal()
+      return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
+    }
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
@@ -45,6 +52,11 @@ export async function POST(request: Request) {
 
     if (eventError || !event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    const purchasable = checkEventPurchasable(event)
+    if (!purchasable.ok) {
+      return NextResponse.json({ error: purchasable.error, code: purchasable.code }, { status: purchasable.status })
     }
 
     // Calculate total amount
@@ -74,7 +86,9 @@ export async function POST(request: Request) {
       quantity,
       amount: totalAmount,
       payment_method: 'moncash',
-      status: status === 'successful' ? 'completed' : 'pending',
+      // Always pending: tickets are issued only by the verified callback through the
+      // shared fulfillment pipeline. A row born 'completed' had no tickets at all.
+      status: 'pending',
     })
 
     return NextResponse.json({ 

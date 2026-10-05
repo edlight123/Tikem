@@ -219,7 +219,20 @@ async function loadTicketFacts(eventId: string): Promise<TicketFacts> {
   const snapshot = await adminDb
     .collection('tickets')
     .where('event_id', '==', eventId)
-    .select('status', 'checked_in', 'check_in_method', 'price_paid', 'pricePaid', 'refund_status', 'refund_amount')
+    .select(
+      'status',
+      'checked_in',
+      'check_in_method',
+      'price_paid',
+      'pricePaid',
+      'refund_status',
+      'refund_amount',
+      // Refunds count at face value in the event currency (ticketRefundedFaceMinor).
+      'refund_face_amount',
+      'refund_currency',
+      'currency',
+      'original_currency'
+    )
     .get()
 
   // One definition, shared with lib/payouts/availability.ts, so the figure a
@@ -507,7 +520,7 @@ export async function gateHaitiWithdrawal(input: ReleaseGateInput): Promise<Rele
   if (String(eventData?.status || '') === 'cancelled') {
     return blocked(
       'event_cancelled',
-      'This event was cancelled — its earnings are reserved for refunds.'
+      'This event was cancelled, so its earnings are reserved for refunds.'
     )
   }
 
@@ -561,7 +574,7 @@ export async function gateHaitiWithdrawal(input: ReleaseGateInput): Promise<Rele
     if (decision.reason === 'event_cancelled') {
       return blocked(
         'event_cancelled',
-        'This event was cancelled — its earnings are reserved for refunds.',
+        'This event was cancelled, so its earnings are reserved for refunds.',
         { reason: decision.reason, decision, params }
       )
     }
@@ -582,7 +595,7 @@ export async function gateHaitiWithdrawal(input: ReleaseGateInput): Promise<Rele
     return blocked(
       'amount_exceeds_releasable',
       `Only ${formatMoney(decision.releasableMinor, currency)} of this event's earnings is released right now${
-        refundedMinor > 0 ? ` — ${formatMoney(refundedMinor, currency)} has been refunded to buyers.` : '.'
+        refundedMinor > 0 ? `. ${formatMoney(refundedMinor, currency)} has been refunded to buyers.` : '.'
       }`,
       {
         reason: 'amount_above_releasable',

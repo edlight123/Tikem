@@ -335,7 +335,14 @@
     "trailer": "bande-annonce",
     "select_payment_description_one": "Choisissez comment vous souhaitez payer pour votre {{count}} billet",
     "select_payment_description_other": "Choisissez comment vous souhaitez payer pour vos {{count}} billets",
-    "select_payment_description_plural": "Choisissez comment vous souhaitez payer pour vos {{count}} billets"
+    "select_payment_description_plural": "Choisissez comment vous souhaitez payer pour vos {{count}} billets",
+    "not_found_title": "Événement introuvable",
+    "not_found_detail": "Cet événement est peut-être terminé ou a été retiré, ou le lien est incorrect.",
+    "claim_already_claimed": "Vous avez déjà réservé des billets pour cet événement. Consultez vos e-mails pour les retrouver.",
+    "claim_promo_already_used": "Vous avez déjà utilisé ce code promo.",
+    "claim_event_cancelled": "Cet événement a été annulé.",
+    "claim_event_unavailable": "Cet événement n'est pas disponible pour le moment.",
+    "claim_event_ended": "Cet événement est déjà terminé."
   },
   "favorites": {
     "title": "Mes favoris",
@@ -1560,7 +1567,8 @@
   "location_banner": {
     "near_place": "Des événements près de {{place}} ?",
     "use": "Utiliser",
-    "not_now_aria": "Pas maintenant"
+    "not_now_aria": "Pas maintenant",
+    "region_aria": "Suggestion de lieu"
   },
   "invite": {
     "title": "Invitation à un événement",
@@ -1767,7 +1775,7 @@
     "blocked_title": "À régler d'abord",
     "blocked_body": "Votre compte est encore lié à des acheteurs ou à de l'argent. Une fois ces points réglés, vous pourrez le supprimer.",
     "obligation_events": "Annulez et remboursez vos événements à venir qui ont vendu des billets :",
-    "obligation_event": "{{title}} — {{count}} vendus",
+    "obligation_event": "{{title}} : {{count}} vendus",
     "obligation_balance": "Retirez votre solde restant : {{amounts}}",
     "obligation_withdrawals": "Attendez la fin de vos retraits en cours ({{count}})",
     "obligation_promoter": "Retirez vos gains de promoteur : {{amounts}}",

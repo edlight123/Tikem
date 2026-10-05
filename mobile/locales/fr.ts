@@ -363,7 +363,7 @@ export default {
       blockedTitle: "À régler d'abord",
       blockedBody: "Votre compte est encore lié à des acheteurs ou à de l'argent. Une fois ces points réglés, vous pourrez le supprimer.",
       obligationEvents: 'Annulez et remboursez vos événements à venir qui ont vendu des billets :',
-      obligationEvent: '{title} — {count} vendus',
+      obligationEvent: '{title} : {count} vendus',
       obligationBalance: 'Retirez votre solde restant : {amounts}',
       obligationWithdrawals: 'Attendez la fin de vos retraits en cours ({count})',
       obligationPromoter: 'Retirez vos gains de promoteur : {amounts}',
@@ -465,7 +465,7 @@ export default {
 
   contentPage: {
     updatedPrefix: 'Mis à jour le',
-    draftNote: 'Traduction provisoire — en cours de révision. La version anglaise fait référence.',
+    draftNote: 'Traduction provisoire (en cours de révision). La version anglaise fait référence.',
     unavailableTitle: 'Contenu indisponible',
     unavailableBody: 'Impossible de charger ce contenu. Vérifiez votre connexion et réessayez.',
   },
@@ -517,14 +517,14 @@ export default {
       },
     },
     governmentId: {
-      tipsInline: 'Bonne lumière, pas de reflet, texte lisible — le scanner gère le cadrage.',
+      tipsInline: 'Bonne lumière, pas de reflet, texte lisible. Le scanner gère le cadrage.',
       scanDocument: 'Scanner le document (auto)',
       type: {
         label: 'Quel document utilisez-vous ?',
         passport: 'Passeport',
         national_id: 'Carte d’identité',
         drivers_license: 'Permis',
-        passportHint: 'Un passeport ne nécessite que sa page photo — nous ne demanderons pas de verso.',
+        passportHint: 'Un passeport ne nécessite que sa page photo. Nous ne demanderons pas de verso.',
         missingTitle: 'Choisissez un type de document',
         missingBody: 'Indiquez quel document vous envoyez pour que nous demandions les bonnes photos.',
       },
@@ -767,7 +767,7 @@ export default {
     // L’unique rail inter-villes, clairement séparé du contenu local.
     elsewhere: {
       title: 'ailleurs {place}',
-      subtitle: 'AUTRES ZONES — PAS À {location}',
+      subtitle: 'AUTRES ZONES (PAS À {location})',
     },
     noEventsAvailable: 'Aucun événement disponible',
     checkBackSoon: 'Revenez bientôt pour de nouveaux événements !',
@@ -930,7 +930,7 @@ export default {
       what: 'Nous enregistrons quelques secondes de vidéo de votre visage et en tirons des mesures, afin de confirmer qu’une vraie personne effectue cette vérification.',
       why: 'Cela sert uniquement à vérifier votre identité avant de vous envoyer de l’argent. Ce n’est jamais rendu public, jamais utilisé à des fins publicitaires, jamais vendu ni communiqué en dehors de Tikèm et de la personne qui l’examine.',
       retention: 'Nous supprimons l’enregistrement 90 jours après la décision. Nous conservons la décision, pas votre visage.',
-      agree: 'J’accepte — démarrer l’enregistrement',
+      agree: 'J’accepte, démarrer l’enregistrement',
     },
     sectionLabel: 'Vérification de présence',
     sectionHint: 'Un court enregistrement qui prouve qu’une vraie personne est là. Environ 10 secondes.',
@@ -1065,12 +1065,14 @@ export default {
     status: {
       checkedIn: 'Enregistré',
       notCheckedIn: 'Non enregistré',
+      notValid: 'Non valide',
     },
     checkedInPrefix: 'Enregistré à ',
     checkIn: 'Enregistrer',
     checkInConfirmTitle: 'Enregistrer ?',
     checkInConfirmBody: 'Enregistrer {name} ?',
     checkInFailed: "Échec de l'enregistrement. Veuillez réessayer.",
+    outsideWindow: "Ce billet est hors de sa plage d'entrée. Utilisez le scanner pour forcer l'entrée.",
     empty: {
       filtered: 'Aucun participant trouvé',
       default: 'Aucun participant pour le moment',
@@ -1097,7 +1099,7 @@ export default {
     },
     actions: {
       confirm: 'Confirmer l’entrée',
-      overrideCheckIn: 'Forcer — enregistrer quand même',
+      overrideCheckIn: 'Forcer : enregistrer quand même',
     },
     results: {
       notFound: 'Ce billet n’existe pas.',
@@ -1108,12 +1110,12 @@ export default {
       cancelled: 'Ce billet a été annulé.',
       scanFailed: 'Impossible de scanner le billet. Veuillez réessayer.',
       checkInSuccessful: 'Entrée confirmée !',
-      checkInQueued: 'Enregistré — synchronisation dès le retour en ligne.',
+      checkInQueued: 'Enregistré. Synchronisation dès le retour en ligne.',
       checkInFailed: 'Impossible d’enregistrer ce billet. Veuillez réessayer.',
       offlineNotCached: 'Hors ligne et ce billet n’est pas en cache. Reconnectez-vous une fois pour charger la liste.',
     },
     offline: {
-      banner: 'Hors ligne — les entrées se synchroniseront à la reconnexion.',
+      banner: 'Hors ligne. Les entrées se synchroniseront à la reconnexion.',
       ready: '{count} invités prêts pour l’enregistrement hors ligne',
     },
   },
@@ -1147,7 +1149,7 @@ export default {
       noNumbersBody: 'Nous n’avons trouvé aucun numéro de téléphone dans vos contacts.',
       errorTitle: 'Erreur',
       errorBody: 'Impossible de synchroniser les contacts. Veuillez réessayer.',
-      noContactMatches: 'Aucun de vos contacts n’est encore sur Tikèm — invitez-les !',
+      noContactMatches: 'Aucun de vos contacts n’est encore sur Tikèm. Invitez-les !',
       onTikem: '{count} sur Tikèm',
     },
   },
@@ -1266,7 +1268,7 @@ export default {
 
   organizerPromoters: {
     title: 'Promoteurs',
-    infoNotice: 'Donnez à chaque personne qui vend votre événement son propre lien. Chaque billet acheté via ce lien compte pour elle, et Tikèm calcule la commission que vous lui devez. Vous la payez directement — Tikèm tient les comptes.',
+    infoNotice: 'Donnez à chaque personne qui vend votre événement son propre lien. Chaque billet acheté via ce lien compte pour elle, et Tikèm calcule la commission que vous lui devez. Vous la payez directement. Tikèm tient les comptes.',
     formTitle: 'Ajouter un promoteur',
     fields: {
       name: 'Nom',
@@ -1276,7 +1278,7 @@ export default {
     },
     placeholders: {
       name: 'Steeve L.',
-      contact: 'Téléphone ou e-mail — pour votre référence',
+      contact: 'Téléphone ou e-mail (pour votre référence)',
       code: 'STEEVE',
     },
     types: {
@@ -1286,7 +1288,7 @@ export default {
     create: 'Ajouter le promoteur',
     creating: 'Ajout…',
     createdTitle: 'Promoteur ajouté',
-    createdMessage: "Envoyez-lui son lien de statistiques — c'est son outil de vente : son lien personnel, ses ventes en direct et sa commission.",
+    createdMessage: "Envoyez-lui son lien de statistiques. C'est son outil de vente : son lien personnel, ses ventes en direct et sa commission.",
     sendLink: 'Envoyer son lien',
     listTitle: 'Vos promoteurs',
     empty: 'Aucun promoteur',
@@ -1435,7 +1437,7 @@ export default {
       title: 'Créer un code promo',
       create: 'Créer',
       creating: 'Création…',
-      limitHelper: 'Couvre les {n} premiers billets réduits — une commande de 10 billets en consomme 10.',
+      limitHelper: 'Couvre les {n} premiers billets réduits. Une commande de 10 billets en consomme 10.',
     },
     fields: {
       code: 'Code',
@@ -1465,7 +1467,7 @@ export default {
       percentOff: '{value} % de réduction',
       amountOff: '{amount} de réduction',
       atEvent: ' à {event}',
-      blurbFirstN: 'Utilise le code {code} pour {discount}{at} — réservé aux {n} premières personnes !',
+      blurbFirstN: 'Utilise le code {code} pour {discount}{at}. Réservé aux {n} premières personnes !',
       blurbOpen: 'Utilise le code {code} pour {discount}{at} !',
     },
     tabs: {
@@ -2012,9 +2014,9 @@ export default {
     explore: 'Explorer les événements',
     host: 'Je veux organiser un événement',
     slide1Title: 'Bienvenue sur Tikèm',
-    slide1Body: 'Découvrez concerts, fêtes et culture en Haïti et dans la diaspora — chaque événement a une affiche qui vaut le détour.',
+    slide1Body: 'Découvrez concerts, fêtes et culture en Haïti et dans la diaspora. Chaque événement a une affiche qui vaut le détour.',
     slide2Title: 'Votre billet est un code QR',
-    slide2Body: 'Payez avec MonCash ou par carte. Votre billet vit dans l’app — même hors ligne — et se scanne à l’entrée.',
+    slide2Body: 'Payez avec MonCash ou par carte. Votre billet vit dans l’app (même hors ligne) et se scanne à l’entrée.',
     slide3Title: 'Organisez votre propre événement',
     slide3Body: 'Créez et publiez un événement en quelques minutes, gratuitement. Vendez des billets, puis vérifiez votre identité une seule fois pour encaisser via MonCash ou banque.',
   },
@@ -2096,7 +2098,7 @@ export default {
       team: 'Équipe',
       tasks: 'Tâches',
     },
-    infoNotice: 'L’équipe de votre organisation définit les rôles et partage les tâches. Elle est distincte du personnel par événement — les membres ont toujours besoin d’un accès par événement pour scanner les billets.',
+    infoNotice: 'L’équipe de votre organisation définit les rôles et partage les tâches. Elle est distincte du personnel par événement : les membres ont toujours besoin d’un accès par événement pour scanner les billets.',
     tasksInfoNotice: 'Attribuez du travail à votre équipe et suivez-le, de « à faire » à « terminé ».',
     you: 'Vous',
     addMember: 'Ajouter un membre',
@@ -2256,10 +2258,10 @@ export default {
       fixErrors: 'Veuillez corriger {n} champ(s) pour continuer.',
     },
       payoutRegime: {
-        haiti: 'Versé en HTG sur Sogebank, Unibank ou MonCash. Tikèm vérifie votre identité — à configurer dans Moyens de paiement.',
-        international: 'Versé via Stripe sur votre banque. Cela demande un profil de paiement distinct de celui d’Haïti — à configurer dans Moyens de paiement.',
+        haiti: 'Versé en HTG sur Sogebank, Unibank ou MonCash. Tikèm vérifie votre identité. À configurer dans Moyens de paiement.',
+        international: 'Versé via Stripe sur votre banque. Cela demande un profil de paiement distinct de celui d’Haïti. À configurer dans Moyens de paiement.',
         countryMismatch:
-          'Attention : cet événement se tient en {event}, mais votre compte de paiement connecté est enregistré en {account}. Vous serez quand même payé — sur ce compte, dans sa devise, après conversion. Un versement local en {event} exigerait un compte connecté distinct, que Tikèm ne prend pas encore en charge.',
+          'Attention : cet événement se tient en {event}, mais votre compte de paiement connecté est enregistré en {account}. Vous serez quand même payé sur ce compte, dans sa devise, après conversion. Un versement local en {event} exigerait un compte connecté distinct, que Tikèm ne prend pas encore en charge.',
       },
     canvas: {
       nationalDay: {
@@ -2289,7 +2291,7 @@ export default {
       spotifyChange: 'Changer',
       spotifyRemove: 'Retirer la chanson',
       spotifyPastedLink: 'Lien Spotify',
-      spotifySearchUnavailable: 'La recherche de chansons doit être configurée — collez un lien Spotify pour l’instant.',
+      spotifySearchUnavailable: 'La recherche de chansons doit être configurée. Collez un lien Spotify pour l’instant.',
       guestVis: {
         legend: 'Qui peut voir la liste d\'invités',
         previewHidden: 'Rien affiché',
@@ -2346,8 +2348,8 @@ export default {
       accessCodeRequired: 'Définissez un code d’accès (ou désactivez la protection).',
       accessCodeTooShort: 'Utilisez au moins 6 caractères.',
       paidComingSoon: 'Les événements payants arrivent bientôt en {country}. Pour l’instant, vous pouvez créer un événement RSVP gratuit.',
-      stripePayoutNotice: 'Les événements ici sont payés via votre profil US · Canada · France (Stripe). Configurez-le avant de publier des billets payants — votre profil Haïti ne le couvre pas.',
-      haitiPayoutNotice: 'Les événements en Haïti sont payés via votre profil Haïti (MonCash ou banque). Configurez-le avant de publier des billets payants — votre profil Stripe ne le couvre pas.',
+      stripePayoutNotice: 'Les événements ici sont payés via votre profil US · Canada · France (Stripe). Configurez-le avant de publier des billets payants. Votre profil Haïti ne le couvre pas.',
+      haitiPayoutNotice: 'Les événements en Haïti sont payés via votre profil Haïti (MonCash ou banque). Configurez-le avant de publier des billets payants. Votre profil Stripe ne le couvre pas.',
       stripePayoutCta: 'Configurer les paiements',
       // Qui paie les frais de service (champ `fee_incidence`).
       fee: {
@@ -2415,6 +2417,9 @@ export default {
     enterCode: 'Saisir le code d’accès',
     unlock: 'Déverrouiller',
     wrongCode: 'Code incorrect. Réessayez.',
+    tooManyAttempts: 'Trop de tentatives. Patientez quelques minutes, puis réessayez.',
+    networkError: 'Impossible de vérifier le code. Vérifiez votre connexion et réessayez.',
+    verifyFailed: 'Impossible de vérifier le code pour le moment. Veuillez réessayer.',
   },
 
   organizerCreateEvent: {
@@ -2618,7 +2623,7 @@ export default {
     searchPlaceholder: 'Rechercher une image',
     uploadImage: 'Importer une image',
     empty: 'Aucune image trouvée',
-    notConfigured: "Bibliothèque d'images indisponible — importez la vôtre",
+    notConfigured: "Bibliothèque d'images indisponible. Importez la vôtre",
     byPhotographer: 'Photo : {name}',
     artTitle: 'art tikèm',
     artSubtitle: 'Sérigraphies haïtiennes originales, libres d’utilisation',
@@ -2684,11 +2689,15 @@ export default {
       updateError: 'Impossible de mettre à jour les favoris',
     },
     purchase: {
+      notOnSaleBody: 'Les billets de cet événement ne sont pas en vente.',
+      cancelledBody: 'Cet événement a été annulé. Les billets ne sont plus disponibles.',
       loginBody: 'Connectez-vous pour acheter des billets',
       pastTitle: 'Événement terminé',
       pastBody: 'Cet événement est déjà terminé. Les billets ne sont plus disponibles.',
     },
     floating: {
+      notOnSale: 'Pas en vente',
+      eventCancelled: 'Événement annulé',
       noTicketsAvailable: 'Aucun billet disponible',
       freeEntry: 'Entrée gratuite',
       almostSoldOut: '⚡ Presque complet !',
@@ -2713,6 +2722,14 @@ export default {
   },
 
   ticketSelector: {
+    promoErrors: {
+      invalid: 'Ce code promo n’est pas valide pour cet événement.',
+      inactive: 'Ce code promo n’est plus actif.',
+      notYetValid: 'Ce code promo n’est pas encore actif.',
+      expired: 'Ce code promo a expiré.',
+      maxUses: 'Ce code promo a atteint son nombre maximal d’utilisations.',
+      failed: 'Impossible de vérifier le code promo. Veuillez réessayer.',
+    },
     includesFee: 'Inclut {amount} de frais de service',
     title: 'Choisir des billets',
     chooseTickets: 'Sélection des billets',
@@ -2828,6 +2845,11 @@ export default {
       limited: 'Il ne reste pas assez de billets pour cette commande.',
       tooMany: 'Vous pouvez réclamer au maximum 10 billets gratuits à la fois.',
       accessCode: "Cet événement nécessite un code d'accès.",
+      alreadyClaimed: "Vous avez déjà réservé des billets pour cet événement. Consultez vos e-mails pour les retrouver.",
+      promoAlreadyUsed: "Vous avez déjà utilisé ce code promo.",
+      eventCancelled: "Cet événement a été annulé.",
+      eventUnavailable: "Cet événement n'est pas disponible pour le moment.",
+      eventEnded: "Cet événement est déjà terminé.",
     },
     title: 'Réclamer un billet gratuit',
     freeEvent: 'ÉVÉNEMENT GRATUIT',
@@ -2896,11 +2918,26 @@ export default {
       leave: 'Quitter',
       failedTitle: 'Impossible de charger Stripe',
       failedBody:
-        "Nous n'avons pas pu accéder à la page sécurisée de Stripe. Vérifiez votre connexion et réessayez — les informations déjà envoyées sont enregistrées chez Stripe.",
+        "Nous n'avons pas pu accéder à la page sécurisée de Stripe. Vérifiez votre connexion et réessayez. Les informations déjà envoyées sont enregistrées chez Stripe.",
       tryAgain: 'Réessayer',
       backToPayouts: 'Retour aux paramètres de paiement',
     },
     payment: {
+      reasons: {
+        payment_failed: 'Le paiement n’a pas abouti. Vous n’avez pas été débité.',
+        sold_out: 'Les billets ont été épuisés avant la fin de votre paiement. Tout montant débité sera remboursé.',
+        capacity_exceeded: 'Les billets ont été épuisés avant la fin de votre paiement. Tout montant débité sera remboursé.',
+        amount_mismatch: 'Le montant payé ne correspond pas à la commande. Contactez le support si vous avez été débité.',
+        ticket_creation_failed: 'Votre paiement est passé, mais le billet n’a pas encore pu être émis. Consultez Mes billets sous peu ou contactez le support.',
+        missing_order: 'Commande introuvable. Consultez Mes billets ou réessayez.',
+        missing_transaction: 'Paiement introuvable. Consultez Mes billets ou réessayez.',
+        transaction_not_found: 'Impossible de confirmer ce paiement. Consultez Mes billets ou réessayez.',
+        processing_error: 'Un problème est survenu lors de la confirmation du paiement. Consultez Mes billets avant de réessayer.',
+        refund_pending: 'Cette commande n’a pas pu aboutir, aucun billet n’a donc été émis. Votre paiement sera remboursé.',
+        refused: 'Cette commande ne peut plus aboutir, aucun billet n’a donc été émis. Tout montant débité sera remboursé.',
+        invalid_order: 'Cette commande n’était pas valide, aucun billet n’a donc été émis. Tout montant débité sera remboursé.',
+        generic: 'Le paiement n’a pas pu aboutir. Veuillez réessayer.',
+      },
       complete: 'Finaliser le paiement',
       successTitle: 'Paiement réussi !',
       successBody: 'Votre billet est confirmé. Consultez l’onglet Billets.',
@@ -3008,7 +3045,7 @@ export default {
       misleading: "Trompeur ou faux",
       other: "Autre chose",
     },
-    detailsPlaceholder: "Détails (facultatif) — tout ce qui peut nous aider à l'examiner",
+    detailsPlaceholder: "Détails (facultatif) : tout ce qui peut nous aider à l'examiner",
     submit: "Envoyer le signalement",
     successTitle: "Merci de nous avoir prévenus",
     successBody: "Notre équipe examine chaque signalement sous 24 heures et retire les contenus qui enfreignent nos Conditions.",

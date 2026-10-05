@@ -568,9 +568,11 @@ export interface MonCashGatewayVerification {
 function normalizeGatewayPayment(data: any): MonCashGatewayVerification {
   // Response shape: { payment: { reference, transaction_id, cost, message, payer, timestamp }, timestamp, status }
   const payment = data?.payment || data
-  const message = String(payment?.message || '').toLowerCase()
-  const httpStatus = Number(data?.status ?? payment?.status ?? 0)
-  const success = message === 'successful' || httpStatus === 200
+  const message = String(payment?.message || '').trim().toLowerCase()
+  // PAID only when Digicel's own payment record says so. An HTTP 200 envelope is
+  // just "the API answered" — treating any 200 as paid would issue tickets for a
+  // response that carries no successful payment at all.
+  const success = message === 'successful'
   const costRaw = payment?.cost
   const cost = costRaw == null || costRaw === '' ? undefined : Number(costRaw)
   return {

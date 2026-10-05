@@ -187,3 +187,45 @@ describe('releaseInventoryReservation()', () => {
     )
   })
 })
+
+describe('reserveInventoryAtomic() money-path guards', () => {
+  it.each([0.01, 1.01, 2.5])('refuses a fractional order quantity %p (no writes)', async (q) => {
+    store.set('events/evt1', { max_tickets: 100, tickets_sold: 0 })
+    const result = await reserveInventoryAtomic({ eventId: 'evt1', quantity: q, tierIncrements: [] })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid_quantity' })
+    expect(txWrites).toEqual([])
+  })
+
+  it('refuses a fractional tier line (no writes)', async () => {
+    const result = await reserveInventoryAtomic({
+      eventId: 'evt1',
+      quantity: 2,
+      tierIncrements: [{ tierId: 'tierA', quantity: 1.5 }],
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid_quantity' })
+    expect(txWrites).toEqual([])
+  })
+
+  it("refuses a tier that belongs to ANOTHER event (no writes)", async () => {
+    store.set('events/evt1', { max_tickets: 100, tickets_sold: 0 })
+    store.set('ticket_tiers/foreign', { event_id: 'evt2', total_quantity: 0, sold_quantity: 0 })
+    const result = await reserveInventoryAtomic({
+      eventId: 'evt1',
+      quantity: 1,
+      tierIncrements: [{ tierId: 'foreign', quantity: 1 }],
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'tier_mismatch', tierId: 'foreign' })
+    expect(txWrites).toEqual([])
+  })
+
+  it('does not conjure a tier doc that does not exist', async () => {
+    store.set('events/evt1', { max_tickets: 100, tickets_sold: 0 })
+    const result = await reserveInventoryAtomic({
+      eventId: 'evt1',
+      quantity: 1,
+      tierIncrements: [{ tierId: 'ghost', quantity: 1 }],
+    })
+    expect(result.ok).toBe(true)
+    expect(txWrites.map((w) => w.key)).toEqual(['events/evt1'])
+  })
+})

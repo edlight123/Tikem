@@ -185,6 +185,11 @@ export async function POST(request: Request) {
     }
 
     // Best-effort persistence only; the return URL flow is the source of truth.
+    //
+    // This endpoint is unauthenticated, so it may only annotate an order that is
+    // still PENDING. It used to overwrite `transaction_id` on ANY order — including a
+    // completed one — and the legacy callback and the return handler both look orders
+    // up by that field, so a forged alert could re-point or hijack a finished order.
     if (orderId || transactionId) {
       const supabase = await createClient()
 
@@ -197,6 +202,7 @@ export async function POST(request: Request) {
             transaction_id: transactionId || null,
           })
           .eq('order_id', orderId)
+          .eq('status', 'pending')
       } else if (transactionId) {
         await supabase
           .from('pending_transactions')
@@ -205,6 +211,7 @@ export async function POST(request: Request) {
             moncash_alert_payload: payload,
           })
           .eq('transaction_id', transactionId)
+          .eq('status', 'pending')
       }
     }
 

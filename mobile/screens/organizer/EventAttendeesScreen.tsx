@@ -13,8 +13,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { db, auth } from '../../config/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { postCheckIn } from '../../lib/doorCheckIn';
+import type { DoorVerdict } from '../../lib/doorList';
 import { useI18n } from '../../contexts/I18nContext';
 import { useLocaleFormat } from '../../lib/format';
 import ExportAttendeesButton from '../../components/ExportAttendeesButton';
@@ -51,6 +53,17 @@ interface Attendee {
 const isCheckedIn = (a: Attendee): boolean =>
   !!a.checked_in_at || a.checked_in === true || String(a.status || '').toLowerCase() === 'checked_in';
 
+/**
+ * Live = valid | confirmed | active (plus legacy tickets with no status, and
+ * the old 'checked_in' status, which was a live ticket at the door). The same
+ * rule the scanner and the server's check-in use. Refunded, cancelled, voided
+ * tickets are listed but never counted or offered a check-in.
+ */
+const isLive = (a: Attendee): boolean => {
+  const s = String(a.status ?? '').trim().toLowerCase();
+  return s === '' || s === 'valid' || s === 'confirmed' || s === 'active' || s === 'checked_in';
+};
+
 export default function EventAttendeesScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -71,7 +84,7 @@ export default function EventAttendeesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checked_in' | 'not_checked_in'>('all');
   // Ticket ids with an in-flight check-in write — used to disable the row's
-  // button so a double-tap can't fire two updateDocs.
+  // button so a double-tap can't fire two check-ins.
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -95,8 +108,8 @@ export default function EventAttendeesScreen() {
       )) {
         return false;
       }
-      if (filterStatus === 'checked_in') return isCheckedIn(a);
-      if (filterStatus === 'not_checked_in') return !isCheckedIn(a);
+      if (filterStatus === 'checked_in') return isLive(a) && isCheckedIn(a);
+      if (filterStatus === 'not_checked_in') return isLive(a) && !isCheckedIn(a);
       return true;
     });
   }, [attendees, searchQuery, filterStatus]);
@@ -122,11 +135,33 @@ export default function EventAttendeesScreen() {
     }
   };
 
+  /** Why the server refused a check-in, in the scanner's words. */
+  const refusalMessage = (verdict: DoorVerdict): string => {
+    switch (verdict) {
+      case 'ALREADY_CHECKED_IN':
+        return t('organizerTicketScanner.results.alreadyCheckedIn');
+      case 'EXPIRED':
+        return t('organizerTicketScanner.results.expired');
+      case 'CANCELLED':
+        return t('organizerTicketScanner.results.cancelled');
+      case 'WRONG_EVENT':
+        return t('organizerTicketScanner.results.wrongEvent');
+      case 'NOT_FOUND':
+        return t('organizerTicketScanner.results.notFound');
+      case 'OUTSIDE_WINDOW':
+        return t('organizerAttendees.outsideWindow');
+      default:
+        return t('organizerAttendees.checkInFailed');
+    }
+  };
+
   // Manual check-in for staff when the camera can't read a damaged/screenshot
-  // QR. Mirrors TicketScannerScreen's write EXACTLY (same fields), with an
-  // optimistic local update that reverts if the Firestore write fails.
+  // QR. Goes through the same server check-in the scanner uses (a Firestore
+  // transaction that re-checks status, expiry and "already in"), so this list
+  // and a scanner on another phone can never both admit one ticket. Optimistic
+  // local update, reverted if the server refuses or cannot be reached.
   const handleManualCheckIn = (attendee: Attendee) => {
-    if (pendingIds.has(attendee.id) || isCheckedIn(attendee)) return;
+    if (pendingIds.has(attendee.id) || isCheckedIn(attendee) || !isLive(attendee)) return;
 
     const name = attendee.attendee_name || attendee.attendee_email || t('common.attendee');
 
@@ -149,20 +184,7 @@ export default function EventAttendeesScreen() {
               )
             );
 
-            try {
-              await updateDoc(doc(db, 'tickets', attendee.id), {
-                checked_in: true,
-                checked_in_at: serverTimestamp(),
-                checked_in_by: auth.currentUser?.uid || null,
-                // Picked off the attendee list by hand — NOT a scan. This used to
-                // write fields identical to the scanner, which is why a
-                // hand-checked door was invisible to payout review.
-                check_in_method: 'manual',
-                updated_at: serverTimestamp(),
-              });
-            } catch (error) {
-              console.error('Error checking in attendee:', error);
-              // Revert the optimistic change to the exact prior values.
+            const revert = () =>
               setAttendees((prev) =>
                 prev.map((a) =>
                   a.id === attendee.id
@@ -175,6 +197,27 @@ export default function EventAttendeesScreen() {
                     : a
                 )
               );
+
+            try {
+              // Picked off the attendee list by hand, NOT a scan: payout review
+              // reads check_in_method.
+              const res = await postCheckIn(eventId, { ticketId: attendee.id, method: 'manual' });
+              if (res.verdict === 'CHECKED_IN' || (res.verdict === 'ALREADY_CHECKED_IN' && res.mine)) return;
+              // Refused on the server's re-check. If it is already in (another
+              // door got there first), keep it shown as checked in.
+              if (res.verdict === 'ALREADY_CHECKED_IN') {
+                const at = res.row?.checkedInAt ? new Date(res.row.checkedInAt) : new Date();
+                setAttendees((prev) =>
+                  prev.map((a) => (a.id === attendee.id ? { ...a, checked_in: true, checked_in_at: at } : a))
+                );
+              } else {
+                revert();
+              }
+              showAlert(refusalMessage(res.verdict));
+            } catch (error) {
+              console.error('Error checking in attendee:', error);
+              // Revert the optimistic change to the exact prior values.
+              revert();
               showAlert(t('organizerAttendees.checkInFailed'));
             } finally {
               setPendingIds((prev) => {
@@ -191,6 +234,7 @@ export default function EventAttendeesScreen() {
 
   const renderAttendee = ({ item }: { item: Attendee }) => {
     const checkedIn = isCheckedIn(item);
+    const live = isLive(item);
     const pending = pendingIds.has(item.id);
 
     return (
@@ -200,10 +244,14 @@ export default function EventAttendeesScreen() {
             <Text style={styles.attendeeName} numberOfLines={1}>{item.attendee_name || t('common.na')}</Text>
             <Text style={styles.attendeeEmail} numberOfLines={1}>{item.attendee_email || t('common.na')}</Text>
           </View>
-          <StatusChip
-            status={checkedIn ? 'success' : 'pending'}
-            label={checkedIn ? t('organizerAttendees.status.checkedIn') : t('organizerAttendees.status.notCheckedIn')}
-          />
+          {live ? (
+            <StatusChip
+              status={checkedIn ? 'success' : 'pending'}
+              label={checkedIn ? t('organizerAttendees.status.checkedIn') : t('organizerAttendees.status.notCheckedIn')}
+            />
+          ) : (
+            <StatusChip status="neutral" label={t('organizerAttendees.status.notValid')} />
+          )}
         </View>
 
         <View style={styles.attendeeDetails}>
@@ -223,7 +271,7 @@ export default function EventAttendeesScreen() {
           </View>
         </View>
 
-        {checkedIn && item.checked_in_at && (
+        {live && checkedIn && item.checked_in_at && (
           <View style={styles.checkedInInfo}>
             <Ionicons name="checkmark-circle" size={14} color={colors.success} />
             <Text style={styles.checkedInText}>
@@ -232,7 +280,7 @@ export default function EventAttendeesScreen() {
           </View>
         )}
 
-        {!checkedIn && (
+        {live && !checkedIn && (
           <TouchableOpacity
             style={[styles.checkInButton, pending && styles.checkInButtonDisabled]}
             onPress={() => handleManualCheckIn(item)}
@@ -267,7 +315,10 @@ export default function EventAttendeesScreen() {
     );
   }
 
-  const checkedInCount = attendees.filter(isCheckedIn).length;
+  // Live tickets only: a refunded or cancelled ticket is not an attendee.
+  const liveAttendees = attendees.filter(isLive);
+  const liveCount = liveAttendees.length;
+  const checkedInCount = liveAttendees.filter(isCheckedIn).length;
 
   return (
     <View style={styles.container}>
@@ -284,7 +335,7 @@ export default function EventAttendeesScreen() {
           carries the reserved height for the search + tabs + list beneath it. */}
       <View style={[styles.statsBar, { marginTop: headerH }]}>
         <Text style={styles.statsBarText}>
-          {checkedInCount}/{attendees.length} {t('organizerAttendees.headerCheckedInSuffix')}
+          {checkedInCount}/{liveCount} {t('organizerAttendees.headerCheckedInSuffix')}
         </Text>
       </View>
 
@@ -314,7 +365,7 @@ export default function EventAttendeesScreen() {
           tabs={[
             { key: 'all', label: t('organizerAttendees.filters.all'), count: attendees.length },
             { key: 'checked_in', label: t('organizerAttendees.filters.checkedIn'), count: checkedInCount },
-            { key: 'not_checked_in', label: t('organizerAttendees.filters.notCheckedIn'), count: attendees.length - checkedInCount },
+            { key: 'not_checked_in', label: t('organizerAttendees.filters.notCheckedIn'), count: liveCount - checkedInCount },
           ]}
         />
       </View>

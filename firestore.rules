@@ -220,6 +220,12 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         (
           resource.data.organizer_id == request.auth.uid &&
+          // Ownership is fixed at create. Re-pointing organizer_id (or the
+          // legacy organizerId that isEventOrganizer also honours) would hand
+          // the event — and its sales and payout attribution — to another
+          // account, or let a second account take over door/attendee access.
+          request.resource.data.get('organizer_id', null) == resource.data.organizer_id &&
+          request.resource.data.get('organizerId', null) == resource.data.get('organizerId', null) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate
@@ -529,24 +535,55 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
     }
     
-    // Verification requests - organizers can read/write their own
-    // Admins need to check server-side, client reads limited to own requests
+    // Verification requests (KYC). The owner drafts their own request from the
+    // mobile wizard (mobile/lib/verification.ts): create it 'in_progress', then
+    // fill `steps` and `files`. Its STATUS is server-owned: submission goes
+    // through /api/organizer/submit-verification (-> pending_review) and the
+    // decision through the admin routes, all on the Admin SDK.
+    //
+    // lib/firestore/payout.ts treats status == 'approved' as identity-verified,
+    // which activates payouts — so a client must never be able to set it. It
+    // used to be fully owner-writable.
     match /verification_requests/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.get('status', '') in ['in_progress', 'pending']
+        // The server also looks requests up by userId / user_id (legacy docs
+        // whose id is not the uid), so those must name the creator.
+        && request.resource.data.get('userId', request.auth.uid) == request.auth.uid
+        && request.resource.data.get('user_id', request.auth.uid) == request.auth.uid
+        && request.resource.data.keys().hasOnly(['userId', 'user_id', 'status', 'steps', 'files', 'createdAt', 'updatedAt']);
+      // Draft edits only: status and identity untouched, no reviewer fields,
+      // and nothing once approved (the reviewed evidence is frozen).
+      allow update: if isOwner(userId)
+        && resource.data.get('status', '') != 'approved'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['steps', 'files', 'updatedAt']);
       allow delete: if false; // Only allow deletion server-side via Admin SDK
     }
     
-    // Organizers collection - organizers can read/write their own data
+    // Organizers collection. Read by any signed-in user (public organizer
+    // profile data); WRITTEN ONLY BY THE SERVER.
+    //
+    // The doc carries fields the payout engine trusts: payoutRelease
+    // (preEventReleaseApproved / newHoldHours / highRisk / forceEstablished —
+    // lib/payouts/withdrawal-gate.ts, availability-server.ts), is_verified /
+    // verification_status (lib/firestore/payout.ts identity check), Stripe and
+    // payout metadata. An owner-writable doc let an organizer self-approve all
+    // of it. No web or mobile client writes organizers/{id} directly — every
+    // write is an API route / server action on the Admin SDK — so the whole doc
+    // is closed rather than guarded field by field (a denylist would silently
+    // open the next trusted field someone adds).
     match /organizers/{organizerId} {
       allow read: if isSignedIn();
-      allow write: if isOwner(organizerId);
+      allow write: if false;
       
-      // Payout config subcollection
+      // Legacy payout config (payoutConfig/main). Read by the owner (mobile
+      // OrganizerEventEarningsScreen falls back to it); written only by the
+      // server (lib/firestore/payout.ts updatePayoutConfig). getPayoutProfile
+      // falls back to this doc, so it must not be client-writable.
       match /payoutConfig/{configId} {
         allow read: if isOwner(organizerId);
-        allow write: if isOwner(organizerId);
+        allow write: if false; // Server-side only via Admin SDK
       }
 
       // Payout profiles - READ ONLY from client (writes via server API only)
@@ -594,17 +631,27 @@ service cloud.firestore {
       allow write: if false; // Only server-side writes
     }
     
-    // Ticket transfers collection
+    // Ticket transfers. Created ONLY by /api/tickets/transfer/request (Admin
+    // SDK), which checks the sender holds the ticket, it is live, not checked
+    // in, and not already on offer. A client-created transfer could name ANY
+    // ticket id with from_user_id = self and have an accomplice accept it.
+    // Accept / reject go through /api/tickets/transfer/respond, which moves the
+    // ticket on the Admin SDK — so the recipient never writes here either.
+    // The only client write left is the sender cancelling their own pending
+    // offer (mobile TicketDetailScreen); /api/tickets/transfer/cancel does the
+    // same server-side.
     match /ticket_transfers/{transferId} {
       allow read: if isSignedIn() && (
         resource.data.from_user_id == request.auth.uid ||
         resource.data.to_email == request.auth.token.email
       );
-      allow create: if isSignedIn() && request.resource.data.from_user_id == request.auth.uid;
-      allow update: if isSignedIn() && (
-        resource.data.from_user_id == request.auth.uid ||
-        resource.data.to_email == request.auth.token.email
-      );
+      allow create: if false;
+      allow update: if isSignedIn()
+        && resource.data.from_user_id == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at', 'responded_at']);
+      allow delete: if false;
     }
     
     // Attendee -> organizer messages. Created ONLY by the server route, which

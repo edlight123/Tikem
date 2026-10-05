@@ -4,7 +4,7 @@
  *
  * Availability is LINKED TO THE ORGANIZER'S RELEASE STATE by design: a
  * commission becomes withdrawable exactly when its event's funds release to the
- * organizer (the same pure release ladder, asked through previewRelease). Until
+ * organizer (loadEventAvailability's holds, then the release ladder). Until
  * then it shows as pending. This kills the obvious fraud loop — a fake
  * organizer's "promoter" cashing out stolen-card sales before review — because
  * the commission is held by the very ladder that holds the organizer.
@@ -22,7 +22,9 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { previewRelease } from '@/lib/payouts/withdrawal-gate'
-import { getEventEarnings } from '@/lib/earnings'
+import { loadEventAvailability } from '@/lib/payouts/availability-server'
+import { gateEventData, type EventAvailability } from '@/lib/payouts/availability'
+import { excludeStripeConnectSales } from '@/lib/promoters'
 import {
   computePrefundedPayout,
   executePrefundedTransfer,
@@ -109,7 +111,17 @@ async function walletRef(uid: string) {
   return adminDb.collection('promoter_wallets').doc(String(uid))
 }
 
-/** Funded, accrued commission grouped per event for everything this account claimed. */
+/**
+ * Funded, accrued commission grouped per event for everything this account claimed.
+ *
+ * Excluded, so they can never be withdrawn from Tikèm's pool:
+ *  - `funded: false` rows (Stripe Connect sales are written that way: the
+ *    money is in the organizer's own Stripe account, Tikèm never held it);
+ *  - Connect rows written `funded: true` before that change. They are
+ *    recognised by the row's payment_method, or, for rows the client-confirm
+ *    path wrote as plain 'stripe', by the sold ticket's payment_method
+ *    (see excludeStripeConnectSales).
+ */
 async function loadFundedLines(uid: string): Promise<Array<{ eventId: string; currency: string; commissionCents: number }>> {
   const promotersSnap = await adminDb
     .collection('event_promoters')
@@ -125,9 +137,11 @@ async function loadFundedLines(uid: string): Promise<Array<{ eventId: string; cu
         .where('promoter_id', '==', d.id)
         .where('funded', '==', true)
         .get()
-      salesSnap.docs.forEach((saleDoc: any) => {
-        const s = saleDoc.data()
-        if (s.status !== 'accrued') return
+      const candidates = salesSnap.docs
+        .map((saleDoc: any) => saleDoc.data() || {})
+        .filter((s: any) => s.funded === true && s.status === 'accrued')
+      const sales = await excludeStripeConnectSales(candidates)
+      sales.forEach((s: any) => {
         const cents = Math.max(0, Number(s.commission_cents) || 0)
         if (cents <= 0) return
         const eventId = String(s.event_id)
@@ -142,28 +156,68 @@ async function loadFundedLines(uid: string): Promise<Array<{ eventId: string; cu
   return Array.from(perEvent.values())
 }
 
-/** Ask the organizer's release ladder whether this event's funds are out. */
-async function isEventReleased(eventId: string): Promise<{ released: boolean; availableAt: string | null; title: string }> {
+/**
+ * Availability states that hold the promoter's commission no matter what the
+ * ladder says: integrity holds, cancellation/freeze, review, and any refund
+ * still being decided or executed (the commission on that order is about to be
+ * reversed, so it must not be withdrawable in the meantime).
+ */
+const PROMOTER_HARD_HOLDS = new Set<string>([
+  'payouts_frozen',
+  'event_cancelled',
+  'earnings_currency_review',
+  'ticket_currency_review',
+  'ledger_gross_exceeded',
+  'release_unknown',
+  'payout_under_review',
+])
+
+export function promoterHoldFromAvailability(
+  a: Pick<EventAvailability, 'reason' | 'refundRequestedMinor' | 'refundInFlightMinor'>
+): string | null {
+  if (PROMOTER_HARD_HOLDS.has(String(a.reason))) return String(a.reason)
+  if ((Number(a.refundRequestedMinor) || 0) > 0) return 'refund_requested'
+  if ((Number(a.refundInFlightMinor) || 0) > 0) return 'refund_in_flight'
+  return null
+}
+
+/**
+ * Ask the organizer's release machinery whether this event's funds are out,
+ * the way an organizer withdrawal is gated: the server-authoritative
+ * availability (ticket-stamped end, integrity and refund holds) first, then the
+ * release ladder judged against gateEventData (never the organizer-editable
+ * end_datetime). When the organizer has already taken their whole balance the
+ * availability reads "nothing owed", so the ladder is asked again with the
+ * promoter's own commission as the amount at stake.
+ */
+async function isEventReleased(
+  eventId: string,
+  commissionMinor: number
+): Promise<{ released: boolean; availableAt: string | null; title: string }> {
   try {
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     const eventData = eventDoc.exists ? (eventDoc.data() as any) : {}
-    const earnings = await getEventEarnings(eventId)
-    const availableMinor = Math.max(
-      0,
-      Number((earnings as any)?.netAmount || 0) - Number((earnings as any)?.withdrawnAmount || 0)
-    )
+    const title = String(eventData?.title || 'Event')
+    if (!eventDoc.exists) return { released: false, availableAt: null, title }
+
+    const a = await loadEventAvailability({ eventId, eventData })
+    if (!a) return { released: false, availableAt: null, title }
+    if (promoterHoldFromAvailability(a)) return { released: false, availableAt: a.availableAt, title }
+    if (a.releasedNow) return { released: true, availableAt: a.availableAt, title }
+
     const release = await previewRelease({
       eventId,
-      organizerId: String(eventData?.organizer_id || (earnings as any)?.organizerId || ''),
-      eventData,
-      grossMinor: Number((earnings as any)?.grossSales || 0),
-      currency: String((earnings as any)?.currency || eventData?.currency || 'HTG'),
-      availableMinor,
+      organizerId: String(eventData?.organizer_id || eventData?.organizerId || ''),
+      eventData: gateEventData(eventData, a),
+      grossMinor: a.gateInputs.grossMinor,
+      refundedMinor: a.gateInputs.refundedMinor,
+      currency: a.currency,
+      availableMinor: Math.max(0, Math.round(Number(commissionMinor) || 0)),
     })
     return {
       released: Boolean(release?.releasedNow),
-      availableAt: release?.availableAt || null,
-      title: String(eventData?.title || 'Event'),
+      availableAt: release?.availableAt || a.availableAt || null,
+      title,
     }
   } catch (err: any) {
     // Fail CLOSED: a release check that cannot run must hold the money.
@@ -178,9 +232,11 @@ export async function getPromoterWalletView(uid: string): Promise<PromoterWallet
   const withdrawnByCurrency: Record<string, number> = { ...(wallet?.withdrawn_by_currency || {}) }
 
   const releaseByEvent = new Map<string, { released: boolean; availableAt: string | null; title: string }>()
+  const commissionByEvent = new Map<string, number>()
+  for (const l of lines) commissionByEvent.set(l.eventId, (commissionByEvent.get(l.eventId) || 0) + l.commissionCents)
   await Promise.all(
-    Array.from(new Set(lines.map((l) => l.eventId))).map(async (eventId) => {
-      releaseByEvent.set(eventId, await isEventReleased(eventId))
+    Array.from(commissionByEvent.entries()).map(async ([eventId, commission]) => {
+      releaseByEvent.set(eventId, await isEventReleased(eventId, commission))
     })
   )
 
@@ -330,7 +386,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     })
   } catch (err: any) {
     if (String(err?.message) === 'conflict') {
-      return { ok: false, code: 'conflict', error: 'Your balance changed — reload and try again.' }
+      return { ok: false, code: 'conflict', error: 'Your balance changed. Reload and try again.' }
     }
     throw err
   }
@@ -406,7 +462,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     releasedBy: 'promoter_withdraw',
   })
   if (released.changed) await notifyWithdrawalOutcome(withdrawalRef.id, 'failed', { row: released.row })
-  return { ok: false, code: 'transfer_failed', error: 'The MonCash transfer failed. Your balance was restored — try again shortly.' }
+  return { ok: false, code: 'transfer_failed', error: 'The MonCash transfer failed. Your balance was restored. Try again shortly.' }
 }
 
 // Crediting a wallet back lives in lib/payouts/withdrawal-finalize.ts

@@ -6,6 +6,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { convertCurrency } from '@/lib/currency'
+import { isLiveTicketStatus, liveTicketStatusesForQuery } from '@/lib/tickets/status'
 
 export interface PaymentMethodRevenue {
   method: string
@@ -60,12 +61,20 @@ export async function getOrganizerRevenueBreakdown(
     // Filter by specific event if provided
     const targetEventIds = options?.eventId ? [options.eventId] : eventIds
     
-    // Get all tickets for these events
-    let ticketsQuery = adminDb.collection('tickets')
-      .where('event_id', 'in', targetEventIds)
-      .where('status', '==', 'valid')
-    
-    const ticketsSnap = await ticketsQuery.get()
+    // Get all live tickets for these events. Live is valid | confirmed | active
+    // (lib/tickets/status.ts); filtering on 'valid' alone hid every MonCash and
+    // SogePay sale. Event ids are chunked to stay inside Firestore's 30-value
+    // `in` limit, and status is filtered in memory so the query keeps a single
+    // disjunction.
+    const ticketDocs: any[] = []
+    for (let i = 0; i < targetEventIds.length; i += 30) {
+      const chunk = targetEventIds.slice(i, i + 30)
+      const snap = await adminDb.collection('tickets').where('event_id', 'in', chunk).get()
+      for (const doc of snap.docs) {
+        if (isLiveTicketStatus(doc.data()?.status)) ticketDocs.push(doc)
+      }
+    }
+    const ticketsSnap = { docs: ticketDocs }
     
     // Initialize breakdown structure
     const breakdown: RevenueBreakdown = {
@@ -162,7 +171,7 @@ export async function getEventRevenueBreakdown(
   try {
     const ticketsSnap = await adminDb.collection('tickets')
       .where('event_id', '==', eventId)
-      .where('status', '==', 'valid')
+      .where('status', 'in', liveTicketStatusesForQuery())
       .get()
     
     const breakdown: RevenueBreakdown = {

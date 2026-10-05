@@ -12,8 +12,13 @@
  * say the `links.download_location` URL must be hit whenever a photo is
  * actually used (i.e. the organizer picked it as their flyer), not merely
  * displayed in the grid.
+ *
+ * Both legs require a signed-in user (cookie session or the mobile app's
+ * Bearer token): open to the internet, anyone could burn the Unsplash quota
+ * the composer depends on.
  */
 import { NextResponse } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
 
 const UNSPLASH_SEARCH_URL = 'https://api.unsplash.com/search/photos'
 
@@ -37,6 +42,9 @@ interface FlyerResult {
 }
 
 export async function GET(request: Request) {
+  const user = await getCurrentUser()
+  if (!user) return fail('Sign in to search images.', 'unauthorized', 401)
+
   const accessKey = process.env.UNSPLASH_ACCESS_KEY
   if (!accessKey) {
     // Not an error from the client's point of view: the library is simply
@@ -88,9 +96,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { configured: true, results, total: Number(data?.total) || results.length },
-      // Same query = same grid for everyone; 5 minutes keeps us well inside
-      // Unsplash's demo-tier rate limit without the grid feeling stale.
-      { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' } }
+      // Same query = same grid; 5 minutes keeps us well inside Unsplash's
+      // demo-tier rate limit without the grid feeling stale. `private`: the
+      // response sits behind auth now, so a shared CDN copy would hand it to
+      // unauthenticated callers.
+      { headers: { 'Cache-Control': 'private, max-age=300' } }
     )
   } catch (error) {
     console.error('flyers/search failed', error)
@@ -99,6 +109,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const user = await getCurrentUser()
+  if (!user) return fail('Sign in to use images.', 'unauthorized', 401)
+
   const accessKey = process.env.UNSPLASH_ACCESS_KEY
   if (!accessKey) {
     // Nothing to report to; treat as done so the client never blocks on this.

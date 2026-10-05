@@ -7,7 +7,7 @@ import {
   identityFromUser,
   type CheckoutIdentity,
 } from '@/lib/guest/checkout'
-import { calculateDiscount, resolvePromoCode, promoHasCapacity, type PromoDoc } from '@/lib/promo-codes'
+import { calculateDiscount, resolvePromoCode, promoBuyerKey, promoCanCoverOrder, type PromoDoc } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
 import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread, sumMoney } from '@/lib/fx/usd-htg'
@@ -21,6 +21,18 @@ import {
   isMonCashButtonConfigured,
 } from '@/lib/moncash-button'
 import { prewarmMonCashAccessToken } from '@/lib/moncash'
+import {
+  checkEventPurchasable,
+  checkTierForEvent,
+  invalidQuantityRefusal,
+  normalizeTierLines,
+  parseTicketQuantity,
+  pickTierWhenUnspecified,
+} from '@/lib/tickets/purchasable'
+import { screenPurchaseAttempt } from '@/lib/tickets/purchase-screens'
+import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
+import { getPlatformSettings } from '@/lib/admin/platform-settings'
+import { fromCents } from '@/lib/ticketPricing'
 
 import crypto from 'crypto'
 
@@ -95,7 +107,7 @@ export async function POST(request: Request) {
 
     const {
       eventId,
-      quantity = 1,
+      quantity: rawQuantity = 1,
       tierId,
       promoCode,
       refCode,
@@ -105,9 +117,10 @@ export async function POST(request: Request) {
       forceFormPost,
       guest,
       accessCode,
+      fingerprint,
     }: {
       eventId: string
-      quantity?: number
+      quantity?: unknown
       tierId?: string | null
       promoCode?: string | null
       /** Promoter attribution (`?ref=`). Resolved below; junk never blocks the sale. */
@@ -120,6 +133,7 @@ export async function POST(request: Request) {
       guest?: { name?: string; email?: string; phone?: string }
       /** A GUEST's access code for a password-protected event. */
       accessCode?: string | null
+      fingerprint?: string | null
     } = await request.json()
 
     const provider = String(mobileMoneyProvider || 'moncash').toLowerCase()
@@ -128,6 +142,33 @@ export async function POST(request: Request) {
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
+
+    // Quantities are whole numbers, 1..MAX_TICKETS_PER_ORDER, on every line. A
+    // fractional quantity used to be charged pro rata (0.01 → 1% of a ticket) while
+    // fulfillment's loop still issued a whole ticket, and 1.01 paid for one and got two.
+    const multiTier = Array.isArray(tiers) && tiers.length > 0
+    let validSelections: TierSelection[] = []
+    let quantity = 0
+    if (multiTier) {
+      const lines = normalizeTierLines(tiers)
+      if (!lines.ok) {
+        return NextResponse.json({ error: lines.error, code: lines.code }, { status: lines.status })
+      }
+      validSelections = lines.lines
+      if (validSelections.length === 0) {
+        return NextResponse.json({ error: 'No valid ticket tiers selected' }, { status: 400 })
+      }
+    } else {
+      const parsed = parseTicketQuantity(rawQuantity)
+      if (parsed === null) {
+        const refusal = invalidQuantityRefusal()
+        return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
+      }
+      quantity = parsed
+    }
+    const requestedQuantity = multiTier
+      ? validSelections.reduce((sum, s) => sum + s.quantity, 0)
+      : quantity
 
     const supabase = await createClient()
 
@@ -140,6 +181,15 @@ export async function POST(request: Request) {
 
     if (eventError || !event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    // Cancelled, unpublished, rejected or finished events do not take money.
+    const purchasable = checkEventPurchasable(event)
+    if (!purchasable.ok) {
+      return NextResponse.json(
+        { error: purchasable.error, code: purchasable.code },
+        { status: purchasable.status }
+      )
     }
 
     // Resolve the buyer: the signed-in user, or a validated guest contact record.
@@ -167,6 +217,23 @@ export async function POST(request: Request) {
     // as strict as it was.
     if (!(await hasEventAccess(event, eventId, identity.id))) {
       return NextResponse.json({ error: 'access_code_required' }, { status: 403 })
+    }
+
+    // The same abuse screens the card path runs (blacklist, rate limit, bot check,
+    // per-account ticket limit). This rail used to skip all of them.
+    const ipAddress =
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const screen = await screenPurchaseAttempt({
+      userId: identity.isGuest ? null : identity.id,
+      email: String(identity.email || ''),
+      isGuest: identity.isGuest,
+      eventId: String(eventId),
+      ipAddress,
+      quantity: requestedQuantity,
+      fingerprint: fingerprint || null,
+    })
+    if (!screen.ok) {
+      return NextResponse.json({ error: screen.error }, { status: screen.status })
     }
 
     // Defense in depth: never take money for a country whose payout rail isn't
@@ -201,19 +268,22 @@ export async function POST(request: Request) {
     // Latency: the promo, promoter/attribution and ticket-tier lookups are independent
     // Firestore reads, so they are issued together rather than one after another. The
     // validation below still runs in the original order on their results.
-    const multiTier = Array.isArray(tiers) && tiers.length > 0
-    const validSelections = multiTier
-      ? (tiers as TierSelection[]).filter((sel) => sel?.tierId && sel.quantity && sel.quantity > 0)
-      : []
     const readTier = (id: string) =>
       Promise.resolve(supabase.from('ticket_tiers').select('*').eq('id', id).single()).then(
         ({ data }) => data as any
       )
-    const [promo, { promoter, attribution }, tierDocs, singleTier] = await Promise.all([
+    const [promo, { promoter, attribution }, tierDocs, singleTier, eventTiers] = await Promise.all([
       (async (): Promise<PromoDoc | null> => {
         if (!promoCode) return null
         const resolved = await resolvePromoCode(String(eventId), String(promoCode))
-        return resolved && promoHasCapacity(resolved) ? resolved : null
+        if (!resolved) return null
+        // Discount only when confirm-time redemption can honour it for this order's
+        // quantity and buyer (the same key fulfillment redeems under).
+        const cover = await promoCanCoverOrder(resolved, {
+          qty: requestedQuantity,
+          buyerKey: promoBuyerKey(identity),
+        })
+        return cover.ok ? resolved : null
       })(),
       (async () => {
         const promoter = refCode ? await resolvePromoterCode(String(eventId), String(refCode)) : null
@@ -221,7 +291,14 @@ export async function POST(request: Request) {
         return { promoter, attribution }
       })(),
       Promise.all(validSelections.map((sel) => readTier(sel.tierId))),
-      !multiTier && tierId ? readTier(tierId) : Promise.resolve(null),
+      !multiTier && tierId ? readTier(String(tierId)) : Promise.resolve(null),
+      // No tierId on a single-line order: find out whether the event HAS tiers, so
+      // the buyer cannot skip them by paying `event.ticket_price` (the lowest one).
+      !multiTier && !tierId
+        ? Promise.resolve(
+            supabase.from('ticket_tiers').select('*').eq('event_id', String(eventId))
+          ).then(({ data }) => (Array.isArray(data) ? data : []) as any[])
+        : Promise.resolve(null),
     ])
     // Total discount applied across the order (event currency), recorded on the promo
     // redemption at confirm time. Accumulated as each selection is priced below.
@@ -237,7 +314,11 @@ export async function POST(request: Request) {
         const selection = validSelections[i]
         const tier = tierDocs[i]
 
-        if (!tier) continue
+        // Must exist, belong to THIS event, and be active — never skipped silently.
+        const tierCheck = checkTierForEvent(tier, String(eventId))
+        if (!tierCheck.ok) {
+          return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
+        }
 
         const onSale = tierIsOnSale(tier, now)
         if (!onSale.ok) {
@@ -275,26 +356,37 @@ export async function POST(request: Request) {
       let tierName = 'General Admission'
       let resolvedTierId: string | null = null
 
+      let tier: any = null
       if (tierId) {
-        const tier = singleTier
-
-        if (tier) {
-          const onSale = tierIsOnSale(tier, now)
-          if (!onSale.ok) {
-            return NextResponse.json({ error: onSale.reason }, { status: 400 })
-          }
-
-          const sold = Number(tier.sold_quantity || 0)
-          const total = Number(tier.total_quantity || 0)
-          const remaining = Math.max(0, total - sold)
-          if (quantity > remaining) {
-            return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
-          }
-
-          unitPrice = tier.price
-          tierName = tier.name
-          resolvedTierId = tier.id
+        const tierCheck = checkTierForEvent(singleTier, String(eventId))
+        if (!tierCheck.ok) {
+          return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
         }
+        tier = singleTier
+      } else {
+        const picked = pickTierWhenUnspecified(eventTiers, String(eventId))
+        if (!picked.ok) {
+          return NextResponse.json({ error: picked.error, code: picked.code }, { status: picked.status })
+        }
+        tier = picked.tier
+      }
+
+      if (tier) {
+        const onSale = tierIsOnSale(tier, now)
+        if (!onSale.ok) {
+          return NextResponse.json({ error: onSale.reason }, { status: 400 })
+        }
+
+        const sold = Number(tier.sold_quantity || 0)
+        const total = Number(tier.total_quantity || 0)
+        const remaining = Math.max(0, total - sold)
+        if (quantity > remaining) {
+          return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
+        }
+
+        unitPrice = tier.price
+        tierName = tier.name
+        resolvedTierId = tier.id
       }
 
       if (promo) {
@@ -315,7 +407,7 @@ export async function POST(request: Request) {
 
     const totalQuantity = normalizedSelections.reduce((sum, s) => sum + s.quantity, 0)
     const originalCurrency = String(event.currency || 'HTG').toUpperCase()
-    const originalAmount = normalizedSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
+    const originalAmount = sumMoney(normalizedSelections.map((s) => s.quantity * s.unitPrice))
 
     // Fast-fail UX gate: reject obviously sold-out events before sending the buyer to MonCash.
     // Best-effort only (never blocks on its own errors); the atomic reserve at fulfillment is the
@@ -369,6 +461,35 @@ export async function POST(request: Request) {
       )
     }
 
+    // ── WHO PAYS THE FEE ──────────────────────────────────────────────────────
+    // The organizer chooses per event whether to absorb the platform fee or pass it
+    // on. This rail used to ignore that and always charge the face value, while the
+    // app showed the buyer face + fee. The buyer total is now priced exactly the way
+    // create-payment-intent prices it — the same lib/checkout/buyer-pricing call,
+    // the same STORED platform settings (rate + per-ticket cap in the event's own
+    // currency) — on the post-promo face total in the event currency. The incidence
+    // and fee are then stamped on the ORDER, so fulfillment records what the buyer
+    // actually paid, never whatever the event's (editable) setting says later.
+    const faceValueCents = Math.round(originalAmount * 100)
+    const platformSettings = await getPlatformSettings()
+    const buyerPricing = priceOrderCents(faceValueCents, event, {
+      quantity: totalQuantity,
+      currency: originalCurrency,
+      config: platformSettings.haiti,
+    })
+    const feeIncidence: 'buyer' | 'organizer' =
+      buyerPricing.incidence === 'buyer' && buyerPricing.buyerFee > 0 ? 'buyer' : 'organizer'
+    const buyerFeeOriginal = feeIncidence === 'buyer' ? fromCents(buyerPricing.buyerFee) : 0
+    let buyerFeeCharged = 0
+    if (buyerFeeOriginal > 0) {
+      buyerFeeCharged =
+        originalCurrency === 'USD' && exchangeRateUsed
+          ? convertUsdToHtgAmount(buyerFeeOriginal, exchangeRateUsed)
+          : buyerFeeOriginal
+    }
+    const faceChargeAmount = chargeAmount
+    chargeAmount = sumMoney([faceChargeAmount, buyerFeeCharged])
+
     // Create a gateway order ID.
     // Keep it short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
     // IMPORTANT: Digicel appears to expect a numeric orderId (parsing errors can happen otherwise).
@@ -383,7 +504,16 @@ export async function POST(request: Request) {
       user_id: identity.id,
       event_id: eventId,
       quantity: totalQuantity,
+      // What the gateway is asked to collect: face value + any fee passed on to
+      // the buyer. The return handler and the reconcile cron check Digicel's
+      // reported `cost` against exactly this number.
       amount: chargeAmount,
+      // Fee incidence, fixed at purchase. `original_amount` stays the FACE total in
+      // the event currency (the organizer-facing gross the ledger is built on).
+      fee_incidence: feeIncidence,
+      face_amount: faceChargeAmount,
+      buyer_fee: buyerFeeCharged || 0,
+      buyer_fee_original: buyerFeeOriginal || 0,
       payment_method: normalizedProvider,
       status: 'pending',
       currency: chargeCurrency,
@@ -417,6 +547,9 @@ export async function POST(request: Request) {
       console.error('Error creating pending transaction:', pendingInsertError)
       return NextResponse.json({ error: 'Failed to create pending transaction' }, { status: 500 })
     }
+
+    // Counted toward the per-buyer rate limit, exactly like a created PaymentIntent.
+    await screen.log(true)
 
     const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
 

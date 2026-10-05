@@ -138,6 +138,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'capacity_exceeded', needsRefund: true })
     }
 
+    if (result.outcome === 'refused' || result.outcome === 'invalid_order') {
+      // Flagged for refund (or malformed): never fulfilled. Acknowledge so Sogepay stops retrying.
+      console.error('[sogepay] order not fulfillable — flagged for refund/review', {
+        orderId,
+        reason: result.reason,
+      })
+      return NextResponse.json({ ok: false, error: result.outcome, needsRefund: true })
+    }
+
     if (result.outcome === 'ticket_creation_failed') {
       // Return 500 so Sogepay retries the (paid) notification and we can re-attempt fulfillment.
       return NextResponse.json({ ok: false, error: 'ticket_creation_failed' }, { status: 500 })

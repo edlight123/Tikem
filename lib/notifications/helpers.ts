@@ -169,7 +169,7 @@ export async function notifyOrganizerTicketSale(
       await sendPushNotification(
         organizerId,
         `🎫 New Sale: ${eventTitle}`,
-        `${ticketCount} ticket${ticketCount > 1 ? 's' : ''} sold — $${revenue.toFixed(2)}`,
+        `${ticketCount} ticket${ticketCount > 1 ? 's' : ''} sold for $${revenue.toFixed(2)}`,
         `/organizer/events/${eventId}/attendees`,
         { type: 'ticket_sale', eventId, ticketCount, revenue }
       )

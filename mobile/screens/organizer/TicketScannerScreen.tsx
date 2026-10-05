@@ -16,7 +16,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { db } from '../../config/firebase';
-import { doc, updateDoc, getDoc, serverTimestamp, getDocs, query, collection, where } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, collection, where } from 'firebase/firestore';
 import { auth } from '../../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useI18n } from '../../contexts/I18nContext';
@@ -39,7 +39,6 @@ import { DoorRow, findDoorRow, judgeDoorRow, markRowCheckedIn, DoorVerdict } fro
 import {
   DoorAccessError,
   DoorListPayload,
-  clearCachedDoorList,
   fetchDoorList,
   flushCheckInQueue,
   loadCachedDoorList,
@@ -285,6 +284,14 @@ export default function TicketScannerScreen() {
         return;
       }
       setMode('full');
+      // Check-ins this device queued offline on an earlier visit read as
+      // "already in" until they sync, same as on the door list.
+      if (uid) {
+        const queued = (await readCheckInQueue(uid)).filter((q) => q.eventId === eventId);
+        for (const q of queued) admittedRef.current.add(q.ticketId);
+        if (!cancelled) setPendingSync(queued.length);
+      }
+      if (cancelled) return;
       try {
         const snap = await getDocs(query(collection(db, 'tickets'), where('event_id', '==', eventId)));
         if (cancelled) return;
@@ -303,6 +310,7 @@ export default function TicketScannerScreen() {
           };
           // The in-memory lookup list may carry the email so staff can search
           // by it; it is dropped with the screen and never written to disk.
+          if (admittedRef.current.has(d.id)) manifest[d.id].checkedIn = true;
           list.push({
             ticketId: d.id,
             name: manifest[d.id].name,
@@ -317,6 +325,7 @@ export default function TicketScannerScreen() {
         setGuests(list);
         setListUnavailable(false);
         await AsyncStorage.setItem(`scanner_manifest_${eventId}`, JSON.stringify(manifest));
+        syncQueue();
       } catch (e: any) {
         // Rules refused the read (e.g. an admin, or a member doc we could not
         // read): this user is door-only here. Switch to the server door list.
@@ -340,7 +349,7 @@ export default function TicketScannerScreen() {
                 name: m.name || '',
                 email: '',
                 tier: m.tier || '',
-                checkedIn: !!m.checkedIn,
+                checkedIn: !!m.checkedIn || admittedRef.current.has(id),
                 live: isLiveStatus(m.status),
               })),
             );
@@ -356,26 +365,27 @@ export default function TicketScannerScreen() {
         }
       }
     })();
-    // On unmount, drop the cached guest manifest so the (reduced) PII isn't left
-    // sitting in AsyncStorage after the scanning session ends.
+    // The saved manifest and door list are KEPT on unmount (keyed by event, and
+    // holding name/tier only, never email): they exist so that reopening the
+    // scanner with no signal can still validate. Deleting them here meant the
+    // offline fallback never had anything to read. Each is overwritten by the
+    // next online load.
     return () => {
       cancelled = true;
-      AsyncStorage.removeItem(`scanner_manifest_${eventId}`).catch(() => {});
-      // Same lifetime for the door list. The offline QUEUE is kept: it holds
-      // check-ins that have not reached the server yet.
-      clearCachedDoorList(eventId);
     };
   }, [eventId]);
 
-  // Door mode: replay queued check-ins and refresh the list while the screen is
-  // open. Every 15s try the queue; once a minute (or right after a sync) pull a
+  // Replay queued check-ins while the screen is open (every access mode now
+  // commits through the server, so every mode can have a queue). Every 15s try
+  // the queue; in door mode, once a minute (or right after a sync) also pull a
   // fresh list so check-ins made at other doors show as "already in".
   useEffect(() => {
-    if (accessMode !== 'door' || !uid) return;
+    if (!accessMode || !uid) return;
     let ticks = 0;
     const timer = setInterval(async () => {
       ticks += 1;
       const report = await syncQueue();
+      if (accessMode !== 'door') return;
       if ((report && report.synced + report.conflicts.length > 0 && report.remaining === 0) || ticks % 4 === 0) {
         await loadDoorList({ silent: true });
       }
@@ -399,7 +409,13 @@ export default function TicketScannerScreen() {
     );
   };
 
+  // Tickets this device admitted (or queued) this session. The full-access
+  // path validates from Firestore, whose offline cache does not see a check-in
+  // made through the server API, so a re-scan consults this set too.
+  const admittedRef = useRef<Set<string>>(new Set());
+
   const markGuestCheckedIn = (ticketId: string) => {
+    admittedRef.current.add(ticketId);
     setGuests((prev) =>
       prev ? prev.map((g) => (g.ticketId === ticketId ? { ...g, checkedIn: true } : g)) : prev,
     );
@@ -610,7 +626,7 @@ export default function TicketScannerScreen() {
   };
 
   /**
-   * Door-mode commit: the server re-judges inside a transaction. If the server
+   * Server commit (every access mode): the server re-judges inside a transaction. If the server
    * cannot be reached, the check-in is queued on the device (and marked in
    * locally so a re-scan reads "already in"), then synced when back online.
    */
@@ -636,9 +652,11 @@ export default function TicketScannerScreen() {
       }
       // Refused on the server's re-check (another door got there first, or the
       // list was stale). The server's row is the truth.
-      if (res.row && doorRowsRef.current) {
+      if (res.row) {
         const fresh = res.row;
-        doorRowsRef.current = doorRowsRef.current.map((r) => (r.id === fresh.id ? fresh : r));
+        if (doorRowsRef.current) {
+          doorRowsRef.current = doorRowsRef.current.map((r) => (r.id === fresh.id ? fresh : r));
+        }
         if (fresh.checkedIn) markGuestCheckedIn(fresh.id);
       }
       return { synced: true, refused: doorVerdictToResult(res.row, res.verdict, method) };
@@ -734,7 +752,7 @@ export default function TicketScannerScreen() {
       // reads back as null, so checked_in_at can be missing on a ticket that was
       // just checked in on this device — treat the boolean checked_in === true as
       // authoritative too, otherwise the same QR would admit the guest twice.
-      if (ticketData.checked_in_at || ticketData.checked_in === true) {
+      if (ticketData.checked_in_at || ticketData.checked_in === true || admittedRef.current.has(ticketId)) {
         const checkedInTime = ticketData.checked_in_at
           ? (ticketData.checked_in_at.toDate
               ? ticketData.checked_in_at.toDate()
@@ -820,49 +838,18 @@ export default function TicketScannerScreen() {
   };
 
   /**
-   * Write the check-in. Same fields the web's checkInTicket writes (and that
-   * firestore.rules lets door staff touch): checked_in, checked_in_at,
-   * checked_in_by, check_in_method, entry_point, updated_at, reentry_override.
-   *
-   * Firestore's updateDoc promise only settles once the write reaches the
-   * server, so offline `await` would hang forever. Fire it and race against a
-   * short timeout: the write is applied to the local cache immediately (so a
-   * re-scan shows ALREADY_CHECKED_IN) and Firestore syncs it on reconnect.
-   * A detached catch swallows a late rejection once the race has moved on.
+   * Write the check-in. Every access mode goes through the server's check-in
+   * API (POST /api/staff/events/:id/check-in), which re-judges the ticket and
+   * writes inside a Firestore transaction, so two devices can never both admit
+   * the same ticket. A direct client check-then-write could not guarantee that.
+   * When the server cannot be reached the check-in is queued on the device and
+   * replayed on reconnect (see commitDoorCheckIn / syncQueue).
    */
   const commitCheckIn = async (
     ticketId: string,
     method: CheckInMethod,
     opts: { reentry?: boolean; override?: boolean } = {},
-  ): Promise<CommitOutcome> => {
-    if (accessModeRef.current === 'door') return commitDoorCheckIn(ticketId, method, opts);
-    const payload: Record<string, any> = {
-      checked_in: true,
-      checked_in_at: serverTimestamp(),
-      checked_in_by: auth.currentUser?.uid || null,
-      // 'scan' when the camera read a real QR, 'manual' when staff picked the
-      // guest off the list — payout review reads this.
-      check_in_method: method,
-      updated_at: serverTimestamp(),
-    };
-    // The entry point is only chosen in door mode, so only door mode records it.
-    if (doorMode) payload.entry_point = entryPoint;
-    if (opts.reentry) payload.reentry_override = true;
-
-    const writePromise = updateDoc(doc(db, 'tickets', ticketId), payload);
-    writePromise.catch((e) => console.warn('Deferred check-in write failed:', e));
-
-    let synced = false;
-    await Promise.race([
-      writePromise.then(() => {
-        synced = true;
-      }),
-      new Promise<void>((resolve) => setTimeout(resolve, 1200)),
-    ]);
-    if (!synced) setIsOffline(true);
-    markGuestCheckedIn(ticketId);
-    return { synced };
-  };
+  ): Promise<CommitOutcome> => commitDoorCheckIn(ticketId, method, opts);
 
   const entryLabel = (value: string) => {
     const match = ENTRY_POINTS.find((e) => e.value === value);
@@ -1334,9 +1321,9 @@ export default function TicketScannerScreen() {
           </View>
         )}
 
-        {/* Door-only access: check-ins this phone admitted while offline and
-            has not delivered yet. Cleared as the queue syncs. */}
-        {accessMode === 'door' && pendingSync > 0 && (
+        {/* Check-ins this phone admitted while offline and has not delivered
+            yet. Cleared as the queue syncs. */}
+        {pendingSync > 0 && (
           <View style={[styles.statusStrip, { backgroundColor: T.amberMuted }]}>
             <Ionicons name="sync-outline" size={15} color={T.amber} />
             <Text style={[styles.statusStripText, { color: T.amber }]} numberOfLines={1}>

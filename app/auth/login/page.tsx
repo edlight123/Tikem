@@ -162,9 +162,9 @@ export default function LoginPage() {
             <TikemWordmark italic className="text-[46px] text-white" />
           </Link>
           <p className="mt-1.5 text-sm text-white/55">{BRAND.tagline}</p>
-          <h2 className="mt-6 font-display text-2xl md:text-3xl text-white">
+          <h1 className="mt-6 font-display text-2xl md:text-3xl text-white">
             {t('login.title')}
-          </h2>
+          </h1>
         </div>
 
         {PHONE_AUTH_WEB ? <PhoneLoginPanel redirectTo={redirectTo} /> : null}

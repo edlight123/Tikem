@@ -335,7 +335,14 @@
     "trailer": "videyo",
     "select_payment_description_one": "Chwazi kijan ou vle peye pou {{count}} tikè ou",
     "select_payment_description_other": "Chwazi kijan ou vle peye pou {{count}} tikè ou yo",
-    "select_payment_description_plural": "Chwazi kijan ou vle peye pou {{count}} tikè ou yo"
+    "select_payment_description_plural": "Chwazi kijan ou vle peye pou {{count}} tikè ou yo",
+    "not_found_title": "Nou pa jwenn evènman an",
+    "not_found_detail": "Evènman sa a ka fini, yo ka retire l, oswa lyen an ka pa bon.",
+    "claim_already_claimed": "Ou te deja pran tikè pou evènman sa a. Gade nan imèl ou pou jwenn yo.",
+    "claim_promo_already_used": "Ou te deja itilize kòd pwomo sa a.",
+    "claim_event_cancelled": "Yo anile evènman sa a.",
+    "claim_event_unavailable": "Evènman sa a pa disponib kounye a.",
+    "claim_event_ended": "Evènman sa a fini deja."
   },
   "favorites": {
     "title": "Favori mwen",
@@ -1560,7 +1567,8 @@
   "location_banner": {
     "near_place": "Evènman tou pre {{place}}?",
     "use": "Itilize",
-    "not_now_aria": "Pa kounye a"
+    "not_now_aria": "Pa kounye a",
+    "region_aria": "Sijesyon kote ou ye"
   },
   "invite": {
     "title": "Envitasyon evènman",
@@ -1767,7 +1775,7 @@
     "blocked_title": "Regle sa yo anvan",
     "blocked_body": "Kont ou toujou gen achtè oswa lajan ki mare ak li. Lè sa yo regle, w ap ka efase l.",
     "obligation_events": "Anile epi ranbouse evènman k ap vini ou yo ki gen tikè vann:",
-    "obligation_event": "{{title}} — {{count}} vann",
+    "obligation_event": "{{title}}: {{count}} vann",
     "obligation_balance": "Retire balans ki rete a: {{amounts}}",
     "obligation_withdrawals": "Tann retrè k ap fèt yo fini ({{count}})",
     "obligation_promoter": "Retire lajan ou fè kòm pwomotè: {{amounts}}",

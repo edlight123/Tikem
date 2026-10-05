@@ -1,9 +1,16 @@
+import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/auth'
 import { getContentPage, resolveLocale } from '@/lib/content-pages'
 import ContentPageView from '@/components/ContentPageView'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Refund policy | Tikèm',
+  description: 'When and how ticket refunds work on Tikèm.',
+  alternates: { canonical: '/legal/refunds' },
+}
 
 export default async function RefundPolicyPage() {
   // Locale: the language switcher's cookie wins (works for anonymous

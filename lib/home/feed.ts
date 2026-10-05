@@ -135,6 +135,49 @@ export function zoneFor(country?: string | null): string {
   return ZONE_BY_COUNTRY[str(country).toUpperCase()] || DEFAULT_ZONE
 }
 
+/**
+ * Cities whose zone differs from their country's default above. Only the
+ * cities the location config knows; anything else falls back to the country.
+ */
+const ZONE_BY_CITY: Record<string, string> = {
+  'los angeles': 'America/Los_Angeles',
+  houston: 'America/Chicago',
+  chicago: 'America/Chicago',
+  vancouver: 'America/Vancouver',
+  calgary: 'America/Edmonton',
+}
+
+/**
+ * The zone an EVENT happens in: its stored `timezone` when it has a valid
+ * one, else its city's, else its country's. The event page and the discover
+ * cards print times in this zone, so a 10 PM show in Port-au-Prince reads
+ * 10 PM for every reader, and the server render matches hydration (a
+ * runtime-zone format printed UTC on the server and the reader's zone in the
+ * browser: React #418 on every event page).
+ */
+export function eventZone(e: { timezone?: unknown; city?: unknown; country?: unknown } | null | undefined): string {
+  const stored = validZone(typeof e?.timezone === 'string' ? e.timezone : null)
+  if (stored) return stored
+  const byCity = ZONE_BY_CITY[fold(stripRegion(str(e?.city)))]
+  return byCity || zoneFor(str(e?.country) || 'HT')
+}
+
+/**
+ * Whether an event is over: its end when it has one, else its start plus
+ * DEFAULT_RUN_MS. One rule for the homepage and /discover, so an event can't
+ * be gone from one and still listed on the other.
+ */
+export function eventHasEnded(
+  e: { start_datetime?: unknown; end_datetime?: unknown },
+  now: number
+): boolean {
+  const end = e?.end_datetime ? new Date(e.end_datetime as any).getTime() : NaN
+  if (Number.isFinite(end)) return end <= now
+  const start = e?.start_datetime ? new Date(e.start_datetime as any).getTime() : NaN
+  if (Number.isFinite(start)) return start + DEFAULT_RUN_MS <= now
+  return false
+}
+
 /** 'YYYY-MM-DD' of an instant on a zone's calendar. */
 export function dayKey(at: Date | number | string, zone: string): string {
   const d = new Date(at)

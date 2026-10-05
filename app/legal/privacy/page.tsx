@@ -1,9 +1,16 @@
+import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/auth'
 import { getContentPage, resolveLocale } from '@/lib/content-pages'
 import ContentPageView from '@/components/ContentPageView'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Privacy policy | Tikèm',
+  description: 'How Tikèm collects, uses and protects your personal information.',
+  alternates: { canonical: '/legal/privacy' },
+}
 
 export default async function PrivacyPolicyPage() {
   // Locale: the language switcher's cookie wins (works for anonymous

@@ -136,5 +136,5 @@ export function organizerFacingReason(reason: DestinationUnreadyReason): string 
   if (reason === 'charges_disabled') {
     return 'Your Stripe payout account can’t accept payments yet. Finish Stripe onboarding in Payout settings to resume card sales.'
   }
-  return 'Your Stripe payout account could not be found. Accounts connected before Tikèm switched to live payments must be reconnected — reconnect Stripe in Payout settings so buyers can pay by card.'
+  return 'Your Stripe payout account could not be found. Accounts connected before Tikèm switched to live payments must be reconnected. Reconnect Stripe in Payout settings so buyers can pay by card.'
 }

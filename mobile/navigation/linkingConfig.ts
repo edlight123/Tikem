@@ -18,6 +18,25 @@ export const LINKING_CONFIG = {
     Notifications: 'notifications',
     TicketDetail: 'tickets/:ticketId',
     EventDetail: 'events/:eventId',
+    // Push-notification targets (server-side `url`s, mapped to tikem://<path> in
+    // lib/pushNotifications.ts). Without a route here a tap opened the app and
+    // went nowhere. App scheme only, like national-day below.
+    // Purchase / reminder pushes: the buyer's passes for one event.
+    EventTickets: 'tickets/event/:eventId',
+    // Organizer sale pushes.
+    EventAttendees: 'organizer/events/:eventId/attendees',
+    OrganizerEventManagement: 'organizer/events/:eventId',
+    // Withdrawal outcome pushes.
+    OrganizerEarningsHub: 'organizer/payouts',
+    // Payout-verification / payout-health pushes.
+    OrganizerPayoutSettings: 'organizer/settings/payouts',
+    // City-discovery pushes. Discover is a tab of the attendee navigator; in
+    // organizer/staff mode the tab does not exist and the link lands on Main.
+    Main: {
+      screens: {
+        Discover: 'discover',
+      },
+    },
     // The national-day push's deepLink (tikem://national-day/vertieres) opens
     // the day's themed event list. App scheme only: there is no such web path,
     // so it is not in the AASA or the Android intent filters.

@@ -15,6 +15,7 @@ import {
 import { PosterCard } from '@/components/ui/PosterCard'
 import { useTranslation } from 'react-i18next'
 import { useFriendsGoingCount } from './FriendsGoingContext'
+import { eventZone } from '@/lib/home/feed'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -49,7 +50,10 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
   // and date-fns `format` throws on that. Only format when the date is valid.
   const parsedDate = event.start_datetime ? parseISO(event.start_datetime) : null
   const dateLabel =
-    parsedDate && isValid(parsedDate) ? formatEventDate(event.start_datetime, t, i18n.language) : undefined
+    parsedDate && isValid(parsedDate)
+      ? // The event's zone, as the event page prints it (and as the server did).
+        formatEventDate(event.start_datetime, t, i18n.language, eventZone(event as any))
+      : undefined
 
   // Poster overlay chips, stacked top-left: the status cue (Popular / Few tickets
   // left, else category) plus a friends-going social-proof chip when relevant.

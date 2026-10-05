@@ -1062,7 +1062,7 @@ export function getOrganizerReplyEmail(params: {
                     </div>
 
                     <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
-                      Reply to this organizer from the event page — your email address stays private.
+                      Reply to this organizer from the event page. Your email address stays private.
                     </div>
                   </td>
                 </tr>

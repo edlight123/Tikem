@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
         await sendEmail({
           to: organizerData.email,
           subject: decision === 'approve'
-            ? 'Your bank account has been verified — Tikèm'
-            : 'Bank verification update — Tikèm',
+            ? 'Your bank account has been verified | Tikèm'
+            : 'Bank verification update | Tikèm',
           html,
         })
       }

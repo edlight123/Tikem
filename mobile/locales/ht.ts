@@ -335,7 +335,7 @@ export default {
       blockedTitle: 'Regle sa yo anvan',
       blockedBody: 'Kont ou toujou gen achtè oswa lajan ki mare ak li. Lè sa yo regle, w ap ka efase l.',
       obligationEvents: 'Anile epi ranbouse evènman k ap vini ou yo ki gen tikè vann:',
-      obligationEvent: '{title} — {count} vann',
+      obligationEvent: '{title}: {count} vann',
       obligationBalance: 'Retire balans ki rete a: {amounts}',
       obligationWithdrawals: 'Tann retrè k ap fèt yo fini ({count})',
       obligationPromoter: 'Retire lajan ou fè kòm pwomotè: {amounts}',
@@ -437,7 +437,7 @@ export default {
 
   contentPage: {
     updatedPrefix: 'Mizajou',
-    draftNote: 'Tradiksyon pwovizwa — n ap revize l. Vèsyon anglè a se referans lan.',
+    draftNote: 'Tradiksyon pwovizwa (n ap revize l). Vèsyon anglè a se referans lan.',
     unavailableTitle: 'Kontni pa disponib',
     unavailableBody: 'Nou pa t kapab chaje kontni sa a. Tanpri tcheke koneksyon ou epi eseye ankò.',
   },
@@ -489,14 +489,14 @@ export default {
       },
     },
     governmentId: {
-      tipsInline: 'Bon limyè, san reflè, tout tèks lizib — eskanè a jere kadraj la.',
+      tipsInline: 'Bon limyè, san reflè, tout tèks lizib. Eskanè a jere kadraj la.',
       scanDocument: 'Eskane dokiman an (otomatik)',
       type: {
         label: 'Ki dokiman w ap sèvi?',
         passport: 'Paspò',
         national_id: 'Kat idantite',
         drivers_license: 'Lisans',
-        passportHint: 'Yon paspò bezwen sèlman paj foto a — nou p ap mande do a.',
+        passportHint: 'Yon paspò bezwen sèlman paj foto a. Nou p ap mande do a.',
         missingTitle: 'Chwazi yon kalite dokiman',
         missingBody: 'Di nou ki dokiman w ap voye pou nou mande bon foto yo.',
       },
@@ -737,7 +737,7 @@ export default {
     // Sèl ray ki soti nan lòt zòn, byen separe anba sa ki lokal yo.
     elsewhere: {
       title: 'lòt kote nan {place}',
-      subtitle: 'LÒT ZÒN — SE PA NAN {location}',
+      subtitle: 'LÒT ZÒN (SE PA NAN {location})',
     },
     noEventsAvailable: 'Pa gen evènman disponib',
     checkBackSoon: 'Tounen byento pou nouvo evènman!',
@@ -899,7 +899,7 @@ export default {
       what: 'Nou anrejistre kèk segonn videyo figi ou, epi nou pran mezi ladan l, pou konfime se yon moun reyèl k ap fè verifikasyon sa a.',
       why: 'Nou sèvi avè l sèlman pou verifye idantite ou anvan nou voye lajan ba ou. Nou pa janm montre l an piblik, nou pa janm sèvi avè l pou piblisite, e nou pa janm vann ni pataje l deyò Tikèm ak moun k ap tcheke l la.',
       retention: 'Nou efase anrejistreman an 90 jou apre desizyon an fèt. Nou kenbe desizyon an, se pa figi ou.',
-      agree: 'Mwen dakò — kòmanse anrejistreman an',
+      agree: 'Mwen dakò, kòmanse anrejistreman an',
     },
     sectionLabel: 'Verifikasyon prezans',
     sectionHint: 'Yon ti videyo kout ki pwouve se yon moun reyèl ki la. Sa pran anviwon 10 segonn.',
@@ -1034,12 +1034,14 @@ export default {
     status: {
       checkedIn: 'Verifye',
       notCheckedIn: 'Pa verifye',
+      notValid: 'Pa valab',
     },
     checkedInPrefix: 'Verifye ',
     checkIn: 'Verifye',
     checkInConfirmTitle: 'Verifye?',
     checkInConfirmBody: 'Verifye {name}?',
     checkInFailed: 'Nou pa t kapab verifye. Tanpri eseye ankò.',
+    outsideWindow: 'Tikè sa a deyò lè antre li. Sèvi ak eskanè a pou fòse antre a.',
     empty: {
       filtered: 'Pa gen patisipan jwenn',
       default: 'Pa gen patisipan ankò',
@@ -1066,7 +1068,7 @@ export default {
     },
     actions: {
       confirm: 'Konfime verifikasyon',
-      overrideCheckIn: 'Fòse — verifye l kanmenm',
+      overrideCheckIn: 'Fòse: verifye l kanmenm',
     },
     results: {
       notFound: 'Biyè sa a pa egziste.',
@@ -1077,12 +1079,12 @@ export default {
       cancelled: 'Biyè sa a anile.',
       scanFailed: 'Pa t kapab eskane biyè a. Tanpri eseye ankò.',
       checkInSuccessful: 'Verifikasyon reyisi!',
-      checkInQueued: 'Verifye — l ap senkronize lè koneksyon tounen.',
+      checkInQueued: 'Verifye. L ap senkronize lè koneksyon tounen.',
       checkInFailed: 'Pa t kapab verifye biyè a. Tanpri eseye ankò.',
       offlineNotCached: 'Ou offline e biyè sa a pa nan kach. Rekonekte yon fwa pou chaje lis envite a.',
     },
     offline: {
-      banner: 'Offline — verifikasyon yo ap senkronize lè ou rekonekte.',
+      banner: 'Offline. Verifikasyon yo ap senkronize lè ou rekonekte.',
       ready: '{count} envite pare pou verifikasyon offline',
     },
   },
@@ -1116,7 +1118,7 @@ export default {
       noNumbersBody: 'Nou pa t jwenn okenn nimewo telefòn nan kontak ou yo.',
       errorTitle: 'Erè',
       errorBody: 'Nou pa t kapab senkronize kontak yo. Tanpri eseye ankò.',
-      noContactMatches: 'Okenn nan kontak ou yo poko sou Tikèm — envite yo!',
+      noContactMatches: 'Okenn nan kontak ou yo poko sou Tikèm. Envite yo!',
       onTikem: '{count} sou Tikèm',
     },
   },
@@ -1235,7 +1237,7 @@ export default {
 
   organizerPromoters: {
     title: 'Pwomotè',
-    infoNotice: 'Bay chak moun k ap vann evènman w lan pwòp lyen pa yo. Chak tikè ki achte sou lyen an konte pou yo, epi Tikèm kalkile komisyon ou dwe yo. Ou peye yo dirèkteman — Tikèm kenbe kont lan.',
+    infoNotice: 'Bay chak moun k ap vann evènman w lan pwòp lyen pa yo. Chak tikè ki achte sou lyen an konte pou yo, epi Tikèm kalkile komisyon ou dwe yo. Ou peye yo dirèkteman. Tikèm kenbe kont lan.',
     formTitle: 'Ajoute yon pwomotè',
     fields: {
       name: 'Non',
@@ -1245,7 +1247,7 @@ export default {
     },
     placeholders: {
       name: 'Steeve L.',
-      contact: 'Telefòn oswa imèl — pou referans ou',
+      contact: 'Telefòn oswa imèl (pou referans ou)',
       code: 'STEEVE',
     },
     types: {
@@ -1255,7 +1257,7 @@ export default {
     create: 'Ajoute pwomotè a',
     creating: 'Ap ajoute…',
     createdTitle: 'Pwomotè ajoute',
-    createdMessage: 'Voye lyen estatistik li ba li — se zouti lavant li: lyen pèsonèl li, lavant an dirèk ak komisyon li.',
+    createdMessage: 'Voye lyen estatistik li ba li. Se zouti lavant li: lyen pèsonèl li, lavant an dirèk ak komisyon li.',
     sendLink: 'Voye lyen li',
     listTitle: 'Pwomotè ou yo',
     empty: 'Poko gen pwomotè',
@@ -1404,7 +1406,7 @@ export default {
       title: 'Kreye yon kòd pwomo',
       create: 'Kreye',
       creating: 'N ap kreye…',
-      limitHelper: 'Li kouvri {n} premye tikè ak rabè — yon kòmand 10 tikè itilize 10.',
+      limitHelper: 'Li kouvri {n} premye tikè ak rabè. Yon kòmand 10 tikè itilize 10.',
     },
     fields: {
       code: 'Kòd',
@@ -1434,7 +1436,7 @@ export default {
       percentOff: '{value}% rabè',
       amountOff: '{amount} rabè',
       atEvent: ' nan {event}',
-      blurbFirstN: 'Itilize kòd {code} pou {discount}{at} — se {n} premye moun sèlman!',
+      blurbFirstN: 'Itilize kòd {code} pou {discount}{at}. Se {n} premye moun sèlman!',
       blurbOpen: 'Itilize kòd {code} pou {discount}{at}!',
     },
     tabs: {
@@ -1981,9 +1983,9 @@ export default {
     explore: 'Eksplore evènman yo',
     host: 'Mwen vle òganize yon evènman',
     slide1Title: 'Byenveni sou Tikèm',
-    slide1Body: 'Dekouvri konsè, fèt ak kilti ann Ayiti ak nan dyaspora a — chak evènman gen yon afich ki fè w kanpe.',
+    slide1Body: 'Dekouvri konsè, fèt ak kilti ann Ayiti ak nan dyaspora a. Chak evènman gen yon afich ki fè w kanpe.',
     slide2Title: 'Tikè w se yon kòd QR',
-    slide2Body: 'Peye ak MonCash oswa kat. Tikè w rete nan app la — menm san entènèt — epi yo eskane l nan pòt la.',
+    slide2Body: 'Peye ak MonCash oswa kat. Tikè w rete nan app la (menm san entènèt) epi yo eskane l nan pòt la.',
     slide3Title: 'Òganize pwòp evènman pa w',
     slide3Body: 'Kreye epi pibliye yon evènman nan kèk minit, gratis. Vann tikè, apre sa verifye yon sèl fwa pou retire kòb ou via MonCash oswa bank.',
   },
@@ -2065,7 +2067,7 @@ export default {
       team: 'Ekip',
       tasks: 'Travay',
     },
-    infoNotice: 'Ekip òganizasyon ou an bay wòl epi pataje travay. Li diferan de estaf pa evènman — manm yo toujou bezwen aksè pa evènman pou eskane biyè.',
+    infoNotice: 'Ekip òganizasyon ou an bay wòl epi pataje travay. Li diferan de estaf pa evènman: manm yo toujou bezwen aksè pa evènman pou eskane biyè.',
     tasksInfoNotice: 'Bay ekip ou travay epi swiv li depi « pou fè » rive « fini ».',
     you: 'Ou menm',
     addMember: 'Ajoute yon manm',
@@ -2225,10 +2227,10 @@ export default {
       fixErrors: 'Tanpri korije {n} chan pou w kontinye.',
     },
       payoutRegime: {
-        haiti: 'Yo peye w an HTG sou Sogebank, Unibank oswa MonCash. Tikèm verifye ou — konfigire l nan Metòd peman.',
-        international: 'Yo peye w atravè Stripe nan bank ou. Sa mande yon pwofil peman apa de sa Ayiti a — konfigire l nan Metòd peman.',
+        haiti: 'Yo peye w an HTG sou Sogebank, Unibank oswa MonCash. Tikèm verifye ou. Konfigire l nan Metòd peman.',
+        international: 'Yo peye w atravè Stripe nan bank ou. Sa mande yon pwofil peman apa de sa Ayiti a. Konfigire l nan Metòd peman.',
         countryMismatch:
-          'Atansyon: evènman sa a nan {event}, men kont peman ou konekte a anrejistre nan {account}. Y ap toujou peye w — nan kont sa a, nan lajan pa l, apre yon konvèsyon. Pou yon peman lokal nan {event}, ou ta bezwen yon lòt kont konekte, e Tikèm poko sipòte sa.',
+          'Atansyon: evènman sa a nan {event}, men kont peman ou konekte a anrejistre nan {account}. Y ap toujou peye w nan kont sa a, nan lajan pa l, apre yon konvèsyon. Pou yon peman lokal nan {event}, ou ta bezwen yon lòt kont konekte, e Tikèm poko sipòte sa.',
       },
     canvas: {
       nationalDay: {
@@ -2258,7 +2260,7 @@ export default {
       spotifyChange: 'Chanje',
       spotifyRemove: 'Retire chante a',
       spotifyPastedLink: 'Lyen Spotify',
-      spotifySearchUnavailable: 'Rechèch chante a poko konfigire — kole yon lyen Spotify pou kounye a.',
+      spotifySearchUnavailable: 'Rechèch chante a poko konfigire. Kole yon lyen Spotify pou kounye a.',
       guestVis: {
         legend: 'Kiyès ki ka wè lis envite a',
         previewHidden: 'Pa gen anyen ki parèt',
@@ -2315,8 +2317,8 @@ export default {
       accessCodeRequired: 'Mete yon kòd aksè (oswa dezaktive pwoteksyon an).',
       accessCodeTooShort: 'Sèvi ak omwen 6 karaktè.',
       paidComingSoon: 'Evènman peyan yo ap vini talè nan {country}. Pou kounye a ou ka kreye yon evènman RSVP gratis.',
-      stripePayoutNotice: 'Evènman isit yo peye atravè pwofil US · Kanada · Frans ou (Stripe). Konfigire li anvan ou pibliye tikè peyan — pwofil Ayiti ou pa kouvri sa.',
-      haitiPayoutNotice: 'Evènman ann Ayiti peye atravè pwofil Ayiti ou (MonCash oswa labank). Konfigire li anvan ou pibliye tikè peyan — pwofil Stripe ou pa kouvri sa.',
+      stripePayoutNotice: 'Evènman isit yo peye atravè pwofil US · Kanada · Frans ou (Stripe). Konfigire li anvan ou pibliye tikè peyan. Pwofil Ayiti ou pa kouvri sa.',
+      haitiPayoutNotice: 'Evènman ann Ayiti peye atravè pwofil Ayiti ou (MonCash oswa labank). Konfigire li anvan ou pibliye tikè peyan. Pwofil Stripe ou pa kouvri sa.',
       stripePayoutCta: 'Konfigire peman',
       // Kiyès ki peye frè sèvis la (chan `fee_incidence`).
       fee: {
@@ -2384,6 +2386,9 @@ export default {
     enterCode: 'Antre kòd aksè a',
     unlock: 'Debloke',
     wrongCode: 'Kòd pa kòrèk. Eseye ankò.',
+    tooManyAttempts: 'Twòp esè. Tann kèk minit, epi eseye ankò.',
+    networkError: 'Nou pa t ka verifye kòd la. Tcheke koneksyon ou epi eseye ankò.',
+    verifyFailed: 'Nou pa ka verifye kòd la kounye a. Tanpri eseye ankò.',
   },
 
   organizerCreateEvent: {
@@ -2586,7 +2591,7 @@ export default {
     searchPlaceholder: 'Chèche yon imaj',
     uploadImage: 'Telechaje yon imaj',
     empty: 'Nou pa jwenn okenn imaj',
-    notConfigured: 'Bibliyotèk imaj la pa disponib — telechaje pa w la',
+    notConfigured: 'Bibliyotèk imaj la pa disponib. Telechaje pa w la',
     byPhotographer: 'Foto: {name}',
     artTitle: 'atizay tikèm',
     artSubtitle: 'Serigrafi ayisyen orijinal, gratis pou w itilize',
@@ -2652,11 +2657,15 @@ export default {
       updateError: 'Pa t kapab mete favori yo ajou',
     },
     purchase: {
+      notOnSaleBody: 'Tikè pou evènman sa a pa an vant.',
+      cancelledBody: 'Evènman sa a anile. Pa gen tikè disponib ankò.',
       loginBody: 'Tanpri konekte pou achte biyè',
       pastTitle: 'Evènman fini',
       pastBody: 'Evènman sa a deja fini. Biyè pa disponib ankò.',
     },
     floating: {
+      notOnSale: 'Pa an vant',
+      eventCancelled: 'Evènman anile',
       noTicketsAvailable: 'Pa gen biyè disponib',
       freeEntry: 'Antre gratis',
       almostSoldOut: '⚡ Prèske fini!',
@@ -2681,6 +2690,14 @@ export default {
   },
 
   ticketSelector: {
+    promoErrors: {
+      invalid: 'Kòd pwomo sa a pa valab pou evènman sa a.',
+      inactive: 'Kòd pwomo sa a pa aktif ankò.',
+      notYetValid: 'Kòd pwomo sa a poko aktif.',
+      expired: 'Kòd pwomo sa a ekspire.',
+      maxUses: 'Kòd pwomo sa a fin itilize nèt.',
+      failed: 'Nou pa t ka verifye kòd pwomo a. Tanpri eseye ankò.',
+    },
     includesFee: 'Gen ladan l {amount} frè sèvis',
     title: 'Chwazi biyè',
     chooseTickets: 'Chwazi biyè',
@@ -2796,6 +2813,11 @@ export default {
       limited: 'Pa gen ase tikè ki rete pou kòmand sa a.',
       tooMany: 'Ou ka pran maksimòm 10 tikè gratis alafwa.',
       accessCode: 'Evènman sa a mande yon kòd aksè.',
+      alreadyClaimed: "Ou te deja pran tikè pou evènman sa a. Gade nan imèl ou pou jwenn yo.",
+      promoAlreadyUsed: "Ou te deja itilize kòd pwomo sa a.",
+      eventCancelled: "Yo anile evènman sa a.",
+      eventUnavailable: "Evènman sa a pa disponib kounye a.",
+      eventEnded: "Evènman sa a fini deja.",
     },
     title: 'Pran biyè gratis la',
     freeEvent: 'EVÈNMAN GRATIS',
@@ -2864,11 +2886,26 @@ export default {
       leave: 'Kite',
       failedTitle: 'Nou pa t ka chaje Stripe',
       failedBody:
-        "Nou pa t ka rive sou paj sekirize Stripe la. Tcheke koneksyon ou epi eseye ankò — enfòmasyon ou te deja voye yo sere lakay Stripe.",
+        "Nou pa t ka rive sou paj sekirize Stripe la. Tcheke koneksyon ou epi eseye ankò. Enfòmasyon ou te deja voye yo sere lakay Stripe.",
       tryAgain: 'Eseye ankò',
       backToPayouts: 'Tounen nan paramèt peman',
     },
     payment: {
+      reasons: {
+        payment_failed: 'Peman an pa t fèt. Yo pa retire lajan sou ou.',
+        sold_out: 'Tikè yo fin vann anvan peman ou an pase. Si yo retire lajan, y ap ranbouse ou.',
+        capacity_exceeded: 'Tikè yo fin vann anvan peman ou an pase. Si yo retire lajan, y ap ranbouse ou.',
+        amount_mismatch: 'Montan ou peye a pa koresponn ak kòmand lan. Kontakte sipò si yo retire lajan sou ou.',
+        ticket_creation_failed: 'Peman ou an pase, men nou poko ka bay tikè a. Gade Tikè mwen yo talè oswa kontakte sipò.',
+        missing_order: 'Nou pa jwenn kòmand sa a. Gade Tikè mwen yo, oswa eseye ankò.',
+        missing_transaction: 'Nou pa jwenn peman sa a. Gade Tikè mwen yo, oswa eseye ankò.',
+        transaction_not_found: 'Nou pa t ka konfime peman sa a. Gade Tikè mwen yo, oswa eseye ankò.',
+        processing_error: 'Yon pwoblèm rive pandan nou t ap konfime peman ou an. Gade Tikè mwen yo anvan ou eseye ankò.',
+        refund_pending: 'Kòmand sa a pa t ka fèt, kidonk yo pa bay tikè. Y ap ranbouse peman ou an.',
+        refused: 'Kòmand sa a pa ka fèt ankò, kidonk yo pa bay tikè. Si yo retire lajan, y ap ranbouse ou.',
+        invalid_order: 'Kòmand sa a pa t valab, kidonk yo pa bay tikè. Si yo retire lajan, y ap ranbouse ou.',
+        generic: 'Peman an pa t ka fèt. Tanpri eseye ankò.',
+      },
       complete: 'Fini peman',
       successTitle: 'Peman reyisi!',
       successBody: 'Biyè w konfime. Gade tab Biyè yo.',
@@ -2976,7 +3013,7 @@ export default {
       misleading: "Twonpè oswa fo",
       other: "Lòt bagay",
     },
-    detailsPlaceholder: "Detay (si ou vle) — nenpòt bagay ki ka ede nou egzaminen l",
+    detailsPlaceholder: "Detay (si ou vle): nenpòt bagay ki ka ede nou egzaminen l",
     submit: "Voye siyalman an",
     successTitle: "Mèsi paske ou di nou sa",
     successBody: "Ekip nou an egzaminen chak siyalman nan 24 èdtan epi li retire kontni ki vyole Kondisyon nou yo.",

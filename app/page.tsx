@@ -1,4 +1,5 @@
 import { cookies, headers } from 'next/headers'
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
@@ -37,6 +38,12 @@ import {
 
 // This page reads auth cookies for personalization.
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Event tickets in Haiti and the diaspora | Tikèm',
+  description: 'Concerts, parties, festivals and culture in Haiti and across the diaspora. Discover what is on and get your tickets on Tikèm.',
+  alternates: { canonical: '/' },
+}
 
 /** Events in the "back home" / abroad rail. */
 const ELSEWHERE_MAX = 12

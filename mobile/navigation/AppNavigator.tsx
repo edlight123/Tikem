@@ -596,7 +596,7 @@ function StaffTabNavigator() {
 
 export default function AppNavigator() {
   const { user, loading, userProfile } = useAuth();
-  const { mode, isLoading: modeLoading } = useAppMode();
+  const { mode, setMode, isLoading: modeLoading } = useAppMode();
   const { t } = useI18n();
   // In-app sheet for the pending-payment resume prompt — the last surviving
   // native Alert after the app-wide migration. Referentially stable, so the
@@ -663,6 +663,14 @@ export default function AppNavigator() {
     maybeResumeInvite();
   }, [user, navigationRef]);
 
+  // The app mode lives in memory (AppModeProvider never remounts on sign-out),
+  // so it survived sign-out: a staff session left 'staff' set and the NEXT account to
+  // sign in on the device got the Staff tabs. Back to attendee on sign-out.
+  useEffect(() => {
+    if (loading || modeLoading) return;
+    if (!user && mode !== 'attendee') setMode('attendee');
+  }, [loading, mode, modeLoading, setMode, user]);
+
   // Register for push notifications once user is signed in.
   useEffect(() => {
     if (!user?.uid) return;
@@ -674,6 +682,11 @@ export default function AppNavigator() {
 
     let lastPromptAt = 0;
     const maybePromptPendingPayment = async () => {
+      // PaymentWebView saves the pending payment the moment it opens, so a
+      // buyer who switches out (MonCash app, 3-D Secure, the bank's SMS) and
+      // comes back mid-checkout would get this prompt on top of the live page.
+      if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === 'PaymentWebView') return;
+
       const now = Date.now();
       // Debounce prompts so we don't annoy users.
       if (now - lastPromptAt < 10_000) return;

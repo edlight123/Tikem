@@ -6,10 +6,10 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { normalizePromoterCode } from '@/lib/promoters'
+import { maxTierPriceCentsForEvent, normalizePromoterCode } from '@/lib/promoters'
 
 async function loadOwnedPromoter(eventId: string, promoterId: string, userId: string): Promise<
-  | { ok: true; ref: FirebaseFirestore.DocumentReference; data: any }
+  | { ok: true; ref: FirebaseFirestore.DocumentReference; data: any; event: any }
   | { ok: false; status: number; error: string }
 > {
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
@@ -25,7 +25,7 @@ async function loadOwnedPromoter(eventId: string, promoterId: string, userId: st
   if (String(data.event_id) !== String(eventId)) {
     return { ok: false, status: 404, error: 'Promoter not found' }
   }
-  return { ok: true, ref, data }
+  return { ok: true, ref, data, event: eventData }
 }
 
 export async function PATCH(
@@ -92,6 +92,16 @@ export async function PATCH(
       if (commissionType === 'percentage' && rawValue > 50) {
         return NextResponse.json({ error: 'Commission percentage is capped at 50%' }, { status: 400 })
       }
+      if (commissionType === 'flat_per_ticket') {
+        // Same guard as create: a flat fee above the priciest ticket is never earnable.
+        const maxTierCents = await maxTierPriceCentsForEvent(id, loaded.event)
+        if (maxTierCents !== null && Math.round(rawValue * 100) > maxTierCents) {
+          return NextResponse.json(
+            { error: 'A flat commission cannot be more than the ticket price' },
+            { status: 400 }
+          )
+        }
+      }
       updates.commission_type = commissionType
       updates.commission_value =
         commissionType === 'flat_per_ticket' ? Math.round(rawValue * 100) : rawValue
@@ -119,7 +129,7 @@ export async function DELETE(
 
     if ((Number(loaded.data.orders_count) || 0) > 0) {
       return NextResponse.json(
-        { error: 'This promoter has recorded sales — deactivate them instead of deleting.' },
+        { error: 'This promoter has recorded sales. Deactivate them instead of deleting.' },
         { status: 409 }
       )
     }

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { refundTicket } from '@/lib/tickets/refundExecution'
+import { refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { adminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: Request) {
@@ -97,11 +97,15 @@ export async function POST(request: Request) {
           status: 'refunded',
           refund_status: 'approved',
           refund_amount: 0,
+          refund_face_amount: 0,
           refund_processed_at: nowIso,
           updated_at: nowIso,
         },
         { merge: true }
       )
+      // Retired without money moving; refundTicket only reverses commission on
+      // refunded/queued outcomes, so this branch does it itself.
+      await reversePromoterCommission(String(ticketId), 'organizer_refund_free')
     } else if (res.outcome === 'skipped') {
       return Response.json(
         { error: 'This ticket cannot be refunded automatically', code: res.reason },

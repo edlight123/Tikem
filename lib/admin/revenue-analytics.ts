@@ -4,6 +4,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 
 export interface RevenueBreakdown {
   totalRevenueUSD: number
@@ -118,8 +119,8 @@ export async function getPlatformRevenueAnalytics(
   endDate?: Date
 ): Promise<RevenueBreakdown> {
   const ticketsRef = adminDb.collection('tickets')
-  // Support both legacy ticket status values.
-  let query: any = ticketsRef.where('status', 'in', ['confirmed', 'valid'])
+  // Every live status (lib/tickets/status.ts): valid | confirmed | active.
+  let query: any = ticketsRef.where('status', 'in', liveTicketStatusesForQuery())
 
   if (startDate) {
     query = query.where('created_at', '>=', startDate)
@@ -365,7 +366,7 @@ export async function getCompletePlatformMetrics(): Promise<PlatformMetrics> {
 async function getTopPerformers() {
   const ticketsSnapshot = await adminDb
     .collection('tickets')
-    .where('status', '==', 'confirmed')
+    .where('status', 'in', liveTicketStatusesForQuery())
     .get()
 
   const tickets = ticketsSnapshot.docs.map((doc: any) => ({
@@ -449,7 +450,7 @@ export async function getRevenueByPeriod(
 ): Promise<Array<{ date: string; revenueUSD: number; revenueHTG: number; tickets: number }>> {
   const ticketsSnapshot = await adminDb
     .collection('tickets')
-    .where('status', '==', 'confirmed')
+    .where('status', 'in', liveTicketStatusesForQuery())
     .where('created_at', '>=', startDate)
     .where('created_at', '<=', endDate)
     .get()

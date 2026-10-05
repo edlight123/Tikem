@@ -85,7 +85,7 @@ export async function POST(_request: NextRequest) {
 
     const emailResult = await sendEmail({
       to: email,
-      subject: 'Tikèm — Confirm payout details change',
+      subject: 'Tikèm: Confirm payout details change',
       html,
     })
 

@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     // precisely so this check can hold the line even if refunds are still running.
     if (eventData?.status === 'cancelled' || eventData?.payouts_frozen === true) {
       return NextResponse.json(
-        { error: 'This event was cancelled — its earnings are reserved for refunds.', code: 'cancelled_event' },
+        { error: 'This event was cancelled, so its earnings are reserved for refunds.', code: 'cancelled_event' },
         { status: 400 }
       )
     }
@@ -274,7 +274,7 @@ export async function POST(req: NextRequest) {
               code: 'PAYOUT_CHANGE_VERIFICATION_REQUIRED',
               requiresVerification: true,
               message:
-                'For your security, confirm this MonCash number with the code we email you — it is not the number on your payout profile.',
+                'For your security, confirm this MonCash number with the code we email you. It is not the number on your payout profile.',
             },
             { status: 403 }
           )
@@ -452,7 +452,7 @@ export async function POST(req: NextRequest) {
             payoutCurrency: 'HTG',
             payoutAmountHtgCents,
             message:
-              'Your MonCash withdrawal was sent but not yet confirmed. We are verifying it with MonCash — do not resubmit.',
+              'Your MonCash withdrawal was sent but not yet confirmed. We are verifying it with MonCash. Do not resubmit.',
           },
           { status: 202 }
         )

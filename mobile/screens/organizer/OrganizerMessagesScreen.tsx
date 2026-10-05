@@ -324,7 +324,7 @@ export default function OrganizerMessagesScreen() {
       style={styles.card}
       onPress={() => handleOpen(thread)}
       accessibilityRole="button"
-      accessibilityLabel={`${thread.sender_name} — ${thread.message}`}
+      accessibilityLabel={`${thread.sender_name}: ${thread.message}`}
     >
       <View style={styles.cardHead}>
         <View style={styles.cardHeadLeft}>

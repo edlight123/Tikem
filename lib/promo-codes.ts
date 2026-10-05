@@ -260,14 +260,71 @@ export function promoCapacityRemaining(promo: {
   return Math.max(0, maxN - getPromoUsesCount(promo))
 }
 
-/** True when a discount should be applied (unlimited, or at least 1 slot left). */
-export function promoHasCapacity(promo: {
-  max_uses?: number | null
-  uses_count?: number
-  [key: string]: any
-}): boolean {
+/**
+ * True when a discount should be applied to an order of `qty` tickets: the promo
+ * is unlimited, or at least `qty` uses remain. Redemption (below) is all-or-nothing
+ * for the order's full quantity, so pricing a 3-ticket order at a discount when only
+ * one use is left charges the buyer a discount the redemption then refuses. `qty`
+ * defaults to 1 so existing single-ticket callers behave exactly as before.
+ *
+ * Global cap only — see promoCanCoverOrder for the per-buyer cap as well.
+ */
+export function promoHasCapacity(
+  promo: {
+    max_uses?: number | null
+    uses_count?: number
+    [key: string]: any
+  },
+  qty: number = 1
+): boolean {
   const remaining = promoCapacityRemaining(promo)
-  return remaining === null || remaining > 0
+  const need = Math.max(1, Math.floor(Number(qty) || 1))
+  return remaining === null || remaining >= need
+}
+
+/** Doc id of the per-(promo, buyer) running counter in `promo_buyer_usage`. */
+function promoBuyerCounterId(promoId: string, buyerKey: string): string {
+  return `${promoId}__${createHash('sha256').update(buyerKey).digest('hex').slice(0, 32)}`
+}
+
+/**
+ * The pricing-time mirror of redeemPromoInTransaction's two caps, so a charge is
+ * only discounted when the redemption at confirm can actually honour it:
+ *
+ *  - global: at least `qty` uses remain (not just one)
+ *  - per buyer: when the promo declares a per-buyer cap, the buyer is
+ *    identifiable and their prior redemptions + `qty` fit under it
+ *
+ * Soft/non-atomic (a concurrent order can still take the last slot between
+ * pricing and confirm); redeemPromoInTransaction stays the authoritative gate.
+ * Fails OPEN on a lookup error for the per-buyer count, like the rest of pricing.
+ */
+export async function promoCanCoverOrder(
+  promo: (PromoDoc | Record<string, any>) & { id?: string },
+  params: { qty: number; buyerKey?: string | null }
+): Promise<{ ok: boolean; reason?: 'cap' | 'buyer_cap' | 'buyer_unknown' }> {
+  const qty = Math.max(1, Math.floor(Number(params.qty) || 1))
+  if (!promoHasCapacity(promo, qty)) return { ok: false, reason: 'cap' }
+
+  const perBuyerCap = promoMaxUsesPerBuyer(promo)
+  if (perBuyerCap === null) return { ok: true }
+  if (qty > perBuyerCap) return { ok: false, reason: 'buyer_cap' }
+
+  const buyerKey = String(params.buyerKey || '').trim()
+  if (!buyerKey) return { ok: false, reason: 'buyer_unknown' }
+  if (!promo?.id) return { ok: true }
+
+  try {
+    const snap = await adminDb
+      .collection('promo_buyer_usage')
+      .doc(promoBuyerCounterId(String(promo.id), buyerKey))
+      .get()
+    const prior = snap.exists ? Math.max(0, Number(snap.data()?.qty || 0)) : 0
+    return prior + qty > perBuyerCap ? { ok: false, reason: 'buyer_cap' } : { ok: true }
+  } catch (e) {
+    console.error('[promo] per-buyer usage lookup failed; allowing at pricing', (e as any)?.message)
+    return { ok: true }
+  }
 }
 
 export interface RedeemResult {
@@ -347,9 +404,7 @@ export async function redeemPromoInTransaction(params: {
           // refused rather than handed out uncounted.
           return { redeemed: false, capReached: true, buyerCapReached: true } as RedeemResult
         }
-        buyerCounterRef = adminDb
-          .collection('promo_buyer_usage')
-          .doc(`${promoId}__${createHash('sha256').update(buyerKey).digest('hex').slice(0, 32)}`)
+        buyerCounterRef = adminDb.collection('promo_buyer_usage').doc(promoBuyerCounterId(promoId, buyerKey))
         const priorSnap = await tx.get(buyerCounterRef)
         const priorQty = priorSnap.exists ? Math.max(0, Number(priorSnap.data()?.qty || 0)) : 0
         if (priorQty + qty > perBuyerCap) {

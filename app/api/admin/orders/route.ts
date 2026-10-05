@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { adminDb } from '@/lib/firebase/admin'
+import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 
 export const dynamic = 'force-dynamic'
 
@@ -229,7 +230,7 @@ export async function POST(request: Request) {
 
       const [totalOrders, confirmed, pending, cancelled, refunded] = await Promise.all([
         safeCount(ticketsRef),
-        safeCount(ticketsRef.where('status', '==', 'confirmed')),
+        safeCount(ticketsRef.where('status', 'in', liveTicketStatusesForQuery())),
         safeCount(ticketsRef.where('status', '==', 'pending')),
         safeCount(ticketsRef.where('status', '==', 'cancelled')),
         safeCount(ticketsRef.where('status', '==', 'refunded')),
@@ -251,14 +252,14 @@ export async function POST(request: Request) {
       let recentDocs: any[] = []
       try {
         const recentTickets = await ticketsRef
-          .where('status', 'in', ['confirmed', 'valid'])
+          .where('status', 'in', liveTicketStatusesForQuery())
           .where('purchased_at', '>=', thirtyDaysAgo)
           .get()
         recentDocs = recentTickets.docs
       } catch (e) {
         console.warn('orders summary revenue query failed; falling back to in-memory date filter', e)
         try {
-          const snap = await ticketsRef.where('status', 'in', ['confirmed', 'valid']).limit(2000).get()
+          const snap = await ticketsRef.where('status', 'in', liveTicketStatusesForQuery()).limit(2000).get()
           recentDocs = snap.docs.filter((d: any) => {
             const dt = toDate(d.data()?.purchased_at)
             return dt !== null && dt >= thirtyDaysAgo

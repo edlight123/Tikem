@@ -336,7 +336,7 @@ export default {
       blockedTitle: 'Resolve these first',
       blockedBody: 'Your account still has buyers or money attached. Once these are resolved, you can delete it.',
       obligationEvents: 'Cancel and refund your upcoming events that have sold tickets:',
-      obligationEvent: '{title} — {count} sold',
+      obligationEvent: '{title}: {count} sold',
       obligationBalance: 'Withdraw your remaining balance: {amounts}',
       obligationWithdrawals: 'Wait for your withdrawals in progress to finish ({count})',
       obligationPromoter: 'Withdraw your promoter earnings: {amounts}',
@@ -438,7 +438,7 @@ export default {
 
   contentPage: {
     updatedPrefix: 'Updated',
-    draftNote: 'Draft translation — being reviewed. The English version is the reference.',
+    draftNote: 'Draft translation (under review). The English version is the reference.',
     unavailableTitle: 'Content unavailable',
     unavailableBody: 'We couldn’t load this content. Please check your connection and try again.',
   },
@@ -490,14 +490,14 @@ export default {
       },
     },
     governmentId: {
-      tipsInline: 'Good light, no glare, all text readable — the scanner handles framing.',
+      tipsInline: 'Good light, no glare, all text readable. The scanner handles framing.',
       scanDocument: 'Scan document (auto)',
       type: {
         label: 'Which document are you using?',
         passport: 'Passport',
         national_id: 'ID card',
         drivers_license: 'Licence',
-        passportHint: 'A passport only needs its photo page — we will not ask for a back.',
+        passportHint: 'A passport only needs its photo page. We will not ask for a back.',
         missingTitle: 'Choose a document type',
         missingBody: 'Tell us which document you are submitting so we ask for the right photos.',
       },
@@ -685,10 +685,10 @@ export default {
       fixErrors: 'Please fix {n} field(s) to continue.',
     },
       payoutRegime: {
-        haiti: 'Paid out in HTG to Sogebank, Unibank or MonCash. Tikèm verifies you — set it up under Payout Settings.',
-        international: 'Paid out through Stripe to your bank. This needs a separate payout profile from Haiti — set it up under Payout Settings.',
+        haiti: 'Paid out in HTG to Sogebank, Unibank or MonCash. Tikèm verifies you. Set it up under Payout Settings.',
+        international: 'Paid out through Stripe to your bank. This needs a separate payout profile from Haiti. Set it up under Payout Settings.',
         countryMismatch:
-          'Heads up: this event is in {event}, but your connected payout account is registered in {account}. You’ll still be paid — into that account, in its currency, after a conversion. A local {event} payout would need a separate connected account, which Tikèm doesn’t support yet.',
+          'Heads up: this event is in {event}, but your connected payout account is registered in {account}. You’ll still be paid into that account, in its currency, after a conversion. A local {event} payout would need a separate connected account, which Tikèm doesn’t support yet.',
       },
     canvas: {
       nationalDay: {
@@ -718,7 +718,7 @@ export default {
       spotifyChange: 'Change',
       spotifyRemove: 'Remove song',
       spotifyPastedLink: 'Spotify link',
-      spotifySearchUnavailable: 'Song search needs setup — paste a Spotify link for now.',
+      spotifySearchUnavailable: 'Song search needs setup. Paste a Spotify link for now.',
       guestVis: {
         legend: 'Who can see the guest list',
         previewHidden: 'Nothing shown',
@@ -777,8 +777,8 @@ export default {
       // Coming-soon markets (e.g. Dominican Republic): paid tickets disabled, free/RSVP only.
       paidComingSoon: 'Paid events are coming soon in {country}. For now you can create a free RSVP event.',
       // US/Canada paid events require Stripe Connect payouts before publishing.
-      stripePayoutNotice: 'Events here pay out through your US · Canada · France profile (Stripe). Set it up before you can publish paid tickets — your Haiti profile doesn’t cover it.',
-      haitiPayoutNotice: 'Events in Haiti pay out through your Haiti profile (MonCash or bank). Set it up before you can publish paid tickets — your Stripe profile doesn’t cover it.',
+      stripePayoutNotice: 'Events here pay out through your US · Canada · France profile (Stripe). Set it up before you can publish paid tickets. Your Haiti profile doesn’t cover it.',
+      haitiPayoutNotice: 'Events in Haiti pay out through your Haiti profile (MonCash or bank). Set it up before you can publish paid tickets. Your Stripe profile doesn’t cover it.',
       stripePayoutCta: 'Set up payouts',
       // Who pays the service fee (event doc `fee_incidence`).
       fee: {
@@ -846,6 +846,9 @@ export default {
     enterCode: 'Enter access code',
     unlock: 'Unlock',
     wrongCode: 'Incorrect code. Try again.',
+    tooManyAttempts: 'Too many tries. Wait a few minutes, then try again.',
+    networkError: 'Could not check the code. Check your connection and try again.',
+    verifyFailed: 'Could not check the code right now. Please try again.',
   },
 
   organizerCreateEvent: {
@@ -1107,7 +1110,7 @@ export default {
     // The one labelled cross-metro rail, below the local content.
     elsewhere: {
       title: 'elsewhere in {place}',
-      subtitle: 'OTHER AREAS — NOT IN {location}',
+      subtitle: 'OTHER AREAS (NOT IN {location})',
     },
     noEventsAvailable: 'No events available',
     checkBackSoon: 'Check back soon for new events!',
@@ -1280,11 +1283,26 @@ export default {
       leave: 'Leave',
       failedTitle: "Couldn't load Stripe",
       failedBody:
-        "We couldn't reach Stripe's secure setup page. Check your connection and try again — any details you already submitted are saved with Stripe.",
+        "We couldn't reach Stripe's secure setup page. Check your connection and try again. Any details you already submitted are saved with Stripe.",
       tryAgain: 'Try again',
       backToPayouts: 'Back to payout settings',
     },
     payment: {
+      reasons: {
+        payment_failed: 'The payment was not completed. You were not charged.',
+        sold_out: 'Tickets sold out before your payment went through. Any charge will be refunded.',
+        capacity_exceeded: 'Tickets sold out before your payment went through. Any charge will be refunded.',
+        amount_mismatch: 'The amount paid did not match the order. Contact support if you were charged.',
+        ticket_creation_failed: 'Your payment went through but we could not issue the ticket yet. Check My Tickets shortly or contact support.',
+        missing_order: 'We could not find this order. Check My Tickets, or try again.',
+        missing_transaction: 'We could not find this payment. Check My Tickets, or try again.',
+        transaction_not_found: 'We could not confirm this payment. Check My Tickets, or try again.',
+        processing_error: 'Something went wrong while confirming your payment. Check My Tickets before trying again.',
+        refund_pending: 'This order could not be completed, so no ticket was issued. Your payment will be refunded.',
+        refused: 'This order can no longer be completed, so no ticket was issued. Any charge will be refunded.',
+        invalid_order: 'This order was not valid, so no ticket was issued. Any charge will be refunded.',
+        generic: 'The payment could not be completed. Please try again.',
+      },
       complete: 'Complete Payment',
       successTitle: 'Payment Successful!',
       successBody: 'Your ticket has been confirmed. Check your Tickets tab.',
@@ -1314,7 +1332,7 @@ export default {
       what: 'We record a few seconds of video of your face, and take measurements from it, to confirm a real person is completing this verification.',
       why: 'It is used only to verify your identity before we send you money. It is never shown publicly, never used for advertising, and never sold or shared with anyone outside Tikèm and the reviewer who checks it.',
       retention: 'We delete the recording 90 days after your verification is decided. We keep the decision itself, not your face.',
-      agree: 'I agree — start recording',
+      agree: 'I agree, start recording',
     },
     sectionLabel: 'Liveness check',
     sectionHint: 'A short recording that proves a real person is here. Takes about 10 seconds.',
@@ -1449,12 +1467,14 @@ export default {
     status: {
       checkedIn: 'Checked In',
       notCheckedIn: 'Not Checked In',
+      notValid: 'Not valid',
     },
     checkedInPrefix: 'Checked in ',
     checkIn: 'Check in',
     checkInConfirmTitle: 'Check in?',
     checkInConfirmBody: 'Check in {name}?',
     checkInFailed: 'Could not check in. Please try again.',
+    outsideWindow: 'This ticket is outside its entry window. Use the scanner to override.',
     empty: {
       filtered: 'No attendees found',
       default: 'No attendees yet',
@@ -1481,7 +1501,7 @@ export default {
     },
     actions: {
       confirm: 'Confirm Check-in',
-      overrideCheckIn: 'Override — check in anyway',
+      overrideCheckIn: 'Override: check in anyway',
     },
     results: {
       notFound: 'This ticket does not exist.',
@@ -1492,12 +1512,12 @@ export default {
       cancelled: 'This ticket has been cancelled.',
       scanFailed: 'Failed to scan ticket. Please try again.',
       checkInSuccessful: 'Check-in successful!',
-      checkInQueued: 'Checked in — will sync when back online.',
+      checkInQueued: 'Checked in. Will sync when back online.',
       checkInFailed: 'Failed to check in ticket. Please try again.',
       offlineNotCached: 'Offline and this ticket isn’t cached. Reconnect once to load the guest list.',
     },
     offline: {
-      banner: 'Offline — check-ins will sync when you reconnect.',
+      banner: 'Offline. Check-ins will sync when you reconnect.',
       ready: '{count} guests ready for offline check-in',
     },
   },
@@ -1531,7 +1551,7 @@ export default {
       noNumbersBody: 'We couldn’t find any phone numbers in your contacts.',
       errorTitle: 'Error',
       errorBody: 'Could not sync contacts. Please try again.',
-      noContactMatches: 'None of your contacts are on Tikèm yet — invite them!',
+      noContactMatches: 'None of your contacts are on Tikèm yet. Invite them!',
       onTikem: '{count} on Tikèm',
     },
   },
@@ -1650,7 +1670,7 @@ export default {
 
   organizerPromoters: {
     title: 'Promoters',
-    infoNotice: 'Give each person selling your event their own link. Every ticket bought through it counts for them, and Tikèm tallies the commission you owe. You pay them directly — Tikèm keeps the score.',
+    infoNotice: 'Give each person selling your event their own link. Every ticket bought through it counts for them, and Tikèm tallies the commission you owe. You pay them directly. Tikèm keeps the score.',
     formTitle: 'Add a promoter',
     fields: {
       name: 'Name',
@@ -1660,7 +1680,7 @@ export default {
     },
     placeholders: {
       name: 'Steeve L.',
-      contact: 'Phone or email — for your reference',
+      contact: 'Phone or email (for your reference)',
       code: 'STEEVE',
     },
     types: {
@@ -1670,7 +1690,7 @@ export default {
     create: 'Add promoter',
     creating: 'Adding…',
     createdTitle: 'Promoter added',
-    createdMessage: 'Send them their stats link — it is their sales toolkit: their personal link, live sales, and commission.',
+    createdMessage: 'Send them their stats link. It is their sales toolkit: their personal link, live sales, and commission.',
     sendLink: 'Send their link',
     listTitle: 'Your promoters',
     empty: 'No promoters yet',
@@ -1819,7 +1839,7 @@ export default {
       title: 'Create a promo code',
       create: 'Create',
       creating: 'Creating…',
-      limitHelper: 'Covers the first {n} discounted tickets — a 10-ticket order uses 10.',
+      limitHelper: 'Covers the first {n} discounted tickets. A 10-ticket order uses 10.',
     },
     fields: {
       code: 'Code',
@@ -1849,7 +1869,7 @@ export default {
       percentOff: '{value}% off',
       amountOff: '{amount} off',
       atEvent: ' at {event}',
-      blurbFirstN: 'Use code {code} for {discount}{at} — first {n} people only!',
+      blurbFirstN: 'Use code {code} for {discount}{at}. First {n} people only!',
       blurbOpen: 'Use code {code} for {discount}{at}!',
     },
     tabs: {
@@ -2399,9 +2419,9 @@ export default {
     explore: 'Explore events',
     host: 'I want to host an event',
     slide1Title: 'Welcome to Tikèm',
-    slide1Body: 'Discover concerts, parties, and culture across Haiti and the diaspora — every event a poster worth stopping for.',
+    slide1Body: 'Discover concerts, parties, and culture across Haiti and the diaspora. Every event is a poster worth stopping for.',
     slide2Title: 'Your ticket is a QR code',
-    slide2Body: 'Buy with MonCash or card. Your ticket lives in the app — even offline — and gets scanned at the door.',
+    slide2Body: 'Buy with MonCash or card. Your ticket lives in the app (even offline) and gets scanned at the door.',
     slide3Title: 'Host your own event',
     slide3Body: 'Create and publish an event in minutes, free. Sell tickets, then verify once to cash out via MonCash or bank.',
   },
@@ -2483,7 +2503,7 @@ export default {
       team: 'Team',
       tasks: 'Tasks',
     },
-    infoNotice: 'Your organization team sets roles and shares tasks. It is separate from per-event staff — teammates still need per-event access to scan tickets.',
+    infoNotice: 'Your organization team sets roles and shares tasks. It is separate from per-event staff: teammates still need per-event access to scan tickets.',
     tasksInfoNotice: 'Assign work to your team and track it from to-do to done.',
     you: 'You',
     addMember: 'Add member',
@@ -2639,7 +2659,7 @@ export default {
     searchPlaceholder: 'Find an image',
     uploadImage: 'Upload an image',
     empty: 'No images found',
-    notConfigured: 'Image library unavailable — upload your own',
+    notConfigured: 'Image library unavailable. Upload your own',
     byPhotographer: 'Photo: {name}',
     artTitle: 'tikèm art',
     artSubtitle: 'Original Haitian screenprints, free to use',
@@ -2705,11 +2725,15 @@ export default {
       updateError: 'Failed to update favorites',
     },
     purchase: {
+      notOnSaleBody: 'Tickets for this event are not on sale.',
+      cancelledBody: 'This event was cancelled. Tickets are no longer available.',
       loginBody: 'Please login to purchase tickets',
       pastTitle: 'Event Ended',
       pastBody: 'This event has already ended. Tickets are no longer available.',
     },
     floating: {
+      notOnSale: 'Not on sale',
+      eventCancelled: 'Event cancelled',
       noTicketsAvailable: 'No tickets available',
       freeEntry: 'Free entry',
       almostSoldOut: '⚡ Almost sold out!',
@@ -2734,6 +2758,14 @@ export default {
   },
 
   ticketSelector: {
+    promoErrors: {
+      invalid: 'This promo code is not valid for this event.',
+      inactive: 'This promo code is no longer active.',
+      notYetValid: 'This promo code is not active yet.',
+      expired: 'This promo code has expired.',
+      maxUses: 'This promo code has been fully used.',
+      failed: 'Could not check the promo code. Please try again.',
+    },
     title: 'Select Tickets',
     includesFee: 'Includes {amount} service fee',
     chooseTickets: 'Choose Tickets',
@@ -2850,6 +2882,11 @@ export default {
       limited: 'There are not enough tickets left for this order.',
       tooMany: 'You can claim at most 10 free tickets at a time.',
       accessCode: 'This event needs an access code.',
+      alreadyClaimed: "You already claimed tickets for this event. Check your email for them.",
+      promoAlreadyUsed: "You have already used this promo code.",
+      eventCancelled: "This event has been cancelled.",
+      eventUnavailable: "This event is not available right now.",
+      eventEnded: "This event has already ended.",
     },
     title: 'Claim Free Ticket',
     freeEvent: 'FREE EVENT',
@@ -2977,7 +3014,7 @@ export default {
     reportOrganizer: "Report organizer",
     reportEventTitle: "Report this event",
     reportOrganizerTitle: "Report this organizer",
-    reportIntro: "What's wrong? Reports are private — the organizer is never told who sent one.",
+    reportIntro: "What's wrong? Reports are private. The organizer is never told who sent one.",
     reasons: {
       spam: "Spam",
       scam_or_fraud: "Scam or fraud",
@@ -2988,7 +3025,7 @@ export default {
       misleading: "Misleading or fake",
       other: "Something else",
     },
-    detailsPlaceholder: "Details (optional) — anything that helps us review it",
+    detailsPlaceholder: "Details (optional): anything that helps us review it",
     submit: "Send report",
     successTitle: "Thanks for telling us",
     successBody: "Our team reviews every report within 24 hours and removes content that breaks our Terms.",

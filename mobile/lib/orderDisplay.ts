@@ -14,6 +14,18 @@ export function isLiveTicket(status: string | null | undefined): boolean {
   return LIVE.has(String(status ?? '').toLowerCase().trim());
 }
 
+/**
+ * Statuses the server writes for a held, usable ticket: 'valid' (MonCash,
+ * SogePay, free, comp), 'confirmed' and 'active' (card). Stricter than
+ * `isLiveTicket`: a blank or checked-in ticket must not offer Transfer,
+ * Wallet or Refund.
+ */
+export const ACTIVE_TICKET_STATUSES = new Set(['valid', 'confirmed', 'active']);
+
+export function isActiveTicketStatus(status: string | null | undefined): boolean {
+  return ACTIVE_TICKET_STATUSES.has(String(status ?? '').toLowerCase().trim());
+}
+
 export function formatMoneyLines(lines: MoneyLine[]): string {
   return lines.map((l) => formatCurrency(l.amount, l.currency)).join(' + ');
 }

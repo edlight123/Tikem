@@ -207,7 +207,7 @@ export default function SpotifySongPicker({
         <Text style={[styles.hint, { color: colors.textTertiary }]}>
           {tr(
             'organizerCreateEventFlow.canvas.spotifySearchUnavailable',
-            'Song search needs setup — paste a Spotify link for now.'
+            'Song search needs setup. Paste a Spotify link for now.'
           )}
         </Text>
       </View>

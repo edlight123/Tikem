@@ -262,7 +262,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
           </div>
           <div className="flex justify-between">
             <span>{tx('earnings.processing_fee')}</span>
-            <span className="font-mono tabular-nums font-medium text-white">Included — Tikèm pays it</span>
+            <span className="font-mono tabular-nums font-medium text-white">Included (Tikèm pays it)</span>
           </div>
           <div className="flex justify-between border-t border-white/10 pt-2">
             <span>{tx('earnings.total_fees_paid')}</span>

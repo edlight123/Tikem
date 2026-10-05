@@ -120,9 +120,9 @@ export function withdrawalOutcomeCopy(
       return {
         title: to('Confirming your withdrawal', 'Confirmation de votre retrait', 'N ap konfime retrè w la'),
         body: to(
-          `Your ${v.amount} MonCash withdrawal was sent and we're confirming it with MonCash. Please don't resubmit — the money is held for you.`,
-          `Votre retrait MonCash de ${v.amount} a été envoyé et nous le confirmons avec MonCash. Ne le soumettez pas à nouveau — le montant reste réservé.`,
-          `Retrè MonCash ${v.amount} ou a pati, n ap konfime l ak MonCash. Pa refè demann lan — lajan an rete rezève pou ou.`
+          `Your ${v.amount} MonCash withdrawal was sent and we're confirming it with MonCash. Please don't resubmit. The money is held for you.`,
+          `Votre retrait MonCash de ${v.amount} a été envoyé et nous le confirmons avec MonCash. Ne le soumettez pas à nouveau. Le montant reste réservé.`,
+          `Retrè MonCash ${v.amount} ou a pati, n ap konfime l ak MonCash. Pa refè demann lan. Lajan an rete rezève pou ou.`
         ),
         cta,
       }

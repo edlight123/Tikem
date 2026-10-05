@@ -16,6 +16,7 @@ import { MapPin, Check, X, Search as SearchIcon } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useFilters } from '../contexts/FiltersContext';
+import { useAuth } from '../contexts/AuthContext';
 import { COUNTRIES, getFeaturedCities } from '../types/filters';
 import { METROS } from '../data/metros';
 import { RADIUS, SPACING } from '../config/brand';
@@ -56,6 +57,19 @@ export default function LocationPickerSheet({
   const { colors } = useTheme();
   const { t } = useI18n();
   const { userCountry, setUserCountry } = useFilters();
+  const { user, userProfile, updateUserProfile } = useAuth();
+
+  // Signed in, the choice also goes on the profile: FiltersContext re-applies
+  // the profile's default_country on every launch, so a pick kept only on the
+  // device was undone at the next cold start. Best-effort (offline, demo).
+  const persistToProfile = (patch: { default_country?: string; default_city?: string }) => {
+    if (!user?.uid || !userProfile) return;
+    const changed =
+      (patch.default_country !== undefined && patch.default_country !== (userProfile.default_country || '')) ||
+      (patch.default_city !== undefined && patch.default_city !== (userProfile.default_city || ''));
+    if (!changed) return;
+    updateUserProfile(patch).catch((e) => console.warn('[LocationPickerSheet] Could not save location', e));
+  };
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
 
@@ -106,7 +120,10 @@ export default function LocationPickerSheet({
       <TouchableOpacity
         key={value || '__all__'}
         style={[styles.cityRow, active && styles.cityRowActive]}
-        onPress={() => onSelect(value)}
+        onPress={() => {
+          onSelect(value);
+          persistToProfile({ default_country: userCountry, default_city: value });
+        }}
         activeOpacity={0.8}
       >
         <MapPin size={18} color={active ? colors.primary : colors.textSecondary} />
@@ -215,6 +232,12 @@ export default function LocationPickerSheet({
                     // make its list look empty.
                     setAreaQuery('');
                     setUserCountry(c.code);
+                    // A new country's towns differ, so the old one goes too.
+                    persistToProfile(
+                      c.code !== userCountry
+                        ? { default_country: c.code, default_city: '' }
+                        : { default_country: c.code },
+                    );
                     setPickingCountry(false);
                   }}
                   activeOpacity={0.8}
