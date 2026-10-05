@@ -734,7 +734,13 @@
       "abroad_link": "Haitian events abroad",
       "abroad_title": "haitian events abroad"
     },
-    "empty": "{{place}}: nothing listed right now."
+    "empty": "{{place}}: nothing listed right now.",
+    "nationalDay": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "in_days": "In {{count}} days",
+      "see_events": "See events"
+    }
   },
   "resources": {
     "hero_eyebrow": "guides & resources",
@@ -1425,7 +1431,11 @@
     "tierNameLabel": "Name",
     "tierPriceLabel": "Price",
     "tierQtyLabel": "Qty",
-    "endRequired": "Add when your event ends, so attendees know how long it runs."
+    "endRequired": "Add when your event ends, so attendees know how long it runs.",
+    "nationalDay": {
+      "label": "Part of {{day}}?",
+      "hint": "Feature it on the {{day}} banner."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Promoter portal",

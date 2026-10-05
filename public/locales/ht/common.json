@@ -734,7 +734,13 @@
       "abroad_link": "Evènman ayisyen lòt bò dlo",
       "abroad_title": "evènman ayisyen lòt bò dlo"
     },
-    "empty": "{{place}}: anyen pwograme pou kounye a."
+    "empty": "{{place}}: anyen pwograme pou kounye a.",
+    "nationalDay": {
+      "today": "Jodi a",
+      "tomorrow": "Demen",
+      "in_days": "Nan {{count}} jou",
+      "see_events": "Gade evènman yo"
+    }
   },
   "resources": {
     "hero_eyebrow": "gid & resous",
@@ -1425,7 +1431,11 @@
     "tierNameLabel": "Non",
     "tierPriceLabel": "Pri",
     "tierQtyLabel": "Kantite",
-    "endRequired": "Mete lè evènman w fini, pou moun yo konnen konbyen tan l ap dire."
+    "endRequired": "Mete lè evènman w fini, pou moun yo konnen konbyen tan l ap dire.",
+    "nationalDay": {
+      "label": "Evènman sa a pou {{day}}?",
+      "hint": "Fè l parèt sou banyè {{day}} an."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Pòtay pwomotè",

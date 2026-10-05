@@ -651,6 +651,10 @@ export default {
           'Heads up: this event is in {event}, but your connected payout account is registered in {account}. You’ll still be paid — into that account, in its currency, after a conversion. A local {event} payout would need a separate connected account, which Tikèm doesn’t support yet.',
       },
     canvas: {
+      nationalDay: {
+        label: 'Part of {day}?',
+        hint: 'Feature it on the {day} banner.',
+      },
       flyerTitle: 'Design your event page',
       uploadFlyer: 'Upload Flyer',
       changeFlyer: 'Change flyer',
@@ -946,6 +950,14 @@ export default {
     },
   },
   home: {
+    nationalDay: {
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+      inDays: 'In {count} days',
+      seeEvents: 'See events',
+      dismiss: 'Hide this banner',
+      nearYou: '{day} near you',
+    },
     discoverMoreTitle: 'discover more',
     worlds: {
       title: 'worlds',

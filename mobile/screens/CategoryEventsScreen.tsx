@@ -22,6 +22,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
 import { artForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
 import { withAlpha } from '../theme/tokens';
+import { eventMatchesNationalDay, resolveNationalDays } from '../lib/nationalDays';
+import { nationalDayArt } from '../lib/nationalDaysRemote';
 import WhenPickerSheet from '../components/WhenPickerSheet';
 import LocationPickerSheet from '../components/LocationPickerSheet';
 import PricePickerSheet, { PriceRange } from '../components/PricePickerSheet';
@@ -46,7 +48,10 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
   // `feed` opens one of Home's curated rails as a full page; `category` is the
   // original per-category listing. Exactly one of them is set.
-  const { category, feed, city, title, subtitle, world } = route.params || {};
+  // `nationalDay` lists the events tagged for a national day (the Home
+  // banner's "See events"), under the day's art.
+  const { category, feed, city, title, subtitle, world, nationalDay } = route.params || {};
+  const nationalDayDef = nationalDay ? resolveNationalDays().find((d) => d.key === nationalDay) ?? null : null;
 
   // The header floats (OverlayHeader), so the grid reserves its measured height.
   const { height: headerH, onHeight } = useOverlayHeaderInset();
@@ -77,7 +82,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
   useEffect(() => {
     const load = async () => {
-      if (!category && !feed && !world) {
+      if (!category && !feed && !world && !nationalDayDef) {
         setLoading(false);
         return;
       }
@@ -140,7 +145,11 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
         // without the slice.
         // A world page gathers every category in that world (mizik = Concert +
         // Music…), mapped with the same worldForCategory the tiles use.
-        const scoped = world ? local.filter((e: any) => worldForCategory(e.category) === world) : local;
+        const scoped = world
+          ? local.filter((e: any) => worldForCategory(e.category) === world)
+          : nationalDayDef
+            ? local.filter((e: any) => eventMatchesNationalDay(e, nationalDayDef))
+            : local;
         setEvents(feed ? applyHomeFeed(scoped, feed, { city }) : scoped);
         setElsewhere(
           elsewhereEvents(inCountry, activeMetro).sort(
@@ -155,7 +164,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
     };
 
     load();
-  }, [category, feed, world, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
+  }, [category, feed, world, nationalDay, city, userCountry, countryResolved, activeMetro?.id, blockedOrganizers]);
 
   const { start: dStart, end: dEnd } = getDateRange(dateFilter, pickedDate);
   const visibleEvents = events.filter((e) => {
@@ -202,12 +211,14 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   // photo under a scrim with "( label )" centered — that scrolls away with the
   // grid. Curated-feed pages ("for you", "this week"…) have no category art
   // and keep the blurred overlay header.
-  const isCategoryPage = !!category || !!world;
+  const isCategoryPage = !!category || !!world || !!nationalDayDef;
   const label = (title || (world ? worldLabel(world) : getCategoryLabel(t, category)) || category || '').toString().toLowerCase();
   // The hero wears the category's WORLD art (Tikèm screenprints) when that
   // world has some; a category with no world (religious, wellness) keeps its
   // original photo. Seeded by the world key, so the page always looks the same.
-  const heroArt = world
+  const heroArt = nationalDayDef
+    ? nationalDayArt(nationalDayDef)?.source ?? artForWorld('kilti', 'kilti').source
+    : world
     ? artForWorld(world, world).source
     : tileArtForCategory(category)?.source ?? categoryArt(category);
 

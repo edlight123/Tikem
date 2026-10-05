@@ -580,6 +580,14 @@ export default {
     },
   },
   home: {
+    nationalDay: {
+      today: 'Jodi a',
+      tomorrow: 'Demen',
+      inDays: 'Nan {count} jou',
+      seeEvents: 'Gade evènman yo',
+      dismiss: 'Kache banyè sa a',
+      nearYou: '{day} toupre w',
+    },
     discoverMoreTitle: 'dekouvri plis',
     worlds: {
       title: 'mond yo',
@@ -2183,6 +2191,10 @@ export default {
           'Atansyon: evènman sa a nan {event}, men kont peman ou konekte a anrejistre nan {account}. Y ap toujou peye w — nan kont sa a, nan lajan pa l, apre yon konvèsyon. Pou yon peman lokal nan {event}, ou ta bezwen yon lòt kont konekte, e Tikèm poko sipòte sa.',
       },
     canvas: {
+      nationalDay: {
+        label: 'Evènman sa a pou {day}?',
+        hint: 'Fè l parèt sou banyè {day} an.',
+      },
       flyerTitle: 'Konsevwa paj evènman ou',
       uploadFlyer: 'Mete afich',
       changeFlyer: 'Chanje afich',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { themedArt } from '../lib/nationalDaysRemote';
 import { 
   View, 
   Text, 
@@ -693,7 +694,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
                       locationCopy.emptySubtitle,
                       { label: t('discover.changeLocation'), onAction: () => setWhereSheetOpen(true) },
                       MapPin,
-                      artForPlace(activeMetro, activeCity).key,
+                      themedArt(artForPlace(activeMetro, activeCity)).key,
                     )}
 
                 <ElsewhereRail

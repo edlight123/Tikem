@@ -270,6 +270,8 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
             ? data.guestlist_visibility
             : undefined,
         show_guestlist: data?.show_guestlist === false ? false : undefined,
+        // Read back by the composer's "Part of …?" toggle on edit.
+        national_day: typeof data?.national_day === 'string' ? data.national_day : undefined,
         tags: data?.tags && Array.isArray(data.tags) ? data.tags.filter((tag: any) => typeof tag === 'string') : undefined,
         created_at: data?.created_at?.toDate?.()?.toISOString() || data?.created_at,
         updated_at: data?.updated_at?.toDate?.()?.toISOString() || data?.updated_at,
@@ -370,6 +372,9 @@ const readPublishedEvents = unstable_cache(
         fee_incidence: typeof data.fee_incidence === 'string' ? data.fee_incidence : undefined,
         // Who is on the bill — the homepage hero prints it.
         guestlist: Array.isArray(data.guestlist) ? data.guestlist : undefined,
+        // The national day the organizer tagged it for (lib/nationalDays.ts):
+        // the homepage banner counts these and /discover?day= lists them.
+        national_day: typeof data.national_day === 'string' ? data.national_day : undefined,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       } as Event

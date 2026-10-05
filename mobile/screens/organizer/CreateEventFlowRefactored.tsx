@@ -45,6 +45,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicker';
 import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
 import { createEvent, updateEvent, SaveEventOptions } from '../../lib/api/events';
+import { nationalDayForEventDate, nationalDayName } from '../../lib/nationalDays';
 import { getEventById } from '../../lib/api/organizer';
 import { db } from '../../config/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -171,6 +172,10 @@ export interface EventDraft {
   // How the guest list shows on the event page: faces / count / hidden. Same
   // three states the web composer writes (see lib/guestlistVisibility).
   guestlist_visibility: GuestlistVisibility;
+
+  // The national day it is tagged for (lib/nationalDays eventTag), '' = none.
+  // Offered only while the start date is near a day; see the toggle.
+  national_day: string;
 
   // Poster-theme override. '' = Auto (deterministic pick from seed/category);
   // a valid PosterThemeKey pins the poster gradient for this event everywhere.
@@ -404,7 +409,7 @@ export default function CreateEventFlowRefactored() {
   // carries no safe-area inset (the SafeAreaView above already does).
   const { height: headerH, onHeight } = useOverlayHeaderInset(48);
   const { user, userProfile } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const [saving, setSaving] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -513,6 +518,7 @@ export default function CreateEventFlowRefactored() {
     video_url: '',
     spotify_url: '',
     guestlist_visibility: 'faces',
+    national_day: '',
     theme_key: '',
     recurrence: 'none',
     recurrence_count: 4,
@@ -674,6 +680,7 @@ export default function CreateEventFlowRefactored() {
           spotify_url: (event as any).spotify_url || '',
           // New field first, then the legacy boolean for older events.
           guestlist_visibility: guestlistVisibilityFrom(event as any),
+          national_day: typeof (event as any).national_day === 'string' ? (event as any).national_day : '',
           // Poster-theme override; default '' (Auto) when the field is absent.
           theme_key: (event as any).theme_key || '',
           // Recurrence is create-only; editing never regenerates a series. The
@@ -1394,6 +1401,10 @@ export default function CreateEventFlowRefactored() {
   // came from: a loaded tier with an id that is free (an RSVP tier always is).
   const rsvpSourceTier = () =>
     eventDraft.ticket_tiers.find((tier) => tier.id && parseFloat(tier.price) === 0);
+  // The national day the start date sits in or near, if any (lib/nationalDays).
+  const eligibleNationalDay = nationalDayForEventDate(eventDraft.start_date || null);
+  const nationalDayLabel = eligibleNationalDay ? nationalDayName(eligibleNationalDay, language) : '';
+
   const buildEventData = () => {
     const { lineup, fee_incidence, ...draft } = eventDraft;
     // Fields shared by both paths, written in the web composer's shape: the
@@ -1402,6 +1413,9 @@ export default function CreateEventFlowRefactored() {
     const shared = {
       fee_incidence: incidenceForEvent({ country: draft.country, fee_incidence }),
       guestlist: lineup.filter((g) => g.name.trim()).map(lineupEntryToRecord),
+      // Kept only while the date still sits near that same day.
+      national_day:
+        draft.national_day && eligibleNationalDay?.eventTag === draft.national_day ? draft.national_day : null,
       ...(draft.is_online
         ? { venue_name: '', address: '', city: '', commune: '', department: '' }
         : {}),
@@ -1963,6 +1977,29 @@ export default function CreateEventFlowRefactored() {
                 <View style={styles.scheduleError}>
                   <Ionicons name="alert-circle" size={16} color={colors.error} />
                   <Text style={styles.scheduleErrorText}>{t(scheduleErrorKey)}</Text>
+                </View>
+              )}
+
+              {/* National day: one quiet toggle, only when the date is near one. */}
+              {!!eligibleNationalDay && (
+                <View style={styles.settingRow}>
+                  <Ionicons name="flag-outline" size={18} color={colors.textSecondary} />
+                  <View style={styles.settingTextCol}>
+                    <Text style={styles.onlineLabel}>
+                      {t('organizerCreateEventFlow.canvas.nationalDay.label', { day: nationalDayLabel })}
+                    </Text>
+                    <Text style={styles.settingHint}>
+                      {t('organizerCreateEventFlow.canvas.nationalDay.hint', { day: nationalDayLabel })}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={eventDraft.national_day === eligibleNationalDay.eventTag}
+                    onValueChange={(v) => updateDraft({ national_day: v ? eligibleNationalDay.eventTag : '' })}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.white}
+                    ios_backgroundColor={colors.border}
+                    accessibilityLabel={t('organizerCreateEventFlow.canvas.nationalDay.label', { day: nationalDayLabel })}
+                  />
                 </View>
               )}
 

@@ -155,6 +155,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // National-day theming remote control (lib/nationalDays.ts): which days
+    // are off, copy overrides, movable dates. Both apps read it signed out, so
+    // it is public. ONLY this doc: the rest of /config (payouts…) stays
+    // server-only under the default deny. Edited by admins via the console or
+    // the Admin SDK, never by clients.
+    match /config/national_days {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Connections (friendships) - one document per user pair.
     // Participants may read; all writes go through server APIs (Admin SDK),
     // so client writes are disabled.

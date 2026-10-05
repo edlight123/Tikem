@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { generalArt } from '../../lib/artLibrary';
+import { themedArt } from '../../lib/nationalDaysRemote';
 
 /**
  * The auth (login / sign-up) backdrop is a rotating piece of Haitian artwork —
@@ -22,7 +23,8 @@ const ART = generalArt();
 
 export function AuthBackground({ children }: { children?: React.ReactNode }) {
   // Pick one piece per mount so users see the collection rotate across opens.
-  const [art] = useState(() => ART[Math.floor(Math.random() * ART.length)]);
+  // While a national day is active (lib/nationalDays) its art takes the slot.
+  const [art] = useState(() => themedArt(ART[Math.floor(Math.random() * ART.length)]));
 
   return (
     <View style={styles.root}>

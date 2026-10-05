@@ -32,6 +32,14 @@ import AllEventsPreview from '../components/AllEventsPreview';
 import EventRail from '../components/EventRail';
 import EmptyState from '../components/EmptyState';
 import { artForPlace } from '../lib/artLibrary';
+import NationalDayBanner from '../components/NationalDayBanner';
+import { eventMatchesNationalDay, nationalDayName } from '../lib/nationalDays';
+import {
+  dismissNationalDay,
+  isNationalDayDismissed,
+  themedArt,
+  useNationalDay,
+} from '../lib/nationalDaysRemote';
 import { HomeFeedSkeleton } from '../components/Skeleton';
 import ChromeBlur from '../components/ChromeBlur';
 import { isBudgetFriendlyTicketPrice } from '../lib/pricing';
@@ -104,6 +112,26 @@ export default function HomeScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const scrollViewRef = React.useRef<ScrollView>(null);
+
+  // National day (lib/nationalDays): a poster banner while one is active, and
+  // a rail of the events organizers tagged for it inside the active metro.
+  const nationalDay = useNationalDay();
+  const nationalDayId = nationalDay ? `${nationalDay.day.key}.${nationalDay.start}.${nationalDay.phase}` : '';
+  // Hidden until AsyncStorage answers, so a dismissed banner never flashes.
+  const [dayDismissed, setDayDismissed] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    if (!nationalDay) return;
+    isNationalDayDismissed(nationalDay).then((d) => alive && setDayDismissed(d));
+    return () => {
+      alive = false;
+    };
+  }, [nationalDayId]);
+  const dayEvents = nationalDay ? events.filter((e) => eventMatchesNationalDay(e, nationalDay.day)) : [];
+  const dayName = nationalDay ? nationalDayName(nationalDay.day, language) : '';
+  const openNationalDay = () =>
+    nationalDay &&
+    navigation.navigate('CategoryEvents', { nationalDay: nationalDay.day.key, title: dayName });
 
   // Seeded with a close estimate of the header's height (safe-area + 10pt
   // padding + 33pt wordmark line + 12pt bottom padding) instead of 0: starting
@@ -451,6 +479,29 @@ export default function HomeScreen({ navigation }: any) {
                 the tikèm wordmark in the top bar already brands the screen; the
                 section titles below carry the hierarchy.) */}
 
+            {/* National day: the poster, then its rail. A low-key day (Jou
+                Mò, Fèt Travay…) offers the pill only when events are tagged. */}
+            {nationalDay && !dayDismissed && (
+              <NationalDayBanner
+                active={nationalDay}
+                onSeeEvents={!nationalDay.day.lowKey || dayEvents.length > 0 ? openNationalDay : undefined}
+                onDismiss={() => {
+                  setDayDismissed(true);
+                  dismissNationalDay(nationalDay);
+                }}
+              />
+            )}
+            {dayEvents.length > 0 && (
+              <View style={styles.firstSection}>
+                <EventRail
+                  title={t('home.nationalDay.nearYou', { day: dayName })}
+                  events={dayEvents.slice(0, 10)}
+                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
+                  onViewAll={openNationalDay}
+                />
+              </View>
+            )}
+
             {/* For You */}
             {forYouEvents.length > 0 && (
               <View style={styles.firstSection}>
@@ -567,7 +618,7 @@ export default function HomeScreen({ navigation }: any) {
               // silent widening — see fetchEvents.
               <EmptyState
                 icon={MapPin}
-                art={artForPlace(activeMetro, activeCity)}
+                art={themedArt(artForPlace(activeMetro, activeCity))}
                 title={locationCopy.emptyTitle}
                 subtitle={locationCopy.emptySubtitle}
                 actionLabel={t('discover.changeLocation')}

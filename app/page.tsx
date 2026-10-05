@@ -15,6 +15,9 @@ import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { getLocationFromVercelHeaders, mapToSupportedLocation } from '@/lib/geolocation'
 import { LocationBannerWrapper } from '@/components/LocationBannerWrapper'
 import { COUNTRY_COOKIE, resolveCountry } from '@/lib/home/country'
+import NationalDayBanner from '@/components/home/NationalDayBanner'
+import { getActiveNationalDay, nationalDayPreviewKey } from '@/lib/nationalDaysServer'
+import { eventMatchesNationalDay } from '@/lib/nationalDays'
 import {
   type HomeEvent,
   DEFAULT_ZONE,
@@ -101,8 +104,13 @@ export default async function HomePage({
 
   // One read for every section: all upcoming events, every country; country
   // and city are applied in memory below.
-  const rawEvents: any[] = isDemoMode() ? (DEMO_EVENTS as any[]) : await getDiscoverEvents({}, 50)
-  const blockedOrganizers = await getBlockedOrganizerIds(user?.id)
+  // The national day (if any) is read alongside: a cached, time-boxed config
+  // read that falls back to the built-in calendar, so it never holds the page.
+  const [rawEvents, blockedOrganizers, nationalDay] = await Promise.all([
+    isDemoMode() ? (DEMO_EVENTS as any[]) : getDiscoverEvents({}, 50),
+    getBlockedOrganizerIds(user?.id),
+    getActiveNationalDay(new Date(), nationalDayPreviewKey(params.nd)),
+  ])
 
   const now = Date.now()
   const upcoming: HomeEvent[] = filterBlockedEvents(rawEvents, blockedOrganizers)
@@ -165,6 +173,15 @@ export default async function HomePage({
   // the events it counted.
   const scopeQs = `country=${country}${active ? `&city=${encodeURIComponent(active.name)}` : ''}`
 
+  // Tagged events for the active national day, in the browsed country. A
+  // low-key day only offers its "See events" button when there are some.
+  const dayActive = nationalDay.active
+  const dayEventCount = dayActive
+    ? filterBlockedEvents(rawEvents, blockedOrganizers).filter(
+        (e: any) => (e.country || 'HT') === country && eventMatchesNationalDay(e, dayActive.day)
+      ).length
+    : 0
+
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       <LiveTicker signals={buildTickerSignals(inCountry, now)} />
@@ -173,6 +190,14 @@ export default async function HomePage({
       <CityRow country={country} cities={cities} active={active?.key ?? null} total={inCountry.length} />
 
       <LocationBannerWrapper userId={user?.id} currentCountry={country} currentCity={profileCity} />
+
+      {dayActive && (
+        <NationalDayBanner
+          active={dayActive}
+          eventCount={dayEventCount}
+          href={`/discover?day=${dayActive.day.key}&country=${country}`}
+        />
+      )}
 
       {isDemoMode() && (
         <div className="bg-white/[0.06]">

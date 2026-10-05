@@ -66,6 +66,7 @@ import { DatePicker, TimePicker } from '@/components/ui/DateTimePickers'
 import { normalizeEventCurrencyForCountry, getAllowedEventCurrencies, type EventCurrency } from '@/lib/currency-policy'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
+import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
 // The sanctioned editorial section heading (font-display, lowercase, italic).
 // Hand-rolled bold sans headings read as off-brand — see EditorialRails.
 import { SectionHeader } from '@/components/ui/EditorialRails'
@@ -497,7 +498,7 @@ export default function EventComposer({
   const { t: tx } = useTranslation('organizer')
   const router = useRouter()
   const { showToast } = useToast()
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
 
   const isEdit = !!event
   const start0 = splitISO(event?.start_datetime)
@@ -712,6 +713,10 @@ export default function EventComposer({
   // edit mode (the hash is write-only), so a blank code on save keeps it.
   const [passwordProtected, setPasswordProtected] = useState(!!event?.is_password_protected)
   const [accessCode, setAccessCode] = useState('')
+  // "Part of Vertières?": offered only while the start date sits in or near a
+  // national day's window (lib/nationalDays). Saved as `national_day`, the
+  // day's eventTag, which the Home banners and rails read.
+  const [nationalDayOn, setNationalDayOn] = useState(!!event?.national_day)
 
   // WHO PAYS THE SERVICE FEE for this event. The default follows the country
   // (Haiti absorbs it into the organizer's proceeds, US/CA/FR adds it on top),
@@ -848,6 +853,7 @@ export default function EventComposer({
     // accessCodeInvalid demand a fresh code before create, instead of silently
     // creating a public event the guest believed was protected.
     if (d.is_password_protected) setPasswordProtected(true)
+    if (d.national_day) setNationalDayOn(true)
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
     // draft is picked up as each tier's fallback in the tier mapping above.
@@ -949,6 +955,8 @@ export default function EventComposer({
   const endMissing = !endDate || !endTime
   const titleInvalid = attempted && title.trim().length < 3
   const startInvalid = attempted && !startDate
+  const eligibleNationalDay = nationalDayForEventDate(startDate || null)
+  const nationalDayLabel = eligibleNationalDay ? nationalDayName(eligibleNationalDay, (i18n.language || 'en').slice(0, 2)) : ''
   const endInvalid = attempted && (endMissing || endBeforeStart)
   const locationInvalid = attempted && needsLocation
 
@@ -1120,6 +1128,9 @@ export default function EventComposer({
       show_guestlist: showGuestlistFor(guestlistVisibility),
       show_on_explore: showOnExplore,
       is_password_protected: passwordProtected,
+      // The national day it is tagged for, or null when the toggle is off or
+      // the date moved out of every window.
+      national_day: nationalDayOn && eligibleNationalDay ? eligibleNationalDay.eventTag : null,
       // Stamped on the event so checkout, the ticket record and the earnings
       // ledger all read the same answer. Free events carry it harmlessly.
       fee_incidence: passFeesToBuyer ? 'buyer' : 'organizer',
@@ -1960,6 +1971,25 @@ export default function EventComposer({
                       defaultValue: 'The end time must be after the start time.',
                     })}
               </p>
+            )}
+
+            {/* National day: one quiet toggle, only when the date is near one. */}
+            {eligibleNationalDay && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] px-4 py-3.5">
+                <span className="min-w-0">
+                  <span className="block text-[15px] text-white/80">
+                    {t('composer.nationalDay.label', { day: nationalDayLabel, defaultValue: 'Part of {{day}}?' })}
+                  </span>
+                  <span className="mt-0.5 block text-[13px] text-white/50">
+                    {t('composer.nationalDay.hint', { day: nationalDayLabel, defaultValue: 'Feature it on the {{day}} banner.' })}
+                  </span>
+                </span>
+                <Toggle
+                  on={nationalDayOn}
+                  onChange={setNationalDayOn}
+                  label={t('composer.nationalDay.label', { day: nationalDayLabel, defaultValue: 'Part of {{day}}?' })}
+                />
+              </div>
             )}
 
             {/* Repeats — create-only. Generates a series of independent events. */}

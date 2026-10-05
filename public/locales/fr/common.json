@@ -734,7 +734,13 @@
       "abroad_link": "Événements haïtiens à l’étranger",
       "abroad_title": "événements haïtiens à l’étranger"
     },
-    "empty": "{{place}} : rien au programme pour l’instant."
+    "empty": "{{place}} : rien au programme pour l’instant.",
+    "nationalDay": {
+      "today": "Aujourd’hui",
+      "tomorrow": "Demain",
+      "in_days": "Dans {{count}} jours",
+      "see_events": "Voir les événements"
+    }
   },
   "resources": {
     "hero_eyebrow": "guides & ressources",
@@ -1425,7 +1431,11 @@
     "tierNameLabel": "Nom",
     "tierPriceLabel": "Prix",
     "tierQtyLabel": "Qté",
-    "endRequired": "Indiquez quand votre événement se termine, pour que les participants sachent combien de temps il dure."
+    "endRequired": "Indiquez quand votre événement se termine, pour que les participants sachent combien de temps il dure.",
+    "nationalDay": {
+      "label": "Un événement pour {{day}} ?",
+      "hint": "Mettez-le en avant sur la bannière {{day}}."
+    }
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",

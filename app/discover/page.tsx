@@ -30,6 +30,9 @@ import {
 import { getDiscoverEvents } from '@/lib/data/events'
 import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
+import { eventMatchesNationalDay, nationalDayText, resolveNationalDays } from '@/lib/nationalDays'
+import { getNationalDayConfig } from '@/lib/nationalDaysServer'
+import { resolveServerLanguage } from '@/lib/serverT'
 
 // Revalidate every 30 seconds for discover page (frequently updated)
 export const revalidate = 30
@@ -92,6 +95,18 @@ export default async function DiscoverPage({
 
   // Apply filters and sort
   let filteredEvents = applyFiltersAndSort(allEvents, filters)
+
+  // ?day=vertieres: the events organizers tagged for a national day (the
+  // homepage banner's "See events"). An unknown or disabled key filters
+  // nothing, so a stale link still lands on the normal feed.
+  const dayParam = typeof params.day === 'string' ? params.day : ''
+  const nationalDay = dayParam
+    ? resolveNationalDays(await getNationalDayConfig()).find((d) => d.key === dayParam) ?? null
+    : null
+  if (nationalDay) {
+    filteredEvents = filteredEvents.filter((e: any) => eventMatchesNationalDay(e, nationalDay))
+  }
+  const nationalDayTitle = nationalDay ? nationalDayText(nationalDay, await resolveServerLanguage()).title : ''
 
   // Filter out events that have definitively ended
   // Be lenient: show events that are ongoing or haven't started yet
@@ -184,7 +199,8 @@ export default async function DiscoverPage({
     ? filterEventsByLocation(allEvents, filters.city, filters.commune).filter(notDefinitelyEnded)
     : []
 
-  const hasActiveFilters: boolean = filters.date !== 'any' || 
+  const hasActiveFilters: boolean = !!nationalDay ||
+                          filters.date !== 'any' || 
                           filters.city !== '' || 
                           filters.categories.length > 0 || 
                           filters.price !== 'any' || 
@@ -234,6 +250,12 @@ export default async function DiscoverPage({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {nationalDay && (
+          // The national day this list is for, named in the editorial voice.
+          <h1 className="mb-6 font-display lowercase italic !text-[clamp(28px,4.4vw,44px)] !leading-[1.02] text-white/90">
+            {nationalDayTitle}
+          </h1>
+        )}
         <Suspense fallback={<DiscoverContentSkeleton />}>
           <DiscoverPageContent
             hasActiveFilters={hasActiveFilters}

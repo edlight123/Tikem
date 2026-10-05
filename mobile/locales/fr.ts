@@ -610,6 +610,14 @@ export default {
     },
   },
   home: {
+    nationalDay: {
+      today: "Aujourd'hui",
+      tomorrow: 'Demain',
+      inDays: 'Dans {count} jours',
+      seeEvents: 'Voir les événements',
+      dismiss: 'Masquer cette bannière',
+      nearYou: '{day} près de chez vous',
+    },
     discoverMoreTitle: 'découvrir plus',
     worlds: {
       title: 'univers',
@@ -2214,6 +2222,10 @@ export default {
           'Attention : cet événement se tient en {event}, mais votre compte de paiement connecté est enregistré en {account}. Vous serez quand même payé — sur ce compte, dans sa devise, après conversion. Un versement local en {event} exigerait un compte connecté distinct, que Tikèm ne prend pas encore en charge.',
       },
     canvas: {
+      nationalDay: {
+        label: 'Un événement pour {day} ?',
+        hint: 'Mettez-le en avant sur la bannière {day}.',
+      },
       flyerTitle: 'Concevez votre page d’événement',
       uploadFlyer: 'Ajouter une affiche',
       changeFlyer: 'Changer l’affiche',

@@ -144,6 +144,12 @@ export interface CreateEventData {
   /** Legacy boolean, derived from guestlist_visibility on write. */
   show_guestlist?: boolean;
   /**
+   * The national day this event is tagged for (a lib/nationalDays eventTag),
+   * or null. Home's banner and rail list events by it. Same field the web
+   * composer writes.
+   */
+  national_day?: string | null;
+  /**
    * Recurring-event cadence (create-only). When set to a real cadence and
    * `recurrence_count > 1`, createEvent generates that many independent event
    * docs one cadence apart, all sharing a `series_id`. Defaults to 'none'.
@@ -408,6 +414,7 @@ function maxPerOrderOf(tier: CreateEventData['ticket_tiers'][number]): number | 
 function webParityFields(eventData: CreateEventData) {
   return {
     is_online: !!eventData.is_online,
+    national_day: eventData.national_day || null,
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),
     ...(eventData.fee_incidence ? { fee_incidence: eventData.fee_incidence } : {}),
     ...(eventData.guestlist ? { guestlist: eventData.guestlist } : {}),
