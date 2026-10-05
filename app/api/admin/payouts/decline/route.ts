@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { findEventEarningsDocInTransaction } from '@/lib/earnings'
 import { requireAdmin } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
@@ -17,6 +18,11 @@ export async function POST(request: NextRequest) {
     // Parse request
     const body = await request.json()
     const { organizerId, payoutId, reason } = body
+    // Cancelling an APPROVED batch is allowed only with an explicit statement
+    // that no money was sent for it: approval is the step before an admin moves
+    // the money by hand, and crediting the ledger back after a transfer that did
+    // go out would let the organizer withdraw the same money again.
+    const confirmNotPaid = body?.confirmNotPaid === true
 
     if (!organizerId || !payoutId || !reason) {
       return adminError('Missing required fields', 400)
@@ -41,8 +47,12 @@ export async function POST(request: NextRequest) {
         return { idempotent: true, payout: { id: payoutDoc.id, ...payoutData } }
       }
 
-      // Concurrency-safe transition: only pending -> cancelled
-      if (payoutData.status !== 'pending') {
+      // Concurrency-safe transitions: pending -> cancelled, and approved ->
+      // cancelled when the admin confirms nothing was paid.
+      if (payoutData.status === 'approved' && !confirmNotPaid) {
+        return { needsConfirmation: true, payout: { id: payoutDoc.id, ...payoutData } }
+      }
+      if (payoutData.status !== 'pending' && payoutData.status !== 'approved') {
         return { conflict: true, payout: { id: payoutDoc.id, ...payoutData } }
       }
 
@@ -56,12 +66,9 @@ export async function POST(request: NextRequest) {
         for (const [eventId, raw] of Object.entries(payoutData.eventAmounts as Record<string, number>)) {
           const amount = Math.max(0, Math.round(Number(raw) || 0))
           if (!amount) continue
-          const snap = await transaction.get(
-            adminDb.collection('event_earnings').where('eventId', '==', eventId).limit(1)
-          )
-          if (snap.empty) throw new Error(`Earnings row for event ${eventId} not found; cannot restore`)
-          const doc = snap.docs[0]
-          credits.push({ ref: doc.ref, withdrawn: Math.max(0, Number(doc.data()?.withdrawnAmount || 0) || 0), amount })
+          const found = await findEventEarningsDocInTransaction(transaction, eventId)
+          if (!found) throw new Error(`Earnings row for event ${eventId} not found; cannot restore`)
+          credits.push({ ref: found.ref, withdrawn: Math.max(0, Number(found.data?.withdrawnAmount || 0) || 0), amount })
         }
       }
 
@@ -81,6 +88,7 @@ export async function POST(request: NextRequest) {
         declineReason: reason,
         updatedAt: now,
         ...(credits.length ? { earningsRestoredAt: now } : {}),
+        ...(payoutData.status === 'approved' ? { cancelledAfterApproval: true, confirmedNotPaidBy: user.id } : {}),
       })
 
       return {
@@ -96,6 +104,14 @@ export async function POST(request: NextRequest) {
         },
       }
     })
+
+    if ((result as any)?.needsConfirmation) {
+      return adminError(
+        'Confirm no money was sent',
+        409,
+        'This payout is approved. Cancel it only if no transfer was made for it, and resend with confirmNotPaid: true — its amounts will be credited back to the organizer.'
+      )
+    }
 
     if ((result as any)?.conflict) {
       return adminError('Invalid payout status transition', 409, `Cannot decline - payout is ${String((result as any)?.payout?.status || '')}`)

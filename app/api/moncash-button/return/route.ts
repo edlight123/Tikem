@@ -555,6 +555,12 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
           attendee_name: attendee?.full_name || attendee?.email || 'Guest',
           // Organizer-facing/event currency
           price_paid: organizerUnitPrice,
+          // WHO paid the platform fee: the organizer. The Haitian rails (MonCash,
+          // MonCash button, SogePay) charge the buyer the face value only — no fee
+          // is added on top (only the Stripe paths price buyer incidence) — so the
+          // fee comes out of the organizer's proceeds. Stamped from the PAYMENT,
+          // never from the event's client-editable fee_incidence setting.
+          fee_incidence: 'organizer',
           currency: eventCurrency,
           original_currency: eventCurrency,
           // settlement-per-event fx rate (HTG per USD for MonCash USD events)
@@ -622,6 +628,12 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
                 status: 'confirmed',
                 ticket_type: selection.tierName || 'General Admission',
                 price_paid: organizerUnitPrice,
+                // WHO paid the platform fee: the organizer. The Haitian rails (MonCash,
+                // MonCash button, SogePay) charge the buyer the face value only — no fee
+                // is added on top (only the Stripe paths price buyer incidence) — so the
+                // fee comes out of the organizer's proceeds. Stamped from the PAYMENT,
+                // never from the event's client-editable fee_incidence setting.
+                fee_incidence: 'organizer',
                 currency: eventCurrency,
                 ...(guestRecipient
                   ? {

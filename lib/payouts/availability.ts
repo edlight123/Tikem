@@ -156,10 +156,27 @@ export function ticketPriceMinor(ticket: any): number {
   return majorToMinor(ticket?.price_paid ?? ticket?.pricePaid)
 }
 
+/**
+ * Who paid the platform fee. 'buyer' is honoured ONLY on the Stripe rails —
+ * the only checkout that prices a fee on top of face value. MonCash, MonCash
+ * button and SogePay charge face value, so a 'buyer' stamp there (which the
+ * MonCash callback used to copy from the client-editable event setting) would
+ * waive a fee nobody paid.
+ */
+const BUYER_FEE_RAILS = new Set(['stripe', 'stripe_connect'])
 function ticketIncidence(ticket: any): 'buyer' | 'organizer' {
-  return String(ticket?.fee_incidence ?? ticket?.feeIncidence ?? '').toLowerCase() === 'buyer'
-    ? 'buyer'
-    : 'organizer'
+  const stamped = String(ticket?.fee_incidence ?? ticket?.feeIncidence ?? '').toLowerCase()
+  const rail = String(ticket?.payment_method ?? '').toLowerCase().trim()
+  return stamped === 'buyer' && BUYER_FEE_RAILS.has(rail) ? 'buyer' : 'organizer'
+}
+
+/**
+ * The currency a ticket was SOLD in, as the payment path stamped it
+ * (original_currency, else currency). Null when absent.
+ */
+export function ticketSaleCurrency(ticket: any): string | null {
+  const raw = String(ticket?.original_currency ?? ticket?.currency ?? '').trim().toUpperCase()
+  return raw || null
 }
 
 /**
@@ -266,6 +283,15 @@ export type EventAvailabilityInput = {
     withdrawnMinor: number
     /** Stored row is in another currency than the event: hold everything. */
     currencyBlocked?: boolean
+    /**
+     * The server-written running gross (event_earnings.grossSales), event
+     * currency minor units, refund-inclusive. A defence-in-depth CAP: the
+     * ticket-derived gross may never exceed what the payment paths recorded.
+     * Undefined/null when the row has no such figure.
+     */
+    grossMinor?: number | null
+    /** lib/events/cancel.ts stamped the ledger: the event was cancelled server-side. */
+    cancelled?: boolean
   } | null
   /** All of this organizer's batch payouts; ones for other events are ignored. */
   batchPayouts?: BatchPayout[]
@@ -279,6 +305,8 @@ export type AvailabilityReason =
   | 'payouts_frozen'
   | 'event_cancelled'
   | 'earnings_currency_review'
+  | 'ticket_currency_review'
+  | 'ledger_gross_exceeded'
   | 'payout_under_review'
   | 'release_unknown'
   | 'nothing_owed'
@@ -338,6 +366,11 @@ export type EventAvailability = {
 
   /** What decideRelease() was given, for the gate to be called identically. */
   gateInputs: { grossMinor: number; refundedMinor: number; availableMinor: number }
+  /**
+   * The event end the hold counted from (ISO), see effective end above. Callers
+   * hand it to the gate as end_datetime so both judge the same moment.
+   */
+  effectiveEndsAt: string | null
 }
 
 // ── The function ────────────────────────────────────────────────────────────
@@ -376,10 +409,27 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   let ticketsSold = 0
   const unpaid: Array<{ id: string; at: Date | null }> = []
 
+  const eventCurrencyCode = currency
+  let currencyMismatchTickets = 0
+  // The latest moment any ticket says the event runs to (server-stamped at
+  // purchase: end/start of the event as sold, and the purchase itself).
+  let latestTicketMoment: Date | null = null
+  const later = (d: Date | null) => {
+    if (d && (!latestTicketMoment || d.getTime() > latestTicketMoment.getTime())) latestTicketMoment = d
+  }
+
   for (const ticket of input.tickets || []) {
     if (!ticket) continue
     const id = String(ticket.id || '')
     const price = ticketPriceMinor(ticket)
+
+    // A paid ticket must have been SOLD in the event's currency. The event doc
+    // is organizer-editable; the ticket's currency was stamped by the payment
+    // path. Missing or different → the whole event goes to review.
+    if (price > 0 && ticketSaleCurrency(ticket) !== eventCurrencyCode) currencyMismatchTickets += 1
+    later(toDateOrNull(ticket.end_datetime))
+    later(toDateOrNull(ticket.start_datetime ?? ticket.event_date))
+    later(ticketPurchasedAt(ticket))
 
     if (isRefundedTicket(ticket)) {
       if (!isStripeConnectTicket(ticket)) {
@@ -497,12 +547,23 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     gateInputs,
   }
 
-  const endsAt = eventEndsAt(event)
+  /**
+   * The event end the HOLD counts from: the later of the event doc's end (which
+   * the organizer can edit) and everything the tickets — server-written and
+   * client-immutable — say about it: the end and start stamped at purchase, and
+   * the purchase time itself (an event cannot have ended before its tickets
+   * were sold). Moving end_datetime earlier therefore cannot release money
+   * early; postponing it still delays. No event end at all → no_end_date.
+   */
+  const docEnd = eventEndsAt(event)
+  const latest = latestTicketMoment as Date | null
+  const endsAt = docEnd && latest && latest.getTime() > docEnd.getTime() ? latest : docEnd
   const held = (
     reason: AvailabilityReason,
     extra: Partial<Pick<EventAvailability, 'tier' | 'holdHours' | 'availableAt' | 'reviewStatus'>> = {}
   ): EventAvailability => ({
     ...base,
+    effectiveEndsAt: endsAt ? endsAt.toISOString() : null,
     availableNowMinor: 0,
     pendingMinor: balanceMinor,
     releasedNow: false,
@@ -515,8 +576,23 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
 
   // ── hard stops, before any ladder ────────────────────────────────────────
   if (event.payouts_frozen === true) return held('payouts_frozen')
-  if (String(event.status || '') === 'cancelled') return held('event_cancelled')
+  if (String(event.status || '') === 'cancelled' || input.ledger?.cancelled) return held('event_cancelled')
   if (input.ledger?.currencyBlocked) return held('earnings_currency_review')
+  if (currencyMismatchTickets > 0) return held('ticket_currency_review')
+  const ledgerGross = input.ledger?.grossMinor
+  if (typeof ledgerGross === 'number' && Number.isFinite(ledgerGross) && ledgerGross >= 0) {
+    // Paid, un-refunded Tikèm-held money per the tickets (refunds in flight
+    // included) vs the server's running gross, which only ever grows.
+    const ticketGross = Math.max(0, grossMinor - refundedMinor) + refundInFlightMinor
+    if (ticketGross > Math.round(ledgerGross)) {
+      console.warn('[payouts/availability] ticket gross exceeds ledger gross; holding for review', {
+        eventId,
+        ticketGross,
+        ledgerGross,
+      })
+      return held('ledger_gross_exceeded')
+    }
+  }
   if (!input.release) return held('release_unknown')
 
   // ── the release ladder, exactly as the gate asks it ──────────────────────
@@ -563,6 +639,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   const availableNowMinor = Math.max(0, Math.min(balanceMinor, decision.releasableMinor))
   return {
     ...base,
+    effectiveEndsAt: endsAt ? endsAt.toISOString() : null,
     availableNowMinor,
     pendingMinor: Math.max(0, balanceMinor - availableNowMinor),
     releasedNow: availableNowMinor > 0,
@@ -664,8 +741,11 @@ export function toEarningsRow(a: EventAvailability, now: Date = new Date()) {
       tier: a.tier ?? 'new',
       reviewStatus: a.reviewStatus,
     },
+    // Any hold that needs the payouts team: screens show "needs review", not 0.
     withdrawalBlocked:
-      a.reason === 'earnings_currency_review' ? { code: 'earnings_currency_review', eventCurrency: a.currency } : null,
+      a.reason === 'earnings_currency_review' || a.reason === 'ticket_currency_review' || a.reason === 'ledger_gross_exceeded'
+        ? { code: a.reason, eventCurrency: a.currency }
+        : null,
   }
 }
 
@@ -726,4 +806,52 @@ export function summaryFromAvailability(
       })
       .sort((a, b) => new Date(b.eventDate || 0).getTime() - new Date(a.eventDate || 0).getTime()),
   }
+}
+
+// ── Hand-off to the withdrawal routes ───────────────────────────────────────
+
+/**
+ * The event as the release gate must judge it: the server-authoritative end
+ * (effectiveEndsAt) and a server-side cancellation, overriding whatever the
+ * organizer-editable event doc says now.
+ */
+export function gateEventData(eventData: any, a: EventAvailability): any {
+  return {
+    ...(eventData || {}),
+    ...(a.effectiveEndsAt ? { end_datetime: a.effectiveEndsAt } : {}),
+    ...(a.reason === 'event_cancelled' ? { status: 'cancelled' } : {}),
+    ...(a.reason === 'payouts_frozen' ? { payouts_frozen: true } : {}),
+  }
+}
+
+/**
+ * Integrity holds that refuse a withdrawal outright (409, for admin review):
+ * the money inputs disagree with what the payment paths recorded.
+ */
+export function integrityRefusal(
+  a: EventAvailability
+): { status: number; body: { error: string; code: string; needsAdminReview: true } } | null {
+  if (a.reason === 'ticket_currency_review') {
+    return {
+      status: 409,
+      body: {
+        error:
+          "This event's ticket sales were recorded in a different currency than the event now shows. The Tikèm payouts team needs to review it before anything can be withdrawn.",
+        code: 'ticket_currency_review',
+        needsAdminReview: true,
+      },
+    }
+  }
+  if (a.reason === 'ledger_gross_exceeded') {
+    return {
+      status: 409,
+      body: {
+        error:
+          "This event's ticket records don't match its payment records. The Tikèm payouts team needs to review it before anything can be withdrawn.",
+        code: 'ledger_gross_exceeded',
+        needsAdminReview: true,
+      },
+    }
+  }
+  return null
 }

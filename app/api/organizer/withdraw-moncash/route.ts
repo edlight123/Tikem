@@ -10,6 +10,7 @@ import {
   withdrawFromEarnings,
 } from '@/lib/earnings'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
+import { gateEventData, integrityRefusal } from '@/lib/payouts/availability'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
@@ -171,6 +172,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // The money inputs disagree with what the payment paths recorded (a ticket
+    // sold in another currency than the event now shows, or more ticket gross
+    // than the server ledger ever booked): refuse for admin review.
+    const integrity = integrityRefusal(availability)
+    if (integrity) {
+      return NextResponse.json(integrity.body, { status: integrity.status })
+    }
+
     // MonCash transfers are executed in HTG. If earnings are in USD, we convert
     // at withdrawal time — and the 1,000 HTG floor is measured on that HTG value.
     const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
@@ -212,7 +221,8 @@ export async function POST(req: NextRequest) {
     const gate = await gateHaitiWithdrawal({
       eventId: String(eventId),
       organizerId: user.id,
-      eventData,
+      // Server-authoritative end and cancellation, not the editable event doc.
+      eventData: gateEventData(eventData, availability),
       grossMinor: availability.gateInputs.grossMinor,
       refundedMinor: availability.gateInputs.refundedMinor,
       currency,

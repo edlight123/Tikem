@@ -8,7 +8,6 @@ import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, guestTicketUrl, isGuestId } from '@/lib/guest/identity'
 import { adminDb } from '@/lib/firebase/admin'
 import { addTicketToEarnings } from '@/lib/earnings'
-import { incidenceForEvent } from '@/lib/checkout/buyer-pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,21 +95,14 @@ export async function GET(request: Request) {
     /**
      * Who paid the platform fee on this sale — stamped on every ticket.
      *
-     * The payout side (lib/firestore/payout.ts) reads `fee_incidence` to decide
-     * whether to deduct the platform fee: under BUYER incidence the fee was
-     * already collected from the buyer on top of face value, so the organizer's
-     * balance is the face value and deducting again charges them twice.
-     *
-     * Only the two Stripe paths were stamping it. MonCash — the live rail in
-     * Haiti — was not, so every MonCash ticket read as organizer-incidence and
-     * had 10% taken off at payout even when the buyer had already paid it. The
-     * flag the payout comment assumed was "stamped per ticket at purchase" was
-     * in fact absent on the primary channel.
+     * The organizer. This rail charges the buyer the face value only (no fee is
+     * added on top; only the Stripe paths price buyer incidence), so the fee
+     * comes out of the organizer's proceeds. It used to be derived from the
+     * EVENT's fee_incidence — a client-editable setting — so an organizer who
+     * flipped it to 'buyer' had MonCash sales read as fee-free at payout while
+     * no buyer ever paid the fee. Stamped from what the payment charged instead.
      */
-    const feeIncidence = incidenceForEvent({
-      country: eventDetails?.country ?? 'HT',
-      fee_incidence: eventDetails?.fee_incidence ?? null,
-    })
+    const feeIncidence = 'organizer' as const
 
     const createdTickets = []
     for (let i = 0; i < quantity; i++) {

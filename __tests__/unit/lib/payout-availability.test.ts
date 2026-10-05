@@ -32,6 +32,7 @@ function ticket(priceMajor: number, over: Record<string, any> = {}) {
     event_id: 'evt1',
     status: 'valid',
     price_paid: priceMajor,
+    currency: 'HTG',
     payment_method: 'moncash',
     payment_id: over.payment_id ?? `pay${seq}`,
     checked_in: true,
@@ -87,7 +88,7 @@ describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => 
     const a = run({
       event: { id: 'evt1', organizer_id: 'org1', currency: 'USD', country: 'HT', status: 'published', end_datetime: endedHoursAgo(200) },
       fee: USD_RULE,
-      tickets: [ticket(100, { payment_method: 'stripe' })], // $100
+      tickets: [ticket(100, { payment_method: 'stripe', currency: 'USD' })], // $100
     })
     expect(a.currency).toBe('USD')
     expect(a.platformFeeMinor).toBe(500)
@@ -95,7 +96,7 @@ describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => 
   })
 
   it('pass-on (buyer incidence, stamped on the ticket): the organizer nets face value', () => {
-    const a = run({ tickets: [ticket(10_000, { fee_incidence: 'buyer' })] })
+    const a = run({ tickets: [ticket(10_000, { fee_incidence: 'buyer', payment_method: 'stripe' })] })
     expect(a.platformFeeMinor).toBe(0)
     expect(a.netMinor).toBe(1_000_000)
   })
@@ -109,7 +110,7 @@ describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => 
   })
 
   it('an order whose tickets disagree takes the fee-bearing reading', () => {
-    const a = run({ tickets: [ticket(1_000, { payment_id: 'p', fee_incidence: 'buyer' }), ticket(1_000, { payment_id: 'p' })] })
+    const a = run({ tickets: [ticket(1_000, { payment_id: 'p', fee_incidence: 'buyer', payment_method: 'stripe' }), ticket(1_000, { payment_id: 'p', payment_method: 'stripe' })] })
     expect(a.platformFeeMinor).toBe(20_000)
   })
 
@@ -341,7 +342,7 @@ describe('per-currency separation', () => {
     const usd = run({
       event: { id: 'evt2', currency: 'USD', end_datetime: endedHoursAgo(200) },
       fee: USD_RULE,
-      tickets: [ticket(50, { event_id: 'evt2', payment_method: 'stripe' })],
+      tickets: [ticket(50, { event_id: 'evt2', payment_method: 'stripe', currency: 'USD' })],
     })
     const totals = summarizeAvailability([usd, htg, run({ tickets: [ticket(100)] })])
     expect(totals.map((t) => t.currency)).toEqual(['HTG', 'USD'])
@@ -367,5 +368,86 @@ describe('the earnings row every screen reads', () => {
     expect(row.settlementStatus).toBe('pending')
     expect(row.release.releasedNow).toBe(false)
     expect(row.settlementReadyDate).toBe(a.availableAt)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Trust boundary: the event doc is organizer-editable; tickets and the ledger
+// are server-written. Money inputs must come from the latter.
+// ---------------------------------------------------------------------------
+import { gateEventData, integrityRefusal } from '@/lib/payouts/availability'
+
+describe('server-authoritative money inputs (S2)', () => {
+  it('event re-labelled HTG → USD after sales: held for review, 0 available (was ~130x)', () => {
+    const a = run({
+      event: { id: 'evt1', currency: 'USD', end_datetime: endedHoursAgo(200) },
+      fee: USD_RULE,
+      tickets: [ticket(1_000)], // sold in HTG
+    })
+    expect(a.reason).toBe('ticket_currency_review')
+    expect(a.availableNowMinor).toBe(0)
+    expect(integrityRefusal(a)?.status).toBe(409)
+    expect(toEarningsRow(a, NOW).withdrawalBlocked).toEqual({ code: 'ticket_currency_review', eventCurrency: 'USD' })
+  })
+
+  it('a paid ticket with no stamped currency: review; free tickets need none', () => {
+    expect(run({ tickets: [ticket(1_000, { currency: undefined })] }).reason).toBe('ticket_currency_review')
+    expect(run({ tickets: [ticket(1_000), ticket(0, { currency: undefined })] }).availableNowMinor).toBe(90_000)
+    // original_currency (the sale currency) wins over a later `currency` label
+    expect(run({ tickets: [ticket(1_000, { currency: 'USD', original_currency: 'HTG' })] }).availableNowMinor).toBe(90_000)
+  })
+
+  it('ticket-derived gross above the server ledger gross: review, 0 available', () => {
+    const tickets = [ticket(1_000), ticket(1_000)]
+    expect(run({ tickets, ledger: { withdrawnMinor: 0, grossMinor: 200_000 } }).availableNowMinor).toBe(180_000)
+    const over = run({ tickets, ledger: { withdrawnMinor: 0, grossMinor: 199_999 } })
+    expect(over.reason).toBe('ledger_gross_exceeded')
+    expect(over.availableNowMinor).toBe(0)
+    expect(integrityRefusal(over)?.body.code).toBe('ledger_gross_exceeded')
+    // Refunded tickets are not counted against the ledger (it never decrements).
+    const refunded = [ticket(1_000), ticket(1_000, { status: 'refunded', refund_status: 'approved' })]
+    expect(run({ tickets: refunded, ledger: { withdrawnMinor: 0, grossMinor: 200_000 } }).availableNowMinor).toBe(90_000)
+    // No recorded gross → no cap (rows without the figure, events with no row).
+    expect(run({ tickets, ledger: { withdrawnMinor: 0, grossMinor: null } }).availableNowMinor).toBe(180_000)
+  })
+
+  it('moving end_datetime earlier cannot release early: the hold counts from the stamped end / last purchase', () => {
+    const soldFor = endedHoursAgo(10) // the end buyers were sold
+    const a = run({
+      history: NEW_ORG,
+      event: { id: 'evt1', currency: 'HTG', end_datetime: endedHoursAgo(500) }, // edited to look long over
+      tickets: [ticket(1_000, { end_datetime: soldFor })],
+    })
+    expect(a.availableNowMinor).toBe(0)
+    expect(a.reason).toBe('hold_72h')
+    expect(a.effectiveEndsAt).toBe(soldFor)
+    expect(gateEventData({ end_datetime: endedHoursAgo(500), title: 'x' }, a).end_datetime).toBe(soldFor)
+
+    const lastSale = run({
+      history: NEW_ORG,
+      event: { id: 'evt1', currency: 'HTG', end_datetime: endedHoursAgo(500) },
+      tickets: [ticket(1_000, { purchased_at: endedHoursAgo(5) })],
+    })
+    expect(lastSale.availableNowMinor).toBe(0)
+
+    // Postponing still delays (the later of the two wins).
+    const postponed = run({
+      event: { id: 'evt1', currency: 'HTG', end_datetime: endedHoursAgo(-24) },
+      tickets: [ticket(1_000, { end_datetime: endedHoursAgo(200) })],
+    })
+    expect(postponed.reason).toBe('event_not_over')
+  })
+
+  it('a "buyer" stamp on a MonCash/SogePay ticket does not waive the fee (only Stripe prices it on top)', () => {
+    expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'moncash' })] }).platformFeeMinor).toBe(10_000)
+    expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'sogepay' })] }).platformFeeMinor).toBe(10_000)
+    expect(run({ tickets: [ticket(1_000, { fee_incidence: 'buyer', payment_method: 'stripe' })] }).platformFeeMinor).toBe(0)
+  })
+
+  it('a server-side cancellation on the ledger holds everything even if the event doc was "un-cancelled"', () => {
+    const a = run({ tickets: [ticket(1_000)], ledger: { withdrawnMinor: 0, cancelled: true } })
+    expect(a.reason).toBe('event_cancelled')
+    expect(a.availableNowMinor).toBe(0)
+    expect(gateEventData({ status: 'published' }, a).status).toBe('cancelled')
   })
 })

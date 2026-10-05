@@ -57,6 +57,10 @@ function docRef(name: string, id?: string): any {
     get: async () => snapOf(name, docId),
     set: async (data: any, opts?: any) => writeDoc(name, docId, data, opts),
     update: async (patch: any) => updateDoc(name, docId, patch),
+    create: async (data: any) => {
+      if (coll(name)[docId] !== undefined) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 })
+      writeDoc(name, docId, data)
+    },
     // Subcollections (organizers/{id}/payouts) are flat collections named by path.
     collection: (sub: string) => ({
       doc: (subId?: string) => docRef(`${name}/${docId}/${sub}`, subId),
@@ -260,13 +264,18 @@ const USD_MIN = Math.ceil(MIN / USD_TO_HTG) // 770 cents = $7.70 → 1,001 HTG
  * row is backed by a sale that nets exactly that amount: buyer incidence (the
  * fee was paid on top, so net = face), checked in by scan.
  */
+/** The seeded event's currency — backing tickets are sold in it. */
+let currentCurrency = 'HTG'
 function backingTicket(netMinor: number, over: Record<string, any> = {}) {
   return {
     event_id: 'evt1',
+    currency: (over as any).currency ?? currentCurrency,
     status: 'valid',
     price_paid: netMinor / 100,
     fee_incidence: 'buyer',
-    payment_method: 'moncash',
+    // Buyer incidence exists only on the Stripe rails (the Haitian rails charge
+    // face value), so the backing sale is a card sale in the event currency.
+    payment_method: 'stripe',
     payment_id: 'pay_backing',
     checked_in: true,
     check_in_method: 'scan',
@@ -286,6 +295,7 @@ function seed(
   } = {}
 ) {
   for (const k of Object.keys(db)) delete db[k]
+  currentCurrency = opts.currency || 'HTG'
   const ended = '2026-09-01T23:00:00.000Z'
   const currency = opts.currency || 'HTG'
   coll('events').evt1 = { organizer_id: 'org1', title: 'Konpa Night', currency, country: 'HT', end_datetime: ended, status: 'published' }
@@ -675,6 +685,61 @@ describe('display and validation agree (lib/payouts/availability.ts)', () => {
     await withdraw(post(body(EXPECTED)))
     expect(gateMock).toHaveBeenCalledWith(
       expect.objectContaining({ grossMinor: 1_300_000, refundedMinor: 200_000, availableMinor: EXPECTED, requestedAmountMinor: EXPECTED })
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// F1: the first withdrawal on an event with NO ledger row creates exactly one
+// ---------------------------------------------------------------------------
+describe('concurrent first withdrawals (no event_earnings row yet)', () => {
+  it.each([[true], [false]])('one row is created, one withdrawal succeeds, one debit (instant=%s)', async (instant) => {
+    seed({ net: 150_000, instant })
+    delete coll('event_earnings').earn1 // legacy event: sales only in tickets
+    const [a, b] = await Promise.all([withdraw(post(body(MIN))), withdraw(post(body(MIN)))])
+    expect([a.status, b.status].sort()).toEqual([200, 409])
+    const rows = Object.entries(coll('event_earnings'))
+    expect(rows).toHaveLength(1)
+    expect(rows[0][0]).toBe('evt1') // deterministic id
+    expect((rows[0][1] as any).withdrawnAmount).toBe(MIN)
+    // Seeded from the tickets, so history is kept and the cap is armed.
+    expect(rows[0][1]).toMatchObject({ grossSales: 150_000, seededFromTickets: true, grossSalesComplete: true })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// S2: money inputs come from server-written records, not the editable event
+// ---------------------------------------------------------------------------
+describe('route refuses integrity-flagged events', () => {
+  it.each([[true], [false]])('event re-labelled to another currency than its tickets: 409, nothing moves (instant=%s)', async (instant) => {
+    seed({ net: 300_000, instant })
+    coll('tickets').t0.currency = 'USD' // sold in USD, event says HTG
+    const before = moneyFields(earnings())
+    const res = await withdraw(post(body(MIN)))
+    expect(res.status).toBe(409)
+    expect((await res.json()).code).toBe('ticket_currency_review')
+    expect(withdrawals()).toEqual([])
+    expect(digicel.transfers).toEqual([])
+    expect(moneyFields(earnings())).toEqual(before)
+    const api = await (await eventEarningsApi({} as any, { params: Promise.resolve({ id: 'evt1' }) })).json()
+    expect(api.earnings).toMatchObject({ availableToWithdraw: 0, withdrawalBlocked: { code: 'ticket_currency_review' } })
+  })
+
+  it('ticket gross above a complete ledger gross: 409, nothing moves', async () => {
+    seed({ net: 300_000, earningsDoc: { grossSales: 200_000, grossSalesComplete: true } })
+    const res = await withdraw(post(body(MIN)))
+    expect(res.status).toBe(409)
+    expect((await res.json()).code).toBe('ledger_gross_exceeded')
+    expect(earnings().withdrawnAmount).toBe(0)
+  })
+
+  it('the gate judges the server-stamped end, not an end_datetime moved earlier', async () => {
+    seed({ net: 300_000, instant: false })
+    coll('tickets').t0.end_datetime = '2026-09-30T23:00:00.000Z' // sold for this end
+    coll('events').evt1.end_datetime = '2026-01-01T00:00:00.000Z' // edited afterwards
+    await withdraw(post(body(MIN)))
+    expect(gateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ eventData: expect.objectContaining({ end_datetime: '2026-09-30T23:00:00.000Z' }) })
     )
   })
 })

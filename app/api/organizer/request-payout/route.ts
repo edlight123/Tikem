@@ -4,8 +4,13 @@ import { cookies } from 'next/headers'
 import { getPayoutProfile, getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
 import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
 import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
-import { batchPayoutReserves, normalizeCurrencyCode } from '@/lib/payouts/availability'
-import { getOrCreateEventEarnings, storedEarningsCurrencyMismatch } from '@/lib/earnings'
+import { batchPayoutReserves, gateEventData, integrityRefusal, normalizeCurrencyCode } from '@/lib/payouts/availability'
+import {
+  EARNINGS_CURRENCY_REVIEW_CODE,
+  EARNINGS_CURRENCY_REVIEW_MESSAGE,
+  getOrCreateEventEarnings,
+  storedEarningsCurrencyMismatch,
+} from '@/lib/earnings'
 import { FEE_CONFIG } from '@/types/earnings'
 
 /** Shared with the finance page's button gate (EarningsView) — one threshold. */
@@ -67,6 +72,25 @@ export async function POST(request: NextRequest) {
     // The ONE availability figure, per event.
     const { events, context } = await loadOrganizerAvailability(organizerId)
 
+    // Integrity holds refuse the WHOLE request, explicitly — the same refusals
+    // the per-event MonCash/bank routes give. The shared function already
+    // reports 0 available for such an event, so it could never be paid here;
+    // refusing (rather than quietly batching the organizer's other events)
+    // keeps the flagged event in front of the payouts team.
+    for (const e of events) {
+      if (getRequiredPayoutProfileIdForEventCountry(e.country) !== 'haiti') continue
+      if (e.reason === EARNINGS_CURRENCY_REVIEW_CODE) {
+        return NextResponse.json(
+          { error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true, eventId: e.eventId },
+          { status: 409 }
+        )
+      }
+      const integrity = integrityRefusal(e)
+      if (integrity) {
+        return NextResponse.json({ ...integrity.body, eventId: e.eventId }, { status: integrity.status })
+      }
+    }
+
     // This is the Haiti rail (MonCash / Haitian bank). Stripe Connect markets
     // are paid by Stripe and never batched here.
     const eligible = events.filter(
@@ -127,7 +151,7 @@ export async function POST(request: NextRequest) {
       const gate = await gateHaitiWithdrawal({
         eventId: e.eventId,
         organizerId,
-        eventData: e.eventData,
+        eventData: gateEventData(e.eventData, e),
         grossMinor: e.gateInputs.grossMinor,
         refundedMinor: e.gateInputs.refundedMinor,
         currency: e.currency,

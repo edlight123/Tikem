@@ -70,6 +70,10 @@ function docRef(name: string, id?: string): any {
     get: async () => snapOf(name, docId),
     set: async (data: any, opts?: any) => writeDoc(name, docId, data, opts),
     update: async (patch: any) => updateDoc(name, docId, patch),
+    create: async (data: any) => {
+      if (coll(name)[docId] !== undefined) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 })
+      writeDoc(name, docId, data)
+    },
     // Subcollections (organizers/{id}/payouts) are flat collections named by path.
     collection: (sub: string) => ({
       doc: (subId?: string) => docRef(`${name}/${docId}/${sub}`, subId),
@@ -263,13 +267,18 @@ const NET = 100_000 // 1,000.00 HTG available
  * row is backed by a sale that nets exactly that amount: buyer incidence (the
  * fee was paid on top, so net = face), checked in by scan.
  */
+/** The seeded event's currency — backing tickets are sold in it. */
+let currentCurrency = 'HTG'
 function backingTicket(netMinor: number, over: Record<string, any> = {}) {
   return {
     event_id: 'evt1',
+    currency: (over as any).currency ?? currentCurrency,
     status: 'valid',
     price_paid: netMinor / 100,
     fee_incidence: 'buyer',
-    payment_method: 'moncash',
+    // Buyer incidence exists only on the Stripe rails (the Haitian rails charge
+    // face value), so the backing sale is a card sale in the event currency.
+    payment_method: 'stripe',
     payment_id: 'pay_backing',
     checked_in: true,
     check_in_method: 'scan',
@@ -279,6 +288,7 @@ function backingTicket(netMinor: number, over: Record<string, any> = {}) {
 
 function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: string; enabled?: boolean; available?: boolean; optedIn?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
+  currentCurrency = opts.currency || 'HTG'
   const ended = '2026-09-01T23:00:00.000Z'
   coll('events').evt1 = { organizer_id: 'org1', title: 'Konpa Night', currency: opts.currency || 'HTG', country: 'HT', end_datetime: ended, status: 'published' }
   coll('event_earnings').earn1 = {

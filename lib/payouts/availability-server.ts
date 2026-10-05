@@ -119,9 +119,12 @@ export async function loadEventAvailability(args: {
       ? args.context
       : await loadOrganizerAvailabilityContext(organizerId, now)
 
-  const [ticketsSnap, earningsDoc, promoterCommissionMinor, reviewSnap] = await Promise.all([
+  const [ticketsSnap, earningsDoc, canonicalSnap, promoterCommissionMinor, reviewSnap] = await Promise.all([
     adminDb.collection('tickets').where('event_id', '==', eventId).get(),
     findEventEarningsDoc(eventId),
+    // lib/events/cancel.ts stamps event_earnings/{eventId}; on events whose
+    // ledger row has a random id that stamp lives on a second doc. Read it too.
+    adminDb.collection('event_earnings').doc(eventId).get(),
     // No fallbacks: a commission or review lookup that fails must fail the
     // whole figure, never quietly report the promoter's money or a held event
     // as the organizer's to take.
@@ -130,6 +133,17 @@ export async function loadEventAvailability(args: {
   ])
 
   const earnings = earningsDoc ? ((earningsDoc.data() as any) || {}) : null
+  const canonical = canonicalSnap?.exists ? ((canonicalSnap.data() as any) || {}) : null
+  const cancelledStamp = (row: any) =>
+    Boolean(row && (String(row.settlementStatus || '') === 'cancelled' || row.cancelledAt))
+  // The running gross caps the ticket-derived figure only on rows known to
+  // cover every sale (grossSalesComplete, stamped at row creation). Older rows
+  // — created after an event had already sold, or before the flag existed —
+  // would put honest events in review, so they carry no cap until backfilled.
+  const ledgerGross =
+    earnings != null && earnings.grossSalesComplete === true && earnings.grossSales != null
+      ? Number(earnings.grossSales)
+      : null
   const currency = normalizeCurrencyCode(eventData?.currency)
   const reviewStatus = reviewSnap?.exists ? String((reviewSnap.data() as any)?.status || '') || null : null
 
@@ -142,8 +156,12 @@ export async function loadEventAvailability(args: {
       ? {
           withdrawnMinor: Number(earnings.withdrawnAmount || 0) || 0,
           currencyBlocked: Boolean(storedEarningsCurrencyMismatch(earnings.currency, eventData?.currency)),
+          grossMinor: ledgerGross !== null && Number.isFinite(ledgerGross) ? ledgerGross : null,
+          cancelled: cancelledStamp(earnings) || cancelledStamp(canonical),
         }
-      : null,
+      : cancelledStamp(canonical)
+        ? { withdrawnMinor: 0, cancelled: true }
+        : null,
     batchPayouts: context.batchPayouts,
     release: {
       history: historyFor(context.releaseContext, eventId, currency),

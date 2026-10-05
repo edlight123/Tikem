@@ -8,6 +8,7 @@ import {
   withdrawFromEarnings,
 } from '@/lib/earnings'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
+import { gateEventData, integrityRefusal } from '@/lib/payouts/availability'
 import {
   addSecondaryBankDestination,
   getDecryptedBankDestination,
@@ -130,6 +131,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // The money inputs disagree with what the payment paths recorded (a ticket
+    // sold in another currency than the event now shows, or more ticket gross
+    // than the server ledger ever booked): refuse for admin review.
+    const integrity = integrityRefusal(availability)
+    if (integrity) {
+      return NextResponse.json(integrity.body, { status: integrity.status })
+    }
+
     // Owed and unpaid, in cents, regardless of timing; the gate below decides when.
     const availableBalance = availability.balanceMinor
     if (amount > availableBalance) {
@@ -155,7 +164,8 @@ export async function POST(req: NextRequest) {
     const gate = await gateHaitiWithdrawal({
       eventId: String(eventId),
       organizerId: user.id,
-      eventData,
+      // Server-authoritative end and cancellation, not the editable event doc.
+      eventData: gateEventData(eventData, availability),
       grossMinor: availability.gateInputs.grossMinor,
       refundedMinor: availability.gateInputs.refundedMinor,
       currency: availability.currency,

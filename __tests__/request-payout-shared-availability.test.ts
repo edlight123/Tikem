@@ -34,6 +34,10 @@ function docRef(name: string, id?: string): any {
       if (coll(name)[docId] === undefined) throw new Error(`NOT_FOUND ${name}/${docId}`)
       coll(name)[docId] = { ...coll(name)[docId], ...clone(patch) }
     },
+    create: async (data: any) => {
+      if (coll(name)[docId] !== undefined) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 })
+      coll(name)[docId] = clone(data)
+    },
     collection: (sub: string) => collectionApi(`${name}/${docId}/${sub}`),
   }
 }
@@ -113,11 +117,15 @@ const ENDED = { _seconds: Date.parse('2026-09-01T23:00:00.000Z') / 1000, _nanose
 
 let tid = 0
 function sell(eventId: string, priceMajor: number, over: Record<string, any> = {}) {
+  // Once a ledger row exists, a real sale also books it (addTicketToEarnings).
+  const row = Object.values(coll('event_earnings')).find((r: any) => r.eventId === eventId) as any
+  if (row) row.grossSales = (Number(row.grossSales) || 0) + Math.round(priceMajor * 100)
   tid += 1
   coll('tickets')[`t${tid}`] = {
     event_id: eventId,
     status: 'confirmed',
     price_paid: priceMajor,
+    currency: String(coll('events')[eventId]?.currency || 'HTG'),
     payment_method: 'moncash',
     payment_id: `pay${tid}`,
     checked_in: true,
@@ -231,7 +239,8 @@ describe('finance page figures == what the batch request pays', () => {
     expect((await decline()).status).toBe(200)
     expect(ledger('htg1').withdrawnAmount).toBe(0)
     expect(ledger('htg2').withdrawnAmount).toBe(0)
-    expect((await loadEventAvailability({ eventId: 'htg1' }))?.availableNowMinor).toBe(925_000)
+    const back = await loadEventAvailability({ eventId: 'htg1' })
+    expect(back?.availableNowMinor).toBe(925_000)
 
     // Idempotent: a second decline is a no-op, not a second credit.
     expect((await decline()).status).toBe(200)
@@ -255,5 +264,65 @@ describe('finance page figures == what the batch request pays', () => {
     const res = await requestPayout(req())
     expect(res.status).toBe(400)
     expect((await res.json()).message).toMatch(/50\.00 HTG.*9\.00 HTG/)
+  })
+})
+
+describe('admin cancel of a batch payout (F3, F4)', () => {
+  it('credits back a LEGACY ledger row keyed by event_id (the old eventId-only lookup skipped it)', async () => {
+    seed()
+    await requestPayout(req({ currency: 'HTG' }))
+    // Re-key htg1's row the legacy way.
+    const [rowId, row] = Object.entries(coll('event_earnings')).find(([, r]: any) => r.eventId === 'htg1') as any
+    delete coll('event_earnings')[rowId]
+    const legacy = { ...row }
+    delete legacy.eventId
+    legacy.event_id = 'htg1'
+    coll('event_earnings').legacy_row = legacy
+    const [p] = payouts()
+    expect((await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x' }))).status).toBe(200)
+    expect(coll('event_earnings').legacy_row.withdrawnAmount).toBe(0)
+  })
+
+  it('an APPROVED batch can be cancelled only with confirmNotPaid, and is then credited back once', async () => {
+    seed()
+    await requestPayout(req({ currency: 'HTG' }))
+    const [p] = payouts()
+    coll('organizers/org1/payouts')[p.id].status = 'approved'
+
+    const refused = await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x' }))
+    expect(refused.status).toBe(409)
+    expect(ledger('htg1').withdrawnAmount).toBe(925_000)
+
+    const ok = await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x', confirmNotPaid: true }))
+    expect(ok.status).toBe(200)
+    expect(ledger('htg1').withdrawnAmount).toBe(0)
+    expect(coll('organizers/org1/payouts')[p.id]).toMatchObject({ status: 'cancelled', cancelledAfterApproval: true })
+
+    // Completed payouts can never be cancelled.
+    coll('organizers/org1/payouts')[p.id].status = 'completed'
+    expect((await declinePayout(req({ organizerId: 'org1', payoutId: p.id, reason: 'x', confirmNotPaid: true }))).status).toBe(409)
+  })
+})
+
+describe('integrity-flagged events are never paid through the batch', () => {
+  it('a ticket sold in another currency than the event now shows: whole batch refused, nothing debited', async () => {
+    seed()
+    coll('events').htg2.currency = 'USD' // re-labelled after an HTG sale
+    const res = await requestPayout(req({ currency: 'HTG' }))
+    const out = await res.json()
+    expect(res.status).toBe(409)
+    expect(out).toMatchObject({ code: 'ticket_currency_review', eventId: 'htg2', needsAdminReview: true })
+    expect(payouts()).toEqual([])
+    expect(Object.keys(coll('event_earnings'))).toEqual([])
+  })
+
+  it('ticket gross above a complete ledger gross: refused, nothing debited', async () => {
+    seed()
+    coll('event_earnings').htg1 = { eventId: 'htg1', organizerId: 'org1', currency: 'HTG', grossSales: 500_000, grossSalesComplete: true, withdrawnAmount: 0 }
+    const res = await requestPayout(req({ currency: 'HTG' }))
+    expect(res.status).toBe(409)
+    expect((await res.json()).code).toBe('ledger_gross_exceeded')
+    expect(payouts()).toEqual([])
+    expect(coll('event_earnings').htg1.withdrawnAmount).toBe(0)
   })
 })

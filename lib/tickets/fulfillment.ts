@@ -274,6 +274,12 @@ export async function fulfillPaidOrder(params: {
         attendee_id: pendingTx.user_id,
         attendee_name: attendee?.full_name || attendee?.email || 'Guest',
         price_paid: organizerUnitPrice,
+        // WHO paid the platform fee: the organizer. The Haitian rails (MonCash,
+        // MonCash button, SogePay) charge the buyer the face value only — no fee
+        // is added on top (only the Stripe paths price buyer incidence) — so the
+        // fee comes out of the organizer's proceeds. Stamped from the PAYMENT,
+        // never from the event's client-editable fee_incidence setting.
+        fee_incidence: 'organizer',
         currency: eventCurrency,
         original_currency: eventCurrency,
         exchange_rate_used: fxRate,
@@ -343,6 +349,12 @@ export async function fulfillPaidOrder(params: {
               ticket_type: selection.tierName || 'General Admission',
               tier_id: selection.tierId || '',
               price_paid: organizerUnitPrice,
+              // WHO paid the platform fee: the organizer. The Haitian rails (MonCash,
+              // MonCash button, SogePay) charge the buyer the face value only — no fee
+              // is added on top (only the Stripe paths price buyer incidence) — so the
+              // fee comes out of the organizer's proceeds. Stamped from the PAYMENT,
+              // never from the event's client-editable fee_incidence setting.
+              fee_incidence: 'organizer',
               currency: eventCurrency,
               ...(guestRecipient
                 ? {

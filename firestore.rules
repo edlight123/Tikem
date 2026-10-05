@@ -165,6 +165,24 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Sign-in methods remote switch: { phone_whatsapp: bool }. The app reads it
+    // signed out (on the login screen) to decide whether to offer phone sign-in,
+    // so it is public. ONLY this doc, same as national_days above.
+    match /config/auth {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Phone one-time codes (hashed) and their rate-limit counters. Server-only
+    // (Admin SDK in app/api/auth/phone/*); explicit here so nobody "opens" them
+    // by accident when editing the default deny.
+    match /phone_otp/{id} {
+      allow read, write: if false;
+    }
+    match /phone_otp_rate/{id} {
+      allow read, write: if false;
+    }
+
     // Connections (friendships) - one document per user pair.
     // Participants may read; all writes go through server APIs (Admin SDK),
     // so client writes are disabled.
@@ -208,6 +226,22 @@ service cloud.firestore {
           // Auto-hide after repeated reports (lib/moderation/reports.ts) is
           // likewise admin-only: an organizer must not un-hide their own event.
           request.resource.data.get('hidden_pending_review', false) == resource.data.get('hidden_pending_review', false) &&
+          // Payout safety (lib/payouts/availability.ts): a cancellation and its
+          // payout freeze are set by lib/events/cancel.ts on the Admin SDK and
+          // must not be undone from a client — un-cancelling would re-open money
+          // that is owed back to buyers.
+          request.resource.data.get('payouts_frozen', false) == resource.data.get('payouts_frozen', false) &&
+          (resource.data.get('status', '') != 'cancelled' || request.resource.data.get('status', '') == 'cancelled') &&
+          // Once tickets have sold, the currency and country they were sold in
+          // are fixed: re-labelling HTG takings as USD would value them ~130x.
+          // tickets_sold is written only by the Admin SDK (H2 below).
+          (
+            resource.data.get('tickets_sold', 0) == 0 ||
+            (
+              request.resource.data.get('currency', null) == resource.data.get('currency', null) &&
+              request.resource.data.get('country', null) == resource.data.get('country', null)
+            )
+          ) &&
           // is_published may only travel DOWNWARDS from a client: leave it alone,
           // or turn it off. Turning it ON means money can be taken, and whether
           // that is safe depends on the organizer's payout account — a question
@@ -314,26 +348,29 @@ service cloud.firestore {
       // reservation, so it oversold.
       allow create: if false;
 
-      // Only allow event owners full control; staff may only update check-in related fields.
-      allow update: if isSignedIn() && (
-        isEventOwner(ticketEventId()) ||
-        (
-          canCheckin(ticketEventId()) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'checked_in',
-            'checked_in_at',
-            'checked_in_by',
-            'entry_point',
-            // Whether the door SCANNED a QR or a human picked the attendee off a
-            // list. Payout review reads this: a mostly-hand-checked door is a
-            // signal, and without the field the signal cannot exist. Staff must be
-            // able to write it or every staff check-in would be rejected here.
-            'check_in_method',
-            'updated_at',
-            'reentry_override'
-          ])
-        )
-      );
+      // Check-in fields ONLY — for the event owner exactly as for door staff.
+      //
+      // The owner used to have unrestricted update here, so an organizer could
+      // rewrite price_paid, status, fee_incidence, payment_id, refund fields or
+      // payment_method from the client SDK — and the organizer payout balance
+      // (lib/payouts/availability.ts) is computed from those fields. Every
+      // legitimate client ticket write is a check-in (mobile TicketScannerScreen
+      // and EventAttendeesScreen); everything else goes through Admin-SDK routes.
+      // The list is mirrored in __tests__/firestore-rules-ticket-update.test.ts.
+      allow update: if isSignedIn() &&
+        (isEventOwner(ticketEventId()) || canCheckin(ticketEventId())) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'checked_in',
+          'checked_in_at',
+          'checked_in_by',
+          'entry_point',
+          // Whether the door SCANNED a QR or a human picked the attendee off a
+          // list. Payout review reads this: a mostly-hand-checked door is a
+          // signal, and without the field the signal cannot exist.
+          'check_in_method',
+          'updated_at',
+          'reentry_override'
+        ]);
     }
     
     // Ticket tiers - public read, organizers can manage their event's tiers

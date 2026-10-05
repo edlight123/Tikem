@@ -5,6 +5,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { calculateFees, calculateSettlementDate, isSettlementReady, calculateCappedPlatformFee, calculateSettlementDateWithHoldDays } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 import { getEventLocation } from '@/types/platform-settings'
@@ -19,6 +20,10 @@ type FeeIncidence = 'organizer' | 'buyer'
 
 function toDateOrNull(value: any): Date | null {
   if (!value) return null
+  if (typeof value === 'object' && !(value instanceof Date) && typeof value?.toDate !== 'function') {
+    const seconds = value._seconds ?? value.seconds
+    return typeof seconds === 'number' && Number.isFinite(seconds) ? new Date(seconds * 1000) : null
+  }
   const raw = value?.toDate ? value.toDate() : value
   const date = raw instanceof Date ? raw : new Date(raw)
   return isNaN(date.getTime()) ? null : date
@@ -154,6 +159,26 @@ function calculateEventCurrencyFees(options: {
     netAmount,
     absorbedProcessingFee: absorbedProcessingFee + processingFeeEventCents,
   }
+}
+
+/**
+ * findEventEarningsDoc's three-way lookup (eventId field, legacy event_id
+ * field, then doc id), as reads INSIDE a transaction — for the paths that
+ * credit a withdrawal back. A lookup on `eventId` alone silently skipped the
+ * credit for legacy rows.
+ */
+export async function findEventEarningsDocInTransaction(
+  tx: any,
+  eventId: string
+): Promise<{ ref: any; data: any } | null> {
+  const col = adminDb.collection('event_earnings')
+  const byEventId = await tx.get(col.where('eventId', '==', eventId).limit(1))
+  if (!byEventId.empty) return { ref: byEventId.docs[0].ref, data: byEventId.docs[0].data() || {} }
+  const byLegacy = await tx.get(col.where('event_id', '==', eventId).limit(1))
+  if (!byLegacy.empty) return { ref: byLegacy.docs[0].ref, data: byLegacy.docs[0].data() || {} }
+  const byDocId = await tx.get(col.doc(eventId))
+  if (byDocId.exists) return { ref: byDocId.ref || col.doc(eventId), data: byDocId.data() || {} }
+  return null
 }
 
 export async function findEventEarningsDoc(eventId: string) {
@@ -628,6 +653,8 @@ export async function getOrCreateEventEarnings(
 ): Promise<{
   ref: FirebaseFirestore.DocumentReference
   data: EventEarnings | null
+  /** True when THIS call created the row. */
+  created?: boolean
 }> {
   // Find the existing row with the SAME lookup getEventEarnings uses (eventId,
   // then legacy event_id, then doc id). Querying `eventId` alone here used to
@@ -659,7 +686,11 @@ export async function getOrCreateEventEarnings(
   // first withdrawal would replace a real history with zeros on every screen.
   const seed = opts?.seedFromTickets ? await deriveEventEarningsFromTickets(eventId).catch(() => null) : null
 
-  const newEarningsRef = adminDb.collection('event_earnings').doc()
+  // Deterministic id + create(): two first withdrawals (or a withdrawal and a
+  // first sale) racing here used to create TWO random-id rows, each debited
+  // separately — a double withdrawal. create() fails if the doc exists, so the
+  // loser adopts the winner's row and every transaction serializes on one doc.
+  const newEarningsRef = adminDb.collection('event_earnings').doc(eventId)
   const newEarnings: Omit<EventEarnings, 'id'> = {
     eventId,
     organizerId: event.organizer_id,
@@ -669,6 +700,10 @@ export async function getOrCreateEventEarnings(
     processingFees: seed?.processingFees || 0,
     absorbedProcessingFees: seed?.absorbedProcessingFees || 0,
     ...(seed ? { promoterCommission: seed.promoterCommission || 0, seededFromTickets: true } : {}),
+    // grossSales is a payout CAP (lib/payouts/availability.ts) only when it is
+    // known to cover every sale. A seeded row does, as of now; a row created by
+    // the sale path is marked by addTicketToEarnings once it has checked.
+    ...(opts?.seedFromTickets ? { grossSalesComplete: Boolean(seed) } : {}),
     netAmount: seed?.netAmount || 0,
     availableToWithdraw: 0,
     withdrawnAmount: 0,
@@ -680,11 +715,20 @@ export async function getOrCreateEventEarnings(
     updatedAt: new Date().toISOString(),
   }
 
-  await newEarningsRef.set(newEarnings)
+  try {
+    await newEarningsRef.create(newEarnings)
+  } catch (err: any) {
+    const code = err?.code
+    const exists = code === 6 || code === 'already-exists' || /already exists/i.test(String(err?.message || ''))
+    if (!exists) throw err
+    const winner = await newEarningsRef.get()
+    return { ref: newEarningsRef, data: { id: newEarningsRef.id, ...(winner.data() as any) } as EventEarnings }
+  }
 
   return {
     ref: newEarningsRef,
     data: { id: newEarningsRef.id, ...newEarnings },
+    created: true,
   }
 }
 
@@ -722,7 +766,17 @@ export async function addTicketToEarnings(
     promoterCommissionCents?: number
   }
 ): Promise<void> {
-  const { ref, data } = await getOrCreateEventEarnings(eventId)
+  const { ref, data, created } = await getOrCreateEventEarnings(eventId)
+
+  // A row this sale created covers every sale only if no OTHER paid ticket
+  // exists yet (an event that sold before the ledger existed does not). Only
+  // then may its grossSales cap the ticket-derived payout figure.
+  let grossSalesComplete: boolean | undefined
+  if (created) {
+    const paid = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
+    const paidCount = paid.docs.filter((d: any) => Number(d.data()?.price_paid ?? d.data()?.pricePaid ?? 0) > 0).length
+    grossSalesComplete = paidCount <= Math.max(1, Math.floor(Number(quantity) || 1))
+  }
 
   // Get event to determine location and dynamic settings
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
@@ -759,18 +813,23 @@ export async function addTicketToEarnings(
   const promoterCommissionCents = Math.max(0, Math.round(Number(options?.promoterCommissionCents) || 0))
   const netAfterCommission = fees.netAmount - promoterCommissionCents
 
-  // Update earnings
-  const updates: Partial<EventEarnings> = {
-    grossSales: (data?.grossSales || 0) + fees.grossAmount,
-    ticketsSold: (data?.ticketsSold || 0) + quantity,
-    platformFee: (data?.platformFee || 0) + fees.platformFee,
-    processingFees: (data?.processingFees || 0) + fees.processingFee,
-    absorbedProcessingFees: (data?.absorbedProcessingFees || 0) + fees.absorbedProcessingFee,
-    promoterCommission: (data?.promoterCommission || 0) + promoterCommissionCents,
-    netAmount: (data?.netAmount || 0) + netAfterCommission,
-    availableToWithdraw: (data?.availableToWithdraw || 0) + netAfterCommission,
+  // Update earnings — as server-side INCREMENTS. The old read-then-write of
+  // absolute totals lost a sale whenever two fulfilled at once (both read the
+  // same total), and grossSales is now the cap the payout availability checks
+  // ticket-derived gross against (lib/payouts/availability.ts), so a lost
+  // update would hold an honest organizer's money for review.
+  const updates: Record<string, any> = {
+    grossSales: FieldValue.increment(fees.grossAmount),
+    ticketsSold: FieldValue.increment(quantity),
+    platformFee: FieldValue.increment(fees.platformFee),
+    processingFees: FieldValue.increment(fees.processingFee),
+    absorbedProcessingFees: FieldValue.increment(fees.absorbedProcessingFee),
+    promoterCommission: FieldValue.increment(promoterCommissionCents),
+    netAmount: FieldValue.increment(netAfterCommission),
+    availableToWithdraw: FieldValue.increment(netAfterCommission),
     lastCalculatedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    ...(grossSalesComplete !== undefined ? { grossSalesComplete } : {}),
   }
 
   await ref.update(updates)
@@ -778,7 +837,6 @@ export async function addTicketToEarnings(
   console.log(`✅ Updated earnings for event ${eventId}:`, {
     ticketAmount: fees.grossAmount,
     netAdded: fees.netAmount,
-    newTotal: updates.grossSales,
   })
 }
 

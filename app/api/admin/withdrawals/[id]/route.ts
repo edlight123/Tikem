@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isPayeeReasonCode, resolvePayeeReason } from '@/lib/payouts/payee-reasons'
 import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { findEventEarningsDocInTransaction } from '@/lib/earnings'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { notifyWithdrawalOutcome, type WithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
@@ -102,15 +103,12 @@ export async function POST(req: NextRequest) {
         }
 
         const amountInCents = normalizeAmountToCents(withdrawal.amount)
-        const earningsQuery = adminDb
-          .collection('event_earnings')
-          .where('eventId', '==', withdrawal.eventId)
-          .limit(1)
-
-        const earningsSnap = await tx.get(earningsQuery)
-        if (!earningsSnap.empty) {
-          const earningsDoc = earningsSnap.docs[0]
-          const earnings = earningsDoc.data() as any
+        // Same three-way lookup the read path uses — legacy rows keyed by
+        // event_id (or by doc id) used to miss the credit-back silently.
+        const found = await findEventEarningsDocInTransaction(tx, String(withdrawal.eventId))
+        if (found) {
+          const earningsDoc = found
+          const earnings = found.data as any
 
           const available = Number(earnings.availableToWithdraw || 0)
           const withdrawn = Number(earnings.withdrawnAmount || 0)

@@ -26,8 +26,20 @@ jest.mock('@/lib/firebase/admin', () => {
     set: async (data: Doc) => {
       store.set(`${name}/${id}`, { ...(store.get(`${name}/${id}`) || {}), ...data })
     },
+    // FieldValue.increment(n) arrives as a transform carrying `operand`; apply
+    // it to the stored number the way Firestore does (the ledger now increments
+    // rather than writing read-then-computed totals).
     update: async (data: Doc) => {
-      store.set(`${name}/${id}`, { ...(store.get(`${name}/${id}`) || {}), ...data })
+      const cur = { ...(store.get(`${name}/${id}`) || {}) }
+      for (const [k, v] of Object.entries(data)) {
+        const isIncrement = v && typeof v === 'object' && typeof (v as any).operand === 'number'
+        cur[k] = isIncrement ? (Number(cur[k]) || 0) + (v as any).operand : v
+      }
+      store.set(`${name}/${id}`, cur)
+    },
+    create: async (data: Doc) => {
+      if (store.get(`${name}/${id}`)) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 })
+      store.set(`${name}/${id}`, { ...data })
     },
   })
 

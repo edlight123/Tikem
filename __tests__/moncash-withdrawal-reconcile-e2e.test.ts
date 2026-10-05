@@ -62,6 +62,10 @@ function docRef(name: string, id?: string): any {
     get: async () => snapOf(name, docId),
     set: async (data: any, opts?: any) => writeDoc(name, docId, data, opts),
     update: async (patch: any) => updateDoc(name, docId, patch),
+    create: async (data: any) => {
+      if (coll(name)[docId] !== undefined) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 })
+      writeDoc(name, docId, data)
+    },
     collection: (sub: string) => collectionApi(`${name}/${docId}/${sub}`),
   }
 }
@@ -261,13 +265,18 @@ const MIN = 60 * 1000
  * row is backed by a sale that nets exactly that amount: buyer incidence (the
  * fee was paid on top, so net = face), checked in by scan.
  */
+/** The seeded event's currency — backing tickets are sold in it. */
+let currentCurrency = 'HTG'
 function backingTicket(netMinor: number, over: Record<string, any> = {}) {
   return {
     event_id: 'evt1',
+    currency: (over as any).currency ?? currentCurrency,
     status: 'valid',
     price_paid: netMinor / 100,
     fee_incidence: 'buyer',
-    payment_method: 'moncash',
+    // Buyer incidence exists only on the Stripe rails (the Haitian rails charge
+    // face value), so the backing sale is a card sale in the event currency.
+    payment_method: 'stripe',
     payment_id: 'pay_backing',
     checked_in: true,
     check_in_method: 'scan',
@@ -277,6 +286,7 @@ function backingTicket(netMinor: number, over: Record<string, any> = {}) {
 
 function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
+  currentCurrency = 'HTG'
   const ended = '2026-09-01T23:00:00.000Z'
   coll('events').evt1 = { organizer_id: 'org1', title: 'Konpa Night', currency: 'HTG', country: 'HT', end_datetime: ended, status: 'published' }
   coll('event_earnings').earn1 = {
@@ -699,5 +709,25 @@ describe('classifyStatusCheck', () => {
     expect(classifyStatusCheck({ error: new Error('MonCash REST request failed (404): nope') }).verdict).toBe('not_found')
     expect(classifyStatusCheck({ error: new Error('MonCash REST request failed (500): x') }).verdict).toBe('ambiguous')
     expect(classifyStatusCheck({ error: new TypeError('fetch failed') }).verdict).toBe('ambiguous')
+  })
+})
+
+// F3: crediting a rejected withdrawal back must find a LEGACY ledger row
+// (keyed by `event_id`, no `eventId`) — the old eventId-only query skipped it.
+describe('admin reject credits a legacy event_id-keyed ledger row', () => {
+  it('restores withdrawnAmount on the legacy row', async () => {
+    seed()
+    coll('config').payouts = { prefunding: { enabled: false, available: false } }
+    const legacy = { ...earnings() }
+    delete legacy.eventId
+    legacy.event_id = 'evt1'
+    coll('event_earnings').earn1 = legacy
+    const out = await (await withdraw(post({ eventId: 'evt1', amount: NET, moncashNumber: '+509 3700 7294' }))).json()
+    expect(earnings().withdrawnAmount).toBe(NET)
+    session.admin = true
+    const res = await adminPOST(post({ withdrawalId: out.withdrawalId, action: 'reject', payeeReasonCode: 'details_mismatch' }))
+    expect(res.status).toBe(200)
+    expect(earnings().withdrawnAmount).toBe(0)
+    expect(Object.keys(coll('event_earnings'))).toEqual(['earn1'])
   })
 })

@@ -19,6 +19,7 @@
  *    (exactly the `walletDebits` recorded when it was taken).
  */
 import { adminDb } from '@/lib/firebase/admin'
+import { findEventEarningsDocInTransaction } from '@/lib/earnings'
 
 export type FinalizeResult =
   | { changed: true; row: any }
@@ -132,12 +133,10 @@ export async function releaseWithdrawalReservation(
         tx.set(walletRef, { withdrawn_by_currency: next, updated_at: now.toISOString() }, { merge: true })
     } else if (row?.eventId) {
       const amount = Math.max(0, Math.round(Number(row?.reservedCents ?? row?.amount) || 0))
-      const earningsSnap = await tx.get(
-        adminDb.collection('event_earnings').where('eventId', '==', String(row.eventId)).limit(1)
-      )
-      if (!earningsSnap.empty && amount > 0) {
-        const earningsDoc = earningsSnap.docs[0]
-        const e = earningsDoc.data() as any
+      const found = await findEventEarningsDocInTransaction(tx, String(row.eventId))
+      if (found && amount > 0) {
+        const earningsDoc = found
+        const e = found.data as any
         const restoredAvailable = Math.max(0, Number(e?.availableToWithdraw || 0) || 0) + amount
         const restoredWithdrawn = Math.max(0, (Number(e?.withdrawnAmount || 0) || 0) - amount)
         creditWrite = () =>
