@@ -61,7 +61,11 @@ export function safeSameOriginPath(raw: string | null | undefined, origin: strin
     const url = new URL(raw.trim(), base.origin)
     if (url.origin !== base.origin) return '/'
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return '/'
-    return `${url.pathname}${url.search}${url.hash}` || '/'
+    // Dot segments resolve AFTER the origin check: "/.//evil.com" and
+    // "/a/..//evil.com" come back with pathname "//evil.com", which a browser
+    // then follows as protocol-relative. A path may start with one slash only.
+    const path = url.pathname.replace(/^[\/\\]+/, '/')
+    return `${path}${url.search}${url.hash}` || '/'
   } catch {
     return '/'
   }

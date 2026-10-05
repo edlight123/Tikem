@@ -41,3 +41,12 @@ describe('safeSameOriginPath', () => {
     }
   })
 })
+
+describe('dot-segment bypasses', () => {
+  it.each(['/.//evil.com', '/./\\evil.com', '/a/..//evil.com', '/%2e//evil.com'])('%p stays on this site', (raw) => {
+    const out = safeSameOriginPath(raw, 'https://www.tikem.co')
+    expect(out.startsWith('//')).toBe(false)
+    expect(out.startsWith('/\\')).toBe(false)
+    expect(new URL(out, 'https://www.tikem.co').origin).toBe('https://www.tikem.co')
+  })
+})
