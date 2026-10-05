@@ -160,7 +160,7 @@ describe('artForPlace', () => {
     expect(artForPlace(findMetro('Cap-Haïtien', 'HT')).key).toBe('citadelle')
     expect(artForPlace(findMetro('Jacmel', 'HT')).key).toBe('jacmel')
     expect(artForPlace(findMetro('Les Cayes', 'HT')).key).toBe('portsalut')
-    expect(artForPlace(findMetro('Brooklyn', 'US')).key).toBe('diaspora')
+    expect(['diaspora', 'flatbush']).toContain(artForPlace(findMetro('Brooklyn', 'US')).key)
   })
   it('lets the town beat its metro', () => {
     const pap = findMetro('Port-au-Prince', 'HT')
@@ -183,9 +183,14 @@ describe('artForPlace', () => {
   })
   it('gives other Haitian towns the lakou and names no wrong landmark abroad', () => {
     expect(artForPlace(findMetro('Gonaïves', 'HT')).key).toBe('lakou')
-    for (const c of ['Miami, FL', 'Montréal', 'Paris', 'Boston']) {
-      expect(artForPlace(c).place).toBeUndefined()
+    for (const c of ['Atlanta, GA', 'Toronto', 'Chicago']) {
+      expect(artForPlace(c).key).toBe('dyaspora')
     }
+    expect(artForPlace(findMetro('Miami', 'US')).key).toBe('miami')
+    expect(artForPlace(findMetro('Boston', 'US')).key).toBe('boston')
+    expect(artForPlace('Montréal').key).toBe('montreal')
+    expect(artForPlace('Saint-Denis').key).toBe('paris')
+    expect(artForPlace(null, 'Flatbush').key).toBe('flatbush')
     expect(artForPlace(null).key).toBe('citadelle')
     expect(artForPlace('').key).toBe('citadelle')
   })

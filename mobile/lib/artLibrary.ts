@@ -86,6 +86,14 @@ export const ART: ArtPiece[] = [
   { key: 'bassinbleunight', source: require('../assets/art/bassinbleunight.jpg'), alt: 'The turquoise pools of Bassin Bleu glowing in the gorge at night', worlds: ['eksperyans'], place: 'Bassin Bleu · Jacmel' },
   { key: 'lakou',           source: require('../assets/art/lakou.jpg'),           alt: 'A lakou at night with a tap-tap, string lights and the Haitian flag', worlds: ['fanmi'] },
 
+  // Diaspora landmarks: Haitian life in the cities where Tikèm sells abroad.
+  { key: 'miami',    source: require('../assets/art/miami.jpg'),    alt: 'A konpa night at the Caribbean Marketplace in Little Haiti, Miami', worlds: ['lavi-lannwit'], place: 'Little Haiti · Miami' },
+  { key: 'boston',   source: require('../assets/art/boston.jpg'),   alt: 'A Flag Day street party in Mattapan Square, Boston', worlds: ['lavi-lannwit'], place: 'Mattapan · Boston' },
+  { key: 'montreal', source: require('../assets/art/montreal.jpg'), alt: 'A Haitian terrace night in Saint-Michel, Montréal, with the Olympic tower behind', worlds: ['lavi-lannwit'], place: 'Saint-Michel · Montréal' },
+  { key: 'paris',    source: require('../assets/art/paris.jpg'),    alt: 'A konpa night in front of the Basilica of Saint-Denis', worlds: ['mizik'], place: 'Saint-Denis · Paris', scrim: 'strong' },
+  { key: 'flatbush', source: require('../assets/art/flatbush.jpg'), alt: 'A rara band and a giant Haitian flag on Nostrand Avenue, Flatbush', worlds: ['kilti'], place: 'Flatbush · Brooklyn' },
+  { key: 'dyaspora', source: require('../assets/art/dyaspora.jpg'), alt: 'A Haitian block party with a sound system, the flag and griot on the table', worlds: ['fanmi', 'lavi-lannwit'] },
+
   // The original login pieces: general pool only, no world.
   { key: 'art1', source: require('../assets/art/art1.jpg'), alt: 'Jacmel steps at sunset', worlds: [] },
   { key: 'art2', source: require('../assets/art/art2.jpg'), alt: 'A tap-tap at sunset', worlds: [] },
@@ -242,13 +250,13 @@ export function artForPicker(category: string | null | undefined): ArtPiece[] {
  * place elsewhere with none gets PLACE_ART_GENERAL, which names no landmark,
  * so it is never wrong. No place at all keeps the Citadelle.
  *
+ * Anywhere abroad without its own piece gets the dyaspora block party.
+ *
  * STILL WANTED (one line here once the art exists): Gonaïves (Place d'Armes),
- * Saint-Marc, Île-à-Vache, Miami (Little Haiti Cultural Complex), Boston
- * (Mattapan), Montréal (Saint-Michel), Paris (Saint-Denis), Santo Domingo
- * (the Malecón).
+ * Saint-Marc, Île-à-Vache, Santo Domingo (the Malecón), Toronto, Atlanta.
  */
 const PLACE_ART_DEFAULT = 'citadelle';
-const PLACE_ART_GENERAL = 'konpa';
+const PLACE_ART_GENERAL = 'dyaspora';
 const PLACE_ART_HAITI = 'lakou';
 
 // prettier-ignore
@@ -258,7 +266,11 @@ const PLACE_ART_BY_METRO: Record<string, string | string[]> = {
   'ht-jacmel':         'jacmel',
   'ht-les-cayes':      'portsalut',
   'ht-jeremie':        'portsalut',
-  'us-new-york':       'diaspora', // the Brooklyn Bridge
+  'us-new-york':       ['diaspora', 'flatbush'],
+  'us-miami':          'miami',
+  'us-boston':         'boston',
+  'ca-montreal':       'montreal',
+  'fr-paris':          'paris',
 };
 
 // Normalised town names and nicknames. Checked before the metro.
@@ -275,7 +287,12 @@ const PLACE_ART_BY_NAME: Record<string, string | string[]> = {
   'saut d eau': 'sautdeau', 'sodo': 'sautdeau', 'ville bonheur': 'sautdeau', 'mirebalais': 'sautdeau',
   'foret des pins': 'foretdespins', 'fonds verrettes': 'foretdespins',
   'port salut': 'portsalut', 'ile a vache': 'portsalut', 'les cayes': 'portsalut', 'okay': 'portsalut',
-  'new york': 'diaspora', 'nyc': 'diaspora', 'brooklyn': 'diaspora', 'queens': 'diaspora',
+  'new york': ['diaspora', 'flatbush'], 'nyc': ['diaspora', 'flatbush'], 'brooklyn': ['diaspora', 'flatbush'], 'queens': 'diaspora',
+  'flatbush': 'flatbush', 'nostrand': 'flatbush',
+  'miami': 'miami', 'little haiti': 'miami', 'north miami': 'miami',
+  'boston': 'boston', 'mattapan': 'boston',
+  'montreal': 'montreal', 'saint michel': 'montreal', 'st michel': 'montreal',
+  'paris': 'paris', 'saint denis': 'paris',
 };
 
 /** Today as a seed, so a rotating place changes once a day, not per render. */
