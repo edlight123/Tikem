@@ -1,3 +1,4 @@
+import { setOrderProofCookies } from '@/lib/tickets/orderAccess'
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
@@ -118,6 +119,7 @@ export async function GET(request: Request) {
       if (apex && apex.includes('.') && !/localhost/i.test(apex) && !/vercel\.app$/i.test(apex)) {
         response.cookies.set('moncash_button_order_id_domain', orderId, { ...cookieOpts, domain: `.${apex}` })
       }
+      setOrderProofCookies(response, orderId, request.url)
     }
 
     // --- MonCash: standard REST gateway flow (CreatePayment -> redirect) ---

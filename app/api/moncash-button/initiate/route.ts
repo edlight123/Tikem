@@ -1,3 +1,4 @@
+import { setOrderProofCookies } from '@/lib/tickets/orderAccess'
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
@@ -650,6 +651,7 @@ export async function POST(request: Request) {
         maxAge: 60 * 60,
       })
     }
+    setOrderProofCookies(response, orderId, request.url)
     return response
   } catch (error: any) {
     console.error('MonCash Button initiate error:', error)

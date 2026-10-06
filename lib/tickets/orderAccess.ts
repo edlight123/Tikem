@@ -9,16 +9,77 @@
 
 import { getGuestOrderByToken } from '@/lib/guest/identity'
 
-/** Cookie names /api/moncash-button/initiate sets with the order id. */
+import crypto from 'crypto'
+
+/** Cookie names /api/moncash-button/initiate sets with the order id (lookup only). */
 export const ORDER_COOKIE_NAMES = [
   'moncash_button_order_id',
   '__Host-moncash_button_order_id',
   'moncash_button_order_id_domain',
 ] as const
 
-/** The order ids this browser holds, from a Next cookie store. */
+/**
+ * Proof-of-checkout cookies: `${orderId}.${HMAC(secret, orderId)}`. The plain
+ * order-id cookies above only help the return route FIND the order; they prove
+ * nothing, since anyone who learns an order id can set them. Only the server can
+ * mint a valid proof, so only the browser that started the checkout holds one.
+ */
+export const ORDER_PROOF_COOKIE_NAMES = ['moncash_order_proof', 'moncash_order_proof_domain'] as const
+
+function orderProofSecret(): string | null {
+  const s =
+    process.env.ORDER_COOKIE_SECRET ||
+    process.env.TICKET_QR_SECRET ||
+    process.env.TICKET_ID_SECRET ||
+    process.env.STRIPE_WEBHOOK_SECRET ||
+    ''
+  return s ? s : null
+}
+
+function orderProofMac(orderId: string, secret: string): string {
+  return crypto.createHmac('sha256', secret).update(`moncash-order:${orderId}`).digest('hex')
+}
+
+/** The proof cookie value for an order, or null when no secret is configured. */
+export function orderProofValue(orderId: string): string | null {
+  const secret = orderProofSecret()
+  const id = String(orderId || '').trim()
+  if (!secret || !id) return null
+  return `${id}.${orderProofMac(id, secret)}`
+}
+
+/** Set the proof cookies next to the correlation cookies (same options). */
+export function setOrderProofCookies(
+  response: { cookies: { set: (name: string, value: string, opts: Record<string, any>) => void } },
+  orderId: string,
+  requestUrl: string
+): void {
+  const value = orderProofValue(orderId)
+  if (!value) return
+  const opts = { httpOnly: true, sameSite: 'none' as const, secure: true, path: '/', maxAge: 60 * 60 }
+  response.cookies.set('moncash_order_proof', value, opts)
+  const host = new URL(requestUrl).hostname
+  const apex = host.startsWith('www.') ? host.slice(4) : host
+  if (apex && apex.includes('.') && !/localhost/i.test(apex) && !/vercel\.app$/i.test(apex)) {
+    response.cookies.set('moncash_order_proof_domain', value, { ...opts, domain: `.${apex}` })
+  }
+}
+
+/** The order ids this browser can PROVE it started, from a Next cookie store. */
 export function orderIdsFromCookies(store: { get(name: string): { value?: string } | undefined }): string[] {
-  return ORDER_COOKIE_NAMES.map((name) => String(store.get(name)?.value || '').trim()).filter(Boolean)
+  const secret = orderProofSecret()
+  if (!secret) return []
+  const out: string[] = []
+  for (const name of ORDER_PROOF_COOKIE_NAMES) {
+    const raw = String(store.get(name)?.value || '').trim()
+    const dot = raw.lastIndexOf('.')
+    if (dot <= 0) continue
+    const id = raw.slice(0, dot)
+    const mac = Buffer.from(raw.slice(dot + 1), 'utf8')
+    const want = Buffer.from(orderProofMac(id, secret), 'utf8')
+    if (mac.length === want.length && crypto.timingSafeEqual(mac, want) && !out.includes(id)) out.push(id)
+  }
+  return out
 }
 
 /**

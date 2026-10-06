@@ -25,7 +25,7 @@ jest.mock('@/lib/notifications/helpers', () => ({ createNotification: jest.fn(as
 process.env.GUEST_TOKEN_SECRET = process.env.GUEST_TOKEN_SECRET || 'test-guest-secret-for-jest-0123456789'
 
 import { callerOwnsPaymentIntent } from '@/lib/tickets/paymentIntentOwner'
-import { callerHoldsOrder, orderIdsFromCookies, ticketHolderId } from '@/lib/tickets/orderAccess'
+import { callerHoldsOrder, orderIdsFromCookies, orderProofValue, ticketHolderId } from '@/lib/tickets/orderAccess'
 import { guestTokenFor, mintGuestOrderKey } from '@/lib/guest/identity'
 import { isOrganizerBanned, publishBlockReason } from '@/lib/events/publishGuard'
 import { decideRelease } from '@/lib/payouts/release-rules'
@@ -74,9 +74,23 @@ describe('payment return routes: who holds the order', () => {
     expect(callerHoldsOrder({ orderId: '123', order: { user_id: 'guest_abc' }, cookieOrderIds: [] })).toBe(false)
   })
 
-  it('reads every order cookie name', () => {
-    const jar = new Map([['moncash_button_order_id_domain', { value: '42' }]])
-    expect(orderIdsFromCookies({ get: (n: string) => jar.get(n) })).toEqual(['42'])
+  it('trusts only a server-signed proof cookie, never a bare order id', () => {
+    const prev = process.env.ORDER_COOKIE_SECRET
+    process.env.ORDER_COOKIE_SECRET = 'test-secret'
+    try {
+      const signed = orderProofValue('42')!
+      const ok = new Map([['moncash_order_proof_domain', { value: signed }]])
+      expect(orderIdsFromCookies({ get: (n: string) => ok.get(n) })).toEqual(['42'])
+      // A bare order id in the lookup cookie proves nothing.
+      const bare = new Map([['moncash_button_order_id_domain', { value: '42' }]])
+      expect(orderIdsFromCookies({ get: (n: string) => bare.get(n) })).toEqual([])
+      // A forged proof for another order is refused.
+      const forged = new Map([['moncash_order_proof', { value: '43.' + signed.split('.')[1] }]])
+      expect(orderIdsFromCookies({ get: (n: string) => forged.get(n) })).toEqual([])
+    } finally {
+      if (prev === undefined) delete process.env.ORDER_COOKIE_SECRET
+      else process.env.ORDER_COOKIE_SECRET = prev
+    }
   })
 
   it("a ticket's holder is attendee_id, else the legacy user_id", () => {
