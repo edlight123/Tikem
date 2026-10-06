@@ -13,6 +13,7 @@ import { I18nProvider } from './contexts/I18nContext';
 import { AppAlertProvider } from './components/AppAlert';
 import AppNavigator from './navigation/AppNavigator';
 import BootScreen from './components/BootScreen';
+import PhonePromptHost from './components/PhonePromptHost';
 import { refreshFeeConfig } from './lib/feeConfigSync';
 
 export default function App() {
@@ -46,6 +47,9 @@ export default function App() {
                   DARK_COLORS and the app ships a single dark theme. */}
               <AppAlertProvider>
                 <AppNavigator />
+                {/* The "add your number" sheet (lib/phonePrompt.ts). At the root
+                    so it survives the navigation that follows a purchase. */}
+                <PhonePromptHost />
               </AppAlertProvider>
               <StatusBar style="light" />
             </FiltersProvider>

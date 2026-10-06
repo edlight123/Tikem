@@ -47,6 +47,8 @@ export interface UserProfile {
   bio?: string
   socialLinks?: SocialLinks
   privacy?: PrivacySettings
+  /** Appear in "people you may know" / "friends going". Top-level users field; missing = true. */
+  discoverable?: boolean
   defaultCountry?: string
   defaultCity?: string
   subareaType?: 'COMMUNE' | 'NEIGHBORHOOD'
@@ -87,6 +89,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       bio: data.bio || '',
       socialLinks: data.social_links || {},
       privacy: { ...DEFAULT_PRIVACY, ...(data.privacy || {}) },
+      discoverable: data.discoverable !== false,
       defaultCountry: data.default_country || data.defaultCountry || 'HT',
       defaultCity: data.default_city || data.defaultCity || '',
       subareaType: data.subarea_type || data.subareaType || 'COMMUNE',
@@ -174,6 +177,7 @@ export async function updateUserProfile(uid: string, updates: Partial<UserProfil
     if (updates.bio !== undefined) updateData.bio = String(updates.bio).slice(0, 280)
     if (updates.socialLinks !== undefined) updateData.social_links = sanitizeSocialLinks(updates.socialLinks)
     if (updates.privacy !== undefined) updateData.privacy = sanitizePrivacy(updates.privacy)
+    if (typeof updates.discoverable === 'boolean') updateData.discoverable = updates.discoverable
     if (updates.defaultCountry !== undefined) updateData.default_country = updates.defaultCountry
     if (updates.defaultCity !== undefined) updateData.default_city = updates.defaultCity
     if (updates.subareaType !== undefined) updateData.subarea_type = updates.subareaType

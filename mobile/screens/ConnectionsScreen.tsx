@@ -22,6 +22,10 @@ import { useI18n } from '../contexts/I18nContext';
 import ConnectButton from '../components/ConnectButton';
 import VerifiedBadge from '../components/VerifiedBadge';
 import EmptyState from '../components/EmptyState';
+import SectionHeader from '../components/SectionHeader';
+import { suggestionReasonLabel } from '../components/PeopleYouMayKnowRail';
+import { useSocialFlags } from '../lib/socialFlags';
+import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
@@ -29,10 +33,11 @@ import {
   fetchConnections,
   searchUsers,
   matchContacts,
+  fetchFriendSuggestions,
   type ConnectionsOverview,
   type UserSearchResult,
 } from '../lib/api/social';
-import type { PublicUserSummary, FriendshipState, ContactMatch } from '../types/social';
+import type { PublicUserSummary, FriendshipState, ContactMatch, FriendSuggestion } from '../types/social';
 
 type Tab = 'friends' | 'requests' | 'find';
 
@@ -64,6 +69,7 @@ function PersonRow({
   onOpen,
   onChange,
   onRequireAuth,
+  subtitle,
 }: {
   user: PublicUserSummary;
   state: FriendshipState;
@@ -71,6 +77,8 @@ function PersonRow({
   onOpen: (uid: string) => void;
   onChange?: (s: FriendshipState) => void;
   onRequireAuth?: () => void;
+  /** e.g. why a suggestion is shown ("3 mutual friends"). */
+  subtitle?: string;
 }) {
   const styles = getStyles(colors);
   return (
@@ -81,6 +89,11 @@ function PersonRow({
           <Text style={styles.rowName} numberOfLines={1}>
             {user.displayName}
           </Text>
+          {!!subtitle && (
+            <Text style={styles.rowSub} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
           {user.isVerified && <VerifiedBadge size="small" showLabel style={styles.rowVerified} />}
         </View>
       </TouchableOpacity>
@@ -305,6 +318,28 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
   const [contactMatches, setContactMatches] = useState<ContactMatch[] | null>(null);
   const [contactLoading, setContactLoading] = useState(false);
 
+  // People you may know (config/auth.friend_suggestions; enforced server-side too).
+  const flags = useSocialFlags();
+  const [suggestions, setSuggestions] = useState<FriendSuggestion[]>([]);
+  useEffect(() => {
+    if (!flags.friendSuggestions) {
+      setSuggestions([]);
+      return;
+    }
+    let active = true;
+    fetchFriendSuggestions().then((list) => {
+      if (active) setSuggestions(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [flags.friendSuggestions]);
+
+  // With the "add your number" prompt live, contact matching needs a verified
+  // phone first: route through the sheet, then sync once it is linked. With
+  // the prompt off (no WhatsApp provider yet) the old direct flow stays.
+  const needsPhone = usePhonePromptAvailable();
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -355,14 +390,22 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
     }
   }, [t]);
 
+  const startSync = useCallback(() => {
+    if (needsPhone) {
+      requestPhonePrompt({ trigger: 'find_friends', onLinked: () => syncContacts() });
+      return;
+    }
+    syncContacts();
+  }, [needsPhone, syncContacts]);
+
   // Auto-start the sync once when arriving via Discover's "Sync contacts" CTA.
   const didAutoSync = useRef(false);
   useEffect(() => {
     if (autoSync && !didAutoSync.current) {
       didAutoSync.current = true;
-      syncContacts();
+      startSync();
     }
-  }, [autoSync, syncContacts]);
+  }, [autoSync, startSync]);
 
   return (
     <ScrollView
@@ -398,6 +441,27 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
         <Text style={styles.noResults}>{t('connections.find.noResults').replace('{query}', query)}</Text>
       )}
 
+      {suggestions.length > 0 && (
+        <View style={{ marginTop: 20 }}>
+          <SectionHeader title={t('friendSuggestions.title')} />
+          <View style={styles.card}>
+            {suggestions.map((s, i) => (
+              <View key={s.uid} style={i > 0 ? styles.divider : undefined}>
+                <PersonRow
+                  user={s}
+                  state="none"
+                  subtitle={suggestionReasonLabel(t, s)}
+                  colors={colors}
+                  onOpen={onOpen}
+                  onChange={onChange}
+                  onRequireAuth={onRequireAuth}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
       {/* Contact sync */}
       <View style={styles.contactCard}>
         <View style={styles.contactHeader}>
@@ -407,11 +471,11 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
           <View style={{ flex: 1 }}>
             <Text style={styles.contactTitle}>{t('connections.find.contactTitle')}</Text>
             <Text style={styles.contactSub}>
-              {t('connections.find.contactSub')}
+              {needsPhone ? t('friendSuggestions.contactsNeedsPhone') : t('connections.find.contactSub')}
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.syncBtn} onPress={syncContacts} disabled={contactLoading} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.syncBtn} onPress={startSync} disabled={contactLoading} activeOpacity={0.85}>
           {contactLoading ? (
             <ActivityIndicator size="small" color="#000000" />
           ) : (
@@ -547,6 +611,11 @@ const getStyles = (colors: any) =>
     },
     rowVerified: {
       marginTop: 3,
+    },
+    rowSub: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
     },
     sectionLabelRow: {
       flexDirection: 'row',

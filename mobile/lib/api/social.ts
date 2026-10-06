@@ -8,6 +8,8 @@ import { backendFetch } from './backend';
 import type {
   ContactMatch,
   EventSocialAttendance,
+  FriendSuggestion,
+  FriendsGoingResponse,
   FriendshipState,
   PublicUserSummary,
   SocialLinks,
@@ -123,6 +125,8 @@ export interface SocialProfileUpdate {
   bio?: string;
   socialLinks?: SocialLinks;
   privacy?: Partial<PrivacySettings>;
+  /** users/{uid}.discoverable: friend suggestions + "friends going". */
+  discoverable?: boolean;
 }
 
 /** Update social/bio/privacy via the shared profile endpoint (sanitized server-side). */
@@ -155,5 +159,37 @@ export async function fetchFriendsGoingCounts(
     return res.ok && data?.counts ? data.counts : {};
   } catch {
     return {};
+  }
+}
+
+/**
+ * "People you may know" (config/auth.friend_suggestions, enforced server-side).
+ * Empty on any failure, when the flag is off, or when rate-limited.
+ */
+export async function fetchFriendSuggestions(): Promise<FriendSuggestion[]> {
+  try {
+    const res = await backendFetch('/api/connections/suggestions', { method: 'GET' });
+    const data = await readJson(res);
+    return res.ok && data?.enabled === true && Array.isArray(data?.suggestions) ? data.suggestions : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The viewer's own connections going to an event. Never anyone else. */
+export async function fetchFriendsGoing(eventId: string): Promise<FriendsGoingResponse> {
+  const off: FriendsGoingResponse = { enabled: false, count: 0, friends: [] };
+  if (!eventId) return off;
+  try {
+    const res = await backendFetch(`/api/events/${encodeURIComponent(eventId)}/friends-going`, { method: 'GET' });
+    const data = await readJson(res);
+    if (!res.ok || !data || data.enabled !== true) return off;
+    return {
+      enabled: true,
+      count: Number(data.count) || 0,
+      friends: Array.isArray(data.friends) ? data.friends : [],
+    };
+  } catch {
+    return off;
   }
 }

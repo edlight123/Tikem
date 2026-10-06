@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Lock, Users, Globe, Phone } from 'lucide-react'
+import { Lock, Users, Globe, Phone, UserPlus } from 'lucide-react'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import { DEFAULT_PRIVACY, type AttendanceVisibility, type ProfileVisibility } from '@/types/social'
 import { ProfileSection, Panel, PanelRows, SwitchRow, FieldLabel } from './ui'
@@ -52,6 +52,7 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
   const initial = { ...DEFAULT_PRIVACY, ...(profile.privacy || {}) }
   const [privacy, setPrivacy] = useState(initial)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [discoverable, setDiscoverable] = useState(profile.discoverable !== false)
 
   const persist = async (next: typeof privacy) => {
     const previous = privacy
@@ -69,6 +70,21 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
 
   const setAttendance = (value: AttendanceVisibility) => persist({ ...privacy, attendance_visibility: value })
   const setProfileVisibility = (value: ProfileVisibility) => persist({ ...privacy, profile_visibility: value })
+  // Top-level users.discoverable, not part of `privacy`: it gates "people you
+  // may know" and "friends going" (lib/social/suggestions.ts).
+  const toggleSuggestions = async () => {
+    const next = !discoverable
+    setDiscoverable(next)
+    setIsUpdating(true)
+    try {
+      await onUpdate({ discoverable: next })
+    } catch (error) {
+      console.error('Failed to update discoverability:', error)
+      setDiscoverable(!next)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
   const toggleDiscoverable = () => persist({ ...privacy, discoverable_by_phone: !privacy.discoverable_by_phone })
 
   return (
@@ -149,6 +165,14 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
             icon={Phone}
             checked={privacy.discoverable_by_phone}
             onChange={toggleDiscoverable}
+            disabled={isUpdating}
+          />
+          <SwitchRow
+            title="Suggest me to people I may know"
+            description="Let people who share friends or events with you see you in friend suggestions, and let friends see that you are going. When off, you stay out of both."
+            icon={UserPlus}
+            checked={discoverable}
+            onChange={toggleSuggestions}
             disabled={isUpdating}
           />
         </PanelRows>

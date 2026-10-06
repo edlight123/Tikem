@@ -35,6 +35,8 @@ interface UserProfile {
   organization_logo?: string;
   social_links?: SocialLinks;
   privacy?: PrivacySettings;
+  /** Appear in "people you may know" / "friends going". Missing means true. */
+  discoverable?: boolean;
 }
 
 type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'default_country' | 'default_subarea' | 'photo_url' | 'organization_name' | 'organization_logo'>>;
@@ -90,6 +92,8 @@ const USER_SCOPED_PREFIXES = [
   'organizer_markets_',
   'scanner_manifest_',
   'door_list_',
+  // "Add your number" re-ask counter, per account (lib/phonePromptPolicy.ts).
+  'tikem_phone_prompt_',
 ];
 
 /** The `sub` claim of a JWT, or null if it cannot be read (no verification: a pre-check only). */

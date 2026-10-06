@@ -111,6 +111,8 @@ export default function ProfileScreen() {
   const [discoverableByPhone, setDiscoverableByPhone] = useState<boolean>(
     userProfile?.privacy?.discoverable_by_phone ?? DEFAULT_PRIVACY.discoverable_by_phone
   );
+  // users/{uid}.discoverable (default true): "people you may know" and "friends going".
+  const [discoverable, setDiscoverable] = useState<boolean>(userProfile?.discoverable !== false);
 
   const [phonePrefix, setPhonePrefix] = useState<'+509' | '+1'>('+509');
   const [phoneDigits, setPhoneDigits] = useState('');
@@ -288,8 +290,9 @@ export default function ProfileScreen() {
       setProfileVisibility(userProfile?.privacy?.profile_visibility || DEFAULT_PRIVACY.profile_visibility);
       setAttendanceVisibility(userProfile?.privacy?.attendance_visibility || DEFAULT_PRIVACY.attendance_visibility);
       setDiscoverableByPhone(userProfile?.privacy?.discoverable_by_phone ?? DEFAULT_PRIVACY.discoverable_by_phone);
+      setDiscoverable(userProfile?.discoverable !== false);
     }
-  }, [isEditing, parsePhone, userProfile?.default_city, userProfile?.default_country, userProfile?.full_name, userProfile?.organization_name, userProfile?.organization_logo, userProfile?.phone_number, userProfile?.bio, userProfile?.social_links?.instagram, userProfile?.social_links?.tiktok, userProfile?.social_links?.twitter, userProfile?.social_links?.facebook, userProfile?.privacy?.profile_visibility, userProfile?.privacy?.attendance_visibility, userProfile?.privacy?.discoverable_by_phone]);
+  }, [userProfile?.discoverable, isEditing, parsePhone, userProfile?.default_city, userProfile?.default_country, userProfile?.full_name, userProfile?.organization_name, userProfile?.organization_logo, userProfile?.phone_number, userProfile?.bio, userProfile?.social_links?.instagram, userProfile?.social_links?.tiktok, userProfile?.social_links?.twitter, userProfile?.social_links?.facebook, userProfile?.privacy?.profile_visibility, userProfile?.privacy?.attendance_visibility, userProfile?.privacy?.discoverable_by_phone]);
 
   // Cities available for the selected country — drives the City dropdown.
   const citiesForCountry = useMemo(() => {
@@ -426,6 +429,7 @@ export default function ProfileScreen() {
           attendance_visibility: attendanceVisibility,
           discoverable_by_phone: discoverableByPhone,
         },
+        discoverable,
       });
       await refreshUserProfile();
 
@@ -444,7 +448,7 @@ export default function ProfileScreen() {
     } finally {
       setSaving(false);
     }
-  }, [setActiveCity, canUseOrganizerMode, editedBio, editedCity, editedCountry, editedFacebook, editedInstagram, editedName, editedOrgName, editedTiktok, editedTwitter, orgLogoUrl, attendanceVisibility, discoverableByPhone, profileVisibility, phoneDigits, phonePrefix, refreshUserProfile, setUserCountry, t, updateUserProfile, user?.uid]);
+  }, [setActiveCity, canUseOrganizerMode, editedBio, editedCity, editedCountry, editedFacebook, editedInstagram, editedName, editedOrgName, editedTiktok, editedTwitter, orgLogoUrl, attendanceVisibility, discoverableByPhone, discoverable, profileVisibility, phoneDigits, phonePrefix, refreshUserProfile, setUserCountry, t, updateUserProfile, user?.uid]);
 
   const confirmSignOut = useCallback(() => {
     showAlert(t('profile.signOutTitle'), t('profile.signOutBody'), [
@@ -850,6 +854,22 @@ export default function ProfileScreen() {
                 </View>
                 <View style={[styles.switchTrack, discoverableByPhone && styles.switchTrackOn]}>
                   <View style={[styles.switchThumb, discoverableByPhone && styles.switchThumbOn]} />
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.toggleRow}
+                onPress={() => setDiscoverable((v) => !v)}
+                activeOpacity={0.7}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: discoverable }}
+              >
+                <View style={styles.toggleTextWrap}>
+                  <Text style={styles.toggleLabel}>{t('profile.social.suggestable')}</Text>
+                  <Text style={styles.toggleHint}>{t('profile.social.suggestableHint')}</Text>
+                </View>
+                <View style={[styles.switchTrack, discoverable && styles.switchTrackOn]}>
+                  <View style={[styles.switchThumb, discoverable && styles.switchThumbOn]} />
                 </View>
               </TouchableOpacity>
 

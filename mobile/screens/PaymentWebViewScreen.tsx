@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { auth } from '../config/firebase'
 import { clearPendingPayment, setPendingPayment } from '../lib/pendingPayment'
 import { setTicketsRefreshHint } from '../lib/ticketsRefreshHint'
+import { requestPhonePrompt } from '../lib/phonePrompt'
 import { useI18n } from '../contexts/I18nContext'
 import { PaymentSkeleton } from '../components/Skeleton'
 import { useAppAlert } from '../components/AppAlert';
@@ -432,6 +433,8 @@ export default function PaymentWebViewScreen() {
             index: 0,
             routes: [{ name: 'Main', params: { screen: 'Tickets' } }],
           })
+          // "Add your number" (lib/phonePrompt.ts); the root host applies the policy.
+          requestPhonePrompt({ trigger: 'post_purchase' })
         },
       },
     ])

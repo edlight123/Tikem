@@ -412,6 +412,8 @@ export default {
       attEveryone: 'Tout moun',
       discoverable: 'Kite moun jwenn mwen ak nimewo telefòn',
       discoverableHint: 'Nou itilize l sèlman pou matche kontak ou ki deja sou Tikèm.',
+      suggestable: "Sijere m bay moun mwen ka konnen",
+      suggestableHint: "Moun ki gen menm zanmi oswa menm evènman avè w ka jwenn ou. Fèmen l pou w pa parèt nan sijesyon yo ni nan lis zanmi ki prale.",
     },
     createEvent: 'Kreye evènman',
     notificationsA11y: 'Notifikasyon',
@@ -1093,6 +1095,22 @@ export default {
     },
   },
 
+  phonePrompt: {
+    title: "Ajoute nimewo ou",
+    valueProp: "Ajoute nimewo ou pou w resevwa tikè ou yo sou WhatsApp epi wè ki zanmi ki prale.",
+    skip: "Pita",
+  },
+  friendSuggestions: {
+    title: "Moun ou ka konnen",
+    mutual: "{count} zanmi an komen",
+    sameEvents: "Ale nan menm evènman yo",
+    contactsCta: "Jwenn zanmi nan kontak ou",
+    contactsNeedsPhone: "Verifye nimewo ou anvan. Nou matche sèlman nimewo ou deja genyen, epi nou pa janm kenbe kontak ou yo.",
+  },
+  friendsGoing: {
+    one: "{name} prale",
+    other: "{count} zanmi prale",
+  },
   connections: {
     title: 'Zanmi',
     tabs: {

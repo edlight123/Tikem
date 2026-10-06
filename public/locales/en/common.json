@@ -1852,5 +1852,9 @@
       "not_found": "This content isn't available anymore.",
       "self_report": "You can't report yourself."
     }
+  },
+  "friendsGoing": {
+    "one": "{{name}} is going",
+    "other": "{{count}} friends going"
   }
 }
