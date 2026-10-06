@@ -33,6 +33,7 @@ export default function WorldRail({ onWorldPress }: { onWorldPress: (world: Worl
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.scroll}
         contentContainerStyle={styles.row}
         decelerationRate="fast"
         snapToInterval={TILE_W + spacing.sm}
@@ -105,6 +106,14 @@ function WorldTile({
 }
 
 const styles = StyleSheet.create({
+  // Same bleed as EventRail: the caller's section already pads 16, so the
+  // scroll view steps back out to the screen edge and the content pads in
+  // again. The first tile then lines up with the header and the screen gutter,
+  // and the last peeks off the right edge (padding it twice put the first tile
+  // 32pt in, double the gutter).
+  scroll: {
+    marginHorizontal: -spacing.lg,
+  },
   row: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,

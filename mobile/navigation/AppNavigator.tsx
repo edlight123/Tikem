@@ -37,6 +37,7 @@ import ContentPageScreen from '../screens/ContentPageScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import TicketsScreen from '../screens/TicketsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 
 // Organizer Screens
 import OrganizerDashboardScreen from '../screens/organizer/OrganizerDashboardScreen';
@@ -177,6 +178,7 @@ export type RootStackParamList = {
   OrganizerAnalytics: undefined;
   OrganizerRefunds: undefined;
   Favorites: undefined;
+  EditProfile: { organizer?: boolean } | undefined;
 };
 
 export type AuthStackParamList = {
@@ -900,6 +902,7 @@ export default function AppNavigator() {
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />

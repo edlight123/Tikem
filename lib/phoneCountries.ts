@@ -171,9 +171,17 @@ export function fromE164(value: string | null | undefined): { iso: string; natio
   const raw = (value || '').trim()
   if (!raw.startsWith('+')) {
     // Legacy free-text values (everything stored before this field existed)
-    // are left in the national box under the default country, so an organizer
-    // sees what they typed rather than an empty field.
-    return { iso: DEFAULT_PHONE_ISO, national: digitsOnly(raw) }
+    // are left in the national box, so an organizer sees what they typed
+    // rather than an empty field. The country is read from the number's SHAPE
+    // before defaulting to Haiti: a Haitian national number is exactly 8
+    // digits, a NANP one 10 (11 with its leading 1). Defaulting a bare US
+    // number to +509 is how "7654076400" ended up under the Haiti code and
+    // then saved as +5097654076400.
+    const d = digitsOnly(raw)
+    if (d.length === 11 && d.startsWith('509')) return { iso: 'HT', national: d.slice(3) }
+    if (d.length === 10 && /^[2-9]/.test(d)) return { iso: 'US', national: d }
+    if (d.length === 11 && d.startsWith('1')) return { iso: 'US', national: d.slice(1) }
+    return { iso: DEFAULT_PHONE_ISO, national: d }
   }
   const digits = digitsOnly(raw)
   const byLength = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length)

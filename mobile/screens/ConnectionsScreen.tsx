@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Users, Search, Phone, Inbox, Send, UserPlus } from 'lucide-react-native';
+import { ChevronLeft, Users, Search, Phone, Inbox, Send, Share2, UserPlus } from 'lucide-react-native';
 import * as Contacts from 'expo-contacts';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -38,6 +39,7 @@ import {
   type ConnectionsOverview,
   type UserSearchResult,
 } from '../lib/api/social';
+import { fetchInviteLink } from '../lib/api/invites';
 import type { PublicUserSummary, FriendshipState, ContactMatch, FriendSuggestion } from '../types/social';
 
 type Tab = 'friends' | 'requests' | 'find';
@@ -419,6 +421,23 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
     syncContacts();
   }, [needsPhone, syncContacts]);
 
+  const [sharingInvite, setSharingInvite] = useState(false);
+  const shareAppInvite = useCallback(async () => {
+    setSharingInvite(true);
+    try {
+      const link = await fetchInviteLink();
+      if (!link) {
+        showAlert(t('invites.errorTitle'), t('invites.linkError'));
+        return;
+      }
+      await Share.share({ message: t('invites.messageApp', { link }) });
+    } catch {
+      // Share sheet dismissed or unavailable: nothing to report.
+    } finally {
+      setSharingInvite(false);
+    }
+  }, [showAlert, t]);
+
   // Auto-start the sync once when arriving via Discover's "Sync contacts" CTA.
   const didAutoSync = useRef(false);
   useEffect(() => {
@@ -526,6 +545,32 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
           </View>
         )}
       </View>
+
+      {/* Invite friends to Tikèm: the personal link (config/auth.invites).
+          Hidden entirely while the switch is off, never a dead button. */}
+      {flags.invites && (
+        <TouchableOpacity
+          style={styles.contactCard}
+          onPress={shareAppInvite}
+          disabled={sharingInvite}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          <View style={styles.contactHeader}>
+            <View style={styles.contactIcon}>
+              {sharingInvite ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              ) : (
+                <Share2 size={20} color={colors.textSecondary} />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contactTitle}>{t('invites.shareInviteLink')}</Text>
+              <Text style={styles.contactSub}>{t('invites.appLinkSub')}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {flags.invites && contactMatches !== null && (
         <InviteContactsCard

@@ -27,6 +27,7 @@ import { elsewhereEvents, isEventInMetro } from '../data/metros';
 import { TikemWordmark } from '../components/TikemWordmark';
 import TrendingSection from '../components/TrendingSection';
 import WorldRail from '../components/WorldRail';
+import FindFriendsCard from '../components/FindFriendsCard';
 import ThisWeekSection from '../components/ThisWeekSection';
 import AllEventsPreview from '../components/AllEventsPreview';
 import EventRail from '../components/EventRail';
@@ -568,6 +569,10 @@ export default function HomeScreen({ navigation }: any) {
             {/* People you may know: renders nothing (no gap) unless the
                 friend_suggestions switch is on and there are 3+ people. */}
             <PeopleYouMayKnowRail style={styles.section} />
+
+            {/* "Find your friends": once, after the first ticket, while the
+                account has no friends yet. Renders nothing otherwise. */}
+            <FindFriendsCard variant="home" style={styles.section} />
 
             {/* Free & Budget-Friendly */}
             {freeEvents.length > 0 && (
