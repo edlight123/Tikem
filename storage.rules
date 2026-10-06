@@ -9,7 +9,9 @@ service firebase.storage {
     // strongest ownership signal available for this flat path.
     match /event-images/{imageId} {
       allow read: if true; // Public read for event banners
-      allow write: if request.auth != null && imageId.matches('^' + request.auth.uid + '_.*');
+      allow write: if request.auth != null && imageId.matches('^' + request.auth.uid + '_.*')
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif|gif)');
       allow delete: if request.auth != null && imageId.matches('^' + request.auth.uid + '_.*');
     }
     
@@ -20,7 +22,10 @@ service firebase.storage {
         request.auth.uid == userId ||
         (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
       );
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId
+        // IDs and selfies (images/PDF) and the liveness clip (video).
+        && request.resource.size < 60 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf|video/.*');
       allow delete: if request.auth != null && (
         request.auth.uid == userId ||
         (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
@@ -30,7 +35,9 @@ service firebase.storage {
     // User profile images
     match /profile-images/{userId}/{allPaths=**} {
       allow read: if true; // Public read
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif|gif)');
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
     

@@ -156,8 +156,18 @@ describe('checkEventPurchasable', () => {
     expect(checkEventPurchasable(live, NOW)).toEqual({ ok: true })
   })
 
-  it('status "published" alone counts as published (same test as the public page)', () => {
-    expect(checkEventPurchasable({ ...live, is_published: undefined }, NOW)).toEqual({ ok: true })
+  it('status "published" alone does NOT count: is_published is the only publish signal', () => {
+    // Moderation and bans flip is_published off and leave status 'published'.
+    const r = checkEventPurchasable({ ...live, is_published: undefined }, NOW)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.code).toBe('event_unavailable')
+    expect(checkEventPurchasable({ ...live, is_published: false, status: 'published' }, NOW).ok).toBe(false)
+  })
+
+  it('refuses an event whose payouts are frozen', () => {
+    const r = checkEventPurchasable({ ...live, payouts_frozen: true }, NOW)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.code).toBe('event_unavailable')
   })
 
   it('refuses a cancelled event', () => {

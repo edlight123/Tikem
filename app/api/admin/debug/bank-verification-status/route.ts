@@ -64,52 +64,5 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Manually update a bank verification status for testing
-export async function POST(request: NextRequest) {
-  try {
-    const { user, error } = await requireDevTools()
-    if (error || !user) {
-      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
-    }
-
-    const { docPath, newStatus } = await request.json()
-
-    if (!docPath || !newStatus) {
-      return adminError('Missing docPath or newStatus', 400)
-    }
-
-    // Validate status
-    if (!['pending', 'verified', 'failed'].includes(newStatus)) {
-      return adminError('Invalid status. Use: pending, verified, or failed', 400)
-    }
-
-    const ref = adminDb.doc(docPath)
-    const doc = await ref.get()
-
-    if (!doc.exists) {
-      return adminError('Document not found', 404)
-    }
-
-    const beforeStatus = doc.data()?.status
-
-    await ref.update({
-      status: newStatus,
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: user.id,
-    })
-
-    // Read back to confirm
-    const afterDoc = await ref.get()
-    const afterStatus = afterDoc.data()?.status
-
-    return adminOk({
-      docPath,
-      beforeStatus,
-      afterStatus,
-      success: afterStatus === newStatus,
-    })
-  } catch (e: any) {
-    console.error('Debug bank verification update error:', e)
-    return adminError('Failed to update', 500, e?.message)
-  }
-}
+// The POST that rewrote a request's status directly was removed: it bypassed
+// the review flow, its state guards and its audit trail. Use the admin review UI.

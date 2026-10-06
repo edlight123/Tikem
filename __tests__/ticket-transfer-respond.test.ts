@@ -10,6 +10,7 @@ type Doc = Record<string, any>
 const store: Record<string, Map<string, Doc>> = {
   tickets: new Map(),
   ticket_transfers: new Map(),
+  users: new Map(),
 }
 
 function ref(col: string, id: string) {
@@ -64,6 +65,8 @@ const future = new Date(Date.now() + 3600_000).toISOString()
 function seed(ticket: Doc, transfer: Doc = {}) {
   store.tickets.clear()
   store.ticket_transfers.clear()
+  store.users.clear()
+  store.users.set('buyer2', { full_name: 'Buyer Two', email: 'stale-profile@example.com' })
   store.tickets.set('t1', { event_id: 'e1', status: 'valid', attendee_id: 'seller', user_id: 'seller', ...ticket })
   store.ticket_transfers.set('tr1', {
     ticket_id: 't1',
@@ -87,6 +90,14 @@ describe('POST /api/tickets/transfer/respond', () => {
     expect(store.ticket_transfers.get('tr1')?.status).toBe('accepted')
   })
 
+  it("puts the new holder's name and Auth email on the ticket", async () => {
+    seed({ attendee_name: 'Seller Name', attendee_email: 'seller@example.com' })
+    const res = await accept()
+    expect(res.status).toBe(200)
+    // The Auth email, never the profile copy.
+    expect(store.tickets.get('t1')).toMatchObject({ attendee_name: 'Buyer Two', attendee_email: 'buyer2@example.com' })
+  })
+
   it("refuses a ticket that is not the sender's (forged / stale transfer)", async () => {
     seed({ attendee_id: 'victim', user_id: 'victim' })
     const res = await accept()
@@ -107,6 +118,18 @@ describe('POST /api/tickets/transfer/respond', () => {
     expect((await accept()).status).toBe(400)
     seed({ checked_in: true })
     expect((await accept()).status).toBe(400)
+  })
+
+  it('refuses while a refund is requested or moving, and still accepts after a denial', async () => {
+    for (const refund_status of ['requested', 'processing', 'admin_review', 'approved']) {
+      seed({ refund_status, refund_requested_by: 'seller' })
+      expect((await accept()).status).toBe(400)
+      expect(store.tickets.get('t1')?.attendee_id).toBe('seller')
+    }
+    seed({ refund_status: 'denied', refund_requested_by: 'seller' })
+    expect((await accept()).status).toBe(200)
+    // The old holder's request does not follow the seat.
+    expect(store.tickets.get('t1')).toMatchObject({ attendee_id: 'buyer2', refund_requested_by: null })
   })
 
   it('persists an expired transfer instead of rolling it back', async () => {

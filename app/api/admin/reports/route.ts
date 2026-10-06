@@ -109,7 +109,15 @@ export async function POST(request: NextRequest) {
     const orgRef = adminDb.collection('users').doc(organizerId)
     const orgSnap = await orgRef.get()
     if (!orgSnap.exists) return adminError('Organizer not found', 404)
-    await orgRef.update({ status: 'banned', can_create_events: false, updated_at: now })
+    // Same fields as /api/admin/organizer-actions 'ban': the publish route reads
+    // status / can_create_events (lib/events/publishGuard) to refuse a republish.
+    await orgRef.update({
+      status: 'banned',
+      can_create_events: false,
+      banned_at: now,
+      banned_by: user.id,
+      updated_at: now,
+    })
     const eventsUnpublished = await unpublishOrganizerEvents(organizerId, undefined, now)
     const { resolved } = await resolveReports({ kind, targetId, resolution: 'actioned', adminId: user.id, note, now })
     const orgData = orgSnap.data() || {}

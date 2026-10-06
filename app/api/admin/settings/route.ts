@@ -9,6 +9,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser, requireAdmin } from '@/lib/auth'
 import { getPlatformSettings, updatePlatformSettings } from '@/lib/admin/platform-settings'
 import { DEFAULT_PLATFORM_SETTINGS } from '@/types/platform-settings'
+import { logAdminAction } from '@/lib/admin/audit-log'
+
+const ALLOWED_KEYS = new Set(['haiti', 'usCanada', 'minimumPayoutAmount'])
+const MAX_HOLD_DAYS = 365
+
+type RegionInput = { platformFeePercentage: number; settlementHoldDays: number }
+
+/** Exactly the two known numeric fields, or an error message. Unknown keys are refused. */
+function parseRegion(raw: unknown, label: string): { ok: true; value: RegionInput } | { ok: false; error: string } {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: `${label} must be an object` }
+  }
+  const obj = raw as Record<string, unknown>
+  const extra = Object.keys(obj).filter((k) => k !== 'platformFeePercentage' && k !== 'settlementHoldDays')
+  if (extra.length) return { ok: false, error: `${label}: unknown field(s) ${extra.join(', ')}` }
+  const fee = obj.platformFeePercentage
+  const hold = obj.settlementHoldDays
+  if (typeof fee !== 'number' || !Number.isFinite(fee) || fee < 0 || fee > 1) {
+    return { ok: false, error: `Invalid ${label} platform fee percentage (must be between 0 and 1)` }
+  }
+  if (typeof hold !== 'number' || !Number.isInteger(hold) || hold < 0 || hold > MAX_HOLD_DAYS) {
+    return { ok: false, error: `Invalid ${label} settlement hold days (integer 0-${MAX_HOLD_DAYS})` }
+  }
+  return { ok: true, value: { platformFeePercentage: fee, settlementHoldDays: hold } }
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -60,60 +85,38 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const { haiti, usCanada, minimumPayoutAmount } = body
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+    const unknownKeys = Object.keys(body).filter((k) => !ALLOWED_KEYS.has(k))
+    if (unknownKeys.length) {
+      return NextResponse.json({ error: `Unknown field(s): ${unknownKeys.join(', ')}` }, { status: 400 })
+    }
+    const { haiti, usCanada, minimumPayoutAmount } = body as Record<string, unknown>
 
-    // Validate input
-    if (haiti && typeof haiti === 'object') {
-      if (typeof haiti.platformFeePercentage !== 'number' || 
-          haiti.platformFeePercentage < 0 || 
-          haiti.platformFeePercentage > 1) {
-        return NextResponse.json(
-          { error: 'Invalid Haiti platform fee percentage (must be between 0 and 1)' },
-          { status: 400 }
-        )
+    const updateData: Record<string, unknown> = {}
+    if (haiti !== undefined) {
+      const parsed = parseRegion(haiti, 'Haiti')
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+      updateData.haiti = parsed.value
+    }
+    if (usCanada !== undefined) {
+      const parsed = parseRegion(usCanada, 'US/Canada')
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+      updateData.usCanada = parsed.value
+    }
+    if (minimumPayoutAmount !== undefined) {
+      if (typeof minimumPayoutAmount !== 'number' || !Number.isFinite(minimumPayoutAmount) || minimumPayoutAmount < 0) {
+        return NextResponse.json({ error: 'Invalid minimum payout amount (must be >= 0)' }, { status: 400 })
       }
-      if (typeof haiti.settlementHoldDays !== 'number' || 
-          haiti.settlementHoldDays < 0) {
-        return NextResponse.json(
-          { error: 'Invalid Haiti settlement hold days (must be >= 0)' },
-          { status: 400 }
-        )
-      }
+      updateData.minimumPayoutAmount = minimumPayoutAmount
+    }
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No settings to update' }, { status: 400 })
     }
 
-    if (usCanada && typeof usCanada === 'object') {
-      if (typeof usCanada.platformFeePercentage !== 'number' || 
-          usCanada.platformFeePercentage < 0 || 
-          usCanada.platformFeePercentage > 1) {
-        return NextResponse.json(
-          { error: 'Invalid US/Canada platform fee percentage (must be between 0 and 1)' },
-          { status: 400 }
-        )
-      }
-      if (typeof usCanada.settlementHoldDays !== 'number' || 
-          usCanada.settlementHoldDays < 0) {
-        return NextResponse.json(
-          { error: 'Invalid US/Canada settlement hold days (must be >= 0)' },
-          { status: 400 }
-        )
-      }
-    }
-
-    if (minimumPayoutAmount !== undefined && 
-        (typeof minimumPayoutAmount !== 'number' || minimumPayoutAmount < 0)) {
-      return NextResponse.json(
-        { error: 'Invalid minimum payout amount (must be >= 0)' },
-        { status: 400 }
-      )
-    }
-
-    // Update settings
-    const updateData: any = {}
-    if (haiti) updateData.haiti = haiti
-    if (usCanada) updateData.usCanada = usCanada
-    if (minimumPayoutAmount !== undefined) updateData.minimumPayoutAmount = minimumPayoutAmount
-
+    const before = await getPlatformSettings().catch(() => null)
     const result = await updatePlatformSettings(updateData, user.id)
 
     if (!result.success) {
@@ -125,6 +128,24 @@ export async function PATCH(request: NextRequest) {
 
     // Fetch updated settings
     const updatedSettings = await getPlatformSettings()
+
+    await logAdminAction({
+      action: 'platform_settings.update',
+      adminId: user.id,
+      adminEmail: String(user.email || 'unknown'),
+      resourceId: 'platform_settings',
+      resourceType: 'settings',
+      details: {
+        changes: updateData,
+        before: before
+          ? {
+              haiti: (before as any).haiti ?? null,
+              usCanada: (before as any).usCanada ?? null,
+              minimumPayoutAmount: (before as any).minimumPayoutAmount ?? null,
+            }
+          : null,
+      },
+    })
 
     return NextResponse.json({
       success: true,

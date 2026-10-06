@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,10 +53,23 @@ export async function GET(req: NextRequest) {
         const organizerDoc = data.organizerId ? await adminDb.collection('users').doc(String(data.organizerId)).get() : null
         const organizer = organizerDoc?.exists ? organizerDoc.data() : null
 
+        // Is the number on this row still the payee's saved, verified MonCash
+        // destination? 'mismatch' / 'unverified' must be checked before paying.
+        const destinationReview = await reviewWithdrawalDestination(data)
+        const flags: string[] = Array.isArray((data as any).reviewFlags) ? [...(data as any).reviewFlags] : []
+        if (destinationReview === 'mismatch') flags.push('destination_mismatch')
+        if (destinationReview === 'unverified') flags.push('destination_unverified')
+        // The admin viewing the queue is the payee: someone else must act on it.
+        if (String(data.organizerId || '') === user.id || String((data as any).promoter_uid || '') === user.id) {
+          flags.push('own_account')
+        }
+
         return {
           id: doc.id,
           ...data,
           amount,
+          destinationReview,
+          reviewFlags: flags,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
           updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
           processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,

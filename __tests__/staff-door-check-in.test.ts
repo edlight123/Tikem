@@ -12,12 +12,20 @@
 
 import {
   belongsOnDoorList,
+  doorCodeHash,
   evaluateDoorAccess,
   judgeDoorRow as serverJudge,
   resolveTier,
   toDoorRow,
 } from '@/lib/scan/doorRules'
-import { judgeDoorRow as mobileJudge, enqueueCheckIn, findDoorRow, markRowCheckedIn } from '../mobile/lib/doorList'
+import {
+  judgeDoorRow as mobileJudge,
+  doorCodeHash as mobileDoorCodeHash,
+  enqueueCheckIn,
+  findDoorRow,
+  markRowCheckedIn,
+  scrubDoorRow,
+} from '../mobile/lib/doorList'
 
 // ---------------------------------------------------------------------------
 // Fake Firestore + auth
@@ -251,11 +259,12 @@ describe('GET door-list', () => {
     // t3 is refunded and never came in; `other` belongs to another event.
     expect(ids).toEqual(['t1', 't2', 't4', 't5'])
 
-    const allowed = ['id', 'code', 'name', 'tier', 'status', 'live', 'checkedIn', 'checkedInAt', 'endsAt', 'validFrom', 'validUntil', 'qrVersion']
+    const allowed = ['id', 'codeHash', 'name', 'tier', 'status', 'live', 'checkedIn', 'checkedInAt', 'endsAt', 'validFrom', 'validUntil', 'qrVersion']
     for (const row of json.rows) expect(Object.keys(row).sort()).toEqual([...allowed].sort())
 
     const text = JSON.stringify(json)
-    for (const secret of ['ana@x.co', 'bel@x.co', '+509', '1500', 'moncash', 'mc_1', 'HTG']) {
+    // ...nor any admitting QR code: only its hash.
+    for (const secret of ['ana@x.co', 'bel@x.co', '+509', '1500', 'moncash', 'mc_1', 'HTG', 'QR-T2']) {
       expect(text).not.toContain(secret)
     }
     expect(json.event).toEqual({ id: EVENT, title: 'Kanaval', allowReentry: false })
@@ -265,7 +274,8 @@ describe('GET door-list', () => {
     as(DOOR)
     const json: any = await (await doorListGET(new Request('http://localhost'), ctx)).json()
     const t2 = json.rows.find((r: any) => r.id === 't2')
-    expect(t2).toMatchObject({ name: 'Bèl Moun', tier: 'VIP', code: 'QR-T2', live: true, validFrom: '2000-01-01T00:00:00.000Z' })
+    expect(t2).toMatchObject({ name: 'Bèl Moun', tier: 'VIP', codeHash: doorCodeHash('QR-T2'), live: true, validFrom: '2000-01-01T00:00:00.000Z' })
+    expect(t2.code).toBeUndefined()
     const t4 = json.rows.find((r: any) => r.id === 't4')
     expect(t4).toMatchObject({ live: false, checkedIn: true, checkedInAt: '2026-09-01T20:00:00.000Z' })
   })
@@ -362,6 +372,29 @@ describe('POST check-in', () => {
   it('400s without a ticket id or code', async () => {
     expect((await post({})).status).toBe(400)
   })
+
+  it.each([['processing'], ['approved'], ['manual_required'], ['admin_review']])(
+    'refuses a live-status ticket whose refund is %s, saying it is a refund',
+    async (refundStatus) => {
+      state.docs['tickets/t1'].refund_status = refundStatus
+      const json: any = await (await post({ ticketId: 't1' })).json()
+      // CANCELLED keeps every shipped build rendering it as a refusal.
+      expect(json).toMatchObject({ ok: false, verdict: 'CANCELLED', reason: 'REFUNDED' })
+      expect(json.row).toMatchObject({ id: 't1', live: false, status: 'valid' })
+      expect(state.updates).toEqual([])
+    }
+  )
+
+  it("admits a ticket with an open refund request and denies the request in the same write", async () => {
+    state.docs['tickets/t1'].refund_status = 'requested'
+    expect(await (await post({ ticketId: 't1' })).json()).toMatchObject({ ok: true, verdict: 'CHECKED_IN' })
+    expect(state.updates).toHaveLength(1)
+    expect(state.updates[0].data).toMatchObject({
+      refund_status: 'denied',
+      refund_denied_reason: 'checked_in',
+      checked_in: true,
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -420,6 +453,21 @@ describe('mobile door list helpers', () => {
     expect(findDoorRow(rows, 't2')?.id).toBe('t2')
     expect(findDoorRow(rows, 'CODE1')?.id).toBe('t1')
     expect(findDoorRow(rows, 'zzz')).toBeNull()
+  })
+
+  it('a list cached by an older build (raw codes) still works and is scrubbed to hashes', () => {
+    const legacy = [{ ...rows[0], codeHash: undefined, code: 'CODE1' }] as any
+    expect(findDoorRow(legacy, 'CODE1')?.id).toBe('t1')
+    const scrubbed = scrubDoorRow(legacy[0])
+    expect(scrubbed.code).toBeUndefined()
+    expect(scrubbed.codeHash).toBe(doorCodeHash('CODE1'))
+    expect(findDoorRow([scrubbed], 'CODE1')?.id).toBe('t1')
+  })
+
+  it("the app's pure SHA-256 matches the server's, including non-ASCII", () => {
+    for (const code of ['', 't1', 'QR-T2', JSON.stringify({ ticketId: 't1', v: 2, s: 'abc' }), 'Kanaval Jakmèl 🎉', 'x'.repeat(200)]) {
+      expect(mobileDoorCodeHash(code)).toBe(doorCodeHash(code))
+    }
   })
 
   it('marks a row in so an offline re-scan reads "already in"', () => {

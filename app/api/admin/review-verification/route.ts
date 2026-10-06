@@ -7,6 +7,10 @@ import { sendPushNotification } from '@/lib/notification-triggers'
 import { FieldValue } from 'firebase-admin/firestore'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
+import { escapeHtml } from '@/lib/html'
+
+/** A request can only be decided while it is awaiting review. */
+const REVIEWABLE_STATUSES = new Set(['pending', 'pending_review', 'in_review', 'in_progress'])
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -23,7 +27,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`[review-verification] Received: requestId=${requestId}, status=${status}`)
 
-    if (!requestId || !status || !['approved', 'rejected', 'changes_requested'].includes(status)) {
+    if (
+      typeof requestId !== 'string' ||
+      !requestId ||
+      !status ||
+      !['approved', 'rejected', 'changes_requested'].includes(status) ||
+      (rejectionReason != null && typeof rejectionReason !== 'string')
+    ) {
       return adminError('Invalid request data', 400)
     }
 
@@ -31,32 +41,46 @@ export async function POST(request: NextRequest) {
     const normalizedStatus = status === 'rejected' ? 'changes_requested' : status
     console.log(`[review-verification] Normalized status: ${normalizedStatus}`)
 
-    // Get verification request
+    // Read and decide in one transaction, and only from an awaiting-review
+    // state. Without this guard a second click (or a stale tab) could flip an
+    // already-approved organizer back to changes_requested, or approve a
+    // request the organizer has since withdrawn/reset.
     const verificationRef = adminDb.collection('verification_requests').doc(requestId)
-    const verificationDoc = await verificationRef.get()
-
-    if (!verificationDoc.exists) {
-      console.log(`[review-verification] Request ${requestId} not found`)
-      return adminError('Verification request not found', 404)
+    let verificationRequest: any
+    try {
+      verificationRequest = await adminDb.runTransaction(async (tx: any) => {
+        const snap = await tx.get(verificationRef)
+        if (!snap.exists) {
+          throw Object.assign(new Error('not_found'), { code: 404 })
+        }
+        const data = snap.data() || {}
+        const current = String(data.status || '').toLowerCase()
+        if (!REVIEWABLE_STATUSES.has(current)) {
+          throw Object.assign(new Error(`not_reviewable:${current || 'unknown'}`), { code: 409 })
+        }
+        const reason = typeof rejectionReason === 'string' ? rejectionReason.slice(0, 2000) : null
+        tx.update(verificationRef, {
+          status: normalizedStatus,
+          // New/canonical fields
+          reviewedBy: user.id,
+          reviewedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          reviewNotes: normalizedStatus !== 'approved' ? reason : null,
+          // Legacy fields (kept for older screens/backfills)
+          reviewed_by: user.id,
+          reviewed_at: new Date(),
+          updated_at: new Date(),
+          rejection_reason: normalizedStatus !== 'approved' ? reason : null,
+        })
+        return data
+      })
+    } catch (txError: any) {
+      if (txError?.code === 404) return adminError('Verification request not found', 404)
+      if (txError?.code === 409) {
+        return adminError('This request has already been reviewed or is not awaiting review', 409)
+      }
+      throw txError
     }
-
-    const verificationRequest = verificationDoc.data()
-    console.log(`[review-verification] Current status in DB: ${verificationRequest?.status}`)
-
-    // Update verification request using Firebase Admin SDK
-    await verificationRef.update({
-      status: normalizedStatus,
-      // New/canonical fields
-      reviewedBy: user.id,
-      reviewedAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-      reviewNotes: normalizedStatus !== 'approved' ? (rejectionReason || null) : null,
-      // Legacy fields (kept for older screens/backfills)
-      reviewed_by: user.id,
-      reviewed_at: new Date(),
-      updated_at: new Date(),
-      rejection_reason: normalizedStatus !== 'approved' ? (rejectionReason || null) : null,
-    })
 
     // Verify the update was successful by reading back
     const updatedDoc = await verificationRef.get()
@@ -161,7 +185,7 @@ export async function POST(request: NextRequest) {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h1 style="color: #059669;">🎉 Congratulations!</h1>
-                <p>Hello ${(organizer as any).full_name || ''},</p>
+                <p>Hello ${escapeHtml((organizer as any).full_name || '')},</p>
                 <p>Great news! Your identity verification has been <strong>approved</strong>.</p>
                 <p>You can now:</p>
                 <ul>
@@ -187,9 +211,9 @@ export async function POST(request: NextRequest) {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h1 style="color: #DC2626;">Verification Not Approved</h1>
-                <p>Hello ${(organizer as any).full_name || ''},</p>
+                <p>Hello ${escapeHtml((organizer as any).full_name || '')},</p>
                 <p>Unfortunately, we were unable to approve your verification request.</p>
-                ${rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
+                ${rejectionReason ? `<p><strong>Reason:</strong> ${escapeHtml(rejectionReason)}</p>` : ''}
                 <p>Please submit a new verification request with:</p>
                 <ul>
                   <li>Clear, well-lit photos</li>

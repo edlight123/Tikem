@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Wallet, Download, Smartphone } from 'lucide-react'
 import { format } from 'date-fns'
+import { escapeHtml } from '@/lib/html'
 
 interface AddToWalletButtonProps {
   ticket: any
@@ -155,7 +156,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Ticket - ${event.title}</title>
+          <title>Ticket - ${escapeHtml(event.title)}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
@@ -287,13 +288,13 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             
             <div class="qr-section">
               <div class="qr-code">
-                <img src="${qrDataUrl}" alt="QR Code" />
+                <img src="${escapeHtml(qrDataUrl)}" alt="QR Code" />
               </div>
               <div class="status">${ticket.checked_in_at ? 'USED' : 'VALID'}</div>
             </div>
             
             <div class="details">
-              <h2 class="event-title">${event.title}</h2>
+              <h2 class="event-title">${escapeHtml(event.title)}</h2>
               
               <div class="detail-row">
                 <div class="detail-label">Date:</div>
@@ -307,7 +308,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               
               <div class="detail-row">
                 <div class="detail-label">Venue:</div>
-                <div class="detail-value">${event.venue_name || 'TBA'}<br>${event.commune ? event.commune + ', ' : ''}${event.city || 'TBA'}</div>
+                <div class="detail-value">${escapeHtml(event.venue_name || 'TBA')}<br>${event.commune ? escapeHtml(event.commune) + ', ' : ''}${escapeHtml(event.city || 'TBA')}</div>
               </div>
               
               <div class="detail-row">
@@ -317,7 +318,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             </div>
             
             <div class="footer">
-              <div class="ticket-id">Ticket ID: ${ticket.id}</div>
+              <div class="ticket-id">Ticket ID: ${escapeHtml(ticket.id)}</div>
             </div>
           </div>
           

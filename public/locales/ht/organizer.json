@@ -861,7 +861,9 @@
     "moncash_note": "Retrè ou a ap voye sou kont MonCash ou (anjeneral nan 24 èdtan).",
     "moncash_below_minimum": "Retrè MonCash kòmanse a {{min}}. Balans ou ki disponib se {{balance}}.",
     "bank_below_minimum": "Transfè labank kòmanse a {{min}}.",
-    "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l. Pa gen okenn lajan ki deplase."
+    "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l. Pa gen okenn lajan ki deplase.",
+    "destination_on_hold": "Nouvo kont ou an anrejistre epi li ka resevwa peman apati {{date}}.",
+    "balance_changed": "Balans ou chanje, tanpri eseye ankò."
   },
   "events_filters": {
     "alphabetical": "Alfabetik",

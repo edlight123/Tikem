@@ -300,14 +300,14 @@ const DISCOVER_CACHE_SECONDS = 30
  */
 const readPublishedEvents = unstable_cache(
   async (city: string, category: string, fetchLimit: number): Promise<Event[]> => {
-    const buildBaseQuery = (mode: 'is_published' | 'status') => {
+    const buildBaseQuery = () => {
       let queryRef = adminDb.collection('events').orderBy('start_datetime', 'asc')
 
-      if (mode === 'is_published') {
-        queryRef = queryRef.where('is_published', '==', true) as any
-      } else {
-        queryRef = queryRef.where('status', '==', 'published') as any
-      }
+      // `is_published: true` is the only publish signal. There used to be a
+      // fallback to `status == 'published'` when this came back empty, but events
+      // moderation or a ban takes down keep that status (only is_published flips),
+      // so an empty city/category feed resurfaced exactly those.
+      queryRef = queryRef.where('is_published', '==', true) as any
 
       // Apply filters — metro-inclusive city match (city + its subdivisions).
       if (city) {
@@ -325,12 +325,7 @@ const readPublishedEvents = unstable_cache(
       return queryRef
     }
 
-    // Primary: canonical Firestore field `is_published: true`
-    let snapshot = await buildBaseQuery('is_published').get()
-    // Fallback: legacy field `status: 'published'`
-    if (snapshot.empty) {
-      snapshot = await buildBaseQuery('status').get()
-    }
+    const snapshot = await buildBaseQuery().get()
 
     // The base query above is ordered OLDEST first and capped, so once the
     // catalogue holds more than `fetchLimit` published events it returns past

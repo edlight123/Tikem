@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
-import { requireAdmin } from '@/lib/auth'
+import { requireDevTools } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error: authError } = await requireAdmin()
+    const { user, error: authError } = await requireDevTools()
     if (authError || !user) {
       return adminError(authError || 'Unauthorized', authError === 'Not authenticated' ? 401 : 403)
     }

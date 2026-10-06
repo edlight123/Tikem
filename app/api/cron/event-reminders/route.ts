@@ -6,6 +6,7 @@ import { sendEventReminder } from '@/lib/notification-triggers'
 import { claimReminder, releaseReminderClaim } from '@/lib/notifications/reminder-claim'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 import { reminderWindows } from '@/lib/notifications/reminder-windows'
+import { escapeHtml } from '@/lib/html'
 
 export const dynamic = 'force-dynamic'
 
@@ -157,10 +158,10 @@ export async function GET(request: Request) {
                   
                   <div style="padding: 40px 20px; background: #f9fafb;">
                     <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                      <p style="font-size: 18px; color: #111827; margin-bottom: 10px;">Hi ${ticket.attendee.full_name || 'there'}!</p>
+                      <p style="font-size: 18px; color: #111827; margin-bottom: 10px;">Hi ${escapeHtml(ticket.attendee.full_name || 'there')}!</p>
                       
                       <p style="font-size: 16px; color: #374151; line-height: 1.6;">
-                        This is a friendly reminder that <strong>${event.title}</strong> starts in ${reminder.label}!
+                        This is a friendly reminder that <strong>${escapeHtml(event.title)}</strong> starts in ${escapeHtml(reminder.label)}!
                       </p>
                       
                       <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -188,7 +189,7 @@ export async function GET(request: Request) {
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">📍 Location:</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">
-                              ${event.venue_name}, ${event.city}
+                              ${escapeHtml(event.venue_name)}, ${escapeHtml(event.city)}
                             </td>
                           </tr>
                         </table>
@@ -199,7 +200,7 @@ export async function GET(request: Request) {
                       </p>
                       
                       <div style="text-align: center; margin-top: 30px;">
-                        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/tickets/${ticket.id}"
+                        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/tickets/${encodeURIComponent(String(ticket.id))}"
                            style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                           View My Ticket
                         </a>

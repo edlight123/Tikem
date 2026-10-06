@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { backendFetch } from './api/backend';
-import { enqueueCheckIn, type DoorRow, type DoorVerdict, type QueuedCheckIn } from './doorList';
+import { enqueueCheckIn, scrubDoorRow, type DoorRow, type DoorVerdict, type QueuedCheckIn } from './doorList';
 
 /**
  * Server-backed door path for staff who may check people in but not read the
@@ -86,7 +86,8 @@ export async function fetchDoorList(eventId: string): Promise<DoorListPayload> {
       title: String(json.event?.title || ''),
       allowReentry: Boolean(json.event?.allowReentry),
     },
-    rows: json.rows as DoorRow[],
+    // scrubDoorRow: an older server sent the raw admitting code; keep only its hash.
+    rows: (json.rows as DoorRow[]).map(scrubDoorRow),
     generatedAt: String(json.generatedAt || new Date().toISOString()),
   };
   await saveDoorList(eventId, payload);
@@ -106,7 +107,13 @@ export async function loadCachedDoorList(eventId: string): Promise<DoorListPaylo
     const raw = await AsyncStorage.getItem(listKey(eventId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed && Array.isArray(parsed.rows) ? (parsed as DoorListPayload) : null;
+    if (!parsed || !Array.isArray(parsed.rows)) return null;
+    // A list cached by an older build holds every ticket's raw admitting code.
+    // Rewrite it to hashes and persist that, so the raw codes leave the device.
+    const legacy = (parsed.rows as DoorRow[]).some((r) => r && r.code !== undefined);
+    const payload: DoorListPayload = { ...parsed, rows: (parsed.rows as DoorRow[]).map(scrubDoorRow) };
+    if (legacy) await saveDoorList(eventId, payload);
+    return payload;
   } catch {
     return null;
   }

@@ -37,20 +37,39 @@ export class FakeFirestore {
         self.write(ref._path, data)
         return ref
       },
-      where: (field: string, op: string, value: unknown) => {
-        const match = (v: any) =>
-          op === '>' ? typeof v === 'number' && v > (value as number)
-          : op === 'array-contains' ? Array.isArray(v) && v.includes(value)
-          : v === value
-        const get = async () => {
-          const docs = Array.from(self.store.entries())
-            .filter(([p, d]) => p.startsWith(`${name}/`) && p.split('/').length === name.split('/').length + 1 && match(d[field]))
-            .map(([p]) => self.snap(p))
-          return { docs, empty: docs.length === 0 }
-        }
-        return { get, limit: () => ({ get }) }
-      },
+      where: (field: string, op: string, value: unknown) => self.query(name, [[field, op, value]]),
+      select: () => self.query(name, []),
+      get: async () => self.query(name, []).get(),
     }
+  }
+
+  /** where(==, >, array-contains) chains are ANDed; select/limit/orderBy are accepted and ignored. */
+  query(name: string, filters: Array<[string, string, unknown]>): any {
+    const self = this
+    const match = (v: any, op: string, value: unknown) =>
+      op === '>' ? typeof v === 'number' && v > (value as number)
+      : op === 'array-contains' ? Array.isArray(v) && v.includes(value)
+      : op === 'in' ? Array.isArray(value) && value.includes(v)
+      : v === value
+    const get = async () => {
+      const docs = Array.from(self.store.entries())
+        .filter(
+          ([p, d]) =>
+            p.startsWith(`${name}/`) &&
+            p.split('/').length === name.split('/').length + 1 &&
+            filters.every(([field, op, value]) => match(d[field], op, value))
+        )
+        .map(([p]) => self.snap(p))
+      return { docs, empty: docs.length === 0, size: docs.length }
+    }
+    const q: any = {
+      get,
+      where: (field: string, op: string, value: unknown) => self.query(name, [...filters, [field, op, value]]),
+      select: () => q,
+      limit: () => q,
+      orderBy: () => q,
+    }
+    return q
   }
 
   docsIn(name: string): [string, Doc][] {

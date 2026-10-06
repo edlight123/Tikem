@@ -1115,6 +1115,7 @@ export default {
       offlineNotCached: 'Hors ligne et ce billet n’est pas en cache. Reconnectez-vous une fois pour charger la liste.',
       transferredCode: 'Ce billet a été transféré. L’ancien code n’est plus valide.',
       invalidCode: 'Ce code n’est pas valide.',
+      refundInProgress: 'Ce billet a un remboursement en cours. Il ne peut pas être enregistré.',
     },
     offline: {
       banner: 'Hors ligne. Les entrées se synchroniseront à la reconnexion.',
@@ -1964,6 +1965,10 @@ export default {
       submitFailed: 'Échec de la demande de retrait',
       duplicateTitle: 'Déjà en cours',
       duplicateBody: 'Un retrait pour ce solde est déjà en cours, ou le solde vient de changer. Nous l’avons actualisé. Vérifiez-le avant de réessayer.',
+      destinationOnHoldTitle: 'Compte enregistré',
+      destinationOnHoldBody: 'Votre nouveau compte est enregistré et pourra recevoir des paiements à partir du {date}.',
+      balanceChangedTitle: 'Solde modifié',
+      balanceChangedBody: 'Votre solde a changé, veuillez réessayer.',
       instantFailedBody: 'MonCash n’a pas pu effectuer le transfert instantané. Aucun argent n’a été envoyé et votre solde a été rétabli. Réessayez, ou désactivez les paiements instantanés pour passer par la vérification manuelle.',
     },
   },

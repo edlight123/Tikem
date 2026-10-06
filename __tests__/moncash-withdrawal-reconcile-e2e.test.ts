@@ -140,6 +140,8 @@ jest.mock('@/lib/firestore/payout-profiles', () => ({
   getRequiredPayoutProfileIdForEventCountry: () => 'haiti',
 }))
 jest.mock('@/lib/firestore/payout', () => ({
+  // The pure destination helpers (fingerprint, comparison) are the real ones.
+  ...jest.requireActual('@/lib/firestore/payout'),
   requireRecentPayoutDetailsChangeVerification: jest.fn(async () => {}),
   consumePayoutDetailsChangeVerification: jest.fn(async () => {}),
 }))
@@ -284,6 +286,11 @@ function backingTicket(netMinor: number, over: Record<string, any> = {}) {
   }
 }
 
+/** The saved MonCash number's full-number fingerprint (509 3700 7294). */
+function savedFingerprint(): string {
+  return jest.requireActual('@/lib/firestore/payout').mobileMoneyFingerprint('50937007294')
+}
+
 function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
   currentCurrency = 'HTG'
@@ -312,7 +319,7 @@ function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
     status: 'active',
     method: 'mobile_money',
     allowInstantMoncash: true,
-    mobileMoneyDetails: { provider: 'moncash', phoneNumberLast4: '7294' },
+    mobileMoneyDetails: { provider: 'moncash', phoneNumberLast4: '7294', phoneNumberFingerprint: savedFingerprint() },
   }
   session.uid = 'org1'
   session.admin = false
@@ -750,5 +757,53 @@ describe('admin reject credits back only reserved requests', () => {
     expect(res.status).toBe(200)
     expect(row('unreserved')).toMatchObject({ status: 'failed', creditBackSkipped: 'no_reservation_recorded' })
     expect(earnings().withdrawnAmount).toBe(30_000)
+  })
+})
+
+// An instant withdrawal still in flight may already be paid: an admin 'fail'
+// must not hand the reservation back on top of the transfer.
+describe('admin fail of an in-flight instant withdrawal', () => {
+  it('needs confirmNotPaid, asks MonCash, and refuses while MonCash says paid or cannot tell', async () => {
+    seed()
+    const id = await unconfirmedWithdrawal()
+    session.admin = true
+
+    const unconfirmed = await adminPOST(post({ withdrawalId: id, action: 'fail' }))
+    expect(unconfirmed.status).toBe(409)
+    expect(earnings().withdrawnAmount).toBe(NET)
+
+    digicel.statusAnswer = 'pending'
+    const ambiguous = await adminPOST(post({ withdrawalId: id, action: 'fail', confirmNotPaid: true }))
+    expect(ambiguous.status).toBe(409)
+    expect(row(id).status).toBe('processing')
+    expect(earnings().withdrawnAmount).toBe(NET)
+
+    digicel.statusAnswer = 'successful'
+    const paid = await adminPOST(post({ withdrawalId: id, action: 'fail', confirmNotPaid: true }))
+    expect(paid.status).toBe(409)
+    expect(row(id).status).toBe('completed')
+    expect(earnings().withdrawnAmount).toBe(NET)
+  })
+
+  it('releases once MonCash reports the transfer failed', async () => {
+    seed()
+    const id = await unconfirmedWithdrawal()
+    session.admin = true
+    digicel.statusAnswer = 'failed'
+    const res = await adminPOST(post({ withdrawalId: id, action: 'fail', confirmNotPaid: true, payeeReasonCode: 'details_mismatch' }))
+    expect(res.status).toBe(200)
+    expect(row(id)).toMatchObject({ status: 'failed', reservationReleasedBy: 'admin:admin1' })
+    expect(earnings().withdrawnAmount).toBe(0)
+  })
+
+  it('an admin cannot act on a withdrawal paid to their own account', async () => {
+    seed()
+    coll('config').payouts = { prefunding: { enabled: false, available: false } }
+    const out = await (await withdraw(post({ eventId: 'evt1', amount: NET, moncashNumber: '+509 3700 7294' }))).json()
+    coll('withdrawal_requests')[out.withdrawalId].organizerId = 'admin1'
+    session.admin = true
+    const res = await adminPOST(post({ withdrawalId: out.withdrawalId, action: 'approve' }))
+    expect(res.status).toBe(403)
+    expect(row(out.withdrawalId).status).toBe('pending')
   })
 })

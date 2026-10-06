@@ -250,6 +250,33 @@ describe('MonCash Button payment flow', () => {
 
   // --------------------------------------------------------------------------
   describe('getMonCashButtonPaymentByOrderId() — the ticket-issuing gate', () => {
+    it('never verifies against the sandbox in production, and never probes the other mode', async () => {
+      const prevVercel = process.env.VERCEL_ENV
+      process.env.VERCEL_ENV = 'production'
+      try {
+        // A sandbox-pinned config is refused outright: no gateway call at all.
+        const sandboxFetch = jest.fn()
+        global.fetch = sandboxFetch as unknown as typeof fetch
+        await expect(getMonCashButtonPaymentByOrderId('123456789')).rejects.toThrow(/sandbox/i)
+        expect(sandboxFetch).not.toHaveBeenCalled()
+
+        // Production mode, unpaid on production: the sandbox is not asked.
+        delete process.env.MONCASH_BUTTON_MODE
+        process.env.MONCASH_MODE = 'production'
+        const prodFetch = jest.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ success: false, message: 'not found' }),
+        })
+        global.fetch = prodFetch as unknown as typeof fetch
+        await getMonCashButtonPaymentByOrderId('123456789').catch(() => null)
+        for (const [url] of prodFetch.mock.calls) expect(String(url)).not.toMatch(/sandbox/i)
+      } finally {
+        if (prevVercel === undefined) delete process.env.VERCEL_ENV
+        else process.env.VERCEL_ENV = prevVercel
+      }
+    })
+
     it('treats a confirmed order as PAID (success && payment_status)', async () => {
       const fetchMock = jest.fn().mockResolvedValue({
         ok: true,

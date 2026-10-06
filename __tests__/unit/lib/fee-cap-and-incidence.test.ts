@@ -15,9 +15,7 @@
 import {
   calculateBuyerPricing,
   calculatePlatformFeeWithPercentage,
-  legacyPlatformFeeCapMinor,
   platformFeeForSale,
-  PLATFORM_FEE_CAP_RETIRED_AT,
 } from '@/lib/fees'
 import {
   priceOrder,
@@ -118,8 +116,8 @@ describe('no per-ticket cap on a new sale', () => {
 
 describe('a high-priced ticket pays exactly 10% on every surface, and they agree', () => {
   // purchased after the cap was retired, so the payout engine applies the flat rate too
-  const AFTER = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString()
-  const NOW = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 30 * 24 * 3_600_000)
+  const AFTER = new Date('2026-10-06T00:01:00.000Z').toISOString()
+  const NOW = new Date('2026-11-05T00:00:00.000Z')
 
   const CASES = [
     { label: '$500 USD', face: 500, currency: 'USD', country: 'US', expectedFeeMinor: 50_00 },
@@ -196,38 +194,14 @@ describe('a high-priced ticket pays exactly 10% on every surface, and they agree
   })
 })
 
-describe('sales made while the cap was in force keep their capped fee in payouts', () => {
-  const BEFORE = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() - 60_000)
-  const AFTER = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000)
-
-  it('knows the retired ceilings per location and currency', () => {
-    expect(legacyPlatformFeeCapMinor('haiti', 'HTG')).toBe(75_000)
-    expect(legacyPlatformFeeCapMinor('haiti', 'USD')).toBe(500)
-    expect(legacyPlatformFeeCapMinor('haiti', 'CAD')).toBeNull() // was uncapped then too
-    expect(legacyPlatformFeeCapMinor('us-canada', 'usd')).toBe(500)
-    expect(legacyPlatformFeeCapMinor('us-canada', 'CAD')).toBe(700)
-    expect(legacyPlatformFeeCapMinor('us-canada', 'EUR')).toBe(450)
-  })
-
-  it('caps a sale from before the change, scaled by the order quantity', () => {
-    const sale = { legacyCapMinorPerTicket: 75_000, quantity: 1, purchasedAt: BEFORE }
-    expect(platformFeeForSale(10_000_00, RATE, sale)).toBe(75_000)
-    expect(platformFeeForSale(20_000_00, RATE, { ...sale, quantity: 2 })).toBe(150_000)
-    expect(platformFeeForSale(1_000_00, RATE, sale)).toBe(10_000) // under the cap, untouched
-  })
-
-  it('treats a sale with no purchase date as a capped-era sale', () => {
-    expect(platformFeeForSale(10_000_00, RATE, { legacyCapMinorPerTicket: 75_000, quantity: 1, purchasedAt: null })).toBe(75_000)
-  })
-
-  it('charges a sale from after the change exactly the rate', () => {
-    const sale = { legacyCapMinorPerTicket: 75_000, quantity: 1, purchasedAt: AFTER }
-    expect(platformFeeForSale(10_000_00, RATE, sale)).toBe(1_000_00)
-    expect(platformFeeForSale(10_000_00, RATE, sale)).toBe(calculatePlatformFeeWithPercentage(10_000_00, RATE))
-  })
-
-  it('leaves a currency that never had a cap uncapped either way', () => {
-    expect(platformFeeForSale(500_00, RATE, { legacyCapMinorPerTicket: null, quantity: 1, purchasedAt: BEFORE })).toBe(50_00)
+describe('every sale, old or new, pays exactly the rate in payouts', () => {
+  // The cap was retired before any real organizer sold, so no sale keeps it.
+  it('ignores purchase date and any legacy cap', () => {
+    const old = { legacyCapMinorPerTicket: 75_000, quantity: 1, purchasedAt: new Date('2026-09-01T00:00:00Z') }
+    expect(platformFeeForSale(10_000_00, RATE, old)).toBe(1_000_00)
+    expect(platformFeeForSale(10_000_00, RATE, { ...old, purchasedAt: null })).toBe(1_000_00)
+    expect(platformFeeForSale(20_000_00, RATE, { ...old, quantity: 2 })).toBe(2_000_00)
+    expect(platformFeeForSale(500_00, RATE)).toBe(calculatePlatformFeeWithPercentage(500_00, RATE))
   })
 })
 

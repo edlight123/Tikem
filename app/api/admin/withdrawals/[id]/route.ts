@@ -6,6 +6,14 @@ import { findEventEarningsDocInTransaction } from '@/lib/earnings'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { notifyWithdrawalOutcome, type WithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
+import { moncashPrefundedTransactionStatus } from '@/lib/moncash'
+import {
+  finalizeWithdrawalCompleted,
+  isPrefundedInFlight,
+  releaseWithdrawalReservation,
+} from '@/lib/payouts/withdrawal-finalize'
+import { classifyStatusCheck, RECONCILE_RELEASE_GRACE_MS, toMillis } from '@/lib/payouts/withdrawal-reconcile'
+import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,7 +51,103 @@ export async function POST(req: NextRequest) {
       return adminError('Invalid action. Must be: approve, reject, complete, or fail', 400)
     }
 
-    const withdrawalRef = adminDb.collection('withdrawal_requests').doc(withdrawalId)
+    const withdrawalRef = adminDb.collection('withdrawal_requests').doc(String(withdrawalId))
+
+    // Pre-read for the checks that need the network (MonCash, the payee's
+    // profile); the transaction below re-reads and re-checks the status.
+    const preSnap = await withdrawalRef.get()
+    if (!preSnap.exists) {
+      return adminError('Withdrawal not found', 404)
+    }
+    const pre = preSnap.data() as any
+
+    // Nobody releases, approves or fails money paid to their own account.
+    if (String(pre?.organizerId || '') === user.id || String(pre?.promoter_uid || '') === user.id) {
+      return adminError('You cannot act on a withdrawal paid to your own account. Ask another admin.', 403)
+    }
+
+    // A MonCash number that is not the payee's saved destination is not paid
+    // without an explicit, logged override.
+    if (action === 'approve' || action === 'complete') {
+      const destinationReview = await reviewWithdrawalDestination(pre)
+      if (destinationReview === 'mismatch' && body.overrideDestinationMismatch !== true) {
+        return adminError(
+          "This MonCash number is not the payee's saved payout number",
+          409,
+          'Check with the payee, then retry with overrideDestinationMismatch: true if it is correct.'
+        )
+      }
+    }
+
+    // An instant (prefunded) withdrawal still 'processing' may already have been
+    // paid by MonCash: failing it would hand the reservation back on top of the
+    // transfer. It is failed only once MonCash says it was not paid.
+    if (action === 'fail' && isPrefundedInFlight(pre)) {
+      if (body.confirmNotPaid !== true) {
+        return adminError(
+          'This instant MonCash withdrawal may already have been paid',
+          409,
+          'Check the transfer in MonCash, then retry with confirmNotPaid: true. Tikèm also asks MonCash before releasing.'
+        )
+      }
+      let verdict: ReturnType<typeof classifyStatusCheck>
+      try {
+        const status = await moncashPrefundedTransactionStatus(String(withdrawalId))
+        verdict = classifyStatusCheck({ raw: status.raw })
+      } catch (err) {
+        verdict = classifyStatusCheck({ error: err })
+      }
+      if (verdict.verdict === 'successful') {
+        await finalizeWithdrawalCompleted(String(withdrawalId), {
+          transactionId: verdict.transactionId,
+          confirmedVia: 'admin_status_check',
+          statusRaw: verdict.raw,
+        })
+        return adminError('MonCash reports this transfer as paid', 409, 'It was marked completed instead of failed.')
+      }
+      if (verdict.verdict === 'ambiguous') {
+        return adminError('MonCash could not confirm this transfer either way', 409, verdict.detail)
+      }
+      const attemptedAt = toMillis(pre?.reservedAt) ?? toMillis(pre?.createdAt) ?? Date.now()
+      if (verdict.verdict === 'not_found' && Date.now() - attemptedAt < RECONCILE_RELEASE_GRACE_MS) {
+        return adminError(
+          'MonCash does not know this transfer yet',
+          409,
+          'A slow transfer can take a while to appear. Try again in 30 minutes.'
+        )
+      }
+      const now = new Date()
+      const released = await releaseWithdrawalReservation(String(withdrawalId), {
+        reason: payeeReasonEn || 'The payout could not be completed.',
+        releasedBy: `admin:${user.id}`,
+        now,
+        extra: {
+          payeeReasonCode,
+          payeeReasonText,
+          ...(internalNote ? { adminNote: internalNote } : {}),
+          processedBy: user.id,
+          processedAt: now,
+          reconciledAt: now,
+          adminStatusCheck: verdict.verdict,
+        },
+      })
+      if (released.changed) {
+        logAdminAction({
+          action: 'withdrawal.fail',
+          adminId: user.id,
+          adminEmail: user.email || 'unknown',
+          resourceType: 'withdrawal',
+          resourceId: String(withdrawalId),
+          details: { withdrawalId, internalNote, payeeReasonCode, payeeReasonText, statusCheck: verdict.verdict },
+        }).catch(() => {})
+        await notifyWithdrawalOutcome(String(withdrawalId), 'failed', {
+          row: released.row,
+          reasonCode: payeeReasonCode,
+          reasonText: payeeReasonText,
+        })
+      }
+      return adminOk({ message: 'Withdrawal marked failed; reservation released', idempotent: !released.changed })
+    }
 
     const normalizeAmountToCents = (raw: any): number => {
       const n = Number(raw)

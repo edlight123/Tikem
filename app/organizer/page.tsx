@@ -12,17 +12,20 @@ import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
 import OrganizerDashboardClient from './OrganizerDashboardClient'
 import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
+import { safeSameOriginPath } from '@/lib/safeUrl'
 
 export const revalidate = 30 // Cache for 30 seconds
 
 // Depends on auth cookies and organizer-specific data.
 export const dynamic = 'force-dynamic'
 
-function sanitizeRedirectTarget(target: string | undefined): string {
+// Parsed with the URL parser (lib/safeUrl): a startsWith('/') check let
+// "/\evil.com" through, which browsers read as protocol-relative. The base
+// origin is only a reference point; the result is always a bare path.
+function sanitizeRedirectTarget(target: string | undefined | null): string {
   if (!target) return '/organizer'
-  if (!target.startsWith('/')) return '/organizer'
-  if (target.startsWith('//')) return '/organizer'
-  return target
+  const path = safeSameOriginPath(target, 'https://tikem.co')
+  return path === '/' ? '/organizer' : path
 }
 
 export default async function OrganizerDashboard({

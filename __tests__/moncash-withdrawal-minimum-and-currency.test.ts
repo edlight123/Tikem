@@ -135,6 +135,8 @@ jest.mock('@/lib/firestore/payout-profiles', () => ({
 }))
 
 jest.mock('@/lib/firestore/payout', () => ({
+  // The pure destination helpers (fingerprint, comparison) are the real ones.
+  ...jest.requireActual('@/lib/firestore/payout'),
   requireRecentPayoutDetailsChangeVerification: jest.fn(async () => {
     throw new Error('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
   }),
@@ -283,6 +285,11 @@ function backingTicket(netMinor: number, over: Record<string, any> = {}) {
   }
 }
 
+/** The saved MonCash number's full-number fingerprint (509 3700 7294). */
+function savedFingerprint(): string {
+  return jest.requireActual('@/lib/firestore/payout').mobileMoneyFingerprint('50937007294')
+}
+
 function seed(
   opts: {
     currency?: 'HTG' | 'USD'
@@ -321,7 +328,7 @@ function seed(
     status: 'active',
     method: 'mobile_money',
     allowInstantMoncash: instant,
-    mobileMoneyDetails: { provider: 'moncash', phoneNumber: '****7294', phoneNumberLast4: '7294' },
+    mobileMoneyDetails: { provider: 'moncash', phoneNumber: '****7294', phoneNumberLast4: '7294', phoneNumberFingerprint: savedFingerprint() },
   }
   session.uid = 'org1'
   digicel.balanceHtg = 100_000
@@ -616,13 +623,11 @@ describe('validation and debit read the same row', () => {
 // One figure: what the screens show is what the withdrawal accepts
 // ---------------------------------------------------------------------------
 describe('display and validation agree (lib/payouts/availability.ts)', () => {
-  // A 10,000 HTG ticket absorbed by the organizer, sold while the (now retired)
-  // per-ticket cap was in force: it has no purchase date, so it keeps the fee it
-  // was sold under (capped at 750 HTG → nets 9,250 HTG), a refunded 2,000 HTG ticket, and a 1,000 HTG ticket that
-  // an APPROVED legacy batch payout already covers. The stored ledger row says
-  // something else entirely (an uncapped 10%, refunds never removed) — it must
-  // not matter.
-  const EXPECTED = 925_000
+  // A 10,000 HTG ticket absorbed by the organizer (flat 10% fee, no cap for any
+  // sale → nets 9,000 HTG), a refunded 2,000 HTG ticket, and a 1,000 HTG ticket
+  // that an APPROVED legacy batch payout already covers. The stored ledger row
+  // says something else entirely (refunds never removed); it must not matter.
+  const EXPECTED = 900_000
   // The shipped fee settings (10%) rather than this file's 5% stub.
   const { getPlatformSettings } = jest.requireMock('@/lib/admin/platform-settings')
   let stub: any
@@ -650,9 +655,9 @@ describe('display and validation agree (lib/payouts/availability.ts)', () => {
     const api = await (await eventEarningsApi({} as any, { params: Promise.resolve({ id: 'evt1' }) })).json()
     expect(api.earnings).toMatchObject({
       availableToWithdraw: EXPECTED,
-      netAmount: 1_015_000,
+      netAmount: 990_000,
       withdrawnAmount: 90_000,
-      platformFee: 85_000,
+      platformFee: 110_000,
       refundedAmount: 200_000,
       settlementStatus: 'ready',
       dataSource: 'availability',
@@ -668,7 +673,7 @@ describe('display and validation agree (lib/payouts/availability.ts)', () => {
     // One cent more is refused, nothing written.
     const over = await withdraw(post(body(EXPECTED + 1)))
     expect(over.status).toBe(400)
-    expect((await over.json()).error).toMatch(/Available: 9250\.00 HTG/)
+    expect((await over.json()).error).toMatch(/Available: 9000\.00 HTG/)
     expect(withdrawals()).toEqual([])
 
     // Exactly the displayed figure is accepted, and debited once.

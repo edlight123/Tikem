@@ -110,8 +110,9 @@ export function parseSogepayCallbackPayload(payload: Record<string, any>): Sogep
 
 /**
  * Whether a Sogepay-reported amount is acceptable for the expected order amount.
- * Defense-in-depth, mirroring the MonCash amount guard: a verified mismatch should block
- * fulfillment; a missing amount can't be checked and is allowed (logged by the caller).
+ * `verified: false` means it could NOT be checked (no amount reported, or no
+ * expected amount): the callback treats that as a refusal (fail closed), since
+ * the checkout redirect does not bind the gateway to a signed amount.
  */
 export function isSogepayPaidAmountAcceptable(
   expectedAmount: number,

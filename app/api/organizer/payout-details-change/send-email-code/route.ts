@@ -111,6 +111,9 @@ export async function POST(_request: NextRequest) {
         verifiedUntil: null,
         codeHash,
         salt,
+        // A fresh code gets a fresh attempt budget (the verify route wipes the
+        // code after 5 wrong guesses).
+        failedAttempts: 0,
       },
       { merge: true }
     )

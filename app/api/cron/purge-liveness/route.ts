@@ -76,13 +76,29 @@ export async function GET(request: Request) {
       if (!decidedAt || Number.isNaN(decidedAt.getTime())) continue
       if (decidedAt.getTime() > cutoff) continue
 
+      // The path is client-written (the user's own request doc), so it is only
+      // trusted inside that user's own verification folder. Anything else —
+      // another user's file, an event poster, `../` tricks — is skipped, never
+      // deleted with the service account's authority.
+      const objectPath = String(path)
+      const ownPrefix = `verification/${doc.id}/`
+      if (
+        !objectPath.startsWith(ownPrefix) ||
+        objectPath.length === ownPrefix.length ||
+        objectPath.includes('\\') ||
+        objectPath.split('/').some((seg) => seg === '' || seg === '.' || seg === '..')
+      ) {
+        failures.push(`${doc.id}: path outside verification/${doc.id}/, skipped`)
+        continue
+      }
+
       if (dryRun) {
         purged++
         continue
       }
 
       try {
-        await adminStorage.bucket().file(String(path)).delete({ ignoreNotFound: true })
+        await adminStorage.bucket().file(objectPath).delete({ ignoreNotFound: true })
         // Drop the pointer too, and record WHY it is gone — a reviewer opening
         // an old case should see a retention deletion, not a missing file.
         await doc.ref.set(
@@ -115,6 +131,6 @@ export async function GET(request: Request) {
     })
   } catch (error: any) {
     console.error('[purge-liveness] failed', error?.message)
-    return NextResponse.json({ error: 'Purge failed', message: error?.message }, { status: 500 })
+    return NextResponse.json({ error: 'Purge failed' }, { status: 500 })
   }
 }

@@ -10,6 +10,7 @@ export type AuditAction =
   | 'event.unfeature'
   | 'event.export_financials'
   | 'admin.backfill'
+  | 'platform_settings.update'
   | 'admin.search_index.rebuild'
   | 'user.verify'
   | 'user.unverify'

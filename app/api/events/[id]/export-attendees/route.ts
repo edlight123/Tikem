@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
+import { toCsv } from '@/lib/csv'
 
 export async function GET(
   request: NextRequest,
@@ -59,10 +60,7 @@ export async function GET(
     })
 
     // Convert to CSV format
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row: string[]) => row.map((cell: string) => `"${cell}"`).join(','))
-    ].join('\n')
+    const csvContent = toCsv([headers, ...rows])
 
     // Return as downloadable file
     return new NextResponse(csvContent, {

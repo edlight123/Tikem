@@ -7,8 +7,9 @@ export const dynamic = 'force-dynamic'
  * GET /api/staff/events/:id/door-list
  *
  * What the door needs and nothing else: display name, tier, status, checked-in
- * state and ticket code, for live tickets plus ones already checked in. No
- * email, phone, payment or amounts. Door staff without the view-attendees
+ * state and a SHA-256 of the ticket code (never the code itself: it admits),
+ * for live tickets plus ones already checked in. No email, phone, payment or
+ * amounts. Door staff without the view-attendees
  * permission validate QRs and look guests up this way, because Firestore
  * cannot hide fields on a direct tickets read.
  *

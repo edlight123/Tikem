@@ -143,11 +143,11 @@ function seed() {
   coll('events').htg1 = { organizer_id: 'org1', title: 'Konpa', currency: 'HTG', country: 'HT', end_datetime: ENDED, status: 'published' }
   coll('events').htg2 = { organizer_id: 'org1', title: 'Rara', currency: 'HTG', country: 'HT', end_datetime: ENDED, status: 'published' }
   coll('events').usd1 = { organizer_id: 'org1', title: 'Diaspora', currency: 'USD', country: 'HT', end_datetime: ENDED, status: 'published' }
-  // Sold 2026-08-20, while the (now retired) per-ticket cap was in force, so
-  // these keep the capped fee they were sold under.
-  sell('htg1', 10_000) // fee capped at 750 → 9,250 HTG
+  // Flat 10% for every sale: the per-ticket cap is retired, including for
+  // tickets sold while it was in force.
+  sell('htg1', 10_000) // fee 1,000 → 9,000 HTG
   sell('htg2', 1_000) //  fee 100 → 900 HTG
-  sell('usd1', 100, { payment_method: 'stripe' }) // fee capped at $5 → $95
+  sell('usd1', 100, { payment_method: 'stripe' }) // fee $10 → $90
   gateMock.mockClear()
 }
 
@@ -201,19 +201,19 @@ describe('batch "Request payout" is retired', () => {
     seed()
     const { totals, events } = await loadOrganizerAvailability('org1')
     expect(totals).toEqual([
-      expect.objectContaining({ currency: 'HTG', availableNowMinor: 925_000 + 90_000 }),
-      expect.objectContaining({ currency: 'USD', availableNowMinor: 9_500 }),
+      expect.objectContaining({ currency: 'HTG', availableNowMinor: 900_000 + 90_000 }),
+      expect.objectContaining({ currency: 'USD', availableNowMinor: 9_000 }),
     ])
     const summary = summaryFromAvailability(events)
     expect(summary.currency).toBe('mixed')
-    expect(summary.totalsByCurrency?.HTG?.totalAvailableToWithdraw).toBe(1_015_000)
+    expect(summary.totalsByCurrency?.HTG?.totalAvailableToWithdraw).toBe(990_000)
   })
 })
 
 describe('historical batch payouts still count', () => {
   it.each([['pending'], ['approved'], ['completed']])('a ledger-debited batch in status %s leaves nothing to withdraw twice', async (status) => {
     seed()
-    fileHistoricalBatch(status, { htg1: 925_000 }, ['t1'])
+    fileHistoricalBatch(status, { htg1: 900_000 }, ['t1'])
     const a = await loadEventAvailability({ eventId: 'htg1' })
     expect(a?.balanceMinor).toBe(0)
     expect(a?.availableNowMinor).toBe(0)
@@ -223,7 +223,7 @@ describe('historical batch payouts still count', () => {
     seed()
     coll('organizers/org1/payouts').legacy = { status: 'completed', ticketIds: ['t1'], amount: 900_000, currency: 'HTG' }
     const a = await loadEventAvailability({ eventId: 'htg1' })
-    expect(a?.batchReservedMinor).toBe(925_000)
+    expect(a?.batchReservedMinor).toBe(900_000)
     expect(a?.availableNowMinor).toBe(0)
   })
 })
@@ -231,13 +231,13 @@ describe('historical batch payouts still count', () => {
 describe('admin decline / cancel of a historical batch (credit-back)', () => {
   it('admin decline credits the ledger back, once', async () => {
     seed()
-    const id = fileHistoricalBatch('pending', { htg1: 925_000, htg2: 90_000 }, ['t1', 't2'])
+    const id = fileHistoricalBatch('pending', { htg1: 900_000, htg2: 90_000 }, ['t1', 't2'])
     const decline = () => declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'wrong number' }))
 
     expect((await decline()).status).toBe(200)
     expect(ledger('htg1').withdrawnAmount).toBe(0)
     expect(ledger('htg2').withdrawnAmount).toBe(0)
-    expect((await loadEventAvailability({ eventId: 'htg1' }))?.availableNowMinor).toBe(925_000)
+    expect((await loadEventAvailability({ eventId: 'htg1' }))?.availableNowMinor).toBe(900_000)
 
     // Idempotent: a second decline is a no-op, not a second credit.
     expect((await decline()).status).toBe(200)
@@ -248,10 +248,10 @@ describe('admin decline / cancel of a historical batch (credit-back)', () => {
     seed()
     coll('event_earnings').legacy_row = { event_id: 'htg1', organizerId: 'org1', currency: 'HTG', withdrawnAmount: 0 }
     // File against the legacy row directly.
-    coll('event_earnings').legacy_row.withdrawnAmount = 925_000
+    coll('event_earnings').legacy_row.withdrawnAmount = 900_000
     coll('organizers/org1/payouts').po1 = {
-      organizerId: 'org1', status: 'pending', amount: 925_000, currency: 'HTG',
-      ticketIds: ['t1'], eventAmounts: { htg1: 925_000 }, debitedEventEarnings: true,
+      organizerId: 'org1', status: 'pending', amount: 900_000, currency: 'HTG',
+      ticketIds: ['t1'], eventAmounts: { htg1: 900_000 }, debitedEventEarnings: true,
     }
     expect((await declinePayout(req({ organizerId: 'org1', payoutId: 'po1', reason: 'x' }))).status).toBe(200)
     expect(coll('event_earnings').legacy_row.withdrawnAmount).toBe(0)
@@ -259,11 +259,11 @@ describe('admin decline / cancel of a historical batch (credit-back)', () => {
 
   it('an APPROVED batch can be cancelled only with confirmNotPaid, and is then credited back once', async () => {
     seed()
-    const id = fileHistoricalBatch('approved', { htg1: 925_000 }, ['t1'])
+    const id = fileHistoricalBatch('approved', { htg1: 900_000 }, ['t1'])
 
     const refused = await declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'x' }))
     expect(refused.status).toBe(409)
-    expect(ledger('htg1').withdrawnAmount).toBe(925_000)
+    expect(ledger('htg1').withdrawnAmount).toBe(900_000)
 
     const ok = await declinePayout(req({ organizerId: 'org1', payoutId: id, reason: 'x', confirmNotPaid: true }))
     expect(ok.status).toBe(200)

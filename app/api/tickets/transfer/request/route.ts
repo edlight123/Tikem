@@ -79,6 +79,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // A ticket with a refund requested, under review or in flight is not
+    // transferable: the money may go back to the buyer while the seat moves on.
+    const refundStatus = String(ticket.refund_status ?? '').toLowerCase().trim()
+    if (refundStatus && refundStatus !== 'none' && refundStatus !== 'denied') {
+      return NextResponse.json(
+        { error: 'This ticket has a refund in progress and cannot be transferred', code: 'refund_in_progress' },
+        { status: 400 }
+      )
+    }
+
     // Check for existing pending transfers using Firestore
     const existingTransfers = await adminDb.collection('ticket_transfers')
       .where('ticket_id', '==', ticketId)

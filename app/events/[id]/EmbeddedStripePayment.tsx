@@ -100,7 +100,8 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
             const response = await fetch('/api/tickets/create-from-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+              // The client secret proves this browser paid; a guest has no session.
+              body: JSON.stringify({ paymentIntentId: paymentIntent.id, clientSecret }),
             })
 
             if (!response.ok) {

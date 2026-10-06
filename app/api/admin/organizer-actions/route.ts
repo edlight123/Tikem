@@ -43,14 +43,20 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'ban':
+        // users.status / can_create_events are what the publish route reads
+        // (lib/events/publishGuard isOrganizerBanned) to refuse a republish.
         updates.status = 'banned'
         updates.can_create_events = false
+        updates.banned_at = new Date()
+        updates.banned_by = user.id
         successMessage = 'Organizer has been banned successfully'
         break
       
       case 'unban':
         updates.status = 'active'
         updates.can_create_events = true
+        updates.banned_at = null
+        updates.banned_by = null
         successMessage = 'Organizer has been unbanned successfully'
         break
       

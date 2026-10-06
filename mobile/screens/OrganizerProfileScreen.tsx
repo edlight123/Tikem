@@ -318,7 +318,17 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     ]);
   };
 
-  const openLink = async (url: string) => {
+  const openLink = async (raw: string) => {
+    // Organizer-supplied (website is free text). Only open web links: a bare
+    // domain gets https://, anything with another scheme (javascript:, file:,
+    // a custom deep-link scheme) is refused, same rule as EventDetailScreen.
+    const trimmed = (raw || '').trim();
+    const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+    const url = hasScheme ? trimmed : `https://${trimmed}`;
+    if (!/^https?:\/\/[^\s/]+\.[^\s/]+/i.test(url)) {
+      console.warn('Blocked non-http(s) organizer link');
+      return;
+    }
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {

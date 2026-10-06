@@ -58,11 +58,19 @@ export async function POST(request: Request) {
     // Claim, refund/queue and record each ticket through the same mechanics
     // event cancellation uses (lib/tickets/refundExecution.ts).
     for (const original of loaded.tickets) {
+      // A ticket already used at the door is refunded only on purpose
+      // (body.allowCheckedIn), never as part of a bulk tap.
+      if (((original as any).checked_in === true || (original as any).checked_in_at) && body?.allowCheckedIn !== true) {
+        skipped.push({ ticketId: original.id, reason: 'checked_in' })
+        continue
+      }
       const res = await refundTicket(original.id, {
         reason: 'organizer_refund',
         actorId: user.id,
         event: { id: event.id, title: event.title, organizer_id: event.organizer_id },
         onFailure: 'release',
+        // Re-judged inside the claim: a check-in landing after the read above is still refused.
+        allowCheckedIn: body?.allowCheckedIn === true,
       })
       if (res.outcome === 'refunded') refunded.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
       else if (res.outcome === 'queued') queued.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })

@@ -101,7 +101,12 @@ service cloud.firestore {
         && (!('email' in request.resource.data) || request.auth.token.email == null
             || request.resource.data.email == request.auth.token.email)
         && (request.resource.data.is_verified == false || !(request.resource.data.keys().hasAny(['is_verified'])))
-        && (request.resource.data.verification_status == 'none' || !(request.resource.data.keys().hasAny(['verification_status'])));
+        && (request.resource.data.verification_status == 'none' || !(request.resource.data.keys().hasAny(['verification_status'])))
+        // Moderation and reputation are server-owned from the first write, not
+        // only on update: a profile created with its own rating, status or
+        // can_create_events (or a pre-cleared ban) would keep them forever,
+        // since update only forbids CHANGING them.
+        && !(request.resource.data.keys().hasAny(['rating', 'status', 'can_create_events', 'banned_at', 'banned_by']));
 
       // Update: users may update profile fields but cannot change role/verification.
       allow update: if isOwner(userId)
@@ -109,7 +114,14 @@ service cloud.firestore {
         && request.resource.data.is_verified == resource.data.is_verified
         && request.resource.data.verification_status == resource.data.verification_status
         && (request.resource.data.get('email', null) == resource.data.get('email', null)
-            || request.resource.data.get('email', null) == request.auth.token.email);
+            || request.resource.data.get('email', null) == request.auth.token.email)
+        // Moderation and reputation are server-owned (admin ban / disable
+        // posting, organizer rating).
+        && request.resource.data.get('status', null) == resource.data.get('status', null)
+        && request.resource.data.get('can_create_events', null) == resource.data.get('can_create_events', null)
+        && request.resource.data.get('banned_at', null) == resource.data.get('banned_at', null)
+        && request.resource.data.get('banned_by', null) == resource.data.get('banned_by', null)
+        && request.resource.data.get('rating', null) == resource.data.get('rating', null);
 
       // Delete: disallow client deletes.
       allow delete: if false;
@@ -149,7 +161,17 @@ service cloud.firestore {
     // every profile write). No sensitive fields are ever stored here.
     match /public_profiles/{uid} {
       allow read: if isSignedIn();
-      allow create, update: if isOwner(uid);
+      // The verified badge and rating are shown to other users, so they must
+      // mirror the server-owned users/{uid} values, never be self-asserted.
+      allow create, update: if isOwner(uid) && (
+        exists(/databases/$(database)/documents/users/$(uid))
+          ? (request.resource.data.get('is_verified', false)
+               == get(/databases/$(database)/documents/users/$(uid)).data.get('is_verified', false)
+             && request.resource.data.get('rating', null)
+               == get(/databases/$(database)/documents/users/$(uid)).data.get('rating', null))
+          : (request.resource.data.get('is_verified', false) == false
+             && request.resource.data.get('rating', null) == null)
+      );
       allow delete: if false;
     }
 
@@ -247,6 +269,10 @@ service cloud.firestore {
           // (it bypasses rules). .get() defaults keep legacy docs that predate
           // these fields writable.
           request.resource.data.get('rejected', false) == resource.data.get('rejected', false) &&
+          // Cancellation bookkeeping is written only by lib/events/cancel.ts.
+          request.resource.data.get('cancelled_at', null) == resource.data.get('cancelled_at', null) &&
+          request.resource.data.get('cancelled_by', null) == resource.data.get('cancelled_by', null) &&
+          request.resource.data.get('cancelled_by_admin', null) == resource.data.get('cancelled_by_admin', null) &&
           request.resource.data.get('featured', false) == resource.data.get('featured', false) &&
           request.resource.data.get('is_featured', false) == resource.data.get('is_featured', false) &&
           request.resource.data.get('is_verified', false) == resource.data.get('is_verified', false) &&
@@ -418,7 +444,13 @@ service cloud.firestore {
         // (lib/tickets/qr.ts). A direct client write cannot prove it was the
         // new holder's code, so older app builds that still write here are
         // refused for transferred tickets instead of admitting the old code.
-        resource.data.get('qr_version', 0) == 0;
+        resource.data.get('qr_version', 0) == 0 &&
+        // Any refund_status in this list sends the check-in through the server
+        // door routes instead. There, a buyer's open request ('requested') is
+        // admitted and the request is auto-denied in the same transaction
+        // (refund_denied_reason 'checked_in'); a refund already moving
+        // (processing, approved, manual_required, admin_review) is refused.
+        !(resource.data.get('refund_status', '') in ['requested', 'processing', 'approved', 'manual_required', 'admin_review']);
     }
     
     // Ticket tiers - public read, organizers can manage their event's tiers
@@ -505,9 +537,9 @@ service cloud.firestore {
           || resource.data.get('claimed_by_uid', '') == request.auth.uid
         );
 
-      allow create: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid
-        && request.resource.data.get('clicks', 0) == 0;
+      // Created only by /api/organizer/events/[id]/promoters (Admin SDK), which
+      // validates commission and never lets a creator preset the claim.
+      allow create: if false;
 
       allow update: if isSignedIn()
         && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
@@ -569,8 +601,12 @@ service cloud.firestore {
       allow read: if true;
       // M10: bind the review to its author so a signed-in user can't post as
       // someone else.
-      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      // Created only by /api/reviews (Admin SDK), which checks attendance.
+      allow create: if false;
+      allow update: if isSignedIn() && resource.data.user_id == request.auth.uid
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.get('event_id', null) == resource.data.get('event_id', null);
+      allow delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
     }
     
     // Verification requests (KYC). The owner drafts their own request from the
@@ -641,7 +677,8 @@ service cloud.firestore {
       // Verification documents - READ ONLY from client
       // Document uploads go through server API which validates and stores in Storage
       match /verificationDocuments/{docId} {
-        allow read: if isOwner(organizerId);
+        // The phone doc holds the pending one-time code: never client-readable.
+        allow read: if isOwner(organizerId) && docId != 'phone';
         allow write: if false; // Server-side only via Admin SDK
       }
     }

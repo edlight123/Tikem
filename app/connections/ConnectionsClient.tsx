@@ -424,13 +424,23 @@ function FindTab({ onChange }: { onChange: () => void }) {
     setContactLoading(true)
     setContactError(null)
     try {
-      const res = await fetch('/api/connections/match-contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phones }),
-      })
-      const data = await res.json()
-      setContactMatches(data.matches || [])
+      // The server reads at most 200 numbers per call; chunk larger lists.
+      const unique = Array.from(new Set(phones))
+      const byUid = new Map<string, any>()
+      for (let i = 0; i < unique.length; i += 200) {
+        const res = await fetch('/api/connections/match-contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phones: unique.slice(i, i + 200) }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok || !data?.matches) {
+          if (byUid.size === 0) throw new Error('match failed')
+          break
+        }
+        for (const m of data.matches) byUid.set(m.uid, m)
+      }
+      setContactMatches(Array.from(byUid.values()))
     } catch {
       setContactError(
         t('connections.error_match_failed', {

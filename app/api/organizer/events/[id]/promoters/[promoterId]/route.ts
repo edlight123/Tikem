@@ -95,7 +95,18 @@ export async function PATCH(
       if (commissionType === 'flat_per_ticket') {
         // Same guard as create: a flat fee above the priciest ticket is never earnable.
         const maxTierCents = await maxTierPriceCentsForEvent(id, loaded.event)
-        if (maxTierCents !== null && Math.round(rawValue * 100) > maxTierCents) {
+        // No known ticket price = no cap to check against: refuse rather than
+        // accept an uncapped flat fee.
+        if (maxTierCents === null) {
+          return NextResponse.json(
+            {
+              error: 'Add a paid ticket tier before setting a flat commission, or use a percentage commission.',
+              code: 'flat_commission_needs_price',
+            },
+            { status: 400 }
+          )
+        }
+        if (Math.round(rawValue * 100) > maxTierCents) {
           return NextResponse.json(
             { error: 'A flat commission cannot be more than the ticket price' },
             { status: 400 }

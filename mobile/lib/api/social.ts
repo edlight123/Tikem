@@ -89,14 +89,24 @@ export async function searchUsers(q: string): Promise<UserSearchResult[]> {
   return res.ok && data?.results ? data.results : [];
 }
 
+/** The server reads at most this many numbers per call. */
+const MATCH_CONTACTS_CHUNK = 200;
+
 export async function matchContacts(phones: string[]): Promise<ContactMatch[]> {
-  if (!phones.length) return [];
-  const res = await backendFetch('/api/connections/match-contacts', {
-    method: 'POST',
-    body: JSON.stringify({ phones }),
-  });
-  const data = await readJson(res);
-  return res.ok && data?.matches ? data.matches : [];
+  const unique = Array.from(new Set(phones));
+  if (!unique.length) return [];
+  const byUid = new Map<string, ContactMatch>();
+  for (let i = 0; i < unique.length; i += MATCH_CONTACTS_CHUNK) {
+    const res = await backendFetch('/api/connections/match-contacts', {
+      method: 'POST',
+      body: JSON.stringify({ phones: unique.slice(i, i + MATCH_CONTACTS_CHUNK) }),
+    });
+    const data = await readJson(res);
+    // A 429 (daily budget) keeps what was matched so far.
+    if (!res.ok || !data?.matches) break;
+    for (const m of data.matches as ContactMatch[]) byUid.set(m.uid, m);
+  }
+  return Array.from(byUid.values());
 }
 
 /** "Who's going" attendance for an event (privacy-enforced server-side). */

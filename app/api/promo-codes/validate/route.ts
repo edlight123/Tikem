@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { findPromoDoc, recordPromoValidationAttempt } from '@/lib/promo-codes'
+import { clientIp } from '@/lib/rate-limit'
+import {
+  findPromoDoc,
+  isPromoValidationLimited,
+  promoIpFailureKeys,
+  recordFailedPromoValidation,
+  recordPromoValidationAttempt,
+} from '@/lib/promo-codes'
 import { getPromoExpiresAt, getPromoStartAt, getPromoUsesCount, isPromoActive } from '@/lib/promo-code-shared'
 
 // Validate a promo code against Firestore `promo_codes`. Accepts either the raw
@@ -21,19 +28,22 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
 
-    if (!user) {
-      const ipAddress =
-        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-      const throttle = await recordPromoValidationAttempt(`promo-validate:${ipAddress}`)
-      if (throttle.limited) {
-        return NextResponse.json(
-          { error: 'Too many promo code attempts. Please try again in a few minutes.' },
-          { status: 429 }
-        )
-      }
-    }
-
     const { code, eventId } = await request.json()
+
+    // Guests are throttled per IP, counting only FAILED lookups (one IP is
+    // often a whole carrier's CGNAT), with a tighter per-(event, IP) budget;
+    // signed-in callers per uid on every attempt, so an account (or a farm of
+    // them on fresh IPs) cannot sweep an event's codespace either.
+    const ipKeys = user ? [] : promoIpFailureKeys(clientIp(request), eventId ? String(eventId) : null)
+    const limited = user
+      ? (await recordPromoValidationAttempt(`promo-validate:uid:${user.id}`)).limited
+      : await isPromoValidationLimited(ipKeys)
+    if (limited) {
+      return NextResponse.json(
+        { error: 'Too many promo code attempts. Please try again in a few minutes.' },
+        { status: 429 }
+      )
+    }
 
     // Never log the code itself: an organizer's unpublished discount shouldn't end
     // up in a log line. The event is enough to trace a problem.
@@ -49,6 +59,7 @@ export async function POST(request: Request) {
     const promoCode = await findPromoDoc(String(eventId), String(code))
 
     if (!promoCode) {
+      await recordFailedPromoValidation(ipKeys)
       return NextResponse.json({ error: 'Invalid promo code' }, { status: 404 })
     }
 

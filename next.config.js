@@ -96,9 +96,11 @@ const nextConfig = {
       "font-src 'self' data:",
       // Next.js injects inline styles; recharts sets inline SVG styles.
       "style-src 'self' 'unsafe-inline'",
-      // 'unsafe-inline'/'unsafe-eval' are required by Next's runtime today;
-      // tighten to a nonce/hash-based policy as a follow-up.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://apis.google.com https://www.gstatic.com",
+      // 'unsafe-inline' is still required by Next's inline bootstrap scripts;
+      // tighten to a nonce/hash-based policy as a follow-up. 'unsafe-eval' is
+      // only needed by the dev server (React Refresh / eval source maps), so a
+      // production build ships without it.
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"} https://js.stripe.com https://apis.google.com https://www.gstatic.com`,
       "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://api.stripe.com https://m.stripe.network https://*.stripe.com",
       // youtube-nocookie.com and player.vimeo.com host the promo video player
       // (components/events/PromoVideo.tsx). These two entries are the whole
@@ -167,8 +169,11 @@ const nextConfig = {
             value: 'DENY',
           },
           {
+            // '0' disables the legacy XSS auditor: modern browsers ignore it and
+            // in older ones '1; mode=block' could itself be abused as an oracle.
+            // The CSP above is the real defence.
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '0',
           },
           {
             // Don't leak full URLs (which can contain ids/tokens) to third parties.

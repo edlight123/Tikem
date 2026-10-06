@@ -6,6 +6,10 @@ import {
   EARNINGS_CURRENCY_REVIEW_MESSAGE,
   flagEarningsCurrencyReview,
   getOrCreateEventEarnings,
+  readRefundClaimVersion,
+  refundClaimVersionOf,
+  REFUND_CLAIMED_RETRY_CODE,
+  REFUND_CLAIMED_RETRY_MESSAGE,
   storedEarningsCurrencyMismatch,
   withdrawFromEarnings,
 } from '@/lib/earnings'
@@ -15,7 +19,9 @@ import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
 import {
+  checkMobileMoneyDestination,
   consumePayoutDetailsChangeVerification,
+  enrollLegacyMobileMoneyFingerprint,
   requireRecentPayoutDetailsChangeVerification,
 } from '@/lib/firestore/payout'
 import { fetchUsdToHtgRate } from '@/lib/currency'
@@ -26,7 +32,6 @@ import {
   executePrefundedTransfer,
   normalizeMoncashReceiver,
   prefundedBalanceCovers,
-  sameMoncashNumberLast4,
 } from '@/lib/payouts/moncash-prefunded'
 import {
   MONCASH_BELOW_MINIMUM_CODE,
@@ -113,6 +118,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // The number must be the destination saved on the payout profile, compared
+    // on the FULL normalized number. A different number is changed in payout
+    // settings, where it costs an emailed code and a 24h payout hold; it is
+    // never accepted per request (queued requests used to store and pay
+    // whatever number the request carried).
+    const destination = checkMobileMoneyDestination(haitiProfile, receiver)
+    if (!destination.ok) {
+      return NextResponse.json(
+        { error: destination.message, code: destination.code, message: destination.message },
+        { status: 403 }
+      )
+    }
+
     // Verify event ownership
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     if (!eventDoc.exists) {
@@ -150,6 +168,9 @@ export async function POST(req: NextRequest) {
     // (lib/payouts/availability.ts): ticket-derived net with the platform fee
     // checkout charged, refunds and every earlier withdrawal or batch payout
     // out. The earnings screens show this same number.
+    // Recorded BEFORE the ceiling is computed: a refund claimed after this point
+    // bumps it, and the debit below refuses instead of using a stale ceiling.
+    const expectedRefundClaimVersion = await readRefundClaimVersion(String(eventId))
     const availability = await loadEventAvailability({ eventId: String(eventId), eventData })
     if (!availability) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -255,14 +276,12 @@ export async function POST(req: NextRequest) {
       instantFallbackReason = 'insufficient_prefunded_balance'
     }
 
-    // An instant transfer is automatic and irreversible — no admin ever looks at
-    // it. Sending it to a number other than the one on the payout profile gets
-    // the same OTP step-up a new bank account does.
+    // A profile saved before full-number fingerprints existed matched on its
+    // last 4 digits only: that is not proof it is the same wallet, so the email
+    // step-up is required (instant or queued) and the full number is then
+    // enrolled as the profile's destination.
     let stepUpUsed = false
-    if (
-      shouldUsePrefunding &&
-      !sameMoncashNumberLast4(receiver, (haitiProfile as any)?.mobileMoneyDetails?.phoneNumberLast4)
-    ) {
+    if (destination.via === 'legacy_last4') {
       try {
         await requireRecentPayoutDetailsChangeVerification(user.id)
         stepUpUsed = true
@@ -274,13 +293,14 @@ export async function POST(req: NextRequest) {
               code: 'PAYOUT_CHANGE_VERIFICATION_REQUIRED',
               requiresVerification: true,
               message:
-                'For your security, confirm this MonCash number with the code we email you. It is not the number on your payout profile.',
+                'For your security, confirm your MonCash number with the code we email you. You only need to do this once.',
             },
             { status: 403 }
           )
         }
         throw e
       }
+      await enrollLegacyMobileMoneyFingerprint(user.id, destination.fingerprint)
     }
 
     const feeCents = shouldUsePrefunding ? instantPricing.feeCents : 0
@@ -320,6 +340,11 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     }
     if (instantFallbackReason) (baseWithdrawalRequest as any).instantFallbackReason = instantFallbackReason
+    // Proof for the admin queue that this number IS the profile's destination
+    // (the queue and the admin transfer re-check it against the live profile).
+    ;(baseWithdrawalRequest as any).destinationFingerprint = destination.fingerprint
+    ;(baseWithdrawalRequest as any).destinationCheck =
+      destination.via === 'profile' ? 'profile_fingerprint' : 'legacy_last4_step_up'
 
     if (shouldUsePrefunding) {
       // For instant prefunding, reserve (debit) earnings first so we never end up
@@ -346,6 +371,12 @@ export async function POST(req: NextRequest) {
 
           const earningsData = earningsSnap.data() as any
           const withdrawnAmount = Math.max(0, Number(earningsData?.withdrawnAmount || 0) || 0)
+
+          // availability.ceilingMinor was computed outside this transaction; a
+          // refund claimed since then lowered it (see readRefundClaimVersion).
+          if (refundClaimVersionOf(earningsData) !== expectedRefundClaimVersion) {
+            throw new ReservationRefused(REFUND_CLAIMED_RETRY_MESSAGE, REFUND_CLAIMED_RETRY_CODE)
+          }
 
           // Re-checked on the snapshot being debited: validation above read the
           // same row, and must have read it in the same currency.
@@ -496,6 +527,7 @@ export async function POST(req: NextRequest) {
     const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
       ceilingMinor: availability.ceilingMinor,
       fileRequest: { ref: withdrawalRef, data: baseWithdrawalRequest as any },
+      expectedRefundClaimVersion,
     })
     if (!debit.success) {
       return NextResponse.json(
@@ -504,6 +536,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (stepUpUsed) await consumePayoutDetailsChangeVerification(user.id)
     await notifyWithdrawalOutcome(withdrawalRef.id, 'submitted', { row: baseWithdrawalRequest })
 
     return NextResponse.json({

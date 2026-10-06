@@ -147,6 +147,8 @@ jest.mock('@/lib/firestore/payout-profiles', () => ({
 
 const stepUp = { verified: false, consumed: 0 }
 jest.mock('@/lib/firestore/payout', () => ({
+  // The pure destination helpers (fingerprint, comparison) are the real ones.
+  ...jest.requireActual('@/lib/firestore/payout'),
   requireRecentPayoutDetailsChangeVerification: jest.fn(async () => {
     if (!stepUp.verified) throw new Error('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
   }),
@@ -286,6 +288,11 @@ function backingTicket(netMinor: number, over: Record<string, any> = {}) {
   }
 }
 
+/** The saved MonCash number's full-number fingerprint (509 3700 7294). */
+function savedFingerprint(): string {
+  return jest.requireActual('@/lib/firestore/payout').mobileMoneyFingerprint('50937007294')
+}
+
 function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: string; enabled?: boolean; available?: boolean; optedIn?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
   currentCurrency = opts.currency || 'HTG'
@@ -310,7 +317,7 @@ function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: str
     status: 'active',
     method: 'mobile_money',
     allowInstantMoncash: opts.optedIn ?? true,
-    mobileMoneyDetails: { provider: 'moncash', phoneNumber: '****7294', phoneNumberLast4: '7294' },
+    mobileMoneyDetails: { provider: 'moncash', phoneNumber: '****7294', phoneNumberLast4: '7294', phoneNumberFingerprint: savedFingerprint() },
   }
   session.uid = 'org1'
   stepUp.verified = false
@@ -568,19 +575,76 @@ describe('destination number', () => {
     expect(withdrawals()).toEqual([])
   })
 
-  it('an instant payout to a number other than the profile\'s needs the OTP step-up', async () => {
+  it('a number other than the saved one is refused outright, even with the step-up passed', async () => {
     seed()
+    stepUp.verified = true
     const res = await withdraw(post(body({ moncashNumber: '3811 2233' })))
     const out = await res.json()
     expect(res.status).toBe(403)
-    expect(out).toMatchObject({ requiresVerification: true, code: 'PAYOUT_CHANGE_VERIFICATION_REQUIRED' })
+    expect(out.code).toBe('PAYOUT_DESTINATION_MISMATCH')
     expect(digicel.transfers).toEqual([])
+    expect(withdrawals()).toEqual([])
     expect(earnings().withdrawnAmount).toBe(0)
+  })
+
+  it('a queued (manual) request to another number is refused too: it used to store and pay the request number', async () => {
+    seed({ enabled: false })
+    const res = await withdraw(post(body({ moncashNumber: '3811 2233' })))
+    expect(res.status).toBe(403)
+    expect((await res.json()).code).toBe('PAYOUT_DESTINATION_MISMATCH')
+    expect(withdrawals()).toEqual([])
+  })
+
+  it('the saved number (full-number match) needs no step-up and is recorded on the request', async () => {
+    seed({ enabled: false })
+    const res = await withdraw(post(body()))
+    expect(res.status).toBe(200)
+    const [w] = withdrawals()
+    expect(w).toMatchObject({ moncashNumber: '50937007294', destinationCheck: 'profile_fingerprint' })
+    expect(stepUp.consumed).toBe(0)
+  })
+
+  it('a legacy profile (last 4 only) needs the step-up once, then the full number is enrolled', async () => {
+    seed()
+    delete profiles.org1.mobileMoneyDetails.phoneNumberFingerprint
+    // The doc the enrollment writes to (getPayoutProfile is stubbed in this file).
+    coll('organizers/org1/payoutProfiles').haiti = { ...profiles.org1 }
+    const res = await withdraw(post(body()))
+    expect(res.status).toBe(403)
+    expect((await res.json()).code).toBe('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
+    expect(digicel.transfers).toEqual([])
 
     stepUp.verified = true
-    const ok = await withdraw(post(body({ moncashNumber: '3811 2233' })))
+    const ok = await withdraw(post(body()))
     expect(ok.status).toBe(200)
-    expect(digicel.transfers[0].receiver).toBe('50938112233')
+    expect(digicel.transfers[0].receiver).toBe('50937007294')
     expect(stepUp.consumed).toBe(1)
+    expect(coll('organizers/org1/payoutProfiles').haiti.mobileMoneyDetails.phoneNumberFingerprint).toBe(savedFingerprint())
+  })
+
+  it('a legacy profile whose last 4 do not match is refused', async () => {
+    seed()
+    delete profiles.org1.mobileMoneyDetails.phoneNumberFingerprint
+    stepUp.verified = true
+    const res = await withdraw(post(body({ moncashNumber: '3811 2233' })))
+    expect(res.status).toBe(403)
+    expect((await res.json()).code).toBe('PAYOUT_DESTINATION_MISMATCH')
+  })
+})
+
+describe('refund claimed while a withdrawal is being computed', () => {
+  it('the debit refuses when a refund claim bumped the ledger counter after the ceiling was read', async () => {
+    seed({ enabled: false })
+    // A refund claim commits between the route's ceiling computation (which
+    // recorded the counter) and its debit transaction.
+    const { withdrawFromEarnings, readRefundClaimVersion } = jest.requireActual('@/lib/earnings')
+    const expected = await readRefundClaimVersion('evt1')
+    coll('event_earnings').earn1.refundClaimVersion = expected + 1
+    const r = await withdrawFromEarnings('evt1', 1_000, 'wr_race', {
+      ceilingMinor: NET,
+      expectedRefundClaimVersion: expected,
+    })
+    expect(r).toMatchObject({ success: false, code: 'balance_changed_by_refund' })
+    expect(earnings().withdrawnAmount).toBe(0)
   })
 })

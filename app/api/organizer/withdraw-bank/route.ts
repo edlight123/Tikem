@@ -5,6 +5,7 @@ import {
   EARNINGS_CURRENCY_REVIEW_CODE,
   EARNINGS_CURRENCY_REVIEW_MESSAGE,
   flagEarningsCurrencyReview,
+  readRefundClaimVersion,
   withdrawFromEarnings,
 } from '@/lib/earnings'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
@@ -16,12 +17,17 @@ import {
 } from '@/lib/firestore/payout-destinations'
 import {
   consumePayoutDetailsChangeVerification,
+  NEW_PAYOUT_DESTINATION_HOLD_MS,
   requireRecentPayoutDetailsChangeVerification,
+  sameAccountHolderName,
 } from '@/lib/firestore/payout'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
 import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
+
+/** 5,000 minor units of the event's own currency (50.00 HTG / 50.00 USD). */
+const BANK_MIN_WITHDRAWAL_MINOR = 5000
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,7 +68,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { eventId, amount, bankDetails, bankDestinationId, saveDestination } = body
+    // saveDestination is no longer needed: a new account is always saved (and held).
+    const { eventId, bankDetails, bankDestinationId } = body
+    const amount = Number(body?.amount)
 
     // Validate inputs
     if (!eventId || !amount || (!bankDestinationId && !bankDetails)) {
@@ -72,12 +80,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Minimum withdrawal amount (in cents)
-    if (amount < 5000) {
-      return NextResponse.json(
-        { error: 'Minimum withdrawal amount is $50.00' },
-        { status: 400 }
-      )
+    if (!Number.isInteger(amount) || amount <= 0) {
+      return NextResponse.json({ error: 'Amount must be a whole number of cents' }, { status: 400 })
     }
 
     // Verify event ownership
@@ -115,9 +119,25 @@ export async function POST(req: NextRequest) {
 
     // What this event can pay out — the one shared figure
     // (lib/payouts/availability.ts), the same number the earnings screens show.
+    // Recorded BEFORE the ceiling is computed; the debit refuses if a refund
+    // claim moved it since (lib/earnings.ts readRefundClaimVersion).
+    const expectedRefundClaimVersion = await readRefundClaimVersion(String(eventId))
     const availability = await loadEventAvailability({ eventId: String(eventId), eventData })
     if (!availability) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    // Minimum: 5,000 minor units OF THE EVENT'S CURRENCY (the earnings screen
+    // shows the same floor formatted in that currency). The message used to say
+    // "$50.00" for an HTG event whose floor is 50 HTG.
+    if (amount < BANK_MIN_WITHDRAWAL_MINOR) {
+      return NextResponse.json(
+        {
+          error: `Minimum withdrawal amount is ${(BANK_MIN_WITHDRAWAL_MINOR / 100).toFixed(2)} ${availability.currency}`,
+          code: 'below_minimum',
+        },
+        { status: 400 }
+      )
     }
 
     // Same refusal as the MonCash route: a stored row in another currency than
@@ -184,17 +204,36 @@ export async function POST(req: NextRequest) {
     // email code for a new account.
     let resolvedBankDetails: BankDestinationDetails | null = null
     let resolvedDestinationId: string | null = null
+    // Flags for the admin who releases this request by hand.
+    const reviewFlags: string[] = []
+    const profileHolderName = String((haitiProfile as any)?.bankDetails?.accountName || '')
 
     if (bankDestinationId) {
       resolvedDestinationId = String(bankDestinationId)
 
-      // Identity-only + manual review: filing a withdrawal REQUEST no longer
-      // requires the specific bank destination to be pre-"verified". No money
-      // moves here — this only creates a `pending` withdrawal_request. An admin
-      // verifies the destination and releases funds by hand, which is the actual
-      // gate. (The profile still had to reach `active` via identity verification
-      // upstream, and the destination must still exist — enforced by the 404
-      // below.)
+      // Identity-only + manual review: filing a withdrawal REQUEST does not
+      // require the destination to be pre-"verified"; an admin verifies it and
+      // releases funds by hand. But a destination added through the new-account
+      // path below is held for 24h after it was added (a stolen session plus an
+      // email code must not be able to drain to a fresh account immediately).
+      const destSnap = await adminDb
+        .collection('organizers')
+        .doc(user.id)
+        .collection('payoutDestinations')
+        .doc(resolvedDestinationId)
+        .get()
+      const holdUntilMs = destSnap.exists ? Date.parse(String((destSnap.data() as any)?.holdUntil || '')) : NaN
+      if (Number.isFinite(holdUntilMs) && holdUntilMs > Date.now()) {
+        return NextResponse.json(
+          {
+            error: 'This bank account was added recently. For your security it can receive withdrawals 24 hours after it was added.',
+            code: 'PAYOUT_DESTINATION_ON_HOLD',
+            availableAt: new Date(holdUntilMs).toISOString(),
+          },
+          { status: 409 }
+        )
+      }
+
       resolvedBankDetails = await getDecryptedBankDestination({
         organizerId: user.id,
         destinationId: resolvedDestinationId,
@@ -203,11 +242,25 @@ export async function POST(req: NextRequest) {
       if (!resolvedBankDetails) {
         return NextResponse.json({ error: 'Bank destination not found' }, { status: 404 })
       }
+      if (!sameAccountHolderName(resolvedBankDetails.accountHolder, profileHolderName)) {
+        reviewFlags.push('holder_name_mismatch')
+      }
     } else {
-      resolvedBankDetails = bankDetails as BankDestinationDetails
+      const details = bankDetails as BankDestinationDetails
 
-      if (!resolvedBankDetails?.accountNumber || !resolvedBankDetails?.bankName || !resolvedBankDetails?.accountHolder) {
+      if (!details?.accountNumber || !details?.bankName || !details?.accountHolder) {
         return NextResponse.json({ error: 'Incomplete bank details' }, { status: 400 })
+      }
+
+      // A new account must be in the payout profile's account-holder name.
+      if (!sameAccountHolderName(details.accountHolder, profileHolderName)) {
+        return NextResponse.json(
+          {
+            error: 'The account holder must match the name on your payout profile.',
+            code: 'PAYOUT_HOLDER_NAME_MISMATCH',
+          },
+          { status: 400 }
+        )
       }
 
       // Using a new bank account requires OTP step-up.
@@ -230,13 +283,30 @@ export async function POST(req: NextRequest) {
         throw e
       }
 
-      // Optionally save as a second account.
-      if (saveDestination) {
-        const created = await addSecondaryBankDestination({ organizerId: user.id, bankDetails: resolvedBankDetails })
-        resolvedDestinationId = created.id
-      }
-
+      // The new account is SAVED (always) and held for 24 hours, the same hold
+      // a payout-settings destination change gets. Nothing is filed now; the
+      // organizer withdraws to it once the hold ends.
+      const created = await addSecondaryBankDestination({ organizerId: user.id, bankDetails: details })
+      const holdUntil = new Date(Date.now() + NEW_PAYOUT_DESTINATION_HOLD_MS).toISOString()
+      await adminDb
+        .collection('organizers')
+        .doc(user.id)
+        .collection('payoutDestinations')
+        .doc(created.id)
+        .set({ holdUntil, addedVia: 'withdraw_bank' }, { merge: true })
       await consumePayoutDetailsChangeVerification(user.id)
+
+      return NextResponse.json(
+        {
+          error:
+            'Bank account saved. For your security, a new bank account can receive withdrawals 24 hours after it is added.',
+          code: 'PAYOUT_DESTINATION_ON_HOLD',
+          bankDestinationId: created.id,
+          availableAt: holdUntil,
+          saved: true,
+        },
+        { status: 409 }
+      )
     }
 
     // Create withdrawal request. Preserve the event's real currency in the record;
@@ -266,6 +336,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date()
     }
+    if (reviewFlags.length > 0) (withdrawalRequest as any).reviewFlags = reviewFlags
 
     // Filed in the SAME transaction as the debit (lib/earnings.ts
     // withdrawFromEarnings): a request exists only if its money was reserved,
@@ -274,6 +345,7 @@ export async function POST(req: NextRequest) {
     const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
       ceilingMinor: availability.ceilingMinor,
       fileRequest: { ref: withdrawalRef, data: withdrawalRequest as any },
+      expectedRefundClaimVersion,
     })
     if (!debit?.success) {
       const isReview = debit?.code === EARNINGS_CURRENCY_REVIEW_CODE

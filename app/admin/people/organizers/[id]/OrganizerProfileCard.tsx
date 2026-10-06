@@ -1,9 +1,13 @@
 'use client'
 
 import { ConsolePanel } from '@/components/admin/console'
+import { safeExternalUrl } from '@/lib/safeUrl'
 
 /** The public-facing organization details, when the organizer has filled any in. */
 export default function OrganizerProfileCard({ organizer }: { organizer: any }) {
+  // Organizer-typed and possibly stored before write-side validation existed:
+  // only an http(s) URL becomes a link, anything else renders as plain text.
+  const websiteHref = safeExternalUrl(organizer.website)
   return (
     <ConsolePanel className="p-4 sm:p-5 lg:col-span-2">
       <h2 className="label-mono mb-4 text-[10px] uppercase tracking-[0.18em] text-console-faint">
@@ -29,14 +33,18 @@ export default function OrganizerProfileCard({ organizer }: { organizer: any }) 
           <div>
             <dt className="text-xs text-console-mut">Website</dt>
             <dd className="mt-1 text-sm text-console-text">
-              <a
-                href={organizer.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-console-mut hover:underline"
-              >
-                {organizer.website}
-              </a>
+              {websiteHref ? (
+                <a
+                  href={websiteHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-console-mut hover:underline"
+                >
+                  {organizer.website}
+                </a>
+              ) : (
+                <span className="break-all">{String(organizer.website)}</span>
+              )}
             </dd>
           </div>
         )}

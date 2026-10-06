@@ -58,14 +58,21 @@ describe('firestore.rules — tickets (S1)', () => {
   })
 
   it('no money field is writable by a client', () => {
+    // Only the hasOnly([...]) whitelist decides what a client may write; the
+    // rule may still READ fields such as refund_status in its conditions.
+    const writable = update.slice(update.indexOf('hasOnly(['), update.indexOf('])'))
     for (const f of ['price_paid', 'status', 'fee_incidence', 'buyer_fee_charged', 'refund_face_amount', 'payment_id', 'payment_method', 'refund_status', 'currency', 'original_currency', 'end_datetime']) {
-      expect(update).not.toContain(`'${f}'`)
+      expect(writable).not.toContain(`'${f}'`)
     }
   })
 
   it('a transferred ticket (qr_version >= 1) never checks in by a direct client write', () => {
     // Only the server can judge WHICH code was scanned (lib/tickets/qr.ts).
-    expect(update).toMatch(/\]\) &&\s*(\/\/[^\n]*\n\s*)*resource\.data\.get\('qr_version', 0\) == 0;/)
+    expect(update).toMatch(/\]\) &&\s*(\/\/[^\n]*\n\s*)*resource\.data\.get\('qr_version', 0\) == 0 &&/)
+  })
+
+  it('a ticket with a refund in motion never checks in by a direct client write', () => {
+    expect(update).toMatch(/!\(resource\.data\.get\('refund_status', ''\) in \['requested', 'processing', 'approved', 'manual_required', 'admin_review'\]\);/)
   })
 
   it('clients may not create or delete tickets', () => {

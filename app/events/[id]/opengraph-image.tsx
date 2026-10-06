@@ -47,10 +47,30 @@ const TEAL = '#2dd4bf'
 // than skipping — which would fail the whole route and leave the share with no
 // image at all. A HEAD first is cheaper than that outcome. Anything unreadable
 // falls through to the gradient, exactly like the in-app poster fallback.
-async function usablePoster(url: string | undefined): Promise<string | null> {
-  if (!url || !/^https?:\/\//.test(url)) return null
+// banner_image_url is organizer-supplied, and this route fetches it from the
+// server: left open, it is an SSRF primitive (internal metadata endpoints,
+// localhost). Only the hosts posters are actually stored on are fetched, over
+// https, and redirects are refused so an allowed host cannot bounce elsewhere.
+const POSTER_HOSTS = new Set([
+  'firebasestorage.googleapis.com',
+  'storage.googleapis.com',
+  'images.unsplash.com',
+])
+
+function isAllowedPosterUrl(url: string | undefined | null): url is string {
+  if (!url) return false
   try {
-    const res = await fetch(url, { method: 'HEAD' })
+    const u = new URL(url)
+    return u.protocol === 'https:' && !u.username && !u.password && !u.port && POSTER_HOSTS.has(u.hostname)
+  } catch {
+    return false
+  }
+}
+
+async function usablePoster(url: string | undefined): Promise<string | null> {
+  if (!isAllowedPosterUrl(url)) return null
+  try {
+    const res = await fetch(url, { method: 'HEAD', redirect: 'error' })
     if (!res.ok) return null
     const type = (res.headers.get('content-type') || '').toLowerCase()
     return /^image\/(png|apng|jpeg|jpg|gif|svg\+xml)/.test(type) ? url : null
@@ -65,9 +85,9 @@ async function usablePoster(url: string | undefined): Promise<string | null> {
 // and blurring turns it into an ambient wash of the poster's own colour instead.
 // It has to happen here because satori implements no filter: blur().
 async function ambientFill(url: string | null): Promise<string | null> {
-  if (!url) return null
+  if (!isAllowedPosterUrl(url)) return null
   try {
-    const res = await fetch(url)
+    const res = await fetch(url, { redirect: 'error' })
     if (!res.ok) return null
     const { default: sharp } = await import('sharp')
     const buf = await sharp(Buffer.from(await res.arrayBuffer()))

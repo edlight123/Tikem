@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { guestTicketUrl } from '@/lib/guest/identity'
+import { callerOwnsPaymentIntent } from '@/lib/tickets/paymentIntentOwner'
 import {
   claimWebhookEvent,
   markWebhookEventCompleted,
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
 
-    const { paymentIntentId } = await request.json()
+    const { paymentIntentId, clientSecret, guestToken } = await request.json()
 
     if (!paymentIntentId) {
       return NextResponse.json({ error: 'Payment Intent ID is required' }, { status: 400 })
@@ -54,12 +55,25 @@ export async function POST(request: Request) {
       guest_order_key: paymentIntent.metadata.guestOrderKey,
     })
 
-    // A session is still required for an ACCOUNT order. A guest order has no session by
-    // definition; what stands in for one is the succeeded PaymentIntent itself, whose id
-    // only the browser that just paid holds. (The Stripe webhook fulfills the same order
-    // through the same shared claim, so this call is a fast path, not the only path.)
-    if (!user && !piGuestRecipient) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Only the order's own buyer may confirm it and see its ticket ids.
+    //  - ACCOUNT order: the session uid must be the uid stamped on the PaymentIntent.
+    //  - GUEST order: no session exists, so the caller proves possession of the order with
+    //    the PaymentIntent's client_secret (only the paying browser holds it) or the
+    //    guest's signed retrieval token for this exact order. A bare PaymentIntent id is
+    //    NOT proof: ids leak through receipts, logs and support threads.
+    // A non-owner gets nothing: the Stripe webhook fulfills the order regardless.
+    const isOwner = callerOwnsPaymentIntent({
+      paymentIntent,
+      user,
+      isGuest: Boolean(piGuestRecipient),
+      clientSecret,
+      guestToken,
+    })
+    if (!isOwner) {
+      if (!user && !piGuestRecipient) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Already fulfilled (by the webhook, an earlier confirm, or the pre-ledger

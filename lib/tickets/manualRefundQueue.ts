@@ -44,11 +44,37 @@ export type RefundQueueItem = {
   eventTitle: string | null
   buyerName: string | null
   buyerEmail: string | null
+  /**
+   * The number to PAY: the wallet that paid (payer_phone / order payer). Only
+   * when no payer was recorded does it fall back to the buyer's profile phone,
+   * which the buyer can edit (payerPhoneUnknown says so).
+   */
   buyerPhone: string | null
+  /** The buyer's profile/guest phone, when it differs from the paying wallet. */
+  profilePhone: string | null
+  /** Paying wallet and profile phone are different numbers: check before paying. */
+  payerPhoneMismatch: boolean
+  /** No paying wallet recorded; buyerPhone is the editable profile phone. */
+  payerPhoneUnknown: boolean
   createdAt: string | null
   resolvedAt: string | null
   resolvedBy: string | null
   note: string | null
+}
+
+const phoneDigits = (v: string | null) => String(v || '').replace(/\D/g, '').replace(/^509(?=\d{8}$)/, '')
+
+/**
+ * Pay the wallet the money came from, never the profile phone: a profile phone
+ * is editable by the buyer (or anyone holding their session), so paying it
+ * would let a refund be redirected. A difference between the two is surfaced.
+ */
+function refundPhones(payer: string | null, profile: string | null) {
+  if (payer) {
+    const mismatch = Boolean(profile) && phoneDigits(profile) !== phoneDigits(payer)
+    return { buyerPhone: payer, profilePhone: mismatch ? profile : null, payerPhoneMismatch: mismatch, payerPhoneUnknown: false }
+  }
+  return { buyerPhone: profile, profilePhone: null, payerPhoneMismatch: false, payerPhoneUnknown: Boolean(profile) }
 }
 
 const RESOLVED_LIMIT = 50
@@ -315,7 +341,7 @@ export async function listRefundQueue(): Promise<{
       eventTitle: str(q.eventTitle) || titles.get(String(q.eventId || '')) || null,
       buyerName: str(t.attendee_name) || str(u.full_name) || str(t.guest_name),
       buyerEmail: str(u.email) || str(t.guest_email) || str(t.recipient_email),
-      buyerPhone: str(u.phone_number) || str(u.phone) || str(t.guest_phone) || str(t.payer_phone),
+      ...refundPhones(str(t.payer_phone), str(u.phone_number) || str(u.phone) || str(t.guest_phone)),
       createdAt: toIso(q.createdAt),
       resolvedAt: toIso(q.resolvedAt),
       resolvedBy: str(q.resolvedBy),
@@ -342,7 +368,10 @@ export async function listRefundQueue(): Promise<{
       eventTitle: titles.get(String(o.event_id || '')) || null,
       buyerName: str(u.full_name) || str(o.guest_name),
       buyerEmail: str(u.email) || str(o.guest_email),
-      buyerPhone: str(u.phone_number) || str(u.phone) || str(o.guest_phone) || (typeof o.payer === 'string' ? str(o.payer) : null),
+      ...refundPhones(
+        str(o.payer_phone) || (typeof o.payer === 'string' ? str(o.payer) : null),
+        str(u.phone_number) || str(u.phone) || str(o.guest_phone)
+      ),
       createdAt: toIso(o.created_at) || toIso(o.createdAt) || toIso(o.updated_at),
       resolvedAt: toIso(o.refund_resolved_at),
       resolvedBy: str(o.refund_resolved_by),
@@ -368,7 +397,8 @@ export async function listRefundQueue(): Promise<{
 // ── Resolve ─────────────────────────────────────────────────────────────────
 
 export class RefundQueueError extends Error {
-  constructor(message: string, public status: number) {
+  /** Machine-readable reason for the client (e.g. 'checked_in'), when there is one. */
+  constructor(message: string, public status: number, public code?: string) {
     super(message)
   }
 }

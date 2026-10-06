@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireDevTools } from '@/lib/auth'
+import { requireSuperAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
@@ -14,14 +14,6 @@ type Seed20Request = {
   batchTag?: string
   // When true, newly created events are published.
   publish?: boolean
-}
-
-function parseBoolean(value: string | null | undefined): boolean | undefined {
-  if (value === null || value === undefined) return undefined
-  const v = String(value).trim().toLowerCase()
-  if (v === 'true' || v === '1' || v === 'yes' || v === 'y') return true
-  if (v === 'false' || v === '0' || v === 'no' || v === 'n') return false
-  return undefined
 }
 
 function isoInDays(days: number, hourLocal = 19): string {
@@ -305,45 +297,25 @@ async function seed20(options: { admin: { id: string; email: string | null | und
   })
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { user, error } = await requireDevTools()
-    if (error || !user) {
-      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
-    }
-
-    const url = new URL(request.url)
-    const run = parseBoolean(url.searchParams.get('run'))
-    const input: Seed20Request = {
-      organizerEmail: url.searchParams.get('organizerEmail') || undefined,
-      organizerName: url.searchParams.get('organizerName') || undefined,
-      batchTag: url.searchParams.get('batchTag') || undefined,
-      publish: parseBoolean(url.searchParams.get('publish')),
-    }
-
-    if (!run) {
-      return adminOk({
-        message:
-          'This endpoint seeds 20 events. To run from the browser, pass ?run=1. Prefer POST for scripted usage.',
-        defaults: {
-          organizerEmail: 'info@edlight.org',
-          organizerName: 'EdLight Initiative',
-          publish: true,
-        },
-        runExamples: {
-          minimal: `${url.origin}/api/admin/events/seed-20?run=1`,
-          withBatchTag: `${url.origin}/api/admin/events/seed-20?run=1&batchTag=seed-${new Date().toISOString().slice(0, 10)}`,
-          customOrganizer: `${url.origin}/api/admin/events/seed-20?run=1&organizerEmail=info%40edlight.org&organizerName=EdLight%20Initiative`,
-        },
-        note: 'You must be logged in as an admin for seeding to execute.',
-      })
-    }
-
-    return await seed20({ admin: { id: user.id, email: user.email }, input })
-  } catch (e: any) {
-    console.error('seed-20 GET failed:', e)
-    return adminError('Internal server error', 500, e?.message || String(e))
+/**
+ * Informational only. Seeding used to run from `GET ?run=1`, which made a
+ * state-changing write reachable by a plain link or <img> (a top-level GET
+ * carries SameSite=Lax cookies). It now runs only from POST.
+ */
+export async function GET() {
+  const { user, error } = await requireSuperAdmin()
+  if (error || !user) {
+    return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
   }
+  return adminOk({
+    message: 'This endpoint seeds 20 events. Send a POST with a JSON body to run it.',
+    defaults: {
+      organizerEmail: 'info@edlight.org',
+      organizerName: 'EdLight Initiative',
+      publish: true,
+    },
+    body: { organizerEmail: 'string?', organizerName: 'string?', batchTag: 'string?', publish: 'boolean?' },
+  })
 }
 
 export async function OPTIONS() {
@@ -357,15 +329,20 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireDevTools()
+    const { user, error } = await requireSuperAdmin()
     if (error || !user) {
       return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
+    }
+    // JSON only: a cross-site form/text POST cannot send this content type
+    // without a CORS preflight, which we never grant.
+    if (!(request.headers.get('content-type') || '').toLowerCase().includes('application/json')) {
+      return adminError('Content-Type must be application/json', 415)
     }
 
     const body = (await request.json().catch(() => ({}))) as Seed20Request
     return await seed20({ admin: { id: user.id, email: user.email }, input: body })
   } catch (e: any) {
     console.error('seed-20 failed:', e)
-    return adminError('Internal server error', 500, e?.message || String(e))
+    return adminError('Internal server error', 500)
   }
 }

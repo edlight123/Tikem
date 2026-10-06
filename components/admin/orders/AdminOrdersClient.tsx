@@ -21,6 +21,7 @@ import {
   Ticket,
   QrCode,
 } from 'lucide-react'
+import { toCsv } from '@/lib/csv'
 
 interface Order {
   id: string
@@ -287,10 +288,7 @@ export function AdminOrdersClient() {
           o.purchased_at || o.purchasedAt || '',
         ])
 
-        const csvContent = [
-          headers.join(','),
-          ...rows.map((r: any[]) => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')),
-        ].join('\n')
+        const csvContent = toCsv([headers, ...rows])
 
         // Download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })

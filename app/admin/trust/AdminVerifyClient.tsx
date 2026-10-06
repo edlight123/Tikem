@@ -9,6 +9,7 @@ import { ConsoleButton } from '@/components/admin/console'
 import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { useToast } from '@/components/ui/Toast'
 import { Search, Download, Check, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
+import { toCsv } from '@/lib/csv'
 
 type AdminVerifyClientProps = {
   requestsWithUsers: any[]
@@ -171,10 +172,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
       r.id,
     ])
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row: any[]) => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-    ].join('\n')
+    const csvContent = toCsv([headers, ...rows])
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')

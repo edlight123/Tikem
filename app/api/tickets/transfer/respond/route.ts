@@ -143,6 +143,26 @@ export async function POST(request: NextRequest) {
           throw err
         }
 
+        // Re-checked at acceptance: a refund requested (or claimed) after the
+        // offer would otherwise pay the old holder back while the recipient
+        // keeps the seat.
+        const refundStatus = String(ticket?.refund_status ?? '').toLowerCase().trim()
+        if (action !== 'reject' && refundStatus && refundStatus !== 'none' && refundStatus !== 'denied') {
+          const err: any = new Error('This ticket has a refund in progress and cannot be transferred')
+          err.status = 400
+          throw err
+        }
+
+        // The new holder's identity for the ticket, read BEFORE any write: the
+        // Auth email (the one the transfer was matched on) and the profile's
+        // name. Without this the door list and the attendee export kept the
+        // previous holder's name and address on the ticket.
+        let recipientProfile: Record<string, any> = {}
+        if (action === 'accept') {
+          const recipientSnap = await tx.get(adminDb.collection('users').doc(String(user.id)) as DocumentReference)
+          recipientProfile = recipientSnap.exists ? ((recipientSnap.data() as any) ?? {}) : {}
+        }
+
         const baseTransferUpdate: any = {
           to_user_id: user.id,
           responded_at: nowIso,
@@ -158,10 +178,17 @@ export async function POST(request: NextRequest) {
             attendee_id: user.id,
             user_id: user.id,
             transfer_count: existingTransferCount + 1,
+            attendee_name:
+              String(recipientProfile.full_name || recipientProfile.name || '').trim() || null,
+            attendee_email: String(user.email || '').trim().toLowerCase() || null,
             // New signed QR in the SAME write as the change of hands: the
             // previous holder's code, screenshot and wallet pass stop
             // admitting the moment the recipient owns the ticket.
             ...rotatedTicketQrFields(ticketId, ticket),
+            // The previous holder's refund request (only a denied one can be
+            // left here) belongs to them, not to the new holder.
+            refund_requested_by: null,
+            refund_requested_at: null,
             updated_at: nowIso
           })
           tx.update(transferRef, { ...baseTransferUpdate, status: 'accepted' })

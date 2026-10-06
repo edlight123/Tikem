@@ -6,7 +6,10 @@ import {
   reversePromoterCommission,
   type TicketRefundResult,
 } from '@/lib/tickets/refundExecution'
-import { notifyAdminsOfQueuedRefunds, type QueuedRefundNotice } from '@/lib/tickets/manualRefundQueue'
+import { notifyAdminsOfQueuedRefunds, notifyAdminsOfRefundReview, type QueuedRefundNotice } from '@/lib/tickets/manualRefundQueue'
+import { loadEventAvailability } from '@/lib/payouts/availability-server'
+import { eventEndsAt } from '@/lib/payouts/availability'
+import { loadRefundCoverageContext, type RefundCoverageContext } from '@/lib/tickets/refundCoverage'
 
 /**
  * Cancelling an event is a MONEY operation, not a status flag.
@@ -34,6 +37,13 @@ import { notifyAdminsOfQueuedRefunds, type QueuedRefundNotice } from '@/lib/tick
  *      for refunded/queued ones; free and failed-held ones are done here), and
  *      send the admins ONE summary of the mobile-money refunds queued by hand
  *
+ * WHO MAY CANCEL (organizerSelfCancelBlock): the organizer, only before any
+ * money has been withdrawn for the event and before it has ended; after that,
+ * only an admin. An organizer's cancellation also runs the refund COVERAGE GATE
+ * (lib/tickets/refundCoverage.ts): what their unwithdrawn balance covers is
+ * refunded now, the rest goes to refund_reviews for a Tikèm admin. An admin
+ * cancellation refunds every buyer regardless, as before.
+ *
  * IDEMPOTENT: re-running on an already-cancelled event resumes the sweep
  * instead of refusing. Each ticket is claimed in a transaction before money
  * moves and planTicketRefund refuses refunded / refund_pending / in-flight
@@ -58,6 +68,8 @@ export type CancelOutcome = {
   refundsSucceeded: number
   refundsQueuedManual: number
   refundsFailed: number
+  /** Organizer cancellation only: refunds the unwithdrawn balance did not cover, held for a Tikèm admin. */
+  refundsSentToReview: number
   freeTicketsVoided: number
   /** Tickets already refunded, pending or in flight — left untouched. */
   alreadyHandled: number
@@ -154,6 +166,7 @@ export async function cancelEventWithRefunds({
     refundsSucceeded: 0,
     refundsQueuedManual: 0,
     refundsFailed: 0,
+    refundsSentToReview: 0,
     freeTicketsVoided: 0,
     alreadyHandled: 0,
     notified: 0,
@@ -163,14 +176,36 @@ export async function cancelEventWithRefunds({
 
   const refundEvent = { id: eventId, title: event?.title || null, organizer_id: event?.organizer_id || null }
   const queuedForAdmins: QueuedRefundNotice[] = []
+  const sentToReview: Array<Extract<TicketRefundResult, { outcome: 'admin_review' }>> = []
+
+  // The coverage gate's context (the whole event's availability facts) is
+  // loaded ONCE for the sweep, on first use, instead of once per ticket. Each
+  // claim transaction still re-reads the ledger (and the tickets, once anything
+  // was withdrawn), so sharing it never makes the gate stale. A failed load is
+  // forgotten so the next ticket retries it (that ticket fails closed to review).
+  let coverageCtx: Promise<RefundCoverageContext> | null = null
+  const sharedCoverageContext = () => {
+    if (!coverageCtx) {
+      coverageCtx = loadRefundCoverageContext(eventId).catch((e) => {
+        coverageCtx = null
+        throw e
+      })
+    }
+    return coverageCtx
+  }
 
   for (const doc of ticketsSnap.docs) {
     const res = await refundTicket(doc.id, {
+      coverageContext: sharedCoverageContext,
       reason: 'event_cancelled',
       actorId: actor.id,
       event: refundEvent,
       onFailure: 'hold',
       cancellation: true,
+      // An organizer's own cancellation may only spend what they still have
+      // unwithdrawn; the rest waits for a Tikèm admin (refund_reviews).
+      // (A resume of an admin's cancellation keeps the admin's terms.)
+      cancellationCoverageGate: !actor.isAdmin && !(alreadyCancelled && event?.cancelled_by_admin === true),
       // One summary email for the whole sweep, sent below.
       notifyAdmins: false,
     })
@@ -191,6 +226,12 @@ export async function cancelEventWithRefunds({
         reason: 'event_cancelled',
         needsReview: res.needsReview,
       })
+    } else if (res.outcome === 'admin_review') {
+      // Not covered by the organizer's unwithdrawn balance: held (it no longer
+      // scans, its money cannot be withdrawn) until an admin approves or denies.
+      outcome.refundsSentToReview += 1
+      sentToReview.push(res)
+      notice = { kind: 'pending' }
     } else if (res.outcome === 'failed') {
       outcome.refundsFailed += 1
       outcome.failures.push({ ticketId: doc.id, reason: res.error })
@@ -216,8 +257,7 @@ export async function cancelEventWithRefunds({
       }
     } else {
       // Already refunded, refund pending (including a previous run's manual
-      // queue), in flight, or not live: already dealt with. ('admin_review'
-      // cannot happen here: cancellation skips the coverage gate.)
+      // queue), in flight, or not live: already dealt with.
       outcome.alreadyHandled += 1
       continue
     }
@@ -234,8 +274,67 @@ export async function cancelEventWithRefunds({
   // 5. One admin email for every refund this sweep queued for a manual payout.
   // Best-effort (never throws); the queue docs are the record.
   if (queuedForAdmins.length > 0) await notifyAdminsOfQueuedRefunds(queuedForAdmins)
+  // ...and one for the refunds held for review (the queue lists every one).
+  if (sentToReview.length > 0) {
+    const first = sentToReview[0]
+    await notifyAdminsOfRefundReview({
+      ticketId: first.ticketId,
+      eventTitle: refundEvent.title,
+      amount: first.amount,
+      currency: first.currency,
+      method: String(first.ticket?.payment_method || 'unknown').toLowerCase(),
+      reason: `event_cancelled_by_organizer (${sentToReview.length} ticket${sentToReview.length === 1 ? '' : 's'} held for review)`,
+      eventCurrency: first.coverage?.currency ?? null,
+      shortfallMinor: first.coverage?.shortfallMinor ?? null,
+      coverageMinor: first.coverage?.coverageMinor ?? null,
+    })
+  }
 
   return outcome
+}
+
+export type SelfCancelBlock = { status: number; code: string; error: string }
+
+/**
+ * May the event's ORGANIZER cancel it themselves? Only before any money has been
+ * withdrawn for it and before it has ended (the effective end: the later of the
+ * editable end_datetime and what the server-stamped tickets say). Otherwise an
+ * admin must: a self-cancel after a payout used to refund buyers out of Tikèm's
+ * own funds. Fails closed when the balance cannot be computed.
+ */
+export async function organizerSelfCancelBlock(
+  eventId: string,
+  event: Record<string, any>,
+  now: Date = new Date()
+): Promise<SelfCancelBlock | null> {
+  let availability: Awaited<ReturnType<typeof loadEventAvailability>> = null
+  try {
+    availability = await loadEventAvailability({ eventId, eventData: event, now })
+  } catch (e: any) {
+    console.error('[cancelEvent] availability failed; refusing organizer self-cancel', { eventId, message: e?.message })
+    return {
+      status: 503,
+      code: 'cancel_balance_unavailable',
+      error: 'We could not check this event’s payouts right now. Please try again, or contact support.',
+    }
+  }
+  if (availability && availability.withdrawnMinor > 0) {
+    return {
+      status: 403,
+      code: 'cancel_after_withdrawal',
+      error: 'Money has already been withdrawn for this event, so only Tikèm support can cancel it. Please contact support.',
+    }
+  }
+  const endIso = availability?.effectiveEndsAt || eventEndsAt(event)?.toISOString() || null
+  const ends = endIso ? Date.parse(endIso) : NaN
+  if (!isNaN(ends) && now.getTime() >= ends) {
+    return {
+      status: 403,
+      code: 'cancel_after_event_end',
+      error: 'This event has already ended, so only Tikèm support can cancel it. Please contact support.',
+    }
+  }
+  return null
 }
 
 async function notifyBuyer(

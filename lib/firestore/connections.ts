@@ -10,7 +10,7 @@
  * the existing organizer-follow pattern. Client writes are disabled in rules.
  */
 
-import { adminDb } from '@/lib/firebase/admin'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import {
   type Connection,
@@ -18,7 +18,7 @@ import {
   type FriendshipState,
   type PublicUserSummary,
   connectionIdFor,
-  phoneMatchKey,
+  phoneToE164,
 } from '@/types/social'
 
 const COLLECTION = 'connections'
@@ -310,32 +310,37 @@ export async function matchContacts(
   userId: string,
   phoneNumbers: string[]
 ): Promise<ContactMatch[]> {
-  const keys = Array.from(
-    new Set(phoneNumbers.map((p) => phoneMatchKey(p)).filter((k) => k.length >= 6))
+  // Exact E.164 only, and only against VERIFIED numbers: Firebase Auth's
+  // phoneNumber is set solely by a completed OTP (sign-in or link), whereas the
+  // profile `phone` field is free text anyone can type someone else's number
+  // into. A last-8-digit match against that field let a caller learn which
+  // account claimed a number, and sweep a suffix across every country code.
+  const numbers = Array.from(
+    new Set(phoneNumbers.map((p) => phoneToE164(p)).filter(Boolean))
   )
-  if (keys.length === 0) return []
+  if (numbers.length === 0) return []
 
-  // Firestore `in` supports up to 30 values per query.
-  const chunks: string[][] = []
-  for (let i = 0; i < keys.length; i += 30) {
-    chunks.push(keys.slice(i, i + 30))
+  // getUsers accepts at most 100 identifiers per call.
+  const uids = new Set<string>()
+  for (let i = 0; i < numbers.length; i += 100) {
+    const chunk = numbers.slice(i, i + 100).map((phoneNumber) => ({ phoneNumber }))
+    const result = await adminAuth.getUsers(chunk)
+    for (const u of result.users as any[]) {
+      if (u.uid !== userId && !u.disabled && u.phoneNumber) uids.add(u.uid)
+    }
   }
+  if (uids.size === 0) return []
 
-  const snapshots = await Promise.all(
-    chunks.map((chunk) =>
-      adminDb.collection('users').where('phone_normalized', 'in', chunk).get()
-    )
-  )
+  const refs = Array.from(uids).map((uid) => adminDb.collection('users').doc(uid))
+  const docs: any[] = await adminDb.getAll(...refs)
 
   const matchedUsers = new Map<string, any>()
-  snapshots.forEach((snap: any) => {
-    snap.docs.forEach((doc: any) => {
-      if (doc.id === userId) return // skip self
-      const data = doc.data() || {}
-      // Respect discovery preference (defaults to true when unset).
-      if (data.privacy?.discoverable_by_phone === false) return
-      matchedUsers.set(doc.id, data)
-    })
+  docs.forEach((doc: any) => {
+    if (!doc.exists) return
+    const data = doc.data() || {}
+    // Respect discovery preference (defaults to true when unset).
+    if (data.privacy?.discoverable_by_phone === false) return
+    matchedUsers.set(doc.id, data)
   })
 
   const matchedIds = Array.from(matchedUsers.keys())

@@ -8,6 +8,7 @@ import {
   isSogepayPaidAmountAcceptable,
 } from '@/lib/sogepay'
 import { fulfillPaidOrder } from '@/lib/tickets/fulfillment'
+import { getCurrentUser } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -101,24 +102,43 @@ export async function POST(request: Request) {
     }
 
     if (!paid) {
+      // Only a still-pending order can be failed. A replayed (or late, out of
+      // order) "not paid" notice must not knock an order that is being
+      // fulfilled, was flagged for refund, or already failed into a new state.
+      if (String(pendingTx.status || '') !== 'pending') {
+        return NextResponse.json({ ok: true, paid: false, ignored: true })
+      }
       await supabase.from('pending_transactions').update({ status: 'failed' }).eq('order_id', orderId)
       return NextResponse.json({ ok: true, paid: false })
     }
 
-    // Defense-in-depth: verify the reported amount matches what we expected to charge.
+    // The reported amount must be present AND match what we expected to charge.
+    // Our redirect does not (yet) carry a signed amount the gateway is bound to,
+    // so a paid notice without an amount proves nothing about HOW MUCH was paid:
+    // fail closed. Either way money may have been taken, so the order goes to
+    // the refund queue (needs_refund) instead of being fulfilled.
     const amountCheck = isSogepayPaidAmountAcceptable(Number(pendingTx.amount), amount)
-    if (amountCheck.verified && !amountCheck.ok) {
-      console.error('[sogepay] callback amount mismatch — refusing fulfillment', {
+    if (!amountCheck.verified || !amountCheck.ok) {
+      const reason = amountCheck.verified ? 'amount_mismatch' : 'amount_unverified'
+      console.error('[sogepay] callback amount not acceptable — refusing fulfillment', {
         orderId,
+        reason,
         expected: amountCheck.expected,
         paid: amountCheck.paid,
         tolerance: amountCheck.tolerance,
       })
       await supabase
         .from('pending_transactions')
-        .update({ status: 'failed', failure_reason: 'amount_mismatch' })
+        .update({
+          status: 'failed',
+          failure_reason: reason,
+          needs_refund: true,
+          refund_queue_status: 'pending',
+          reported_amount: amountCheck.paid,
+          transaction_id: transactionId || pendingTx.transaction_id || null,
+        })
         .eq('order_id', orderId)
-      return NextResponse.json({ ok: false, error: 'amount_mismatch' })
+      return NextResponse.json({ ok: false, error: reason, needsRefund: true })
     }
 
     const result = await fulfillPaidOrder({
@@ -194,8 +214,15 @@ export async function GET(request: Request) {
     }
 
     if (pendingTx.status === 'completed' && pendingTx.ticket_id) {
+      // The order id is in the URL, so it proves nothing: only the signed-in buyer
+      // is sent on to their ticket (and its QR). Anyone else gets the generic page.
+      const sessionUser = await getCurrentUser().catch(() => null)
+      const isBuyer = Boolean(sessionUser?.id && String(pendingTx.user_id || '') === String(sessionUser.id))
       return NextResponse.redirect(
-        new URL(`/purchase/success?ticketId=${pendingTx.ticket_id}`, request.url)
+        new URL(
+          isBuyer ? `/purchase/success?ticketId=${encodeURIComponent(String(pendingTx.ticket_id))}` : '/purchase/success',
+          request.url
+        )
       )
     }
 

@@ -32,6 +32,21 @@ function parseStorageTarget(rawPath: string): { bucketName: string | null; objec
   return { bucketName: null, objectPath: trimmed }
 }
 
+/**
+ * Only identity-verification uploads (`verification/{uid}/...`) and bank proof
+ * documents (`verifications/bank/{uid}/...`) can be signed here. No dot
+ * segments, no empty segments, no backslashes.
+ */
+const VERIFICATION_PREFIXES = ['verification/', 'verifications/bank/']
+function isVerificationObjectPath(objectPath: string): boolean {
+  if (!VERIFICATION_PREFIXES.some((p) => objectPath.startsWith(p))) return false
+  if (objectPath.includes('\\')) return false
+  const segments = objectPath.split('/')
+  if (segments.some((seg) => seg === '' || seg === '.' || seg === '..')) return false
+  // prefix + owner uid + at least a file name
+  return segments.length >= (objectPath.startsWith('verifications/bank/') ? 4 : 3)
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { user, error } = await requireAdmin()
@@ -55,7 +70,14 @@ export async function GET(request: NextRequest) {
     }
 
     const { bucketName: bucketFromPath, objectPath } = parseStorageTarget(path)
-    const bucketName = bucketFromPath || getStorageBucketName()
+    const configuredBucket = getStorageBucketName()
+    // Pinned to the app's own bucket: a gs:// path naming any other bucket is
+    // refused, so this cannot mint signed URLs for arbitrary objects the
+    // service account can read.
+    if (bucketFromPath && configuredBucket && bucketFromPath !== configuredBucket) {
+      return NextResponse.json({ error: 'Invalid path parameter' }, { status: 400 })
+    }
+    const bucketName = configuredBucket || bucketFromPath
 
     if (!bucketName) {
       return NextResponse.json(
@@ -67,7 +89,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!objectPath) {
+    if (!objectPath || !isVerificationObjectPath(objectPath)) {
       return NextResponse.json(
         { error: 'Invalid path parameter' },
         { status: 400 }
@@ -89,7 +111,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     )

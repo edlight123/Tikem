@@ -1,7 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { findEventEarningsDocInTransaction } from '@/lib/earnings'
 import { loadEventAvailabilityInput } from '@/lib/payouts/availability-server'
-import { computeEventAvailability, type EventAvailabilityInput } from '@/lib/payouts/availability'
+import { computeEventAvailability, normalizeCurrencyCode, type EventAvailabilityInput } from '@/lib/payouts/availability'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 
 /**
@@ -51,6 +51,13 @@ export type RefundCoverage = {
   shortfallMinor: number
   /** withdrawnAmount on the ledger row, as read inside the claim transaction. */
   withdrawnMinor: number
+  /**
+   * The ledger row this transaction read (coverageInTransaction only), so the
+   * claim can bump its refund-claim counter (bumpRefundClaimVersionInTransaction)
+   * and conflict with a withdrawal computed against the pre-refund ceiling.
+   * Never persisted.
+   */
+  ledger?: { ref: any; data: any } | null
 }
 
 /**
@@ -122,8 +129,10 @@ export async function loadRefundCoverageContext(eventId: string): Promise<Refund
 /**
  * Inside the claim transaction (reads only, before any write): re-read the
  * event's tickets and the ledger row withdrawals debit, then judge. A
- * withdrawal that debited first is seen here; one that commits after has its
- * own transaction conflict on the ledger row this read.
+ * withdrawal that debited first is seen here. One that commits after is caught
+ * because the claim WRITES the row (bumpRefundClaimVersionInTransaction on
+ * `ledger`): the withdrawal's debit transaction re-reads the counter and
+ * refuses when it moved since its ceiling was computed.
  */
 export async function coverageInTransaction(
   tx: any,
@@ -131,6 +140,34 @@ export async function coverageInTransaction(
   ticketId: string,
   ticketData: Record<string, any>
 ): Promise<RefundCoverage> {
+  // Nothing withdrawn yet: every refund is covered by definition (Tikèm still
+  // holds the whole balance), so the event's tickets are not re-read. That
+  // re-read is what made a cancellation sweep O(N^2) in reads. The ledger row
+  // is still read (and returned) so the claim bumps its counter and a
+  // withdrawal racing this claim conflicts as before.
+  const ledgerFirst = await findEventEarningsDocInTransaction(tx, ctx.eventId)
+  const primaryWithdrawn = Math.max(0, Number(ledgerFirst?.data?.withdrawnAmount || 0) || 0)
+  const loadedLedger = ctx.input?.ledger || null
+  const otherRowsWithdrawn = loadedLedger
+    ? Math.max(
+        0,
+        (Number(loadedLedger.withdrawnMinor) || 0) -
+          (Number(loadedLedger.primaryWithdrawnMinor ?? loadedLedger.withdrawnMinor) || 0)
+      )
+    : 0
+  if (primaryWithdrawn === 0 && otherRowsWithdrawn === 0) {
+    const faceMinor = Math.round(refundFaceAmount(ticketData) * 100)
+    return {
+      currency: normalizeCurrencyCode(ctx.input?.event?.currency),
+      faceMinor,
+      organizerCostMinor: faceMinor,
+      coverageMinor: faceMinor,
+      shortfallMinor: 0,
+      withdrawnMinor: 0,
+      ledger: ledgerFirst,
+    }
+  }
+
   const ticketsSnap = await tx.get(adminDb.collection('tickets').where('event_id', '==', ctx.eventId))
   const tickets: Array<{ id: string; [k: string]: any }> = (ticketsSnap?.docs || []).map((d: any) => ({
     id: String(d.id),
@@ -141,7 +178,5 @@ export async function coverageInTransaction(
   if (idx >= 0) tickets[idx] = { id: ticketId, ...ticketData }
   else tickets.push({ id: ticketId, ...ticketData })
 
-  const ledgerRow = await findEventEarningsDocInTransaction(tx, ctx.eventId)
-  const withdrawn = Math.max(0, Number(ledgerRow?.data?.withdrawnAmount || 0) || 0)
-  return computeRefundCoverage({ ...ctx.input, tickets }, ticketId, withdrawn)
+  return { ...computeRefundCoverage({ ...ctx.input, tickets }, ticketId, primaryWithdrawn), ledger: ledgerFirst }
 }

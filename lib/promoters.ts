@@ -538,6 +538,13 @@ export async function reversePromoterSaleForTicket(ticketId: string): Promise<bo
       if (already.includes(id)) return false
 
       const promoterSnap = await tx.get(promoterRef)
+      // A FUNDED commission reversed after its promoter withdrew money is a debt,
+      // not a rounding detail: read the claimant's wallet (all reads before any
+      // write) so the reversal is recorded on it below.
+      const claimantUid =
+        sale.funded === true && promoterSnap.exists ? String((promoterSnap.data() as any)?.claimed_by_uid || '') : ''
+      const walletRef = claimantUid ? adminDb.collection('promoter_wallets').doc(claimantUid) : null
+      const walletSnap = walletRef ? await tx.get(walletRef) : null
 
       const n = Math.max(1, ticketIds.length)
       const reversedIds = [...already, id]
@@ -583,6 +590,21 @@ export async function reversePromoterSaleForTicket(ticketId: string): Promise<bo
               partially_reversed_at: nowIso,
             }),
       })
+      if (walletRef && walletSnap?.exists && deltaCommission > 0) {
+        const w = (walletSnap.data() as any) || {}
+        const currency = String(sale.currency || 'HTG').toUpperCase()
+        if ((Number(w?.withdrawn_by_currency?.[currency]) || 0) > 0) {
+          // The wallet view nets this out as a signed balance (owedByCurrency)
+          // and blocks withdrawals while it is negative; this is the audit trail.
+          const reversed = { ...(w.reversed_after_withdrawal_by_currency || {}) }
+          reversed[currency] = (Number(reversed[currency]) || 0) + deltaCommission
+          tx.set(
+            walletRef,
+            { reversed_after_withdrawal_by_currency: reversed, last_commission_reversal_at: nowIso },
+            { merge: true }
+          )
+        }
+      }
       if (promoterSnap.exists) {
         const p = promoterSnap.data() as PromoterDoc
         tx.update(promoterRef, {

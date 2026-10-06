@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createClient } from '@/lib/firebase-db/server'
+import { escapeHtml } from '@/lib/html'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -130,31 +131,31 @@ export async function GET(request: Request) {
                     </div>
                     
                     <div class="content">
-                      <p>Hi ${user.full_name || 'there'},</p>
+                      <p>Hi ${escapeHtml(user.full_name || 'there')},</p>
                       
                       <p>This is a friendly reminder that you have an upcoming event tomorrow!</p>
                       
                       <div class="highlight">
                         <h3 style="margin-top: 0; color: #92400e;">🎯 Don't Forget!</h3>
-                        <p style="margin: 0; color: #78350f;">Your event <strong>${event.title}</strong> is happening in less than 24 hours.</p>
+                        <p style="margin: 0; color: #78350f;">Your event <strong>${escapeHtml(event.title)}</strong> is happening in less than 24 hours.</p>
                       </div>
                       
                       <div class="event-card">
-                        <h2 style="margin-top: 0; color: #0d9488;">${event.title}</h2>
+                        <h2 style="margin-top: 0; color: #0d9488;">${escapeHtml(event.title)}</h2>
                         
                         <div class="info-row">
                           <span class="info-icon">📅</span>
-                          <span><strong>Date:</strong> ${formattedDate}</span>
+                          <span><strong>Date:</strong> ${escapeHtml(formattedDate)}</span>
                         </div>
                         
                         <div class="info-row">
                           <span class="info-icon">🕐</span>
-                          <span><strong>Time:</strong> ${formattedTime}</span>
+                          <span><strong>Time:</strong> ${escapeHtml(formattedTime)}</span>
                         </div>
                         
                         <div class="info-row">
                           <span class="info-icon">📍</span>
-                          <span><strong>Location:</strong> ${event.venue_name}, ${event.city}</span>
+                          <span><strong>Location:</strong> ${escapeHtml(event.venue_name)}, ${escapeHtml(event.city)}</span>
                         </div>
                         
                         <div class="info-row">

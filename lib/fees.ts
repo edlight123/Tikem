@@ -50,58 +50,22 @@ export function calculatePlatformFeeWithPercentage(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * When the per-ticket cap stopped applying to new sales. Set this to the moment
- * the change is deployed: sales before it keep their capped fee in payouts.
- */
-export const PLATFORM_FEE_CAP_RETIRED_AT = new Date('2026-10-06T00:00:00.000Z')
-
-/**
- * The retired ceilings, per ticket, in the event currency's minor units, by
- * location. These are the compiled-in defaults that were live while the cap
- * existed (no stored platform_settings doc ever overrode them). A currency with
- * no entry was uncapped then too.
- */
-const LEGACY_PLATFORM_FEE_CAP_MINOR: Record<'haiti' | 'us-canada', Record<string, number>> = {
-  haiti: { HTG: 75_000, USD: 500 },
-  'us-canada': { USD: 500, CAD: 700, EUR: 450 },
-}
-
-/** The retired per-ticket ceiling for a location + currency, or null when none applied. */
-export function legacyPlatformFeeCapMinor(
-  location: 'haiti' | 'us-canada',
-  currency: unknown
-): number | null {
-  const table = LEGACY_PLATFORM_FEE_CAP_MINOR[location] || {}
-  const code = String(currency || '').toUpperCase().trim()
-  return Object.prototype.hasOwnProperty.call(table, code) ? table[code] : null
-}
-
-/**
  * The platform fee on a sale ALREADY MADE, recomputed for payouts and reports.
  *
- * Exactly the rate, except for a sale made while the per-ticket cap was in force
- * (purchased before PLATFORM_FEE_CAP_RETIRED_AT, or with no purchase date, which
- * only old tickets lack): that keeps the capped fee it was sold under, scaled by
- * the order's ticket count as it was then.
+ * Exactly the rate. The per-ticket cap was retired before any real organizer
+ * sold (2026-10-05: every event so far is a test/template event), so no sale
+ * keeps a capped fee. The `sale` argument is kept so callers needn't change.
  */
 export function platformFeeForSale(
   grossAmount: number,
   feePercentage: number,
-  sale: {
-    /** legacyPlatformFeeCapMinor() for the event; null = no historical cap. */
-    legacyCapMinorPerTicket: number | null
-    /** Tickets in the order. */
-    quantity: number
-    /** When the order was paid; null = unknown, treated as before the change. */
-    purchasedAt: Date | null
+  _sale?: {
+    legacyCapMinorPerTicket?: number | null
+    quantity?: number
+    purchasedAt?: Date | null
   }
 ): number {
-  const fee = calculatePlatformFeeWithPercentage(grossAmount, feePercentage)
-  const cap = sale.legacyCapMinorPerTicket
-  if (cap == null || !Number.isFinite(cap) || cap < 0) return fee
-  if (sale.purchasedAt && sale.purchasedAt.getTime() >= PLATFORM_FEE_CAP_RETIRED_AT.getTime()) return fee
-  const quantity = Math.max(1, Math.floor(Number(sale.quantity) || 1))
-  return Math.min(fee, Math.round(cap) * quantity)
+  return calculatePlatformFeeWithPercentage(grossAmount, feePercentage)
 }
 
 /**

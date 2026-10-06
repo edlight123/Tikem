@@ -20,8 +20,25 @@ export async function POST(request: NextRequest) {
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
 
-    // Delete the existing verification request
-    await adminDb.collection('verification_requests').doc(userId).delete()
+    // An approved request is the record behind the organizer's verified badge
+    // and payout eligibility; deleting it would erase the review trail and let
+    // an approved organizer swap in different documents. Only an unapproved
+    // request (draft, in progress, rejected) may be started over.
+    const ref = adminDb.collection('verification_requests').doc(userId)
+    const reset = await adminDb.runTransaction(async (tx: any) => {
+      const snap = await tx.get(ref)
+      if (!snap.exists) return { ok: true as const }
+      const status = String(snap.data()?.status || '').toLowerCase()
+      if (status === 'approved' || status === 'verified') return { ok: false as const }
+      tx.delete(ref)
+      return { ok: true as const }
+    })
+    if (!reset.ok) {
+      return NextResponse.json(
+        { error: 'An approved verification cannot be reset.' },
+        { status: 409 }
+      )
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -30,7 +47,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error resetting verification:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to reset verification' },
+      { error: 'Failed to reset verification' },
       { status: 500 }
     )
   }

@@ -38,6 +38,7 @@ import {
 import {
   DoorRow,
   findDoorRow,
+  isRefundHeldRow,
   judgeDoorRow,
   judgeScannedCodeAgainstRow,
   markRowCheckedIn,
@@ -604,7 +605,14 @@ export default function TicketScannerScreen() {
       case 'EXPIRED':
         return { status: 'EXPIRED', attendeeName, tierName, message: t('organizerTicketScanner.results.expired') };
       case 'CANCELLED':
-        return { status: 'CANCELLED', attendeeName, tierName, message: t('organizerTicketScanner.results.cancelled') };
+        return {
+          status: 'CANCELLED',
+          attendeeName,
+          tierName,
+          message: isRefundHeldRow(row)
+            ? t('organizerTicketScanner.results.refundInProgress')
+            : t('organizerTicketScanner.results.cancelled'),
+        };
       // Distinct from "already in": the person holding this code is not the
       // ticket's holder any more, so no name is shown.
       case 'TRANSFERRED':

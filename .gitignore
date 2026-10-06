@@ -58,3 +58,10 @@ firebase-debug.log
 
 # App Review demo credentials (never commit)
 store/app-store/demo.env
+
+# Signing material (certificates, keys, provisioning profiles) never committed
+*.cer
+*.p12
+*.p8
+*.key
+*.mobileprovision

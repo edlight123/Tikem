@@ -861,7 +861,9 @@
     "moncash_note": "Votre retrait sera envoyé sur votre compte MonCash (généralement sous 24 heures).",
     "moncash_below_minimum": "Les retraits MonCash commencent à {{min}}. Votre solde disponible est de {{balance}}.",
     "bank_below_minimum": "Les virements bancaires commencent à {{min}}.",
-    "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé. Aucun argent n'a été déplacé."
+    "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé. Aucun argent n'a été déplacé.",
+    "destination_on_hold": "Votre nouveau compte est enregistré et pourra recevoir des paiements à partir du {{date}}.",
+    "balance_changed": "Votre solde a changé, veuillez réessayer."
   },
   "events_filters": {
     "alphabetical": "Alphabétique",

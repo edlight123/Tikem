@@ -11,7 +11,6 @@ import {
   type EventAvailabilityInput,
 } from '@/lib/payouts/availability'
 import { DEFAULT_PAYOUT_RELEASE_CONFIG } from '@/types/platform-settings'
-import { PLATFORM_FEE_CAP_RETIRED_AT } from '@/lib/fees'
 import type { OrganizerHistory } from '@/lib/payouts/release-rules'
 
 const NOW = new Date('2026-10-05T12:00:00.000Z')
@@ -63,7 +62,7 @@ beforeEach(() => {
   seq = 0
 })
 
-describe('fee actually charged: rate, retired per-ticket cap, absorb vs pass-on', () => {
+describe('fee actually charged: flat rate, absorb vs pass-on', () => {
   it('absorb (organizer incidence) below the cap: 10% comes off', () => {
     const a = run({ tickets: [ticket(1_000)] }) // 1,000 HTG
     expect(a.platformFeeMinor).toBe(10_000)
@@ -71,47 +70,45 @@ describe('fee actually charged: rate, retired per-ticket cap, absorb vs pass-on'
     expect(a.availableNowMinor).toBe(90_000)
   })
 
-  it('absorb above the cap, sold while the cap was in force: keeps the 750 HTG per-ticket fee it was sold under', () => {
+  it('absorb on an older sale: still exactly 10% (the cap is retired for every sale)', () => {
     const a = run({ tickets: [ticket(10_000)] }) // 10,000 HTG
-    expect(a.platformFeeMinor).toBe(75_000)
-    expect(a.netMinor).toBe(925_000)
-    // Old engines: Math.floor(1_000_000 * 0.9) = 900_000 → under-paid by 250 HTG.
-    expect(a.netMinor - Math.floor(1_000_000 * 0.9)).toBe(25_000)
+    expect(a.platformFeeMinor).toBe(100_000)
+    expect(a.netMinor).toBe(900_000)
   })
 
-  it('a capped-era order: the cap scales with the ORDER quantity (one payment, many tickets)', () => {
+  it('a multi-ticket order: 10% of the order', () => {
     const a = run({ tickets: [ticket(10_000, { payment_id: 'p' }), ticket(10_000, { payment_id: 'p' })] })
-    expect(a.platformFeeMinor).toBe(150_000) // min(10% of 20,000 HTG, 2 × 750)
-    expect(a.netMinor).toBe(1_850_000)
+    expect(a.platformFeeMinor).toBe(200_000)
+    expect(a.netMinor).toBe(1_800_000)
   })
 
-  it('USD event sold in the capped era: $5.00 cap', () => {
+  it('USD event, older sale: $100 pays $10', () => {
     const a = run({
       event: { id: 'evt1', organizer_id: 'org1', currency: 'USD', country: 'HT', status: 'published', end_datetime: endedHoursAgo(200) },
       fee: USD_RULE,
       tickets: [ticket(100, { payment_method: 'stripe', currency: 'USD' })], // $100
     })
     expect(a.currency).toBe('USD')
-    expect(a.platformFeeMinor).toBe(500)
-    expect(a.netMinor).toBe(9_500)
+    expect(a.platformFeeMinor).toBe(1_000)
+    expect(a.netMinor).toBe(9_000)
   })
 
   it('absorb, sold AFTER the cap was retired: exactly 10%, however expensive', () => {
-    const after = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString()
+    const after = new Date(Date.parse('2026-10-06T00:00:00.000Z') + 60_000).toISOString()
     const a = run({ tickets: [ticket(50_000, { purchased_at: after })] }) // 50,000 HTG
     expect(a.platformFeeMinor).toBe(500_000) // 5,000 HTG, not 750
     expect(a.netMinor).toBe(4_500_000)
   })
 
-  it('an order is priced by its EARLIEST ticket: one capped-era ticket keeps the order capped', () => {
-    const after = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString()
+  it('an order mixing older and newer tickets still pays 10%', () => {
+    const after = new Date(Date.parse('2026-10-06T00:00:00.000Z') + 60_000).toISOString()
     const a = run({
       tickets: [
         ticket(10_000, { payment_id: 'p', purchased_at: after }),
         ticket(10_000, { payment_id: 'p' }), // 2026-09-20
       ],
     })
-    expect(a.platformFeeMinor).toBe(150_000)
+    expect(a.platformFeeMinor).toBe(200_000)
   })
 
   it('USD event sold after the cap was retired: $100 pays $10', () => {
@@ -122,7 +119,7 @@ describe('fee actually charged: rate, retired per-ticket cap, absorb vs pass-on'
         ticket(100, {
           payment_method: 'stripe',
           currency: 'USD',
-          purchased_at: new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString(),
+          purchased_at: new Date(Date.parse('2026-10-06T00:00:00.000Z') + 60_000).toISOString(),
         }),
       ],
     })
@@ -554,13 +551,13 @@ describe('withdrawn = max(all ledger rows, independent payment records)', () => 
 describe('requested refunds hold that ticket’s net until decided', () => {
   it('a requested refund holds only that ticket’s organizer net, not the event', () => {
     const a = run({ tickets: [ticket(1_000), ticket(10_000, { refund_status: 'requested' })] })
-    // 10,000 HTG ticket nets 9,250 (fee capped at 750) — that is what is held.
-    expect(a.refundRequestedMinor).toBe(925_000)
-    expect(a.netMinor).toBe(90_000 + 925_000)
+    // 10,000 HTG ticket nets 9,000 after the 10% fee; that is what is held.
+    expect(a.refundRequestedMinor).toBe(900_000)
+    expect(a.netMinor).toBe(90_000 + 900_000)
     expect(a.availableNowMinor).toBe(90_000)
     const row = toEarningsRow(a, NOW)
     expect(row.netAmount - row.withdrawnAmount).toBe(a.balanceMinor)
-    expect(row.refundRequestedAmount).toBe(925_000)
+    expect(row.refundRequestedAmount).toBe(900_000)
   })
 
   it('a ticket inside a multi-ticket order holds its share of the order fee only', () => {

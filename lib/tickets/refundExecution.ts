@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
+import { bumpRefundClaimVersionInTransaction } from '@/lib/earnings'
 import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
 import { planTicketRefund, refundFaceAmount, type RefundIneligibleReason, type RefundPlan } from '@/lib/tickets/refundPlan'
 import { reversePromoterSaleForTicket } from '@/lib/promoters'
@@ -81,7 +82,7 @@ export type TicketRefundResult =
       recordFailed?: boolean
     }
   | { outcome: 'queued'; ticketId: string; ticket: Record<string, any>; amount: number; currency: string; needsReview: boolean }
-  | { outcome: 'skipped'; ticketId: string; ticket: Record<string, any>; reason: RefundIneligibleReason }
+  | { outcome: 'skipped'; ticketId: string; ticket: Record<string, any>; reason: RefundSkipReason }
   | {
       /** Not covered by the organizer's remaining balance: sent to a Tikèm admin, no money moved. */
       outcome: 'admin_review'
@@ -111,6 +112,12 @@ export type RefundTicketOptions = {
    */
   cancellation?: boolean
   /**
+   * Cancellation by the ORGANIZER (not an admin): run the coverage gate anyway,
+   * so a cancellation after a withdrawal refunds only what the organizer's
+   * unwithdrawn balance covers and sends the rest to refund_reviews.
+   */
+  cancellationCoverageGate?: boolean
+  /**
    * Buyer refund requests keep the buyer's own words in `refund_reason` (the
    * organizer's queue shows them), so the refund's cause is recorded in
    * `refund_source` instead of overwriting it.
@@ -127,6 +134,27 @@ export type RefundTicketOptions = {
    * 'admin_review' hold is planned as the live ticket it was.
    */
   adminApprovedShortfall?: { adminId: string }
+  /**
+   * A ticket already used at the door is refused (`skipped`, reason
+   * 'checked_in') unless the caller passes this on purpose. Judged inside the
+   * claim transaction, so a check-in that lands between the caller's read and
+   * the claim is still seen. Event cancellation always refunds.
+   */
+  allowCheckedIn?: boolean
+  /**
+   * The coverage gate's context, loaded once by a caller that refunds many
+   * tickets of the same event (the cancellation sweep). Without it each ticket
+   * loads the whole event again. The claim transaction still re-reads the
+   * ledger (and, once anything was withdrawn, the tickets), so a shared context
+   * never makes the gate stale.
+   */
+  coverageContext?: () => Promise<RefundCoverageContext>
+}
+
+export type RefundSkipReason = RefundIneligibleReason | 'checked_in'
+
+function isTicketCheckedIn(ticket: Record<string, any>): boolean {
+  return ticket?.checked_in === true || Boolean(ticket?.checked_in_at)
 }
 
 export const ADMIN_REVIEW_REFUND_STATUS = 'admin_review'
@@ -260,6 +288,9 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
   const { reason, actorId, event, onFailure } = options
   const cancellation = Boolean(options.cancellation)
   const approvedBy = options.adminApprovedShortfall?.adminId ? String(options.adminApprovedShortfall.adminId) : null
+  // The coverage gate runs for every refund except an admin-approved shortfall and
+  // an ADMIN cancellation (an organizer's own cancellation opts back in).
+  const gated = !approvedBy && (!cancellation || Boolean(options.cancellationCoverageGate))
   const reasonFields = options.keepRefundReason ? { refund_source: reason } : { refund_reason: reason }
   const ref = adminDb.collection('tickets').doc(ticketId)
   const nowIso = new Date().toISOString()
@@ -268,11 +299,14 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
   //    transaction re-plans from its own read and only gates an eligible plan.
   let gate: { ctx: RefundCoverageContext | null; error: string | null } | null = null
   let knownDestination: boolean | null = null
-  if (!cancellation && !approvedBy) {
+  if (gated) {
     try {
       const pre = await ref.get()
       const preData = pre.exists ? ((pre.data() as any) ?? {}) : {}
-      const prePlan = planTicketRefund(preData)
+      // Planned exactly as the claim will plan it (a cancellation re-plans a
+      // failed or admin-review ticket as live), so a gated cancellation re-run
+      // gates those tickets instead of tripping ticket_changed_retry.
+      const prePlan = planForClaim(preData, cancellation).plan
       if (prePlan.eligible && prePlan.rail !== 'stripe_connect') {
         if (prePlan.rail === 'stripe') {
           // `payment_method` under-reports destination charges on older tickets.
@@ -280,7 +314,10 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         }
         if (!knownDestination) {
           try {
-            gate = { ctx: await loadRefundCoverageContext(String(event.id)), error: null }
+            const ctx = options.coverageContext
+              ? await options.coverageContext()
+              : await loadRefundCoverageContext(String(event.id))
+            gate = { ctx, error: null }
           } catch (e: any) {
             // Fail closed: a balance that cannot be computed sends the refund to
             // an admin rather than letting Tikèm fund an unknown amount.
@@ -303,6 +340,9 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
     const claimed = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
       const data = snap.exists ? ((snap.data() as any) ?? {}) : {}
+      if (!cancellation && !options.allowCheckedIn && isTicketCheckedIn(data)) {
+        return { data, checkedIn: true as const }
+      }
       const decided = planForClaim(data, cancellation, Boolean(approvedBy))
       const wasAdminReview = isAdminReview(data)
       let coverage: RefundCoverage | null = null
@@ -310,8 +350,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       if (
         decided.plan.eligible &&
         !gate &&
-        !cancellation &&
-        !approvedBy &&
+        gated &&
         decided.plan.rail !== 'stripe_connect' &&
         knownDestination !== true
       ) {
@@ -326,6 +365,12 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         } else {
           reviewNeeded = true
         }
+      }
+      // The claim changes this event's ceiling (the ticket goes to review or
+      // processing): bump the ledger row the gate read, so a withdrawal whose
+      // ceiling was computed before this claim fails its debit and retries.
+      if (decided.plan.eligible && coverage?.ledger) {
+        bumpRefundClaimVersionInTransaction(tx, coverage.ledger)
       }
       if (decided.plan.eligible && reviewNeeded) {
         const p = decided.plan
@@ -396,8 +441,10 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
           )
         }
       }
-      return { data, ...decided, reviewNeeded, coverage }
+      if (coverage) delete coverage.ledger
+      return { data, checkedIn: false as const, ...decided, reviewNeeded, coverage }
     })
+    if (claimed.checkedIn) return { outcome: 'skipped', ticketId, ticket: claimed.data, reason: 'checked_in' }
     ticket = claimed.data
     plan = claimed.plan
     needsReview = claimed.needsReview

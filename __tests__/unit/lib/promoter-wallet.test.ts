@@ -46,11 +46,33 @@ describe('computeWalletBuckets', () => {
     expect(buckets.pendingByCurrency).toEqual({ HTG: 30_000 })
   })
 
-  it('never goes negative when a reversal outruns withdrawals', () => {
+  it('records a debt (signed balance) when a reversal outruns withdrawals, instead of hiding it', () => {
     const buckets = computeWalletBuckets(
       [{ currency: 'HTG', commissionCents: 10_000, released: true }],
       { HTG: 25_000 }
     )
+    expect(buckets.availableByCurrency).toEqual({})
+    expect(buckets.owedByCurrency).toEqual({ HTG: 15_000 })
+  })
+
+  it('new commission pays the debt down before anything is available again', () => {
+    const buckets = computeWalletBuckets(
+      [
+        { currency: 'HTG', commissionCents: 10_000, released: true },
+        { currency: 'HTG', commissionCents: 20_000, released: true },
+      ],
+      { HTG: 25_000 }
+    )
+    expect(buckets.owedByCurrency).toEqual({})
+    expect(buckets.availableByCurrency).toEqual({ HTG: 5_000 })
+  })
+
+  it('a temporarily held (pending) event is not mistaken for a debt', () => {
+    const buckets = computeWalletBuckets(
+      [{ currency: 'HTG', commissionCents: 30_000, released: false }],
+      { HTG: 25_000 }
+    )
+    expect(buckets.owedByCurrency).toEqual({})
     expect(buckets.availableByCurrency).toEqual({})
   })
 

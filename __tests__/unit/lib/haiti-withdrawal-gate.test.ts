@@ -108,12 +108,34 @@ function seedEvent(fields: Doc = {}) {
   })
 }
 
-/** Ended, non-cancelled events other than the one under test → tier history. */
+/**
+ * Completed events other than the one under test → tier history. Only a
+ * PUBLISHED event with a paid live ticket counts (lib/payouts/completed-events).
+ */
 function seedCompletedEvents(count: number) {
   for (let i = 0; i < count; i += 1) {
     store.set(`events/other_${i}`, {
       organizer_id: ORGANIZER,
       status: 'published',
+      is_published: true,
+      end_datetime: hoursAgo(1000 + i),
+    })
+    store.set(`tickets/other_${i}_t0`, {
+      event_id: `other_${i}`,
+      status: 'confirmed',
+      price_paid: 20,
+      purchased_at: hoursAgo(1100 + i),
+    })
+  }
+}
+
+/** Zero-sale drafts backdated to look finished: must NOT earn the established tier. */
+function seedBackdatedDrafts(count: number) {
+  for (let i = 0; i < count; i += 1) {
+    store.set(`events/draft_${i}`, {
+      organizer_id: ORGANIZER,
+      status: 'draft',
+      is_published: false,
       end_datetime: hoursAgo(1000 + i),
     })
   }
@@ -219,6 +241,33 @@ describe('gateHaitiWithdrawal — tier ladder', () => {
     expect(result.allowed).toBe(true)
     if (!result.allowed) return
     expect(result.decision.tier).toBe('established')
+  })
+
+  it('does not count zero-sale backdated drafts, or published events whose tickets say they are not over', async () => {
+    seedEvent({ end_datetime: hoursAgo(25) })
+    seedTickets()
+    seedBackdatedDrafts(3)
+    // Published and paid, but the doc end was moved back: the ticket stamps the real end.
+    for (let i = 0; i < 3; i += 1) {
+      store.set(`events/moved_${i}`, {
+        organizer_id: ORGANIZER,
+        status: 'published',
+        is_published: true,
+        end_datetime: hoursAgo(1000),
+      })
+      store.set(`tickets/moved_${i}_t0`, {
+        event_id: `moved_${i}`,
+        status: 'confirmed',
+        price_paid: 20,
+        end_datetime: new Date(NOW.getTime() + 48 * HOUR).toISOString(),
+      })
+    }
+
+    const result = await gate()
+
+    expect(result.allowed).toBe(false)
+    if (result.allowed) return
+    expect(result.body.reason).toBe('hold_72h')
   })
 
   it('still holds an established organizer inside the 24h window', async () => {

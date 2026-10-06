@@ -12,7 +12,8 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { ticketId, action } = await request.json()
+    const body = await request.json()
+    const { ticketId, action } = body || {}
 
     if (!ticketId || !action || !['approve', 'deny'].includes(action)) {
       return Response.json({ error: 'Invalid request' }, { status: 400 })
@@ -50,6 +51,36 @@ export async function POST(request: Request) {
       return Response.json({ error: 'No pending refund request for this ticket' }, { status: 400 })
     }
 
+    if (action === 'approve') {
+      // The request belongs to whoever made it. A ticket that has since changed
+      // hands (or a request with no recorded requester on a transferred ticket)
+      // must not refund the money while the seat sits with someone else.
+      const requestedBy = String(ticket.refund_requested_by || '')
+      const holders = [String(ticket.attendee_id || ''), String(ticket.user_id || '')].filter(Boolean)
+      const holderMatches = requestedBy ? holders.includes(requestedBy) : !(Number(ticket.transfer_count) > 0)
+      if (!holderMatches) {
+        return Response.json(
+          {
+            error: 'This ticket changed hands after the refund was requested, so it cannot be refunded from this request.',
+            code: 'holder_changed',
+          },
+          { status: 409 }
+        )
+      }
+
+      // A ticket already used at the door is refunded only on purpose.
+      if ((ticket.checked_in === true || ticket.checked_in_at) && body?.allowCheckedIn !== true) {
+        return Response.json(
+          {
+            error: 'This ticket was already checked in. Confirm to refund it anyway.',
+            code: 'checked_in',
+            requiresOverride: true,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     if (action === 'deny') {
       // Deny refund
       const { error: updateError } = await supabase
@@ -80,6 +111,8 @@ export async function POST(request: Request) {
       event: { id: event.id, title: event.title || null, organizer_id: event.organizer_id || null },
       onFailure: 'release',
       keepRefundReason: true,
+      // Re-judged inside the claim: a check-in landing after the read above is still refused.
+      allowCheckedIn: body?.allowCheckedIn === true,
     })
 
     if (res.outcome === 'admin_review') {
@@ -121,6 +154,15 @@ export async function POST(request: Request) {
       // Retired without money moving; refundTicket only reverses commission on
       // refunded/queued outcomes, so this branch does it itself.
       await reversePromoterCommission(String(ticketId), 'organizer_refund_free')
+    } else if (res.outcome === 'skipped' && res.reason === 'checked_in') {
+      return Response.json(
+        {
+          error: 'This ticket was already checked in. Confirm to refund it anyway.',
+          code: 'checked_in',
+          requiresOverride: true,
+        },
+        { status: 409 }
+      )
     } else if (res.outcome === 'skipped') {
       return Response.json(
         { error: 'This ticket cannot be refunded automatically', code: res.reason },

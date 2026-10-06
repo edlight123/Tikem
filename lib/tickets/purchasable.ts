@@ -187,8 +187,12 @@ export const NO_END_TIME_SALES_GRACE_MS = 24 * 60 * 60 * 1000
  * Field names are the ones the codebase actually writes:
  *  - `status === 'cancelled'`          lib/events/cancel.ts
  *  - `rejected === true`                admin moderation (also flips is_published off)
- *  - `is_published` / `status === 'published'`
- *                                       the same test the public event page uses
+ *  - `payouts_frozen === true`          a dispute / admin / cancellation freeze
+ *  - `is_published === true`            the ONLY publish signal. The old
+ *                                       `status === 'published'` fallback kept
+ *                                       selling events moderation or a ban had
+ *                                       unpublished (they keep that status); the
+ *                                       publish route always writes both.
  *  - `end_datetime` (else `start_datetime` + grace)
  *
  * Password protection is NOT decided here; the existing access-grant check stays in
@@ -201,11 +205,10 @@ export function checkEventPurchasable(event: any, now: Date = new Date()): { ok:
   if (status === 'cancelled' || status === 'canceled') {
     return refuse('This event has been cancelled.', 'event_cancelled', 400)
   }
-  if (event.rejected === true) {
+  if (event.rejected === true || event.payouts_frozen === true) {
     return refuse('This event is not available for purchase.', 'event_unavailable', 400)
   }
-  const published = event.is_published === true || status === 'published'
-  if (!published) {
+  if (event.is_published !== true) {
     return refuse('This event is not available for purchase.', 'event_unavailable', 400)
   }
 

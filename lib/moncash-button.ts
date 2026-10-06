@@ -20,6 +20,24 @@ function isButtonModeExplicit(): boolean {
   return typeof process.env.MONCASH_BUTTON_MODE === 'string' && process.env.MONCASH_BUTTON_MODE.length > 0
 }
 
+/**
+ * The live deployment. A payment is proof of money only when the PRODUCTION
+ * gateway confirms it: a sandbox "success" is free to produce, so production
+ * never probes the other mode and never accepts a config pinned to sandbox.
+ * (Vercel previews run NODE_ENV=production but VERCEL_ENV=preview.)
+ */
+function isProductionRuntime(): boolean {
+  const vercelEnv = String(process.env.VERCEL_ENV || '').toLowerCase()
+  if (vercelEnv) return vercelEnv === 'production'
+  return process.env.NODE_ENV === 'production'
+}
+
+/** May a lookup probe the OTHER gateway mode when the configured one fails? */
+function lookupModeFallbackAllowed(configName: 'primary' | 'form'): boolean {
+  if (isProductionRuntime()) return false
+  return !(isButtonModeExplicit() && configName === 'primary')
+}
+
 function isRsaPaddingExplicit(): boolean {
   return (
     typeof process.env.MONCASH_BUTTON_RSA_PADDING === 'string' && process.env.MONCASH_BUTTON_RSA_PADDING.length > 0
@@ -883,8 +901,9 @@ export async function createMonCashButtonCheckoutToken(params: {
   let fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
 
   // If the portal keys belong to the other environment, Digicel often returns 404/410 or generic parse errors.
-  // Auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set.
-  if (!isButtonModeExplicit()) {
+  // Auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set, and never in
+  // production (a buyer sent to the sandbox would "pay" with nothing).
+  if (!isButtonModeExplicit() && !isProductionRuntime()) {
     const configuredOk =
       !!attemptConfigured?.response?.ok &&
       !!attemptConfigured?.parsed?.data?.success &&
@@ -1178,6 +1197,10 @@ export async function getMonCashButtonPaymentByTransactionId(
 
     const configuredMode = config.configuredMode
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
+    if (isProductionRuntime() && configuredMode !== 'production') {
+      lastError = new Error(`MonCash Button ${config.name} config is in sandbox mode; refused in production`)
+      continue
+    }
 
     // If the ReturnUrl transactionId is already an encrypted/base64 value, some middleware deployments
     // accept it directly (without us re-encrypting). Try that first.
@@ -1189,7 +1212,7 @@ export async function getMonCashButtonPaymentByTransactionId(
         lastError = err
       }
 
-      if (!(isButtonModeExplicit() && config.name === 'primary')) {
+      if (lookupModeFallbackAllowed(config.name)) {
         try {
           const directFallback = await tryLookupUsingRawCiphertext(fallbackMode, config.businessKeySegments)
           if (directFallback && directFallback.success) return directFallback
@@ -1207,8 +1230,8 @@ export async function getMonCashButtonPaymentByTransactionId(
     let bestAttempt: any = await tryLookupForMode(keyPem, effectiveTransactionId, config.businessKeySegments, configuredMode)
     let bestAttemptMode: 'sandbox' | 'production' = configuredMode
 
-    // Preserve the previous behavior: if MONCASH_BUTTON_MODE is explicitly set, don't probe the other mode.
-    const allowModeFallback = !(isButtonModeExplicit() && config.name === 'primary')
+    // Never in production; elsewhere, not when MONCASH_BUTTON_MODE is explicitly set.
+    const allowModeFallback = lookupModeFallbackAllowed(config.name)
     if (allowModeFallback) {
       const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
       if (!configuredOk) {
@@ -1401,11 +1424,15 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
 
     const configuredMode = config.configuredMode
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
+    if (isProductionRuntime() && configuredMode !== 'production') {
+      lastError = new Error(`MonCash Button ${config.name} config is in sandbox mode; refused in production`)
+      continue
+    }
 
     let bestAttempt: any = await tryLookupForMode(keyPem, config.businessKeySegments, configuredMode)
     let bestAttemptMode: 'sandbox' | 'production' = configuredMode
 
-    const allowModeFallback = !(isButtonModeExplicit() && config.name === 'primary')
+    const allowModeFallback = lookupModeFallbackAllowed(config.name)
     if (allowModeFallback) {
       const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
       if (!configuredOk) {

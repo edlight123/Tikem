@@ -27,7 +27,7 @@ jest.mock('stripe', () =>
   }))
 )
 
-import { cancelEventWithRefunds } from '@/lib/events/cancel'
+import { cancelEventWithRefunds, organizerSelfCancelBlock } from '@/lib/events/cancel'
 
 const actor = { id: 'org_1', email: 'org@example.com', isAdmin: false }
 
@@ -292,5 +292,72 @@ describe('the payout-ledger cancellation stamp fails loudly', () => {
     const out = await cancelEventWithRefunds({ eventId: 'ev1', actor })
     expect(out.ledgerStampFailed).toBeUndefined()
     expect(db.store.get('event_earnings/ev1')).toMatchObject({ settlementStatus: 'cancelled' })
+  })
+})
+
+describe('cancellation after a withdrawal', () => {
+  // The organizer already took out more than the Tikèm-held sales leave after
+  // the platform fee, so nothing unwithdrawn covers a Tikèm-held refund.
+  function seedWithdrawn() {
+    seed()
+    db.write('event_earnings/ev1', { eventId: 'ev1', organizerId: 'org_1', currency: 'HTG', withdrawnAmount: 300_000 })
+  }
+
+  it("an organizer's cancellation sends what the balance cannot cover to refund_reviews", async () => {
+    seedWithdrawn()
+    const errSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const out = await cancelEventWithRefunds({ eventId: 'ev1', actor })
+      // Tikèm-held sales (platform card, MonCash) wait for an admin; nothing moved.
+      expect(out.refundsSentToReview).toBe(2)
+      expect(stripeRefundsCreate.mock.calls.find(([p]) => p.payment_intent === 'pi_card')).toBeUndefined()
+      expect(ticket('t_card')).toMatchObject({ refund_status: 'admin_review' })
+      expect(ticket('t_moncash')).toMatchObject({ refund_status: 'admin_review' })
+      expect(db.store.get('refund_reviews/t_card')).toMatchObject({ status: 'pending', event_id: 'ev1' })
+      expect(db.store.get('refund_reviews/t_moncash')).toMatchObject({ status: 'pending' })
+      // A destination charge comes out of the organizer's own Stripe balance: refunded.
+      expect(stripeRefundsCreate.mock.calls.find(([p]) => p.payment_intent === 'pi_connect')).toBeDefined()
+    } finally {
+      errSpy.mockRestore()
+    }
+  })
+
+  it("an admin's cancellation still refunds every buyer regardless", async () => {
+    seedWithdrawn()
+    const out = await cancelEventWithRefunds({ eventId: 'ev1', actor: { id: 'admin_1', isAdmin: true } })
+    expect(out.refundsSentToReview).toBe(0)
+    expect(stripeRefundsCreate.mock.calls.find(([p]) => p.payment_intent === 'pi_card')).toBeDefined()
+    expect(db.store.get('refund_reviews/t_card')).toBeUndefined()
+  })
+})
+
+describe('organizerSelfCancelBlock', () => {
+  const future = new Date(Date.now() + 7 * 24 * 3_600_000).toISOString()
+  const past = new Date(Date.now() - 24 * 3_600_000).toISOString()
+
+  it('allows an organizer before any withdrawal and before the end', async () => {
+    seed()
+    const event = { ...(db.store.get('events/ev1') as Doc), end_datetime: future }
+    expect(await organizerSelfCancelBlock('ev1', event)).toBeNull()
+  })
+
+  it('refuses once money has been withdrawn for the event', async () => {
+    seed()
+    db.write('event_earnings/ev1', { eventId: 'ev1', organizerId: 'org_1', currency: 'HTG', withdrawnAmount: 1000 })
+    const event = { ...(db.store.get('events/ev1') as Doc), end_datetime: future }
+    expect(await organizerSelfCancelBlock('ev1', event)).toMatchObject({ status: 403, code: 'cancel_after_withdrawal' })
+  })
+
+  it('refuses a live withdrawal request even before the ledger is debited', async () => {
+    seed()
+    db.write('withdrawal_requests/w1', { eventId: 'ev1', status: 'pending', amount: 5000 })
+    const event = { ...(db.store.get('events/ev1') as Doc), end_datetime: future }
+    expect(await organizerSelfCancelBlock('ev1', event)).toMatchObject({ code: 'cancel_after_withdrawal' })
+  })
+
+  it('refuses after the event has ended', async () => {
+    seed()
+    const event = { ...(db.store.get('events/ev1') as Doc), end_datetime: past }
+    expect(await organizerSelfCancelBlock('ev1', event)).toMatchObject({ status: 403, code: 'cancel_after_event_end' })
   })
 })

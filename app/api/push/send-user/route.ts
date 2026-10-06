@@ -4,6 +4,7 @@ import webpush from 'web-push'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
 import { createHash } from 'crypto'
+import { safePushPath } from '@/lib/push/safePushPath'
 
 function encodeEndpoint(endpoint: string): string {
   return createHash('sha256').update(endpoint).digest('hex')
@@ -77,8 +78,14 @@ export async function POST(req: Request) {
 
   const title = payload.title || 'Tikèm'
   const body = payload.body || 'Notification'
-  const url = payload.url || '/'
-  const notificationPayload = JSON.stringify({ title, body, data: { url, userId, ...payload.data } })
+  const url = safePushPath(payload.url)
+  if (!url) {
+    return NextResponse.json({ error: 'url must be a same-origin relative path (e.g. /events/123)' }, { status: 400 })
+  }
+  // `data` may not smuggle a different click target past the check above.
+  const extraData = payload.data && typeof payload.data === 'object' ? { ...payload.data } : {}
+  delete (extraData as any).url
+  const notificationPayload = JSON.stringify({ title, body, data: { ...extraData, url, userId } })
 
   interface SendResult { endpoint: string; ok: boolean; error?: string; statusCode?: number }
   const results: SendResult[] = await Promise.all(subs.map(s => webpush

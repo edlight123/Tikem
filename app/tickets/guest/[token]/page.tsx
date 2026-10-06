@@ -11,6 +11,7 @@ import Image from 'next/image'
 import { adminDb } from '@/lib/firebase/admin'
 import { getGuestOrderByToken } from '@/lib/guest/identity'
 import { generateTicketQRCode } from '@/lib/qrcode'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import GuestAccountOffer from './GuestAccountOffer'
@@ -72,7 +73,16 @@ export default async function GuestTicketsPage({
       return snap.exists ? { id: snap.id, ...(snap.data() as any) } : null
     })
   )
-  const tickets = ticketDocs.filter(Boolean) as any[]
+  // The link is a bearer credential that is never revoked, so it may only render
+  // tickets the guest STILL holds: once a ticket is claimed onto an account,
+  // transferred, refunded or cancelled, its live QR must not stay reachable here.
+  const tickets = (ticketDocs.filter(Boolean) as any[]).filter(
+    (ticket) =>
+      Boolean(order.guestId) &&
+      String(ticket.attendee_id || '') === order.guestId &&
+      isLiveTicketStatus(ticket.status)
+  )
+  const ticketsMovedAway = order.ticketIds.length > 0 && ticketDocs.some(Boolean) && tickets.length === 0
 
   const eventSnap = order.eventId
     ? await adminDb.collection('events').doc(order.eventId).get()
@@ -132,7 +142,17 @@ export default async function GuestTicketsPage({
           )}
         </header>
 
-        {tickets.length === 0 ? (
+        {ticketsMovedAway ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
+            <p className="text-white font-semibold">{t('guest_tickets.no_longer_here', 'These tickets are no longer on this link.')}</p>
+            <p className="text-sm text-white/60 mt-2">
+              {t(
+                'guest_tickets.no_longer_here_detail',
+                'They were moved to an account, transferred, or refunded. Sign in to the account that holds them, or contact support.'
+              )}
+            </p>
+          </div>
+        ) : tickets.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
             <p className="text-white font-semibold">{t('guest_tickets.still_being_issued', 'Your tickets are still being issued.')}</p>
             <p className="text-sm text-white/60 mt-2">

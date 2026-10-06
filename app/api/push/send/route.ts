@@ -4,6 +4,7 @@ import webpush from 'web-push'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
 import { createHash } from 'crypto'
+import { safePushPath } from '@/lib/push/safePushPath'
 
 function encodeEndpoint(endpoint: string): string {
   return createHash('sha256').update(endpoint).digest('hex')
@@ -37,7 +38,13 @@ export async function POST(req: Request) {
 
   const title = payload.title || 'Tikèm'
   const body = payload.body || 'Notification'
-  const url = payload.url || '/'
+  const url = safePushPath(payload.url)
+  if (!url) {
+    return NextResponse.json({ error: 'url must be a same-origin relative path (e.g. /events/123)' }, { status: 400 })
+  }
+  // `data` may not smuggle a different click target past the check above.
+  const extraData = payload.data && typeof payload.data === 'object' ? { ...payload.data } : {}
+  delete (extraData as any).url
   const topicsFilter = Array.isArray(payload.topics) && payload.topics.length ? payload.topics : null
 
   const snap = await adminDb.collection('pushSubscriptions').get()
@@ -52,7 +59,7 @@ export async function POST(req: Request) {
   const notificationPayload = JSON.stringify({
     title,
     body,
-    data: { url, ...payload.data }
+    data: { ...extraData, url }
   })
 
   const results = await Promise.all(subs.map(s => webpush

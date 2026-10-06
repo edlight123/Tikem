@@ -97,9 +97,35 @@ export function connectionIdFor(a: string, b: string): string {
 }
 
 /**
- * Normalize a phone number to a stable match key for contact discovery.
- * We keep digits only and use the last 8 digits (Haiti national number
- * length), which makes matching resilient to country-code/format variance.
+ * A contact-book number reduced to full E.164, or '' when it cannot be read
+ * unambiguously. Contact discovery matches on this exactly: a last-8-digits
+ * match let a caller sweep every number sharing a suffix across countries.
+ *
+ * - "+…" or "00…" is taken as international.
+ * - 8 national digits are Haitian (+509), the app's home market.
+ * - 10 digits, or 11 starting with 1, are NANP (+1), the diaspora.
+ * Anything else is rejected rather than guessed.
+ */
+export function phoneToE164(raw: string | null | undefined): string {
+  const s = String(raw || '').trim()
+  if (!s) return ''
+  const digits = s.replace(/\D+/g, '')
+  if (!digits) return ''
+  let e164 = ''
+  if (s.startsWith('+')) e164 = `+${digits}`
+  else if (digits.startsWith('00')) e164 = `+${digits.slice(2)}`
+  else if (digits.length === 8) e164 = `+509${digits}`
+  else if (digits.length === 10) e164 = `+1${digits}`
+  else if (digits.length === 11 && digits.startsWith('1')) e164 = `+${digits}`
+  else return ''
+  // E.164: at most 15 digits, country code never starts with 0.
+  return /^\+[1-9]\d{6,14}$/.test(e164) ? e164 : ''
+}
+
+/**
+ * Normalize a phone number to a stable match key.
+ * Digits only, last 8. LEGACY: no longer used for contact discovery (see
+ * phoneToE164); still written to `phone_normalized` on profile updates.
  */
 export function phoneMatchKey(raw: string | null | undefined): string {
   if (!raw) return ''

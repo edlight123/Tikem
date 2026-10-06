@@ -12,6 +12,7 @@ import { BRAND } from '@/config/brand'
 import { TikemWordmark } from '@/components/ui/TikemLogo'
 import type { UserRole } from '@/types/database'
 import PhoneField from '@/components/ui/PhoneField'
+import { safeSameOriginPath } from '@/lib/safeUrl'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -24,12 +25,10 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Only same-origin paths survive. A startsWith('/') check let "/\evil.com"
+  // through, which browsers read as protocol-relative (same fix as login).
   function sanitizeRedirectTarget(target: string | null): string {
-    if (!target) return '/'
-    // Only allow same-origin relative paths to prevent open redirects.
-    if (!target.startsWith('/')) return '/'
-    if (target.startsWith('//')) return '/'
-    return target
+    return safeSameOriginPath(target, window.location.origin)
   }
 
   // Resolve the redirect target AFTER mount (same treatment as the login page):

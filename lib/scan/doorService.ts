@@ -8,6 +8,7 @@ import {
   checkInFields,
   displayNameOf,
   evaluateDoorAccess,
+  isRefundInFlight,
   judgeDoorRow,
   parseSignedTicketQr,
   parseTicketCode,
@@ -135,7 +136,7 @@ export type DoorCheckInResult = {
    * Why a code was refused, when the verdict had to be sent as CANCELLED to a
    * client that predates the TRANSFERRED / INVALID_CODE verdicts.
    */
-  reason?: 'TRANSFERRED' | 'INVALID_CODE'
+  reason?: 'TRANSFERRED' | 'INVALID_CODE' | 'REFUNDED'
 }
 
 /** Find the ticket ref by id, then by the code its QR encodes, within the event. */
@@ -209,11 +210,29 @@ export async function performDoorCheckIn(req: DoorCheckInRequest): Promise<DoorC
         // all render as a refusal.
         return { verdict: 'CANCELLED', row, reason: judgement.verdict } as DoorCheckInResult
       }
+      if (judgement.verdict === 'CANCELLED' && isRefundInFlight(ticket)) {
+        // Still CANCELLED (every client renders it as a refusal); the reason
+        // says why: the ticket's money is on its way back to the buyer.
+        return { verdict: 'CANCELLED', row, reason: 'REFUNDED' } as DoorCheckInResult
+      }
       const mine = judgement.verdict === 'ALREADY_CHECKED_IN' && String(ticket.checked_in_by || '') === req.uid
       return { verdict: judgement.verdict, row, mine } as DoorCheckInResult
     }
 
+    // A refund the holder asked for but nobody has acted on yet is DENIED by
+    // walking in (same as lib/scan/checkInTicket.ts): attending and then being
+    // refunded is the abuse this closes.
+    const pendingRefundRequest =
+      String(ticket.refund_status ?? '').toLowerCase().trim() === 'requested'
+        ? {
+            refund_status: 'denied',
+            refund_denied_reason: 'checked_in',
+            refund_processed_at: new Date().toISOString(),
+          }
+        : {}
+
     tx.update(ticketRef, {
+      ...pendingRefundRequest,
       ...checkInFields({ uid: req.uid, method: req.method, entryPoint: req.entryPoint, reentry: judgement.reentry }),
       checked_in_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),

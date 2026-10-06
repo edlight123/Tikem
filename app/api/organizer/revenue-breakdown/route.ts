@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { assertEventOwnedByUser } from '@/lib/tracking-links'
 import { getOrganizerRevenueBreakdown, getEventRevenueBreakdown } from '@/lib/analytics/revenue'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,11 @@ export async function GET(request: Request) {
     let breakdown
 
     if (eventId) {
-      // Get breakdown for specific event
+      // Get breakdown for specific event — only the event's organizer (or an admin).
+      if (user.role !== 'admin') {
+        const owned = await assertEventOwnedByUser(eventId, user.id)
+        if (!owned.ok) return NextResponse.json({ error: owned.error }, { status: owned.status })
+      }
       breakdown = await getEventRevenueBreakdown(eventId)
     } else {
       // Get breakdown for organizer's all events

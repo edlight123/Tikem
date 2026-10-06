@@ -17,7 +17,10 @@ const config = {
   ],
   // The `tests/` directory holds Playwright E2E specs (run via `playwright test`),
   // not Jest unit tests — keep Jest from trying to load them.
-  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/', '/.next/'],
+  // `.claude/worktrees/` holds other agents' git worktrees (stale copies of
+  // this repo, git-excluded): their tests run against THIS tree's modules and
+  // fail for reasons that have nothing to do with it.
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/', '/.next/', '<rootDir>/.claude/'],
   collectCoverageFrom: [
     'components/**/*.{js,jsx,ts,tsx}',
     'lib/**/*.{js,jsx,ts,tsx}',

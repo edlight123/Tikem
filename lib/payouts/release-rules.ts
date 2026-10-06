@@ -87,6 +87,10 @@ export type EventForRelease = {
   /** Event end (ISO). Nothing releases before this unless pre-event is granted. */
   endsAt: string | null
   status: string | null
+  /** events/{id}.payouts_frozen (a dispute, cancellation or admin freeze). Nothing releases. */
+  payoutsFrozen?: boolean
+  /** The earnings ledger's settlementStatus; 'cancelled' (lib/events/cancel.ts) releases nothing. */
+  settlementStatus?: string | null
   /** Gross for THIS event, minor units. */
   grossMinor: number
   /** Currency of grossMinor/refundedMinor. Used only to normalise thresholds. */
@@ -184,6 +188,8 @@ export function decideRelease({
   })
 
   if (event.status === 'cancelled') return nothing('event_cancelled')
+  if (String(event.settlementStatus || '').toLowerCase() === 'cancelled') return nothing('event_cancelled')
+  if (event.payoutsFrozen === true) return nothing('payouts_frozen')
   if (event.hasOpenDispute) return nothing('open_dispute')
 
   const endsAt = event.endsAt ? new Date(event.endsAt) : null

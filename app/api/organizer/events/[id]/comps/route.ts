@@ -4,6 +4,15 @@ import { getCurrentUser } from '@/lib/auth'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { generateTicketQRCode } from '@/lib/qrcode'
+import { releaseInventoryReservation, reserveInventoryAtomic } from '@/lib/tickets/inventory'
+import { consumeRateLimit } from '@/lib/rate-limit'
+
+/** Comps one event may issue per rolling day, and one account across all events. */
+const COMPS_PER_EVENT_PER_DAY = 200
+const COMPS_PER_ISSUER_PER_DAY = 300
+/** Comp emails one recipient address may receive per day (each ticket is one email). */
+const COMP_EMAILS_PER_RECIPIENT_PER_DAY = 20
+const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
  * Issue complimentary (free) tickets for an event.
@@ -59,6 +68,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // their uid so the comp shows up in their "My Tickets" and can be scanned by
     // them. A missing account is expected (they may not have signed up yet) and
     // must not fail issuance — the no-email/no-account path stays unchanged.
+    // Caps: comps are free seats and each one sends an email, so an account (or
+    // a stolen session) must not be able to mint and mail them without limit.
+    const [eventLimit, issuerLimit] = await Promise.all([
+      consumeRateLimit({ key: `comps:event:${eventId}`, limit: COMPS_PER_EVENT_PER_DAY, windowMs: DAY_MS, cost: quantity }),
+      consumeRateLimit({ key: `comps:issuer:${user.id}`, limit: COMPS_PER_ISSUER_PER_DAY, windowMs: DAY_MS, cost: quantity }),
+    ])
+    if (eventLimit.limited || issuerLimit.limited) {
+      return NextResponse.json(
+        { error: 'Too many complimentary tickets issued today. Try again tomorrow or contact support.', code: 'comp_limit' },
+        { status: 429 }
+      )
+    }
+
+    // A comp is a seat: reserve it against the event and tier capacity in one
+    // transaction, the same gate paid orders go through, so comps cannot
+    // oversell a sold-out event.
+    const tierIncrements = tierId ? [{ tierId, quantity }] : []
+    const reservation = await reserveInventoryAtomic({ eventId, quantity, tierIncrements, logPrefix: '[comps]' })
+    if (!reservation.ok) {
+      return NextResponse.json(
+        {
+          error: 'Not enough capacity left for these complimentary tickets.',
+          code: reservation.reason || 'capacity',
+          remaining: reservation.remaining ?? null,
+        },
+        { status: 409 }
+      )
+    }
+
     let recipientUid: string | null = null
     if (recipientEmail) {
       try {
@@ -70,40 +108,64 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const created: string[] = []
-    for (let i = 0; i < quantity; i++) {
-      const ref = await adminDb.collection('tickets').add({
-        event_id: eventId,
-        event_title: event?.title || '',
-        source: 'comp',
-        status: 'valid',
-        ...(recipientUid ? { attendee_id: recipientUid, user_id: recipientUid } : {}),
-        price_paid: 0,
-        currency: event?.currency || 'HTG',
-        tier_id: tierId,
-        tier_name: 'Complimentary',
-        recipient_name: recipientName,
-        recipient_email: recipientEmail || null,
-        comp_note: note || null,
-        issued_by: user.id,
-        quantity: 1,
-        checked_in: false,
-        checked_in_at: null,
-        start_datetime: event?.start_datetime || null,
-        end_datetime: event?.end_datetime || null,
-        venue_name: event?.venue_name || null,
-        city: event?.city || null,
-        purchased_at: FieldValue.serverTimestamp(),
-        created_at: FieldValue.serverTimestamp(),
-      })
-      // Give the QR a stable payload = the ticket id.
-      await ref.update({ qr_code_data: ref.id })
-      created.push(ref.id)
+    try {
+      for (let i = 0; i < quantity; i++) {
+        const ref = await adminDb.collection('tickets').add({
+          event_id: eventId,
+          event_title: event?.title || '',
+          source: 'comp',
+          status: 'valid',
+          ...(recipientUid ? { attendee_id: recipientUid, user_id: recipientUid } : {}),
+          price_paid: 0,
+          currency: event?.currency || 'HTG',
+          tier_id: tierId,
+          tier_name: 'Complimentary',
+          recipient_name: recipientName,
+          recipient_email: recipientEmail || null,
+          comp_note: note || null,
+          issued_by: user.id,
+          quantity: 1,
+          checked_in: false,
+          checked_in_at: null,
+          start_datetime: event?.start_datetime || null,
+          end_datetime: event?.end_datetime || null,
+          venue_name: event?.venue_name || null,
+          city: event?.city || null,
+          purchased_at: FieldValue.serverTimestamp(),
+          created_at: FieldValue.serverTimestamp(),
+        })
+        created.push(ref.id)
+        // Give the QR a stable payload = the ticket id.
+        await ref.update({ qr_code_data: ref.id })
+      }
+    } catch (issueErr) {
+      // Give back the seats that were reserved but never issued.
+      const unissued = quantity - created.length
+      if (unissued > 0) {
+        await releaseInventoryReservation({
+          eventId,
+          quantity: unissued,
+          tierIncrements: tierId ? [{ tierId, quantity: unissued }] : [],
+          logPrefix: '[comps]',
+        })
+      }
+      throw issueErr
     }
 
     // Best-effort: email the recipient their ticket(s) with a QR. Never let a
     // mail failure fail the issuance — the tickets already exist and scan fine.
     let emailed = false
+    let emailLimited = false
     if (recipientEmail && created.length > 0) {
+      const mailLimit = await consumeRateLimit({
+        key: `comps:email:${recipientEmail.toLowerCase()}`,
+        limit: COMP_EMAILS_PER_RECIPIENT_PER_DAY,
+        windowMs: DAY_MS,
+        cost: created.length,
+      })
+      emailLimited = mailLimit.limited
+    }
+    if (recipientEmail && created.length > 0 && !emailLimited) {
       try {
         const startDate = event?.start_datetime?.toDate
           ? event.start_datetime.toDate()
@@ -139,7 +201,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    return NextResponse.json({ success: true, count: created.length, ticketIds: created, emailed })
+    return NextResponse.json({ success: true, count: created.length, ticketIds: created, emailed, emailLimited })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Failed to issue comps' }, { status: 500 })
   }

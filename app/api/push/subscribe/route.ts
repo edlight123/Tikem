@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { createHash } from 'crypto'
+import { getCurrentUser } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -12,7 +13,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     console.log('[push/subscribe] Received:', { endpoint: body?.endpoint?.substring(0, 50), hasKeys: !!body?.keys })
-    if (!body || !body.endpoint) return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 })
+    if (!body || typeof body.endpoint !== 'string' || !/^https:\/\//i.test(body.endpoint) || body.endpoint.length > 2048) {
+      return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 })
+    }
 
     // Accept optional topics array from client (e.g. ["reminders", "promotions"])
     const topics: string[] = Array.isArray(body.topics)
@@ -27,8 +30,12 @@ export async function POST(req: Request) {
     const doc = await ref.get()
     const existing = doc.exists ? doc.data() : null
     const mergedTopics = Array.from(new Set([...(existing?.topics || []), ...topics]))
-    // Accept optional userId from body
-    const userId = typeof body.userId === 'string' && body.userId.length <= 64 ? body.userId : (existing?.userId || null)
+    // The subscription is bound to the SESSION's uid, never a body-supplied
+    // one: otherwise anyone could attach their browser to another user's
+    // account and receive that user's targeted pushes. Signed-out callers keep
+    // whatever binding the endpoint already had (or none).
+    const sessionUser = await getCurrentUser().catch(() => null)
+    const userId = sessionUser?.id || existing?.userId || null
 
     const data = {
       endpoint: body.endpoint,
@@ -43,6 +50,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, topics: data.topics })
   } catch (e) {
     console.error('[push/subscribe] Error:', e)
-    return NextResponse.json({ error: 'Bad Request', detail: (e as any)?.message }, { status: 400 })
+    return NextResponse.json({ error: 'Bad Request' }, { status: 400 })
   }
 }

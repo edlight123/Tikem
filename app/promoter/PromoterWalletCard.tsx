@@ -12,7 +12,9 @@ interface WalletData {
   availableByCurrency: Record<string, number>
   pendingByCurrency: Record<string, number>
   unsupportedByCurrency: Record<string, number>
+  owedByCurrency?: Record<string, number>
   moncashPhone: string | null
+  moncashPhoneAvailableAt?: string | null
   feePercent: number
   minWithdrawalHtgCents: number
 }
@@ -46,6 +48,10 @@ export default function PromoterWalletCard() {
   const [phone, setPhone] = useState('')
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  // A new MonCash number is confirmed with the emailed step-up code (the same
+  // one organizers use for payout changes), then held 24h by the server.
+  const [needsCode, setNeedsCode] = useState(false)
+  const [code, setCode] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -82,7 +88,14 @@ export default function PromoterWalletCard() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        if (data?.requiresVerification) {
+          await fetch('/api/organizer/payout-details-change/send-email-code', { method: 'POST' }).catch(() => null)
+          setNeedsCode(true)
+          setMessage({ kind: 'ok', text: t('promoter.wallet_code_prompt', 'We emailed you a 6-digit code. Enter it to confirm this MonCash number.') })
+          return
+        }
         setMessage({ kind: 'error', text: data?.error || t('promoter.wallet_error_generic', 'Withdrawal failed.') })
+        if (data?.code === 'destination_on_hold') await load()
         return
       }
       setMessage({
@@ -105,6 +118,37 @@ export default function PromoterWalletCard() {
       setWorking(false)
     }
   }
+
+  const handleConfirmCode = async () => {
+    setWorking(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/organizer/payout-details-change/verify-email-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setMessage({ kind: 'error', text: data?.error || t('promoter.wallet_error_generic', 'Withdrawal failed.') })
+        return
+      }
+      setNeedsCode(false)
+      setCode('')
+    } catch {
+      setMessage({ kind: 'error', text: t('promoter.wallet_error_network', 'Could not reach Tikèm. Nothing was sent.') })
+      return
+    } finally {
+      setWorking(false)
+    }
+    // Verified: retry, which saves the number (and reports its 24h hold).
+    await handleWithdraw()
+  }
+
+  const owed = wallet.owedByCurrency || {}
+  const hasOwed = Object.values(owed).some((c) => c > 0)
+  const holdUntilMs = wallet.moncashPhoneAvailableAt ? Date.parse(wallet.moncashPhoneAvailableAt) : NaN
+  const numberOnHold = Number.isFinite(holdUntilMs) && holdUntilMs > Date.now()
 
   return (
     <div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -130,7 +174,44 @@ export default function PromoterWalletCard() {
         })}
       </p>
 
-      {hasAvailable && (
+      {hasOwed && (
+        <p className="mt-3 text-xs text-amber-200">
+          {t('promoter.wallet_owed', { defaultValue: 'Owed back from reversed commission: {{amount}}', amount: fmtBuckets(owed) })}
+        </p>
+      )}
+
+      {numberOnHold && (
+        <p className="mt-3 text-xs text-white/60">
+          {t('promoter.wallet_number_on_hold', {
+            defaultValue: 'This MonCash number can receive withdrawals from {{date}}.',
+            date: new Date(holdUntilMs).toLocaleString(),
+          })}
+        </p>
+      )}
+
+      {hasAvailable && needsCode && (
+        <div className="mt-4 flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder={t('promoter.wallet_code_placeholder', '6-digit code')}
+            className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          />
+          <button
+            type="button"
+            onClick={handleConfirmCode}
+            disabled={working || code.length !== 6}
+            className="rounded-xl bg-white hover:bg-white/90 px-5 py-3 text-sm font-medium text-black transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            {t('promoter.wallet_code_confirm', 'Confirm')}
+          </button>
+        </div>
+      )}
+
+      {hasAvailable && !needsCode && (
         <div className="mt-4 flex flex-col sm:flex-row gap-2">
           <input
             type="tel"

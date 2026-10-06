@@ -1,5 +1,6 @@
 // Email service for sending notifications
 // Using Resend API (direct fetch, no SDK) for production-ready email delivery
+import { escapeHtml } from '@/lib/html'
 
 type EmailParams = {
   to: string | null | undefined
@@ -82,8 +83,8 @@ function getEmailFooter() {
 // Premium button component
 function getButton(text: string, url: string, color: string = BRAND.primary, fullWidth: boolean = false) {
   return `
-    <a href="${url}" style="display: inline-block; ${fullWidth ? 'width: 100%; text-align: center;' : ''} padding: 14px 28px; background: linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -15)} 100%); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px ${color}40; transition: all 0.2s;">
-      ${text}
+    <a href="${escapeHtml(url)}" style="display: inline-block; ${fullWidth ? 'width: 100%; text-align: center;' : ''} padding: 14px 28px; background: linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -15)} 100%); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px ${color}40; transition: all 0.2s;">
+      ${escapeHtml(text)}
     </a>
   `
 }
@@ -107,14 +108,7 @@ function adjustColor(hex: string, percent: number): string {
  * `<style>` in the message body would render as live markup in the recipient's
  * mail client.
  */
-export function escapeHtml(value: string): string {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+export { escapeHtml }
 
 export async function sendEmail({ to, subject, html }: EmailParams): Promise<SendEmailResult> {
   // NULL-GUARD THE RECIPIENT FIRST.
@@ -288,7 +282,7 @@ export function getTicketConfirmationEmail(params: {
                                 <span style="font-size: 18px; margin-right: 10px;">🎫</span>
                                 <div>
                                   <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Ticket Type</div>
-                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${tier} · ${price}</div>
+                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${escapeHtml(tier)} · ${escapeHtml(price)}</div>
                                 </div>
                               </div>
                             </td>
@@ -307,14 +301,14 @@ export function getTicketConfirmationEmail(params: {
                         <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px;">Scan at Entry</div>
                         ${params.qrCodeDataURL ? `
                           <div style="display: inline-block; padding: 16px; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
-                            <img src="${params.qrCodeDataURL}" alt="Ticket QR Code" style="width: 180px; height: 180px; display: block;">
+                            <img src="${escapeHtml(params.qrCodeDataURL)}" alt="Ticket QR Code" style="width: 180px; height: 180px; display: block;">
                           </div>
                         ` : `
                           <div style="display: inline-block; padding: 40px; background: #f1f5f9; border-radius: 16px;">
                             <span style="font-size: 48px;">🎫</span>
                           </div>
                         `}
-                        <div style="margin-top: 16px; font-family: ${emailStyles.monoFont}; font-size: 16px; font-weight: 700; color: #0f172a; letter-spacing: 2px;">${ticketCode}</div>
+                        <div style="margin-top: 16px; font-family: ${emailStyles.monoFont}; font-size: 16px; font-weight: 700; color: #0f172a; letter-spacing: 2px;">${escapeHtml(ticketCode)}</div>
                         <div style="margin-top: 6px; font-size: 12px; color: #94a3b8;">Show this code if QR won't scan</div>
                       </div>
                     </div>
@@ -367,7 +361,7 @@ export function getEventCreatedEmail(params: {
   eventId: string
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const manageUrl = `${appUrl}/organizer/events/${params.eventId}`
+  const manageUrl = `${appUrl}/organizer/events/${encodeURIComponent(String(params.eventId))}`
   
   return `
     <!DOCTYPE html>
@@ -398,7 +392,7 @@ export function getEventCreatedEmail(params: {
                 <tr>
                   <td style="padding: 40px;">
                     <div style="font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
-                      Félicitations, ${params.organizerName}! 🎉
+                      Félicitations, ${escapeHtml(params.organizerName)}! 🎉
                     </div>
                     <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
                       Your event has been published and is now visible to thousands of potential attendees on Tikèm.
@@ -407,10 +401,10 @@ export function getEventCreatedEmail(params: {
                     <!-- Event Card -->
                     <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
                       <div style="font-size: 11px; font-weight: 700; color: #10b981; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px;">NOW LIVE</div>
-                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${params.eventTitle}</div>
+                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${escapeHtml(params.eventTitle)}</div>
                       <div style="display: flex; align-items: center; color: #64748b; font-size: 14px;">
                         <span style="margin-right: 8px;">📅</span>
-                        <span>${params.eventDate}</span>
+                        <span>${escapeHtml(params.eventDate)}</span>
                       </div>
                     </div>
                     
@@ -479,16 +473,16 @@ export function getRefundRequestEmail(params: {
                 <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${params.organizerName},</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${escapeHtml(params.organizerName)},</div>
                     <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      An attendee has requested a refund for your event <strong style="color: #0f172a;">${params.eventTitle}</strong>. Please review the details below.
+                      An attendee has requested a refund for your event <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong>. Please review the details below.
                     </div>
                     
                     <!-- Request Details Card -->
                     <div style="background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
                       <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
                         <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Attendee</div>
-                        <div style="font-size: 16px; color: #0f172a; font-weight: 600; margin-top: 6px;">${params.attendeeEmail}</div>
+                        <div style="font-size: 16px; color: #0f172a; font-weight: 600; margin-top: 6px;">${escapeHtml(params.attendeeEmail)}</div>
                       </div>
                       <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
                         <div style="font-size: 11px; font-weight: 700; color: #92400e; letter-spacing: 1px; text-transform: uppercase;">Refund Amount</div>
@@ -496,12 +490,12 @@ export function getRefundRequestEmail(params: {
                       </div>
                       <div style="padding: 20px;">
                         <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Reason Given</div>
-                        <div style="font-size: 15px; color: #0f172a; margin-top: 6px; line-height: 1.6;">${params.reason}</div>
+                        <div style="font-size: 15px; color: #0f172a; margin-top: 6px; line-height: 1.6;">${escapeHtml(params.reason)}</div>
                       </div>
                     </div>
                     
                     <div style="font-family: ${emailStyles.monoFont}; font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
-                      Ticket ID: ${params.ticketId}
+                      Ticket ID: ${escapeHtml(params.ticketId)}
                     </div>
                     
                     <div style="text-align: center; margin-top: 28px;">
@@ -559,9 +553,9 @@ export function getRefundProcessedEmail(params: {
                 <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${params.attendeeName},</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${escapeHtml(params.attendeeName)},</div>
                     <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      Your refund request for <strong style="color: #0f172a;">${params.eventTitle}</strong> has been reviewed.
+                      Your refund request for <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong> has been reviewed.
                     </div>
                     
                     ${isApproved ? `
@@ -593,7 +587,7 @@ export function getRefundProcessedEmail(params: {
                     `}
                     
                     <div style="font-family: ${emailStyles.monoFont}; font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
-                      Reference: ${params.ticketId}
+                      Reference: ${escapeHtml(params.ticketId)}
                     </div>
                   </td>
                 </tr>
@@ -615,7 +609,7 @@ export function getWaitlistNotificationEmail(params: {
   eventId: string
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const eventUrl = `${appUrl}/events/${params.eventId}`
+  const eventUrl = `${appUrl}/events/${encodeURIComponent(String(params.eventId))}`
   
   return `
     <!DOCTYPE html>
@@ -655,7 +649,7 @@ export function getWaitlistNotificationEmail(params: {
                     <!-- Event Card -->
                     <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 16px; padding: 24px; border: 1px solid #e9d5ff;">
                       <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px;">🔥 HOT EVENT</div>
-                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${params.eventTitle}</div>
+                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${escapeHtml(params.eventTitle)}</div>
                       <div style="padding-top: 16px; border-top: 1px solid #e9d5ff;">
                         <div style="display: flex; align-items: center; color: #7c3aed; font-size: 14px; font-weight: 600;">
                           <span style="margin-right: 8px;">📅</span>
@@ -667,7 +661,7 @@ export function getWaitlistNotificationEmail(params: {
                     <!-- Urgency Notice -->
                     <div style="margin-top: 24px; padding: 16px 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; text-align: center;">
                       <div style="font-size: 14px; color: #92400e;">
-                        ⏰ <strong>Don't wait!</strong> You requested <strong>${params.quantity}</strong> ticket${params.quantity > 1 ? 's' : ''} - grab ${params.quantity > 1 ? 'them' : 'it'} before ${params.quantity > 1 ? "they're" : "it's"} gone!
+                        ⏰ <strong>Don't wait!</strong> You requested <strong>${escapeHtml(params.quantity)}</strong> ticket${params.quantity > 1 ? 's' : ''} - grab ${params.quantity > 1 ? 'them' : 'it'} before ${params.quantity > 1 ? "they're" : "it's"} gone!
                       </div>
                     </div>
                     
@@ -701,8 +695,8 @@ export function getTicketTransferRequestEmail(params: {
   expiresAt: string
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const acceptUrl = `${appUrl}/tickets/transfer/${params.transferToken}`
-  const declineUrl = `${appUrl}/tickets/transfer/${params.transferToken}?action=reject`
+  const acceptUrl = `${appUrl}/tickets/transfer/${encodeURIComponent(String(params.transferToken))}`
+  const declineUrl = `${appUrl}/tickets/transfer/${encodeURIComponent(String(params.transferToken))}?action=reject`
   
   return `
     <!DOCTYPE html>
@@ -732,14 +726,14 @@ export function getTicketTransferRequestEmail(params: {
                 <tr>
                   <td style="padding: 40px;">
                     <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      <strong style="color: #0f172a;">${params.senderName}</strong> wants to send you a ticket for an upcoming event!
+                      <strong style="color: #0f172a;">${escapeHtml(params.senderName)}</strong> wants to send you a ticket for an upcoming event!
                     </div>
                     
                     ${params.message ? `
                       <!-- Personal Message -->
                       <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 16px 20px; margin-bottom: 24px; border-radius: 0 12px 12px 0;">
-                        <div style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Message from ${params.senderName}</div>
-                        <div style="font-size: 15px; color: #0f172a; font-style: italic; line-height: 1.6;">"${params.message}"</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Message from ${escapeHtml(params.senderName)}</div>
+                        <div style="font-size: 15px; color: #0f172a; font-style: italic; line-height: 1.6;">"${escapeHtml(params.message)}"</div>
                       </div>
                     ` : ''}
                     
@@ -747,7 +741,7 @@ export function getTicketTransferRequestEmail(params: {
                     <div style="background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
                       <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
                         <div style="font-size: 11px; font-weight: 700; color: #3b82f6; letter-spacing: 1px; text-transform: uppercase;">Event</div>
-                        <div style="font-size: 18px; color: #0f172a; font-weight: 800; margin-top: 6px;">${params.eventTitle}</div>
+                        <div style="font-size: 18px; color: #0f172a; font-weight: 800; margin-top: 6px;">${escapeHtml(params.eventTitle)}</div>
                       </div>
                       <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
                         <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">When</div>
@@ -767,7 +761,7 @@ export function getTicketTransferRequestEmail(params: {
                             ${getButton('Accept Ticket', acceptUrl, '#10b981')}
                           </td>
                           <td>
-                            <a href="${declineUrl}" style="display: inline-block; padding: 14px 28px; background-color: #f1f5f9; color: #475569; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
+                            <a href="${escapeHtml(declineUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f1f5f9; color: #475569; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
                               Decline
                             </a>
                           </td>
@@ -831,7 +825,7 @@ export function getTicketTransferResponseEmail(params: {
                   <td style="padding: 40px;">
                     <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Transfer Update</div>
                     <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      <strong style="color: #0f172a;">${params.recipientName}</strong> has ${isAccepted ? 'accepted' : 'declined'} your ticket transfer for <strong style="color: #0f172a;">${params.eventTitle}</strong>.
+                      <strong style="color: #0f172a;">${escapeHtml(params.recipientName)}</strong> has ${isAccepted ? 'accepted' : 'declined'} your ticket transfer for <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong>.
                     </div>
                     
                     ${isAccepted ? `
@@ -849,7 +843,7 @@ export function getTicketTransferResponseEmail(params: {
                           Your ticket is still yours. You can try transferring it to someone else or keep it for yourself!
                         </div>
                         <div style="text-align: center;">
-                          ${getButton('View My Ticket', `${appUrl}/tickets/${params.ticketId}`, '#f97316')}
+                          ${getButton('View My Ticket', `${appUrl}/tickets/${encodeURIComponent(String(params.ticketId))}`, '#f97316')}
                         </div>
                       </div>
                     `}
@@ -899,7 +893,7 @@ export function getTicketTransferCancelledEmail(params: {
                   <td style="padding: 40px;">
                     <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Transfer Withdrawn</div>
                     <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      <strong style="color: #0f172a;">${params.senderName}</strong> has cancelled the ticket transfer for <strong style="color: #0f172a;">${params.eventTitle}</strong>.
+                      <strong style="color: #0f172a;">${escapeHtml(params.senderName)}</strong> has cancelled the ticket transfer for <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong>.
                     </div>
                     
                     <div style="background: #f8fafc; border-radius: 14px; padding: 20px; text-align: center;">
@@ -928,7 +922,7 @@ export function getEventUpdateEmail(params: {
   eventId: string
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const eventUrl = `${appUrl}/events/${params.eventId}`
+  const eventUrl = `${appUrl}/events/${encodeURIComponent(String(params.eventId))}`
   
   return `
     <!DOCTYPE html>
@@ -936,7 +930,7 @@ export function getEventUpdateEmail(params: {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Event Update - ${params.eventTitle}</title>
+        <title>Event Update - ${escapeHtml(params.eventTitle)}</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -951,7 +945,7 @@ export function getEventUpdateEmail(params: {
                       <div style="display: inline-block; padding: 10px 18px; background: rgba(0, 0, 0, 0.15); border-radius: 30px; margin-bottom: 16px;">
                         <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">📢 EVENT UPDATE</span>
                       </div>
-                      <div style="font-size: 20px; font-weight: 800; color: #ffffff;">${params.eventTitle}</div>
+                      <div style="font-size: 20px; font-weight: 800; color: #ffffff;">${escapeHtml(params.eventTitle)}</div>
                     </div>
                   </td>
                 </tr>
@@ -959,15 +953,15 @@ export function getEventUpdateEmail(params: {
                 <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Hi ${params.attendeeName}! 👋</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Hi ${escapeHtml(params.attendeeName)}! 👋</div>
                     <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
                       The organizer has posted an important update about your event.
                     </div>
                     
                     <!-- Update Card -->
                     <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-radius: 16px; padding: 24px; border-left: 4px solid #f59e0b;">
-                      <div style="font-size: 18px; font-weight: 800; color: #78350f; margin-bottom: 12px;">${params.updateTitle}</div>
-                      <div style="font-size: 15px; color: #92400e; line-height: 1.8; white-space: pre-line;">${params.updateMessage}</div>
+                      <div style="font-size: 18px; font-weight: 800; color: #78350f; margin-bottom: 12px;">${escapeHtml(params.updateTitle)}</div>
+                      <div style="font-size: 15px; color: #92400e; line-height: 1.8; white-space: pre-line;">${escapeHtml(params.updateMessage)}</div>
                     </div>
                     
                     <div style="text-align: center; margin-top: 32px;">
@@ -1009,7 +1003,7 @@ export function getOrganizerReplyEmail(params: {
   reply: string
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const eventUrl = `${appUrl}/events/${params.eventId}`
+  const eventUrl = `${appUrl}/events/${encodeURIComponent(String(params.eventId))}`
 
   return `
     <!DOCTYPE html>
@@ -1053,7 +1047,7 @@ export function getOrganizerReplyEmail(params: {
 
                     <!-- The reply -->
                     <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-radius: 16px; padding: 24px; border-left: 4px solid #14b8a6;">
-                      <div style="font-size: 12px; font-weight: 700; color: #0f766e; letter-spacing: 0.5px; margin-bottom: 10px;">${escapeHtml(params.organizerName).toUpperCase()} REPLIED</div>
+                      <div style="font-size: 12px; font-weight: 700; color: #0f766e; letter-spacing: 0.5px; margin-bottom: 10px;">${escapeHtml(String(params.organizerName ?? "").toUpperCase())} REPLIED</div>
                       <div style="font-size: 15px; color: #134e4a; line-height: 1.8; white-space: pre-line;">${escapeHtml(params.reply)}</div>
                     </div>
 
@@ -1117,7 +1111,7 @@ export function getBankVerificationDecisionEmail(params: {
                 <tr>
                   <td style="padding: 40px;">
                     <div style="font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
-                      Hi ${params.organizerName},
+                      Hi ${escapeHtml(params.organizerName)},
                     </div>
                     ${isApproved ? `
                     <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
@@ -1141,7 +1135,7 @@ export function getBankVerificationDecisionEmail(params: {
                     ${params.reason ? `
                     <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 14px; padding: 20px; border-left: 4px solid #ef4444; margin-bottom: 28px;">
                       <div style="font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 8px;">Reason</div>
-                      <div style="font-size: 14px; color: #b91c1c;">${params.reason}</div>
+                      <div style="font-size: 14px; color: #b91c1c;">${escapeHtml(params.reason)}</div>
                     </div>
                     ` : ''}
                     <div style="text-align: center;">

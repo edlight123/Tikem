@@ -9,6 +9,8 @@ type ResolvedProfile = {
   full_name: string | null
 }
 
+const MAX_UIDS = 100
+
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth()
@@ -29,11 +31,31 @@ export async function POST(request: NextRequest) {
 
     if (!eventId) return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
     if (uids.length === 0) return NextResponse.json({ profiles: {} })
+    if (uids.length > MAX_UIDS) {
+      return NextResponse.json({ error: `At most ${MAX_UIDS} uids per call` }, { status: 400 })
+    }
 
     await assertEventOwner({ eventId, uid: user.id })
 
+    // Only resolve people who are actually attached to THIS event: a members
+    // doc, or an invite they redeemed. Without this, any organizer could pass
+    // an arbitrary uid and read that user's Auth email.
+    const eventRef = adminDb.collection('events').doc(eventId)
+    const memberSnaps = await adminDb.getAll(...uids.map((uid) => eventRef.collection('members').doc(uid)))
+    const allowed = new Set(memberSnaps.filter((s: any) => s.exists).map((s: any) => String(s.id)))
+    const remaining = uids.filter((uid) => !allowed.has(uid))
+    for (let i = 0; i < remaining.length; i += 30) {
+      const chunk = remaining.slice(i, i + 30)
+      const inv = await eventRef.collection('invites').where('usedBy', 'in', chunk).get().catch(() => null)
+      inv?.docs.forEach((d: any) => {
+        const usedBy = String((d.data() as any)?.usedBy || '')
+        if (usedBy) allowed.add(usedBy)
+      })
+    }
+    const permitted = uids.filter((uid) => allowed.has(uid))
+
     const profilesArr: ResolvedProfile[] = await Promise.all(
-      uids.map(async (uid: string) => {
+      permitted.map(async (uid: string) => {
         const [authRecord, userDoc] = await Promise.all([
           adminAuth
             .getUser(uid)

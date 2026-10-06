@@ -238,4 +238,28 @@ describe('POST /api/refunds/process', () => {
     expect((await call('t_card', 'approve')).status).toBe(401)
     expect(stripeRefundsCreate).not.toHaveBeenCalled()
   })
+
+  it('refuses to approve a request made by someone who no longer holds the ticket', async () => {
+    db.write('tickets/t_card', { refund_requested_by: 'buyer_1', attendee_id: 'buyer_2', user_id: 'buyer_2', transfer_count: 1 }, { merge: true })
+    const res = await call('t_card', 'approve')
+    expect(res.status).toBe(409)
+    expect((await res.json()).code).toBe('holder_changed')
+    expect(stripeRefundsCreate).not.toHaveBeenCalled()
+  })
+
+  it('a checked-in ticket needs an explicit override to be refunded', async () => {
+    db.write('tickets/t_card', { checked_in: true, checked_in_at: '2026-10-01T20:00:00.000Z' }, { merge: true })
+    const res = await call('t_card', 'approve')
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ code: 'checked_in', requiresOverride: true })
+    expect(stripeRefundsCreate).not.toHaveBeenCalled()
+
+    const overridden = await POST(
+      new Request('http://localhost/api/refunds/process', {
+        method: 'POST',
+        body: JSON.stringify({ ticketId: 't_card', action: 'approve', allowCheckedIn: true }),
+      })
+    )
+    expect(overridden.status).toBe(200)
+  })
 })

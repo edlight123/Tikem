@@ -42,15 +42,72 @@ export async function GET() {
   }
 }
 
+/** Max age of the Firebase sign-in behind an ID token we will mint a cookie from. */
+const MAX_AUTH_AGE_SECONDS = 5 * 60
+
+const ALLOWED_ORIGINS = new Set(['https://tikem.co', 'https://www.tikem.co'])
+
+/**
+ * A browser POST must come from our own pages. The request's own origin
+ * (preview deploys, localhost) counts as ours. React Native's fetch sends no
+ * Origin header at all, so a MISSING Origin is allowed; a FOREIGN one is not.
+ */
+function isAllowedOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get('origin')
+  if (!origin) return true
+  if (ALLOWED_ORIGINS.has(origin)) return true
+  if (origin === request.nextUrl.origin) return true
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  if (host) {
+    const proto = request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '')
+    if (origin === `${proto}://${host}`) return true
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (appUrl) {
+    try {
+      if (new URL(appUrl).origin === origin) return true
+    } catch {
+      // ignore a malformed env value
+    }
+  }
+  return false
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { idToken } = await request.json()
+    // JSON only: a form POST from another site cannot set this content type
+    // without a CORS preflight, so this closes login-CSRF via plain forms.
+    const contentType = request.headers.get('content-type') || ''
+    if (!contentType.toLowerCase().startsWith('application/json')) {
+      return NextResponse.json({ error: 'Unsupported content type' }, { status: 415 })
+    }
+    if (!isAllowedOrigin(request)) {
+      return NextResponse.json({ error: 'Forbidden origin' }, { status: 403 })
+    }
+
+    const body = await request.json().catch(() => null)
+    const idToken = body && typeof body.idToken === 'string' ? body.idToken : ''
 
     if (!idToken) {
       return NextResponse.json({ error: 'Missing ID token' }, { status: 400 })
     }
 
-    // Verify the ID token and create a session cookie
+    // checkRevoked=true: a token from a disabled/revoked account is refused.
+    let decoded
+    try {
+      decoded = await adminAuth.verifyIdToken(idToken, true)
+    } catch {
+      return NextResponse.json({ error: 'Invalid ID token' }, { status: 401 })
+    }
+
+    // Only mint a 5-day cookie from a RECENT sign-in (Firebase's recommended
+    // check). Otherwise a leaked 1-hour ID token could be upgraded into a
+    // 5-day session.
+    const nowSeconds = Math.floor(Date.now() / 1000)
+    if (!decoded.auth_time || nowSeconds - decoded.auth_time > MAX_AUTH_AGE_SECONDS) {
+      return NextResponse.json({ error: 'Recent sign-in required' }, { status: 401 })
+    }
+
     const expiresIn = 60 * 60 * 24 * 5 * 1000 // 5 days
 
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn })
@@ -73,6 +130,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Sign-out clears THIS browser's cookie only. It deliberately does not call
+ * revokeRefreshTokens: that would sign the user out of every device (the
+ * mobile app included) whenever they log out of one browser tab. A stolen
+ * cookie therefore stays valid until it expires (5 days); an admin/account
+ * "sign out everywhere" action is the place for revocation.
+ */
 export async function DELETE() {
   try {
     // Clear the session cookie

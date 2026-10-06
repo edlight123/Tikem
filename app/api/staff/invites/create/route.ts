@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html'
+import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { sendSms } from '@/lib/sms'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
@@ -132,6 +134,23 @@ export async function POST(request: NextRequest) {
       await assertEventOwner({ eventId, uid: user.id })
     }
 
+    // Each email/phone invite sends a message to an address the caller typed.
+    // Without limits this route is an open relay for Tikèm-branded email/SMS
+    // (and SMS costs money). Limit per caller, per IP, and per recipient.
+    const HOUR = 60 * 60 * 1000
+    const contactKey =
+      method === 'email' ? targetEmail : method === 'phone' ? normalizeInvitePhoneE164(targetPhone || '') || targetPhone : null
+    const checks = await Promise.all([
+      consumeRateLimit({ key: `staff-invite:uid:${user.id}`, limit: 30, windowMs: HOUR }),
+      consumeRateLimit({ key: `staff-invite:ip:${clientIp(request)}`, limit: 60, windowMs: HOUR }),
+      contactKey
+        ? consumeRateLimit({ key: `staff-invite:contact:${contactKey}`, limit: 5, windowMs: 24 * HOUR })
+        : Promise.resolve({ limited: false }),
+    ])
+    if (checks.some((c) => c.limited)) {
+      return NextResponse.json({ error: 'Too many invites. Please try again later.' }, { status: 429 })
+    }
+
     const token = randomToken(32)
     const tokenHash = sha256Hex(token)
 
@@ -156,95 +175,100 @@ export async function POST(request: NextRequest) {
     const inviteUrl = inviteUrlFor(eventId, token)
     const inviteDeepLink = inviteDeepLinkFor(eventId, token)
 
-    // Always send delivery message for email/phone invites.
-    if (method === 'email' && targetEmail) {
-      try {
-        const eventSnap = await adminDb.collection('events').doc(eventId).get()
-        const eventTitle = eventSnap.exists
-          ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
-          : 'an event'
-
-        const subject = `You're invited to be staff: ${eventTitle}`
-        const html = `
-          <!doctype html>
-          <html>
-            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-              <h2>Tikèm staff invitation</h2>
-              <p>You have been invited to join <strong>${eventTitle}</strong> as staff.</p>
-              <p><a href="${inviteDeepLink}">Open in the Tikèm app</a></p>
-              <p><a href="${inviteUrl}">Accept your invite</a></p>
-              <p style="color:#6b7280;font-size:12px;">This invite expires in 48 hours.</p>
-            </body>
-          </html>
-        `.trim()
-
-        await sendEmail({ to: targetEmail, subject, html })
-      } catch (emailError) {
-        console.error('Failed to send staff invite email:', emailError)
-      }
-    }
-
-    if (method === 'phone' && targetPhone) {
-      try {
-        const to = normalizeInvitePhoneE164(targetPhone)
-        if (to) {
+    // Delivery (email/SMS/notification/push) runs after the response is sent:
+    // the caller's latency no longer reveals whether the contact is an existing
+    // account, and a slow provider cannot time the request out.
+    after(async () => {
+      // Always send delivery message for email/phone invites.
+      if (method === 'email' && targetEmail) {
+        try {
           const eventSnap = await adminDb.collection('events').doc(eventId).get()
           const eventTitle = eventSnap.exists
             ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
             : 'an event'
 
-          const message = `Tikèm staff invite: ${eventTitle}. Open in app: ${inviteDeepLink} (or web: ${inviteUrl})`
-          await sendSms({ to, message })
+          const subject = `You're invited to be staff: ${eventTitle.replace(/[\r\n]+/g, ' ')}`
+          const html = `
+            <!doctype html>
+            <html>
+              <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                <h2>Tikèm staff invitation</h2>
+                <p>You have been invited to join <strong>${escapeHtml(eventTitle)}</strong> as staff.</p>
+                <p><a href="${escapeHtml(inviteDeepLink)}">Open in the Tikèm app</a></p>
+                <p><a href="${escapeHtml(inviteUrl)}">Accept your invite</a></p>
+                <p style="color:#6b7280;font-size:12px;">This invite expires in 48 hours.</p>
+              </body>
+            </html>
+          `.trim()
+
+          await sendEmail({ to: targetEmail, subject, html })
+        } catch (emailError) {
+          console.error('Failed to send staff invite email:', emailError)
         }
-      } catch (smsError) {
-        console.error('Failed to send staff invite SMS:', smsError)
       }
-    }
 
-    // If the invited email/phone already belongs to an existing user, also surface the invite
-    // in their in-app Notifications so they can accept from there.
-    if (method === 'email' || method === 'phone') {
-      try {
-        const existingUserId = await resolveExistingUserId({ method, targetEmail, targetPhone })
+      if (method === 'phone' && targetPhone) {
+        try {
+          const to = normalizeInvitePhoneE164(targetPhone)
+          if (to) {
+            const eventSnap = await adminDb.collection('events').doc(eventId).get()
+            const eventTitle = eventSnap.exists
+              ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
+              : 'an event'
 
-        if (existingUserId) {
-          const eventSnap = await adminDb.collection('events').doc(eventId).get()
-          const eventTitle = eventSnap.exists
-            ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
-            : 'an event'
-
-          const actionUrl = `/invite?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`
-
-          await createNotification(
-            existingUserId,
-            'staff_invite',
-            'Staff invitation',
-            `You have been invited to join "${eventTitle}" as staff.`,
-            actionUrl,
-            {
-              eventId,
-              inviteId: inviteRef.id,
-              token,
-              method,
-              role: 'staff',
-              permissions: normalizePermissions(body?.permissions),
-              eventTitle,
-            }
-          )
-
-          // Best-effort push (mobile + web)
-          await sendPushNotification(
-            existingUserId,
-            'Staff invitation',
-            `You have been invited to join "${eventTitle}" as staff.`,
-            inviteUrl,
-            { type: 'staff_invite', eventId, inviteId: inviteRef.id, deepLink: inviteDeepLink }
-          )
+            const message = `Tikèm staff invite: ${eventTitle}. Open in app: ${inviteDeepLink} (or web: ${inviteUrl})`
+            await sendSms({ to, message })
+          }
+        } catch (smsError) {
+          console.error('Failed to send staff invite SMS:', smsError)
         }
-      } catch (notificationError) {
-        console.error('Failed to create staff invite notification:', notificationError)
       }
-    }
+
+      // If the invited email/phone already belongs to an existing user, also surface the invite
+      // in their in-app Notifications so they can accept from there.
+      if (method === 'email' || method === 'phone') {
+        try {
+          const existingUserId = await resolveExistingUserId({ method, targetEmail, targetPhone })
+
+          if (existingUserId) {
+            const eventSnap = await adminDb.collection('events').doc(eventId).get()
+            const eventTitle = eventSnap.exists
+              ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
+              : 'an event'
+
+            const actionUrl = `/invite?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`
+
+            await createNotification(
+              existingUserId,
+              'staff_invite',
+              'Staff invitation',
+              `You have been invited to join "${eventTitle}" as staff.`,
+              actionUrl,
+              {
+                eventId,
+                inviteId: inviteRef.id,
+                token,
+                method,
+                role: 'staff',
+                permissions: normalizePermissions(body?.permissions),
+                eventTitle,
+              }
+            )
+
+            // Best-effort push (mobile + web)
+            await sendPushNotification(
+              existingUserId,
+              'Staff invitation',
+              `You have been invited to join "${eventTitle}" as staff.`,
+              inviteUrl,
+              { type: 'staff_invite', eventId, inviteId: inviteRef.id, deepLink: inviteDeepLink }
+            )
+          }
+        } catch (notificationError) {
+          console.error('Failed to create staff invite notification:', notificationError)
+        }
+      }
+    })
 
     return NextResponse.json({
       inviteId: inviteRef.id,

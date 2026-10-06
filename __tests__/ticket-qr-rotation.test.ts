@@ -119,7 +119,12 @@ import {
   signTicketQr,
   verifyScannedTicketCode,
 } from '@/lib/tickets/qr'
-import { judgeDoorRow as serverJudge, judgeScannedCodeAgainstRow as serverCodeJudge, toDoorRow } from '@/lib/scan/doorRules'
+import {
+  doorCodeHash,
+  judgeDoorRow as serverJudge,
+  judgeScannedCodeAgainstRow as serverCodeJudge,
+  toDoorRow,
+} from '@/lib/scan/doorRules'
 import {
   findDoorRow,
   judgeDoorRow as mobileJudge,
@@ -364,7 +369,7 @@ describe('web door mode', () => {
 // ---------------------------------------------------------------------------
 
 describe('offline door list', () => {
-  it('carries each ticket\'s current QR version and code', async () => {
+  it('carries each ticket\'s current QR version and a hash of its code', async () => {
     await acceptTransfer()
     db.write('tickets/t2', { event_id: EVENT, status: 'valid', qr_code_data: 't2', end_datetime: future })
     auth.user = OWNER
@@ -373,9 +378,12 @@ describe('offline door list', () => {
     const t1 = rows.find((r) => r.id === 't1')
     const t2 = rows.find((r) => r.id === 't2')
     expect(t1.qrVersion).toBe(1)
-    expect(t1.code).toBe(signTicketQr('t1', 1))
+    // A hash of the admitting code, never the code itself.
+    expect(t1.code).toBeUndefined()
+    expect(t1.codeHash).toBe(doorCodeHash(signTicketQr('t1', 1)))
+    expect(JSON.stringify(rows)).not.toContain(JSON.parse(signTicketQr('t1', 1)).s)
     expect(t2.qrVersion).toBe(0)
-    expect(t2.code).toBe('t2')
+    expect(t2.codeHash).toBe(doorCodeHash('t2'))
   })
 
   const current = toDoorRow('t1', { status: 'valid', qr_version: 2, qr_code_data: signTicketQr('t1', 2) })
@@ -402,6 +410,20 @@ describe('offline door list', () => {
 
   it('finds a row from a signed payload', () => {
     expect(findDoorRow([current as any], signTicketQr('t1', 1))?.id).toBe('t1')
+  })
+
+  it('JSON whitespace/key order in a scanned payload does not matter (canonical hash)', () => {
+    const p = JSON.parse(signTicketQr('t1', 2))
+    const reordered = JSON.stringify({ s: p.s, v: p.v, ticketId: p.ticketId }, null, 1)
+    expect(mobileCodeJudge(reordered, current)).toBe('OK')
+    expect(serverCodeJudge(reordered, current)).toBe('OK')
+  })
+
+  it('the full-access scanner path (raw code from Firestore) judges the same', () => {
+    const raw = { id: 't1', code: signTicketQr('t1', 2), qrVersion: 2 }
+    expect(mobileCodeJudge(signTicketQr('t1', 2), raw)).toBe('OK')
+    expect(mobileCodeJudge(signTicketQr('t1', 1), raw)).toBe('TRANSFERRED')
+    expect(mobileCodeJudge(JSON.stringify({ ticketId: 't1', v: 2, s: 'zz' }), raw)).toBe('INVALID_CODE')
   })
 })
 

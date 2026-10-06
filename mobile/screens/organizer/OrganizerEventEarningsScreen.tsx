@@ -626,6 +626,32 @@ export default function OrganizerEventEarningsScreen() {
         e?.payload?.requiresVerification === true ||
         (status === 403 && /verify|verification/i.test(message))
 
+      if (status === 409 && e?.code === 'PAYOUT_DESTINATION_ON_HOLD') {
+        // A newly added account is held for 24h before it can be paid. When it
+        // was just saved here, nothing else needs doing: say when it is usable.
+        const at = e?.payload?.availableAt ? new Date(String(e.payload.availableAt)) : null
+        const when =
+          at && !isNaN(at.getTime())
+            ? at.toLocaleString(dateLocale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+            : ''
+        showAlert(
+          t('organizerEarnings.errors.destinationOnHoldTitle'),
+          when ? t('organizerEarnings.errors.destinationOnHoldBody').replace('{date}', when) : message
+        )
+        setShowWithdraw(false)
+        setMethod(null)
+        await loadEarnings()
+        return
+      }
+
+      if (status === 409 && e?.code === 'balance_changed_by_refund') {
+        // A refund was claimed while this withdrawal was being computed:
+        // nothing was taken. Refresh and let them submit again.
+        showAlert(t('organizerEarnings.errors.balanceChangedTitle'), t('organizerEarnings.errors.balanceChangedBody'))
+        await loadEarnings()
+        return
+      }
+
       if (status === 409) {
         // Another submit already took this balance (double tap, second device),
         // or the reservation was refused. Show the fresh balance.

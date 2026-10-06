@@ -113,7 +113,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       // commission is also capped at the gross minus Tikèm's fee
       // (calculateCommissionCents), so this is the up-front guard.
       const maxTierCents = await maxTierPriceCentsForEvent(id, ownership.event)
-      if (maxTierCents !== null && Math.round(commissionValue * 100) > maxTierCents) {
+      // No known ticket price = no cap to check against: refuse rather than
+      // accept an uncapped flat fee.
+      if (maxTierCents === null) {
+        return NextResponse.json(
+          {
+            error: 'Add a paid ticket tier before setting a flat commission, or use a percentage commission.',
+            code: 'flat_commission_needs_price',
+          },
+          { status: 400 }
+        )
+      }
+      if (Math.round(commissionValue * 100) > maxTierCents) {
         return NextResponse.json(
           { error: 'A flat commission cannot be more than the ticket price' },
           { status: 400 }

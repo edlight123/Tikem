@@ -6,6 +6,7 @@ import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { escapeHtml } from '@/lib/html'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #0F766E;">Verification Request Received</h1>
-            <p>Hello ${user.user_metadata?.full_name || 'there'},</p>
+            <p>Hello ${escapeHtml(user.user_metadata?.full_name || 'there')},</p>
             <p>We've received your identity verification request for Tikèm.</p>
             <p><strong>What happens next?</strong></p>
             <ul>
@@ -259,9 +260,9 @@ export async function POST(request: NextRequest) {
             <h1 style="color: #0F766E;">New Verification Request</h1>
             <p>A new organizer verification request has been submitted:</p>
             <ul>
-              <li><strong>Name:</strong> ${user.user_metadata?.full_name || 'N/A'}</li>
-              <li><strong>Email:</strong> ${user.email}</li>
-              <li><strong>Request ID:</strong> ${verificationRequest.id}</li>
+              <li><strong>Name:</strong> ${escapeHtml(user.user_metadata?.full_name || 'N/A')}</li>
+              <li><strong>Email:</strong> ${escapeHtml(user.email)}</li>
+              <li><strong>Request ID:</strong> ${escapeHtml(verificationRequest.id)}</li>
             </ul>
             <p>
               <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/trust"

@@ -5,6 +5,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html'
 import { getAdminEmails } from '@/lib/admin'
 
 interface PurchaseAttempt {
@@ -240,12 +241,12 @@ export async function logSuspiciousActivity(activity: SuspiciousActivity): Promi
       const subject = `[Tikèm] Critical Security Alert: ${activity.activityType}`
       const html = `<div style="font-family:sans-serif;padding:24px">
 <h2 style="color:#ef4444">🚨 Critical Security Alert</h2>
-<p><strong>Type:</strong> ${activity.activityType}</p>
-<p><strong>Description:</strong> ${activity.description}</p>
-${activity.userId ? `<p><strong>User ID:</strong> ${activity.userId}</p>` : ''}
-${activity.ipAddress ? `<p><strong>IP Address:</strong> ${activity.ipAddress}</p>` : ''}
+<p><strong>Type:</strong> ${escapeHtml(activity.activityType)}</p>
+<p><strong>Description:</strong> ${escapeHtml(activity.description)}</p>
+${activity.userId ? `<p><strong>User ID:</strong> ${escapeHtml(activity.userId)}</p>` : ''}
+${activity.ipAddress ? `<p><strong>IP Address:</strong> ${escapeHtml(activity.ipAddress)}</p>` : ''}
 <p><strong>Detected at:</strong> ${new Date().toISOString()}</p>
-${activity.metadata ? `<pre style="background:#f1f5f9;padding:12px;border-radius:8px">${JSON.stringify(activity.metadata, null, 2)}</pre>` : ''}
+${activity.metadata ? `<pre style="background:#f1f5f9;padding:12px;border-radius:8px">${escapeHtml(JSON.stringify(activity.metadata, null, 2))}</pre>` : ''}
 <p style="color:#94a3b8;font-size:12px">Tikèm Security System</p>
 </div>`
       Promise.all(

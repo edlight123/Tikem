@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY || '')
+import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html'
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +13,7 @@ export async function POST(request: Request) {
 
     const { eventId } = await request.json()
 
-    if (!eventId) {
+    if (!eventId || typeof eventId !== 'string') {
       return Response.json({ error: 'Event ID required' }, { status: 400 })
     }
 
@@ -70,12 +69,14 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Failed to join waitlist' }, { status: 500 })
     }
 
-    // Send confirmation email
+    // Send confirmation email. `user.email` is the Firebase Auth address (never
+    // the client-writable profile copy); a phone-only account has none and is
+    // skipped by sendEmail's null guard. Every organizer-typed value is escaped.
     try {
-      await resend.emails.send({
-        from: 'Tikem <noreply@tikem.co>',
-        to: user.email,
-        subject: `You're on the waitlist for ${event.title}`,
+      const eventPath = `/events/${encodeURIComponent(String(eventId))}`
+      await sendEmail({
+        to: user.email || null,
+        subject: `You're on the waitlist for ${String(event.title || 'this event').replace(/[\r\n]+/g, ' ')}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -94,8 +95,8 @@ export async function POST(request: Request) {
                 <h1 style="margin: 0;">📋 Waitlist Confirmed</h1>
               </div>
               <div class="content">
-                <p>Hi ${user.full_name || 'there'},</p>
-                <p>You've been added to the waitlist for <strong>${event.title}</strong>!</p>
+                <p>Hi ${escapeHtml(user.full_name || 'there')},</p>
+                <p>You've been added to the waitlist for <strong>${escapeHtml(event.title)}</strong>!</p>
                 <p><strong>Your position:</strong> #${position}</p>
                 <p>We'll notify you immediately if tickets become available. Keep an eye on your inbox!</p>
                 <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
                   </ul>
                 </div>
                 <div style="text-align: center;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/events/${eventId}" class="button">
+                  <a href="${escapeHtml((process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co') + eventPath)}" class="button">
                     View Event Details
                   </a>
                 </div>

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
+import { toCsv } from '@/lib/csv'
 
 export async function GET(
   request: Request,
@@ -72,9 +73,7 @@ export async function GET(
     })
 
     // Convert to CSV string
-    const csvContent = csvRows
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n')
+    const csvContent = toCsv(csvRows)
 
     // Return as downloadable CSV
     return new Response(csvContent, {

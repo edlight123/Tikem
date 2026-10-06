@@ -296,12 +296,10 @@ class ServerQueryBuilder {
       if (this.constraints.length === 1 && 
           this.constraints[0].field === 'id' && 
           this.constraints[0].op === '==') {
-        console.log('Server query - fetching by document ID:', this.constraints[0].value)
         const docRef = adminDb.collection(this.collectionName).doc(this.constraints[0].value as string)
         const docSnapshot = await docRef.get()
         
         if (!docSnapshot.exists) {
-          console.log('Server query - document not found')
           return { data: this.singleDoc ? null : [], error: null }
         }
         
@@ -309,20 +307,15 @@ class ServerQueryBuilder {
           id: docSnapshot.id, 
           ...docSnapshot.data() 
         })
-        console.log('Server query - document found:', docData)
         return { data: this.singleDoc ? docData : [docData], error: null }
       }
 
       // Regular query
       let query: any = adminDb.collection(this.collectionName)
 
-      console.log('Server query - collection:', this.collectionName)
-      console.log('Server query - constraints:', this.constraints)
-      console.log('Server query - orderField:', this.orderField, this.orderDirection)
 
       // Apply constraints
       for (const constraint of this.constraints) {
-        console.log('Applying constraint:', constraint)
         query = query.where(constraint.field, constraint.op, constraint.value)
       }
 
@@ -333,15 +326,10 @@ class ServerQueryBuilder {
 
       // Apply limit
       if (this.limitCount) {
-        console.log('Applying limit:', this.limitCount)
         query = query.limit(this.limitCount)
-      } else {
-        console.log('No limit set - may default to 20')
       }
 
-      console.log('Executing query...')
       const snapshot = await query.get()
-      console.log('Query returned', snapshot.docs.length, 'documents')
       
       const data = snapshot.docs.map((doc: any) => 
         serializeFirestoreData({
@@ -350,7 +338,6 @@ class ServerQueryBuilder {
         })
       )
 
-      console.log('Mapped data:', data)
 
       if (this.singleDoc) {
         return { data: data[0] || null, error: null }

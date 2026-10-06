@@ -1084,6 +1084,7 @@ export default {
       offlineNotCached: 'Ou offline e biyè sa a pa nan kach. Rekonekte yon fwa pou chaje lis envite a.',
       transferredCode: 'Biyè sa a te transfere. Ansyen kòd la pa valab ankò.',
       invalidCode: 'Kòd sa a pa valab.',
+      refundInProgress: 'Gen yon ranbousman k ap fèt pou biyè sa a. Li pa ka verifye.',
     },
     offline: {
       banner: 'Offline. Verifikasyon yo ap senkronize lè ou rekonekte.',
@@ -1933,6 +1934,10 @@ export default {
       submitFailed: 'Demann retrè a pa pase',
       duplicateTitle: 'Deja an kou',
       duplicateBody: 'Gen yon retrè pou balans sa a ki deja an kou, oswa balans lan fèk chanje. Nou rafrechi l. Tcheke l anvan ou eseye ankò.',
+      destinationOnHoldTitle: 'Kont lan anrejistre',
+      destinationOnHoldBody: 'Nouvo kont ou an anrejistre epi li ka resevwa peman apati {date}.',
+      balanceChangedTitle: 'Balans lan chanje',
+      balanceChangedBody: 'Balans ou chanje, tanpri eseye ankò.',
       instantFailedBody: 'MonCash pa t ka fè transfè instant lan. Pa gen lajan ki voye epi balans ou retounen. Eseye ankò, oswa dezaktive peman instant yo pou voye l nan revizyon manyèl.',
     },
   },

@@ -331,8 +331,9 @@ const TRUSTED_PAYMENT_HOSTS = new Set(
   [
     'tikem.co',
     'www.tikem.co',
-    'jointikem.vercel.app',
-    'eventhaiti.vercel.app',
+    // The legacy *.vercel.app aliases are deliberately absent: production
+    // canonicalizes them to www.tikem.co, and a backend pointed at one is still
+    // trusted through EXPO_PUBLIC_API_URL below.
     (() => {
       try {
         return new URL(process.env.EXPO_PUBLIC_API_URL || '').host.toLowerCase()
@@ -342,6 +343,18 @@ const TRUSTED_PAYMENT_HOSTS = new Set(
     })(),
   ].filter(Boolean),
 )
+
+function isTrustedPaymentUrl(raw: string | undefined | null): boolean {
+  if (!raw) return false
+  try {
+    const u = new URL(raw)
+    // http only in a dev build, for a local backend.
+    const secure = u.protocol === 'https:' || (__DEV__ && u.protocol === 'http:')
+    return secure && TRUSTED_PAYMENT_HOSTS.has(u.host.toLowerCase())
+  } catch {
+    return false
+  }
+}
 
 export default function PaymentWebViewScreen() {
   const { colors } = useTheme();
@@ -621,6 +634,10 @@ export default function PaymentWebViewScreen() {
         onNavigationStateChange={(state) => onNavChange(state.url)}
         onMessage={(event) => {
           try {
+            // Only our own pages may report a purchase result. The checkout
+            // passes through MonCash / card pages that can run script, and any
+            // of them could otherwise post {status:'success'} and end the flow.
+            if (!isTrustedPaymentUrl(event?.nativeEvent?.url)) return
             const raw = event?.nativeEvent?.data
             if (!raw) return
             const parsed = JSON.parse(String(raw))

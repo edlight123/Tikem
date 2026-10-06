@@ -43,12 +43,9 @@ export async function GET(req: NextRequest) {
       tiers
     })
   } catch (error: any) {
+    // Server log only: a stack trace in the response maps the server's file
+    // layout and dependency versions for whoever reads it.
     console.error('Test endpoint error:', error)
-    console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
-    return NextResponse.json({
-      error: error.message,
-      stack: error.stack
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

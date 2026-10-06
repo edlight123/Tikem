@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
+import { csvCell } from '@/lib/csv'
 
 type AuditTicketRow = {
   ticketId: string
@@ -44,10 +45,7 @@ function toIso(value: any): string {
   }
 }
 
-function csvEscape(cell: unknown): string {
-  const text = String(cell ?? '')
-  return `"${text.replace(/\"/g, '""')}"`
-}
+const csvEscape = csvCell
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

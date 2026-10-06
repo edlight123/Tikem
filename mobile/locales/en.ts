@@ -1517,6 +1517,7 @@ export default {
       offlineNotCached: 'Offline and this ticket isn’t cached. Reconnect once to load the guest list.',
       transferredCode: 'This ticket was transferred. The old code is no longer valid.',
       invalidCode: 'This code is not valid.',
+      refundInProgress: 'This ticket has a refund in progress. It cannot be checked in.',
     },
     offline: {
       banner: 'Offline. Check-ins will sync when you reconnect.',
@@ -2369,6 +2370,10 @@ export default {
       submitFailed: 'Failed to submit withdrawal',
       duplicateTitle: 'Already in progress',
       duplicateBody: 'A withdrawal for this balance is already in progress, or the balance just changed. We refreshed it. Check it before trying again.',
+      destinationOnHoldTitle: 'Account saved',
+      destinationOnHoldBody: 'Your new account is saved and can be paid from {date}.',
+      balanceChangedTitle: 'Balance changed',
+      balanceChangedBody: 'Your balance changed, please try again.',
       instantFailedBody: 'MonCash could not complete the instant transfer. No money was sent and your balance has been put back. Try again, or turn off instant payouts to send it for manual review.',
     },
   },

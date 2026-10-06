@@ -18,6 +18,7 @@ import {
   StatusChip,
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
+import { toCsv } from '@/lib/csv'
 
 interface Ticket {
   id: string
@@ -165,7 +166,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
   }, [tickets, filterStatus, searchQuery])
 
   const handleExportCSV = () => {
-    const csv = [
+    const csv = toCsv([
       ['Name', 'Email', 'Phone', 'Ticket ID', 'Status', 'Checked In', 'Purchase Date'],
       ...filteredTickets.map((t) => [
         t.attendee?.full_name || 'N/A',
@@ -178,9 +179,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
           : 'Not checked in',
         format(new Date(t.purchased_at), 'MMM d, yyyy'),
       ]),
-    ]
-      .map((row) => row.join(','))
-      .join('\n')
+    ])
 
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)

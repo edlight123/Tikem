@@ -17,10 +17,11 @@
  *
  * WHAT IT DELIBERATELY DOES NOT DO
  * --------------------------------
- * No clawback. No payout decision. Nothing here reverses a transfer or touches
- * `payoutRelease` on an organizer, because "should this organizer still get paid"
- * is decided in lib/payouts/**. This module records the facts and tells the humans;
- * the money logic reads those facts elsewhere.
+ * No clawback: nothing here reverses a transfer. The one protective step it takes
+ * is on a NEW open dispute: it freezes that event's payouts (events/{id}.payouts_frozen,
+ * which withdrawals, the release cron and new sales all honour) and flags the
+ * organizer (organizers/{id}.payoutRelease.highRisk, every later release goes to
+ * review), once per dispute. Lifting either is an admin decision.
  */
 
 import { adminDb } from '@/lib/firebase/admin'
@@ -530,9 +531,9 @@ async function upsertDispute(params: {
      * per dispute (`lossCounted`) so the `updated`-then-`closed` pair Stripe sends
      * for the same loss cannot double-count it.
      *
-     * This writes a RECORD only. It does not set `payoutRelease.highRisk` and does
-     * not reverse anything: what a loss should cost an organizer is decided in
-     * lib/payouts/**, which reads this.
+     * This writes a RECORD only and reverses nothing: what a loss should cost an
+     * organizer is decided in lib/payouts/**, which reads this. (The OPENING of a
+     * dispute is what freezes the event and flags the organizer, below.)
      */
     const organizerId = attributionToWrite?.organizerId || null
     const lossRecorded = !stale && outcome === 'lost' && !existing?.lossCounted
@@ -558,12 +559,56 @@ async function upsertDispute(params: {
       risk.lastLostDisputeId = disputeId
       risk.lastLostEventId = attributionToWrite?.eventId || null
     }
-    if (organizerId && Object.keys(risk).length > 0) {
+    /**
+     * A NEW open dispute freezes the event's payouts and flags the organizer, once
+     * per dispute (`payoutsFrozenAt`), so an admin who lifts the freeze is not
+     * overridden by a later `updated` delivery. Until an admin looks:
+     *   - events/{id}.payouts_frozen stops withdrawals (lib/payouts/availability),
+     *     the Stripe release cron (/api/cron/release-payouts) and new sales
+     *     (lib/tickets/purchasable);
+     *   - organizers/{id}.payoutRelease.highRisk sends every later release to review.
+     * Transfers already made are NOT reversed here; that stays an admin decision.
+     */
+    const eventIdToFreeze = attributionToWrite?.eventId || null
+    const freezeNow =
+      !stale &&
+      !existing?.payoutsFrozenAt &&
+      isOpenDisputeStatus(status) &&
+      (eventType === 'charge.dispute.created' || isNew)
+    if (freezeNow && (eventIdToFreeze || organizerId)) {
+      doc.payoutsFrozenAt = nowIso
+    }
+    // Read before any write in this transaction; never create a ghost event doc.
+    const eventToFreezeExists =
+      freezeNow && eventIdToFreeze
+        ? Boolean((await tx.get(adminDb.collection('events').doc(eventIdToFreeze)))?.exists)
+        : false
+    if (freezeNow && eventIdToFreeze && eventToFreezeExists) {
       tx.set(
-        adminDb.collection('organizers').doc(organizerId),
-        { disputeRisk: { ...risk, updatedAt: nowIso } },
+        adminDb.collection('events').doc(eventIdToFreeze),
+        {
+          payouts_frozen: true,
+          payouts_frozen_reason: 'stripe_dispute',
+          payouts_frozen_at: nowIso,
+          payouts_frozen_dispute_id: disputeId,
+        },
         { merge: true }
       )
+    }
+
+    // ONE organizer write (risk history + the dispute flag).
+    const organizerPatch: Record<string, any> = {}
+    if (Object.keys(risk).length > 0) organizerPatch.disputeRisk = { ...risk, updatedAt: nowIso }
+    if (freezeNow) {
+      organizerPatch.payoutRelease = {
+        highRisk: true,
+        highRiskReason: 'stripe_dispute',
+        highRiskDisputeId: disputeId,
+        highRiskSetAt: nowIso,
+      }
+    }
+    if (organizerId && Object.keys(organizerPatch).length > 0) {
+      tx.set(adminDb.collection('organizers').doc(organizerId), organizerPatch, { merge: true })
     }
 
     tx.set(ref, doc, { merge: true })

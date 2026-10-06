@@ -13,6 +13,8 @@
  * for offline use; __tests__/staff-door-check-in.test.ts holds them to parity.
  */
 
+import { createHash } from 'crypto'
+
 // ---------------------------------------------------------------------------
 // Authorization
 // ---------------------------------------------------------------------------
@@ -99,6 +101,24 @@ export function ticketTierNameOf(ticket: Record<string, any>): string {
   )
 }
 
+/**
+ * A refund that is moving (or waiting on a Tikèm admin): the ticket must not
+ * also be used, whatever its status says yet. Same set as lib/tickets/refundPlan
+ * IN_FLIGHT_REFUND_STATUSES and checkInTicket's ticketBlockReason. 'requested'
+ * is NOT here: a buyer who asked for a refund and came anyway is admitted and
+ * the request is denied by the check-in (performDoorCheckIn).
+ */
+export const DOOR_IN_FLIGHT_REFUND_STATUSES = new Set(['processing', 'approved', 'manual_required', 'admin_review'])
+
+export function isRefundInFlight(ticket: Record<string, any> | null | undefined): boolean {
+  return DOOR_IN_FLIGHT_REFUND_STATUSES.has(String(ticket?.refund_status ?? '').trim().toLowerCase())
+}
+
+/** Admits at the door: a live status and no refund in flight. */
+export function isDoorLive(ticket: Record<string, any> | null | undefined): boolean {
+  return isLiveStatus(ticket?.status) && !isRefundInFlight(ticket)
+}
+
 export function isCheckedIn(ticket: Record<string, any>): boolean {
   return Boolean(ticket?.checked_in_at) || ticket?.checked_in === true
 }
@@ -137,8 +157,13 @@ export function resolveTier(
 
 export type DoorRow = {
   id: string
-  /** What the QR encodes (qr_code_data), which is the ticket id on every current ticket. */
-  code: string
+  /**
+   * SHA-256 of what the QR encodes (doorCodeHash), never the code itself. From
+   * QR version 1 the code is a signed payload that admits on its own, and the
+   * list is cached on every staffer's phone: shipping it raw handed each one a
+   * working ticket. The phone hashes what it scans and compares.
+   */
+  codeHash: string
   name: string
   tier: string
   status: string
@@ -165,11 +190,14 @@ export function toDoorRow(
   const tier = opts.tier || null
   return {
     id,
-    code: String(ticket?.qr_code_data || ticket?.qr_code || id),
+    codeHash: doorCodeHash(String(ticket?.qr_code_data || ticket?.qr_code || id)),
     name: displayNameOf(ticket, opts.profileName),
     tier: ticketTierNameOf(ticket) || String(tier?.name || ''),
     status: String(ticket?.status || ''),
-    live: isLiveStatus(ticket?.status),
+    // A refund in flight (processing / approved / manual_required / admin_review)
+    // refuses at the door even while the status still reads live: the offline
+    // door list judges from this flag alone.
+    live: isDoorLive(ticket),
     checkedIn: isCheckedIn(ticket),
     checkedInAt: toIso(ticket?.checked_in_at),
     endsAt:
@@ -210,7 +238,7 @@ export type CheckInOptions = {
   override?: boolean
   /**
    * The scanned code's judgement against the ticket (server: HMAC verified,
-   * lib/tickets/qr.ts; offline: exact match, judgeScannedCodeAgainstRow).
+   * lib/tickets/qr.ts; offline: code hash match, judgeScannedCodeAgainstRow).
    * Absent = no code was judged (a manual pick by name).
    */
   codeCheck?: ScannedCodeCheck
@@ -347,14 +375,29 @@ export function parseSignedTicketQr(raw: unknown): { ticketId: string; v: number
 }
 
 /**
- * Offline judgement (no signing key on a phone): the door row carries the
- * ticket's CURRENT code, so from version 1 on only that exact signed payload
+ * The canonical form of a scanned/stored code: a signed payload by its fields
+ * (so key order and whitespace in the JSON never matter), anything else trimmed.
+ */
+export function canonicalDoorCode(raw: unknown): string {
+  const signed = parseSignedTicketQr(raw)
+  if (signed) return `signed\n${signed.ticketId}\n${signed.v}\n${signed.s}`
+  return `raw\n${String(raw ?? '').trim()}`
+}
+
+/** What the door list carries instead of the code: hex SHA-256 of its canonical form. */
+export function doorCodeHash(raw: unknown): string {
+  return createHash('sha256').update(canonicalDoorCode(raw), 'utf8').digest('hex')
+}
+
+/**
+ * Offline judgement (no signing key on a phone): the door row carries a hash of
+ * the ticket's CURRENT code, so from version 1 on only that exact signed payload
  * admits. A legacy code or an older version reads as transferred; a payload
- * at the current version whose signature differs is invalid.
+ * at the current version whose hash differs is invalid.
  */
 export function judgeScannedCodeAgainstRow(
   scanned: string | null | undefined,
-  row: { id: string; code: string; qrVersion?: number | null }
+  row: { id: string; codeHash: string; qrVersion?: number | null }
 ): ScannedCodeCheck {
   const raw = String(scanned ?? '').trim()
   if (!raw) return 'OK'
@@ -364,8 +407,5 @@ export function judgeScannedCodeAgainstRow(
   if (signed.ticketId !== row.id) return 'INVALID_CODE'
   if (signed.v < current) return 'TRANSFERRED'
   if (signed.v > current) return 'INVALID_CODE'
-  const stored = parseSignedTicketQr(row.code)
-  return stored && stored.ticketId === signed.ticketId && stored.v === signed.v && stored.s === signed.s
-    ? 'OK'
-    : 'INVALID_CODE'
+  return row.codeHash && doorCodeHash(raw) === row.codeHash ? 'OK' : 'INVALID_CODE'
 }

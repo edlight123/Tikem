@@ -91,7 +91,13 @@ export async function POST(request: NextRequest) {
 
     if (body?.kind === 'review') {
       if (action === 'approve') {
-        const res = await approveRefundReview({ ticketId: id, actorId: String(user.id), note })
+        const res = await approveRefundReview({
+          ticketId: id,
+          actorId: String(user.id),
+          note,
+          // Sent only after the admin confirmed refunding a ticket already used at the door.
+          allowCheckedIn: body?.allowCheckedIn === true,
+        })
         return adminOk({ status: 'approved', ...res })
       }
       if (action === 'deny') {
@@ -120,7 +126,7 @@ export async function POST(request: NextRequest) {
     })
     return adminOk({ status: res.status })
   } catch (err: any) {
-    if (err instanceof RefundQueueError) return adminError(err.message, err.status)
+    if (err instanceof RefundQueueError) return adminError(err.message, err.status, err.code)
     console.error('[admin/refund-queue] resolve failed', err)
     return adminError('Failed to update the refund', 500)
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { getPayoutHistory } from '@/lib/firestore/payout'
+import { toCsv } from '@/lib/csv'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,10 +39,7 @@ export async function GET(request: NextRequest) {
         p.failureReason || '',
       ])
 
-      const csv = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-      ].join('\n')
+      const csv = toCsv([headers, ...rows])
 
       return new NextResponse(csv, {
         headers: {

@@ -234,6 +234,11 @@ export async function approveRefundReview(input: {
   ticketId: string
   actorId: string
   note?: string | null
+  /**
+   * A ticket already used at the door is refused (409, code 'checked_in')
+   * unless the admin confirmed refunding it anyway.
+   */
+  allowCheckedIn?: boolean
 }): Promise<ApproveResult> {
   const ticketId = String(input.ticketId || '').trim()
   const note = String(input.note ?? '').trim().slice(0, 500) || null
@@ -271,7 +276,19 @@ export async function approveRefundReview(input: {
     // The approving admin is looking at the queue: no extra email for a manual payout.
     notifyAdmins: false,
     adminApprovedShortfall: { adminId: input.actorId },
+    // A cancelled event's buyer is refunded regardless, as the cancellation sweep does.
+    allowCheckedIn: input.allowCheckedIn === true || String(review.reason || '') === 'event_cancelled',
   })
+
+  if (res.outcome === 'skipped' && res.reason === 'checked_in') {
+    // Nothing was claimed or moved: the review goes back to pending for the admin to confirm.
+    await reviewRef.set({ status: 'pending', updated_at: new Date().toISOString() }, { merge: true })
+    throw new RefundQueueError(
+      'This ticket was already checked in at the door. Confirm to refund it anyway.',
+      409,
+      'checked_in'
+    )
+  }
 
   if (res.outcome === 'failed') {
     // The claim was released back to 'admin_review': the review stays open.
@@ -366,6 +383,15 @@ export async function denyRefundReview(input: { ticketId: string; actorId: strin
     if (!rSnap.exists) throw new RefundQueueError('Review not found', 404)
     const r = (rSnap.data() as any) || {}
     if (String(r.status) !== 'pending') throw new RefundQueueError(`Already ${String(r.status || 'handled')}`, 409)
+    // A refund held because the event was cancelled must be paid: the buyer
+    // has no event to attend, so denying it would keep their money for nothing.
+    if (String(r.reason || '') === 'event_cancelled') {
+      throw new RefundQueueError(
+        'This refund is for a cancelled event, so the buyer must be refunded. Approve it instead.',
+        409,
+        'event_cancelled'
+      )
+    }
     const t = tSnap.exists ? ((tSnap.data() as any) ?? {}) : null
     const onHold = Boolean(t) && String(t.refund_status || '').toLowerCase() === 'admin_review'
     if (onHold) {

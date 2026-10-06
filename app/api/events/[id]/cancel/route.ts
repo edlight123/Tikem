@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin as isAdminEmail } from '@/lib/admin'
-import { cancelEventWithRefunds } from '@/lib/events/cancel'
+import { cancelEventWithRefunds, organizerSelfCancelBlock } from '@/lib/events/cancel'
 import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const runtime = 'nodejs'
@@ -10,9 +10,12 @@ export const runtime = 'nodejs'
 /**
  * POST /api/events/[id]/cancel — cancel an event and unwind the money.
  *
- * Open to the event's organizer, and to an admin for the case the owner cannot
- * be reached or refuses while the event is unsafe to hold. Admin cancellations
- * are audit-logged; organizer ones are attributed on the event document.
+ * Open to the event's organizer ONLY before any money has been withdrawn for
+ * it and before it has ended (organizerSelfCancelBlock); after that, and for the
+ * case the owner cannot be reached or refuses while the event is unsafe to
+ * hold, to an admin. Admin cancellations are audit-logged; organizer ones are
+ * attributed on the event document, and their refunds are limited to what the
+ * organizer's unwithdrawn balance covers (the rest goes to refund_reviews).
  *
  * The heavy lifting (freeze, refunds, notifications) lives in
  * lib/events/cancel.ts so both paths behave identically.
@@ -39,6 +42,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (!owner && !admin) {
       return NextResponse.json({ error: 'Not allowed to cancel this event' }, { status: 403 })
+    }
+
+    // An organizer's own cancellation: only before a withdrawal and before the end.
+    // A resume of an already-cancelled event is allowed (the sweep is idempotent).
+    const alreadyCancelled = String(event?.status || '').toLowerCase() === 'cancelled'
+    if (!admin && !alreadyCancelled) {
+      const blocked = await organizerSelfCancelBlock(eventId, event)
+      if (blocked) {
+        return NextResponse.json({ error: blocked.error, code: blocked.code }, { status: blocked.status })
+      }
     }
 
     const body = await request.json().catch(() => ({}))

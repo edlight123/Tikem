@@ -8,6 +8,7 @@ import PurchasePopupBridge from '@/components/PurchasePopupBridge'
 import type { Database } from '@/types/database'
 import { generateTicketQRCode } from '@/lib/qrcode'
 import PurchaseSuccessContentClient from './PurchaseSuccessContentClient'
+import { viewerMayShowTicket } from '@/lib/tickets/orderAccess'
 
 type Ticket = Database['public']['Tables']['tickets']['Row']
 
@@ -18,7 +19,7 @@ type TicketEvent = Pick<Database['public']['Tables']['events']['Row'], 'title' |
 export default async function PurchaseSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string; ticket_id?: string; ticketId?: string }>
+  searchParams: Promise<{ session_id?: string; ticket_id?: string; ticketId?: string; g?: string }>
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
@@ -31,15 +32,29 @@ export default async function PurchaseSuccessPage({
 
   if (ticketId) {
     const supabase = await createClient()
-    const { data: ticketData } = await supabase.from('tickets').select('*').eq('id', ticketId).single()
+    const { data: fetched } = await supabase.from('tickets').select('*').eq('id', ticketId).single()
+    // A ticket id in a URL is not proof of anything: only its current holder (or
+    // a guest with the order's signed link) is shown the ticket and its admitting
+    // QR. Anyone else gets the generic confirmation.
+    const allowed = await viewerMayShowTicket({
+      ticketId: String(ticketId),
+      ticket: fetched as any,
+      sessionUid: user?.id || null,
+      guestToken: params.g || null,
+    }).catch(() => false)
+    const ticketData = allowed ? fetched : null
     ticket = ticketData
 
     // Generate QR code for on-page display (best-effort; never crash the page).
-    try {
-      const qrPayload = String((ticketData as any)?.qr_code_data || (ticketData as any)?.qrCodeData || ticketId)
-      qrCodeDataUrl = await generateTicketQRCode(qrPayload)
-    } catch {
-      qrCodeDataUrl = null
+    // Never for a viewer who failed the check above: on an untransferred ticket the
+    // bare id IS the admitting code.
+    if (ticketData) {
+      try {
+        const qrPayload = String((ticketData as any)?.qr_code_data || (ticketData as any)?.qrCodeData || ticketId)
+        qrCodeDataUrl = await generateTicketQRCode(qrPayload)
+      } catch {
+        qrCodeDataUrl = null
+      }
     }
 
     // Our Firebase "Supabase-like" adapter doesn't reliably support joins.
@@ -84,7 +99,7 @@ export default async function PurchaseSuccessPage({
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
-      <PurchasePopupBridge status="success" ticketId={ticketId || null} />
+      <PurchasePopupBridge status="success" ticketId={ticket?.id ? String(ticket.id) : null} />
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <PurchaseSuccessContentClient

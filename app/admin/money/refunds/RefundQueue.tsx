@@ -58,6 +58,9 @@ type Item = {
   buyerName: string | null
   buyerEmail: string | null
   buyerPhone: string | null
+  profilePhone?: string | null
+  payerPhoneMismatch?: boolean
+  payerPhoneUnknown?: boolean
   createdAt: string | null
   resolvedAt: string | null
   resolvedBy: string | null
@@ -202,6 +205,14 @@ function ItemBody({ item }: { item: Item }) {
         {item.buyerPhone ? ` · ${item.buyerPhone}` : ''}
         {item.buyerEmail ? ` · ${item.buyerEmail}` : ''}
       </p>
+      {item.payerPhoneMismatch && (
+        <p className="mt-1 text-sm text-console-red">
+          Paid from {item.buyerPhone}, but the buyer&apos;s profile says {item.profilePhone}. Refund the paying wallet unless the buyer confirms otherwise.
+        </p>
+      )}
+      {item.payerPhoneUnknown && (
+        <p className="mt-1 text-sm text-console-faint">No paying wallet recorded: this is the buyer&apos;s profile phone. Confirm it before paying.</p>
+      )}
       {item.note && <p className="mt-1 text-sm text-console-mut">Note: {item.note}</p>}
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
         {item.ticketId && <span>ticket {item.ticketId}</span>}
@@ -381,7 +392,7 @@ export default function RefundQueue() {
     }
   }
 
-  const decideReview = async (item: ReviewItem, action: 'approve' | 'deny') => {
+  const decideReview = async (item: ReviewItem, action: 'approve' | 'deny', allowCheckedIn = false) => {
     const amount = formatMoney(item.amount, item.currency)
     const gap =
       item.shortfallMinor != null && item.eventCurrency ? formatMoney(item.shortfallMinor / 100, item.eventCurrency) : null
@@ -406,6 +417,15 @@ export default function RefundQueue() {
           }
     )
     if (!ok) return
+    await sendReviewDecision(item, action, amount, allowCheckedIn)
+  }
+
+  const sendReviewDecision = async (
+    item: ReviewItem,
+    action: 'approve' | 'deny',
+    amount: string,
+    allowCheckedIn: boolean
+  ): Promise<void> => {
     const key = `review:${item.ticketId}`
     setBusyKey(key)
     setMessage(null)
@@ -413,9 +433,27 @@ export default function RefundQueue() {
       const res = await fetch('/api/admin/refund-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'review', id: item.ticketId, action, note: notes[key] || null }),
+        body: JSON.stringify({
+          kind: 'review',
+          id: item.ticketId,
+          action,
+          note: notes[key] || null,
+          ...(allowCheckedIn ? { allowCheckedIn: true } : {}),
+        }),
       })
       const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data?.details === 'checked_in' && action === 'approve' && !allowCheckedIn) {
+        setBusyKey(null)
+        const again = await confirmDialog({
+          title: 'This ticket was already used at the door',
+          description: `The buyer checked in with this ticket. Refund ${amount} anyway?`,
+          confirmLabel: 'Refund anyway',
+          variant: 'danger',
+        })
+        if (again) await sendReviewDecision(item, action, amount, true)
+        else await load(false)
+        return
+      }
       if (!res.ok || !data?.success) {
         setMessage({ type: 'error', text: data?.error || 'Could not update this review' })
         if (res.status === 409 || res.status === 502) await load(false)
@@ -599,7 +637,12 @@ export default function RefundQueue() {
                         <ConsoleButton variant="primary" disabled={busy} onClick={() => decideReview(item, 'approve')}>
                           Approve
                         </ConsoleButton>
-                        <ConsoleButton variant="danger" disabled={busy} onClick={() => decideReview(item, 'deny')}>
+                        <ConsoleButton
+                          variant="danger"
+                          disabled={busy || item.reason === 'event_cancelled'}
+                          title={item.reason === 'event_cancelled' ? 'The event was cancelled, so the buyer must be refunded' : undefined}
+                          onClick={() => decideReview(item, 'deny')}
+                        >
                           Deny
                         </ConsoleButton>
                       </div>

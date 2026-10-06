@@ -6,7 +6,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { calculateFees, calculateSettlementDate, isSettlementReady, platformFeeForSale, legacyPlatformFeeCapMinor, calculateSettlementDateWithHoldDays } from '@/lib/fees'
+import { calculateFees, calculateSettlementDate, isSettlementReady, platformFeeForSale, calculateSettlementDateWithHoldDays } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 import { getEventLocation } from '@/types/platform-settings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
@@ -177,6 +177,41 @@ export async function findEventEarningsDocInTransaction(
   return null
 }
 
+/**
+ * The ledger row's refund-claim counter. Every refund claim that the coverage
+ * gate judges (lib/tickets/refundExecution.ts) bumps it in the claim's own
+ * transaction. A withdrawal computes its ceiling OUTSIDE its debit transaction,
+ * so it records this counter before computing, and the debit transaction
+ * refuses if it moved: a refund claimed in between lowered the ceiling the
+ * withdrawal was about to debit against. (Before, the claim only READ the row,
+ * so the two transactions never conflicted and the stale ceiling won.)
+ */
+export const REFUND_CLAIM_VERSION_FIELD = 'refundClaimVersion'
+
+export function refundClaimVersionOf(data: any): number {
+  const n = Math.round(Number(data?.[REFUND_CLAIM_VERSION_FIELD]) || 0)
+  return n > 0 ? n : 0
+}
+
+/** Read before computing a withdrawal's availability; pass to the debit as expectedRefundClaimVersion. */
+export async function readRefundClaimVersion(eventId: string): Promise<number> {
+  const doc = await findEventEarningsDoc(eventId)
+  return refundClaimVersionOf(doc ? doc.data() : null)
+}
+
+/** Inside a refund-claim transaction, after every read: bump the counter on the row it read. */
+export function bumpRefundClaimVersionInTransaction(tx: any, ledger: { ref: any; data: any } | null | undefined) {
+  if (!ledger?.ref) return
+  tx.update(ledger.ref, {
+    [REFUND_CLAIM_VERSION_FIELD]: refundClaimVersionOf(ledger.data) + 1,
+    refundClaimVersionAt: new Date().toISOString(),
+  })
+}
+
+export const REFUND_CLAIMED_RETRY_CODE = 'balance_changed_by_refund'
+export const REFUND_CLAIMED_RETRY_MESSAGE =
+  "A refund on this event just changed its balance. Refresh and try again."
+
 export async function findEventEarningsDoc(eventId: string) {
   // Current schema: eventId field.
   const byEventId = await adminDb
@@ -216,11 +251,8 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   const platformFeePercentage = eventLocation === 'haiti'
     ? platformSettings.haiti.platformFeePercentage
     : platformSettings.usCanada.platformFeePercentage
-  // Only sales made while the (now retired) per-ticket cap was in force use it.
-  const legacyCapMinorPerTicket = legacyPlatformFeeCapMinor(
-    eventLocation,
-    normalizeCurrency(event.currency || 'HTG')
-  )
+  // The per-ticket cap is retired for every sale (no real organizer sold under it).
+  const legacyCapMinorPerTicket: number | null = null
   const settlementHoldDays = eventLocation === 'haiti'
     ? platformSettings.haiti.settlementHoldDays
     : platformSettings.usCanada.settlementHoldDays
@@ -881,6 +913,12 @@ export async function withdrawFromEarnings(
      * left a payable request with no reservation behind it.
      */
     fileRequest?: { ref: any; data: Record<string, any> }
+    /**
+     * readRefundClaimVersion() as read BEFORE ceilingMinor was computed. When
+     * set, the debit refuses if a refund claim bumped the counter since, since
+     * ceilingMinor no longer reflects that refund.
+     */
+    expectedRefundClaimVersion?: number
   }
 ): Promise<{ success: boolean; error?: string; code?: string }> {
   // Never throws: every failure is a refusal the caller can report, and with
@@ -913,6 +951,17 @@ export async function withdrawFromEarnings(
 
       if (requestSnap?.exists) {
         return { success: false, error: 'Withdrawal request already exists' } as { success: boolean; error?: string; code?: string }
+      }
+
+      if (
+        opts.expectedRefundClaimVersion !== undefined &&
+        refundClaimVersionOf(cur) !== Math.max(0, Math.round(Number(opts.expectedRefundClaimVersion) || 0))
+      ) {
+        return {
+          success: false,
+          error: REFUND_CLAIMED_RETRY_MESSAGE,
+          code: REFUND_CLAIMED_RETRY_CODE,
+        } as { success: boolean; error?: string; code?: string }
       }
 
       if (storedEarningsCurrencyMismatch(cur?.currency, eventCurrencyRaw)) {

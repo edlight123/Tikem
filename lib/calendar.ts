@@ -11,6 +11,26 @@ interface Event {
   city: string
 }
 
+/**
+ * Escape a value for an RFC 5545 TEXT property. Without this an organizer-typed
+ * title containing CRLF could end the SUMMARY line and inject its own
+ * properties (an ATTACH, an ORGANIZER, a second VEVENT) into the file.
+ */
+export function escapeICSText(value: string | null | undefined): string {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    // Any remaining control character (other than tab) has no place in a line.
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
+}
+
+/** A URI/identifier property value: no escaping syntax exists, so strip line breaks and controls. */
+function icsSafeValue(value: string): string {
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, '')
+}
+
 export function generateICSFile(event: Event): string {
   const startDate = new Date(event.start_datetime)
   const endDate = event.end_datetime 
@@ -27,7 +47,9 @@ export function generateICSFile(event: Event): string {
     .join(', ')
 
   const description = event.description || ''
-  const eventUrl = `${process.env.NEXT_PUBLIC_APP_URL}/events/${event.id}`
+  const eventUrl = icsSafeValue(
+    `${process.env.NEXT_PUBLIC_APP_URL}/events/${encodeURIComponent(event.id)}`
+  )
 
   const icsContent = [
     'BEGIN:VCALENDAR',
@@ -36,13 +58,13 @@ export function generateICSFile(event: Event): string {
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${event.id}@tikem.co`,
+    `UID:${icsSafeValue(event.id)}@tikem.co`,
     `DTSTAMP:${formatICSDate(new Date())}`,
     `DTSTART:${formatICSDate(startDate)}`,
     `DTEND:${formatICSDate(endDate)}`,
-    `SUMMARY:${event.title}`,
-    `DESCRIPTION:${description.replace(/\n/g, '\\n')}\\n\\nView event: ${eventUrl}`,
-    `LOCATION:${location}`,
+    `SUMMARY:${escapeICSText(event.title)}`,
+    `DESCRIPTION:${escapeICSText(description)}\\n\\nView event: ${escapeICSText(eventUrl)}`,
+    `LOCATION:${escapeICSText(location)}`,
     `URL:${eventUrl}`,
     'STATUS:CONFIRMED',
     'SEQUENCE:0',

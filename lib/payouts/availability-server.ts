@@ -11,7 +11,6 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
-import { legacyPlatformFeeCapMinor } from '@/lib/fees'
 import { findEventEarningsDoc, storedEarningsCurrencyMismatch } from '@/lib/earnings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
@@ -43,7 +42,8 @@ export function feeRuleForEvent(event: any, settings: Pick<PlatformSettings, 'ha
   return {
     // A corrupt stored rate must not price payouts; checkout discards it the same way.
     platformFeePercentage: Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : 0.1,
-    legacyCapMinorPerTicket: legacyPlatformFeeCapMinor(location, currency),
+    // Retired for every sale; kept on the rule so availability needn't change.
+    legacyCapMinorPerTicket: null,
   }
 }
 

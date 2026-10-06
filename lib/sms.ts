@@ -13,7 +13,13 @@ export async function sendSms({ to, message }: SmsParams) {
   const fromNumber = process.env.TWILIO_PHONE_NUMBER
   
   if (!accountSid || !authToken || !fromNumber) {
-    console.log('📱 SMS would be sent (no Twilio credentials configured):', { to, message })
+    // Message bodies carry ticket links and verification codes; only print
+    // them outside production.
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('SMS not sent: no Twilio credentials configured')
+    } else {
+      console.log('📱 SMS would be sent (no Twilio credentials configured):', { to, message })
+    }
     return { success: true, messageId: 'dev-mode' }
   }
 

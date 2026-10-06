@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb, adminStorage } from '@/lib/firebase/admin';
+import { sniffRasterImage } from '@/lib/security/sniffImage';
 import { syncPublicProfileAdmin } from '@/lib/firestore/public-profile';
 
 export async function POST(request: NextRequest) {
@@ -44,8 +45,19 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // The declared type and file name are the uploader's to choose. The bytes
+    // decide: only JPEG/PNG/WebP/GIF pass (no SVG, which can carry script on a
+    // public URL), and the stored extension and content type come from them.
+    const sniffed = sniffRasterImage(buffer);
+    if (!sniffed) {
+      return NextResponse.json(
+        { error: 'File must be a JPEG, PNG, WebP or GIF image' },
+        { status: 400 }
+      );
+    }
+
     // Generate unique filename
-    const fileExtension = file.name.split('.').pop();
+    const fileExtension = sniffed.ext;
     const fileName = `profile-photos/${user.id}/${Date.now()}.${fileExtension}`;
 
     // Upload to Firebase Storage
@@ -54,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     await fileRef.save(buffer, {
       metadata: {
-        contentType: file.type,
+        contentType: sniffed.mime,
       },
     });
 

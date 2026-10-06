@@ -136,10 +136,23 @@ async function computeOrganizerStats(organizerId: string): Promise<{
 async function promoteToOrganizer(formData: FormData) {
   'use server'
 
+  // A server action is its own POST endpoint: anyone holding the action id can
+  // call it without ever rendering this page, so the page's requireAdmin does
+  // not protect it. It must check for itself.
+  const { user: admin, error } = await requireAdmin()
+  if (error || !admin) throw new Error('Unauthorized')
+
   const userId = String(formData.get('userId') || '').trim()
   if (!userId) return
 
   await updateUserRole(userId, 'organizer')
+  await adminDb.collection('admin_actions').add({
+    admin_id: admin.id,
+    admin_email: admin.email,
+    action: 'promote_to_organizer',
+    target_user_id: userId,
+    timestamp: new Date(),
+  })
   revalidatePath(`/admin/people/${userId}`)
   revalidatePath('/admin/people')
   revalidatePath('/admin/people/organizers')

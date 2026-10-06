@@ -8,6 +8,12 @@ import {
   isPromoActive,
   promoDiscountFields,
 } from '@/lib/promo-code-shared'
+import {
+  isPromoValidationLimited,
+  promoIpFailureKeys,
+  recordFailedPromoValidation,
+  recordPromoValidationAttempt,
+} from '@/lib/promo-codes'
 
 // Promo codes are stored in Firestore `promo_codes` (the same store the mobile app
 // writes to and the checkout path reads). All routes here use the Admin SDK.
@@ -143,9 +149,19 @@ export async function PATCH(req: NextRequest) {
 
 /**
  * Validate promo code (Firestore).
+ *
+ * Legacy twin of POST /api/promo-codes/validate, kept because shipped mobile
+ * builds (TieredTicketSelector) still call it unauthenticated. It used to have
+ * no throttle at all, which made it an open codespace sweep; it now shares the
+ * validate route's budgets: per IP (and per event + IP) counting only FAILED
+ * lookups, and per uid when signed in counting every attempt, so rotating IPs
+ * from one account does not reset it.
  */
 export async function GET(req: NextRequest) {
   try {
+    const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || ''
+    const ipAddress = forwarded.split(',')[0].trim() || 'unknown'
+
     const { searchParams } = new URL(req.url)
     const eventId = searchParams.get('eventId')
     const code = searchParams.get('code')
@@ -154,6 +170,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { error: 'Event ID and code are required' },
         { status: 400 }
+      )
+    }
+
+    // Per IP, only FAILED lookups count (shared CGNAT addresses); per uid,
+    // every attempt counts as before.
+    const ipKeys = promoIpFailureKeys(ipAddress, eventId)
+    const user = await getCurrentUser().catch(() => null)
+    const [ipLimited, uidThrottle] = await Promise.all([
+      isPromoValidationLimited(ipKeys),
+      user ? recordPromoValidationAttempt(`promo-validate-uid:${user.id}`) : Promise.resolve({ limited: false }),
+    ])
+    if (ipLimited || uidThrottle.limited) {
+      return NextResponse.json(
+        { valid: false, error: 'Too many promo code attempts. Please try again in a few minutes.' },
+        { status: 429 }
       )
     }
 
@@ -166,6 +197,7 @@ export async function GET(req: NextRequest) {
       .get()
 
     if (snap.empty) {
+      await recordFailedPromoValidation(ipKeys)
       return NextResponse.json({ valid: false, error: 'Invalid promo code' }, { status: 404 })
     }
 

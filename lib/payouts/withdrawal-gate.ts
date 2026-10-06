@@ -36,6 +36,7 @@ import {
 } from '@/types/platform-settings'
 import { FX_SNAPSHOT_DOC, resolveReferenceRates, type FxSnapshot } from '@/lib/payouts/fx-rates'
 import { ticketFactsFromDocs, type TicketFacts } from '@/lib/payouts/availability'
+import { loadCompletedPaidEventIds } from '@/lib/payouts/completed-events'
 import {
   decideRelease,
   holdHoursFor,
@@ -141,15 +142,15 @@ export async function loadOrganizerReleaseContext(
   organizerId: string,
   now: Date = new Date()
 ): Promise<OrganizerReleaseContext> {
-  const [platformSettings, fxSnap, organizerSnap, eventsSnap, earningsSnap] = await Promise.all([
+  const [platformSettings, fxSnap, organizerSnap, endedEventIds, earningsSnap] = await Promise.all([
     getPlatformSettings(),
     adminDb.collection('platform_settings').doc(FX_SNAPSHOT_DOC).get().catch(() => null),
     adminDb.collection('organizers').doc(organizerId).get().catch(() => null),
-    adminDb
-      .collection('events')
-      .where('organizer_id', '==', organizerId)
-      .select('end_datetime', 'status')
-      .get(),
+    // Published, standing events with paid live tickets whose EFFECTIVE end has
+    // passed (lib/payouts/completed-events.ts) — the same signal the cron uses.
+    // Counting every event by its editable end_datetime let backdated zero-sale
+    // drafts make a new organizer "established".
+    loadCompletedPaidEventIds(organizerId, now),
     adminDb
       .collection('event_earnings')
       .where('organizerId', '==', organizerId)
@@ -164,17 +165,6 @@ export async function loadOrganizerReleaseContext(
     fxSnapshot,
     now
   )
-
-  const endedEventIds = new Set<string>()
-  for (const doc of eventsSnap.docs) {
-    const data = (doc.data() || {}) as any
-    if (String(data.status || '') === 'cancelled') continue
-    // end_datetime ONLY — the same field the cron counts. An event with no end
-    // date has not been shown to have happened, so it cannot count as a
-    // completed event that earns a shorter hold.
-    const end = toDateOrNull(data.end_datetime)
-    if (end && end.getTime() <= now.getTime()) endedEventIds.add(doc.id)
-  }
 
   // Kept per currency: summing USD cents with HTG cents would be arithmetic
   // fiction, and the tier thresholds are single-currency figures.

@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import crypto from 'crypto'
+import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 
 const DOC_ID = 'payoutDetailsChangeVerification'
 const CODE_TTL_MS = 10 * 60 * 1000
+/** Wrong guesses allowed against ONE emailed code before it is wiped. */
+const MAX_FAILED_ATTEMPTS = 5
+const LIMIT_WINDOW_MS = 15 * 60 * 1000
+const UID_LIMIT = 10
+const IP_LIMIT = 30
 
 const getRef = (organizerId: string) =>
   adminDb
@@ -41,7 +47,7 @@ export async function POST(request: NextRequest) {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
 
-    const { code } = await request.json()
+    const { code } = await request.json().catch(() => ({} as any))
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ error: 'Verification code is required' }, { status: 400 })
@@ -54,49 +60,83 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // A 6-digit code is a million guesses: cap the attempts per account and per
+    // IP (fail closed), on top of the per-code wipe below.
+    const [byUid, byIp] = await Promise.all([
+      consumeRateLimit({ key: `payout-step-up-verify:uid:${organizerId}`, limit: UID_LIMIT, windowMs: LIMIT_WINDOW_MS }),
+      consumeRateLimit({ key: `payout-step-up-verify:ip:${clientIp(request)}`, limit: IP_LIMIT, windowMs: LIMIT_WINDOW_MS }),
+    ])
+    if (byUid.limited || byIp.limited) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Please wait a few minutes and request a new code.' },
+        { status: 429 }
+      )
+    }
+
     const ref = getRef(organizerId)
-    const snap = await ref.get()
-    if (!snap.exists) {
-      return NextResponse.json({ error: 'No pending verification found' }, { status: 400 })
-    }
-
-    const data = snap.data() as any
-    const expiresAtIso = toIso(data?.expiresAt)
     const nowMs = Date.now()
-
-    if (!expiresAtIso) {
-      return NextResponse.json({ error: 'No pending verification found' }, { status: 400 })
-    }
-
-    const expiresAtMs = new Date(expiresAtIso).getTime()
-    if (!Number.isFinite(expiresAtMs) || expiresAtMs < nowMs) {
-      return NextResponse.json({ error: 'Verification code expired' }, { status: 400 })
-    }
-
-    const salt = String(data?.salt || '')
-    const expectedHash = String(data?.codeHash || '')
-    if (!salt || !expectedHash) {
-      return NextResponse.json({ error: 'No pending verification found' }, { status: 400 })
-    }
-
-    const actualHash = hashCode(salt, code)
-    if (actualHash !== expectedHash) {
-      return NextResponse.json({ error: 'Invalid verification code' }, { status: 400 })
-    }
-
     const verifiedUntil = new Date(nowMs + CODE_TTL_MS).toISOString()
 
-    await ref.set(
-      {
-        verifiedAt: new Date().toISOString(),
-        verifiedUntil,
-        // clear one-time code material
-        codeHash: null,
-        salt: null,
-        expiresAt: null,
-      },
-      { merge: true }
+    // Checked and counted in one transaction, so parallel guesses cannot all be
+    // judged against the same attempt count.
+    const outcome: { ok: true } | { ok: false; status: number; error: string } = await adminDb.runTransaction(
+      async (tx: any) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists) return { ok: false, status: 400, error: 'No pending verification found' }
+
+        const data = snap.data() as any
+        const expiresAtIso = toIso(data?.expiresAt)
+        if (!expiresAtIso) return { ok: false, status: 400, error: 'No pending verification found' }
+
+        const expiresAtMs = new Date(expiresAtIso).getTime()
+        if (!Number.isFinite(expiresAtMs) || expiresAtMs < nowMs) {
+          return { ok: false, status: 400, error: 'Verification code expired' }
+        }
+
+        const salt = String(data?.salt || '')
+        const expectedHash = String(data?.codeHash || '')
+        if (!salt || !expectedHash) return { ok: false, status: 400, error: 'No pending verification found' }
+
+        const actualHash = hashCode(salt, code)
+        const matches =
+          actualHash.length === expectedHash.length &&
+          crypto.timingSafeEqual(Buffer.from(actualHash), Buffer.from(expectedHash))
+
+        if (!matches) {
+          const failed = Math.max(0, Number(data?.failedAttempts || 0) || 0) + 1
+          if (failed >= MAX_FAILED_ATTEMPTS) {
+            // Burn the code: the organizer must request a new one.
+            tx.set(
+              ref,
+              { failedAttempts: 0, codeHash: null, salt: null, expiresAt: null, lockedAt: new Date().toISOString() },
+              { merge: true }
+            )
+            return { ok: false, status: 400, error: 'Too many incorrect codes. Request a new code.' }
+          }
+          tx.set(ref, { failedAttempts: failed }, { merge: true })
+          return { ok: false, status: 400, error: 'Invalid verification code' }
+        }
+
+        tx.set(
+          ref,
+          {
+            verifiedAt: new Date().toISOString(),
+            verifiedUntil,
+            failedAttempts: 0,
+            // clear one-time code material
+            codeHash: null,
+            salt: null,
+            expiresAt: null,
+          },
+          { merge: true }
+        )
+        return { ok: true }
+      }
     )
+
+    if (!outcome.ok) {
+      return NextResponse.json({ error: outcome.error }, { status: outcome.status })
+    }
 
     return NextResponse.json({
       success: true,

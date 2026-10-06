@@ -1,5 +1,7 @@
+import crypto from 'crypto'
 import { adminDb } from '@/lib/firebase/admin'
 import { upsertPrimaryBankDestinationFromPayoutSettings } from '@/lib/firestore/payout-destinations'
+import { normalizeMoncashReceiver } from '@/lib/payouts/moncash-prefunded'
 
 export type PayoutStatus = 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
 export type PayoutMethod = 'bank_transfer' | 'mobile_money'
@@ -30,6 +32,14 @@ export interface PayoutConfig {
     provider: string // 'moncash' | 'natcash' | etc
     phoneNumber: string // masked after save
     accountName: string
+    phoneNumberLast4?: string
+    /**
+     * Server-computed fingerprint of the FULL normalized number
+     * (mobileMoneyFingerprint). Withdrawals pay only a number whose fingerprint
+     * equals this one; never accepted from a client.
+     */
+    phoneNumberFingerprint?: string | null
+    phoneNumberFingerprintSetAt?: string
   }
   verificationStatus?: {
     identity: 'pending' | 'verified' | 'failed'
@@ -69,7 +79,59 @@ const SERVER_OWNED_PAYOUT_FIELDS = ['status', 'payoutHoldUntil', 'verificationSt
 function stripServerOwnedPayoutFields(updates: Partial<PayoutConfig> | null | undefined): Partial<PayoutConfig> {
   const out: Record<string, unknown> = { ...(updates || {}) }
   for (const key of SERVER_OWNED_PAYOUT_FIELDS) delete out[key]
+  // The destination fingerprint/last4 are derived from the full number on the
+  // server. A client-sent value would let a browser declare "this is my saved
+  // number" for a number it never saved.
+  if (out.mobileMoneyDetails && typeof out.mobileMoneyDetails === 'object') {
+    const mm: Record<string, unknown> = { ...(out.mobileMoneyDetails as any) }
+    delete mm.phoneNumberFingerprint
+    delete mm.phoneNumberFingerprintSetAt
+    delete mm.phoneNumberLast4
+    out.mobileMoneyDetails = mm
+  }
   return out as Partial<PayoutConfig>
+}
+
+/**
+ * Fingerprint of a Haitian mobile-money number over its FULL normalized form
+ * (509XXXXXXXX). Payout profiles store only a masked number + last 4, and
+ * last-4 equality let a withdrawal go to any wallet sharing those digits; this
+ * is what withdrawals compare instead. Null for anything that is not a valid
+ * Haitian number.
+ */
+export function mobileMoneyFingerprint(raw: unknown): string | null {
+  const normalized = normalizeMoncashReceiver(raw)
+  if (!normalized) return null
+  return crypto.createHash('sha256').update(`tikem-mobile-money-v1:${normalized}`).digest('hex')
+}
+
+/**
+ * The profile a sensitive-update decision must be judged against: the profile
+ * doc when it exists, else the legacy payoutConfig/main that getPayoutProfile
+ * falls back to. Judging only the profile doc let an organizer whose live
+ * destination came from payoutConfig/main write a NEW destination into a
+ * not-yet-existing profile doc with no step-up and no hold.
+ */
+async function resolveCurrentPayoutProfileForStepUp(
+  organizerId: string,
+  profileId: PayoutProfileId,
+  profileSnap: any
+): Promise<PayoutConfig | null> {
+  if (profileSnap?.exists) return profileSnap.data() as PayoutConfig
+  const legacySnap = await adminDb
+    .collection('organizers')
+    .doc(organizerId)
+    .collection('payoutConfig')
+    .doc('main')
+    .get()
+  if (!legacySnap.exists) return null
+  const legacy = legacySnap.data() as any
+  const provider = String(legacy?.payoutProvider || '').toLowerCase()
+  const location = String(legacy?.accountLocation || legacy?.bankDetails?.accountLocation || '').toLowerCase()
+  const legacyIsStripeConnect = provider === 'stripe_connect' || location === 'united_states' || location === 'canada'
+  // Same split getPayoutProfile uses.
+  if (profileId === 'stripe_connect') return legacyIsStripeConnect ? (legacy as PayoutConfig) : null
+  return legacyIsStripeConnect ? null : (legacy as PayoutConfig)
 }
 
 const isSensitivePayoutDetailsUpdate = (updates: Partial<PayoutConfig>): boolean => {
@@ -248,7 +310,8 @@ export interface Payout {
   paymentNotes?: string         // Admin notes
   
   // NEW: Receipt confirmation (required for completed payouts)
-  receiptUrl?: string           // Firebase Storage URL to receipt image
+  receiptUrl?: string | null    // LEGACY public URL; new uploads store receiptPath (private, signed on read)
+  receiptPath?: string | null   // Storage path of the private receipt (payout-receipts/...)
   receiptUploadedBy?: string    // Admin userId who uploaded receipt
   receiptUploadedAt?: string    // Timestamp of receipt upload
 }
@@ -538,10 +601,15 @@ export async function updatePayoutConfig(
     // If mobile money details are being updated, mask the phone number
     if (!isStripeConnectAccount && sanitizedUpdates.mobileMoneyDetails?.phoneNumber) {
       const phoneNumber = sanitizedUpdates.mobileMoneyDetails.phoneNumber
+      // A client re-saving the profile sends back the MASKED number it was
+      // shown, which has no fingerprint. Writing that null would erase the
+      // stored fingerprint of the real number (merge keeps it when omitted).
+      const fingerprint = mobileMoneyFingerprint(phoneNumber)
       updateData.mobileMoneyDetails = {
         ...sanitizedUpdates.mobileMoneyDetails,
         phoneNumber: maskPhoneNumber(phoneNumber),
-        phoneNumberLast4: phoneNumber.slice(-4)
+        phoneNumberLast4: phoneNumber.slice(-4),
+        ...(fingerprint ? { phoneNumberFingerprint: fingerprint, phoneNumberFingerprintSetAt: now } : {}),
       }
     }
 
@@ -592,7 +660,10 @@ export async function updatePayoutProfileConfig(
     const now = new Date().toISOString()
 
     const configDoc = await configRef.get()
-    const current = configDoc.exists ? (configDoc.data() as PayoutConfig) : null
+    // The RESOLVED profile (profile doc, else the legacy payoutConfig/main
+    // getPayoutProfile falls back to), so a destination that lives only in the
+    // legacy doc still makes a change sensitive.
+    const current = await resolveCurrentPayoutProfileForStepUp(organizerId, profileId, configDoc)
 
     const normalizedLocation = String(
       updates.accountLocation ?? current?.accountLocation ?? current?.bankDetails?.accountLocation ?? ''
@@ -617,7 +688,7 @@ export async function updatePayoutProfileConfig(
 
     const sensitiveUpdate = isSensitivePayoutDetailsUpdate(sanitizedUpdates)
     const existingHasMethod = hasPayoutMethod(current)
-    const shouldRequireStepUp = Boolean(configDoc.exists && existingHasMethod && sensitiveUpdate)
+    const shouldRequireStepUp = Boolean(current && existingHasMethod && sensitiveUpdate)
 
     if (shouldRequireStepUp) {
       await requireRecentPayoutDetailsChangeVerification(organizerId)
@@ -667,10 +738,15 @@ export async function updatePayoutProfileConfig(
 
     if (!isStripeConnectAccount && sanitizedUpdates.mobileMoneyDetails?.phoneNumber) {
       const phoneNumber = sanitizedUpdates.mobileMoneyDetails.phoneNumber
+      // A client re-saving the profile sends back the MASKED number it was
+      // shown, which has no fingerprint. Writing that null would erase the
+      // stored fingerprint of the real number (merge keeps it when omitted).
+      const fingerprint = mobileMoneyFingerprint(phoneNumber)
       updateData.mobileMoneyDetails = {
         ...sanitizedUpdates.mobileMoneyDetails,
         phoneNumber: maskPhoneNumber(phoneNumber),
         phoneNumberLast4: phoneNumber.slice(-4),
+        ...(fingerprint ? { phoneNumberFingerprint: fingerprint, phoneNumberFingerprintSetAt: now } : {}),
       }
     }
 
@@ -787,4 +863,153 @@ function maskAccountNumber(accountNumber: string): string {
 function maskPhoneNumber(phoneNumber: string): string {
   if (phoneNumber.length <= 4) return phoneNumber
   return '*'.repeat(phoneNumber.length - 4) + phoneNumber.slice(-4)
+}
+
+// ── Mobile-money payout destination binding ──────────────────────────────────
+
+export const PAYOUT_DESTINATION_MISMATCH_CODE = 'PAYOUT_DESTINATION_MISMATCH'
+
+export type MobileMoneyDestinationCheck =
+  | {
+      ok: true
+      fingerprint: string
+      /**
+       * 'profile': the number equals the profile's stored full-number fingerprint.
+       * 'legacy_last4': the profile predates fingerprints and only its last 4
+       * matched; the caller must require the email step-up and then enroll the
+       * fingerprint (enrollLegacyMobileMoneyFingerprint).
+       */
+      via: 'profile' | 'legacy_last4'
+    }
+  | { ok: false; code: typeof PAYOUT_DESTINATION_MISMATCH_CODE; message: string }
+
+const DESTINATION_MISMATCH_MESSAGE =
+  'Withdrawals can only go to the MonCash number saved on your payout profile. To use another number, change it in Payout settings (it is confirmed by an emailed code and held for 24 hours).'
+
+/**
+ * Is `receiver` the mobile-money destination on this payout profile? Compared
+ * on the FULL normalized number, never on its last 4 digits.
+ */
+export function checkMobileMoneyDestination(
+  profile: Pick<PayoutConfig, 'mobileMoneyDetails'> | null | undefined,
+  receiver: unknown
+): MobileMoneyDestinationCheck {
+  const fingerprint = mobileMoneyFingerprint(receiver)
+  if (!fingerprint) {
+    return { ok: false, code: PAYOUT_DESTINATION_MISMATCH_CODE, message: DESTINATION_MISMATCH_MESSAGE }
+  }
+  const mm: any = profile?.mobileMoneyDetails || {}
+  const stored = typeof mm.phoneNumberFingerprint === 'string' ? mm.phoneNumberFingerprint : ''
+  if (stored) {
+    return stored === fingerprint
+      ? { ok: true, fingerprint, via: 'profile' }
+      : { ok: false, code: PAYOUT_DESTINATION_MISMATCH_CODE, message: DESTINATION_MISMATCH_MESSAGE }
+  }
+  const last4 = String(mm.phoneNumberLast4 ?? '').replace(/\D/g, '')
+  const digits = String(normalizeMoncashReceiver(receiver) || '')
+  if (last4.length === 4 && digits.endsWith(last4)) return { ok: true, fingerprint, via: 'legacy_last4' }
+  return { ok: false, code: PAYOUT_DESTINATION_MISMATCH_CODE, message: DESTINATION_MISMATCH_MESSAGE }
+}
+
+/**
+ * Record the full-number fingerprint on a profile saved before fingerprints
+ * existed, once the organizer has passed the email step-up for a number whose
+ * last 4 match. Written to the doc getPayoutProfile reads (the haiti profile,
+ * else legacy payoutConfig/main), and only if no fingerprint is there yet.
+ */
+export async function enrollLegacyMobileMoneyFingerprint(organizerId: string, fingerprint: string): Promise<void> {
+  const organizerRef = adminDb.collection('organizers').doc(organizerId)
+  const profileRef = organizerRef.collection('payoutProfiles').doc('haiti')
+  const legacyRef = organizerRef.collection('payoutConfig').doc('main')
+  await adminDb.runTransaction(async (tx: any) => {
+    const profileSnap = await tx.get(profileRef)
+    const target = profileSnap.exists ? profileRef : legacyRef
+    const snap = profileSnap.exists ? profileSnap : await tx.get(legacyRef)
+    if (!snap.exists) return
+    const existing = (snap.data() as any)?.mobileMoneyDetails?.phoneNumberFingerprint
+    if (existing) return
+    tx.set(
+      target,
+      {
+        mobileMoneyDetails: {
+          phoneNumberFingerprint: fingerprint,
+          phoneNumberFingerprintSetAt: new Date().toISOString(),
+          phoneNumberFingerprintSource: 'legacy_last4_step_up',
+        },
+      },
+      { merge: true }
+    )
+  })
+}
+
+/** A destination added outside payout settings waits this long before it can be paid. */
+export const NEW_PAYOUT_DESTINATION_HOLD_MS = PAYOUT_DETAILS_CHANGE_HOLD_MS
+
+function holderNameTokens(raw: unknown): string[] {
+  return String(raw ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+}
+
+/**
+ * Same account holder? Case, accents, punctuation and word order are ignored,
+ * and a middle name present on only one side is tolerated (every word of the
+ * shorter name, at least two words, appears in the longer one). An empty side
+ * never matches.
+ */
+export function sameAccountHolderName(a: unknown, b: unknown): boolean {
+  const ta = holderNameTokens(a)
+  const tb = holderNameTokens(b)
+  if (ta.length === 0 || tb.length === 0) return false
+  const [shorter, longer] = ta.length <= tb.length ? [ta, tb] : [tb, ta]
+  if (shorter.join(' ') === longer.join(' ')) return true
+  if ([...shorter].sort().join(' ') === [...longer].sort().join(' ')) return true
+  if (shorter.length < 2) return false
+  const pool = [...longer]
+  for (const word of shorter) {
+    const i = pool.indexOf(word)
+    if (i < 0) return false
+    pool.splice(i, 1)
+  }
+  return true
+}
+
+export type PayeeDestinationReview = 'match' | 'mismatch' | 'unverified' | 'not_applicable'
+
+/**
+ * For the admin queue: is a MonCash withdrawal row's number the payee's CURRENT
+ * saved destination? Organizers: the haiti payout profile (else legacy
+ * payoutConfig/main). Promoters: promoter_wallets/{uid}.moncash_phone_fingerprint.
+ * 'unverified' = the payee has no full-number fingerprint on file yet.
+ */
+export async function reviewWithdrawalDestination(row: Record<string, any>): Promise<PayeeDestinationReview> {
+  if (String(row?.method || '') !== 'moncash') return 'not_applicable'
+  const rowFingerprint = mobileMoneyFingerprint(row?.moncashNumber)
+  if (!rowFingerprint) return 'mismatch'
+  try {
+    let stored: string | null = null
+    if (row?.payee_type === 'promoter') {
+      const uid = String(row?.promoter_uid || row?.organizerId || '')
+      if (!uid) return 'unverified'
+      const snap = await adminDb.collection('promoter_wallets').doc(uid).get()
+      stored = snap.exists ? ((snap.data() as any)?.moncash_phone_fingerprint ?? null) : null
+    } else {
+      const organizerId = String(row?.organizerId || '')
+      if (!organizerId) return 'unverified'
+      const organizerRef = adminDb.collection('organizers').doc(organizerId)
+      const profileSnap = await organizerRef.collection('payoutProfiles').doc('haiti').get()
+      const snap = profileSnap.exists ? profileSnap : await organizerRef.collection('payoutConfig').doc('main').get()
+      stored = snap.exists ? ((snap.data() as any)?.mobileMoneyDetails?.phoneNumberFingerprint ?? null) : null
+    }
+    if (!stored) return 'unverified'
+    return stored === rowFingerprint ? 'match' : 'mismatch'
+  } catch (e: any) {
+    console.error('[payout] destination review failed', { message: e?.message })
+    return 'unverified'
+  }
 }

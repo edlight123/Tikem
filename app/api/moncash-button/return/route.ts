@@ -15,6 +15,8 @@ import {
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { guestTicketUrl } from '@/lib/guest/identity'
 import { fulfillPaidOrder, fulfillmentBlockedReason } from '@/lib/tickets/fulfillment'
+import { getCurrentUser } from '@/lib/auth'
+import { callerHoldsOrder, orderIdsFromCookies } from '@/lib/tickets/orderAccess'
 
 export const runtime = 'nodejs'
 
@@ -284,9 +286,27 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
       return NextResponse.redirect(new URL('/purchase/failed?reason=transaction_not_found', request.url))
     }
 
+    // The order id can arrive in the query string, so knowing it is no proof of
+    // owning the order. A ticket id or a guest's signed link is only handed to the
+    // browser that started this checkout (it holds the order cookie) or to the
+    // signed-in buyer; anyone else lands on the generic confirmation. Fulfillment
+    // itself still runs for every caller: it only ever issues what was paid for.
+    const sessionUser = await getCurrentUser().catch(() => null)
+    const callerOwnsOrder = callerHoldsOrder({
+      orderId,
+      order: pendingTx,
+      cookieOrderIds: orderIdsFromCookies(cookieStore),
+      sessionUid: sessionUser?.id || null,
+    })
+    const successUrl = (ticketId: string | null | undefined) =>
+      new URL(
+        callerOwnsOrder && ticketId ? `/purchase/success?ticketId=${encodeURIComponent(String(ticketId))}` : '/purchase/success',
+        request.url
+      )
+
     // Idempotency: if the transaction is already completed and has a ticket id, don't create duplicates.
     if (pendingTx.status === 'completed' && pendingTx.ticket_id) {
-      return NextResponse.redirect(new URL(`/purchase/success?ticketId=${pendingTx.ticket_id}`, request.url))
+      return NextResponse.redirect(successUrl(pendingTx.ticket_id))
     }
 
     // An order flagged for refund (paid but sold out, amount mismatch, invalid) is
@@ -302,11 +322,14 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
     const verifyProvider = String(
       pendingTx.mobile_money_provider || pendingTx.payment_method || 'moncash'
     ).toLowerCase()
-    const payment =
-      paymentFromLookup ||
-      (verifyProvider === 'natcash'
+    // Always by orderId, with the ORDER's own provider. The transaction lookup
+    // above only located the order: a payment found by an arbitrary transaction
+    // id (possibly another provider's, or a sandbox one) is never proof that
+    // THIS order was paid.
+    const payment: any =
+      verifyProvider === 'natcash'
         ? await getMonCashButtonPaymentByOrderId(orderId)
-        : await retrieveMonCashOrderPayment(orderId))
+        : await retrieveMonCashOrderPayment(orderId)
 
     const isPaid = !!(payment?.success && payment?.payment_status)
 
@@ -391,9 +414,7 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
 
     switch (result.outcome) {
       case 'already_completed':
-        return NextResponse.redirect(
-          new URL(`/purchase/success?ticketId=${result.ticketId || ''}`, request.url)
-        )
+        return NextResponse.redirect(successUrl(result.ticketId))
       case 'in_progress':
         // Another request is already finalizing this exact payment; avoid duplicates.
         return NextResponse.redirect(new URL('/purchase/success', request.url))
@@ -416,13 +437,13 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
     // A guest has no /tickets page to land on — send them straight to their own
     // signed ticket page, which is also where they are offered an account.
     const guestRecipient = guestRecipientFromOrder(pendingTx)
-    if (guestRecipient?.guestToken) {
+    if (callerOwnsOrder && guestRecipient?.guestToken) {
       return NextResponse.redirect(
         new URL(`${guestTicketUrl(guestRecipient.guestToken)}?purchased=1`, request.url)
       )
     }
 
-    return NextResponse.redirect(new URL(`/purchase/success?ticketId=${result.ticketId || ''}`, request.url))
+    return NextResponse.redirect(successUrl(result.ticketId))
   } catch (error: any) {
     console.error('MonCash Button return error:', error)
     return NextResponse.redirect(new URL('/purchase/failed?reason=processing_error', request.url))

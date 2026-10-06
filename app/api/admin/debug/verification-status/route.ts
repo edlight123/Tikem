@@ -43,46 +43,5 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Update a specific verification status (for testing)
-export async function POST(request: NextRequest) {
-  try {
-    const { user, error } = await requireDevTools()
-    if (error || !user) {
-      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
-    }
-
-    const { requestId, newStatus } = await request.json()
-
-    if (!requestId || !newStatus) {
-      return adminError('Missing requestId or newStatus', 400)
-    }
-
-    const ref = adminDb.collection('verification_requests').doc(requestId)
-    const doc = await ref.get()
-
-    if (!doc.exists) {
-      return adminError('Request not found', 404)
-    }
-
-    const beforeStatus = doc.data()?.status
-
-    await ref.update({
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-    })
-
-    // Read back to confirm
-    const afterDoc = await ref.get()
-    const afterStatus = afterDoc.data()?.status
-
-    return adminOk({
-      requestId,
-      beforeStatus,
-      afterStatus,
-      success: afterStatus === newStatus,
-    })
-  } catch (e: any) {
-    console.error('Debug update error:', e)
-    return adminError('Failed to update', 500, e?.message)
-  }
-}
+// The POST that rewrote a request's status directly was removed: it bypassed
+// the review flow, its state guards and its audit trail. Use the admin review UI.

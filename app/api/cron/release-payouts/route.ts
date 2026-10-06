@@ -22,6 +22,12 @@ import {
 import type { PayoutReleaseOverride } from '@/types/platform-settings'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { ticketRefundedFaceMinor } from '@/lib/payouts/availability'
+import {
+  loadEventAvailability,
+  loadOrganizerAvailabilityContext,
+  type OrganizerAvailabilityContext,
+} from '@/lib/payouts/availability-server'
+import { loadCompletedPaidEventIds } from '@/lib/payouts/completed-events'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -91,6 +97,8 @@ type CandidateEvent = {
   country: unknown
   endsAt: string
   endsAtMs: number
+  /** The event doc as read, handed to the availability engine. */
+  eventData: Record<string, any>
 }
 
 /**
@@ -145,6 +153,8 @@ async function findCandidateEvents(now: Date): Promise<{ scanned: number; candid
       const data = (doc.data() || {}) as any
       const status = data.status ? String(data.status) : null
       if (status === 'cancelled') continue
+      // A frozen event (open dispute, cancellation, admin hold) never releases.
+      if (data.payouts_frozen === true) continue
 
       const organizerId = String(data.organizer_id || data.organizerId || '')
       if (!organizerId) continue
@@ -162,6 +172,7 @@ async function findCandidateEvents(now: Date): Promise<{ scanned: number; candid
         country: data.country,
         endsAt: endsAt.toISOString(),
         endsAtMs: endsAt.getTime(),
+        eventData: data,
       })
     }
   }
@@ -179,26 +190,20 @@ type OrganizerState = {
   organizerId: string
   stripeAccountId: string | null
   override: PayoutReleaseOverride | null
-  /** Ended, non-cancelled events — the current event is subtracted at use time. */
+  /** Completed paid events (lib/payouts/completed-events) — the current event is subtracted at use time. */
   endedEventIds: Set<string>
   lifetimeGrossMinorByCurrency: Record<string, number>
 }
 
 async function loadOrganizerState(organizerId: string, now: Date): Promise<OrganizerState> {
-  const [profile, organizerSnap, eventsSnap, earningsSnap] = await Promise.all([
+  const [profile, organizerSnap, endedEventIds, earningsSnap] = await Promise.all([
     getPayoutProfile(organizerId, 'stripe_connect').catch(() => null),
     adminDb.collection('organizers').doc(organizerId).get(),
-    adminDb.collection('events').where('organizer_id', '==', organizerId).select('end_datetime', 'status').get(),
+    // Published, standing events with paid live tickets whose EFFECTIVE end has
+    // passed — never zero-sale drafts with a backdated end_datetime.
+    loadCompletedPaidEventIds(organizerId, now),
     adminDb.collection('event_earnings').where('organizerId', '==', organizerId).select('grossSales', 'currency').get(),
   ])
-
-  const endedEventIds = new Set<string>()
-  for (const doc of eventsSnap.docs) {
-    const data = (doc.data() || {}) as any
-    if (String(data.status || '') === 'cancelled') continue
-    const end = toDateOrNull(data.end_datetime)
-    if (end && end.getTime() <= now.getTime()) endedEventIds.add(doc.id)
-  }
 
   // Lifetime gross is kept per currency: summing USD cents with EUR cents would
   // be arithmetic fiction, and the tier thresholds are single-currency figures.
@@ -468,6 +473,7 @@ export async function GET(request: Request) {
     const { scanned, candidates } = await findCandidateEvents(now)
 
     const organizerCache = new Map<string, OrganizerState>()
+    const availabilityContextCache = new Map<string, OrganizerAvailabilityContext>()
     const accountCache = new Map<string, AccountState>()
     const results: EventResult[] = []
     const releasedByCurrency: Record<string, number> = {}
@@ -545,6 +551,45 @@ export async function GET(request: Request) {
           continue
         }
 
+        // The server's view of the event: a ledger cancellation stamp, a freeze, and
+        // the EFFECTIVE end (the later of the editable end_datetime and what the
+        // server-stamped tickets say). Moving end_datetime earlier must not
+        // release money early.
+        let availabilityContext = availabilityContextCache.get(organizerId)
+        if (!availabilityContext) {
+          availabilityContext = await loadOrganizerAvailabilityContext(organizerId, now)
+          availabilityContextCache.set(organizerId, availabilityContext)
+        }
+        const availability = await loadEventAvailability({
+          eventId,
+          eventData: candidate.eventData,
+          context: availabilityContext,
+          now,
+        })
+        const settlementStatus = String((earnings as any).settlementStatus || '') || null
+        if (
+          !availability ||
+          availability.reason === 'payouts_frozen' ||
+          availability.reason === 'event_cancelled' ||
+          settlementStatus === 'cancelled'
+        ) {
+          results.push({
+            eventId,
+            organizerId,
+            outcome: 'hold',
+            reason: !availability
+              ? 'event_not_found'
+              : availability.reason === 'payouts_frozen'
+                ? 'payouts_frozen'
+                : 'event_cancelled',
+            tier: null,
+            amountMinor: 0,
+            currency: account.currency,
+          })
+          continue
+        }
+        const effectiveEndsAt = availability.effectiveEndsAt || candidate.endsAt
+
         const facts = await loadTicketFacts(eventId, account.openDisputePaymentRefs, earningsCurrency || null)
 
         const grossMinor = Math.max(0, toMinor(earnings.grossSales))
@@ -562,8 +607,10 @@ export async function GET(request: Request) {
         const eventForRelease: EventForRelease = {
           eventId,
           organizerId,
-          endsAt: candidate.endsAt,
+          endsAt: effectiveEndsAt,
           status: candidate.status,
+          payoutsFrozen: candidate.eventData?.payouts_frozen === true,
+          settlementStatus,
           grossMinor,
           rail: 'card',
           currency: earningsCurrency || null, // Stripe rail. MonCash releases are a separate pipeline.

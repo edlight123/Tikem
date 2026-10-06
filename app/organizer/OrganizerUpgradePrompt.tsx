@@ -6,12 +6,15 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { becomeOrganizer } from './actions'
 import ImageUpload from '@/components/ImageUpload'
+import { safeSameOriginPath } from '@/lib/safeUrl'
 
+// Parsed with the URL parser (lib/safeUrl): a startsWith('/') check let
+// "/\evil.com" through, which browsers read as protocol-relative. The base
+// origin is only a reference point; the result is always a bare path.
 function sanitizeRedirectTarget(target: string | undefined | null): string {
   if (!target) return '/organizer'
-  if (!target.startsWith('/')) return '/organizer'
-  if (target.startsWith('//')) return '/organizer'
-  return target
+  const path = safeSameOriginPath(target, 'https://tikem.co')
+  return path === '/' ? '/organizer' : path
 }
 
 export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: string }) {

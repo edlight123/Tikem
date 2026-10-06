@@ -188,8 +188,25 @@ export async function checkInTicket(params: CheckInParams): Promise<CheckInResul
       // Fetch attendee info
       const attendeeName = await resolveAttendeeName(ticketData)
 
+      // A refund the holder asked for but nobody has acted on yet is DENIED by
+      // walking in: attending and then being refunded is the abuse this closes.
+      // Admitting (rather than refusing at the door) is deliberate: the request
+      // window closes 24h before the event, so a buyer who changed their mind
+      // and came anyway would otherwise be stuck at a door staff cannot fix.
+      // Refunds already moving (processing / admin_review / approved) are
+      // refused above by ticketBlockReason.
+      const pendingRefundRequest =
+        String(ticketData.refund_status ?? '').toLowerCase().trim() === 'requested'
+          ? {
+              refund_status: 'denied',
+              refund_denied_reason: 'checked_in',
+              refund_processed_at: new Date().toISOString(),
+            }
+          : {}
+
       // Perform check-in - update ticket
       transaction.update(ticketRef, {
+        ...pendingRefundRequest,
         checked_in: true,
         checked_in_at: FieldValue.serverTimestamp(),
         checked_in_by: scannedBy,

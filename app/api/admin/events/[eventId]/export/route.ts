@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/auth'
 import { adminError } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { calculateFees } from '@/lib/fees'
+import { csvRow } from '@/lib/csv'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,19 +37,6 @@ function normalizePaymentMethod(raw: unknown): PaymentMethod {
   if (value === 'natcash') return 'natcash'
   if (value === 'sogepay') return 'sogepay'
   return 'unknown'
-}
-
-function escapeCsvValue(value: unknown): string {
-  if (value == null) return ''
-  const raw = String(value)
-  if (/[",\n\r]/.test(raw)) {
-    return `"${raw.replace(/"/g, '""')}"`
-  }
-  return raw
-}
-
-function csvRow(values: unknown[]): string {
-  return values.map(escapeCsvValue).join(',')
 }
 
 function centsFromMajor(maybeMajor: unknown): number {

@@ -77,6 +77,7 @@ import { approveRefundReview, denyRefundReview, listRefundReviews } from '@/lib/
 import { computeEventAvailability } from '@/lib/payouts/availability'
 import { planTicketRefund } from '@/lib/tickets/refundPlan'
 import { ticketBlockReason } from '@/lib/scan/checkInTicket'
+import { coverageInTransaction, loadRefundCoverageContext } from '@/lib/tickets/refundCoverage'
 
 const event = { id: 'ev1', title: 'Rara Fest', organizer_id: 'org_1' }
 const ticket = (id: string) => db.store.get(`tickets/${id}`) as Record<string, any>
@@ -376,5 +377,81 @@ describe('admin decision', () => {
     // Live again: scannable and counted in the balance.
     expect(ticketBlockReason(ticket('t_mc'))).toBeNull()
     await expect(denyRefundReview({ ticketId: 't_mc', actorId: 'admin_1' })).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('approve refuses a ticket already checked in unless the admin confirms', async () => {
+    db.write('tickets/t_mc', { checked_in: true, checked_in_at: '2026-10-01T20:00:00.000Z' }, { merge: true })
+    await expect(approveRefundReview({ ticketId: 't_mc', actorId: 'admin_1' })).rejects.toMatchObject({
+      status: 409,
+      code: 'checked_in',
+    })
+    // Nothing moved; the review is open again for the confirmation.
+    expect(db.store.get('manual_refund_queue/ticket_t_mc')).toBeUndefined()
+    expect(db.store.get('refund_reviews/t_mc')).toMatchObject({ status: 'pending' })
+    expect(ticket('t_mc').refund_status).toBe('admin_review')
+
+    const res = await approveRefundReview({ ticketId: 't_mc', actorId: 'admin_1', allowCheckedIn: true })
+    expect(res.outcome).toBe('queued')
+  })
+
+  it('deny is refused for a cancelled event: that buyer must be refunded', async () => {
+    db.write('refund_reviews/t_mc', { reason: 'event_cancelled' }, { merge: true })
+    await expect(denyRefundReview({ ticketId: 't_mc', actorId: 'admin_1' })).rejects.toMatchObject({
+      status: 409,
+      code: 'event_cancelled',
+    })
+    expect(ticket('t_mc').refund_status).toBe('admin_review')
+    expect(db.store.get('refund_reviews/t_mc')).toMatchObject({ status: 'pending' })
+  })
+})
+
+describe('checked-in tickets', () => {
+  it('refundTicket refuses a ticket used at the door unless allowCheckedIn', async () => {
+    db.write('tickets/t_mc', { checked_in: true }, { merge: true })
+    const res = await refundTicket('t_mc', opts)
+    expect(res).toMatchObject({ outcome: 'skipped', reason: 'checked_in' })
+    expect(ticket('t_mc').refund_status).toBeUndefined()
+    expect(db.store.get('manual_refund_queue/ticket_t_mc')).toBeUndefined()
+
+    expect((await refundTicket('t_mc', { ...opts, allowCheckedIn: true })).outcome).toBe('queued')
+  })
+
+  it('event cancellation refunds a checked-in ticket regardless', async () => {
+    db.write('tickets/t_mc', { checked_in: true }, { merge: true })
+    const res = await refundTicket('t_mc', { ...opts, reason: 'event_cancelled', onFailure: 'hold', cancellation: true })
+    expect(res.outcome).toBe('queued')
+  })
+})
+
+describe('coverage gate with nothing withdrawn', () => {
+  // A transaction that records whether the event's tickets were re-read.
+  const recordingTx = () => {
+    const reads = { tickets: 0 }
+    const tx = {
+      get: async (ref: any) => {
+        if (ref?._path) return db.snap(ref._path)
+        const res = await ref.get()
+        if (res.docs.some((d: any) => String(d.ref?._path || '').startsWith('tickets/'))) reads.tickets += 1
+        return res
+      },
+    }
+    return { tx, reads }
+  }
+
+  it('is covered without re-reading the event tickets (the cancellation sweep was O(N^2))', async () => {
+    const ctx = await loadRefundCoverageContext('ev1')
+    const { tx, reads } = recordingTx()
+    const c = await coverageInTransaction(tx, ctx, 't_mc', ticket('t_mc'))
+    expect(c).toMatchObject({ shortfallMinor: 0, withdrawnMinor: 0, currency: 'HTG', faceMinor: 100_000 })
+    expect(reads.tickets).toBe(0)
+  })
+
+  it('still re-reads the tickets and judges once anything was withdrawn', async () => {
+    withdraw(ceilingNow())
+    const ctx = await loadRefundCoverageContext('ev1')
+    const { tx, reads } = recordingTx()
+    const c = await coverageInTransaction(tx, ctx, 't_mc', ticket('t_mc'))
+    expect(reads.tickets).toBe(1)
+    expect(c.shortfallMinor).toBeGreaterThan(0)
   })
 })

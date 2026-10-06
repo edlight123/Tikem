@@ -79,12 +79,13 @@ function throttleDocId(key: string): string {
  * code guessing an account-only activity. Guests can validate now, so the
  * enumeration control an account got for free has to be made explicit: without
  * it, an unauthenticated caller could sweep an event's codespace. Signed-in
- * callers are not throttled here — nothing about their path changed.
+ * callers are throttled too, keyed by uid instead of IP.
  *
  * Fails OPEN: a bookkeeping error must not stop a real buyer entering a real code.
  */
 export async function recordPromoValidationAttempt(
-  key: string | null | undefined
+  key: string | null | undefined,
+  limit: number = VALIDATION_ATTEMPT_LIMIT
 ): Promise<{ limited: boolean }> {
   const raw = String(key || '').trim()
   if (!raw || raw === 'unknown') return { limited: false }
@@ -100,7 +101,7 @@ export async function recordPromoValidationAttempt(
       const withinWindow = Boolean(windowStart && now - windowStart < VALIDATION_WINDOW_MS)
       const count = withinWindow ? Number(data.count || 0) : 0
 
-      if (count >= VALIDATION_ATTEMPT_LIMIT) {
+      if (count >= limit) {
         return { limited: true }
       }
 
@@ -119,6 +120,61 @@ export async function recordPromoValidationAttempt(
     console.error('[promo] validation throttle failed', (e as any)?.message)
     return { limited: false }
   }
+}
+
+// ── Failed-lookup throttle (per IP) ─────────────────────────────────────────
+//
+// Most of Haiti browses behind carrier-grade NAT: one public IP is shared by
+// thousands of phones, so a per-IP budget that every lookup spends locks out a
+// whole carrier on a busy night. Only FAILED lookups (a code that does not
+// exist for the event) spend the per-IP budgets, since that is what a codespace
+// sweep produces; a buyer entering a real code spends nothing. The per-(event,
+// IP) budget is the tight one: guessing is always against ONE event.
+
+/** Failed lookups one IP may make across every event, per window. */
+export const PROMO_IP_FAILED_LIMIT = 200
+/** Failed lookups one IP may make against ONE event, per window. */
+export const PROMO_IP_EVENT_FAILED_LIMIT = 30
+
+export type PromoThrottleKey = { key: string; limit: number }
+
+/** The per-IP failed-lookup budgets for a lookup against `eventId`. */
+export function promoIpFailureKeys(ip: string, eventId: string | null | undefined): PromoThrottleKey[] {
+  const addr = String(ip || '').trim()
+  if (!addr || addr === 'unknown') return []
+  const keys: PromoThrottleKey[] = [{ key: `promo-validate:${addr}`, limit: PROMO_IP_FAILED_LIMIT }]
+  const event = String(eventId || '').trim()
+  if (event) keys.push({ key: `promo-validate:${addr}:event:${event}`, limit: PROMO_IP_EVENT_FAILED_LIMIT })
+  return keys
+}
+
+/**
+ * True when any of these budgets is already spent in the current window. Reads
+ * only (a successful lookup must not spend anything). Fails OPEN, like the
+ * attempt counter.
+ */
+export async function isPromoValidationLimited(keys: PromoThrottleKey[]): Promise<boolean> {
+  if (keys.length === 0) return false
+  const now = Date.now()
+  try {
+    const snaps = await Promise.all(
+      keys.map((k) => adminDb.collection('promo_validation_attempts').doc(throttleDocId(k.key)).get())
+    )
+    return snaps.some((snap: any, i: number) => {
+      const data = snap?.exists ? snap.data() || {} : {}
+      const windowStart = Number(data.window_start || 0)
+      const withinWindow = Boolean(windowStart && now - windowStart < VALIDATION_WINDOW_MS)
+      return withinWindow && Number(data.count || 0) >= keys[i].limit
+    })
+  } catch (e) {
+    console.error('[promo] validation throttle read failed', (e as any)?.message)
+    return false
+  }
+}
+
+/** Spend one unit of each budget: the lookup found no such code. */
+export async function recordFailedPromoValidation(keys: PromoThrottleKey[]): Promise<void> {
+  await Promise.all(keys.map((k) => recordPromoValidationAttempt(k.key, k.limit)))
 }
 
 export interface PromoDoc {

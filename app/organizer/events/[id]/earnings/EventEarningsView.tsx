@@ -342,6 +342,27 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         )
         return
       }
+      if (response.status === 409 && data?.code === 'PAYOUT_DESTINATION_ON_HOLD') {
+        // A newly added bank account is held for 24h. When it was just saved
+        // here, nothing else is needed: say when it can be paid.
+        const at = data?.availableAt ? new Date(String(data.availableAt)) : null
+        const when =
+          at && !isNaN(at.getTime())
+            ? at.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+            : null
+        if (when) {
+          showToast({ type: 'info', title: t('event_earnings.destination_on_hold', { date: when }), duration: 7000 })
+          setShowWithdrawModal(false)
+          router.refresh()
+          return
+        }
+        throw new Error(data?.error || 'This bank account was added recently and cannot be paid yet.')
+      }
+      if (response.status === 409 && data?.code === 'balance_changed_by_refund') {
+        // A refund was claimed while this withdrawal was computed; nothing was taken.
+        router.refresh()
+        throw new Error(t('event_earnings.balance_changed'))
+      }
       throw new Error(data?.error || data?.message || 'Failed to submit withdrawal')
     }
 

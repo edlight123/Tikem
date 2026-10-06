@@ -136,7 +136,16 @@ export async function POST(request: Request) {
       fingerprint?: string | null
     } = await request.json()
 
-    const provider = String(mobileMoneyProvider || 'moncash').toLowerCase()
+    // Provider allow-list, enforced HERE (the web/mobile NATCASH_ENABLED flags
+    // only hide the button). NatCash is accepted only when the server flag is on;
+    // anything else that is not 'moncash' is refused rather than coerced.
+    const provider = String(mobileMoneyProvider || 'moncash').toLowerCase().trim()
+    if (provider !== 'moncash' && provider !== 'natcash') {
+      return NextResponse.json({ error: 'Unsupported mobile money provider', code: 'provider_not_allowed' }, { status: 400 })
+    }
+    if (provider === 'natcash' && String(process.env.NATCASH_ENABLED || '').toLowerCase() !== 'true') {
+      return NextResponse.json({ error: 'NatCash is not available yet', code: 'provider_not_allowed' }, { status: 400 })
+    }
     const normalizedProvider = provider === 'natcash' ? 'natcash' : 'moncash'
 
     if (!eventId) {
@@ -493,7 +502,11 @@ export async function POST(request: Request) {
     // Create a gateway order ID.
     // Keep it short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
     // IMPORTANT: Digicel appears to expect a numeric orderId (parsing errors can happen otherwise).
-    const orderId = `${Date.now() % 1_000_000_000}${String(crypto.randomInt(0, 1000)).padStart(3, '0')}`
+    // The id is also what the Return URL is keyed on, so it must not be guessable: it used
+    // to be Date.now() plus 3 random digits. 15 digits (~50 bits from the CSPRNG) stays
+    // numeric, below 2^53 for gateways that parse it as a number, and well inside the
+    // 53-byte RSA plaintext limit of the smallest (512-bit, pkcs1) sandbox key.
+    const orderId = `${crypto.randomInt(1_000_000, 10_000_000)}${String(crypto.randomInt(0, 100_000_000)).padStart(8, '0')}`
     const internalOrderId = `mcbtn_${eventId}_${identity.id}_${Date.now()}`
 
     // Store pending transaction first so we can fall back to an HTML form POST flow.

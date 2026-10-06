@@ -15,8 +15,23 @@ export async function POST(request: Request) {
     const result = await executePromoterWithdrawal(user.id, String(body?.phone || ''))
 
     if (!result.ok) {
-      const status = result.code === 'conflict' ? 409 : result.code === 'transfer_failed' ? 502 : 400
-      return NextResponse.json({ error: result.error, code: result.code }, { status })
+      const status =
+        result.code === 'conflict' || result.code === 'destination_on_hold' || result.code === 'balance_negative'
+          ? 409
+          : result.code === 'transfer_failed'
+            ? 502
+            : result.code === 'identity_required' || result.code === 'verification_required'
+              ? 403
+              : 400
+      return NextResponse.json(
+        {
+          error: result.error,
+          code: result.code,
+          ...(result.code === 'verification_required' ? { requiresVerification: true } : {}),
+          ...(result.availableAt ? { availableAt: result.availableAt } : {}),
+        },
+        { status }
+      )
     }
 
     return NextResponse.json({

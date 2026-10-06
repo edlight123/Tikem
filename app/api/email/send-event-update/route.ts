@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { escapeHtml } from '@/lib/html'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -128,11 +129,11 @@ export async function POST(request: Request) {
               <div class="container">
                 <div class="header">
                   <h1 style="margin: 0; font-size: 36px;">${updateIcon}</h1>
-                  <h2 style="margin: 10px 0 0 0;">${updateTitle}</h2>
+                  <h2 style="margin: 10px 0 0 0;">${escapeHtml(updateTitle)}</h2>
                 </div>
                 
                 <div class="content">
-                  <p>Hi ${attendee.full_name || 'there'},</p>
+                  <p>Hi ${escapeHtml(attendee.full_name || 'there')},</p>
                   
                   <div class="alert-box">
                     <h3 style="margin-top: 0; color: ${updateType === 'cancellation' ? '#991b1b' : '#92400e'};">
@@ -144,17 +145,17 @@ export async function POST(request: Request) {
                   </div>
                   
                   <div class="event-details">
-                    <h2 style="margin-top: 0; color: #0d9488;">${event.title}</h2>
+                    <h2 style="margin-top: 0; color: #0d9488;">${escapeHtml(event.title)}</h2>
                     <p style="color: #6b7280; margin: 5px 0;">
-                      📅 ${formattedDate}<br>
-                      🕐 ${formattedTime}<br>
-                      📍 ${event.venue_name}, ${event.city}
+                      📅 ${escapeHtml(formattedDate)}<br>
+                      🕐 ${escapeHtml(formattedTime)}<br>
+                      📍 ${escapeHtml(event.venue_name)}, ${escapeHtml(event.city)}
                     </p>
                   </div>
                   
                   <div class="message-box">
                     <h3 style="margin-top: 0; color: #111827;">Message from Organizer:</h3>
-                    <p style="white-space: pre-wrap; color: #374151;">${updateMessage}</p>
+                    <p style="white-space: pre-wrap; color: #374151;">${escapeHtml(updateMessage)}</p>
                   </div>
                   
                   ${updateType === 'cancellation' ? `
@@ -168,7 +169,7 @@ export async function POST(request: Request) {
                   ` : ''}
                   
                   <div style="text-align: center;">
-                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/events/${eventId}" class="button">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/events/${encodeURIComponent(String(eventId))}" class="button">
                       View Event Details
                     </a>
                   </div>
