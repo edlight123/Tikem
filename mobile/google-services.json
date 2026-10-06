@@ -15,6 +15,30 @@
       },
       "oauth_client": [
         {
+          "client_id": "71580084056-bc9hbkdu53cme317b0qrn4ivg2hc2nf2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.tikem.mobile",
+            "certificate_hash": "0037af440ea2e1e40f2f56a1713228042188c282"
+          }
+        },
+        {
+          "client_id": "71580084056-h67jedco360agn506ji9bgtjpct8mh0d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.tikem.mobile",
+            "certificate_hash": "6c90ea40f3a0f3860d8db9fe3a05fff100202b35"
+          }
+        },
+        {
+          "client_id": "71580084056-u4r105thmcn7esse8o2k6pmkhnf3es0t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.tikem.mobile",
+            "certificate_hash": "6a15ba97650266bf85ee0fa652f4b4d204610a67"
+          }
+        },
+        {
           "client_id": "71580084056-sngjoi0agfg6ro6ben71eo2taghe6t2n.apps.googleusercontent.com",
           "client_type": 3
         }
