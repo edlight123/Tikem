@@ -155,6 +155,9 @@ export async function getFriendSuggestions(viewerId: string, now: number = Date.
   ;[byAttendee, byUser].forEach((snap: any) =>
     snap.docs.forEach((doc: any) => {
       const data = doc.data() || {}
+      // Only tickets the viewer CURRENTLY holds: a buyer who transferred a
+      // ticket away is no longer at that event.
+      if (holderOf(data) !== viewerId) return
       if (holdsTicket(data.status) && typeof data.event_id === 'string' && data.event_id) {
         viewerEventIds.add(data.event_id)
       }
@@ -163,7 +166,15 @@ export async function getFriendSuggestions(viewerId: string, now: number = Date.
   const eventIds = Array.from(viewerEventIds).slice(0, MAX_EVENTS_CONSIDERED)
   const eventDocs = await getAllDocs(eventIds.map((id) => adminDb.collection('events').doc(id)))
   const inWindow = eventDocs
-    .filter((d: any) => d?.exists && inSharedEventWindow(d.data()?.start_datetime, now))
+    // An organizer who hid the guest list (count-only or hidden) has said who
+    // attends is private: such events never produce "same event" suggestions,
+    // matching getFriendsGoing below.
+    .filter(
+      (d: any) =>
+        d?.exists &&
+        inSharedEventWindow(d.data()?.start_datetime, now) &&
+        guestlistVisibilityFrom(d.data() || {}) === 'faces'
+    )
     .map((d: any) => ({ id: d.id as string, start: toMillis(d.data()?.start_datetime) ?? 0 }))
     // Nearest to now first: upcoming and recent events say the most.
     .sort((a, b) => Math.abs(a.start - now) - Math.abs(b.start - now))

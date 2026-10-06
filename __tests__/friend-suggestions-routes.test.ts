@@ -278,6 +278,18 @@ describe('getFriendSuggestions (Firestore layer)', () => {
     expect(json).not.toContain('e1')
   })
 
+  it('an event whose organizer hid the guest list never yields a same-event suggestion', async () => {
+    put('events/e1', { start_datetime: soon, guestlist_visibility: 'hidden' })
+    expect((await getFriendSuggestions('me', NOW)).map((s) => s.uid)).toEqual(['fof'])
+    put('events/e1', { start_datetime: soon, guestlist_visibility: 'count' })
+    expect((await getFriendSuggestions('me', NOW)).map((s) => s.uid)).toEqual(['fof'])
+  })
+
+  it('a ticket the viewer bought but transferred away does not place them at the event', async () => {
+    put('tickets/m1', { event_id: 'e1', user_id: 'me', attendee_id: 'someoneElse', status: 'valid' })
+    expect((await getFriendSuggestions('me', NOW)).map((s) => s.uid)).toEqual(['fof'])
+  })
+
   it('a candidate who blocked the viewer is not suggested', async () => {
     put('users/fof/blocked_organizers/me', { organizer_id: 'me' })
     expect((await getFriendSuggestions('me', NOW)).map((s) => s.uid)).toEqual(['co'])
