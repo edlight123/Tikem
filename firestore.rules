@@ -96,6 +96,10 @@ service cloud.firestore {
       // or mark themselves verified.
       allow create: if isOwner(userId)
         && request.resource.data.role == 'attendee'
+        // The profile email must be the sign-in email (or absent): server code
+        // used to trust it for admin allowlisting and transfer acceptance.
+        && (!('email' in request.resource.data) || request.auth.token.email == null
+            || request.resource.data.email == request.auth.token.email)
         && (request.resource.data.is_verified == false || !(request.resource.data.keys().hasAny(['is_verified'])))
         && (request.resource.data.verification_status == 'none' || !(request.resource.data.keys().hasAny(['verification_status'])));
 
@@ -103,7 +107,9 @@ service cloud.firestore {
       allow update: if isOwner(userId)
         && request.resource.data.role == resource.data.role
         && request.resource.data.is_verified == resource.data.is_verified
-        && request.resource.data.verification_status == resource.data.verification_status;
+        && request.resource.data.verification_status == resource.data.verification_status
+        && (request.resource.data.get('email', null) == resource.data.get('email', null)
+            || request.resource.data.get('email', null) == request.auth.token.email);
 
       // Delete: disallow client deletes.
       allow delete: if false;
@@ -212,6 +218,16 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.organizer_id == request.auth.uid
         && request.resource.data.get('is_published', false) == false
+        // status 'published' is also honoured as published by some readers, so
+        // only the publish route (Admin SDK) may set it. Same for curation flags.
+        && request.resource.data.get('status', 'draft') in ['draft', 'pending']
+        && request.resource.data.get('featured', false) == false
+        && request.resource.data.get('is_featured', false) == false
+        && request.resource.data.get('is_verified', false) == false
+        && request.resource.data.get('rejected', false) == false
+        && request.resource.data.get('payouts_frozen', false) == false
+        && request.resource.data.get('hidden_pending_review', false) == false
+        && request.resource.data.get('reports_count', 0) == 0
         // A new event has sold nothing. tickets_sold is the server's sales
         // counter (lib/tickets/inventory.ts); a client may only start it at 0.
         && request.resource.data.get('tickets_sold', 0) == 0
@@ -231,6 +247,13 @@ service cloud.firestore {
           // (it bypasses rules). .get() defaults keep legacy docs that predate
           // these fields writable.
           request.resource.data.get('rejected', false) == resource.data.get('rejected', false) &&
+          request.resource.data.get('featured', false) == resource.data.get('featured', false) &&
+          request.resource.data.get('is_featured', false) == resource.data.get('is_featured', false) &&
+          request.resource.data.get('is_verified', false) == resource.data.get('is_verified', false) &&
+          // status may stay as-is or move to a non-live value from a client;
+          // going live ('published') is the publish route's job.
+          (request.resource.data.get('status', '') == resource.data.get('status', '')
+            || request.resource.data.get('status', '') in ['draft', 'pending']) &&
           request.resource.data.get('reports_count', 0) == resource.data.get('reports_count', 0) &&
           // Auto-hide after repeated reports (lib/moderation/reports.ts) is
           // likewise admin-only: an organizer must not un-hide their own event.
@@ -389,15 +412,28 @@ service cloud.firestore {
           'check_in_method',
           'updated_at',
           'reentry_override'
-        ]);
+        ]) &&
+        // A ticket that has changed hands (qr_version >= 1) only checks in
+        // through the server, which judges WHICH code was scanned
+        // (lib/tickets/qr.ts). A direct client write cannot prove it was the
+        // new holder's code, so older app builds that still write here are
+        // refused for transferred tickets instead of admitting the old code.
+        resource.data.get('qr_version', 0) == 0;
     }
     
     // Ticket tiers - public read, organizers can manage their event's tiers
     match /ticket_tiers/{tierId} {
       allow read: if true; // Public read for event browsing
       // H1: only the parent event's organizer may create tiers.
-      allow create: if isSignedIn() && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid;
-      allow update, delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+      allow create: if isSignedIn() && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid
+        && request.resource.data.get('sold_quantity', 0) == 0;
+      // A tier can never be moved to another event (checkout trusts
+      // tier.event_id, so moving a free tier onto someone else's event minted
+      // tickets to it), and its sales counter is server-owned.
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+        && request.resource.data.event_id == resource.data.event_id
+        && request.resource.data.get('sold_quantity', 0) == resource.data.get('sold_quantity', 0);
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
     }
 
     // Group discounts - public read, organizers can manage their event's discounts
@@ -405,7 +441,9 @@ service cloud.firestore {
       allow read: if true; // Public read for event browsing
       // H1: only the parent event's organizer may create discounts.
       allow create: if isSignedIn() && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid;
-      allow update, delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+        && request.resource.data.event_id == resource.data.event_id;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
     }
     
     // Promo codes - organizers manage their own event's promo codes. The redemption

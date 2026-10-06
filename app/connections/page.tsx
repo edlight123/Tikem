@@ -36,13 +36,13 @@ export default async function ConnectionsPage() {
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <div className="mx-auto w-full max-w-2xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
         <ConnectionsClient initialOverview={overview} />
       </div>
 
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

@@ -45,7 +45,7 @@ export async function authorizeDoorAccess(eventId: string): Promise<DoorAccess> 
   const event = eventSnap.exists ? { id: eventSnap.id, ...(eventSnap.data() as any) } : null
   const decision = evaluateDoorAccess({
     uid: user.id,
-    isAdmin: user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(user.email),
+    isAdmin: user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(((user as any).email_verified) ? user.email : null),
     event,
     member: memberSnap.exists ? ((memberSnap.data() as any) ?? {}) : null,
   })

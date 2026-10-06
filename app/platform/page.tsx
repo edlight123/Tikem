@@ -405,7 +405,7 @@ export default async function PlatformPage() {
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       {/* HERO — poster voice (uppercase lives here only) + one serif line,
           with real artwork fanning out across the right half. The copy
@@ -545,7 +545,7 @@ export default async function PlatformPage() {
         </div>
       </section>
 
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

@@ -45,7 +45,7 @@ export default async function MyTicketsPage() {
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <TicketsPageClient userId={user.id}>
         <Suspense fallback={<LoadingSkeleton rows={5} animated={false} />}>
@@ -53,7 +53,7 @@ export default async function MyTicketsPage() {
         </Suspense>
       </TicketsPageClient>
       
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

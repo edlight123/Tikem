@@ -44,9 +44,11 @@ export async function POST(_request: NextRequest) {
     const organizerId = decodedClaims.uid
 
     const userDoc = await adminDb.collection('users').doc(organizerId).get()
+    // The step-up code goes to the sign-in email, never the client-writable
+    // profile copy (a stolen session could otherwise redirect it).
     const email =
-      (userDoc.exists ? (userDoc.data() as any)?.email : null) ||
       (decodedClaims as any)?.email ||
+      (userDoc.exists ? (userDoc.data() as any)?.email : null) ||
       null
 
     if (!email) {

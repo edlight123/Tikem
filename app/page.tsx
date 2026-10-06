@@ -193,7 +193,7 @@ export default async function HomePage({
     <div className="min-h-screen bg-black pb-mobile-nav">
       <LiveTicker signals={buildTickerSignals(inCountry, now)} />
       {/* flush: one black canvas, no hairline under the nav. */}
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} flush />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} flush />
       <CityRow country={country} cities={cities} active={active?.key ?? null} total={inCountry.length} />
 
       <LocationBannerWrapper userId={user?.id} currentCountry={country} currentCity={profileCity} />
@@ -231,7 +231,7 @@ export default async function HomePage({
         elsewhere={elsewhere}
       />
 
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

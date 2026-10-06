@@ -54,8 +54,8 @@ export default async function OrganizerLayout({
   if (user.role !== 'organizer') {
     return (
       <OrganizerChrome
-        chromeTop={<Navbar user={user} isAdmin={isAdmin(user?.email)} />}
-        chromeBottom={<MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />}
+        chromeTop={<Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />}
+        chromeBottom={<MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />}
       >
         {children}
       </OrganizerChrome>
@@ -77,7 +77,7 @@ export default async function OrganizerLayout({
           accountInitial={accountInitial}
         />
       }
-      chromeBottom={<MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />}
+      chromeBottom={<MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />}
     >
       {children}
     </OrganizerChrome>

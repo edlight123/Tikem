@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data()
 
     const roleIsAdmin = isRoleAdmin(userData?.role)
-    const emailIsAdmin = isAdminEmail(String(userData?.email || ''))
+    // Token email only (users/{uid}.email is client-writable).
+    const emailIsAdmin = decodedToken.email_verified === true && isAdminEmail(String(decodedToken.email || ''))
     if (!roleIsAdmin && !emailIsAdmin) {
       return adminError('Forbidden - Admin access required', 403)
     }
@@ -142,7 +143,8 @@ export async function DELETE(request: NextRequest) {
     const userData = userDoc.data()
 
     const roleIsAdmin = isRoleAdmin(userData?.role)
-    const emailIsAdmin = isAdminEmail(String(userData?.email || ''))
+    // Token email only (users/{uid}.email is client-writable).
+    const emailIsAdmin = decodedToken.email_verified === true && isAdminEmail(String(decodedToken.email || ''))
     if (!roleIsAdmin && !emailIsAdmin) {
       return adminError('Forbidden - Admin access required', 403)
     }

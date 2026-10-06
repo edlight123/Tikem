@@ -17,11 +17,11 @@ export default async function SupportPage() {
 
   return (
       <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
-        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+        <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
         
         <SupportContent />
         
-        <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+        <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
       </div>
   )
 }

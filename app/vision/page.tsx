@@ -212,7 +212,7 @@ export default async function VisionPage() {
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       {/* ── Hero. One claim, in the grotesk, with the Kreyòl line underneath in
              the editorial serif. Teal appears once on this page, on the rule
@@ -361,7 +361,7 @@ export default async function VisionPage() {
         </section>
       </Reveal>
 
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

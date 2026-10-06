@@ -87,7 +87,7 @@ export default async function StaffHomePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <div className="max-w-3xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-white">Staff</h1>

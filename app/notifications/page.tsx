@@ -75,14 +75,14 @@ export default async function NotificationsPage() {
 
   return (
     <>
-      <Navbar user={user} isAdmin={isAdmin(user.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any).email_verified) ? user.email : null)} />
       <NotificationsClient
         userId={user.id}
         initialNotifications={notifications}
         initialUnreadCount={unreadCount}
         posters={posters}
       />
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any).email_verified) ? user.email : null)} />
     </>
   )
 }

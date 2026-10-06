@@ -36,6 +36,7 @@ export async function getServerSession() {
         user: {
           id: user.uid,
           email: user.email || '',
+          email_verified: Boolean(user.emailVerified),
           user_metadata: {
             full_name: user.displayName || '',
             phone: user.phoneNumber || '',
@@ -53,6 +54,7 @@ export async function getServerSession() {
       user: {
         id: user.uid,
         email: user.email || '',
+        email_verified: Boolean(user.emailVerified),
         user_metadata: {
           full_name: user.displayName || '',
           phone: user.phoneNumber || '',

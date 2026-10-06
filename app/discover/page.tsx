@@ -227,7 +227,7 @@ export default async function DiscoverPage({
     <div className="surface-dark min-h-screen pb-mobile-nav">
       {/* flush: the sticky filter header below supplies the header band's one
           bottom rule, so the navbar doesn't draw its own. */}
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} flush />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} flush />
       
       {/* Location Detection Banner */}
       <LocationBannerWrapper 
@@ -272,7 +272,7 @@ export default async function DiscoverPage({
         </Suspense>
       </div>
 
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }
