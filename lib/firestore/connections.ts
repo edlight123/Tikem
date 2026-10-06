@@ -371,3 +371,39 @@ export async function matchContacts(
     }
   })
 }
+
+/**
+ * Make two users friends outright (no request step). Used when someone joins
+ * Tikèm through a friend's invite link (lib/invites/server.ts): the link IS
+ * the request. An existing pending request either way is accepted; an
+ * accepted one is left alone. Callers decide about blocks first.
+ */
+export async function ensureAcceptedConnection(
+  a: string,
+  b: string
+): Promise<'created' | 'accepted' | 'already'> {
+  if (!a || !b || a === b) return 'already'
+  const ref = adminDb.collection(COLLECTION).doc(connectionIdFor(a, b))
+  const snap = await ref.get()
+  if (snap.exists) {
+    const conn = mapConnection(snap)
+    if (conn.status === 'accepted') return 'already'
+    await ref.update({
+      status: 'accepted',
+      accepted_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+    })
+    return 'accepted'
+  }
+  await ref.set({
+    users: [a, b].sort(),
+    requester_id: a,
+    recipient_id: b,
+    status: 'accepted',
+    via: 'invite_link',
+    created_at: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp(),
+    accepted_at: FieldValue.serverTimestamp(),
+  })
+  return 'created'
+}

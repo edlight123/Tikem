@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSocialFlags } from '../lib/socialFlags';
 import {
   Animated,
   AppState,
@@ -50,6 +51,7 @@ type UserPrefKey =
   | 'notify_discovery'
   | 'notify_filling_fast'
   | 'notify_national_day'
+  | 'notify_friend_invites'
   | 'notify_organizer_milestones'
   | 'notify_organizer_nudges';
 
@@ -77,12 +79,14 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
   const { height: headerH, onHeight: onHeaderHeight } = useOverlayHeaderInset();
   const scrollY = useRef(new Animated.Value(0)).current;
   const isOrganizer = Boolean(route?.params?.organizer);
+  const socialFlags = useSocialFlags();
 
   const [loading, setLoading] = useState(true);
   const [userPrefs, setUserPrefs] = useState<Record<UserPrefKey, boolean>>({
     notify_discovery: true,
     notify_filling_fast: true,
     notify_national_day: true,
+    notify_friend_invites: true,
     notify_organizer_milestones: true,
     notify_organizer_nudges: true,
   });
@@ -125,6 +129,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
             notify_discovery: data.notify_discovery ?? true,
             notify_filling_fast: data.notify_filling_fast ?? true,
             notify_national_day: data.notify_national_day ?? true,
+            notify_friend_invites: data.notify_friend_invites ?? true,
             notify_organizer_milestones: data.notify_organizer_milestones ?? true,
             notify_organizer_nudges: data.notify_organizer_nudges ?? true,
           });
@@ -329,6 +334,15 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 value={userPrefs.notify_national_day}
                 onChange={(v) => toggleUserPref('notify_national_day', v)}
               />
+              {socialFlags.invites ? (
+                <PrefRow
+                  divided
+                  title={t('notificationSettings.fromTikem.friendInvites')}
+                  body={t('notificationSettings.fromTikem.friendInvitesBody')}
+                  value={userPrefs.notify_friend_invites}
+                  onChange={(v) => toggleUserPref('notify_friend_invites', v)}
+                />
+              ) : null}
             </View>
           )}
         </View>

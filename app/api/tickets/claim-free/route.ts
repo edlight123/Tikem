@@ -21,6 +21,7 @@ import {
 import { recordPromoterSale, resolvePromoterCode } from '@/lib/promoters'
 import { ticketAttributionFields } from '@/lib/attribution'
 import { recordAttributedSale, resolveOrderAttribution } from '@/lib/tracking-links'
+import { recordInvitePurchase } from '@/lib/invites/server'
 import { computeSelectionTotal, toCents } from '@/lib/ticketPricing'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
 import {
@@ -852,6 +853,16 @@ export async function POST(request: Request) {
         revenueCents: 0,
         currency: String(event.currency || 'HTG'),
         paymentMethod: 'free',
+      })
+    }
+
+    // Friend-invite credit (lib/invites). Never throws; guests have no account.
+    if (!identity.isGuest && createdTickets.length > 0) {
+      await recordInvitePurchase({
+        buyerUid: identity.id,
+        eventId: String(eventId),
+        ticketIds: createdTickets.map((t: any) => String(t.id)),
+        orderKey: `free_${createdTickets[0].id}`,
       })
     }
 

@@ -15,6 +15,12 @@ export const LINKING_CONFIG = {
   initialRouteName: 'Main',
   screens: {
     InviteRedeem: 'invite',
+    // A friend's personal invite link (web app/i/[code]). App scheme only for
+    // now: /i/* is not in the AASA or the Android intent filters, so the https
+    // link opens the web page (which sets the attribution cookie).
+    InviteLink: 'i/:code',
+    // "X joined Tikèm from your invite" push (url /profile/organizer/{uid}).
+    OrganizerProfile: 'profile/organizer/:organizerId',
     Notifications: 'notifications',
     TicketDetail: 'tickets/:ticketId',
     EventDetail: 'events/:eventId',

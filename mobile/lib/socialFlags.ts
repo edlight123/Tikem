@@ -4,6 +4,7 @@
  *
  *   phone_link_prompt:  the "add your number" sheet after a ticket
  *   friend_suggestions: "people you may know" and "friends going"
+ *   invites:            event invites + personal invite links
  *
  * Fails CLOSED: missing doc, read error or timeout all mean OFF. Cached in
  * memory for 5 minutes; every subscribing screen triggers a re-check after
@@ -21,9 +22,10 @@ const TIMEOUT_MS = 4000;
 export interface SocialFlags {
   phoneLinkPrompt: boolean;
   friendSuggestions: boolean;
+  invites: boolean;
 }
 
-const OFF: SocialFlags = { phoneLinkPrompt: false, friendSuggestions: false };
+const OFF: SocialFlags = { phoneLinkPrompt: false, friendSuggestions: false, invites: false };
 
 let flags: SocialFlags = OFF;
 let checkedAt = 0;
@@ -36,6 +38,7 @@ export function socialFlagsFrom(data: unknown): SocialFlags {
   return {
     phoneLinkPrompt: d.phone_link_prompt === true,
     friendSuggestions: d.friend_suggestions === true,
+    invites: d.invites === true,
   };
 }
 
@@ -54,7 +57,10 @@ export function refreshSocialFlags(force = false): Promise<SocialFlags> {
       next = OFF;
     }
     checkedAt = Date.now();
-    const changed = next.phoneLinkPrompt !== flags.phoneLinkPrompt || next.friendSuggestions !== flags.friendSuggestions;
+    const changed =
+      next.phoneLinkPrompt !== flags.phoneLinkPrompt ||
+      next.friendSuggestions !== flags.friendSuggestions ||
+      next.invites !== flags.invites;
     flags = next;
     if (changed) listeners.forEach((l) => l());
     inflight = null;

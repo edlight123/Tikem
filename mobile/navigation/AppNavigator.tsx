@@ -78,6 +78,9 @@ import TicketDetailScreen from '../screens/TicketDetailScreen';
 import OrganizerProfileScreen from '../screens/OrganizerProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ConnectionsScreen from '../screens/ConnectionsScreen';
+import InviteLinkScreen from '../screens/InviteLinkScreen';
+import { clearPendingInviteCode, getPendingInviteCode, parseInviteUrl, savePendingInviteCode } from '../lib/inviteLink';
+import { claimInviteCode } from '../lib/api/invites';
 import PaymentWebViewScreen from '../screens/PaymentWebViewScreen';
 import StripeConnectWebViewScreen from '../screens/StripeConnectWebViewScreen';
 import StripeOnboardingScreen from '../screens/organizer/StripeOnboardingScreen';
@@ -102,6 +105,8 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   InviteRedeem: { eventId?: string; token?: string };
+  // A friend's personal invite link, tikem://i/{code}?e={eventId} (lib/inviteLink).
+  InviteLink: { code: string; e?: string };
   Search: undefined;
   Subscriptions: undefined;
   NotificationSettings: { organizer?: boolean } | undefined;
@@ -131,7 +136,10 @@ export type RootStackParamList = {
   TicketDetail: { ticketId: string };
   OrganizerProfile: { organizerId: string };
   Notifications: { userId: string };
-  Connections: { initialTab?: 'friends' | 'requests' | 'find'; autoSync?: boolean } | undefined;
+  // inviteEventId/Title: "Invite to Tikèm" from an event context (lib/invites).
+  Connections:
+    | { initialTab?: 'friends' | 'requests' | 'find'; autoSync?: boolean; inviteEventId?: string; inviteEventTitle?: string }
+    | undefined;
   // `event` seeds the Manage Event screen with the list's already-loaded fields
   // for an instant first paint; it then refreshes the fuller data in the background.
   OrganizerEventManagement: { eventId: string; event?: OrganizerEvent };
@@ -646,6 +654,36 @@ export default function AppNavigator() {
     checkVerificationStatus();
   }, [userProfile?.id]);
 
+  // A friend's invite link (tikem://i/{code}): save the code whatever the auth
+  // state. Signed out, the router has no screen for it, so this is the only
+  // place it is seen; the sign-up that follows claims it (below).
+  useEffect(() => {
+    const capture = (url: string | null) => {
+      const invite = parseInviteUrl(url);
+      if (invite) savePendingInviteCode(invite.code, invite.eventId);
+    };
+    ExpoLinking.getInitialURL().then(capture).catch(() => undefined);
+    const sub = ExpoLinking.addEventListener('url', ({ url }) => capture(url));
+    return () => sub.remove();
+  }, []);
+
+  // Once signed in, hand a saved invite code to the server. It credits only a
+  // NEW account (once ever) and connects the two friends; any definitive
+  // answer clears the code, a switched-off feature or network error keeps it.
+  useEffect(() => {
+    if (!user?.uid) return;
+    let active = true;
+    (async () => {
+      const pending = await getPendingInviteCode();
+      if (!pending || !active) return;
+      const { done } = await claimInviteCode(pending.code, pending.eventId);
+      if (done) await clearPendingInviteCode();
+    })().catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [user?.uid]);
+
   useEffect(() => {
     // If a staff invite link was opened while logged out, resume it after login.
     const maybeResumeInvite = async () => {
@@ -840,6 +878,7 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen name="InviteRedeem" component={InviteRedeemScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="InviteLink" component={InviteLinkScreen} options={{ headerShown: false }} />
             <Stack.Screen
               name="PaymentWebView"
               component={PaymentWebViewScreen}

@@ -13,6 +13,7 @@ import MobileKeyFacts from './MobileKeyFacts'
 import MobileSections from './MobileSections'
 import WhosGoing from '@/components/events/WhosGoing'
 import FriendsGoing from '@/components/events/FriendsGoing'
+import InviteFriends from '@/components/events/InviteFriends'
 import PromoVideo from '@/components/events/PromoVideo'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 import { guestlistVisibilityFrom } from '@/lib/guestlistVisibility'
@@ -34,9 +35,11 @@ interface EventDetailsClientProps {
   isFavorite: boolean
   isFollowing: boolean
   relatedEvents: any[]
+  /** config/auth.invites, read on the server (lib/invites). */
+  invitesEnabled?: boolean
 }
 
-export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents }: EventDetailsClientProps) {
+export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents, invitesEnabled = false }: EventDetailsClientProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
   const numLocale = intlLocaleFor(i18n.language)
@@ -643,6 +646,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         {/* Your connections going (config/auth.friend_suggestions); renders
             nothing, margin included, when off or when no friend is going. */}
         <FriendsGoing eventId={event.id} currentUserId={user?.id || null} className="mt-8" />
+
+        {/* Invite connections + personal invite link (config/auth.invites).
+            Renders nothing when off or signed out. */}
+        <InviteFriends
+          eventId={event.id}
+          eventTitle={event.title}
+          enabled={invitesEnabled}
+          currentUserId={user?.id || null}
+          className="mt-4"
+        />
 
         {/* Who's Going - social attendance */}
         <WhosGoing

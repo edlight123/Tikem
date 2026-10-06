@@ -4,6 +4,7 @@
  *
  *   friend_suggestions: true   "people you may know" + "friends going"
  *   phone_link_prompt:  true   the app's "add your number" sheet (read by the app)
+ *   invites:            true   event invites + personal invite links (lib/invites)
  *
  * Fails CLOSED: a missing doc, a read error or a slow Firestore all mean OFF.
  * Cached briefly so a busy endpoint does not read the doc on every call.
@@ -15,7 +16,7 @@ import { AUTH_CONFIG_DOC } from '@/lib/auth/otp/flag'
 const CACHE_MS = 30 * 1000
 const READ_TIMEOUT_MS = 1500
 
-export type SocialFlag = 'friend_suggestions' | 'phone_link_prompt'
+export type SocialFlag = 'friend_suggestions' | 'phone_link_prompt' | 'invites'
 
 /** Pure: only a literal `true` turns a switch on. */
 export function socialFlagOn(data: unknown, flag: SocialFlag): boolean {

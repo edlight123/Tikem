@@ -1,5 +1,6 @@
 import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import { AnalyticsHub } from '@/components/admin/AnalyticsHub'
+import { InviteMetricsLine } from '@/components/admin/InviteMetricsLine'
 
 export const revalidate = 120
 
@@ -18,6 +19,7 @@ export default async function AdminAnalyticsPage() {
       </div>
 
       <AnalyticsHub />
+      <InviteMetricsLine />
     </div>
   )
 }

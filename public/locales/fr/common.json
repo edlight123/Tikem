@@ -1862,5 +1862,32 @@
   "friendsGoing": {
     "one": "{{name}} y va",
     "other": "{{count}} amis y vont"
+  },
+  "invites": {
+    "inviteFriends": "Inviter des amis",
+    "pickerTitle": "Inviter des amis",
+    "pickerSubtitle": "Seulement tes amis Tikèm. Ils reçoivent une notification de ta part.",
+    "search": "Rechercher tes amis",
+    "sendCount": "Inviter {{count}}",
+    "sending": "Envoi",
+    "sentToast": "Invitations envoyées",
+    "stateInvited": "Invité",
+    "stateGoing": "Y va",
+    "stateUnavailable": "Impossible",
+    "empty": "Ajoute des amis sur Tikèm pour les inviter à des événements.",
+    "noMatch": "Aucun ami ne correspond à ce nom.",
+    "limit": "Tu as atteint la limite d'invitations du jour. Réessaie demain.",
+    "error": "Impossible d'envoyer les invitations. Réessaie.",
+    "loadError": "Impossible de charger tes amis. Réessaie.",
+    "shareLink": "Inviter des amis sur Tikèm",
+    "shareLinkHint": "Ton lien personnel. Les amis qui rejoignent avec ce lien sont connectés à toi.",
+    "linkCopied": "Lien d'invitation copié",
+    "messageEvent": "Viens à {{event}} avec moi sur Tikèm : {{link}}",
+    "messageApp": "Rejoins-moi sur Tikèm : {{link}}",
+    "summaryTitle": "Tes invitations",
+    "summarySent": "Invitations envoyées",
+    "summaryJoined": "Inscrits",
+    "summaryBought": "Ont acheté",
+    "close": "Fermer"
   }
 }

@@ -14,6 +14,7 @@ import { CANONICAL_SITE_URL } from '@/lib/site-url'
 import { cookies } from 'next/headers'
 import { intlLocaleFor } from '@/lib/dateLocale'
 import { ticketScarcity, isUrgent } from '@/lib/ticketScarcity'
+import { isSocialFlagOn } from '@/lib/social/flags'
 
 export const runtime = 'nodejs'
 export const revalidate = 300 // Cache for 5 minutes
@@ -287,6 +288,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   }
 
   const serializedEvent = serializeData(event)
+  // Friend invites (lib/invites): signed-in viewers only, behind config/auth.invites.
+  const invitesEnabled = user ? await isSocialFlagOn('invites').catch(() => false) : false
   const serializedRelatedEvents = serializeData(relatedEvents)
 
   // schema.org Event for rich results. Only for public events: a draft shown
@@ -313,6 +316,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         isFavorite={isFavorite}
         isFollowing={isFollowing}
         relatedEvents={serializedRelatedEvents}
+        invitesEnabled={invitesEnabled}
       />
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>

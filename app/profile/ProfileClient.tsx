@@ -13,6 +13,7 @@ import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { NotificationsCard } from '@/components/profile/NotificationsCard'
 import { AccountCard } from '@/components/profile/AccountCard'
 import { AttendanceDefaultBanner } from '@/components/profile/AttendanceDefaultBanner'
+import { InviteSummaryCard } from '@/components/profile/InviteSummaryCard'
 
 interface ProfileClientProps {
   initialProfile: UserProfile
@@ -104,6 +105,8 @@ export default function ProfileClient({ initialProfile, userId, isVerifiedOrgani
       <div className="mt-7 space-y-9 sm:mt-9 sm:space-y-12">
         {/* Identity — the one section with no heading, because the page title is it. */}
         <ProfileHeaderCard profile={profile} onUpdate={handleUpdateProfile} />
+
+        <InviteSummaryCard />
 
         <SocialLinksCard profile={profile} onUpdate={handleUpdateProfile} />
 

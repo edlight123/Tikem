@@ -123,6 +123,19 @@ export async function POST(request: NextRequest) {
       path: '/',
     })
 
+    // Invite-link attribution (lib/invites): a visitor who arrived through
+    // /i/{code} carries a cookie, and a NEW account is credited to that invite
+    // once, ever. Best-effort: a failure here never fails the sign-in.
+    const inviteCookie = cookieStore.get('tikem_invite')?.value
+    if (inviteCookie) {
+      try {
+        const { claimFromInviteCookie } = await import('@/lib/invites/claimCookie')
+        if (await claimFromInviteCookie(decoded.uid, inviteCookie)) cookieStore.delete('tikem_invite')
+      } catch (err) {
+        console.error('[invites] claim at sign-in failed', (err as any)?.message)
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Session creation error:', error)
