@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { font, radius } from '../../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors as T, radius } from '../../theme/tokens';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,23 +18,27 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import {
+  getOrganizerEvents,
   getOrganizerStats,
   getTodayEvents,
+  OrganizerEvent,
   OrganizerStats,
   TodayEvent,
 } from '../../lib/api/organizer';
-import { SPACING, RADIUS } from '../../config/brand';
 import { Skeleton } from '../../components/Skeleton';
-import EmptyState from '../../components/EmptyState';
 import StatTriplet from '../../components/StatTriplet';
-import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
-import { useOverlayHeaderInset } from '../../components/OverlayHeader';
+import StatusChip from '../../components/StatusChip';
 import GettingStartedCard from '../../components/organizer/GettingStartedCard';
-import { Calendar } from 'lucide-react-native';
+import ActionTileGrid, { ActionTile } from '../../components/organizer/ActionTileGrid';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { formatPrice } from '../../lib/currency';
+
+/** How many upcoming events the rail shows before "view all" takes over. */
+const UPCOMING_RAIL_MAX = 10;
+/** An event with no end time counts as running for this long after it starts. */
+const NO_END_RUNNING_MS = 6 * 60 * 60 * 1000;
 
 /**
  * The revenue cell: the largest currency is the figure, any other currency is
@@ -55,14 +60,15 @@ export default function OrganizerDashboardScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { userProfile } = useAuth();
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   // The tab bar is a translucent overlay, so reserve its height here or the
   // last row ends up sitting behind it.
   const tabBarSpace = useTabBarSpace();
-  const { height: headerH, onHeight } = useOverlayHeaderInset();
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<OrganizerEvent[]>([]);
   const [stats, setStats] = useState<OrganizerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,13 +77,15 @@ export default function OrganizerDashboardScreen() {
     if (!userProfile?.id) return;
 
     try {
-      const [eventsData, statsData] = await Promise.all([
+      const [eventsData, statsData, organizerEvents] = await Promise.all([
         getTodayEvents(userProfile.id),
         getOrganizerStats(userProfile.id, '7d'),
+        getOrganizerEvents(userProfile.id, 200),
       ]);
 
       setTodayEvents(eventsData);
       setStats(statsData);
+      setAllEvents(organizerEvents);
     } catch (error) {
       console.error('Error loading organizer dashboard:', error);
     } finally {
@@ -102,235 +110,351 @@ export default function OrganizerDashboardScreen() {
     loadData();
   }, [loadData]);
 
-  const headerSubtitle = `${t('organizerDashboard.welcomeBack')}, ${userProfile?.full_name || t('organizerDashboard.organizerFallback')}`;
+  // Upcoming rail: published, not cancelled, starting later than now, and not
+  // already shown in the tonight block. Soonest first.
+  const upcomingEvents = useMemo(() => {
+    const now = Date.now();
+    const todayIds = new Set(todayEvents.map((e) => e.id));
+    return allEvents
+      .filter((e) => {
+        if (todayIds.has(e.id)) return false;
+        if (e.status === 'cancelled' || !e.is_published || (e as any).rejected === true) return false;
+        const start = new Date(e.start_datetime).getTime();
+        return !isNaN(start) && start > now;
+      })
+      .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+      .slice(0, UPCOMING_RAIL_MAX);
+  }, [allEvents, todayEvents]);
+
+  const displayName =
+    userProfile?.organization_name || userProfile?.full_name || t('organizerDashboard.organizerFallback');
+  const avatarUri = userProfile?.organization_logo || userProfile?.photo_url || null;
+  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
+
+  const greeting = (
+    <View style={[styles.greetingRow, { paddingTop: insets.top + 16 }]}>
+      <View style={styles.greetingText}>
+        <Text style={styles.eyebrow} numberOfLines={1}>
+          {`${t('organizerDashboard.welcomeBack')},`}
+        </Text>
+        <Text style={styles.screenTitle} numberOfLines={2}>
+          {displayName}
+        </Text>
+      </View>
+      <View style={styles.avatar}>
+        {avatarUri ? (
+          <Image
+            source={{ uri: avatarUri }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
+        ) : (
+          <Text style={styles.avatarInitial}>{initial}</Text>
+        )}
+      </View>
+    </View>
+  );
+
+  const quickActions: ActionTile[] = [
+    {
+      key: 'earnings',
+      label: t('organizerDashboard.earnings') || 'Earnings',
+      icon: 'cash-outline',
+      onPress: () => navigation.navigate('OrganizerEarningsHub'),
+    },
+    {
+      key: 'analytics',
+      label: t('organizerDashboard.analytics') || 'Analytics',
+      icon: 'bar-chart-outline',
+      onPress: () => navigation.navigate('OrganizerAnalytics'),
+    },
+    {
+      key: 'payouts',
+      label: t('organizerDashboard.payouts') || 'Payouts',
+      icon: 'wallet-outline',
+      onPress: () => navigation.navigate('OrganizerPayoutSettings'),
+    },
+    {
+      key: 'refunds',
+      label: t('organizerDashboard.refunds') || 'Refunds',
+      icon: 'refresh-outline',
+      onPress: () => navigation.navigate('OrganizerRefunds'),
+    },
+    {
+      key: 'team',
+      label: t('organizerDashboard.team') || 'Team',
+      icon: 'people-outline',
+      onPress: () => navigation.navigate('OrganizerTeamHub'),
+    },
+    {
+      key: 'scan',
+      label: t('tabs.scan') || 'Scan',
+      icon: 'qr-code-outline',
+      onPress: () => navigation.navigate('Scan'),
+    },
+    // No Create tile here (per beta feedback): Create already lives in My
+    // Events' header button.
+  ];
+
+  const renderPoster = (
+    id: string,
+    uri: string | null | undefined,
+    themeSource: any,
+    wordmarkSize: number,
+  ) =>
+    uri ? (
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={200}
+        recyclingKey={id}
+      />
+    ) : (
+      <>
+        <LinearGradient
+          colors={resolvePosterTheme(themeSource, id || themeSource?.title, themeSource?.category).colors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.posterBrand}>
+          <TikemWordmark fontSize={wordmarkSize} />
+        </View>
+      </>
+    );
+
+  const eventTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+
+  const shortDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+  const renderTonightHero = (event: TodayEvent) => {
+    const start = new Date(event.start_datetime).getTime();
+    const running = !isNaN(start) && start <= Date.now() && Date.now() < start + NO_END_RUNNING_MS;
+    const soldOut = event.capacity > 0 && event.ticketsSold >= event.capacity;
+    // Time, then the place when we have one. An empty location used to
+    // leave a pin icon with nothing next to it (TestFlight 2026-09-06).
+    const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
+    const progress = event.capacity > 0 ? Math.min(1, event.ticketsSold / event.capacity) : 0;
+
+    return (
+      <TouchableOpacity
+        key={event.id}
+        style={styles.heroCard}
+        onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
+        activeOpacity={0.85}
+      >
+        <View style={styles.heroPoster}>{renderPoster(event.id, event.posterUri, event, 22)}</View>
+
+        <Text style={styles.heroTitle} numberOfLines={2}>{event.title}</Text>
+        {!!meta && <Text style={styles.heroMeta} numberOfLines={1}>{meta}</Text>}
+
+        <View style={styles.heroStatusRow}>
+          {soldOut ? (
+            <StatusChip status="soldout" label={t('organizerEvents.status.soldOut')} />
+          ) : running ? (
+            <StatusChip status="live" label={t('organizerDashboard.liveNow')} />
+          ) : (
+            <StatusChip status="upcoming" label={t('organizerDashboard.onSale')} />
+          )}
+          <Text style={styles.heroSoldText}>
+            {event.capacity > 0
+              ? t('organizerDashboard.soldOf', { sold: event.ticketsSold, total: event.capacity })
+              : `${event.ticketsSold} ${t('common.sold')}`}
+          </Text>
+        </View>
+        {event.capacity > 0 && (
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          </View>
+        )}
+        {event.ticketsCheckedIn > 0 && (
+          <Text style={styles.heroCheckedIn}>
+            {`${event.ticketsCheckedIn} ${t('organizerDashboard.checkedIn').toLowerCase()}`}
+          </Text>
+        )}
+
+        {/* Scanning is the day-of job: the screen's one primary action. */}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          onPress={(e) => {
+            e.stopPropagation();
+            navigation.navigate('TicketScanner', { eventId: event.id });
+          }}
+        >
+          <Ionicons name="qr-code-outline" size={20} color="#000" />
+          <Text style={styles.primaryButtonText}>{t('organizerDashboard.openScanner')}</Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
+
+  // Further events today (rare): a compact row each, with a secondary scan
+  // button so the hero keeps the only primary fill.
+  const renderTonightRow = (event: TodayEvent) => {
+    const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
+    return (
+      <TouchableOpacity
+        key={event.id}
+        style={styles.tonightRow}
+        onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
+        activeOpacity={0.85}
+      >
+        <View style={styles.tonightRowPoster}>{renderPoster(event.id, event.posterUri, event, 12)}</View>
+        <View style={styles.tonightRowBody}>
+          <Text style={styles.tonightRowTitle} numberOfLines={2}>{event.title}</Text>
+          {!!meta && <Text style={styles.tonightRowMeta} numberOfLines={1}>{meta}</Text>}
+          <Text style={styles.tonightRowMeta} numberOfLines={1}>
+            {event.capacity > 0
+              ? t('organizerDashboard.soldOf', { sold: event.ticketsSold, total: event.capacity })
+              : `${event.ticketsSold} ${t('common.sold')}`}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={t('tabs.scan')}
+          onPress={(e) => {
+            e.stopPropagation();
+            navigation.navigate('TicketScanner', { eventId: event.id });
+          }}
+        >
+          <Ionicons name="qr-code-outline" size={18} color={colors.text} />
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
       <View style={styles.container}>
-        {/* Same overlay header as the loaded branch so the chrome doesn't jump
-            from an in-flow bar to a floating blur when data lands. */}
-        <OrganizerScreenHeader
-          title={t('organizerDashboard.title')}
-          subtitle={headerSubtitle}
-          overlay
-          onHeight={onHeight}
-        />
-        <View style={{ paddingTop: headerH }}>
-          {/* Today's Events: section title + one event card (padded surface). */}
-          <View style={styles.section}>
-            <Skeleton width={150} height={22} radius={7} style={{ marginBottom: 12 }} />
-            <Skeleton width="100%" height={200} radius={RADIUS.lg} />
-          </View>
-          {/* This Week: section title + the metric triplet (••• while loading). */}
-          <View style={styles.section}>
-            <Skeleton width={120} height={22} radius={7} style={{ marginBottom: 12 }} />
-            <StatTriplet
-              items={[
-                { label: t('organizerDashboard.revenue'), value: null },
-                { label: t('organizerDashboard.ticketsSold'), value: null },
-                { label: t('organizerDashboard.upcomingEvents'), value: null },
-              ]}
-            />
-          </View>
-          {/* Quick Actions: section title + the 2-col grid of 6 action tiles
-              (46 tall = paddingVertical 13×2 + 20 icon). */}
-          <View style={styles.section}>
-            <Skeleton width={140} height={22} radius={7} style={{ marginBottom: 12 }} />
-            <View style={styles.quickActionsGrid}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} width="48%" height={46} radius={RADIUS.lg} />
-              ))}
-            </View>
-          </View>
+        {greeting}
+        {/* Tonight: a poster-led hero card. */}
+        <View style={styles.section}>
+          <Skeleton width={110} height={22} radius={7} style={{ marginBottom: 12 }} />
+          <Skeleton width="100%" height={420} radius={radius.xl} />
+        </View>
+        {/* This week: section title + the metric triplet (••• while loading). */}
+        <View style={styles.section}>
+          <Skeleton width={120} height={22} radius={7} style={{ marginBottom: 12 }} />
+          <StatTriplet
+            items={[
+              { label: t('organizerDashboard.revenue'), value: null },
+              { label: t('organizerDashboard.ticketsSold'), value: null },
+              { label: t('organizerDashboard.upcomingEvents'), value: null },
+            ]}
+          />
         </View>
       </View>
     );
   }
 
+  const [heroEvent, ...moreToday] = todayEvents;
+
   return (
     <View style={styles.container}>
-      {/* Fixed Header */}
-      <OrganizerScreenHeader
-        title={t('organizerDashboard.title')}
-        subtitle={headerSubtitle}
-        overlay
-        onHeight={onHeight}
-      />
-
       <ScrollView
         style={styles.scrollContent}
-        contentContainerStyle={{ paddingTop: headerH, paddingBottom: tabBarSpace + 24 }}
+        contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.primary}
+            progressViewOffset={insets.top}
           />
         }
       >
+        {greeting}
+
         {/* Activation checklist — only renders while steps remain (new organizers). */}
         <GettingStartedCard />
 
-        {/* Today's Events */}
-        <View style={styles.section}>
-        <SectionHeader title={t('organizerDashboard.todaysEvents')} />
-        {todayEvents.length === 0 ? (
-          <EmptyState
-            icon={Calendar}
-            title={t('organizerDashboard.noEventsToday')}
-            compact
-          />
-        ) : (
-          todayEvents.map((event) => {
-            const eventTime = new Date(event.start_datetime).toLocaleTimeString(locale, {
-              hour: 'numeric',
-              minute: '2-digit',
-            });
-
-            // Time, then the place when we have one. An empty location used to
-            // leave a pin icon with nothing next to it (TestFlight 2026-09-06).
-            const meta = [eventTime, event.location].filter(Boolean).join('  ·  ');
-
-            return (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.eventCard}
-                onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
-                activeOpacity={0.8}
-              >
-                <View style={styles.eventRow}>
-                  {/* Portrait poster, the same 4:5 thumb My Events uses. */}
-                  <View style={styles.eventPoster}>
-                    {event.posterUri ? (
-                      <Image
-                        source={{ uri: event.posterUri }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        transition={200}
-                        recyclingKey={event.id}
-                      />
-                    ) : (
-                      <>
-                        <LinearGradient
-                          colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={StyleSheet.absoluteFill}
-                        />
-                        <View style={styles.eventPosterBrand}>
-                          <TikemWordmark fontSize={15} />
-                        </View>
-                      </>
-                    )}
-                  </View>
-
-                  <View style={styles.eventBody}>
-                    <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-                    <View style={styles.eventMetaRow}>
-                      <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                      <Text style={styles.eventMetaText} numberOfLines={1}>{meta}</Text>
-                    </View>
-                    <StatTriplet
-                      columns={2}
-                      items={[
-                        { label: t('organizerDashboard.ticketsSold'), value: `${event.ticketsSold}/${event.capacity}` },
-                        { label: t('organizerDashboard.checkedIn'), value: event.ticketsCheckedIn },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* Scanning is the day-of job, so it gets the primary fill. */}
-                <TouchableOpacity
-                  style={styles.scanButton}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    navigation.navigate('TicketScanner', { eventId: event.id });
-                  }}
-                >
-                  <Ionicons name="qr-code-outline" size={18} color="#000" />
-                  <Text style={styles.scanButtonText}>{t('tabs.scan')}</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          })
+        {/* Tonight: only when something is on today. */}
+        {heroEvent && (
+          <View style={styles.section}>
+            <SectionHeader title={t('organizerDashboard.tonight')} />
+            {renderTonightHero(heroEvent)}
+            {moreToday.map(renderTonightRow)}
+          </View>
         )}
-      </View>
 
-      {/* This Week Stats — the reusable POSH metric triplet (§2.3).
-          Revenue / Tickets Sold / Upcoming, three across. `null` renders •••
-          while loading; zero-states (0 HTG / 0) render with confidence.
-          Revenue is per currency: the largest is the figure, others sit under
-          it as a caption (a 25 HTG sale once rendered as "$25.00"). */}
-      <View style={styles.section}>
-        <SectionHeader title={t('organizerDashboard.thisWeek')} />
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('OrganizerAnalytics')}
-        >
-          <StatTriplet
-            items={[
-              { label: t('organizerDashboard.revenue'), ...revenueCell(stats) },
-              { label: t('organizerDashboard.ticketsSold'), value: stats ? (stats.ticketsSold || 0) : null },
-              { label: t('organizerDashboard.upcomingEvents'), value: stats ? (stats.upcomingEvents || 0) : null },
-            ]}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <SectionHeader title={t('organizerDashboard.quickActions') || 'Quick Actions'} />
-        <View style={styles.quickActionsGrid}>
-          <TouchableOpacity 
-            style={styles.quickActionButton}
+        {/* This week — the POSH metric triplet, numbers on the canvas.
+            Revenue is per currency: the largest is the figure, others sit under
+            it as a caption (a 25 HTG sale once rendered as "$25.00"). */}
+        <View style={styles.section}>
+          <SectionHeader title={t('organizerDashboard.thisWeek')} />
+          <TouchableOpacity
+            activeOpacity={0.85}
             onPress={() => navigation.navigate('OrganizerAnalytics')}
           >
-            <Ionicons name="bar-chart-outline" size={20} color={colors.text} />
-            <Text style={styles.quickActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('organizerDashboard.analytics') || 'Analytics'}</Text>
+            <StatTriplet
+              items={[
+                { label: t('organizerDashboard.revenue'), ...revenueCell(stats) },
+                { label: t('organizerDashboard.ticketsSold'), value: stats ? (stats.ticketsSold || 0) : null },
+                { label: t('organizerDashboard.upcomingEvents'), value: stats ? (stats.upcomingEvents || 0) : null },
+              ]}
+            />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('OrganizerRefunds')}
-          >
-            <Ionicons name="refresh-outline" size={20} color={colors.text} />
-            <Text style={styles.quickActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('organizerDashboard.refunds') || 'Refunds'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('OrganizerEarningsHub')}
-          >
-            <Ionicons name="cash-outline" size={20} color={colors.text} />
-            <Text style={styles.quickActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('organizerDashboard.earnings') || 'Earnings'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('OrganizerPayoutSettings')}
-          >
-            <Ionicons name="wallet-outline" size={20} color={colors.text} />
-            <Text style={styles.quickActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('organizerDashboard.payouts') || 'Payouts'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('OrganizerTeamHub')}
-          >
-            <Ionicons name="people-outline" size={20} color={colors.text} />
-            <Text style={styles.quickActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('organizerDashboard.team') || 'Team'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Scan')}
-          >
-            <Ionicons name="qr-code-outline" size={20} color={colors.text} />
-            <Text style={styles.quickActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('tabs.scan') || 'Scan'}</Text>
-          </TouchableOpacity>
-          {/* No Create tile here (per beta feedback): the odd 7th tile broke the
-              2-col grid, and Create already lives in My Events' header button. */}
         </View>
-      </View>
+
+        {/* Upcoming: portrait poster rail, hidden when there is nothing ahead. */}
+        {upcomingEvents.length > 0 && (
+          <View style={styles.railSection}>
+            <View style={styles.railHeader}>
+              <SectionHeader
+                title={t('organizerDashboard.upcoming')}
+                onViewAll={() => navigation.navigate('MyEvents')}
+              />
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.railContent}
+            >
+              {upcomingEvents.map((event) => {
+                const place = event.venue_name || event.city || event.location;
+                const meta = [shortDate(event.start_datetime), place].filter(Boolean).join(' · ');
+                return (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={styles.railCard}
+                    activeOpacity={0.85}
+                    onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
+                  >
+                    <View style={styles.railPoster}>
+                      {renderPoster(
+                        event.id,
+                        event.banner_image_url || event.cover_image_url,
+                        event,
+                        15,
+                      )}
+                    </View>
+                    <Text style={styles.railTitle} numberOfLines={1}>{event.title}</Text>
+                    {!!meta && <Text style={styles.railMeta} numberOfLines={1}>{meta}</Text>}
+                    <Text style={styles.railSold} numberOfLines={1}>
+                      {`${event.tickets_sold || 0} ${t('common.sold')}`}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Manage */}
+        <View style={styles.section}>
+          <SectionHeader title={t('organizerDashboard.manage')} />
+          <ActionTileGrid tiles={quickActions} variant="stacked" columns={2} />
+        </View>
       </ScrollView>
     </View>
   );
@@ -344,99 +468,206 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   scrollContent: {
     flex: 1,
   },
-  // Tighter vertical rhythm so all three sections (Today / This Week / Quick
-  // Actions) fit one screen without scrolling (beta feedback).
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    gap: 16,
+  },
+  greetingText: {
+    flex: 1,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  screenTitle: {
+    fontSize: 36,
+    lineHeight: 40,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    color: colors.text,
+  },
+  // A true circle: avatars keep the round shape.
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  avatarInitial: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+  },
   section: {
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingTop: 20,
+    paddingBottom: 4,
   },
-  // Filled surface (not a hairline box): poster left, details right, and the
-  // Scan action across the bottom.
-  eventCard: {
+  // Tonight hero: filled surface, big 4:5 poster, text below it.
+  heroCard: {
     backgroundColor: colors.surface,
-    borderRadius: RADIUS.lg,
-    padding: 12,
-    marginBottom: SPACING.md,
+    borderRadius: radius.xl,
+    padding: 14,
   },
-  eventRow: {
-    flexDirection: 'row',
-    gap: 14,
-  },
-  eventPoster: {
-    width: 96,
+  heroPoster: {
+    width: '100%',
     aspectRatio: 4 / 5,
-    borderRadius: radius.chip,
+    borderRadius: radius.xl - 6,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
-  eventPosterBrand: {
+  posterBrand: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.9,
     paddingHorizontal: 8,
   },
-  eventBody: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  eventTitle: {
-    fontFamily: font.serif,
-    fontSize: 21,
-    lineHeight: 25,
+  heroTitle: {
+    marginTop: 16,
+    paddingHorizontal: 4,
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '700',
+    letterSpacing: -0.3,
     color: colors.text,
   },
-  eventMetaRow: {
+  heroMeta: {
+    marginTop: 6,
+    paddingHorizontal: 4,
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  heroStatusRow: {
+    marginTop: 16,
+    paddingHorizontal: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  eventMetaText: {
-    fontSize: 13,
+  heroSoldText: {
+    fontSize: 14,
     color: colors.textSecondary,
-    marginLeft: 5,
-    flex: 1,
   },
-  scanButton: {
-    marginTop: 12,
+  progressTrack: {
+    marginTop: 10,
+    marginHorizontal: 4,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  heroCheckedIn: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+    fontSize: 13,
+    color: T.textTertiary,
+  },
+  primaryButton: {
+    marginTop: 18,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: radius.button,
-    paddingVertical: 11,
   },
-  scanButtonText: {
+  primaryButtonText: {
     color: '#000',
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
-    marginLeft: 6,
   },
-  quickActionsGrid: {
+  tonightRow: {
+    marginTop: 10,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 10,
-  },
-  quickActionButton: {
-    width: '48%',
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: RADIUS.lg,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
     alignItems: 'center',
-    // Left-align icon + label: centering each button's content made the icons
-    // land at different x-positions (labels vary in width), so the grid read as
-    // misaligned. Flex-start gives every icon a shared left edge.
-    justifyContent: 'flex-start',
-    flexDirection: 'row',
+    gap: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 12,
   },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
+  tonightRowPoster: {
+    width: 64,
+    aspectRatio: 4 / 5,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+  },
+  tonightRowBody: {
+    flex: 1,
+    gap: 3,
+  },
+  tonightRowTitle: {
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
-    marginLeft: 10,
-    flexShrink: 1,
+  },
+  tonightRowMeta: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  secondaryButton: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.button,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Rail: header keeps the gutter, the scroller bleeds to the edge.
+  railSection: {
+    paddingTop: 20,
+    paddingBottom: 4,
+  },
+  railHeader: {
+    paddingHorizontal: 20,
+  },
+  railContent: {
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  railCard: {
+    width: 170,
+  },
+  railPoster: {
+    width: '100%',
+    aspectRatio: 2 / 3,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceRaised,
+    overflow: 'hidden',
+  },
+  railTitle: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  railMeta: {
+    marginTop: 3,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  railSold: {
+    marginTop: 3,
+    fontSize: 13,
+    color: T.textTertiary,
   },
 });

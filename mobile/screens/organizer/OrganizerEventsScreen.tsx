@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -22,18 +23,25 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { resolvePosterTheme } from '../../lib/posterGradient';
-import { RADIUS } from '../../config/brand';
-import { font, radius } from '../../theme/tokens';
+import { radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
 import { artByKey } from '../../lib/artLibrary';
 import StatusChip from '../../components/StatusChip';
-import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
-import { useOverlayHeaderInset } from '../../components/OverlayHeader';
-import SegmentedTabs from '../../components/organizer/SegmentedTabs';
 import { TikemWordmark } from '../../components/TikemWordmark';
 
-type EventStatus = 'draft' | 'unpublished' | 'sold_out' | 'rejected' | 'cancelled';
+type EventStatus =
+  | 'on_sale'
+  | 'completed'
+  | 'draft'
+  | 'unpublished'
+  | 'sold_out'
+  | 'rejected'
+  | 'cancelled';
+
+// Card geometry, shared by the loaded rows and the skeleton so nothing jumps
+// when data lands.
+const THUMB_WIDTH = 92;
 
 export default function OrganizerEventsScreen() {
   const { colors } = useTheme();
@@ -41,11 +49,11 @@ export default function OrganizerEventsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userProfile } = useAuth();
   const { t, language } = useI18n();
+  const insets = useSafeAreaInsets();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   // The tab bar is a translucent overlay, so reserve its height here or the
   // last row ends up sitting behind it.
   const tabBarSpace = useTabBarSpace();
-  const { height: headerH, onHeight } = useOverlayHeaderInset();
   const [eventTab, setEventTab] = useState<'upcoming' | 'past'>('upcoming');
   const [allEvents, setAllEvents] = useState<OrganizerEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,42 +105,31 @@ export default function OrganizerEventsScreen() {
 
   const events = eventTab === 'upcoming' ? upcomingEvents : pastEvents;
 
-  const createButton = (
-    <TouchableOpacity
-      style={styles.createButton}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      onPress={() => navigation.navigate('CreateEvent')}
-    >
-      <Ionicons name="add" size={18} color={colors.text} />
-      <Text style={styles.createButtonText}>{t('organizerEvents.create')}</Text>
-    </TouchableOpacity>
-  );
-
-  // Only the exceptions earn a label. A live event (and a past one that
-  // simply finished) is the normal state, so it returns null and the row
-  // carries no status at all — "PUBLISHED" on every row was pure noise.
-  const getDisplayStatus = (event: OrganizerEvent): EventStatus | null => {
+  const getDisplayStatus = (event: OrganizerEvent, isPast: boolean): EventStatus => {
     if ((event as any).rejected === true) return 'rejected';
     if (event.status === 'cancelled') return 'cancelled';
     if (!event.is_published) return event.status === 'draft' ? 'draft' : 'unpublished';
     // `total_tickets > 0` guard: an event with no capacity set used to read
     // as sold out because 0 >= 0.
     if (event.total_tickets > 0 && (event.tickets_sold || 0) >= event.total_tickets) return 'sold_out';
-    return null;
+    return isPast ? 'completed' : 'on_sale';
   };
 
   // Map an event status to the locked StatusChip semantic (POSH §2.7):
-  //   draft/unpublished → action-needed (amber) · sold out/rejected/cancelled → red.
+  //   on sale → teal · draft/unpublished/completed → grey ·
+  //   sold out/rejected/cancelled → red. Payout blocked is amber (below).
   const getChipStatus = (status: EventStatus): string => {
     switch (status) {
-      case 'draft':
-      case 'unpublished':
-        return 'actionNeeded';
+      case 'on_sale':
+        return 'live';
       case 'sold_out':
         return 'soldOut';
       case 'rejected':
       case 'cancelled':
         return 'error';
+      case 'draft':
+      case 'unpublished':
+      case 'completed':
       default:
         return 'neutral';
     }
@@ -140,6 +137,10 @@ export default function OrganizerEventsScreen() {
 
   const getStatusLabel = (status: EventStatus) => {
     switch (status) {
+      case 'on_sale':
+        return t('organizerEvents.status.onSale');
+      case 'completed':
+        return t('organizerEvents.status.completed');
       case 'draft':
         return t('organizerEvents.status.draft');
       case 'unpublished':
@@ -155,39 +156,78 @@ export default function OrganizerEventsScreen() {
     }
   };
 
+  // Big left-aligned sans title + a small filled square "+" (radius 12). The
+  // segmented control sits right under it, so the whole block stays put while
+  // the list scrolls.
+  const header = (
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+          {t('organizerEvents.title')}
+        </Text>
+        <TouchableOpacity
+          style={styles.createButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={() => navigation.navigate('CreateEvent')}
+          accessibilityRole="button"
+          accessibilityLabel={t('organizerEvents.create')}
+        >
+          <Ionicons name="add" size={24} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Rounded-rectangle segmented control: surface track, raised fill on
+          the selected half. Never a pill. */}
+      {loading ? (
+        <Skeleton width="100%" height={46} radius={radius.md} />
+      ) : (
+        <View style={styles.segmentTrack} accessibilityRole="tablist">
+          {([
+            { key: 'upcoming', label: t('organizerEvents.upcoming'), count: upcomingEvents.length },
+            { key: 'past', label: t('organizerEvents.past'), count: pastEvents.length },
+          ] as const).map((tab) => {
+            const active = eventTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.segment, active && styles.segmentActive]}
+                onPress={() => setEventTab(tab.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${tab.label}, ${tab.count}`}
+              >
+                <Text
+                  style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}
+                  numberOfLines={1}
+                >
+                  {`${tab.label} · ${tab.count}`}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
-        {/* Same overlay header as the loaded branch so the chrome doesn't jump
-            from an in-flow bar to a floating blur when data lands. */}
-        <OrganizerScreenHeader
-          title={t('organizerEvents.title')}
-          right={createButton}
-          overlay
-          onHeight={onHeight}
-        />
-        {/* Mirrors the segmented control row (pill ≈ 35 tall: paddingVertical
-            9×2 + 17 text) that reserves the header height when loaded. */}
-        <View style={[styles.segmentedWrap, { marginTop: headerH }]}>
-          <View style={styles.segmentedSkeletonRow}>
-            <Skeleton width={110} height={35} radius={999} />
-            <Skeleton width={90} height={35} radius={999} />
-          </View>
-        </View>
-        {/* Event cards: 104-wide 4:5 poster thumb + title/meta/footer column. */}
-        <View style={styles.skeletonList}>
+        {header}
+        {/* Event cards: 2:3 poster thumb + status/title/meta/sales column. */}
+        <View style={styles.list}>
           {[0, 1, 2].map((i) => (
             <View key={i} style={styles.eventCard}>
-              <Skeleton width={104} aspectRatio={4 / 5} radius={radius.chip} />
-              <View style={styles.skeletonCardBody}>
+              <Skeleton width={THUMB_WIDTH} aspectRatio={2 / 3} radius={radius.button} />
+              <View style={styles.eventContent}>
                 <View>
-                  <Skeleton width="72%" height={20} radius={7} />
-                  <Skeleton width="60%" height={14} radius={5} style={{ marginTop: 8 }} />
-                  <Skeleton width="40%" height={12} radius={5} style={{ marginTop: 6 }} />
+                  <Skeleton width={70} height={10} radius={4} />
+                  <Skeleton width="80%" height={18} radius={6} style={{ marginTop: 12 }} />
+                  <Skeleton width="60%" height={13} radius={5} style={{ marginTop: 8 }} />
                 </View>
                 <View>
-                  <Skeleton width={80} height={12} radius={5} />
-                  <Skeleton width="100%" height={3} radius={2} style={{ marginTop: 6 }} />
+                  <Skeleton width={90} height={11} radius={4} />
+                  <Skeleton width="100%" height={4} radius={2} style={{ marginTop: 8 }} />
                 </View>
               </View>
             </View>
@@ -199,31 +239,12 @@ export default function OrganizerEventsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <OrganizerScreenHeader
-        title={t('organizerEvents.title')}
-        right={createButton}
-        overlay
-        onHeight={onHeight}
-      />
-
-      {/* Segmented Control — static, so it reserves the floating header's
-          measured height on behalf of the list below. */}
-      <View style={[styles.segmentedWrap, { marginTop: headerH }]}>
-        <SegmentedTabs
-          value={eventTab}
-          onChange={(key) => setEventTab(key as 'upcoming' | 'past')}
-          tabs={[
-            { key: 'upcoming', label: t('organizerEvents.upcoming'), count: upcomingEvents.length },
-            { key: 'past', label: t('organizerEvents.past'), count: pastEvents.length },
-          ]}
-        />
-      </View>
+      {header}
 
       {/* Events List */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace + 24 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -247,19 +268,22 @@ export default function OrganizerEventsScreen() {
           events.map((event) => {
             const eventDate = new Date(event.start_datetime);
             const hasDate = !Number.isNaN(eventDate.getTime());
-            // One compact line — "Sat, Sep 27 · 4:00 PM". The year only
-            // appears when it isn't this one (mostly the Past tab).
+            // Compact date — "Sat, Nov 18". The year only appears when it
+            // isn't this one (mostly the Past tab). Time goes to the a11y label.
             const dateLabel = hasDate
-              ? `${eventDate.toLocaleDateString(locale, {
+              ? eventDate.toLocaleDateString(locale, {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric',
                   ...(eventDate.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}),
-                })} · ${eventDate.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}`
+                })
+              : '';
+            const timeLabel = hasDate
+              ? eventDate.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
               : '';
 
-            const displayStatus = getDisplayStatus(event);
-            const statusLabel = displayStatus ? getStatusLabel(displayStatus) : null;
+            const displayStatus = getDisplayStatus(event, eventTab === 'past');
+            const statusLabel = getStatusLabel(displayStatus);
             const payoutBlocked = Boolean((event as any).payout_blocked);
 
             // Attendee-side reads banner first, then cover. Match that so the
@@ -275,6 +299,7 @@ export default function OrganizerEventsScreen() {
               (event.city && String(event.city).trim()) ||
               (event.commune && event.commune.trim()) ||
               '';
+            const metaLabel = [dateLabel, venueLabel].filter(Boolean).join(' · ');
 
             const sold = event.tickets_sold || 0;
             const capacity = event.total_tickets || 0;
@@ -292,6 +317,7 @@ export default function OrganizerEventsScreen() {
                 accessibilityLabel={[
                   event.title,
                   dateLabel,
+                  timeLabel,
                   venueLabel,
                   statusLabel,
                   payoutBlocked ? t('organizerEvents.status.payoutBlocked') : null,
@@ -300,13 +326,9 @@ export default function OrganizerEventsScreen() {
                 accessibilityHint={t('organizerEvents.manage')}
                 onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id, event })}
               >
-                {/* Vertical poster thumbnail on the left. Real image when we have
-                    one; otherwise the poster gradient with a small centered
-                    wordmark (branded-strip treatment adapted to a portrait thumb). */}
+                {/* Portrait 2:3 poster thumb. Real image when we have one;
+                    otherwise the poster gradient with a small centered wordmark. */}
                 <View style={styles.eventThumb}>
-                  {/* Fallback art only. The old comment claimed cached posters
-                      never flash — true for cached, false on first load, where
-                      the teal gradient showed until the image arrived. */}
                   {!posterUri && (
                     <LinearGradient
                       colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
@@ -326,44 +348,37 @@ export default function OrganizerEventsScreen() {
                     />
                   ) : (
                     <View style={styles.eventThumbBrand}>
-                      <TikemWordmark fontSize={16} />
+                      <TikemWordmark fontSize={14} />
                     </View>
                   )}
                 </View>
-                {/* Three quiet tiers and no icons: title, when/where, sales.
-                    A status appears only when it's NOT the normal state. */}
+
                 <View style={styles.eventContent}>
                   <View>
-                    {(statusLabel || payoutBlocked) && (
-                      <View style={styles.statusRow}>
-                        {displayStatus && statusLabel ? (
-                          <StatusChip status={getChipStatus(displayStatus)} label={statusLabel} />
-                        ) : null}
+                    <View style={styles.statusRow}>
+                      <View style={styles.statusChips}>
+                        <StatusChip status={getChipStatus(displayStatus)} label={statusLabel} />
                         {/* A live event whose payout account can no longer
                             accept a charge (set by the Connect health sweep).
                             Buyers would fail at checkout, so it always shows. */}
                         {payoutBlocked ? (
-                          <StatusChip status="error" label={t('organizerEvents.status.payoutBlocked')} />
+                          <StatusChip status="actionNeeded" label={t('organizerEvents.status.payoutBlocked')} />
                         ) : null}
                       </View>
-                    )}
+                      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                    </View>
                     <Text style={styles.eventTitle} numberOfLines={2}>
                       {event.title}
                     </Text>
-                    {dateLabel ? (
-                      <Text style={styles.metaPrimary} numberOfLines={1}>
-                        {dateLabel}
-                      </Text>
-                    ) : null}
-                    {venueLabel ? (
-                      <Text style={styles.metaSecondary} numberOfLines={1}>
-                        {venueLabel}
+                    {metaLabel ? (
+                      <Text style={styles.metaText} numberOfLines={1}>
+                        {metaLabel}
                       </Text>
                     ) : null}
                   </View>
 
                   <View style={styles.salesBlock}>
-                    <Text style={styles.salesText}>{salesLabel}</Text>
+                    <Text style={styles.salesText} numberOfLines={1}>{salesLabel}</Text>
                     {capacity > 0 ? (
                       <View style={styles.salesTrack}>
                         <View style={[styles.salesFill, { width: `${soldRatio * 100}%` }]} />
@@ -385,59 +400,83 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
-  // Matches the loaded list: gutter 16, first card flush under the tabs row.
-  skeletonList: {
+  header: {
     paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: colors.background,
   },
-  // SegmentedTabs container row (gap 8, gutter 16, paddingVertical 4).
-  segmentedSkeletonRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  // Mirrors eventContent: text stack on top, sales line + track at the foot.
-  skeletonCardBody: {
-    flex: 1,
-    paddingVertical: 2,
-    justifyContent: 'space-between',
-  },
-  createButton: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceRaised,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: radius.button,
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 18,
   },
-  createButtonText: {
+  title: {
+    flex: 1,
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '800',
+    letterSpacing: -0.8,
     color: colors.text,
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 4,
   },
-  segmentedWrap: {
-    paddingVertical: 12,
+  // Small filled square, not a pill and not a text button.
+  createButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentTrack: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: 4,
+  },
+  segment: {
+    flex: 1,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
+  segmentActive: {
+    backgroundColor: colors.surfaceRaised,
+  },
+  segmentLabel: {
+    fontSize: 15,
+    fontVariant: ['tabular-nums'],
+  },
+  segmentLabelActive: {
+    color: colors.text,
+    fontWeight: '700',
+  },
+  segmentLabelInactive: {
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
   },
-  // No card background (POSH poster-forward): the poster + text sit directly on
-  // the canvas, so the artwork carries the card, not a grey container.
+  list: {
+    paddingHorizontal: 16,
+    gap: 14,
+  },
+  // Filled surface card (never a hairline box).
   eventCard: {
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 24,
+    gap: 16,
+    padding: 14,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
   },
-  // Vertical poster thumbnail on the left (portrait ~4:5). Rounded here since
-  // the card no longer clips it.
   eventThumb: {
-    width: 104,
-    aspectRatio: 4 / 5,
-    // ~10% max roundness per beta feedback (104px * 0.10 ≈ 10).
-    borderRadius: radius.chip,
-    backgroundColor: colors.surfaceMuted,
+    width: THUMB_WIDTH,
+    aspectRatio: 2 / 3,
+    borderRadius: radius.button,
+    backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
   eventThumbBrand: {
@@ -449,54 +488,55 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   eventContent: {
     flex: 1,
-    paddingVertical: 2,
+    paddingVertical: 4,
     justifyContent: 'space-between',
   },
   statusRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10,
+  },
+  statusChips: {
+    flex: 1,
+    flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 6,
+    columnGap: 12,
+    rowGap: 4,
   },
   eventTitle: {
-    fontFamily: font.serif,
-    fontSize: 20,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '700',
+    letterSpacing: -0.2,
     color: colors.text,
-    lineHeight: 24,
   },
-  // Date/time is the one fact an organizer scans for, so it gets the brighter
-  // tier; the venue sits one step quieter beneath it.
-  metaPrimary: {
+  metaText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginTop: 6,
-  },
-  metaSecondary: {
-    fontSize: 13,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: 4,
   },
-  // Sales sit at the foot of the poster as one quiet line over a slim filled
-  // track — no ticket icon, no divider, no separate "Manage" link (the whole
-  // row is the tap target).
   salesBlock: {
-    marginTop: 10,
+    marginTop: 14,
   },
   salesText: {
     fontSize: 12,
     color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
     fontVariant: ['tabular-nums'],
   },
   salesTrack: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
     backgroundColor: colors.surfaceRaised,
-    marginTop: 6,
+    marginTop: 8,
     overflow: 'hidden',
   },
   salesFill: {
     height: '100%',
-    backgroundColor: colors.primary,
+    borderRadius: 2,
+    backgroundColor: colors.text,
   },
 });

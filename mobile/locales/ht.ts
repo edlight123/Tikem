@@ -1000,6 +1000,9 @@ export default {
   },
 
   staffEvents: {
+    noAssignedBody: 'Lè yon òganizatè ajoute w nan ekip pòt la, evènman yo ap parèt isit la.',
+    comingUp: 'K ap vini',
+    nextUp: 'Pwochen',
     staffModeTitle: 'Mòd staff',
     staffModeSubtitle: 'Evènman ou ka eskane',
     assignedTitle: 'Evènman asiyen',
@@ -1199,10 +1202,21 @@ export default {
   },
 
   organizerEventManagement: {
+    openScanner: 'Louvri eskanè pòt la',
+    stats: {
+      sellThrough: 'Pousantaj vann',
+      checkedIn: 'Antre',
+      sold: 'Vann',
+    },
+    status: {
+      paused: 'An poz',
+      onSale: 'An vant',
+    },
     loading: 'Nap chaje evènman an...',
     headerTitle: 'Jere evènman',
     notFound: 'Evènman pa jwenn',
     sections: {
+      ticketTypes: 'Kalite tikè',
       quickActions: 'Aksyon rapid',
       performance: 'Pèfòmans',
       eventControls: 'Kontwòl evènman',
@@ -2078,6 +2092,13 @@ export default {
   },
 
   organizerDashboard: {
+    onSale: 'An vant',
+    liveNow: 'An dirèk kounye a',
+    soldOf: '{sold} sou {total} vann',
+    openScanner: 'Louvri eskanè pòt la',
+    manage: 'Jere',
+    upcoming: 'K ap vini',
+    tonight: 'Aswè a',
     loading: 'Nap chaje tablo a…',
     title: 'Tablo òganizatè',
     welcomeBack: 'Byenveni ankò',
@@ -2186,6 +2207,7 @@ export default {
     emptyPastBody: 'Evènman pase ou yo ap parèt isit la',
     manage: 'Jere',
     status: {
+      onSale: 'An vant',
       draft: 'Bouyon',
       published: 'Pibliye',
       soldOut: 'Fini',
@@ -2198,12 +2220,13 @@ export default {
   },
 
   organizerScan: {
+    offlineReadyShort: 'Pare san entènèt',
     loading: 'Nap chaje evènman yo…',
     title: 'Eskane',
     subtitle: 'Tcheke patisipan yo nan evènman w',
     howTitle: 'Kijan pou eskane biyè',
     howStep1: 'Chwazi evènman w ap tcheke a',
-    howStep2: 'Peze « Kòmanse eskane » anba a',
+    howStep2: 'Peze « Kòmanse eskane »',
     howStep3: 'Vize kamera a sou QR code patisipan an',
     howStep4: 'Biyè a ap valide otomatikman',
     selectEvent: 'Chwazi evènman',
@@ -3132,6 +3155,7 @@ export default {
       reentry: 'Re-antre',
     },
     result: {
+      scanNext: 'Eskane pwochen an',
       valid: 'Valid',
       alreadyIn: 'Deja verifye',
       invalid: 'Pa valid',

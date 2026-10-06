@@ -1433,6 +1433,9 @@ export default {
   },
 
   staffEvents: {
+    noAssignedBody: 'When an organizer adds you as door staff, their events show up here.',
+    comingUp: 'Coming up',
+    nextUp: 'Next up',
     staffModeTitle: 'Staff Mode',
     staffModeSubtitle: 'Events you can scan for',
     assignedTitle: 'Assigned Events',
@@ -1632,10 +1635,21 @@ export default {
   },
 
   organizerEventManagement: {
+    openScanner: 'Open door scanner',
+    stats: {
+      sellThrough: 'Sell-through',
+      checkedIn: 'Checked in',
+      sold: 'Sold',
+    },
+    status: {
+      paused: 'Paused',
+      onSale: 'On sale',
+    },
     loading: 'Loading event...',
     headerTitle: 'Manage Event',
     notFound: 'Event not found',
     sections: {
+      ticketTypes: 'Ticket types',
       quickActions: 'Quick Actions',
       performance: 'Performance',
       eventControls: 'Event Controls',
@@ -2514,6 +2528,13 @@ export default {
   },
 
   organizerDashboard: {
+    onSale: 'On sale',
+    liveNow: 'Live now',
+    soldOf: '{sold} of {total} sold',
+    openScanner: 'Open door scanner',
+    manage: 'Manage',
+    upcoming: 'Upcoming',
+    tonight: 'Tonight',
     loading: 'Loading dashboard...',
     title: 'Organizer Dashboard',
     welcomeBack: 'Welcome back',
@@ -2622,6 +2643,7 @@ export default {
     emptyPastBody: 'Your past events will appear here',
     manage: 'Manage',
     status: {
+      onSale: 'On sale',
       draft: 'Draft',
       published: 'Published',
       soldOut: 'Sold Out',
@@ -2634,12 +2656,13 @@ export default {
   },
 
   organizerScan: {
+    offlineReadyShort: 'Offline ready',
     loading: 'Loading events...',
     title: 'Scan',
     subtitle: 'Check in attendees at your event',
     howTitle: 'How to scan tickets',
     howStep1: "Select the event you're checking in for",
-    howStep2: 'Tap "Start Scanning" below',
+    howStep2: 'Tap "Start scanning"',
     howStep3: "Point your camera at the attendee's QR code",
     howStep4: 'The ticket will be validated automatically',
     selectEvent: 'Select Event',
@@ -3144,6 +3167,7 @@ export default {
       reentry: 'Re-entry',
     },
     result: {
+      scanNext: 'Scan next',
       valid: 'Valid',
       alreadyIn: 'Already checked in',
       invalid: 'Invalid',

@@ -18,12 +18,13 @@ import {
   withdrawableMinor,
   type EventEarningsRow,
 } from '../../lib/eventEarnings';
-import { font, radius } from '../../theme/tokens';
+import { radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
 import SectionHeader from '../../components/SectionHeader';
 import StatusChip from '../../components/StatusChip';
 import WhitePillCTA from '../../components/WhitePillCTA';
+import StatTriplet from '../../components/StatTriplet';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import FormSheet from '../../components/organizer/FormSheet';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -36,6 +37,8 @@ type EventMoney = {
   grossMinor: number;
   withdrawnMinor: number;
   currency: string;
+  /** Settlement state from the earnings row ('ready' | 'pending' | 'locked'). */
+  settlementStatus: string | null;
 };
 
 type PayoutHistoryItem = {
@@ -134,6 +137,7 @@ export default function OrganizerEarningsHubScreen() {
               grossMinor: Math.max(0, Number(row.grossSales || 0)),
               withdrawnMinor: Math.max(0, Number(row.withdrawnAmount || 0)),
               currency: earningsCurrency(row),
+              settlementStatus: row.settlementStatus ? String(row.settlementStatus) : null,
             },
           ] as const;
         } catch {
@@ -212,6 +216,26 @@ export default function OrganizerEarningsHubScreen() {
     if (k === 'cancelled') return { tone: 'neutral', key: 'cancelled' };
     return { tone: 'neutral', key: null as string | null };
   };
+  const payoutMethodIcon = (method?: string): keyof typeof Ionicons.glyphMap => {
+    const k = String(method || '').toLowerCase();
+    if (k.includes('mobile') || k.includes('moncash')) return 'phone-portrait-outline';
+    if (k.includes('stripe')) return 'card-outline';
+    return 'business-outline';
+  };
+  // Per-event status, only when the earnings row supports it: money ready now
+  // (teal), or a balance still settling (amber). Fully paid-out events get none.
+  const eventStatus = (m?: EventMoney) => {
+    if (!m) return null;
+    if (m.availableMinor > 0) {
+      return { status: 'active', label: t('organizerEarnings.settlementLabels.ready') };
+    }
+    const remaining = (m.netMinor || 0) - m.withdrawnMinor;
+    const s = String(m.settlementStatus || '').toLowerCase();
+    if (remaining > 0 && (s === 'pending' || s === 'locked')) {
+      return { status: 'pending', label: t(`organizerEarnings.settlementLabels.${s}`) };
+    }
+    return null;
+  };
   const payoutMethodLabel = (method?: string) => {
     const k = String(method || '').toLowerCase();
     if (k.includes('mobile') || k.includes('moncash')) return 'MonCash';
@@ -244,6 +268,9 @@ export default function OrganizerEarningsHubScreen() {
     return m ? { big: m[1], code: m[2] } : { big: text, code: '' };
   };
 
+  const fmtStat = (minor: number) =>
+    formatCurrency(minor, leadCurrency, { fromCents: true, decimals: leadCurrency === 'HTG' ? 0 : 2 });
+
   const renderBalance = () => {
     if (!moneyLoaded) {
       return (
@@ -258,7 +285,7 @@ export default function OrganizerEarningsHubScreen() {
     return (
       <View style={styles.balanceBlock}>
         <View style={styles.balanceRow}>
-          <Text style={styles.balance} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={styles.balance} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
             {lead.big}
           </Text>
           {lead.code ? <Text style={styles.balanceCode}>{lead.code}</Text> : null}
@@ -281,7 +308,7 @@ export default function OrganizerEarningsHubScreen() {
   return (
     <View style={styles.container}>
       <OrganizerScreenHeader
-        title={t('organizerEarningsHub.title').toLowerCase()}
+        title=""
         onBack={() => navigation.goBack()}
         overlay
         onHeight={onHeight}
@@ -292,18 +319,21 @@ export default function OrganizerEarningsHubScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
         }
       >
+        <Text style={styles.screenTitle} accessibilityRole="header">
+          {t('organizerEarningsHub.title')}
+        </Text>
         {!loaded ? (
           [0, 1, 2].map((i) => (
-            <Skeleton key={i} width="100%" height={85} radius={10} style={{ marginBottom: 18 }} />
+            <Skeleton key={i} width="100%" height={96} radius={radius.xl} style={{ marginBottom: 12 }} />
           ))
         ) : events.length === 0 ? (
           <EmptyState icon={Wallet} title={t('organizerEarningsHub.empty')} compact />
         ) : (
           <>
-            <Text style={styles.monoLabel}>{t('organizerEarningsHub.availableTitle')}</Text>
+            <Text style={styles.eyebrow}>{t('organizerEarnings.availableToWithdraw')}</Text>
             {renderBalance()}
 
-            {/* The one white pill on this screen (POSH §2.2). */}
+            {/* The one white primary action on this screen (POSH §2.2). */}
             <WhitePillCTA
               label={t('organizerEarningsHub.withdraw')}
               onPress={onWithdraw}
@@ -316,23 +346,17 @@ export default function OrganizerEarningsHubScreen() {
               accessibilityRole="button"
             >
               <Text style={styles.settingsLinkText}>{t('organizerEarningsHub.payoutSettings')}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
             </TouchableOpacity>
 
             {moneyLoaded && !moneyFailed ? (
-              <View style={styles.statsRow}>
-                {[
-                  { label: t('organizerEarningsHub.statGross'), value: stats.gross },
-                  { label: t('organizerEarningsHub.statNet'), value: stats.net },
-                  { label: t('organizerEarningsHub.statWithdrawn'), value: stats.withdrawn },
-                ].map((st) => (
-                  <View key={st.label} style={styles.stat}>
-                    <Text style={styles.statLabel}>{st.label}</Text>
-                    <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
-                      {formatCurrency(st.value, leadCurrency, { fromCents: true, decimals: leadCurrency === 'HTG' ? 0 : 2 })}
-                    </Text>
-                  </View>
-                ))}
+              <View style={styles.statsWrap}>
+                <StatTriplet
+                  items={[
+                    { label: t('organizerEarningsHub.statGross'), value: fmtStat(stats.gross) },
+                    { label: t('organizerEarningsHub.statNet'), value: fmtStat(stats.net) },
+                    { label: t('organizerEarningsHub.statWithdrawn'), value: fmtStat(stats.withdrawn) },
+                  ]}
+                />
               </View>
             ) : null}
 
@@ -343,11 +367,12 @@ export default function OrganizerEarningsHubScreen() {
             {events.map((event) => {
               const posterUri = event.banner_image_url || event.cover_image_url;
               const when = event.start_datetime
-                ? safeFormatForLanguage(event.start_datetime, 'MMM d', language)
+                ? safeFormatForLanguage(event.start_datetime, 'MMM d, yyyy', language)
                 : '';
               const m = money[event.id];
               const net =
                 m && m.netMinor != null ? formatCurrency(m.netMinor, m.currency, { fromCents: true }) : null;
+              const chip = eventStatus(m);
 
               return (
                 <TouchableOpacity
@@ -367,7 +392,7 @@ export default function OrganizerEarningsHubScreen() {
                     />
                   ) : (
                     <View style={[styles.poster, styles.posterFallback]}>
-                      <Ionicons name="image-outline" size={16} color={colors.textTertiary} />
+                      <Ionicons name="image-outline" size={18} color={colors.textTertiary} />
                     </View>
                   )}
                   <View style={styles.rowBody}>
@@ -380,14 +405,20 @@ export default function OrganizerEarningsHubScreen() {
                       </Text>
                     )}
                   </View>
-                  {net ? (
+                  {net || chip ? (
                     <View style={styles.rowRight}>
-                      <Text style={styles.rowNet} numberOfLines={1}>
-                        {net}
-                      </Text>
+                      {net ? (
+                        <Text style={styles.rowNet} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                          {net}
+                        </Text>
+                      ) : null}
+                      {chip ? (
+                        <View style={styles.rowChip}>
+                          <StatusChip status={chip.status} label={chip.label} />
+                        </View>
+                      ) : null}
                     </View>
                   ) : null}
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                 </TouchableOpacity>
               );
             })}
@@ -401,20 +432,30 @@ export default function OrganizerEarningsHubScreen() {
                   const tone = payoutTone(p.status);
                   return (
                     <View key={p.id} style={styles.payoutRow}>
-                      <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={styles.payoutAmount}>
-                          {formatCurrency(p.amount, p.currency || 'HTG', { fromCents: true })}
-                        </Text>
-                        <Text style={styles.payoutMeta} numberOfLines={1}>
-                          {[payoutMethodLabel(p.method), safeFormatForLanguage(p.createdAt, 'MMM d', language)]
-                            .filter(Boolean)
-                            .join(' · ')}
+                      <View style={styles.payoutIcon}>
+                        <Ionicons name={payoutMethodIcon(p.method)} size={22} color={colors.text} />
+                      </View>
+                      <View style={styles.rowBody}>
+                        {!!payoutMethodLabel(p.method) && (
+                          <Text style={styles.rowTitle} numberOfLines={1}>
+                            {payoutMethodLabel(p.method)}
+                          </Text>
+                        )}
+                        <Text style={styles.rowMeta} numberOfLines={1}>
+                          {safeFormatForLanguage(p.createdAt, 'MMM d, yyyy', language)}
                         </Text>
                       </View>
-                      <StatusChip
-                        status={tone.tone}
-                        label={tone.key ? t(`organizerPayoutSettings.payoutHistory.status.${tone.key}`) : p.status}
-                      />
+                      <View style={styles.rowRight}>
+                        <Text style={styles.rowNet} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                          {formatCurrency(p.amount, p.currency || 'HTG', { fromCents: true })}
+                        </Text>
+                        <View style={styles.rowChip}>
+                          <StatusChip
+                            status={tone.tone}
+                            label={tone.key ? t(`organizerPayoutSettings.payoutHistory.status.${tone.key}`) : p.status}
+                          />
+                        </View>
+                      </View>
                     </View>
                   );
                 })}
@@ -466,18 +507,26 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     scrollContent: {
       paddingHorizontal: 20,
-      paddingBottom: 40,
+      paddingBottom: 48,
     },
-    monoLabel: {
-      fontFamily: font.mono,
-      fontSize: 11,
-      letterSpacing: 1.6,
+    screenTitle: {
+      fontSize: 38,
+      lineHeight: 44,
+      fontWeight: '800',
+      letterSpacing: -0.8,
+      color: colors.text,
+      marginBottom: 28,
+    },
+    eyebrow: {
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 1.2,
       textTransform: 'uppercase',
       color: colors.textSecondary,
-      marginBottom: 6,
+      marginBottom: 8,
     },
     balanceBlock: {
-      marginBottom: 22,
+      marginBottom: 28,
     },
     balanceRow: {
       flexDirection: 'row',
@@ -486,103 +535,60 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     balance: {
       flexShrink: 1,
-      fontSize: 52,
-      lineHeight: 60,
+      fontSize: 54,
+      lineHeight: 62,
       fontWeight: '800',
-      letterSpacing: -1,
+      letterSpacing: -1.2,
+      fontVariant: ['tabular-nums'],
       color: colors.text,
     },
     balanceCode: {
       fontSize: 22,
-      fontWeight: '500',
+      fontWeight: '600',
       color: colors.textSecondary,
     },
     balanceSecondary: {
       marginTop: 4,
       fontSize: 16,
+      fontVariant: ['tabular-nums'],
+      color: colors.textSecondary,
+    },
+    balanceMeta: {
+      marginTop: 8,
+      fontSize: 15,
+      lineHeight: 21,
       color: colors.textSecondary,
     },
     settingsLink: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
+      alignSelf: 'center',
       paddingVertical: 16,
+      paddingHorizontal: 8,
     },
     settingsLinkText: {
       fontSize: 15,
       color: colors.textSecondary,
+      textDecorationLine: 'underline',
     },
-    statsRow: {
-      flexDirection: 'row',
-      paddingVertical: 16,
-      paddingHorizontal: 8,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      marginTop: 4,
-    },
-    stat: {
-      flex: 1,
-      alignItems: 'center',
-      paddingHorizontal: 4,
-    },
-    statLabel: {
-      fontFamily: font.mono,
-      fontSize: 10,
-      letterSpacing: 1.2,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
-    },
-    statValue: {
-      marginTop: 6,
-      fontFamily: font.mono,
-      fontSize: 14,
-      color: colors.text,
-    },
-    payoutRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 16,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      marginBottom: 10,
-    },
-    payoutAmount: {
-      fontFamily: font.mono,
-      fontSize: 16,
-      color: colors.text,
-    },
-    payoutMeta: {
-      marginTop: 4,
-      fontFamily: font.mono,
-      fontSize: 11,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
-    },
-    balanceMeta: {
-      marginTop: 6,
-      fontSize: 13,
-      lineHeight: 18,
-      color: colors.textSecondary,
+    statsWrap: {
+      marginTop: 12,
     },
     byEventHeader: {
-      marginTop: 32,
+      marginTop: 36,
     },
-    // Filled rows: poster, name, date, net, chevron.
+    // Filled rows (POSH: fill, never a hairline): thumb, name, date, amount + status.
     row: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-      padding: 12,
-      borderRadius: radius.lg,
+      padding: 16,
+      borderRadius: radius.xl,
       backgroundColor: colors.surface,
-      marginBottom: 10,
+      marginBottom: 12,
     },
     poster: {
-      width: 48,
-      height: 60,
-      borderRadius: radius.chip,
+      width: 64,
+      height: 64,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
     },
     posterFallback: {
@@ -591,6 +597,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     rowBody: {
       flex: 1,
+      minWidth: 0,
     },
     rowTitle: {
       fontSize: 16,
@@ -599,25 +606,39 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     rowMeta: {
       marginTop: 4,
-      fontFamily: font.mono,
-      fontSize: 11,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
+      fontSize: 14,
       color: colors.textSecondary,
     },
     rowRight: {
       alignItems: 'flex-end',
-      maxWidth: 130,
+      maxWidth: 140,
     },
     rowNet: {
-      fontFamily: font.mono,
-      fontSize: 14,
+      fontSize: 16,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
       color: colors.text,
     },
-    rowNetLabel: {
-      marginTop: 2,
-      fontSize: 11,
-      color: colors.textTertiary,
+    rowChip: {
+      marginTop: 6,
+      alignItems: 'flex-end',
+    },
+    payoutRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      padding: 16,
+      borderRadius: radius.xl,
+      backgroundColor: colors.surface,
+      marginBottom: 12,
+    },
+    payoutIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     sheetBody: {
       fontSize: 13,

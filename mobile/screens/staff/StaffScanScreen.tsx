@@ -7,23 +7,21 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
-import { Ticket } from 'lucide-react-native';
+import { Ticket, CalendarDays, ScanQrCode } from 'lucide-react-native';
 import { auth } from '../../config/firebase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
-import { RADIUS } from '../../config/brand';
 import { useStaffEvents, StaffEventSummary } from '../../hooks/useStaffEvents';
-import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
-import InfoNotice from '../../components/organizer/InfoNotice';
 import EventSelectorSheet from '../../components/organizer/EventSelectorSheet';
 import EmptyState from '../../components/EmptyState';
 import WhitePillCTA from '../../components/WhitePillCTA';
+import SectionHeader from '../../components/SectionHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { useAppAlert } from '../../components/AppAlert';
-import { radius } from '../../theme/tokens';
+import { colors as T, radius } from '../../theme/tokens';
 import { flushCheckInQueue } from '../../lib/doorCheckIn';
 
 export default function StaffScanScreen() {
@@ -31,6 +29,7 @@ export default function StaffScanScreen() {
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const uid = auth.currentUser?.uid || null;
   const { t } = useI18n();
   // The tab bar is a translucent overlay, so reserve its height here or the
@@ -75,9 +74,24 @@ export default function StaffScanScreen() {
     (navigation as any).navigate('TicketScanner', { eventId: selectedEvent.id });
   };
 
+  // Same steps the organizer door screen shows; the flow is identical.
+  const guideSteps = [
+    t('organizerScan.howStep1'),
+    t('organizerScan.howStep2'),
+    t('organizerScan.howStep3'),
+    t('organizerScan.howStep4'),
+  ];
+
   return (
     <View style={styles.container}>
-      <OrganizerScreenHeader title={t('staffScan.title')} subtitle={t('staffScan.subtitle')} />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {t('staffScan.title')}
+        </Text>
+        <Text style={styles.headerSub} numberOfLines={1}>
+          {t('staffScan.subtitle')}
+        </Text>
+      </View>
 
       <ScrollView
         style={styles.scroll}
@@ -86,46 +100,68 @@ export default function StaffScanScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
         }
       >
-        <View style={styles.notice}>
-          <InfoNotice text={t('staffScan.readySubtitle')} />
-        </View>
-
         {loading ? (
-          <View style={styles.content}>
-            <Skeleton width={120} height={16} radius={6} style={{ marginBottom: 8 }} />
-            <Skeleton width="100%" height={60} radius={RADIUS.lg} style={{ marginBottom: 16 }} />
-            <Skeleton width="100%" height={56} radius={RADIUS.full} />
+          <View>
+            <Skeleton width="100%" height={80} radius={radius.lg} style={{ marginBottom: 20 }} />
+            <Skeleton width="100%" height={64} radius={radius.button} />
           </View>
         ) : events.length === 0 ? (
-          <EmptyState icon={Ticket} title={emptyText} />
+          <View style={styles.emptyWrap}>
+            <EmptyState icon={Ticket} title={emptyText} compact />
+          </View>
         ) : (
-          <View style={styles.content}>
-            <Text style={styles.selectorLabel}>{t('staffScan.selectEvent')}</Text>
-            <TouchableOpacity style={styles.selectorButton} onPress={() => setShowEventSelector(true)}>
-              <View style={styles.selectorContent}>
-                {selectedEvent ? (
-                  <View style={styles.selectorTextCol}>
-                    <Text style={styles.selectorTitle} numberOfLines={1}>{selectedEvent.title}</Text>
-                    <Text style={styles.selectorSubtitle} numberOfLines={1}>
-                      {eventSubtitle(selectedEvent)}
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.selectorPlaceholder}>{t('staffScan.selectEventPlaceholder')}</Text>
-                )}
-                <Ionicons name="chevron-down" size={22} color={colors.textSecondary} />
+          <>
+            {/* Event selector: one filled row; the whole row opens the picker. */}
+            <TouchableOpacity
+              style={styles.eventRow}
+              onPress={() => setShowEventSelector(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('staffScan.selectEvent')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.thumb}>
+                <CalendarDays size={20} color={colors.textTertiary} strokeWidth={1.5} />
               </View>
+              {selectedEvent ? (
+                <View style={styles.eventBody}>
+                  <Text style={styles.eventTitle} numberOfLines={1}>
+                    {selectedEvent.title}
+                  </Text>
+                  <Text style={styles.eventSub} numberOfLines={1}>
+                    {eventSubtitle(selectedEvent)}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.eventBody, styles.eventPlaceholder]} numberOfLines={1}>
+                  {t('staffScan.selectEventPlaceholder')}
+                </Text>
+              )}
+              <Text style={styles.changeLink}>{t('organizerScan.changeEvent')}</Text>
             </TouchableOpacity>
 
-            <View style={styles.ctaWrap}>
-              <WhitePillCTA
-                label={t('staffScan.startScanning')}
-                onPress={handleStartScanning}
-                disabled={!selectedEvent}
-                icon={<Ionicons name="camera-outline" size={20} color="#000" />}
-              />
+            <View style={{ height: 20 }} />
+
+            {/* The one white primary on this screen. */}
+            <WhitePillCTA
+              label={t('staffScan.startScanning')}
+              onPress={handleStartScanning}
+              disabled={!selectedEvent}
+              icon={<ScanQrCode size={22} color={T.onWhite} strokeWidth={1.75} />}
+              style={styles.primary}
+            />
+
+            <View style={styles.howWrap}>
+              <SectionHeader title={t('organizerScan.howTitle')} />
+              <View style={styles.stepsCard}>
+                {guideSteps.map((step, i) => (
+                  <View key={i} style={styles.step}>
+                    <Text style={styles.stepNum}>{String(i + 1).padStart(2, '0')}</Text>
+                    <Text style={styles.stepText}>{step}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          </>
         )}
       </ScrollView>
 
@@ -150,58 +186,105 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    backgroundColor: colors.background,
+  },
+  headerTitle: {
+    fontSize: 38,
+    lineHeight: 44,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    color: colors.text,
+  },
+  headerSub: {
+    marginTop: 4,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 24,
-  },
-  notice: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
   },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+  emptyWrap: {
+    borderRadius: radius.xl,
+    backgroundColor: T.surface,
+    paddingVertical: 8,
   },
-  selectorLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  selectorButton: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  selectorContent: {
+  // Filled selector row: no outline.
+  eventRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 14,
+    padding: 14,
+    borderRadius: radius.lg,
+    backgroundColor: T.surface,
   },
-  selectorTextCol: {
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.sm,
+    backgroundColor: T.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventBody: {
     flex: 1,
-    paddingRight: 12,
   },
-  selectorTitle: {
-    fontSize: 15,
+  eventTitle: {
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
   },
-  selectorSubtitle: {
-    marginTop: 6,
+  eventSub: {
+    marginTop: 3,
     fontSize: 13,
     color: colors.textSecondary,
   },
-  selectorPlaceholder: {
-    fontSize: 14,
+  eventPlaceholder: {
+    fontSize: 15,
     color: colors.textSecondary,
   },
-  ctaWrap: {
-    marginTop: 16,
+  changeLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: T.accent,
+  },
+  primary: {
+    height: 64,
+  },
+  howWrap: {
+    marginTop: 36,
+  },
+  stepsCard: {
+    borderRadius: radius.lg,
+    backgroundColor: T.surface,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingVertical: 10,
+  },
+  stepNum: {
+    minWidth: 20,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 20,
+    color: colors.textTertiary,
+    fontVariant: ['tabular-nums'],
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
   },
 });

@@ -25,6 +25,14 @@ export interface ActionTile {
 
 interface ActionTileGridProps {
   tiles: ActionTile[];
+  /**
+   * `row` (default): two columns of compact icon + label rows.
+   * `stacked`: square-ish tiles with the icon above the label, in `columns`
+   * columns, the quick-actions grid from the organizer redesign.
+   */
+  variant?: 'row' | 'stacked';
+  /** Columns for the stacked variant (default 3). */
+  columns?: 2 | 3;
 }
 
 function renderIcon(icon: ActionTileIcon, color: string): React.ReactNode {
@@ -45,23 +53,28 @@ function renderIcon(icon: ActionTileIcon, color: string): React.ReactNode {
  * A 2-column grid of tappable action tiles. Tiles are neutral raised surfaces
  * with `text`-colored icons — teal is never used as a tile fill or icon color.
  */
-export default function ActionTileGrid({ tiles }: ActionTileGridProps) {
+export default function ActionTileGrid({ tiles, variant = 'row', columns = 3 }: ActionTileGridProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  const stacked = variant === 'stacked';
+  const stackedWidth = columns === 2 ? '48.5%' : '32%';
 
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, stacked && styles.gridStacked]}>
       {tiles.map((tile) => (
         <TouchableOpacity
           key={tile.key}
-          style={styles.tile}
+          style={stacked ? [styles.tileStacked, { width: stackedWidth }, columns === 2 && styles.tileStackedWide] : styles.tile}
           onPress={tile.onPress}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={tile.label}
         >
           <View style={styles.iconWrap}>{renderIcon(tile.icon, colors.text)}</View>
-          <Text style={styles.label} numberOfLines={1}>
+          <Text
+            style={stacked ? (columns === 2 ? styles.labelStackedWide : styles.labelStacked) : styles.label}
+            numberOfLines={1}
+          >
             {tile.label}
           </Text>
         </TouchableOpacity>
@@ -89,6 +102,43 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingVertical: 13,
       paddingHorizontal: 14,
       gap: 10,
+    },
+    // Percent widths plus a fixed column gap overflow on narrow phones, so the
+    // stacked grid spaces its columns with space-between and keeps only a row gap.
+    gridStacked: {
+      columnGap: 0,
+      rowGap: 10,
+      justifyContent: 'space-between',
+    },
+    // Stacked: icon over label, centred, tall enough to read as a tile.
+    tileStacked: {
+      aspectRatio: 1.05,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceRaised,
+      borderRadius: radius.lg,
+      paddingHorizontal: 8,
+      gap: 10,
+    },
+    // Two-column stacked tiles sit the icon top-left with the label at the
+    // foot, like the dashboard's manage grid.
+    tileStackedWide: {
+      aspectRatio: 1.7,
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    labelStacked: {
+      fontSize: 12.5,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    labelStackedWide: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
     },
     iconWrap: {
       width: 19,

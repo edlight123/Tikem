@@ -19,6 +19,8 @@ export type StaffEventSummary = {
   start_datetime?: any;
   venue_name?: string;
   city?: string;
+  banner_image_url?: string | null;
+  cover_image_url?: string | null;
 };
 
 export interface UseStaffEventsResult {
@@ -128,6 +130,8 @@ export function useStaffEvents(): UseStaffEventsResult {
             start_datetime: data?.start_datetime,
             venue_name: data?.venue_name || '',
             city: data?.city || '',
+            banner_image_url: data?.banner_image_url || null,
+            cover_image_url: data?.cover_image_url || null,
           });
         });
 

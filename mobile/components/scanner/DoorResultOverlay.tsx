@@ -1,10 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, AlertTriangle, X } from 'lucide-react-native';
+import { CircleCheck, TriangleAlert, CircleX } from 'lucide-react-native';
 import { colors, font, radius, spacing } from '../../theme/tokens';
 import { useI18n } from '../../contexts/I18nContext';
-import { SecondaryPill } from '../auth/SecondaryPill';
 import type { ScanOutcome } from '../../lib/scanner';
 
 export interface DoorResult {
@@ -13,6 +12,8 @@ export interface DoorResult {
   headline: string;
   name?: string;
   tier?: string;
+  /** Ticket identifier, shown in mono so staff can read it back if asked. */
+  ticketRef?: string;
   /** Reason (invalid), previous check-in time (warning) or sync state (valid). */
   detail?: string;
   entryPoint?: string;
@@ -27,8 +28,8 @@ interface DoorResultOverlayProps {
 }
 
 // Locked status semantics (POSH §2.7): emerald = admitted, amber = already
-// in / warning, red = refused. The colour is the message; the label repeats it
-// so it never relies on colour alone.
+// in / warning, red = refused. The colour lives on the icon; the headline
+// repeats it in words so it never relies on colour alone.
 const TONE: Record<ScanOutcome, { solid: string; wash: string }> = {
   valid: { solid: colors.emerald, wash: colors.emeraldMuted },
   warning: { solid: colors.amber, wash: colors.amberMuted },
@@ -43,19 +44,31 @@ const AUTO_DISMISS_MS: Record<ScanOutcome, number> = {
   invalid: 2600,
 };
 
+/** Short, readable form of a long document id. */
+function formatRef(ref: string): string {
+  const clean = ref.trim();
+  return clean.length > 12 ? clean.slice(-8).toUpperCase() : clean.toUpperCase();
+}
+
 /**
- * Door mode's full-screen verdict — the mobile counterpart of the web's
- * components/scan/ScanResultOverlay. Tap anywhere to return to scanning.
+ * Door mode's verdict — a bottom sheet over the live camera (the mobile
+ * counterpart of the web's components/scan/ScanResultOverlay). Tap anywhere,
+ * or "Scan next", to return to scanning.
  */
 export default function DoorResultOverlay({ result, onDismiss, onAllowReentry }: DoorResultOverlayProps) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const scale = useRef(new Animated.Value(0.6)).current;
+  const slide = useRef(new Animated.Value(80)).current;
 
   useEffect(() => {
     if (!result) return;
     scale.setValue(0.6);
-    Animated.spring(scale, { toValue: 1, friction: 6, tension: 140, useNativeDriver: true }).start();
+    slide.setValue(80);
+    Animated.parallel([
+      Animated.spring(slide, { toValue: 0, friction: 9, tension: 120, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 6, tension: 140, useNativeDriver: true }),
+    ]).start();
     // A pending re-entry decision must not be timed out from under the staff.
     if (result.allowReentry) return;
     const timer = setTimeout(onDismiss, AUTO_DISMISS_MS[result.outcome]);
@@ -64,37 +77,58 @@ export default function DoorResultOverlay({ result, onDismiss, onAllowReentry }:
 
   if (!result) return null;
   const tone = TONE[result.outcome];
-  const Icon = result.outcome === 'valid' ? Check : result.outcome === 'warning' ? AlertTriangle : X;
+  const Icon = result.outcome === 'valid' ? CircleCheck : result.outcome === 'warning' ? TriangleAlert : CircleX;
+  const showReentry = !!result.allowReentry && !!onAllowReentry;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
       <Pressable
-        style={[styles.screen, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}
+        style={styles.backdrop}
         onPress={onDismiss}
         accessibilityRole="button"
         accessibilityLabel={`${result.headline}. ${result.name ?? ''}`}
       >
-        {/* Full-bleed wash of the verdict colour over the black frame. */}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: tone.wash }]} />
-
-        <View style={styles.center}>
-          <Animated.View style={[styles.disc, { backgroundColor: tone.solid, transform: [{ scale }] }]}>
-            <Icon size={64} color={colors.black} strokeWidth={3} />
-          </Animated.View>
-
-          <Text style={[styles.headline, { color: tone.solid }]} numberOfLines={2} adjustsFontSizeToFit>
-            {result.headline}
-          </Text>
-
-          {!!result.name && (
-            <Text style={styles.name} numberOfLines={2}>
-              {result.name}
+        <Animated.View
+          style={[
+            styles.sheet,
+            { paddingBottom: insets.bottom + spacing.lg, transform: [{ translateY: slide }] },
+          ]}
+        >
+          <View style={styles.verdictRow}>
+            <Animated.View style={[styles.iconDisc, { backgroundColor: tone.wash, transform: [{ scale }] }]}>
+              <Icon size={30} color={tone.solid} strokeWidth={2} />
+            </Animated.View>
+            <Text style={styles.headline} numberOfLines={2} adjustsFontSizeToFit>
+              {result.headline}
             </Text>
+          </View>
+
+          {(!!result.name || !!result.tier || !!result.ticketRef) && (
+            <View style={styles.guest}>
+              {!!result.name && (
+                <Text style={styles.name} numberOfLines={2}>
+                  {result.name}
+                </Text>
+              )}
+              {(!!result.tier || !!result.ticketRef) && (
+                <View style={styles.metaRow}>
+                  {!!result.tier && (
+                    <Text style={styles.tier} numberOfLines={1}>
+                      {result.tier}
+                    </Text>
+                  )}
+                  {!!result.ticketRef && (
+                    <Text style={styles.ref} numberOfLines={1}>
+                      {formatRef(result.ticketRef)}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
           )}
-          {!!result.tier && <Text style={styles.tier} numberOfLines={1}>{result.tier}</Text>}
 
           {(!!result.detail || !!result.entryPoint) && (
-            <View style={styles.detailCard}>
+            <View style={styles.details}>
               {!!result.detail && <Text style={styles.detail}>{result.detail}</Text>}
               {!!result.entryPoint && (
                 <Text style={styles.entry}>
@@ -103,89 +137,136 @@ export default function DoorResultOverlay({ result, onDismiss, onAllowReentry }:
               )}
             </View>
           )}
-        </View>
 
-        <View style={styles.footer}>
-          {result.allowReentry && onAllowReentry ? (
-            <SecondaryPill label={t('doorScanner.result.allowReentry')} onPress={onAllowReentry} />
-          ) : null}
-          <Text style={styles.hint}>{t('doorScanner.result.tapToContinue')}</Text>
-        </View>
+          <View style={styles.actions}>
+            <Pressable
+              onPress={onDismiss}
+              accessibilityRole="button"
+              accessibilityLabel={t('doorScanner.result.scanNext')}
+              style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+            >
+              <Text style={styles.primaryLabel}>{t('doorScanner.result.scanNext')}</Text>
+            </Pressable>
+            {showReentry ? (
+              <Pressable
+                onPress={onAllowReentry}
+                accessibilityRole="button"
+                accessibilityLabel={t('doorScanner.result.allowReentry')}
+                style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+              >
+                <Text style={styles.secondaryLabel}>{t('doorScanner.result.allowReentry')}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  backdrop: {
     flex: 1,
-    backgroundColor: colors.black,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: spacing.xl,
     paddingHorizontal: spacing.xl,
-    justifyContent: 'space-between',
   },
-  center: {
-    flex: 1,
+  verdictRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.lg,
   },
-  disc: {
-    width: 128,
-    height: 128,
+  // A true circle (icon disc), so the pill radius is allowed here.
+  iconDisc: {
+    width: 60,
+    height: 60,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xl,
   },
   headline: {
-    fontSize: 34,
-    lineHeight: 40,
+    flex: 1,
+    fontSize: 30,
+    lineHeight: 36,
     fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    textAlign: 'center',
+    letterSpacing: -0.6,
+    color: colors.textPrimary,
+  },
+  guest: {
+    marginTop: spacing.xl,
+    gap: 6,
   },
   name: {
-    marginTop: spacing.lg,
-    fontFamily: font.serif,
-    fontSize: 34,
-    lineHeight: 40,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.3,
     color: colors.textPrimary,
-    textAlign: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   tier: {
-    marginTop: spacing.xs,
+    flexShrink: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.textSecondary,
-    textAlign: 'center',
   },
-  detailCard: {
-    marginTop: spacing.xl,
-    alignSelf: 'stretch',
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+  ref: {
+    fontFamily: font.mono,
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
+  details: {
+    marginTop: spacing.md,
     gap: 4,
   },
   detail: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.textSecondary,
   },
   entry: {
     fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    color: colors.textTertiary,
   },
-  footer: {
-    gap: spacing.md,
+  actions: {
+    marginTop: spacing.xl,
+    gap: spacing.sm,
   },
-  hint: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
+  primary: {
+    height: 56,
+    borderRadius: radius.button,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryLabel: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.onWhite,
+  },
+  secondary: {
+    height: 56,
+    borderRadius: radius.button,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryLabel: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

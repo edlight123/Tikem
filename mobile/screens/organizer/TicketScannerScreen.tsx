@@ -919,6 +919,7 @@ export default function TicketScannerScreen() {
         headline: t('doorScanner.result.alreadyIn'),
         name: r.attendeeName,
         tier: r.tierName,
+        ticketRef: r.ticketId,
         detail: r.message,
         allowReentry: eventMetaRef.current.allowReentry && !!r.ticketId,
       };
@@ -928,6 +929,7 @@ export default function TicketScannerScreen() {
       headline: t('doorScanner.result.invalid'),
       name: r.attendeeName,
       tier: r.tierName,
+      ticketRef: r.ticketId,
       detail: r.message,
     };
   };
@@ -950,6 +952,7 @@ export default function TicketScannerScreen() {
         headline: t('doorScanner.result.valid'),
         name: r.attendeeName,
         tier: r.tierName,
+        ticketRef: r.ticketId,
         detail: synced
           ? t('doorScanner.result.checkedInNow')
           : t('organizerTicketScanner.results.checkInQueued'),

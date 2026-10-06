@@ -1031,6 +1031,9 @@ export default {
   },
 
   staffEvents: {
+    noAssignedBody: 'Quand un organisateur vous ajoute comme personnel d\'accueil, ses événements apparaissent ici.',
+    comingUp: 'Prochainement',
+    nextUp: 'À venir',
     staffModeTitle: 'Mode staff',
     staffModeSubtitle: 'Événements que vous pouvez scanner',
     assignedTitle: 'Événements assignés',
@@ -1230,10 +1233,21 @@ export default {
   },
 
   organizerEventManagement: {
+    openScanner: 'Ouvrir le scanner d\'entrée',
+    stats: {
+      sellThrough: 'Taux de vente',
+      checkedIn: 'Enregistrés',
+      sold: 'Vendus',
+    },
+    status: {
+      paused: 'En pause',
+      onSale: 'En vente',
+    },
     loading: 'Chargement de l’événement…',
     headerTitle: 'Gérer l’événement',
     notFound: 'Événement introuvable',
     sections: {
+      ticketTypes: 'Types de billets',
       quickActions: 'Actions rapides',
       performance: 'Performance',
       eventControls: 'Contrôles de l’événement',
@@ -2109,6 +2123,13 @@ export default {
   },
 
   organizerDashboard: {
+    onSale: 'En vente',
+    liveNow: 'En cours',
+    soldOf: '{sold} sur {total} vendus',
+    openScanner: 'Ouvrir le scanner d\'entrée',
+    manage: 'Gérer',
+    upcoming: 'À venir',
+    tonight: 'Ce soir',
     loading: 'Chargement du tableau…',
     title: 'Tableau organisateur',
     welcomeBack: 'Bon retour',
@@ -2217,6 +2238,7 @@ export default {
     emptyPastBody: 'Vos événements passés apparaîtront ici',
     manage: 'Gérer',
     status: {
+      onSale: 'En vente',
       draft: 'Brouillon',
       published: 'Publié',
       soldOut: 'Complet',
@@ -2229,12 +2251,13 @@ export default {
   },
 
   organizerScan: {
+    offlineReadyShort: 'Prêt hors ligne',
     loading: 'Chargement des événements…',
     title: 'Scanner',
     subtitle: 'Contrôlez les entrées à votre événement',
     howTitle: 'Comment scanner les billets',
     howStep1: "Sélectionnez l’événement pour lequel vous faites le contrôle",
-    howStep2: 'Appuyez sur « Commencer le scan » ci-dessous',
+    howStep2: 'Appuyez sur « Commencer le scan »',
     howStep3: 'Pointez la caméra vers le QR code du participant',
     howStep4: 'Le billet sera validé automatiquement',
     selectEvent: 'Sélectionner un événement',
@@ -3164,6 +3187,7 @@ export default {
       reentry: 'Réadmission',
     },
     result: {
+      scanNext: 'Scanner le suivant',
       valid: 'Valide',
       alreadyIn: 'Déjà enregistré',
       invalid: 'Invalide',
