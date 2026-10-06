@@ -24,6 +24,12 @@ export interface UserProfile {
   bio?: string
   socialLinks?: SocialLinks
   privacy?: PrivacySettings
+  /**
+   * Can appear in other people's "people you may know" and "friends going"
+   * (lib/social/suggestions.ts). Stored top-level as users/{uid}.discoverable;
+   * missing means true. Turning it off only reduces exposure.
+   */
+  discoverable?: boolean
   defaultCountry?: string
   defaultCity?: string
   subareaType?: 'COMMUNE' | 'NEIGHBORHOOD'
@@ -63,6 +69,7 @@ export async function getUserProfileAdmin(uid: string): Promise<UserProfile | nu
       bio: data.bio || '',
       socialLinks: data.social_links || {},
       privacy: { ...DEFAULT_PRIVACY, ...(data.privacy || {}) },
+      discoverable: data.discoverable !== false,
       defaultCountry: data.default_country || data.defaultCountry || 'HT',
       defaultCity: data.default_city || data.defaultCity || '',
       subareaType: data.subarea_type || data.subareaType || 'COMMUNE',
@@ -150,6 +157,7 @@ export async function updateUserProfileAdmin(uid: string, updates: Partial<UserP
     if (updates.bio !== undefined) updateData.bio = String(updates.bio).slice(0, 280)
     if (updates.socialLinks !== undefined) updateData.social_links = sanitizeSocialLinks(updates.socialLinks)
     if (updates.privacy !== undefined) updateData.privacy = sanitizePrivacy(updates.privacy)
+    if (typeof updates.discoverable === 'boolean') updateData.discoverable = updates.discoverable
     if (updates.defaultCountry !== undefined) updateData.default_country = updates.defaultCountry
     if (updates.defaultCity !== undefined) updateData.default_city = updates.defaultCity
     if (updates.subareaType !== undefined) updateData.subarea_type = updates.subareaType

@@ -88,6 +88,23 @@ export interface PublicUserSummary {
   isVerified?: boolean
 }
 
+/** Why a person is suggested. Never says WHICH events or friends. */
+export type SuggestionReason = 'mutual_friends' | 'same_events'
+
+/** GET /api/connections/suggestions item: public fields + a reason. */
+export interface FriendSuggestion extends PublicUserSummary {
+  username?: string
+  reason: SuggestionReason
+  mutualCount: number
+}
+
+/** GET /api/events/[id]/friends-going: only the viewer's own connections. */
+export interface FriendsGoingResponse {
+  enabled: boolean
+  count: number
+  friends: PublicUserSummary[]
+}
+
 /**
  * Build a deterministic connection document id for a pair of user ids.
  * Sorting guarantees both directions resolve to the same id.

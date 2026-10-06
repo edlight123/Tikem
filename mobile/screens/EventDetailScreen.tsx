@@ -59,6 +59,8 @@ import ReportContentModal from '../components/ReportContentModal';
 import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
+import FriendsGoingRow from '../components/FriendsGoingRow';
+import { requestPhonePrompt } from '../lib/phonePrompt';
 import { useAppAlert } from '../components/AppAlert';
 import { EventDetailSkeleton } from '../components/Skeleton';
 import EventLineupRail from '../components/EventLineupRail';
@@ -981,6 +983,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
+          {/* Your own connections going (config/auth.friend_suggestions). Renders
+              nothing when the flag is off, signed out, or no friend is going. */}
+          <FriendsGoingRow eventId={eventId} />
+
           {/* Who's Going: faces, a count, or nothing, per the organizer's
               guest-list setting (same resolver as the web event page). */}
           <WhosGoing eventId={eventId} visibility={guestlistVisibilityFrom(event as any)} />
@@ -1058,10 +1064,16 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
       <PurchaseSuccessSheet
         visible={successQuantity !== null}
-        onClose={() => setSuccessQuantity(null)}
+        onClose={() => {
+          setSuccessQuantity(null);
+          // After the confirmation, never on top of it (two RN modals do not
+          // stack on iOS). The host applies the 7-day / 3-times policy.
+          requestPhonePrompt({ trigger: 'post_purchase' });
+        }}
         onViewTickets={() => {
           setSuccessQuantity(null);
           navigation.navigate('Main', { screen: 'Tickets' });
+          requestPhonePrompt({ trigger: 'post_purchase' });
         }}
         event={event}
         quantity={successQuantity ?? 1}

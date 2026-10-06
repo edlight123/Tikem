@@ -12,6 +12,7 @@ import MobileHero from './MobileHero'
 import MobileKeyFacts from './MobileKeyFacts'
 import MobileSections from './MobileSections'
 import WhosGoing from '@/components/events/WhosGoing'
+import FriendsGoing from '@/components/events/FriendsGoing'
 import PromoVideo from '@/components/events/PromoVideo'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 import { guestlistVisibilityFrom } from '@/lib/guestlistVisibility'
@@ -638,6 +639,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             </div>
           </div>
         </div>
+
+        {/* Your connections going (config/auth.friend_suggestions); renders
+            nothing, margin included, when off or when no friend is going. */}
+        <FriendsGoing eventId={event.id} currentUserId={user?.id || null} className="mt-8" />
 
         {/* Who's Going - social attendance */}
         <WhosGoing

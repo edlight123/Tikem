@@ -439,6 +439,8 @@ export default {
       attEveryone: 'Tout le monde',
       discoverable: 'Permettre aux gens de me trouver par numéro de téléphone',
       discoverableHint: 'Utilisé uniquement pour retrouver vos contacts déjà sur Tikèm.',
+      suggestable: "Me suggérer aux personnes que je connais peut-être",
+      suggestableHint: "Les personnes avec qui vous partagez des amis ou des événements peuvent vous trouver. Désactivez pour ne plus apparaître dans les suggestions ni dans les listes d'amis présents.",
     },
     createEvent: 'Créer un événement',
     notificationsA11y: 'Notifications',
@@ -1123,6 +1125,22 @@ export default {
     },
   },
 
+  phonePrompt: {
+    title: "Ajoutez votre numéro",
+    valueProp: "Ajoutez votre numéro pour recevoir vos billets sur WhatsApp et voir quels amis y vont.",
+    skip: "Plus tard",
+  },
+  friendSuggestions: {
+    title: "Personnes que vous connaissez peut-être",
+    mutual: "{count} amis en commun",
+    sameEvents: "Va aux mêmes événements",
+    contactsCta: "Trouver des amis dans vos contacts",
+    contactsNeedsPhone: "Vérifiez d'abord votre numéro. Nous ne retrouvons que les numéros que vous avez déjà, et vos contacts ne sont jamais conservés.",
+  },
+  friendsGoing: {
+    one: "{name} y va",
+    other: "{count} amis y vont",
+  },
   connections: {
     title: 'Amis',
     tabs: {

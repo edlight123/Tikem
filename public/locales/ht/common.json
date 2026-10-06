@@ -1852,5 +1852,9 @@
       "not_found": "Kontni sa a pa disponib ankò.",
       "self_report": "Ou pa ka siyale tèt ou."
     }
+  },
+  "friendsGoing": {
+    "one": "{{name}} prale",
+    "other": "{{count}} zanmi prale"
   }
 }

@@ -412,6 +412,8 @@ export default {
       attEveryone: 'Everyone',
       discoverable: 'Let people find me by phone number',
       discoverableHint: 'Used only to match your contacts who are already on Tikèm.',
+      suggestable: "Suggest me to people I may know",
+      suggestableHint: "Lets people who share friends or events with you find you. Turn it off to stay out of suggestions and friends going lists.",
     },
     createEvent: 'Create event',
     notificationsA11y: 'Notifications',
@@ -1525,6 +1527,22 @@ export default {
     },
   },
 
+  phonePrompt: {
+    title: "Add your number",
+    valueProp: "Add your number to get your tickets on WhatsApp and see which friends are going.",
+    skip: "Not now",
+  },
+  friendSuggestions: {
+    title: "People you may know",
+    mutual: "{count} mutual friends",
+    sameEvents: "Goes to the same events",
+    contactsCta: "Find friends from contacts",
+    contactsNeedsPhone: "Verify your number first. We only match numbers you already have, and your contacts are never stored.",
+  },
+  friendsGoing: {
+    one: "{name} is going",
+    other: "{count} friends going",
+  },
   connections: {
     title: 'Friends',
     tabs: {

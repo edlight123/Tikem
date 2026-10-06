@@ -42,6 +42,23 @@ export interface PublicUserSummary {
   isVerified?: boolean;
 }
 
+/** Why a person is suggested. Never says WHICH events or friends. */
+export type SuggestionReason = 'mutual_friends' | 'same_events';
+
+/** GET /api/connections/suggestions item (mirrors types/social.ts on the web). */
+export interface FriendSuggestion extends PublicUserSummary {
+  username?: string;
+  reason: SuggestionReason;
+  mutualCount: number;
+}
+
+/** GET /api/events/[id]/friends-going: only the viewer's own connections. */
+export interface FriendsGoingResponse {
+  enabled: boolean;
+  count: number;
+  friends: PublicUserSummary[];
+}
+
 export interface ContactMatch extends PublicUserSummary {
   friendship: FriendshipState;
 }

@@ -13,6 +13,11 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onLinked?: (phoneNumber: string) => void;
+  /** Overrides for the "add your number" prompt (PhonePromptHost). */
+  title?: string;
+  subtitle?: string;
+  /** Shows a quiet "Not now" under the flow; closing the sheet does the same. */
+  skipLabel?: string;
 }
 
 /**
@@ -20,7 +25,7 @@ interface Props {
  * number with a WhatsApp code, then the server adds it to the signed-in
  * account, so next time the person can sign in with it.
  */
-export default function PhoneLinkSheet({ visible, onClose, onLinked }: Props) {
+export default function PhoneLinkSheet({ visible, onClose, onLinked, title, subtitle, skipLabel }: Props) {
   const { t, language } = useI18n();
   const { refreshUserProfile } = useAuth();
   const insets = useSafeAreaInsets();
@@ -39,7 +44,7 @@ export default function PhoneLinkSheet({ visible, onClose, onLinked }: Props) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.avoid} pointerEvents="box-none">
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
           <View style={styles.header}>
-            <Text style={styles.title}>{t('auth.phone.link.title')}</Text>
+            <Text style={styles.title}>{title ?? t('auth.phone.link.title')}</Text>
             <Pressable onPress={close} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('auth.phone.link.close')}>
               <X size={22} color={colors.textSecondary} />
             </Pressable>
@@ -48,7 +53,7 @@ export default function PhoneLinkSheet({ visible, onClose, onLinked }: Props) {
             <Text style={styles.sub}>{t('auth.phone.link.success')}</Text>
           ) : (
             <>
-              <Text style={styles.sub}>{t('auth.phone.link.subtitle')}</Text>
+              <Text style={styles.sub}>{subtitle ?? t('auth.phone.link.subtitle')}</Text>
               <PhoneCodeFlow
                 ctaLabel={t('auth.phone.link.cta')}
                 onBusyChange={setBusy}
@@ -62,6 +67,11 @@ export default function PhoneLinkSheet({ visible, onClose, onLinked }: Props) {
                   onLinked?.(linked);
                 }}
               />
+              {skipLabel ? (
+                <Pressable onPress={close} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.skip}>
+                  <Text style={styles.skipText}>{skipLabel}</Text>
+                </Pressable>
+              ) : null}
             </>
           )}
         </View>
@@ -92,6 +102,14 @@ const styles = StyleSheet.create({
   },
   sub: {
     ...type.body,
+    color: colors.textSecondary,
+  },
+  skip: {
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+  },
+  skipText: {
+    ...type.label,
     color: colors.textSecondary,
   },
 });

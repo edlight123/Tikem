@@ -1852,5 +1852,9 @@
       "not_found": "Ce contenu n'est plus disponible.",
       "self_report": "Vous ne pouvez pas vous signaler vous-même."
     }
+  },
+  "friendsGoing": {
+    "one": "{{name}} y va",
+    "other": "{{count}} amis y vont"
   }
 }

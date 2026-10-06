@@ -31,6 +31,7 @@ import ThisWeekSection from '../components/ThisWeekSection';
 import AllEventsPreview from '../components/AllEventsPreview';
 import EventRail from '../components/EventRail';
 import EmptyState from '../components/EmptyState';
+import PeopleYouMayKnowRail from '../components/PeopleYouMayKnowRail';
 import { artForPlace } from '../lib/artLibrary';
 import NationalDayBanner from '../components/NationalDayBanner';
 import { eventMatchesNationalDay, nationalDayName } from '../lib/nationalDays';
@@ -559,6 +560,10 @@ export default function HomeScreen({ navigation }: any) {
                 />
               </View>
             )}
+
+            {/* People you may know: renders nothing (no gap) unless the
+                friend_suggestions switch is on and there are 3+ people. */}
+            <PeopleYouMayKnowRail style={styles.section} />
 
             {/* Free & Budget-Friendly */}
             {freeEvents.length > 0 && (
