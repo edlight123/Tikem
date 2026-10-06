@@ -82,7 +82,7 @@ export default function FirstRunWelcome({ onCreateEvent }: FirstRunWelcomeProps)
       body: t('welcome.slide2Body'),
     },
     {
-      icon: 'sparkles-outline' as const,
+      icon: 'mic-outline' as const,
       title: t('welcome.slide3Title'),
       body: t('welcome.slide3Body'),
     },
