@@ -38,7 +38,16 @@ export async function POST(request: Request) {
     const stripe = getStripe()
 
     // Verify payment intent exists and succeeded
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    let paymentIntent: Awaited<ReturnType<typeof stripe.paymentIntents.retrieve>>
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(String(paymentIntentId))
+    } catch (e: any) {
+      // An unknown or malformed id is the caller's mistake, not a server error.
+      if (e?.type === 'StripeInvalidRequestError') {
+        return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+      }
+      throw e
+    }
 
     if (paymentIntent.status !== 'succeeded') {
       return NextResponse.json({ error: 'Payment not completed' }, { status: 400 })
