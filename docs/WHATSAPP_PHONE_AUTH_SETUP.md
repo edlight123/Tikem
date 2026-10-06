@@ -101,9 +101,11 @@ example `en_US`), set `WHATSAPP_TEMPLATE_LANG_EN` / `WHATSAPP_TEMPLATE_LANG_FR`.
 | `WHATSAPP_ACCESS_TOKEN` | system-user token from step 3 | yes |
 | `WHATSAPP_PHONE_NUMBER_ID` | from step 2 | yes |
 | `WHATSAPP_WABA_ID` | from step 2 (reference; not used to send) | recommended |
-| `WHATSAPP_TEMPLATE_NAME` | default `tikem_login_code` | no |
-| `WHATSAPP_API_VERSION` | default `v25.0` | no |
-| `WHATSAPP_TEMPLATE_LANG_EN` / `_FR` / `_HT` | defaults `en` / `fr` / French | no |
+| `WHATSAPP_OTP_TEMPLATE` | default `tikem_login_code` (legacy alias `WHATSAPP_TEMPLATE_NAME`) | no |
+| `WHATSAPP_GRAPH_VERSION` | default `v25.0` (legacy alias `WHATSAPP_API_VERSION`) | no |
+| `WHATSAPP_OTP_HAS_BUTTON` | default `true`; `false` only if the template has no copy-code button | no |
+| `WHATSAPP_OTP_TEMPLATE_LANGS` | JSON map, default `{"en":"en","fr":"fr","ht":"fr"}` | no |
+| `WHATSAPP_TEMPLATE_LANG_EN` / `_FR` / `_HT` | per-locale override, wins over the JSON map | no |
 | `PHONE_OTP_ALLOWED_COUNTRIES` | default `HT,US,CA,FR,DO` | no |
 | `PHONE_OTP_DAILY_CAP` | global sends per UTC day, default `2000` | no |
 | `PHONE_OTP_PER_PHONE_HOURLY` / `_DAILY` | defaults `5` / `10` | no |

@@ -51,6 +51,10 @@ import {
   buildWhatsAppTemplatePayload,
   selectOtpSender,
   templateLanguage,
+  classifyMetaError,
+  whatsAppConfigFromEnv,
+  SEND_TIMEOUT_MS,
+  OtpSendError,
   normalizeLocale,
   type OtpSender,
 } from '@/lib/auth/otp/senders'
@@ -375,7 +379,6 @@ describe('WhatsApp Cloud sender', () => {
   it('maps ht to French unless an ht template language is configured', () => {
     expect(templateLanguage('ht', {})).toBe('fr')
     expect(templateLanguage('ht', { WHATSAPP_TEMPLATE_LANG_HT: 'ht' })).toBe('ht')
-    expect(templateLanguage('en', {})).toBe('en')
     expect(templateLanguage('en', { WHATSAPP_TEMPLATE_LANG_EN: 'en_US' })).toBe('en_US')
     expect(normalizeLocale('ht-HT')).toBe('ht')
     expect(normalizeLocale('es')).toBe('en')
@@ -405,9 +408,131 @@ describe('WhatsApp Cloud sender', () => {
       {},
       fetchMock as any
     )
-    await expect(sender.send(HT, '999888', 'en')).rejects.toThrow('whatsapp_rejected')
+    await expect(sender.send(HT, '999888', 'en')).rejects.toMatchObject({
+      message: 'whatsapp_not_on_whatsapp',
+      reason: 'not_on_whatsapp',
+    })
     expect(JSON.stringify(errSpy.mock.calls)).not.toContain('999888')
     expect(JSON.stringify(errSpy.mock.calls)).not.toContain('37123456')
+    expect(JSON.stringify(errSpy.mock.calls)).not.toContain('"T"')
+    expect(JSON.stringify(errSpy.mock.calls)).toContain('131026')
+    errSpy.mockRestore()
+  })
+
+  it('default language map is en->en, fr->fr, ht->fr, overridable by a JSON map', () => {
+    expect(templateLanguage('en', {})).toBe('en')
+    expect(templateLanguage('fr', {})).toBe('fr')
+    expect(templateLanguage('ht', {})).toBe('fr')
+    const map = { WHATSAPP_OTP_TEMPLATE_LANGS: '{"en":"en_US","fr":"fr_FR"}' }
+    expect(templateLanguage('en', map)).toBe('en_US')
+    expect(templateLanguage('fr', map)).toBe('fr_FR')
+    expect(templateLanguage('ht', map)).toBe('fr_FR') // ht follows French
+    expect(templateLanguage('ht', { WHATSAPP_OTP_TEMPLATE_LANGS: '{"ht":"ht"}' })).toBe('ht')
+    // Per-locale vars win over the map.
+    expect(templateLanguage('en', { ...map, WHATSAPP_TEMPLATE_LANG_EN: 'en_GB' })).toBe('en_GB')
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    expect(templateLanguage('en', { WHATSAPP_OTP_TEMPLATE_LANGS: 'not json' })).toBe('en')
+    errSpy.mockRestore()
+  })
+
+  it('reads the spec env names, with the older names as aliases', () => {
+    expect(whatsAppConfigFromEnv({ WHATSAPP_ACCESS_TOKEN: 't' })).toBeNull()
+    expect(whatsAppConfigFromEnv({ WHATSAPP_PHONE_NUMBER_ID: '1' })).toBeNull()
+    expect(whatsAppConfigFromEnv({ WHATSAPP_ACCESS_TOKEN: 't', WHATSAPP_PHONE_NUMBER_ID: '1' })).toEqual({
+      accessToken: 't',
+      phoneNumberId: '1',
+      templateName: 'tikem_login_code',
+      apiVersion: 'v25.0',
+      hasButton: true,
+    })
+    const c = whatsAppConfigFromEnv({
+      WHATSAPP_ACCESS_TOKEN: 't',
+      WHATSAPP_PHONE_NUMBER_ID: '1',
+      WHATSAPP_OTP_TEMPLATE: 'otp2',
+      WHATSAPP_GRAPH_VERSION: '23.0',
+      WHATSAPP_OTP_HAS_BUTTON: 'false',
+    })!
+    expect(c).toMatchObject({ templateName: 'otp2', apiVersion: 'v23.0', hasButton: false })
+    expect(
+      whatsAppConfigFromEnv({
+        WHATSAPP_ACCESS_TOKEN: 't',
+        WHATSAPP_PHONE_NUMBER_ID: '1',
+        WHATSAPP_TEMPLATE_NAME: 'legacy',
+        WHATSAPP_API_VERSION: 'v24.0',
+      })
+    ).toMatchObject({ templateName: 'legacy', apiVersion: 'v24.0' })
+  })
+
+  it('omits the button component when the template has none', () => {
+    const p = buildWhatsAppTemplatePayload('+50937123456', '123456', 'en', 'x', false)
+    expect(p.template.components).toEqual([{ type: 'body', parameters: [{ type: 'text', text: '123456' }] }])
+  })
+
+  it('sends the full request shape and logs the Meta message id, not the code or token', async () => {
+    const infoSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const fetchMock = jest.fn(async () =>
+      new Response(JSON.stringify({ messages: [{ id: 'wamid.ABC' }] }), { status: 200 })
+    )
+    const sender = new WhatsAppCloudSender(
+      whatsAppConfigFromEnv({ WHATSAPP_ACCESS_TOKEN: 'SECRET_TOKEN', WHATSAPP_PHONE_NUMBER_ID: '1116923514839875' })!,
+      {},
+      fetchMock as any
+    )
+    await sender.send(HT, '246810', 'en')
+    const [url, init] = (fetchMock.mock.calls[0] as unknown) as [string, RequestInit]
+    expect(url).toBe('https://graph.facebook.com/v25.0/1116923514839875/messages')
+    expect(init.method).toBe('POST')
+    expect((init.headers as any)['Content-Type']).toBe('application/json')
+    expect(init.signal).toBeDefined()
+    expect(JSON.parse(String(init.body))).toEqual(buildWhatsAppTemplatePayload(HT, '246810', 'en', 'tikem_login_code'))
+    const logged = JSON.stringify(infoSpy.mock.calls)
+    expect(logged).toContain('wamid.ABC')
+    expect(logged).toContain('meta-whatsapp')
+    expect(logged).toContain('3456')
+    expect(logged).not.toContain('37123456')
+    expect(logged).not.toContain('246810')
+    expect(logged).not.toContain('SECRET_TOKEN')
+    infoSpy.mockRestore()
+  })
+
+  it('classifies Meta errors', () => {
+    expect(classifyMetaError(400, 131026)).toBe('not_on_whatsapp')
+    for (const code of [4, 80007, 130429, 131048, 131056]) expect(classifyMetaError(400, code)).toBe('rate_limited')
+    expect(classifyMetaError(429, undefined)).toBe('rate_limited')
+    for (const code of [190, 100, 132001, 132000, 133010]) expect(classifyMetaError(400, code)).toBe('misconfigured')
+    expect(classifyMetaError(401, undefined)).toBe('misconfigured')
+    expect(classifyMetaError(500, 1)).toBe('rejected')
+  })
+
+  it('maps a rate-limit response and a network failure to typed errors', async () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const cfg = { accessToken: 'T', phoneNumberId: '1', templateName: 'x', apiVersion: 'v25.0' }
+    const limited = new WhatsAppCloudSender(cfg, {}, (jest.fn(async () =>
+      new Response(JSON.stringify({ error: { code: 131056 } }), { status: 400 })
+    ) as any))
+    await expect(limited.send(HT, '111222', 'fr')).rejects.toMatchObject({ reason: 'rate_limited' })
+    const down = new WhatsAppCloudSender(cfg, {}, (jest.fn(async () => {
+      throw new TypeError('fetch failed')
+    }) as any))
+    await expect(down.send(HT, '111222', 'fr')).rejects.toMatchObject({ reason: 'network' })
+    errSpy.mockRestore()
+  })
+
+  it('times out after the configured limit (10s by default)', async () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    expect(SEND_TIMEOUT_MS).toBe(10_000)
+    const hang = jest.fn((_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal!.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
+      })
+    )
+    const sender = new WhatsAppCloudSender(
+      { accessToken: 'T', phoneNumberId: '1', templateName: 'x', apiVersion: 'v25.0' },
+      {},
+      hang as any,
+      20
+    )
+    await expect(sender.send(HT, '111222', 'en')).rejects.toMatchObject({ reason: 'timeout' })
     errSpy.mockRestore()
   })
 
@@ -417,6 +542,16 @@ describe('WhatsApp Cloud sender', () => {
     expect(selectOtpSender({ NODE_ENV: 'production', ...wa })?.name).toBe('whatsapp')
     expect(selectOtpSender({ NODE_ENV: 'development' })?.name).toBe('dev-log')
     expect(selectOtpSender({ NODE_ENV: 'development', OTP_SENDER: 'whatsapp', ...wa })?.name).toBe('whatsapp')
+    // Only one of the two Meta vars: not configured. Twilio vars never select a sender.
+    expect(selectOtpSender({ NODE_ENV: 'production', WHATSAPP_ACCESS_TOKEN: 't' })).toBeNull()
+    expect(
+      selectOtpSender({
+        NODE_ENV: 'production',
+        TWILIO_ACCOUNT_SID: 'AC',
+        TWILIO_AUTH_TOKEN: 'x',
+        TWILIO_WHATSAPP_NUMBER: 'whatsapp:+1',
+      })
+    ).toBeNull()
     expect(() => new DevLogSender({ NODE_ENV: 'production' })).toThrow()
   })
 
@@ -656,6 +791,35 @@ describe('handlers', () => {
     ]) {
       expect(res.status).toBe(404)
     }
+  })
+
+  it('status is 404 when enabled but no sender is configured (no Meta credentials)', async () => {
+    expect((await handleStatus(deps().d)).status).toBe(200)
+    expect((await handleStatus(deps({ sender: () => null }).d)).status).toBe(404)
+    expect((await handleStatus(deps({ secret: () => null }).d)).status).toBe(404)
+  })
+
+  it('maps provider failures: not on WhatsApp -> 422, throttled -> 429, other -> 502', async () => {
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const failing = (reason: any): OtpSender => ({
+      name: 'whatsapp',
+      send: async () => {
+        throw new OtpSendError(`whatsapp_${reason}`, null, reason)
+      },
+    })
+    const notOn = await handleStart(req({ phone: HT }, '8.8.8.1'), deps({ sender: () => failing('not_on_whatsapp') }).d)
+    expect(notOn.status).toBe(422)
+    expect((await notOn.json()).code).toBe('not_on_whatsapp')
+
+    const throttled = await handleStart(req({ phone: HT }, '8.8.8.2'), deps({ sender: () => failing('rate_limited') }).d)
+    expect(throttled.status).toBe(429)
+    expect(throttled.headers.get('retry-after')).toBe('60')
+    expect((await throttled.json()).code).toBe('rate_limited')
+
+    const broken = await handleStart(req({ phone: HT }, '8.8.8.3'), deps({ sender: () => failing('misconfigured') }).d)
+    expect(broken.status).toBe(502)
+    expect((await broken.json()).code).toBe('send_failed')
+    errSpy.mockRestore()
   })
 
   it('sign in end to end: start, then verify returns a custom token', async () => {

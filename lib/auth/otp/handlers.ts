@@ -6,7 +6,7 @@
  *   POST /api/auth/phone/verify        { phone, code, locale?, country? } -> { token }
  *   POST /api/auth/phone/link/start    (signed in) { phone, locale?, country? }
  *   POST /api/auth/phone/link/verify   (signed in) { phone, code, country? } -> { phoneNumber }
- *   GET  /api/auth/phone/status        -> { enabled: true }  (404 when off)
+ *   GET  /api/auth/phone/status        -> { enabled: true }  (404 when off or no sender)
  *
  * Every route answers 404 when the feature is off, so a disabled deployment
  * is indistinguishable from one without the feature.
@@ -68,6 +68,7 @@ const MESSAGES: Record<string, string> = {
   cooldown: 'Please wait before requesting another code.',
   rate_limited: 'Too many attempts. Please try again later.',
   send_failed: 'We could not send the code. Please try again.',
+  not_on_whatsapp: 'This number is not on WhatsApp.',
   unavailable: 'Phone sign-in is temporarily unavailable.',
   invalid_code: 'That code is not valid.',
   too_many_attempts: 'Too many wrong codes. Request a new code.',
@@ -164,6 +165,9 @@ function resolveSecret(deps: PhoneAuthDeps): string | null {
 
 export async function handleStatus(deps: PhoneAuthDeps) {
   if (!(await deps.enabled())) return notFound()
+  // Enabled means usable: with no sender (no Meta credentials in production)
+  // or no secret, the app must not offer a flow that can only answer 503.
+  if (!resolveSecret(deps) || !deps.sender()) return notFound()
   return ok({ enabled: true })
 }
 
@@ -204,6 +208,7 @@ async function handleStartFor(req: Request, deps: PhoneAuthDeps, purpose: 'signi
 
   if (result.ok) return ok({ ok: true, resendAfterSec: result.resendAfterSec, expiresInSec: result.expiresInSec })
   if (result.code === 'send_failed') return fail('send_failed', 502)
+  if (result.code === 'not_on_whatsapp') return fail('not_on_whatsapp', 422)
   return fail(result.code, 429, { retryAfterSec: result.retryAfterSec })
 }
 

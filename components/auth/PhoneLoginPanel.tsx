@@ -22,7 +22,7 @@ const COUNTRIES = [
 ] as const
 
 const KNOWN = new Set([
-  'invalid_phone', 'unsupported_country', 'cooldown', 'rate_limited', 'send_failed', 'unavailable',
+  'invalid_phone', 'unsupported_country', 'cooldown', 'rate_limited', 'send_failed', 'not_on_whatsapp', 'unavailable',
   'invalid_code', 'too_many_attempts', 'account_disabled', 'network',
 ])
 

@@ -86,6 +86,7 @@ const KNOWN_ERRORS = new Set([
   'cooldown',
   'rate_limited',
   'send_failed',
+  'not_on_whatsapp',
   'unavailable',
   'invalid_code',
   'too_many_attempts',

@@ -28,7 +28,7 @@ import {
 } from './crypto'
 import { maskPhone } from './phone'
 import { OTP_COLLECTION, RATE_COLLECTION, type OtpStore, type OtpTx, type Doc } from './store'
-import type { OtpLocale, OtpSender } from './senders'
+import { OtpSendError, type OtpLocale, type OtpSender } from './senders'
 
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
@@ -116,6 +116,10 @@ export type StartResult =
   | { ok: false; code: 'cooldown'; retryAfterSec: number }
   | { ok: false; code: 'rate_limited'; retryAfterSec: number }
   | { ok: false; code: 'send_failed' }
+  | { ok: false; code: 'not_on_whatsapp' }
+
+/** How long to ask the person to wait when the provider throttles us. */
+export const PROVIDER_RETRY_AFTER_SEC = 60
 
 export async function startOtp(p: StartParams): Promise<StartResult> {
   const limits = p.limits ?? DEFAULT_LIMITS
@@ -191,6 +195,11 @@ export async function startOtp(p: StartParams): Promise<StartResult> {
     // Let the person retry straight away rather than wait out a cooldown for
     // a message that never left. The quota stays spent (it may have cost us).
     await p.store.patch(OTP_COLLECTION, docId, { lastSentAt: 0, codeHash: null }).catch(() => {})
+    const reason = err instanceof OtpSendError ? err.reason : null
+    if (reason === 'not_on_whatsapp') return { ok: false, code: 'not_on_whatsapp' }
+    if (reason === 'rate_limited') {
+      return { ok: false, code: 'rate_limited', retryAfterSec: PROVIDER_RETRY_AFTER_SEC }
+    }
     return { ok: false, code: 'send_failed' }
   }
 

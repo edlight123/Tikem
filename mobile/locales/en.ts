@@ -230,6 +230,7 @@ export default {
         cooldown: "Please wait {seconds}s before asking for a new code.",
         rate_limited: "Too many attempts. Please try again later.",
         send_failed: "We could not send the code. Check the number and try again.",
+        not_on_whatsapp: "This number is not on WhatsApp. Check the number, or sign in with email, Google or Apple.",
         unavailable: "Phone sign-in is not available right now. Try email, Google or Apple.",
         invalid_code: "That code is not right. Check it and try again.",
         too_many_attempts: "Too many wrong codes. Ask for a new code.",
