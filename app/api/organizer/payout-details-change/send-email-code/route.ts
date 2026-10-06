@@ -46,13 +46,14 @@ export async function POST(_request: NextRequest) {
     const userDoc = await adminDb.collection('users').doc(organizerId).get()
     // The step-up code goes to the sign-in email, never the client-writable
     // profile copy (a stolen session could otherwise redirect it).
+    // Sign-in email ONLY, and only once verified. The profile copy is
+    // client-writable, so falling back to it would let a stolen session send
+    // the step-up code to an attacker's inbox.
     const email =
-      (decodedClaims as any)?.email ||
-      (userDoc.exists ? (userDoc.data() as any)?.email : null) ||
-      null
+      (decodedClaims as any)?.email_verified === true ? (decodedClaims as any)?.email || null : null
 
     if (!email) {
-      return NextResponse.json({ error: 'No email on file' }, { status: 400 })
+      return NextResponse.json({ error: 'A verified sign-in email is required to change payout details' }, { status: 400 })
     }
 
     const ref = getRef(organizerId)
