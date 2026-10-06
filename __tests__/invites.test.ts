@@ -255,6 +255,14 @@ describe('sendEventInvites', () => {
     expect(byUid).toEqual({ bob: 'available', carl: 'invited', dana: 'going', erin: 'unavailable' })
     expect(JSON.stringify(r.friends)).not.toMatch(/example\.com|\+509|muted/)
   })
+
+  it('a friend who keeps attendance private is never shown as going', async () => {
+    put('tickets/t1', { event_id: 'ev1', attendee_id: 'dana', status: 'valid' })
+    put('users/dana', { full_name: 'Dana', privacy: { attendance_visibility: 'nobody' } })
+    const r: any = await getInvitePicker('alice', 'ev1', now)
+    const byUid = Object.fromEntries(r.friends.map((f: any) => [f.uid, f.state]))
+    expect(byUid.dana).toBe('unavailable')
+  })
 })
 
 describe('route guard', () => {
@@ -309,7 +317,7 @@ describe('claimInvite', () => {
     user('newbie')
   })
 
-  it('claims once, auto-connects and notifies the inviter', async () => {
+  it('claims once, sends the inviter a friend request (never a forced friendship) and notifies them', async () => {
     const r = await claimInvite({ uid: 'newbie', code: 'AAAAAAAA', eventId: 'ev1' }, { now: NOW, accountCreatedAt: fresh })
     expect(r).toEqual({ status: 'claimed', inviterUid: 'alice' })
     expect(mockDb.store.get('invite_attributions/newbie')).toMatchObject({
@@ -317,13 +325,17 @@ describe('claimInvite', () => {
       code: 'aaaaaaaa',
       event_id: 'ev1',
     })
-    expect(mockDb.store.get('connections/alice__newbie')).toMatchObject({ status: 'accepted' })
+    expect(mockDb.store.get('connections/alice__newbie')).toMatchObject({
+      status: 'pending',
+      requester_id: 'newbie',
+      recipient_id: 'alice',
+    })
     expect(mockCreateNotification).toHaveBeenCalledWith(
       'alice',
       'invite_joined',
       expect.any(String),
       'Name joined Tikèm from your invite',
-      '/profile/organizer/newbie',
+      '/connections',
       expect.objectContaining({ actorId: 'newbie' })
     )
 
@@ -334,10 +346,20 @@ describe('claimInvite', () => {
     expect(mockDb.store.get('invite_attributions/newbie')).toMatchObject({ inviter_uid: 'alice' })
   })
 
-  it('accepts a pending request rather than duplicating it', async () => {
-    friends('newbie', 'alice', 'pending')
+  it("completes the friendship only when the inviter had already asked", async () => {
+    put('connections/alice__newbie', {
+      users: ['alice', 'newbie'],
+      requester_id: 'alice',
+      recipient_id: 'newbie',
+      status: 'pending',
+    })
     await claimInvite({ uid: 'newbie', code: 'aaaaaaaa' }, { now: NOW, accountCreatedAt: fresh })
     expect(mockDb.store.get('connections/alice__newbie')).toMatchObject({ status: 'accepted' })
+  })
+
+  it('a stranger forwarding the link only creates a pending request', async () => {
+    await claimInvite({ uid: 'newbie', code: 'aaaaaaaa' }, { now: NOW, accountCreatedAt: fresh })
+    expect(mockDb.store.get('connections/alice__newbie')?.status).toBe('pending')
   })
 
   it('does not connect when either side blocked the other', async () => {

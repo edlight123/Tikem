@@ -22,15 +22,16 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { consumeRateLimit } from '@/lib/rate-limit'
 import { BLOCKED_ORGANIZERS_SUBCOLLECTION, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import {
-  ensureAcceptedConnection,
   getAcceptedFriendIds,
   getPublicUserSummaries,
+  sendConnectionRequest,
 } from '@/lib/firestore/connections'
 import { createNotification } from '@/lib/notifications/helpers'
 import { decideSend } from '@/lib/notifications/policy'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { isSocialFlagOn } from '@/lib/social/flags'
 import type { PublicUserSummary } from '@/types/social'
+import { normalizeAttendanceVisibility } from '@/types/social'
 import {
   DAY_MS,
   INVITE_CAPS,
@@ -137,6 +138,19 @@ async function inviteFacts(
   candidates.forEach((c) => {
     if (myBlocks.has(c)) blocked.add(c)
   })
+  // A friend who keeps their attendance private ('nobody') must not be shown
+  // as "going": report them as merely unavailable, like a mute or a block.
+  const holderIds = Array.from(holders)
+  if (holderIds.length > 0) {
+    const docs = await adminDb.getAll(...holderIds.map((id) => users.doc(id)))
+    docs.forEach((d: any) => {
+      const vis = normalizeAttendanceVisibility(d?.exists ? d.data()?.privacy?.attendance_visibility : undefined)
+      if (vis === 'nobody') {
+        holders.delete(d.id)
+        blocked.add(d.id)
+      }
+    })
+  }
   return { alreadyInvited, holders, mutedBy, blocked }
 }
 
@@ -402,14 +416,17 @@ export async function claimInvite(
   })
   if (!claimed) return { status: 'already_claimed' }
 
-  // Auto-connect, unless either side blocked the other.
+  // Ask, never force: invite links get forwarded, so joining through one must
+  // not make a stranger the inviter's friend (friends see attendance). The new
+  // user sends a request the inviter accepts with one tap; if the inviter had
+  // already requested them, that consent completes it.
   try {
     const [blockedByNew, blockedByInviter] = await Promise.all([
       adminDb.collection('users').doc(params.uid).collection(BLOCKED_ORGANIZERS_SUBCOLLECTION).doc(inviterUid).get(),
       adminDb.collection('users').doc(inviterUid).collection(BLOCKED_ORGANIZERS_SUBCOLLECTION).doc(params.uid).get(),
     ])
     if (!blockedByNew.exists && !blockedByInviter.exists) {
-      await ensureAcceptedConnection(inviterUid, params.uid)
+      await sendConnectionRequest(params.uid, inviterUid)
     }
   } catch (err) {
     console.error('[invites] auto-connect failed', (err as any)?.message)
@@ -440,7 +457,7 @@ export async function notifyInviterJoined(inviterUid: string, newUid: string): P
   const copy = inviteCopy(lang)
   const name = firstName(await displayNameOf(newUid), copy.someone)
   const body = copy.joined(name)
-  const url = `/profile/organizer/${newUid}`
+  const url = '/connections'
   const metadata = { actorId: newUid, kind: 'invite_joined' }
   await createNotification(inviterUid, 'invite_joined', copy.joinedTitle, body, url, metadata)
   if (decideSend({ user: inviter, category: 'friend_invite' }).send) {
