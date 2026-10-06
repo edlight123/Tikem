@@ -150,6 +150,11 @@ export type DoorRow = {
   /** The tier's entry window. */
   validFrom: string | null
   validUntil: string | null
+  /**
+   * The ticket's QR version (0 = never changed hands). From 1 on, only the
+   * exact signed `code` admits, so an offline door refuses a pre-transfer code.
+   */
+  qrVersion: number
 }
 
 export function toDoorRow(
@@ -172,6 +177,7 @@ export function toDoorRow(
       toIso(opts.event?.end_datetime),
     validFrom: toIso(tier?.valid_from),
     validUntil: toIso(tier?.valid_until),
+    qrVersion: ticketQrVersionOf(ticket),
   }
 }
 
@@ -192,12 +198,22 @@ export type DoorVerdict =
   | 'CANCELLED'
   | 'WRONG_EVENT'
   | 'NOT_FOUND'
+  /** A code from before the ticket's latest transfer. */
+  | 'TRANSFERRED'
+  /** A signed code that does not verify (forged, or names another ticket). */
+  | 'INVALID_CODE'
 
 export type CheckInOptions = {
   /** Staff tapped "Allow re-entry" on an already-checked-in ticket. */
   reentry?: boolean
   /** Staff tapped "Override — check in anyway" outside the tier's entry window. */
   override?: boolean
+  /**
+   * The scanned code's judgement against the ticket (server: HMAC verified,
+   * lib/tickets/qr.ts; offline: exact match, judgeScannedCodeAgainstRow).
+   * Absent = no code was judged (a manual pick by name).
+   */
+  codeCheck?: ScannedCodeCheck
 }
 
 export type DoorJudgement = {
@@ -219,6 +235,11 @@ export function judgeDoorRow(
   const refuse = (verdict: DoorVerdict): DoorJudgement => ({ verdict, admit: false, reentry: false })
   if (!row) return refuse('NOT_FOUND')
   if (row.eventId !== undefined && row.eventId !== ctx.eventId) return refuse('WRONG_EVENT')
+  // Before "already in": a pre-transfer code must read as transferred, not as
+  // a duplicate of the new holder's check-in. Override and re-entry never
+  // bypass it.
+  if (ctx.codeCheck === 'TRANSFERRED') return refuse('TRANSFERRED')
+  if (ctx.codeCheck === 'INVALID_CODE') return refuse('INVALID_CODE')
 
   const now = (ctx.now ?? new Date()).getTime()
   const ends = row.endsAt ? Date.parse(row.endsAt) : NaN
@@ -292,4 +313,59 @@ export function parseTicketCode(scanResult: unknown): string | null {
     // not JSON
   }
   return /^[a-zA-Z0-9_-]{1,128}$/.test(cleaned) ? cleaned : null
+}
+
+// ---------------------------------------------------------------------------
+// QR versions (see lib/tickets/qr.ts). Pure, so the Expo app's offline copy in
+// mobile/lib/doorList.ts can be held to parity.
+// ---------------------------------------------------------------------------
+
+export type ScannedCodeCheck = 'OK' | 'TRANSFERRED' | 'INVALID_CODE'
+
+/** The ticket's QR version; absent, negative or junk = 0 (never transferred). */
+export function ticketQrVersionOf(ticket: Record<string, any> | null | undefined): number {
+  const v = Number(ticket?.qr_version)
+  return Number.isInteger(v) && v > 0 ? v : 0
+}
+
+/** A signed payload `{"ticketId","v","s"}`, or null for anything else (legacy codes). */
+export function parseSignedTicketQr(raw: unknown): { ticketId: string; v: number; s: string } | null {
+  const cleaned = String(raw ?? '').trim()
+  if (!cleaned.startsWith('{')) return null
+  try {
+    const json = JSON.parse(cleaned)
+    const ticketId = json?.ticketId
+    const v = json?.v
+    const s = json?.s
+    if (typeof ticketId !== 'string' || !ticketId) return null
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) return null
+    if (typeof s !== 'string' || !s) return null
+    return { ticketId, v, s }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Offline judgement (no signing key on a phone): the door row carries the
+ * ticket's CURRENT code, so from version 1 on only that exact signed payload
+ * admits. A legacy code or an older version reads as transferred; a payload
+ * at the current version whose signature differs is invalid.
+ */
+export function judgeScannedCodeAgainstRow(
+  scanned: string | null | undefined,
+  row: { id: string; code: string; qrVersion?: number | null }
+): ScannedCodeCheck {
+  const raw = String(scanned ?? '').trim()
+  if (!raw) return 'OK'
+  const current = Number.isInteger(row.qrVersion) && (row.qrVersion as number) > 0 ? (row.qrVersion as number) : 0
+  const signed = parseSignedTicketQr(raw)
+  if (!signed) return current >= 1 ? 'TRANSFERRED' : 'OK'
+  if (signed.ticketId !== row.id) return 'INVALID_CODE'
+  if (signed.v < current) return 'TRANSFERRED'
+  if (signed.v > current) return 'INVALID_CODE'
+  const stored = parseSignedTicketQr(row.code)
+  return stored && stored.ticketId === signed.ticketId && stored.v === signed.v && stored.s === signed.s
+    ? 'OK'
+    : 'INVALID_CODE'
 }

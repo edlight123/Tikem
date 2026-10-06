@@ -15,6 +15,18 @@
 import type { PKPass as PKPassType } from 'passkit-generator'
 import type { AppleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
+import { appleAuthTokenFor, appleSerialFor, appleWebServiceUrl } from './apple-web-service'
+
+export interface ApplePassOptions {
+  /**
+   * Build the VOIDED pass the previous holder's Wallet downloads after a
+   * transfer (or after a refund): `voided: true`, no barcode, no holder name,
+   * and a line saying why. Served only by the PassKit web service.
+   */
+  voided?: boolean
+  /** The serial being served (a voided pass keeps the serial the device asked for). */
+  serialNumber?: string
+}
 
 /**
  * The ISO instant Wallet should format, or null when the event has no usable
@@ -94,8 +106,17 @@ async function buildPassBackground(
  */
 export async function buildApplePkpass(
   ticket: WalletTicket,
-  config: AppleWalletConfig
+  config: AppleWalletConfig,
+  options: ApplePassOptions = {}
 ): Promise<Buffer> {
+  const voided = Boolean(options.voided)
+  const serialNumber = options.serialNumber || appleSerialFor(ticket.id, ticket.qrVersion || 0)
+  // The PassKit web service, so Wallet can be told when this pass changes
+  // (lib/wallet/apple-web-service.ts). Omitted, rather than half-set, when the
+  // deployment has no https origin or no key to derive the token from.
+  const webServiceURL = appleWebServiceUrl()
+  const authenticationToken = webServiceURL ? appleAuthTokenFor(serialNumber) : null
+
   // Loaded on demand, NOT at module scope. `next build` imports every route
   // module to collect page data, so a top-level import drags passkit-generator
   // (plus node-forge and joi) into the same process that renders 199 static
@@ -139,9 +160,13 @@ export async function buildApplePkpass(
       formatVersion: 1,
       passTypeIdentifier: config.passTypeIdentifier,
       teamIdentifier: config.teamIdentifier,
-      // One pass per ticket, stable across regenerations so re-adding a pass
-      // updates the existing one instead of stacking duplicates in Wallet.
-      serialNumber: ticket.id,
+      // One pass per ticket AND QR version, stable across regenerations so
+      // re-adding a pass updates the existing one instead of stacking
+      // duplicates in Wallet. The version suffix (from the first transfer on)
+      // keeps a new holder's pass apart from the previous holder's voided one.
+      serialNumber,
+      ...(webServiceURL && authenticationToken ? { webServiceURL, authenticationToken } : {}),
+      ...(voided ? { voided: true } : {}),
       organizationName: config.organizationName,
       description: `${ticket.eventTitle} · ${ticket.tierName}`,
       // NO logoText: `logo.png` is the Tikèm wordmark, so setting logoText too
@@ -217,7 +242,9 @@ export async function buildApplePkpass(
     })
   }
 
-  if (ticket.holderName) {
+  // A voided pass belongs to the PREVIOUS holder: never show them the new
+  // holder's name.
+  if (ticket.holderName && !voided) {
     pass.auxiliaryFields.push({
       key: 'holder',
       label: 'ADMIT',
@@ -234,6 +261,19 @@ export async function buildApplePkpass(
   if (ticket.city) {
     pass.backFields.push({ key: 'city', label: 'City', value: ticket.city })
   }
+  if (voided) {
+    pass.auxiliaryFields.push({ key: 'status', label: 'STATUS', value: 'VOID' })
+    pass.backFields.push({
+      key: 'voided',
+      label: 'This pass is void',
+      value:
+        'This ticket was transferred or is no longer valid. This pass no longer admits anyone at the door.',
+    })
+    // No barcode at all: nothing on a void pass can be scanned.
+    pass.setBarcodes(null)
+    return pass.getAsBuffer()
+  }
+
   pass.backFields.push({
     key: 'instructions',
     label: 'At the door',

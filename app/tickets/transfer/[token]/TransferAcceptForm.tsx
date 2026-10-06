@@ -189,6 +189,13 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
           <ul className="text-[11px] sm:text-sm text-white/70 space-y-0.5 sm:space-y-1">
             <li>• {t('transfer.bullet_transferred', { defaultValue: 'This ticket will be transferred to your account' })}</li>
             <li>• {t('transfer.bullet_sender_loses_access', { defaultValue: 'The sender will no longer have access to it' })}</li>
+            <li>
+              •{' '}
+              {t('transfer.bullet_new_code', {
+                defaultValue:
+                  "The ticket gets a new QR code. The sender's old code, screenshots and wallet pass stop working",
+              })}
+            </li>
             <li>• {t('transfer.bullet_view_qr', { defaultValue: "You'll be able to view the QR code and use it at the event" })}</li>
             <li>• {t('transfer.bullet_confirmation_emails', { defaultValue: 'Both you and the sender will receive confirmation emails' })}</li>
           </ul>

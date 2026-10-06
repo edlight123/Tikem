@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { DoorModeTopBar } from '@/components/scan/DoorModeTopBar'
 import { ScanViewport } from '@/components/scan/ScanViewport'
 import { ScanResultOverlay } from '@/components/scan/ScanResultOverlay'
@@ -30,6 +30,8 @@ export function DoorModeInterface({
   const [entryPoint, setEntryPoint] = useState(defaultEntryPoints[0])
   const [showManualLookup, setShowManualLookup] = useState(false)
   const [currentTicketId, setCurrentTicketId] = useState<string | null>(null)
+  const currentCodeRef = useRef<string | null>(null)
+  const currentMethodRef = useRef<'scan' | 'manual'>('scan')
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -51,14 +53,17 @@ export function DoorModeInterface({
 
   // Scan controller
   const { state, result, handleScan, manualCheckIn, reset } = useScanController({
-    onScan: async (ticketId, method) => {
+    onScan: async (ticketId, method, code) => {
       setCurrentTicketId(ticketId)
+      currentCodeRef.current = code ?? null
+      currentMethodRef.current = method
       const params: CheckInParams = {
         ticketId,
         eventId,
         entryPoint,
         scannedBy,
         checkInMethod: method,
+        code: code ?? null,
       }
       return await performCheckIn(params)
     },
@@ -74,6 +79,9 @@ export function DoorModeInterface({
       eventId,
       entryPoint,
       scannedBy,
+      // The same code the first scan read, so a re-entry is judged on it too.
+      checkInMethod: currentMethodRef.current,
+      code: currentCodeRef.current,
     }
 
     const overrideResult = await performOverrideCheckIn(params)

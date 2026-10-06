@@ -18,6 +18,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { ticketQrVersionOf } from '@/lib/scan/doorRules'
 
 /** Ticket statuses that still admit someone to an event. */
 const LIVE_TICKET_STATUSES = new Set(['valid', 'active', 'confirmed'])
@@ -26,6 +27,12 @@ export interface WalletTicket {
   id: string
   /** The EXISTING QR payload. Never minted here — scanners resolve this value. */
   qrPayload: string
+  /**
+   * The ticket's QR version (lib/tickets/qr.ts). Part of the pass identity:
+   * Apple serial / Google object id change with it, so a new holder's pass
+   * never collides with the voided pass of the previous one.
+   */
+  qrVersion: number
   eventId: string
   eventTitle: string
   tierName: string
@@ -117,16 +124,45 @@ export async function loadWalletTicket(
     return { ok: false, code: 'not_ticket_owner', status: 403 }
   }
 
-  // (3) Still live. Missing status is legacy-tolerated; anything else must be
-  // explicitly on the allowlist. A refund also sets refund_status='approved',
-  // which is refused independently in case status lagged behind.
-  const status = String(ticket?.status ?? '').trim().toLowerCase()
-  const refundStatus = String(ticket?.refund_status ?? '').trim().toLowerCase()
-  const statusIsLive = status === '' || LIVE_TICKET_STATUSES.has(status)
-  if (!statusIsLive || refundStatus === 'approved') {
+  // (3) Still live.
+  if (!isWalletTicketLive(ticket)) {
     return { ok: false, code: 'ticket_not_active', status: 409 }
   }
 
+  return { ok: true, ticket: await walletTicketFromDoc(snapshot.id, ticket) }
+}
+
+/**
+ * Missing status is legacy-tolerated; anything else must be explicitly on the
+ * allowlist. A refund also sets refund_status='approved', which is refused
+ * independently in case status lagged behind.
+ */
+export function isWalletTicketLive(ticket: Record<string, any>): boolean {
+  const status = String(ticket?.status ?? '').trim().toLowerCase()
+  const refundStatus = String(ticket?.refund_status ?? '').trim().toLowerCase()
+  const statusIsLive = status === '' || LIVE_TICKET_STATUSES.has(status)
+  return statusIsLive && refundStatus !== 'approved'
+}
+
+/**
+ * The ticket behind an Apple Wallet serial, for the PassKit web service
+ * (app/api/wallet/apple/v1/passes). NO owner check: the caller already proved
+ * it holds that serial's authenticationToken, which only ever shipped inside a
+ * pass built for the holder of that QR version.
+ */
+export async function loadWalletTicketById(
+  ticketId: string
+): Promise<{ ticket: WalletTicket; data: Record<string, any>; live: boolean } | null> {
+  const snapshot = await adminDb.collection('tickets').doc(String(ticketId)).get()
+  if (!snapshot.exists) return null
+  const data = (snapshot.data() || {}) as Record<string, any>
+  return { ticket: await walletTicketFromDoc(snapshot.id, data), data, live: isWalletTicketLive(data) }
+}
+
+async function walletTicketFromDoc(
+  ticketDocId: string,
+  ticket: Record<string, any>
+): Promise<WalletTicket> {
   // Enrich from the event doc, but never fail the pass over it — the ticket
   // already carries denormalized copies of everything the pass shows.
   let event: any = null
@@ -144,35 +180,33 @@ export async function loadWalletTicket(
   }
 
   return {
-    ok: true,
-    ticket: {
-      id: snapshot.id,
-      // The EXISTING code, in the same precedence the app and the door use
-      // (mobile/lib/ticket.ts:32; lib/scan/doorService.ts resolveTicketRef reads
-      // the ticket id, then qr_code_data, then qr_code): scanners resolve this
-      // value to a ticket, so minting a new one would be rejected at the gate.
-      qrPayload: firstString(ticket?.qr_code_data, ticket?.qr_code, snapshot.id),
-      eventId,
-      eventTitle: firstString(event?.title, ticket?.event_title, 'Event'),
-      tierName: firstString(ticket?.tier_name, ticket?.ticket_type, 'General Admission'),
-      holderName: firstString(ticket?.attendee_name),
-      venueName: firstString(ticket?.venue_name, event?.venue_name),
-      city: firstString(ticket?.city, event?.city),
-      // The LIVE event date wins over the copy frozen onto the ticket at
-      // purchase. Organizers reschedule, and the ticket snapshot is never
-      // rewritten when they do — a pass built from it sends the attendee on
-      // the wrong day. The app already reads the event doc (TicketsScreen
-      // hydrates start_datetime from the event), so preferring the ticket here
-      // made the pass and the app disagree. Snapshot stays as the fallback for
-      // tickets whose event doc is gone.
-      startDatetime: firstIso(
-        event?.start_datetime,
-        ticket?.start_datetime,
-        ticket?.event_date
-      ),
-      endDatetime: firstIso(event?.end_datetime, ticket?.end_datetime),
-      orderRef: orderRef(ticket?.order_number || ticket?.order_id || snapshot.id),
-      bannerImageUrl: firstString(event?.banner_image_url, ticket?.banner_image_url) || null,
-    },
+    id: ticketDocId,
+    // The EXISTING code, in the same precedence the app and the door use
+    // (mobile/lib/ticket.ts:32; lib/scan/doorService.ts resolveTicketRef reads
+    // the ticket id, then qr_code_data, then qr_code): scanners resolve this
+    // value to a ticket, so minting a new one would be rejected at the gate.
+    qrPayload: firstString(ticket?.qr_code_data, ticket?.qr_code, ticketDocId),
+    qrVersion: ticketQrVersionOf(ticket),
+    eventId,
+    eventTitle: firstString(event?.title, ticket?.event_title, 'Event'),
+    tierName: firstString(ticket?.tier_name, ticket?.ticket_type, 'General Admission'),
+    holderName: firstString(ticket?.attendee_name),
+    venueName: firstString(ticket?.venue_name, event?.venue_name),
+    city: firstString(ticket?.city, event?.city),
+    // The LIVE event date wins over the copy frozen onto the ticket at
+    // purchase. Organizers reschedule, and the ticket snapshot is never
+    // rewritten when they do — a pass built from it sends the attendee on
+    // the wrong day. The app already reads the event doc (TicketsScreen
+    // hydrates start_datetime from the event), so preferring the ticket here
+    // made the pass and the app disagree. Snapshot stays as the fallback for
+    // tickets whose event doc is gone.
+    startDatetime: firstIso(
+      event?.start_datetime,
+      ticket?.start_datetime,
+      ticket?.event_date
+    ),
+    endDatetime: firstIso(event?.end_datetime, ticket?.end_datetime),
+    orderRef: orderRef(ticket?.order_number || ticket?.order_id || ticketDocId),
+    bannerImageUrl: firstString(event?.banner_image_url, ticket?.banner_image_url) || null,
   }
 }

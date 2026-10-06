@@ -130,9 +130,14 @@ export default function EventOrderDetailScreen() {
       const lines = [
         card.length ? t('organizerOrders.refundSheet.successCard', { amount: sum(card) }) : '',
         queued.length ? t('organizerOrders.refundSheet.successManual', { amount: sum(queued) }) : '',
+        result.review?.length ? t('organizerOrders.refundSheet.successReview', { n: result.review.length }) : '',
         result.failed?.length ? t('organizerOrders.refundSheet.partialFailed', { n: result.failed.length }) : '',
       ].filter(Boolean);
-      showAlert(t('organizerOrders.refundSheet.successTitle'), lines.join('\n\n'));
+      const onlyReview = card.length + queued.length === 0 && (result.review?.length ?? 0) > 0;
+      showAlert(
+        onlyReview ? t('organizerOrders.refundSheet.reviewTitle') : t('organizerOrders.refundSheet.successTitle'),
+        lines.join('\n\n')
+      );
       await load();
     } catch (e: any) {
       setSheetOpen(false);

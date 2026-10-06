@@ -40,18 +40,19 @@ describe('seeding the config in force', () => {
     expect(feeConfigForCountry('US').platformFeePercentage).toBe(0.05)
   })
 
-  it('moves a displayed price when only the CAP changes', () => {
+  it('never moves a displayed price for a stored CAP: the per-ticket cap is retired', () => {
     const before = priceOrder(100, US_EVENT, { quantity: 1 }).total
 
     setPlatformFeeConfig({
       haiti: DEFAULT_PLATFORM_SETTINGS.haiti,
       usCanada: {
         ...DEFAULT_PLATFORM_SETTINGS.usCanada,
-        platformFeeCapMinorByCurrency: { USD: 200 }, // $2.00 ceiling
+        platformFeeCapMinorByCurrency: { USD: 200 }, // a stale $2.00 ceiling on the doc
       },
     })
 
-    expect(priceOrder(100, US_EVENT, { quantity: 1 }).total).toBeLessThan(before)
+    expect(priceOrder(100, US_EVENT, { quantity: 1 }).total).toBe(before)
+    expect(priceOrder(100, US_EVENT, { quantity: 1 }).total).toBe(110)
   })
 
   it('returns to the defaults when cleared', () => {
@@ -86,7 +87,7 @@ describe('a corrupt setting cannot poison a price', () => {
     )
   })
 
-  it('drops individual bad cap entries but keeps the good ones', () => {
+  it('drops a stored cap table entirely', () => {
     setPlatformFeeConfig({
       haiti: DEFAULT_PLATFORM_SETTINGS.haiti,
       usCanada: {
@@ -94,8 +95,7 @@ describe('a corrupt setting cannot poison a price', () => {
         platformFeeCapMinorByCurrency: { usd: 400, CAD: -1, EUR: 'free' } as any,
       },
     })
-    const caps = feeConfigForCountry('US').platformFeeCapMinorByCurrency
-    expect(caps).toEqual({ USD: 400 }) // lowercased key normalized, junk dropped
+    expect(feeConfigForCountry('US').platformFeeCapMinorByCurrency).toBeUndefined()
   })
 
   it('still prices an order when the config is nonsense', () => {

@@ -38,6 +38,20 @@ jest.mock('@/lib/admin', () => ({
   getAdminEmails: () => ['ops@example.com'],
 }))
 
+// The coverage gate (lib/tickets/refundCoverage.ts) is exercised in
+// refund-admin-review.test.ts; here every refund is covered.
+jest.mock('@/lib/tickets/refundCoverage', () => ({
+  loadRefundCoverageContext: async (eventId: string) => ({ eventId, input: {} }),
+  coverageInTransaction: async () => ({
+    currency: 'HTG',
+    faceMinor: 0,
+    organizerCostMinor: 0,
+    coverageMinor: 0,
+    shortfallMinor: 0,
+    withdrawnMinor: 0,
+  }),
+}))
+
 import { refundTicket } from '@/lib/tickets/refundExecution'
 import {
   listReconciliation,

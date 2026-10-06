@@ -1,6 +1,28 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { ticketQrVersionOf } from '@/lib/scan/doorRules'
+import { verifyScannedTicketCode } from '@/lib/tickets/qr'
+
+/**
+ * Why the scanned code itself refuses entry, or null when it is the ticket's
+ * current code (lib/tickets/qr.ts). A scan with no raw code is judged as a
+ * legacy bare id, so a ticket that has changed hands only admits by its new
+ * signed code or by a manual pick.
+ */
+function codeBlockReason(
+  ticketId: string,
+  ticketData: Record<string, any>,
+  code: string | null | undefined,
+  method: 'scan' | 'manual'
+): 'TRANSFERRED' | 'INVALID_CODE' | null {
+  if (code && String(code).trim()) {
+    const check = verifyScannedTicketCode(code, ticketId, ticketData)
+    return check === 'OK' ? null : check
+  }
+  if (method === 'scan' && ticketQrVersionOf(ticketData) >= 1) return 'TRANSFERRED'
+  return null
+}
 
 /**
  * The name the door sees — a NAME, never a contact detail.
@@ -39,7 +61,10 @@ async function resolveAttendeeName(ticketData: any): Promise<string> {
  * cancelled and pending one by one, so `refund_pending` — a mobile-money ticket
  * already voided and queued for a refund — walked straight in. A ticket whose
  * refund is in flight or done (refund_status processing / approved /
- * manual_required) is refused too, even if its status has not caught up yet.
+ * manual_required / admin_review) is refused too, even if its status has not
+ * caught up yet. admin_review is a refund waiting on a Tikèm admin: the buyer
+ * asked for (or was promised) their money back, so the ticket must not also
+ * be used.
  *
  * A status of `checked_in` is passed through: the caller's already-checked-in
  * branch answers it.
@@ -54,7 +79,12 @@ export function ticketBlockReason(
   const refundStatus = String(ticketData?.refund_status ?? '').toLowerCase().trim()
 
   if (status === 'refunded' || status === 'refund_pending') return 'REFUNDED'
-  if (refundStatus === 'processing' || refundStatus === 'approved' || refundStatus === 'manual_required') {
+  if (
+    refundStatus === 'processing' ||
+    refundStatus === 'approved' ||
+    refundStatus === 'manual_required' ||
+    refundStatus === 'admin_review'
+  ) {
     return 'REFUNDED'
   }
   if (status === 'pending') return 'PENDING_PAYMENT'
@@ -66,7 +96,11 @@ export function ticketBlockReason(
 export type CheckInResult = 
   | { success: true; type: 'VALID'; attendeeName: string; ticketType: string; quantity: number; entryPoint: string }
   | { success: false; type: 'ALREADY_CHECKED_IN'; attendeeName: string; checkedInAt: string; entryPoint: string; allowReentry: boolean }
-  | { success: false; type: 'INVALID'; reason: 'NOT_FOUND' | 'WRONG_EVENT' | 'REFUNDED' | 'CANCELLED' | 'PENDING_PAYMENT' }
+  | {
+      success: false
+      type: 'INVALID'
+      reason: 'NOT_FOUND' | 'WRONG_EVENT' | 'REFUNDED' | 'CANCELLED' | 'PENDING_PAYMENT' | 'TRANSFERRED' | 'INVALID_CODE'
+    }
 
 export interface CheckInParams {
   ticketId: string
@@ -76,6 +110,8 @@ export interface CheckInParams {
       their meaning; the manual-lookup path must pass 'manual' explicitly. */
   checkInMethod?: 'scan' | 'manual'
   scannedBy: string
+  /** The raw string the camera read, so its QR version and signature can be judged. */
+  code?: string | null
 }
 
 /**
@@ -83,7 +119,7 @@ export interface CheckInParams {
  * Prevents duplicate check-ins through Firestore transaction
  */
 export async function checkInTicket(params: CheckInParams): Promise<CheckInResult> {
-  const { ticketId, eventId, entryPoint, scannedBy, checkInMethod = 'scan' } = params
+  const { ticketId, eventId, entryPoint, scannedBy, checkInMethod = 'scan', code } = params
 
   try {
     const ticketRef = adminDb.collection('tickets').doc(ticketId)
@@ -115,6 +151,13 @@ export async function checkInTicket(params: CheckInParams): Promise<CheckInResul
           type: 'INVALID',
           reason: 'WRONG_EVENT',
         } as CheckInResult
+      }
+
+      // A code from before a transfer, or a forged one, before anything else:
+      // "transferred" must not read as "already checked in".
+      const codeBlocked = codeBlockReason(ticketId, ticketData, code, checkInMethod)
+      if (codeBlocked) {
+        return { success: false, type: 'INVALID', reason: codeBlocked } as CheckInResult
       }
 
       // Check ticket status (allowlist — see ticketBlockReason)
@@ -188,7 +231,7 @@ export async function checkInTicket(params: CheckInParams): Promise<CheckInResul
  * a transaction so a refund landing mid-tap is seen.
  */
 export async function overrideCheckIn(params: CheckInParams): Promise<CheckInResult> {
-  const { ticketId, eventId, entryPoint, scannedBy } = params
+  const { ticketId, eventId, entryPoint, scannedBy, code } = params
 
   try {
     const ticketRef = adminDb.collection('tickets').doc(ticketId)
@@ -204,6 +247,11 @@ export async function overrideCheckIn(params: CheckInParams): Promise<CheckInRes
 
       if (ticketData.event_id !== eventId) {
         return { success: false, type: 'INVALID', reason: 'WRONG_EVENT' } as CheckInResult
+      }
+
+      const codeBlocked = codeBlockReason(ticketId, ticketData, code, params.checkInMethod ?? 'scan')
+      if (codeBlocked) {
+        return { success: false, type: 'INVALID', reason: codeBlocked } as CheckInResult
       }
 
       const blocked = ticketBlockReason(ticketData)

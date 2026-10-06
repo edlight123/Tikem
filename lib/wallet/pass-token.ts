@@ -67,6 +67,14 @@ function linkSecret(): Buffer | null {
   return null
 }
 
+/**
+ * The same wallet key, for the Apple Wallet web service's per-pass
+ * authenticationToken (lib/wallet/apple-web-service.ts). Null = not configured.
+ */
+export function walletSigningSecret(): Buffer | null {
+  return linkSecret()
+}
+
 function sign(body: string, secret: Buffer): string {
   return base64url(crypto.createHmac('sha256', secret).update(body).digest())
 }

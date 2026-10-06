@@ -35,7 +35,15 @@ import {
   scanOutcomeFeedback,
   scanReadFeedback,
 } from '../../lib/scanner';
-import { DoorRow, findDoorRow, judgeDoorRow, markRowCheckedIn, DoorVerdict } from '../../lib/doorList';
+import {
+  DoorRow,
+  findDoorRow,
+  judgeDoorRow,
+  judgeScannedCodeAgainstRow,
+  markRowCheckedIn,
+  DoorVerdict,
+  ticketQrVersionOf,
+} from '../../lib/doorList';
 import {
   DoorAccessError,
   DoorListPayload,
@@ -88,6 +96,11 @@ type ScanResult = {
   validityBlock?: string;
   /** How this ticket reached the scanner — recorded as check_in_method. */
   method?: CheckInMethod;
+  /**
+   * The raw string the camera read. Sent with the check-in so the server
+   * judges its QR version (a code from before a transfer never admits).
+   */
+  code?: string;
 };
 
 /**
@@ -210,7 +223,13 @@ export default function TicketScannerScreen() {
   const [entryPoint, setEntryPoint] = useState<string>(ENTRY_POINTS[0].value);
   const [hapticsOn, setHapticsOn] = useState(true);
   const [doorResult, setDoorResult] = useState<DoorResult | null>(null);
-  const doorTicketRef = useRef<{ ticketId: string; method: CheckInMethod; name?: string; tier?: string } | null>(null);
+  const doorTicketRef = useRef<{
+    ticketId: string;
+    method: CheckInMethod;
+    name?: string;
+    tier?: string;
+    code?: string;
+  } | null>(null);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const eventMetaRef = useRef<{ allowReentry: boolean }>({ allowReentry: false });
   const [eventTitle, setEventTitle] = useState<string>('');
@@ -295,7 +314,10 @@ export default function TicketScannerScreen() {
       try {
         const snap = await getDocs(query(collection(db, 'tickets'), where('event_id', '==', eventId)));
         if (cancelled) return;
-        const manifest: Record<string, { name: string; tier: string; status: string; checkedIn: boolean }> = {};
+        const manifest: Record<
+          string,
+          { name: string; tier: string; status: string; checkedIn: boolean; qrVersion: number; code: string }
+        > = {};
         const list: DoorGuest[] = [];
         snap.forEach((d) => {
           const x = d.data() as any;
@@ -307,6 +329,10 @@ export default function TicketScannerScreen() {
             tier: x.tier_name || x.ticket_tier_name || x.ticket_type || x.ticketType || x.tierName || '',
             status: x.status || 'active',
             checkedIn: !!x.checked_in_at || x.checked_in === true,
+            // The ticket's CURRENT code and QR version, so a code from before
+            // a transfer reads as transferred even when judged offline.
+            qrVersion: ticketQrVersionOf(x),
+            code: String(x.qr_code || x.qr_code_data || d.id),
           };
           // The in-memory lookup list may carry the email so staff can search
           // by it; it is dropped with the screen and never written to disk.
@@ -579,6 +605,12 @@ export default function TicketScannerScreen() {
         return { status: 'EXPIRED', attendeeName, tierName, message: t('organizerTicketScanner.results.expired') };
       case 'CANCELLED':
         return { status: 'CANCELLED', attendeeName, tierName, message: t('organizerTicketScanner.results.cancelled') };
+      // Distinct from "already in": the person holding this code is not the
+      // ticket's holder any more, so no name is shown.
+      case 'TRANSFERRED':
+        return { status: 'CANCELLED', message: t('organizerTicketScanner.results.transferredCode') };
+      case 'INVALID_CODE':
+        return { status: 'NOT_FOUND', message: t('organizerTicketScanner.results.invalidCode') };
       case 'ALREADY_CHECKED_IN': {
         const at = row?.checkedInAt ? new Date(row.checkedInAt) : undefined;
         const checkedInTime = at && !isNaN(at.getTime()) ? at : undefined;
@@ -611,7 +643,7 @@ export default function TicketScannerScreen() {
   };
 
   /** Door-mode twin of validateTicket: judged against the door list (works offline). */
-  const validateFromDoorList = async (scanned: string, method: CheckInMethod): Promise<ScanResult> => {
+  const validateFromDoorList = async (scanned: string, method: CheckInMethod, code?: string): Promise<ScanResult> => {
     let row = doorRowsRef.current ? findDoorRow(doorRowsRef.current, scanned) : null;
     // Not on the list yet (bought after it loaded): refresh once while online.
     if (!row && !offlineRef.current) {
@@ -621,7 +653,8 @@ export default function TicketScannerScreen() {
     if (!doorRowsRef.current) {
       return { status: 'ERROR', message: t('organizerTicketScanner.results.offlineNotCached') };
     }
-    const { verdict } = judgeDoorRow(row, { allowReentry: eventMetaRef.current.allowReentry });
+    const codeCheck = row && method === 'scan' && code ? judgeScannedCodeAgainstRow(code, row) : undefined;
+    const { verdict } = judgeDoorRow(row, { allowReentry: eventMetaRef.current.allowReentry, codeCheck });
     return doorVerdictToResult(row, verdict, method);
   };
 
@@ -633,10 +666,13 @@ export default function TicketScannerScreen() {
   const commitDoorCheckIn = async (
     ticketId: string,
     method: CheckInMethod,
-    opts: { reentry?: boolean; override?: boolean },
+    opts: { reentry?: boolean; override?: boolean; code?: string },
   ): Promise<CommitOutcome> => {
     const body = {
       ticketId,
+      // The raw scanned code, so the server judges its QR version. A manual
+      // pick by name has none.
+      code: method === 'scan' && opts.code ? opts.code : null,
       method,
       // The entry point is only chosen in door mode, so only door mode records it.
       entryPoint: doorMode ? entryPoint : null,
@@ -677,8 +713,8 @@ export default function TicketScannerScreen() {
    * the checks a scanned QR gets (event, expiry, duplicate, status, entry
    * window). Offline this is served from the cache warmed on mount.
    */
-  const validateTicket = async (ticketId: string, method: CheckInMethod): Promise<ScanResult> => {
-    if (accessModeRef.current === 'door') return validateFromDoorList(ticketId, method);
+  const validateTicket = async (ticketId: string, method: CheckInMethod, code?: string): Promise<ScanResult> => {
+    if (accessModeRef.current === 'door') return validateFromDoorList(ticketId, method, code);
     try {
       // Get ticket from Firestore. Offline this is served from the in-session
       // cache warmed on mount; `fromCache` tells us we're offline so the banner
@@ -734,6 +770,18 @@ export default function TicketScannerScreen() {
           status: 'WRONG_EVENT',
           message: t('organizerTicketScanner.results.wrongEvent'),
         };
+      }
+
+      // The scanned code against the ticket's CURRENT code: once a ticket has
+      // changed hands, a code from before the transfer never admits. Judged
+      // before "already in" so it reads as transferred, not as a duplicate.
+      if (method === 'scan' && code) {
+        const codeCheck = judgeScannedCodeAgainstRow(code, {
+          id: ticketSnap.id,
+          code: String(ticketData.qr_code || ticketData.qr_code_data || ticketSnap.id),
+          qrVersion: ticketQrVersionOf(ticketData),
+        });
+        if (codeCheck !== 'OK') return doorVerdictToResult(null, codeCheck, method);
       }
 
       // Check if event has ended (ticket expired)
@@ -821,7 +869,7 @@ export default function TicketScannerScreen() {
       if (error?.code === 'permission-denied') {
         enterDoorMode();
         await loadDoorList();
-        return validateFromDoorList(ticketId, method);
+        return validateFromDoorList(ticketId, method, code);
       }
       console.error('Error checking in ticket:', error);
       // 'unavailable' = offline and this ticket wasn't in the pre-loaded cache
@@ -848,7 +896,7 @@ export default function TicketScannerScreen() {
   const commitCheckIn = async (
     ticketId: string,
     method: CheckInMethod,
-    opts: { reentry?: boolean; override?: boolean } = {},
+    opts: { reentry?: boolean; override?: boolean; code?: string } = {},
   ): Promise<CommitOutcome> => commitDoorCheckIn(ticketId, method, opts);
 
   const entryLabel = (value: string) => {
@@ -880,7 +928,7 @@ export default function TicketScannerScreen() {
     if (!r.ticketId) return;
     const method = r.method ?? 'scan';
     try {
-      const { synced, refused } = await commitCheckIn(r.ticketId, method, opts);
+      const { synced, refused } = await commitCheckIn(r.ticketId, method, { ...opts, code: r.code });
       if (refused) {
         feedback(outcomeOf(refused));
         recordScan(refused.attendeeName || r.attendeeName, outcomeOf(refused), recentLabelOf(refused));
@@ -921,22 +969,23 @@ export default function TicketScannerScreen() {
       : t('doorScanner.recent.refused');
 
   /** Shared by the camera and the manual lookup. */
-  const runScan = async (ticketId: string, method: CheckInMethod) => {
+  const runScan = async (ticketId: string, method: CheckInMethod, code?: string) => {
     if (processingRef.current) return;
     processingRef.current = true;
     setIsProcessing(true);
     lastScanRef.current = { id: ticketId, at: Date.now() };
 
-    const result = await validateTicket(ticketId, method);
+    const result = await validateTicket(ticketId, method, code);
+    if (code) result.code = code;
 
     if (doorMode) {
       if (result.status === 'VALID' && !result.validityBlock) {
-        doorTicketRef.current = { ticketId, method, name: result.attendeeName, tier: result.tierName };
+        doorTicketRef.current = { ticketId, method, name: result.attendeeName, tier: result.tierName, code };
         await admitInDoorMode(result);
         return;
       }
       if (result.status !== 'VALID') {
-        doorTicketRef.current = { ticketId, method, name: result.attendeeName, tier: result.tierName };
+        doorTicketRef.current = { ticketId, method, name: result.attendeeName, tier: result.tierName, code };
         feedback(outcomeOf(result));
         recordScan(result.attendeeName, outcomeOf(result), recentLabelOf(result));
         setDoorResult(toDoorResult(result));
@@ -964,7 +1013,7 @@ export default function TicketScannerScreen() {
     if (last.id === ticketId && Date.now() - last.at < DUPLICATE_WINDOW_MS) return;
 
     if (hapticsOn) scanReadFeedback();
-    await runScan(ticketId, 'scan');
+    await runScan(ticketId, 'scan', String(data ?? ''));
   };
 
   const handleManualSelect = (ticketId: string) => {
@@ -990,6 +1039,7 @@ export default function TicketScannerScreen() {
         // The override button shares this handler. Outside the entry window it
         // is the only way in, and the server must be told it was deliberate.
         override: Boolean(scanResult.validityBlock),
+        code: scanResult.code,
       });
       if (refused) {
         showRefused(refused);
@@ -1023,7 +1073,10 @@ export default function TicketScannerScreen() {
   const handleAllowReentrySheet = async () => {
     if (!scanResult?.ticketId) return;
     try {
-      const { synced, refused } = await commitCheckIn(scanResult.ticketId, scanResult.method ?? 'scan', { reentry: true });
+      const { synced, refused } = await commitCheckIn(scanResult.ticketId, scanResult.method ?? 'scan', {
+        reentry: true,
+        code: scanResult.code,
+      });
       if (refused) {
         showRefused(refused);
         return;
@@ -1052,7 +1105,14 @@ export default function TicketScannerScreen() {
     if (!target) return;
     setDoorResult(null);
     await admitInDoorMode(
-      { status: 'VALID', ticketId: target.ticketId, method: target.method, attendeeName: target.name, tierName: target.tier },
+      {
+        status: 'VALID',
+        ticketId: target.ticketId,
+        method: target.method,
+        attendeeName: target.name,
+        tierName: target.tier,
+        code: target.code,
+      },
       { reentry: true },
     );
   };

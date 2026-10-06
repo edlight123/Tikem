@@ -1113,6 +1113,8 @@ export default {
       checkInQueued: 'Enregistré. Synchronisation dès le retour en ligne.',
       checkInFailed: 'Impossible d’enregistrer ce billet. Veuillez réessayer.',
       offlineNotCached: 'Hors ligne et ce billet n’est pas en cache. Reconnectez-vous une fois pour charger la liste.',
+      transferredCode: 'Ce billet a été transféré. L’ancien code n’est plus valide.',
+      invalidCode: 'Ce code n’est pas valide.',
     },
     offline: {
       banner: 'Hors ligne. Les entrées se synchroniseront à la reconnexion.',
@@ -2796,6 +2798,7 @@ export default {
       cancelError: 'Impossible d’annuler le transfert',
       buttonTitle: 'Transférer le billet',
       buttonSubtitle: 'Envoyez ce billet à quelqu’un d’autre',
+      newCodeNote: 'Une fois le transfert accepté, le billet reçoit un nouveau QR code. Votre code, vos captures d’écran et votre pass Wallet ne fonctionneront plus.',
     },
     labels: {
       dateTime: 'Date & heure',
@@ -2821,6 +2824,7 @@ export default {
     },
     refund: {
       pending: 'Remboursement en attente',
+      underReview: 'Remboursement en cours d’examen',
       approved: 'Remboursement approuvé',
       denied: 'Remboursement refusé',
     },
@@ -3017,6 +3021,7 @@ export default {
     statusPending: 'En attente',
     statusApproved: 'Approuvé',
     statusDenied: 'Refusé',
+    statusUnderReview: 'En examen',
     reason: 'Raison',
     deny: 'Refuser',
     approve: 'Approuver',
@@ -3026,6 +3031,7 @@ export default {
     denyBody: 'Êtes-vous sûr de vouloir refuser cette demande de remboursement ?',
     approvedSuccess: 'Remboursement approuvé et traité',
     deniedSuccess: 'Demande de remboursement refusée',
+    sentForReview: 'Envoyé à Tikèm pour examen, car votre solde restant ne couvre pas ce remboursement.',
   },
   // Report / block (App Store guideline 1.2). See lib/moderation on the web side.
   moderation: {
@@ -3295,6 +3301,8 @@ export default {
       successCard: '{amount} est en route vers l’acheteur.',
       successManual: '{amount} est en file d’attente ; Tikèm le versera.',
       partialFailed: '{n} billet(s) n’ont pas pu être remboursés. Réessayez.',
+      successReview: '{n} billet(s) envoyé(s) à Tikèm pour examen, car votre solde restant ne couvre pas le remboursement.',
+      reviewTitle: 'Envoyé à Tikèm pour examen',
       failed: 'Le remboursement a échoué et rien n’a été débité. Réessayez.',
     },
   },

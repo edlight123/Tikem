@@ -1082,6 +1082,8 @@ export default {
       checkInQueued: 'Verifye. L ap senkronize lè koneksyon tounen.',
       checkInFailed: 'Pa t kapab verifye biyè a. Tanpri eseye ankò.',
       offlineNotCached: 'Ou offline e biyè sa a pa nan kach. Rekonekte yon fwa pou chaje lis envite a.',
+      transferredCode: 'Biyè sa a te transfere. Ansyen kòd la pa valab ankò.',
+      invalidCode: 'Kòd sa a pa valab.',
     },
     offline: {
       banner: 'Offline. Verifikasyon yo ap senkronize lè ou rekonekte.',
@@ -2764,6 +2766,7 @@ export default {
       cancelError: 'Pa t kapab anile transfè a',
       buttonTitle: 'Transfere biyè',
       buttonSubtitle: 'Voye biyè sa a bay yon lòt moun',
+      newCodeNote: 'Depi transfè a aksepte, biyè a resevwa yon nouvo QR code. Kòd ou, kapti ekran ou ak pas Wallet ou p ap mache ankò.',
     },
     labels: {
       dateTime: 'Dat & lè',
@@ -2789,6 +2792,7 @@ export default {
     },
     refund: {
       pending: 'Ranbousman an atant',
+      underReview: 'Ranbousman an revizyon',
       approved: 'Ranbousman apwouve',
       denied: 'Ranbousman refize',
     },
@@ -2985,6 +2989,7 @@ export default {
     statusPending: 'An atant',
     statusApproved: 'Apwouve',
     statusDenied: 'Refize',
+    statusUnderReview: 'An revizyon',
     reason: 'Rezon',
     deny: 'Refize',
     approve: 'Apwouve',
@@ -2994,6 +2999,7 @@ export default {
     denyBody: 'Èske ou sèten ou vle refize demann ranbousman sa a?',
     approvedSuccess: 'Ranbousman apwouve epi trete',
     deniedSuccess: 'Demann ranbousman refize',
+    sentForReview: 'Nou voye l bay Tikèm pou revizyon paske balans ki rete w la pa kouvri l.',
   },
   // Report / block (App Store guideline 1.2). See lib/moderation on the web side.
   moderation: {
@@ -3263,6 +3269,8 @@ export default {
       successCard: '{amount} sou wout pou retounen bay achtè a.',
       successManual: '{amount} nan lis datant, Tikèm ap voye l.',
       partialFailed: '{n} tikè pa t ka ranbouse. Eseye ankò.',
+      successReview: '{n} tikè voye bay Tikèm pou revizyon paske balans ki rete w la pa kouvri ranbousman an.',
+      reviewTitle: 'Voye bay Tikèm pou revizyon',
       failed: 'Ranbousman an pa pase, e pa gen lajan ki retire. Eseye ankò.',
     },
   },

@@ -29,7 +29,12 @@ interface Event {
 interface CheckInInterfaceProps {
   event: Event
   tickets: Ticket[]
-  onCheckIn: (eventId: string, qrCode: string, entryPoint: string) => Promise<{ success: boolean; error?: string }>
+  onCheckIn: (
+    eventId: string,
+    qrCode: string,
+    entryPoint: string,
+    method?: 'scan' | 'manual'
+  ) => Promise<{ success: boolean; error?: string }>
 }
 
 type ScanResult = {
@@ -66,14 +71,14 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
   }, [tickets])
 
   // Handle QR scan
-  const handleScan = async (qrCode: string) => {
+  const handleScan = async (qrCode: string, method: 'scan' | 'manual' = 'scan') => {
     if (isProcessing) return
     
     setIsProcessing(true)
     setShowScanner(false)
     
     try {
-      const result = await onCheckIn(event.id, qrCode, selectedEntryPoint)
+      const result = await onCheckIn(event.id, qrCode, selectedEntryPoint, method)
       
       if (result.success) {
         const ticket = tickets.find(t => t.qr_code === qrCode || t.id === qrCode)
@@ -119,7 +124,8 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
   // Handle manual check-in
   const handleManualCheckIn = async (ticketId: string) => {
-    await handleScan(ticketId)
+    // Picked by name: no code to judge, so a transferred ticket still admits.
+    await handleScan(ticketId, 'manual')
     setShowManualLookup(false)
     setSearchQuery('')
   }
@@ -282,7 +288,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
       {/* QR Scanner Modal */}
       {showScanner && (
         <QRScanner
-          onScan={handleScan}
+          onScan={(code: string) => handleScan(code, 'scan')}
           onClose={() => setShowScanner(false)}
         />
       )}

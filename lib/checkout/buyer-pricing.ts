@@ -32,7 +32,6 @@ import {
   calculateBuyerPricing,
   type BuyerPricing,
   type FeeIncidence,
-  type PlatformFeeCap,
 } from '@/lib/fees'
 import { feeIncidenceForCountry } from '@/lib/country-support'
 import { fromCents, toCents } from '@/lib/ticketPricing'
@@ -42,7 +41,8 @@ import { getPlatformFeeConfig } from '@/lib/checkout/fee-config-store'
 export type { BuyerPricing, FeeIncidence }
 
 /**
- * The rate and per-ticket ceiling that apply to an event, by country.
+ * The rate that applies to an event, by country. There is no per-ticket cap
+ * (owner decision, 2026-10-05): the fee is exactly this rate of the face value.
  *
  * Reads the DEFAULTS, which is what every client surface can see — the stored
  * platform settings live in Firestore and only the server can await them. Server
@@ -58,31 +58,6 @@ export function feeConfigForCountry(
   const inForce = getPlatformFeeConfig()
   const base = location === 'haiti' ? inForce.haiti : inForce.usCanada
   return { ...base, ...(override || {}) }
-}
-
-/**
- * The per-ticket fee ceiling for one order, in the event currency's minor units.
- *
- * When the caller does not know the currency, fall back to the LOCATION's own
- * currency rather than to no cap — otherwise a surface that passes a bare country
- * would quietly advertise an uncapped fee while checkout charges a capped one.
- * The fallback has to be per location: applying a $5 cap to an HTG event would
- * read as 5 gourdes and collapse the fee to nothing.
- */
-function capFor(
-  config: LocationFeeConfig,
-  currency: unknown,
-  country: unknown,
-  quantity: number | undefined
-): PlatformFeeCap {
-  const explicit = String(currency || '').toUpperCase()
-  const code =
-    explicit || (getEventLocation(String(country || '')) === 'haiti' ? 'HTG' : 'USD')
-  const table = config.platformFeeCapMinorByCurrency || {}
-  const capMinorPerTicket = Object.prototype.hasOwnProperty.call(table, code)
-    ? table[code]
-    : null
-  return { capMinorPerTicket, quantity }
 }
 
 /**
@@ -135,9 +110,12 @@ export type PricingEvent =
     }
 
 export interface OrderPricingOptions {
-  /** Tickets in this order. The per-ticket cap scales with it; defaults to 1. */
+  /**
+   * Tickets in this order. Accepted for call-site compatibility; with no
+   * per-ticket cap the fee does not depend on it.
+   */
   quantity?: number
-  /** Event currency, when it is not on the event object. Selects the cap. */
+  /** Event currency, when it is not on the event object. Does not change the fee. */
   currency?: string | null
   /**
    * Stored platform settings for this location. SERVER ONLY — the client cannot
@@ -180,13 +158,9 @@ export function priceOrderCents(
   const face = Math.max(0, Math.round(Number(faceTotalCents) || 0))
   const subject = asPricingEvent(event)
   const config = feeConfigForCountry(subject.country, options?.config)
-  const currency = options?.currency ?? subject.currency
-  return calculateBuyerPricing(
-    face,
-    incidenceForEvent(subject),
-    config.platformFeePercentage,
-    capFor(config, currency, subject.country, options?.quantity)
-  )
+  // Exactly the configured rate of the face total. A stored cap table, if one
+  // is still on the settings doc, is never applied.
+  return calculateBuyerPricing(face, incidenceForEvent(subject), config.platformFeePercentage)
 }
 
 /**

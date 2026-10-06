@@ -4,11 +4,14 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
+import { parseTicketCode } from '@/lib/scan/doorRules'
+import { verifyScannedTicketCode } from '@/lib/tickets/qr'
 
 export async function checkInTicket(
   eventId: string,
   qrCode: string,
-  entryPoint: string
+  entryPoint: string,
+  method: 'scan' | 'manual' = 'scan'
 ): Promise<{ success: boolean; error?: string }> {
   // ── Auth + ownership check ────────────────────────────────────────────────
   const user = await getCurrentUser()
@@ -32,9 +35,15 @@ export async function checkInTicket(
     // Find ticket by QR code or ticket ID
     const ticketDocs = await loadTicketDocsForEvent(eventId)
 
+    const parsedId = parseTicketCode(qrCode)
     const ticketDoc = ticketDocs.find((doc: any) => {
       const data = doc.data() || {}
-      return data.qr_code === qrCode || data.qr_code_data === qrCode || doc.id === qrCode
+      return (
+        data.qr_code === qrCode ||
+        data.qr_code_data === qrCode ||
+        doc.id === qrCode ||
+        (parsedId !== null && doc.id === parsedId)
+      )
     })
 
     if (!ticketDoc) {
@@ -42,6 +51,18 @@ export async function checkInTicket(
     }
 
     const ticketData = ticketDoc.data()
+
+    // A scanned code is judged against the ticket's QR version: a code from
+    // before a transfer, or a forged signed one, never admits. A manual pick
+    // by name carries no code to judge.
+    // (A server action is a public endpoint: anything but 'manual' is a scan.)
+    if (method !== 'manual') {
+      const check = verifyScannedTicketCode(qrCode, ticketDoc.id, ticketData)
+      if (check === 'TRANSFERRED') {
+        return { success: false, error: 'This ticket was transferred. The old code is no longer valid.' }
+      }
+      if (check === 'INVALID_CODE') return { success: false, error: 'This code is not valid.' }
+    }
 
     // Check if already checked in
     if (ticketData.checked_in) {

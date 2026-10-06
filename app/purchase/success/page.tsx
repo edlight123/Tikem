@@ -85,7 +85,7 @@ export default async function PurchaseSuccessPage({
   return (
     <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
       <PurchasePopupBridge status="success" ticketId={ticketId || null} />
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <PurchaseSuccessContentClient
         hasTicket={!!ticket}
@@ -105,7 +105,7 @@ export default async function PurchaseSuccessPage({
         </div>
       )}
       
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

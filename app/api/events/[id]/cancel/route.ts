@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const admin =
       (user as any).role === 'admin' ||
       (user as any).role === 'super_admin' ||
-      isAdminEmail(user.email)
+      isAdminEmail(((user as any).email_verified) ? user.email : null)
     const owner = event?.organizer_id === user.id
 
     if (!owner && !admin) {

@@ -7,7 +7,8 @@ import type { CheckInResult } from './checkInTicket'
 type ScanState = 'SCANNING' | 'PROCESSING' | 'RESULT'
 
 interface UseScanControllerOptions {
-  onScan: (ticketId: string, method: 'scan' | 'manual') => Promise<CheckInResult>
+  /** `code` is the raw string the camera read (absent for a manual pick), so the server can judge its QR version. */
+  onScan: (ticketId: string, method: 'scan' | 'manual', code?: string) => Promise<CheckInResult>
   cooldownMs?: number
   duplicateWindowMs?: number
 }
@@ -75,7 +76,7 @@ export function useScanController(options: UseScanControllerOptions) {
 
     try {
       // Perform check-in
-      const checkInResult = await onScan(ticketId, method)
+      const checkInResult = await onScan(ticketId, method, method === 'scan' ? scanResult : undefined)
       
       // Show result
       if (mountedRef.current) {

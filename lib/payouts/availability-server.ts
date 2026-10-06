@@ -11,6 +11,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { legacyPlatformFeeCapMinor } from '@/lib/fees'
 import { findEventEarningsDoc, storedEarningsCurrencyMismatch } from '@/lib/earnings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
@@ -24,21 +25,25 @@ import {
   type BatchPayout,
   type CurrencyTotals,
   type EventAvailability,
+  type EventAvailabilityInput,
   type FeeRule,
 } from '@/lib/payouts/availability'
 
-/** The rate and per-ticket cap checkout applies to this event (stored settings). */
+/**
+ * The fee rule checkout applies to this event (stored settings): exactly the
+ * location's rate, no per-ticket cap. A stored `platformFeeCapMinorByCurrency`
+ * is ignored; the retired cap comes from lib/fees.ts and only prices orders paid
+ * before it was retired.
+ */
 export function feeRuleForEvent(event: any, settings: Pick<PlatformSettings, 'haiti' | 'usCanada'>): FeeRule {
   const location = getEventLocation(String(event?.country || 'HT'))
   const cfg = location === 'haiti' ? settings.haiti : settings.usCanada
   const currency = normalizeCurrencyCode(event?.currency)
-  const table = cfg?.platformFeeCapMinorByCurrency || {}
-  const capRaw = Object.prototype.hasOwnProperty.call(table, currency) ? Number(table[currency]) : null
   const rate = Number(cfg?.platformFeePercentage)
   return {
     // A corrupt stored rate must not price payouts; checkout discards it the same way.
     platformFeePercentage: Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : 0.1,
-    capMinorPerTicket: capRaw !== null && Number.isFinite(capRaw) && capRaw >= 0 ? capRaw : null,
+    legacyCapMinorPerTicket: legacyPlatformFeeCapMinor(location, currency),
   }
 }
 
@@ -104,6 +109,22 @@ export async function loadEventAvailability(args: {
   context?: OrganizerAvailabilityContext
   now?: Date
 }): Promise<EventAvailability | null> {
+  const input = await loadEventAvailabilityInput(args)
+  return input ? computeEventAvailability(input) : null
+}
+
+/**
+ * The facts loadEventAvailability() feeds computeEventAvailability(), for a
+ * caller that must recompute with some facts replaced — the refund gate
+ * (lib/tickets/refundCoverage.ts) swaps in tickets and the ledger's withdrawn
+ * amount read inside its own transaction. Null when the event does not exist.
+ */
+export async function loadEventAvailabilityInput(args: {
+  eventId: string
+  eventData?: any
+  context?: OrganizerAvailabilityContext
+  now?: Date
+}): Promise<EventAvailabilityInput | null> {
   const now = args.now || new Date()
   const eventId = String(args.eventId)
 
@@ -172,7 +193,7 @@ export async function loadEventAvailability(args: {
   const currency = normalizeCurrencyCode(eventData?.currency)
   const reviewStatus = reviewSnap?.exists ? String((reviewSnap.data() as any)?.status || '') || null : null
 
-  return computeEventAvailability({
+  return {
     event: { id: eventId, ...eventData },
     tickets: ticketsSnap.docs.map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) })),
     fee: feeRuleForEvent(eventData, context.settings),
@@ -196,7 +217,7 @@ export async function loadEventAvailability(args: {
       reviewStatus,
     },
     now,
-  })
+  }
 }
 
 export type OrganizerEventAvailability = EventAvailability & {

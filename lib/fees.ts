@@ -32,38 +32,76 @@ export function calculatePlatformFeeWithPercentage(
   return Math.max(feeAmount, FEE_CONFIG.PLATFORM_FEE_MIN)
 }
 
-/** How the platform fee is capped for one order. */
-export interface PlatformFeeCap {
-  /**
-   * Ceiling on the platform fee PER TICKET, in the event currency's minor units.
-   * null/undefined means uncapped. The cap is per ticket, not per order, so a
-   * four-ticket order caps at four times this — otherwise group buyers would pay
-   * a fraction of what four single buyers pay for the same seats.
-   */
-  capMinorPerTicket?: number | null
-  /** Tickets in this order. Defaults to 1, which is the right unit for a headline price. */
-  quantity?: number
+// ─────────────────────────────────────────────────────────────────────────────
+// NO PER-TICKET CAP (owner decision, 2026-10-05)
+//
+// The platform fee is exactly the configured rate (platform settings, 10% today)
+// of the ticket price, in every currency and country, whoever pays it. There is
+// no per-ticket ceiling any more: checkout, mobile, the earnings ledger, promoter
+// commissions and payouts all take the plain percentage.
+//
+// From 2026-08-13 until this change the fee WAS capped per ticket (750 HTG,
+// $5.00, C$7.00, EUR 4.50). Tickets do not store the fee an organizer absorbed,
+// so the payout engine recomputes it; recomputing a sale made under the cap
+// without it would quietly take more from an organizer than they were promised
+// when they sold. `platformFeeForSale` therefore keeps the old ceiling for sales
+// made before PLATFORM_FEE_CAP_RETIRED_AT, and only for those. Nothing that
+// prices a NEW sale may call it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * When the per-ticket cap stopped applying to new sales. Set this to the moment
+ * the change is deployed: sales before it keep their capped fee in payouts.
+ */
+export const PLATFORM_FEE_CAP_RETIRED_AT = new Date('2026-10-06T00:00:00.000Z')
+
+/**
+ * The retired ceilings, per ticket, in the event currency's minor units, by
+ * location. These are the compiled-in defaults that were live while the cap
+ * existed (no stored platform_settings doc ever overrode them). A currency with
+ * no entry was uncapped then too.
+ */
+const LEGACY_PLATFORM_FEE_CAP_MINOR: Record<'haiti' | 'us-canada', Record<string, number>> = {
+  haiti: { HTG: 75_000, USD: 500 },
+  'us-canada': { USD: 500, CAD: 700, EUR: 450 },
+}
+
+/** The retired per-ticket ceiling for a location + currency, or null when none applied. */
+export function legacyPlatformFeeCapMinor(
+  location: 'haiti' | 'us-canada',
+  currency: unknown
+): number | null {
+  const table = LEGACY_PLATFORM_FEE_CAP_MINOR[location] || {}
+  const code = String(currency || '').toUpperCase().trim()
+  return Object.prototype.hasOwnProperty.call(table, code) ? table[code] : null
 }
 
 /**
- * Platform fee with a per-ticket ceiling.
+ * The platform fee on a sale ALREADY MADE, recomputed for payouts and reports.
  *
- * A flat percentage is competitive on a $20 ticket and punitive on a $150 table,
- * where the work the platform does is identical. The cap is what keeps a
- * percentage honest at the top of the price range; the existing PLATFORM_FEE_MIN
- * floor does the same job at the bottom. When the two collide the cap wins — it
- * is a ceiling, and a ceiling below a floor still bounds the fee.
+ * Exactly the rate, except for a sale made while the per-ticket cap was in force
+ * (purchased before PLATFORM_FEE_CAP_RETIRED_AT, or with no purchase date, which
+ * only old tickets lack): that keeps the capped fee it was sold under, scaled by
+ * the order's ticket count as it was then.
  */
-export function calculateCappedPlatformFee(
+export function platformFeeForSale(
   grossAmount: number,
   feePercentage: number,
-  cap?: PlatformFeeCap | null
+  sale: {
+    /** legacyPlatformFeeCapMinor() for the event; null = no historical cap. */
+    legacyCapMinorPerTicket: number | null
+    /** Tickets in the order. */
+    quantity: number
+    /** When the order was paid; null = unknown, treated as before the change. */
+    purchasedAt: Date | null
+  }
 ): number {
   const fee = calculatePlatformFeeWithPercentage(grossAmount, feePercentage)
-  const capMinor = cap?.capMinorPerTicket
-  if (capMinor == null || !Number.isFinite(capMinor) || capMinor < 0) return fee
-  const quantity = Math.max(1, Math.floor(Number(cap?.quantity) || 1))
-  return Math.min(fee, Math.round(capMinor) * quantity)
+  const cap = sale.legacyCapMinorPerTicket
+  if (cap == null || !Number.isFinite(cap) || cap < 0) return fee
+  if (sale.purchasedAt && sale.purchasedAt.getTime() >= PLATFORM_FEE_CAP_RETIRED_AT.getTime()) return fee
+  const quantity = Math.max(1, Math.floor(Number(sale.quantity) || 1))
+  return Math.min(fee, Math.round(cap) * quantity)
 }
 
 /**
@@ -296,7 +334,7 @@ export function estimateNetPerTicket(ticketPrice: number): {
 //   buyer (US/CA/FR) — the fee is added on top, so the organizer keeps the full
 //     face value and the buyer sees a total above the ticket price.
 //
-// In BOTH models the capped platform fee is the only fee: Tikèm pays card and
+// In BOTH models the platform fee (the plain rate, no cap) is the only fee: Tikèm pays card and
 // MonCash processing out of it (owner's rule, 2026-09-30). So the buyer model
 // is a plain addition, charge = face + platformFee, and the organizer model
 // nets face − platformFee. Nobody pays processing on top. It was once a gross-up that passed
@@ -322,8 +360,7 @@ export type BuyerPricing = {
 export function calculateBuyerPricing(
   faceValue: number,
   incidence: FeeIncidence,
-  feePercentage: number = FEE_CONFIG.PLATFORM_FEE_PERCENTAGE,
-  cap?: PlatformFeeCap | null
+  feePercentage: number = FEE_CONFIG.PLATFORM_FEE_PERCENTAGE
 ): BuyerPricing {
   if (faceValue <= 0) {
     return {
@@ -338,7 +375,7 @@ export function calculateBuyerPricing(
   }
 
   if (incidence === 'organizer') {
-    const platformFee = calculateCappedPlatformFee(faceValue, feePercentage, cap)
+    const platformFee = calculatePlatformFeeWithPercentage(faceValue, feePercentage)
     const processingFee = calculateStripeFee(faceValue)
     return {
       chargeAmount: faceValue,
@@ -354,7 +391,7 @@ export function calculateBuyerPricing(
   // The buyer pays the platform fee and nothing else; Stripe's cut comes out of
   // it. Destination charges debit processing from the platform balance, so the
   // organizer still nets exactly the face value.
-  const platformFee = calculateCappedPlatformFee(faceValue, feePercentage, cap)
+  const platformFee = calculatePlatformFeeWithPercentage(faceValue, feePercentage)
   const chargeAmount = faceValue + platformFee
   const processingFee = calculateStripeFee(chargeAmount)
 

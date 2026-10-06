@@ -19,17 +19,15 @@ export interface LocationFeeConfig {
   settlementHoldDays: number
 
   /**
-   * Ceiling on the platform fee PER TICKET, in the EVENT CURRENCY's minor units,
-   * keyed by currency code. A currency with no entry is uncapped.
+   * RETIRED (owner decision, 2026-10-05): the platform fee is exactly
+   * `platformFeePercentage` of the ticket price, with no per-ticket cap.
    *
-   * A flat percentage is competitive on a cheap ticket and punitive on an
-   * expensive one — the platform does the same work for a $150 table as for a
-   * $20 entry. The cap is what stops the top of the range looking predatory
-   * next to Posh (10% + $0.99 per ticket, processing absorbed).
+   * Kept only so a stored platform_settings doc that still carries the field
+   * type-checks. Nothing reads it: pricing, payouts and earnings ignore it, and
+   * the sanitizers drop it. Sales made while a cap existed are priced for
+   * payouts by lib/fees.ts platformFeeForSale, from its own compiled-in table.
    *
-   * Denominated in the event's own currency rather than converted through the FX
-   * table: a cap the buyer reads has to be a round local number, and a rate
-   * moving must never move a displayed price.
+   * @deprecated never applied
    */
   platformFeeCapMinorByCurrency?: Record<string, number>
 }
@@ -164,23 +162,10 @@ export const DEFAULT_PLATFORM_SETTINGS: Omit<PlatformSettings, 'id' | 'updatedAt
   haiti: {
     platformFeePercentage: 0.10,  // 10% for Haiti events
     settlementHoldDays: 0,         // No hold for Haiti events
-    // At 10% this binds above 7,500 HTG (~$57) — galas, VIP tables and bottle
-    // service, not ordinary entry.
-    platformFeeCapMinorByCurrency: {
-      HTG: 75_000,  // 750 HTG per ticket
-      USD: 500,     // $5.00 — Haitian events priced in USD
-    },
   },
   usCanada: {
     platformFeePercentage: 0.10,  // 10% for US/Canada events
     settlementHoldDays: 7,         // 7 days hold for US/Canada events
-    // $5/ticket keeps the $10–30 range untouched (10% of $30 is $3) and takes a
-    // $100 ticket's buyer-visible fee from $13.60 to $8.44 — under Posh's $10.99.
-    platformFeeCapMinorByCurrency: {
-      USD: 500,     // $5.00 per ticket
-      CAD: 700,     // C$7.00
-      EUR: 450,     // €4.50
-    },
   },
   minimumPayoutAmount: 5000,      // $50.00 in cents
   payoutRelease: DEFAULT_PAYOUT_RELEASE_CONFIG,

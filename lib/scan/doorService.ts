@@ -9,8 +9,10 @@ import {
   displayNameOf,
   evaluateDoorAccess,
   judgeDoorRow,
+  parseSignedTicketQr,
   parseTicketCode,
   resolveTier,
+  ticketQrVersionOf,
   ticketEventIdOf,
   ticketTierIdOf,
   ticketTierNameOf,
@@ -19,7 +21,9 @@ import {
   type DoorRole,
   type DoorRow,
   type DoorVerdict,
+  type ScannedCodeCheck,
 } from '@/lib/scan/doorRules'
+import { verifyScannedTicketCode } from '@/lib/tickets/qr'
 
 export type DoorAccess =
   | {
@@ -45,7 +49,7 @@ export async function authorizeDoorAccess(eventId: string): Promise<DoorAccess> 
   const event = eventSnap.exists ? { id: eventSnap.id, ...(eventSnap.data() as any) } : null
   const decision = evaluateDoorAccess({
     uid: user.id,
-    isAdmin: user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(user.email),
+    isAdmin: user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(((user as any).email_verified) ? user.email : null),
     event,
     member: memberSnap.exists ? ((memberSnap.data() as any) ?? {}) : null,
   })
@@ -127,6 +131,11 @@ export type DoorCheckInResult = {
   row: DoorRow | null
   /** ALREADY_CHECKED_IN by this same user: an earlier request that timed out on the phone but landed. */
   mine?: boolean
+  /**
+   * Why a code was refused, when the verdict had to be sent as CANCELLED to a
+   * client that predates the TRANSFERRED / INVALID_CODE verdicts.
+   */
+  reason?: 'TRANSFERRED' | 'INVALID_CODE'
 }
 
 /** Find the ticket ref by id, then by the code its QR encodes, within the event. */
@@ -176,13 +185,30 @@ export async function performDoorCheckIn(req: DoorCheckInRequest): Promise<DoorC
     const tier = resolveTier(eventTiers, tierId, ticketTierNameOf(ticket), fetched)
     const row = toDoorRow(ticketSnap.id, ticket, { tier, event })
 
+    // The scanned code against the ticket's current QR version. A client that
+    // sends `code` is told TRANSFERRED / INVALID_CODE. A SCAN that arrives with
+    // only a ticket id comes from an app build that predates QR versions (it
+    // parsed the id out of the code and dropped the rest): for a ticket that
+    // has changed hands the server cannot tell the new holder's code from the
+    // old one, so it refuses, and staff admit the new holder by name (manual).
+    const scanned = req.code || (parseSignedTicketQr(req.ticketId) ? String(req.ticketId) : null)
+    let codeCheck: ScannedCodeCheck | undefined
+    if (scanned) codeCheck = verifyScannedTicketCode(scanned, ticketSnap.id, ticket)
+    else if (req.method === 'scan' && ticketQrVersionOf(ticket) >= 1) codeCheck = 'TRANSFERRED'
+
     const judgement = judgeDoorRow(row, {
       eventId: req.eventId,
       allowReentry: Boolean(event.allow_reentry),
       reentry: req.reentry,
       override: req.override,
+      codeCheck,
     })
     if (!judgement.admit) {
+      if ((judgement.verdict === 'TRANSFERRED' || judgement.verdict === 'INVALID_CODE') && !req.code) {
+        // Older clients map unknown verdicts to "valid"; CANCELLED is one they
+        // all render as a refusal.
+        return { verdict: 'CANCELLED', row, reason: judgement.verdict } as DoorCheckInResult
+      }
       const mine = judgement.verdict === 'ALREADY_CHECKED_IN' && String(ticket.checked_in_by || '') === req.uid
       return { verdict: judgement.verdict, row, mine } as DoorCheckInResult
     }

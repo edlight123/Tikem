@@ -23,12 +23,13 @@
  *  1. Earned net comes from the TICKETS, not from a stored running total.
  *     Live = lib/tickets/status.ts (valid | confirmed | active | empty). A
  *     refunded ticket (status 'refunded' or refund_status 'approved') and one
- *     whose refund is in flight (refund_status 'processing' | 'manual_required')
- *     earn nothing. Free and comp tickets earn nothing but still count as sold.
- *  2. The platform fee is the one checkout charges: the location's rate, the
- *     PLATFORM_FEE_MIN floor per order, and the per-ticket cap in the event's own
- *     currency, scaled by the order's ticket count (lib/fees.ts
- *     calculateCappedPlatformFee — the same function checkout calls). Under
+ *     whose refund is in flight (refund_status 'processing' | 'manual_required'
+ *     | 'admin_review') earn nothing. Free and comp tickets earn nothing but still count as sold.
+ *  2. The platform fee is the one checkout charges: exactly the location's rate
+ *     with the PLATFORM_FEE_MIN floor per order, and NO per-ticket cap (owner
+ *     decision, 2026-10-05). An order paid while the retired cap was in force
+ *     keeps the capped fee it was sold under (lib/fees.ts platformFeeForSale),
+ *     so retiring the cap never reaches back into a past sale's payout. Under
  *     BUYER incidence (stamped on each ticket at purchase) the buyer paid it on
  *     top, so the organizer nets face value. Tickets carry no stored fee or net
  *     amount, so this is a recomputation from the stamped incidence — never from
@@ -52,7 +53,7 @@
  * currencies together. `summarizeAvailability` keeps them in separate buckets.
  */
 
-import { calculateCappedPlatformFee } from '@/lib/fees'
+import { platformFeeForSale } from '@/lib/fees'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
 import {
@@ -140,8 +141,12 @@ export function isRefundedTicket(ticket: any): boolean {
  * A refund is being executed (claimed, or handed to a human). The money is on
  * its way back to the buyer, so it is not the organizer's to withdraw — even
  * though the ticket's status still reads live until the refund lands.
+ *
+ * 'admin_review' is a refund the organizer's remaining balance could not cover
+ * (lib/tickets/refundExecution.ts): it waits for a Tikèm admin to fund or deny
+ * it, and until then the ticket's net is held exactly like any other refund.
  */
-export const REFUND_IN_FLIGHT_STATUSES = ['processing', 'manual_required'] as const
+export const REFUND_IN_FLIGHT_STATUSES = ['processing', 'manual_required', 'admin_review'] as const
 
 export function isRefundInFlight(ticket: any): boolean {
   const refundStatus = String(ticket?.refund_status ?? '').toLowerCase().trim()
@@ -270,12 +275,16 @@ export function ticketFactsFromDocs(tickets: any[]): TicketFacts {
 
 // ── Inputs ──────────────────────────────────────────────────────────────────
 
-/** The fee rule checkout applied to this event: rate + per-ticket cap. */
+/** The fee rule checkout applies to this event: the rate, with no per-ticket cap. */
 export type FeeRule = {
   /** e.g. 0.10 */
   platformFeePercentage: number
-  /** Per-ticket ceiling in the EVENT currency's minor units; null = uncapped. */
-  capMinorPerTicket: number | null
+  /**
+   * The RETIRED per-ticket ceiling for this event's location and currency
+   * (lib/fees.ts legacyPlatformFeeCapMinor), EVENT-currency minor units; null =
+   * none applied. Used only for orders paid before PLATFORM_FEE_CAP_RETIRED_AT.
+   */
+  legacyCapMinorPerTicket: number | null
 }
 
 /** A legacy batch payout (organizers/{id}/payouts). */
@@ -383,7 +392,7 @@ export type EventAvailability = {
   netMinor: number
   /** Stripe Connect sales: already in the organizer's own Stripe account. */
   heldByStripeGrossMinor: number
-  /** …and what the organizer netted from them there (after the capped fee). */
+  /** …and what the organizer netted from them there (after the platform fee). */
   heldByStripeMinor: number
 
   /** Per-event ledger withdrawals (pending + processing + completed). */
@@ -398,6 +407,13 @@ export type EventAvailability = {
   ceilingMinor: number
   /** Owed and not yet paid, regardless of timing: max(0, ceiling − withdrawn). */
   balanceMinor: number
+  /**
+   * The ceiling WITHOUT its floors at 0 (live net − fee − promoter − legacy
+   * batches − paid elsewhere − requested holds). Negative when the organizer
+   * already owes. The refund gate (lib/tickets/refundCoverage.ts) diffs it
+   * before/after a refund, which the floored ceiling would under-state.
+   */
+  ceilingRawMinor: number
 
   /** Withdrawable RIGHT NOW. The one number a button may be gated on. */
   availableNowMinor: number
@@ -455,11 +471,15 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   }
 
   // ── classify tickets ─────────────────────────────────────────────────────
-  type Order = { grossMinor: number; count: number; incidence: 'buyer' | 'organizer'; legacyGrossMinor: number; legacyCount: number }
+  // purchasedAt: the order's earliest ticket purchase; null once any ticket lacks
+  // one (read as a sale from the capped era). It decides the fee rule only.
+  type Order = { grossMinor: number; count: number; incidence: 'buyer' | 'organizer'; legacyGrossMinor: number; legacyCount: number; purchasedAt: Date | null }
   const orders = new Map<string, Order>()
   // Live tickets whose buyer has an undecided refund request: their net is held.
   const requestedTickets: Array<{ key: string; price: number }> = []
-  const connectOrders = new Map<string, { grossMinor: number; count: number; incidence: 'buyer' | 'organizer' }>()
+  const connectOrders = new Map<string, { grossMinor: number; count: number; incidence: 'buyer' | 'organizer'; purchasedAt: Date | null }>()
+  const earlierPurchase = (current: Date | null, ticketAt: Date | null): Date | null =>
+    current === null || ticketAt === null ? null : ticketAt.getTime() < current.getTime() ? ticketAt : current
   let grossMinor = 0
   let refundedMinor = 0
   let refundInFlightMinor = 0
@@ -508,14 +528,16 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
       if (!reservedTicketIds.has(id)) unpaid.push({ id, at: ticketPurchasedAt(ticket) })
       continue
     }
-    // One payment is one order: the fee floor applies once and the cap scales
-    // with its ticket count, exactly as checkout priced it. A ticket with no
+    // One payment is one order: the fee floor applies once, exactly as checkout
+    // priced it (and a capped-era order's retired cap scales with its count). A ticket with no
     // payment id is its own order (the conservative reading: floor per ticket).
     const paymentId = String(ticket.payment_id ?? ticket.paymentId ?? '').trim()
     const orderKey = paymentId ? `pay:${paymentId}` : `ticket:${id}`
 
     if (isStripeConnectTicket(ticket)) {
-      const c = connectOrders.get(orderKey) || { grossMinor: 0, count: 0, incidence: ticketIncidence(ticket) }
+      const boughtAt = ticketPurchasedAt(ticket)
+      const c = connectOrders.get(orderKey) || { grossMinor: 0, count: 0, incidence: ticketIncidence(ticket), purchasedAt: boughtAt }
+      c.purchasedAt = earlierPurchase(c.purchasedAt, boughtAt)
       c.grossMinor += price
       c.count += 1
       if (ticketIncidence(ticket) === 'organizer') c.incidence = 'organizer'
@@ -528,7 +550,9 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
 
     const key = orderKey
     if (isRefundRequested(ticket)) requestedTickets.push({ key, price })
-    const order = orders.get(key) || { grossMinor: 0, count: 0, incidence: ticketIncidence(ticket), legacyGrossMinor: 0, legacyCount: 0 }
+    const boughtAt = ticketPurchasedAt(ticket)
+    const order = orders.get(key) || { grossMinor: 0, count: 0, incidence: ticketIncidence(ticket), legacyGrossMinor: 0, legacyCount: 0, purchasedAt: boughtAt }
+    order.purchasedAt = earlierPurchase(order.purchasedAt, boughtAt)
     order.grossMinor += price
     order.count += 1
     // Should one order's tickets ever disagree, take the fee-bearing reading:
@@ -541,11 +565,12 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     orders.set(key, order)
   }
 
-  const feeFor = (gross: number, count: number, incidence: 'buyer' | 'organizer') => {
+  const feeFor = (gross: number, count: number, incidence: 'buyer' | 'organizer', purchasedAt: Date | null) => {
     if (incidence === 'buyer' || gross <= 0) return 0
-    return calculateCappedPlatformFee(gross, input.fee.platformFeePercentage, {
-      capMinorPerTicket: input.fee.capMinorPerTicket,
+    return platformFeeForSale(gross, input.fee.platformFeePercentage, {
+      legacyCapMinorPerTicket: input.fee.legacyCapMinorPerTicket ?? null,
       quantity: count,
+      purchasedAt,
     })
   }
 
@@ -553,10 +578,10 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   let platformFeeMinor = 0
   for (const order of Array.from(orders.values())) {
     liveGrossMinor += order.grossMinor
-    platformFeeMinor += feeFor(order.grossMinor, order.count, order.incidence)
+    platformFeeMinor += feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt)
     if (order.legacyCount > 0) {
       // Proportional share of the order's fee for the legacy-paid tickets.
-      const orderFee = feeFor(order.grossMinor, order.count, order.incidence)
+      const orderFee = feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt)
       const legacyFee = Math.floor((orderFee * order.legacyGrossMinor) / Math.max(1, order.grossMinor))
       batchReservedMinor += Math.max(0, order.legacyGrossMinor - legacyFee)
     }
@@ -570,18 +595,18 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   for (const r of requestedTickets) {
     const order = orders.get(r.key)
     if (!order) continue
-    const orderFee = feeFor(order.grossMinor, order.count, order.incidence)
+    const orderFee = feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt)
     const feeShare = Math.floor((orderFee * r.price) / Math.max(1, order.grossMinor))
     refundRequestedMinor += Math.max(0, r.price - feeShare)
   }
 
   // Connect sales are reported as what the organizer netted in their own Stripe
-  // account (face − the capped application fee), never as withdrawable here.
+  // account (face − the application fee), never as withdrawable here.
   let heldByStripeGrossMinor = 0
   let heldByStripeMinor = 0
   for (const order of Array.from(connectOrders.values())) {
     heldByStripeGrossMinor += order.grossMinor
-    heldByStripeMinor += Math.max(0, order.grossMinor - feeFor(order.grossMinor, order.count, order.incidence))
+    heldByStripeMinor += Math.max(0, order.grossMinor - feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt))
   }
 
   const promoterCommissionMinor = nonNegativeMinor(input.promoterCommissionMinor)
@@ -602,6 +627,8 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   // Debits compare against the PRIMARY row's withdrawnAmount (read in their
   // transaction), so anything paid beyond it is taken off the ceiling here.
   const paidElsewhere = Math.max(0, withdrawnMinor - primaryWithdrawn)
+  const ceilingRawMinor =
+    liveGrossMinor - platformFeeMinor - promoterCommissionMinor - batchReservedMinor - paidElsewhere - refundRequestedMinor
   const ceilingMinor = Math.max(0, netMinor - batchReservedMinor - paidElsewhere - refundRequestedMinor)
   const balanceMinor = Math.max(0, ceilingMinor - primaryWithdrawn)
 
@@ -627,6 +654,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     batchReservedMinor,
     ceilingMinor,
     balanceMinor,
+    ceilingRawMinor,
     ticketsSold,
     unpaidTicketIds: unpaid.map((u) => u.id),
     periodStart,

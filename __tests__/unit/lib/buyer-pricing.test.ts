@@ -14,7 +14,7 @@
  * @jest-environment node
  */
 
-import { calculateFees, calculateCappedPlatformFee } from '@/lib/fees'
+import { calculateFees, calculatePlatformFeeWithPercentage } from '@/lib/fees'
 import { DEFAULT_PLATFORM_SETTINGS } from '@/types/platform-settings'
 import { applicationFeeFor, feeOnTopFor, priceOrder, priceOrderCents } from '@/lib/checkout/buyer-pricing'
 
@@ -47,10 +47,9 @@ describe('Haiti — organizer pays, nothing about the charge changes', () => {
     // tunable at all, whatever value it holds.
     for (const faceCents of [500, 2000, 12_34, 1000_00]) {
       const p = priceOrderCents(faceCents, 'HT')
-      const expectedPlatformFee = calculateCappedPlatformFee(
+      const expectedPlatformFee = calculatePlatformFeeWithPercentage(
         faceCents,
-        DEFAULT_PLATFORM_SETTINGS.haiti.platformFeePercentage,
-        { capMinorPerTicket: DEFAULT_PLATFORM_SETTINGS.haiti.platformFeeCapMinorByCurrency?.HTG }
+        DEFAULT_PLATFORM_SETTINGS.haiti.platformFeePercentage
       )
       expect(p.platformFee).toBe(expectedPlatformFee)
       // Processing is Tikèm's to absorb: the organizer gives up the platform fee only.
@@ -59,19 +58,14 @@ describe('Haiti — organizer pays, nothing about the charge changes', () => {
     }
   })
 
-  it('never charges MORE than the uncapped rate the route used to apply', () => {
-    // Haiti sits at the same 10% as everywhere else, so the only thing that can
-    // move the fee is the per-ticket cap — and a cap can only ever lower it.
-    for (const faceCents of [2000, 1000_00, 10_000_00]) {
-      const legacy = calculateFees(faceCents) // the old uncapped 10% path
-      expect(priceOrderCents(faceCents, 'HT').platformFee).toBeLessThanOrEqual(
-        legacy.platformFee
-      )
+  it('charges exactly the flat 10% the route always applied, with no per-ticket cap', () => {
+    // Haiti sits at the same 10% as everywhere else and there is no cap (owner
+    // decision, 2026-10-05), so the fee is the plain-rate path at every price.
+    for (const faceCents of [2000, 1000_00, 10_000_00, 50_000_00]) {
+      expect(priceOrderCents(faceCents, 'HT').platformFee).toBe(calculateFees(faceCents).platformFee)
     }
-    // A 10,000 HTG ticket would carry 1,000 HTG uncapped; the ceiling is 750.
-    expect(priceOrderCents(10_000_00, 'HT').platformFee).toBeLessThan(
-      calculateFees(10_000_00).platformFee
-    )
+    // A 10,000 HTG ticket carries 1,000 HTG (it was capped at 750 until the change).
+    expect(priceOrderCents(10_000_00, 'HT').platformFee).toBe(1_000_00)
   })
 })
 
@@ -129,11 +123,12 @@ describe('major-unit surface used by the display code', () => {
     expect(order.feeOnTop).toBe(false)
   })
 
-  it('prices the ORDER, not each ticket — the fixed component is charged once', () => {
-    // Ten tickets grossed up together must cost less than ten separate gross-ups,
-    // because Stripe's per-transaction fixed fee applies once.
-    const together = priceOrderCents(10 * 20_00, 'US').chargeAmount
-    const separately = 10 * priceOrderCents(20_00, 'US').chargeAmount
+  it('prices the ORDER, not each ticket — the minimum fee is charged once', () => {
+    // Ten $2 tickets priced together pay 10% of $20; priced one by one each
+    // would hit the 50c per-order floor.
+    const together = priceOrderCents(10 * 2_00, 'US').chargeAmount
+    const separately = 10 * priceOrderCents(2_00, 'US').chargeAmount
+    expect(together).toBe(22_00)
     expect(together).toBeLessThan(separately)
   })
 })

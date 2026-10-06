@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import {
   calculateBuyerPricing,
-  calculateCappedPlatformFee,
+  calculatePlatformFeeWithPercentage,
   formatCurrency,
   formatFeePercentage,
 } from '@/lib/fees'
@@ -28,25 +28,14 @@ export const revalidate = 0
 const US_FEES = DEFAULT_PLATFORM_SETTINGS.usCanada
 const HT_FEES = DEFAULT_PLATFORM_SETTINGS.haiti
 
-/** The rate differs by market: 10% in the US/Canada, 5% in Haiti. */
+/** The rate per market, from the platform settings (10% in both today). */
 const usPlatformFeePercent = formatFeePercentage(US_FEES.platformFeePercentage)
 const htPlatformFeePercent = formatFeePercentage(HT_FEES.platformFeePercentage)
 
-/** The per-ticket ceiling, which is what keeps an expensive ticket from carrying an expensive fee. */
-const usFeeCapMinor = US_FEES.platformFeeCapMinorByCurrency?.USD ?? null
-const htFeeCapMinor = HT_FEES.platformFeeCapMinorByCurrency?.HTG ?? null
-
-/** A $20 ticket in a buyer-pays market. */
-const usExample = calculateBuyerPricing(20_00, 'buyer', US_FEES.platformFeePercentage, {
-  capMinorPerTicket: usFeeCapMinor,
-  quantity: 1,
-})
+/** A $20 ticket in a buyer-pays market. No per-ticket cap: exactly the rate. */
+const usExample = calculateBuyerPricing(20_00, 'buyer', US_FEES.platformFeePercentage)
 /** The platform's cut of a 1,000 HTG ticket in Haiti, where the organizer bears it. */
-const htExamplePlatformFee = calculateCappedPlatformFee(
-  1000_00,
-  HT_FEES.platformFeePercentage,
-  { capMinorPerTicket: htFeeCapMinor, quantity: 1 }
-)
+const htExamplePlatformFee = calculatePlatformFeeWithPercentage(1000_00, HT_FEES.platformFeePercentage)
 
 export default async function PayoutFeesPage() {
   const payoutPath = '/organizer/settings/payouts/fees'
@@ -194,19 +183,19 @@ export default async function PayoutFeesPage() {
                 )}
               </p>
               <p>
-                {t('fees_page.cap_a', 'The fee is')}{' '}
-                <strong>{t('fees_page.cap_strong', 'capped per ticket')}</strong>{' '}
+                {t('fees_page.flat_a', 'The fee is')}{' '}
+                <strong>{t('fees_page.flat_strong', 'the same percentage on every ticket')}</strong>
                 {t(
-                  'fees_page.cap_b',
-                  ', never more than {{usCap}} on a US ticket or {{htCap}} in Haiti. An expensive ticket costs us no more to sell than a cheap one, so the percentage stops climbing.'
+                  'fees_page.flat_b',
+                  ', with no cap, however much the ticket costs: a $200 ticket carries {{usExample}} and a 20,000 HTG ticket carries {{htExample}}.'
                 )
                   .replace(
-                    '{{usCap}}',
-                    usFeeCapMinor !== null ? formatCurrency(usFeeCapMinor, 'USD') : ', '
+                    '{{usExample}}',
+                    formatCurrency(calculatePlatformFeeWithPercentage(200_00, US_FEES.platformFeePercentage), 'USD')
                   )
                   .replace(
-                    '{{htCap}}',
-                    htFeeCapMinor !== null ? formatCurrency(htFeeCapMinor, 'HTG') : ', '
+                    '{{htExample}}',
+                    formatCurrency(calculatePlatformFeeWithPercentage(20_000_00, HT_FEES.platformFeePercentage), 'HTG')
                   )}
               </p>
               <p>

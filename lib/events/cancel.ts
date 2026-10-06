@@ -199,7 +199,7 @@ export async function cancelEventWithRefunds({
       await reversePromoterCommission(doc.id, 'event_cancelled_refund_failed')
       // A retry that fails again was already announced by the first run.
       if (String(res.ticket?.refund_status || '').toLowerCase() !== 'failed') notice = { kind: 'pending' }
-    } else if (res.reason === 'free') {
+    } else if (res.outcome === 'skipped' && res.reason === 'free') {
       // Free / RSVP / comp — nothing to refund, but the ticket must stop being
       // valid so it can't be scanned at a door that no longer exists.
       try {
@@ -216,7 +216,8 @@ export async function cancelEventWithRefunds({
       }
     } else {
       // Already refunded, refund pending (including a previous run's manual
-      // queue), in flight, or not live: already dealt with.
+      // queue), in flight, or not live: already dealt with. ('admin_review'
+      // cannot happen here: cancellation skips the coverage gate.)
       outcome.alreadyHandled += 1
       continue
     }

@@ -427,7 +427,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const orderPricing = useMemo(
     () =>
       priceOrder(totalAmountDisplay, country, {
-        // The fee cap is per ticket, so it has to know how many are in the cart.
+        // Tickets in the cart. The fee is a flat rate of the total, so this no
+        // longer changes it; passed for the pricing seam's order context.
         quantity: selectedTiers.length
           ? selectedTiers.reduce((sum, t) => sum + t.quantity, 0)
           : quantity,

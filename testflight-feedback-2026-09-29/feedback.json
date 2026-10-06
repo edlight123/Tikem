@@ -1,0 +1,333 @@
+{
+  "fetchedAt": "2026-09-30T01:22:09.591Z",
+  "appId": "6794334427",
+  "screenshotFeedbackCount": 20,
+  "crashFeedbackCount": 0,
+  "screenshotFeedback": [
+    {
+      "id": "ACVzJtUmoK3qNXRiCUwjyGg",
+      "createdDate": "2026-09-24T18:59:30.471Z",
+      "comment": "one issue , we did one sale for 25 gourdes but it listed it as 25$. that is misleading ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.6.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Ijc/Euw/BVs/HCk/A-k/CZ3NVnsg4eY/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=KJBlz5Q9mfLMtiL6KwhXbfvXzPU%3D&p_sig=LaZ0WG2S3q7uVScjy1b0Ge8aaIc",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-24T18-59-30-471Z_ACVzJtUm_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AObxWqA9x5YOoIGle4TDucg",
+      "createdDate": "2026-09-23T19:01:37.366Z",
+      "comment": "this feature could be like the website ?",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.6.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/FHI/GW0/CnU/HRg/FRI/HwPy9oHZcBQ/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=HzPf%2FblysCoC5ukp42974QZMQ7Y%3D&p_sig=7ZNG-MUv46LZkq2AdWj0gKCu1a0",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-23T19-01-37-366Z_AObxWqA9_1.png"
+        }
+      ]
+    },
+    {
+      "id": "ADzrDmN8x7_Mo38K-yr_37A",
+      "createdDate": "2026-09-23T18:58:43.507Z",
+      "comment": "when i open an event link from whatsapp it opens the app but when i tried to go back it wouldn’t let me. pls assist ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.6.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Aug/CFs/BuU/CnI/JOs/8sLlWusBiX0/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=Nv%2F5juUqTLKgJytrxBsM%2BQPQzFA%3D&p_sig=AwLXGSqc52TIr3KLr-BxUuOli6w",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-23T18-58-43-507Z_ADzrDmN8_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AE3A6UUorSZaYc-3BsIrOpk",
+      "createdDate": "2026-09-13T02:19:05.037Z",
+      "comment": "too crowded ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Bec/IE8/HBE/Hv8/BL0/MDOmniQjboU/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=aChwQQtj83ae%2Bx0sEGLS1yEWCKQ%3D&p_sig=BYKCy35fm6O27QOAFYl0iOckc-o",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-13T02-19-05-037Z_AE3A6UUo_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AM5eTTtI3Ssasl9KRPD_hs8",
+      "createdDate": "2026-09-06T21:17:35.564Z",
+      "comment": "",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Di4/JJQ/D-Q/CQY/HdU/tlznOPj3FaE/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=QS6093uZYV9sR4xAcggj%2Fs%2BIjd0%3D&p_sig=iv1gjdyfFU7hciMt81kiPs5FFlA",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-06T21-17-35-564Z_AM5eTTtI_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AIsIXfgQaw53X4cIDvpMBIk",
+      "createdDate": "2026-09-06T21:17:25.432Z",
+      "comment": "no apple pay options?",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/BFU/GEk/DxU/Eks/JtY/wnlbdTTfTiw/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=K879W%2Bh9lC1vOxJaghhOMTCy9s4%3D&p_sig=jn6T6NJaw7GC5d57Es-2E9VLDIc",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-06T21-17-25-432Z_AIsIXfgQ_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AA4syo5smp4y87Pd1XLY36w",
+      "createdDate": "2026-09-06T16:24:37.893Z",
+      "comment": "wrong ration, no pictures that matches the event. can you fix please\n",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/C1A/HpA/DWs/EW0/FDw/WJ3bzewYuJ0/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=HKoVGlS9A8d1nTtmJN5VFfQXLsw%3D&p_sig=esHAKsPg05wXq_4CgoGmipRyoV0",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-06T16-24-37-893Z_AA4syo5s_1.png"
+        }
+      ]
+    },
+    {
+      "id": "ANa-wTcDYw4J1D2j2J_oNDo",
+      "createdDate": "2026-09-04T12:57:41.333Z",
+      "comment": "and also should we charge a sales tax as well?",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/FWU/G20/HjE/Gk4/GPQ/W-GA29NpHBU/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=oUaan2zh64IoPFMnFfP7aY1F0yw%3D&p_sig=KgJ5zaPLD3cjLp8Z-zON4VM7G8w",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-04T12-57-41-333Z_ANa-wTcD_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AMjePwKtCJTE-vQ4mLe9FsA",
+      "createdDate": "2026-09-04T12:57:20.439Z",
+      "comment": "does it give the option to pay with apple pay or google pay or Pay now later? \n\nwhat do u think?",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/EQ8/E6s/GBM/C8I/CdA/W6CaUilOJlE/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=RX8SelkVEOgB3B7gx9AygNcfApU%3D&p_sig=mIEAUf0lGv8yzU83c3lEP4eNvpY",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-04T12-57-20-439Z_AMjePwKt_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AIH9sNM9GWOJAI0RJwS6DPU",
+      "createdDate": "2026-09-02T16:35:45.408Z",
+      "comment": "",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/A_4/DYc/DdY/HqU/HRo/NpcM-0GraN4/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=YqMfwCC3LRqKPs4Ba83kBcxOx5A%3D&p_sig=B0bzWmRAsDvb437pxW_31xVYOJ8",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-02T16-35-45-408Z_AIH9sNM9_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AC0yHiZVQpO41wSoThrYiUs",
+      "createdDate": "2026-09-02T04:02:22.761Z",
+      "comment": "",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Jd0/GeE/D-c/Cw8/IC8/Zwmp8yKf3g8/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=g%2FO%2F8EBtnOxj7JaTOU51tbtoVZ0%3D&p_sig=lqryZYRHvmNNqt7Bcu8PZBkim40",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-02T04-02-22-761Z_AC0yHiZV_1.png"
+        }
+      ]
+    },
+    {
+      "id": "ACZeXWqylCYL12gkKCbGocA",
+      "createdDate": "2026-09-02T04:02:14.884Z",
+      "comment": "",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/G2A/Jhk/ATE/CPw/JGY/r6dsebLmRak/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=U09EAQnPt6MJzKS6R4H9BnEfz%2F8%3D&p_sig=NVYGMBhZLGJT5ybPTjxFzvCNtnY",
+          "localPath": "testflight-feedback-2026-09-29/2026-09-02T04-02-14-884Z_ACZeXWqy_1.png"
+        }
+      ]
+    },
+    {
+      "id": "ABzK_FG2wgt44D-bXV1afAc",
+      "createdDate": "2026-08-29T05:53:48.281Z",
+      "comment": "for the wallet screenshot, there’s a gap next to the logo, also general question can we have the even image as a blurred background in the poster to make it more premium? just asking ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Afg/CaU/GRA/Izc/AWc/EZqHSE3P0k4/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=UnYhLyilA7kq8bbdjPBQ067FB2Q%3D&p_sig=3cwTZwnygsM57GZaWI3aobqYrjA",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-29T05-53-48-281Z_ABzK_FG2_1.png"
+        },
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Jw4/GfE/JkM/IHE/CkI/rCr96h3p9_M/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=zgAWDl%2Ft2P9wogZ%2FslDDg57m8Fo%3D&p_sig=7uap5Csgp2II065OlKTvijRxnKM",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-29T05-53-48-281Z_ABzK_FG2_2.png"
+        }
+      ]
+    },
+    {
+      "id": "AGo-VqlGe7AScFMdkKPeKKA",
+      "createdDate": "2026-08-29T05:45:45.961Z",
+      "comment": "just leave the icons for the bottom bar, remove the texts ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/BX0/Cp0/CpU/C6g/F0w/cZwdrW_lzVU/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=gwhZLiaaR3zNW%2FsLIU3gwkZXoOg%3D&p_sig=YEmsIbFZjzON8VvlNSQiEinHzGo",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-29T05-45-45-961Z_AGo-VqlG_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AA3HRKZ8Dxd5q21LrMQRG_w",
+      "createdDate": "2026-08-29T05:41:25.531Z",
+      "comment": "actually remove this section or see another way to do it. this looks too much like posh",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/C1w/E-s/FT8/GH0/I28/gcPZkrkd4vE/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=ZZ3RD1pURfZbEQVILt7MUdnvjwI%3D&p_sig=6BBq_MC7U50XGJRd7ssthGmiJ3o",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-29T05-41-25-531Z_AA3HRKZ8_1.png"
+        }
+      ]
+    },
+    {
+      "id": "ADppeMGastTF6nwZilYe_94",
+      "createdDate": "2026-08-14T04:12:29.882Z",
+      "comment": "i need better pictures for the cards. i need one or two people max per picture. but aim for artistic visualization ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/Az0/CJw/Cfo/GcE/AAY/PrpD6avb_vE/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=zZn9iNl%2BmQgfhjLG%2FnsuzAcBWVM%3D&p_sig=mOqO39Qz43_7JlvcSbPP71Y_p5Y",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-14T04-12-29-882Z_ADppeMGa_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AC27ydDbSTWpFgjUrIIkVPM",
+      "createdDate": "2026-08-14T04:11:32.369Z",
+      "comment": "for this, i would it to show only the active country. but the person can click change country then select another one? \n\nwhat do u think?",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/EBA/C5k/Dq8/JVE/DJc/JPz78tycVsU/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=hrzAe%2FnVetL9wbHyOytk5GNtGbI%3D&p_sig=1RAZ0FC3X5DTVgtcVsP8TV8aciY",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-14T04-11-32-369Z_AC27ydDb_1.png"
+        }
+      ]
+    },
+    {
+      "id": "ADOjtwiuyxbVJIb-g7c5z0k",
+      "createdDate": "2026-08-14T04:10:17.601Z",
+      "comment": "these cards should be clickable \n\nand the card sizes are uneven. pls fix ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/B0Y/BlA/DA8/DCI/Ass/JVPr_44QhCk/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=6vKw0HEnUv9laDpwAFGnZb5ezQQ%3D&p_sig=DEXPs7c9PFDUuSANaVYNdKjlv8I",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-14T04-10-17-601Z_ADOjtwiu_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AF7l4D24brcB9flDaMoX2D0",
+      "createdDate": "2026-08-14T03:50:46.431Z",
+      "comment": "this should be something the organizer edit and saved. and if they want to change it they edit it. but not display all the countries like that. out in the open.\n\nsee how you can refactor. also refactor the entire page as well. and relevant subpage. i asked many times from you and you never did it. please do that",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/EDs/HQE/AOY/Ijo/F8U/KYxV3jvH1yE/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=nkLsVmE3t7RlNrsvIluk3f9rr2Q%3D&p_sig=-HZWf0Y5pEXG0kNU4EJjExL8Y3k",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-14T03-50-46-431Z_AF7l4D24_1.png"
+        }
+      ]
+    },
+    {
+      "id": "AAt4MeosCvWzH09KSNUoYY8",
+      "createdDate": "2026-08-14T03:48:15.444Z",
+      "comment": "this is too huge. reduce size please ",
+      "tester": "tedolivier.toj86@gmail.com",
+      "device": "iPhone18_1 / IOS / 26.5.2",
+      "locale": "en-US",
+      "screenWidth": 402,
+      "screenHeight": 874,
+      "screenshots": [
+        {
+          "url": "https://tf-feedback.itunes.apple.com/eimg/A2o/Cz8/CqY/CKk/EUw/4efoXQ2_nxE/original.jpg?i_for=6794334427&AWSAccessKeyId=MKIA9C0TVRX1ZL0VZ1YK&Expires=1791331200&Signature=2eiEcS6N9R1T3dH17icByDJL%2Fms%3D&p_sig=68XUK6QFBISPOVAD_Vr0loSfZ1k",
+          "localPath": "testflight-feedback-2026-09-29/2026-08-14T03-48-15-444Z_AAt4Meos_1.png"
+        }
+      ]
+    }
+  ],
+  "crashFeedback": []
+}

@@ -1515,6 +1515,8 @@ export default {
       checkInQueued: 'Checked in. Will sync when back online.',
       checkInFailed: 'Failed to check in ticket. Please try again.',
       offlineNotCached: 'Offline and this ticket isn’t cached. Reconnect once to load the guest list.',
+      transferredCode: 'This ticket was transferred. The old code is no longer valid.',
+      invalidCode: 'This code is not valid.',
     },
     offline: {
       banner: 'Offline. Check-ins will sync when you reconnect.',
@@ -2833,6 +2835,7 @@ export default {
       cancelError: 'Failed to cancel transfer',
       buttonTitle: 'Transfer Ticket',
       buttonSubtitle: 'Send this ticket to someone else',
+      newCodeNote: 'Once the transfer is accepted, the ticket gets a new QR code. Your code, screenshots and wallet pass stop working.',
     },
     labels: {
       dateTime: 'Date & Time',
@@ -2858,6 +2861,7 @@ export default {
     },
     refund: {
       pending: 'Refund Pending',
+      underReview: 'Refund under review',
       approved: 'Refund Approved',
       denied: 'Refund Denied',
     },
@@ -2997,6 +3001,7 @@ export default {
     statusPending: 'Pending',
     statusApproved: 'Approved',
     statusDenied: 'Denied',
+    statusUnderReview: 'Under review',
     reason: 'Reason',
     deny: 'Deny',
     approve: 'Approve',
@@ -3006,6 +3011,7 @@ export default {
     denyBody: 'Are you sure you want to deny this refund request?',
     approvedSuccess: 'Refund approved and processed',
     deniedSuccess: 'Refund request denied',
+    sentForReview: "Sent to Tikèm for review because your remaining balance doesn't cover it.",
   },
   // Report / block (App Store guideline 1.2). See lib/moderation on the web side.
   moderation: {
@@ -3276,6 +3282,8 @@ export default {
       successCard: '{amount} is on its way back to the buyer.',
       successManual: '{amount} is queued and Tikèm will pay it out.',
       partialFailed: '{n} ticket(s) couldn’t be refunded. Try again.',
+      successReview: '{n} ticket(s) sent to Tikèm for review because your remaining balance doesn’t cover the refund.',
+      reviewTitle: 'Sent to Tikèm for review',
       failed: 'The refund didn’t go through and nothing was charged back. Please try again.',
     },
   },

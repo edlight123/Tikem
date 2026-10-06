@@ -11,14 +11,15 @@ import {
   type EventAvailabilityInput,
 } from '@/lib/payouts/availability'
 import { DEFAULT_PAYOUT_RELEASE_CONFIG } from '@/types/platform-settings'
+import { PLATFORM_FEE_CAP_RETIRED_AT } from '@/lib/fees'
 import type { OrganizerHistory } from '@/lib/payouts/release-rules'
 
 const NOW = new Date('2026-10-05T12:00:00.000Z')
 const HOUR = 3_600_000
 const endedHoursAgo = (h: number) => new Date(NOW.getTime() - h * HOUR).toISOString()
 
-const HTG_RULE = { platformFeePercentage: 0.1, capMinorPerTicket: 75_000 } // 750 HTG
-const USD_RULE = { platformFeePercentage: 0.1, capMinorPerTicket: 500 } // $5.00
+const HTG_RULE = { platformFeePercentage: 0.1, legacyCapMinorPerTicket: 75_000 } // retired 750 HTG cap, capped-era sales only
+const USD_RULE = { platformFeePercentage: 0.1, legacyCapMinorPerTicket: 500 } // retired $5.00 cap, capped-era sales only
 
 const ESTABLISHED: OrganizerHistory = { completedEvents: 5, lifetimeGrossMinor: 0, currency: 'HTG' }
 const NEW_ORG: OrganizerHistory = { completedEvents: 0, lifetimeGrossMinor: 0, currency: 'HTG' }
@@ -62,7 +63,7 @@ beforeEach(() => {
   seq = 0
 })
 
-describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => {
+describe('fee actually charged: rate, retired per-ticket cap, absorb vs pass-on', () => {
   it('absorb (organizer incidence) below the cap: 10% comes off', () => {
     const a = run({ tickets: [ticket(1_000)] }) // 1,000 HTG
     expect(a.platformFeeMinor).toBe(10_000)
@@ -70,7 +71,7 @@ describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => 
     expect(a.availableNowMinor).toBe(90_000)
   })
 
-  it('absorb above the cap: the fee is capped at 750 HTG per ticket (the old engine took a flat 10%)', () => {
+  it('absorb above the cap, sold while the cap was in force: keeps the 750 HTG per-ticket fee it was sold under', () => {
     const a = run({ tickets: [ticket(10_000)] }) // 10,000 HTG
     expect(a.platformFeeMinor).toBe(75_000)
     expect(a.netMinor).toBe(925_000)
@@ -78,13 +79,13 @@ describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => 
     expect(a.netMinor - Math.floor(1_000_000 * 0.9)).toBe(25_000)
   })
 
-  it('the cap scales with the ORDER quantity (one payment, many tickets)', () => {
+  it('a capped-era order: the cap scales with the ORDER quantity (one payment, many tickets)', () => {
     const a = run({ tickets: [ticket(10_000, { payment_id: 'p' }), ticket(10_000, { payment_id: 'p' })] })
     expect(a.platformFeeMinor).toBe(150_000) // min(10% of 20,000 HTG, 2 × 750)
     expect(a.netMinor).toBe(1_850_000)
   })
 
-  it('USD event: $5.00 cap', () => {
+  it('USD event sold in the capped era: $5.00 cap', () => {
     const a = run({
       event: { id: 'evt1', organizer_id: 'org1', currency: 'USD', country: 'HT', status: 'published', end_datetime: endedHoursAgo(200) },
       fee: USD_RULE,
@@ -93,6 +94,40 @@ describe('fee actually charged: rate, per-ticket cap, absorb vs pass-on', () => 
     expect(a.currency).toBe('USD')
     expect(a.platformFeeMinor).toBe(500)
     expect(a.netMinor).toBe(9_500)
+  })
+
+  it('absorb, sold AFTER the cap was retired: exactly 10%, however expensive', () => {
+    const after = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString()
+    const a = run({ tickets: [ticket(50_000, { purchased_at: after })] }) // 50,000 HTG
+    expect(a.platformFeeMinor).toBe(500_000) // 5,000 HTG, not 750
+    expect(a.netMinor).toBe(4_500_000)
+  })
+
+  it('an order is priced by its EARLIEST ticket: one capped-era ticket keeps the order capped', () => {
+    const after = new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString()
+    const a = run({
+      tickets: [
+        ticket(10_000, { payment_id: 'p', purchased_at: after }),
+        ticket(10_000, { payment_id: 'p' }), // 2026-09-20
+      ],
+    })
+    expect(a.platformFeeMinor).toBe(150_000)
+  })
+
+  it('USD event sold after the cap was retired: $100 pays $10', () => {
+    const a = run({
+      event: { id: 'evt1', organizer_id: 'org1', currency: 'USD', country: 'HT', status: 'published', end_datetime: endedHoursAgo(200) },
+      fee: USD_RULE,
+      tickets: [
+        ticket(100, {
+          payment_method: 'stripe',
+          currency: 'USD',
+          purchased_at: new Date(PLATFORM_FEE_CAP_RETIRED_AT.getTime() + 60_000).toISOString(),
+        }),
+      ],
+    })
+    expect(a.platformFeeMinor).toBe(1_000)
+    expect(a.netMinor).toBe(9_000)
   })
 
   it('pass-on (buyer incidence, stamped on the ticket): the organizer nets face value', () => {

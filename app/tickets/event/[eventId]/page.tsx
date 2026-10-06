@@ -100,11 +100,11 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
   // reserves nothing for a signed-out reader.
   return (
     <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <EventTicketsContent event={serializedEvent} tickets={serializedTickets} />
 
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

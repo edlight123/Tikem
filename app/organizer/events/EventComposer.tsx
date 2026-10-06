@@ -1026,7 +1026,7 @@ export default function EventComposer({
 
   // A worked example on the organizer's own cheapest paid ticket, so the toggle
   // is a number rather than a policy statement. Uses the same pricing function
-  // the buyer's checkout does, capped fee included.
+  // the buyer's checkout does (exactly the platform rate, no per-ticket cap).
   const feeExample = (() => {
     const paidPrices = tiers.map((t) => Number(t.price) || 0).filter((p) => p > 0)
     if (!paidPrices.length) return ''

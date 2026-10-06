@@ -18,7 +18,7 @@ export async function authorizeEventOwner(eventId: string): Promise<EventAccess>
   const user = await getCurrentUser()
   if (!user) return { ok: false, status: 401, error: 'Not authenticated' }
 
-  const isAdmin = user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(user.email)
+  const isAdmin = user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(((user as any).email_verified) ? user.email : null)
   const snap = await adminDb.collection('events').doc(eventId).get()
   if (!snap.exists) return { ok: false, status: 404, error: 'Event not found' }
   const event = { id: snap.id, ...(snap.data() as any) }

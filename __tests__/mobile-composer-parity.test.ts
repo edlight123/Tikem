@@ -86,11 +86,12 @@ describe('organizer net for the pass-the-fee switch', () => {
     expect(priceOrder(1000, event).total).toBe(1100)
   })
 
-  it('is face minus the capped platform fee when the organizer absorbs it', () => {
+  it('is face minus exactly 10% when the organizer absorbs it, at any price', () => {
     const event = { country: 'HT', currency: 'HTG', fee_incidence: 'organizer' }
     expect(organizerNet(1000, event)).toBe(900)
-    // 10% of 10,000 is 1,000, capped at 750 HTG per ticket.
-    expect(organizerNet(10_000, event)).toBe(9250)
+    // 10% of 10,000 is 1,000: no per-ticket cap any more.
+    expect(organizerNet(10_000, event)).toBe(9000)
+    expect(organizerNet(50_000, event)).toBe(45_000)
     expect(priceOrder(10_000, event).total).toBe(10_000)
   })
 

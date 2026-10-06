@@ -20,7 +20,7 @@
 
 import crypto from 'crypto'
 import { adminDb } from '@/lib/firebase/admin'
-import { calculateCappedPlatformFee } from '@/lib/fees'
+import { calculatePlatformFeeWithPercentage } from '@/lib/fees'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getEventLocation } from '@/types/platform-settings'
 
@@ -153,23 +153,22 @@ export function calculateCommissionCents(
 
 /**
  * The platform fee Tikèm takes on this order, in event-currency cents, computed
- * the way checkout and the earnings ledger compute it (rate + per-ticket cap for
- * the event's location and currency).
+ * the way checkout and the earnings ledger compute it: exactly the rate for the
+ * event's location, with no per-ticket cap (owner decision, 2026-10-05).
  *
  * The buyer-pays incidence (US/CA/FR) is deliberately NOT special-cased: the
  * ticket's incidence is not known here, and assuming the fee comes out of the
  * organizer's share only makes the commission ceiling stricter, never looser.
- * On any lookup failure this falls back to the default 10% uncapped, which is
- * likewise the conservative (largest-fee) answer.
+ * On any lookup failure this falls back to the default 10%.
  */
 export async function platformFeeCentsForOrder(
   eventId: string,
   orderGrossCents: number,
-  quantity: number
+  // Kept for callers; with no per-ticket cap the fee no longer depends on it.
+  _quantity?: number
 ): Promise<number> {
   const gross = Math.max(0, Math.round(Number(orderGrossCents) || 0))
   if (gross <= 0) return 0
-  const qty = Math.max(1, Math.round(Number(quantity) || 1))
   try {
     const eventSnap = await adminDb.collection('events').doc(String(eventId)).get()
     const event: any = eventSnap?.exists ? eventSnap.data() || {} : {}
@@ -177,17 +176,13 @@ export async function platformFeeCentsForOrder(
     const cfg: any = getEventLocation(String(event?.country || 'HT')) === 'haiti' ? settings?.haiti : settings?.usCanada
     const rateRaw = Number(cfg?.platformFeePercentage)
     const rate = Number.isFinite(rateRaw) && rateRaw >= 0 && rateRaw < 1 ? rateRaw : DEFAULT_PLATFORM_FEE_RATE
-    const currency = String(event?.currency || 'HTG').toUpperCase()
-    const table = cfg?.platformFeeCapMinorByCurrency || {}
-    const capRaw = Object.prototype.hasOwnProperty.call(table, currency) ? Number(table[currency]) : null
-    const capMinorPerTicket = capRaw !== null && Number.isFinite(capRaw) && capRaw >= 0 ? capRaw : null
-    return calculateCappedPlatformFee(gross, rate, { capMinorPerTicket, quantity: qty })
+    return calculatePlatformFeeWithPercentage(gross, rate)
   } catch (err: any) {
-    console.warn('[promoters] platform-fee lookup failed; assuming the default rate uncapped', {
+    console.warn('[promoters] platform-fee lookup failed; assuming the default rate', {
       eventId,
       message: err?.message,
     })
-    return calculateCappedPlatformFee(gross, DEFAULT_PLATFORM_FEE_RATE, null)
+    return calculatePlatformFeeWithPercentage(gross, DEFAULT_PLATFORM_FEE_RATE)
   }
 }
 

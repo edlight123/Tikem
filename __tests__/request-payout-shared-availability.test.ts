@@ -143,6 +143,8 @@ function seed() {
   coll('events').htg1 = { organizer_id: 'org1', title: 'Konpa', currency: 'HTG', country: 'HT', end_datetime: ENDED, status: 'published' }
   coll('events').htg2 = { organizer_id: 'org1', title: 'Rara', currency: 'HTG', country: 'HT', end_datetime: ENDED, status: 'published' }
   coll('events').usd1 = { organizer_id: 'org1', title: 'Diaspora', currency: 'USD', country: 'HT', end_datetime: ENDED, status: 'published' }
+  // Sold 2026-08-20, while the (now retired) per-ticket cap was in force, so
+  // these keep the capped fee they were sold under.
   sell('htg1', 10_000) // fee capped at 750 → 9,250 HTG
   sell('htg2', 1_000) //  fee 100 → 900 HTG
   sell('usd1', 100, { payment_method: 'stripe' }) // fee capped at $5 → $95

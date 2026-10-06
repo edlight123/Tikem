@@ -31,6 +31,14 @@ import {
  * A fourth lists stripe_orders the card pipeline flagged: a sold-out auto-refund
  * that failed, a money step that never confirmed, or a partial Stripe refund
  * that did not map to whole tickets. Read-only plus "Mark resolved".
+ *
+ * The first, "Refunds awaiting review", lists refund_reviews: refunds of money
+ * Tikèm holds that the organizer's remaining unwithdrawn balance could not
+ * cover, so no money was sent. "Approve" is the ONE action here that moves
+ * money: Tikèm funds the gap, the refund runs through the normal path (Stripe
+ * refund, or a manual mobile-money item that then appears under "Owed to
+ * buyers"), and the shortfall is recorded against the organizer. "Deny" puts
+ * the ticket back to live.
  */
 
 type Item = {
@@ -82,6 +90,33 @@ type StripeOrderItem = {
   refundError: string | null
   unallocatedCents: number
   updatedAt: string | null
+}
+
+type ReviewItem = {
+  ticketId: string
+  status: 'pending' | 'approving'
+  eventId: string | null
+  eventTitle: string | null
+  organizerId: string | null
+  organizerName: string | null
+  amount: number
+  currency: string
+  eventCurrency: string | null
+  faceMinor: number | null
+  coverageMinor: number | null
+  shortfallMinor: number | null
+  coverageError: string | null
+  rail: string | null
+  method: string | null
+  reason: string | null
+  buyerReason: string | null
+  requestedBy: string | null
+  buyerName: string | null
+  buyerEmail: string | null
+  buyerPhone: string | null
+  ticketRefundStatus: string | null
+  lastError: string | null
+  createdAt: string | null
 }
 
 const RECONCILE_STEP_LABELS: Record<string, string> = {
@@ -187,6 +222,7 @@ export default function RefundQueue() {
   const [resolved, setResolved] = useState<Item[]>([])
   const [recon, setRecon] = useState<ReconItem[]>([])
   const [stripeOrders, setStripeOrders] = useState<StripeOrderItem[]>([])
+  const [reviews, setReviews] = useState<ReviewItem[]>([])
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -206,6 +242,7 @@ export default function RefundQueue() {
       setResolved(Array.isArray(data.resolved) ? data.resolved : [])
       setRecon(Array.isArray(data.reconciliation) ? data.reconciliation : [])
       setStripeOrders(Array.isArray(data.stripeOrders) ? data.stripeOrders : [])
+      setReviews(Array.isArray(data.reviews) ? data.reviews : [])
     } catch (err) {
       console.error('Error loading refund queue:', err)
       setMessage({ type: 'error', text: 'Failed to load the refund queue' })
@@ -344,6 +381,68 @@ export default function RefundQueue() {
     }
   }
 
+  const decideReview = async (item: ReviewItem, action: 'approve' | 'deny') => {
+    const amount = formatMoney(item.amount, item.currency)
+    const gap =
+      item.shortfallMinor != null && item.eventCurrency ? formatMoney(item.shortfallMinor / 100, item.eventCurrency) : null
+    const ok = await confirmDialog(
+      action === 'approve'
+        ? {
+            title: `Approve the ${amount} refund?`,
+            description: `Tikèm funds ${gap ? `the ${gap} the organizer's balance doesn't cover` : 'whatever the organizer can no longer cover'}. ${
+              item.rail === 'manual'
+                ? 'The ticket is voided and the payout moves to "Owed to buyers" for you to send.'
+                : 'The card is refunded in Stripe right away.'
+            } The shortfall is recorded against the organizer. This cannot be undone here.`,
+            confirmLabel: 'Approve refund',
+            variant: 'default',
+          }
+        : {
+            title: `Deny the ${amount} refund?`,
+            description:
+              'No money moves. The ticket is valid again and the buyer and organizer are told it was not approved.',
+            confirmLabel: 'Deny refund',
+            variant: 'danger',
+          }
+    )
+    if (!ok) return
+    const key = `review:${item.ticketId}`
+    setBusyKey(key)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/refund-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'review', id: item.ticketId, action, note: notes[key] || null }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        setMessage({ type: 'error', text: data?.error || 'Could not update this review' })
+        if (res.status === 409 || res.status === 502) await load(false)
+        return
+      }
+      const funded =
+        action === 'approve' && Number(data.shortfallMinor) > 0 && data.eventCurrency
+          ? ` Tikèm advanced ${formatMoney(Number(data.shortfallMinor) / 100, data.eventCurrency)}.`
+          : ''
+      setMessage({
+        type: 'success',
+        text:
+          action === 'approve'
+            ? data.outcome === 'queued'
+              ? `Approved: ${amount} is now owed to the buyer below.${funded}`
+              : `Approved: ${amount} refunded to the buyer's card.${funded}`
+            : `Denied: the ticket is valid again.`,
+      })
+      await load(false)
+    } catch (err) {
+      console.error('Error deciding refund review:', err)
+      setMessage({ type: 'error', text: 'Could not update this review' })
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
   const actionable = (item: Item) => {
     const key = keyOf(item)
     const busy = busyKey === key
@@ -398,6 +497,7 @@ export default function RefundQueue() {
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-8">
+          <Figure label="Awaiting review" value={reviews.length} />
           <Figure label="Owed" value={open.length} sub={totals(open)} />
           <Figure label="Payout failed" value={failed.length} sub={totals(failed)} />
           <Figure label="Recently paid" value={resolved.length} />
@@ -411,6 +511,107 @@ export default function RefundQueue() {
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
         </button>
       </div>
+
+      <section>
+        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          Refunds awaiting review
+        </h2>
+        {reviews.length === 0 ? (
+          <ConsolePanel className="px-4 py-8 text-center">
+            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">Nothing to decide</p>
+            <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
+              A refund lands here when the organizer&apos;s remaining balance with Tikèm can&apos;t cover it. No money
+              is sent until you approve it.
+            </p>
+          </ConsolePanel>
+        ) : (
+          <div className="space-y-2">
+            {reviews.map((item) => {
+              const key = `review:${item.ticketId}`
+              const busy = busyKey === key
+              const ec = item.eventCurrency || item.currency
+              return (
+                <ConsoleRow key={key} ageAt={item.createdAt} now={now}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-mono text-base font-bold tabular-nums text-console-text">
+                        {formatMoney(item.amount, item.currency)}
+                      </span>
+                      <span className="label-mono text-[11px] uppercase tracking-[0.14em] text-console-mut">
+                        {item.method || item.rail || 'unknown'}
+                      </span>
+                      {item.status === 'approving' ? (
+                        <ConsoleState tone="warn">Approval in progress</ConsoleState>
+                      ) : item.shortfallMinor != null ? (
+                        <ConsoleState tone="bad">Short {formatMoney(item.shortfallMinor / 100, ec)}</ConsoleState>
+                      ) : (
+                        <ConsoleState tone="warn">Balance could not be checked</ConsoleState>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-sm text-console-mut">
+                      {item.eventId ? (
+                        <Link
+                          href={`/events/${item.eventId}`}
+                          className="font-medium text-console-text underline decoration-console-faint hover:decoration-console-text"
+                        >
+                          {item.eventTitle || item.eventId}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-console-text">{item.eventTitle || 'Unknown event'}</span>
+                      )}
+                      {item.reason ? ` · ${REASON_LABELS[item.reason] || item.reason.replace(/_/g, ' ')}` : ''}
+                      {item.organizerName ? ` · organizer ${item.organizerName}` : ''}
+                    </p>
+                    {item.shortfallMinor != null && (
+                      <p className="mt-1 text-sm text-console-faint">
+                        Face {item.faceMinor != null ? formatMoney(item.faceMinor / 100, ec) : 'unknown'} · organizer still
+                        holds {item.coverageMinor != null ? formatMoney(item.coverageMinor / 100, ec) : 'unknown'} · Tikèm
+                        would fund {formatMoney(item.shortfallMinor / 100, ec)}
+                      </p>
+                    )}
+                    {item.coverageError && (
+                      <p className="mt-1 text-sm text-console-faint">Balance check failed: {item.coverageError}</p>
+                    )}
+                    <p className="mt-1 text-sm text-console-faint">
+                      Buyer: {item.buyerName || 'Unknown buyer'}
+                      {item.buyerPhone ? ` · ${item.buyerPhone}` : ''}
+                      {item.buyerEmail ? ` · ${item.buyerEmail}` : ''}
+                    </p>
+                    {item.buyerReason && <p className="mt-1 text-sm text-console-mut">Buyer said: {item.buyerReason}</p>}
+                    {item.lastError && (
+                      <p className="mt-1 text-sm text-console-red">Last approval failed: {item.lastError}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
+                      <span>ticket {item.ticketId}</span>
+                      {item.ticketRefundStatus && <span>ticket now {item.ticketRefundStatus}</span>}
+                      <span>held {shortDate(item.createdAt)}</span>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <ConsoleInput
+                        value={notes[key] || ''}
+                        onChange={(e) => setNotes((prev) => ({ ...prev, [key]: e.target.value }))}
+                        placeholder="Note (optional, sent to the organizer on deny)"
+                        maxLength={500}
+                        className="sm:max-w-sm"
+                        aria-label="Review note"
+                      />
+                      <div className="flex gap-2">
+                        <ConsoleButton variant="primary" disabled={busy} onClick={() => decideReview(item, 'approve')}>
+                          Approve
+                        </ConsoleButton>
+                        <ConsoleButton variant="danger" disabled={busy} onClick={() => decideReview(item, 'deny')}>
+                          Deny
+                        </ConsoleButton>
+                      </div>
+                    </div>
+                  </div>
+                  <ConsoleAge ageAt={item.createdAt} now={now} />
+                </ConsoleRow>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
       <section>
         <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Owed to buyers</h2>

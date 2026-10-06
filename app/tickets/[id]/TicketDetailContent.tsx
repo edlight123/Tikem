@@ -85,8 +85,10 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
                 {t('detail.ticket_code')}
               </p>
               <div className="flex justify-center">
-                <QRCodeDisplay 
-                  value={ticket.id} 
+                {/* The ticket's CURRENT code: after a transfer it is a signed
+                    payload (lib/tickets/qr.ts) and the bare id is refused. */}
+                <QRCodeDisplay
+                  value={String(ticket.qr_code_data || ticket.qr_code || ticket.id)}
                   size={280}
                 />
               </div>

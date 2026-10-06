@@ -125,7 +125,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // The fee rates and per-ticket caps in force, read once per render and seeded
+  // The fee rates in force, read once per render and seeded
   // into the pricing layer below. This is what keeps an advertised price honest
   // after an admin edits the rate: without it, every displayed total would be
   // computed from the compiled-in defaults while checkout charged the new figure.

@@ -6,13 +6,14 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { calculateFees, calculateSettlementDate, isSettlementReady, calculateCappedPlatformFee, calculateSettlementDateWithHoldDays } from '@/lib/fees'
+import { calculateFees, calculateSettlementDate, isSettlementReady, platformFeeForSale, legacyPlatformFeeCapMinor, calculateSettlementDateWithHoldDays } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 import { getEventLocation } from '@/types/platform-settings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
 import { isLiveTicketStatus, liveTicketStatusesForQuery } from '@/lib/tickets/status'
 import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
+import { ticketPurchasedAt } from '@/lib/payouts/availability'
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
@@ -60,14 +61,6 @@ export const MONCASH_COLLECTION_FEE_RATE = 0.02
 /** The platform fee rate when no location setting is supplied (types/earnings FEE_CONFIG). */
 const FEE_PERCENT_DEFAULT = 0.1
 
-/** The location's per-ticket fee cap for this currency, or null when uncapped. */
-function capFromSettings(locationConfig: any, currency: string): number | null {
-  const table = locationConfig?.platformFeeCapMinorByCurrency || {}
-  if (!Object.prototype.hasOwnProperty.call(table, currency)) return null
-  const n = Number(table[currency])
-  return Number.isFinite(n) && n >= 0 ? n : null
-}
-
 /**
  * The MonCash fee is taken on the HTG actually charged; express it in the
  * event's currency (fxRate is charged-per-event, so divide).
@@ -95,11 +88,13 @@ function calculateEventCurrencyFees(options: {
   platformFeePercentage?: number
   feeIncidence?: FeeIncidence
   /**
-   * Per-ticket platform-fee ceiling in the event currency's minor units, and the
-   * order's ticket count — the same cap checkout applies. Absent = uncapped.
+   * Only for a sale ALREADY MADE that is being re-derived (the history view):
+   * the retired per-ticket cap for the event (legacyPlatformFeeCapMinor), the
+   * order's ticket count and when it was paid, so a sale made while the cap was
+   * in force keeps the fee it was sold under. Absent = a new sale: exactly the
+   * rate, no cap (owner decision, 2026-10-05).
    */
-  capMinorPerTicket?: number | null
-  quantity?: number
+  historical?: { legacyCapMinorPerTicket: number | null; quantity: number; purchasedAt: Date | null }
 }): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number; absorbedProcessingFee: number } {
   const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
   if (grossEventCents <= 0) {
@@ -126,12 +121,12 @@ function calculateEventCurrencyFees(options: {
 
   // Platform fee is always calculated on organizer-facing gross (event currency).
   // Use dynamic fee percentage if provided, otherwise use default from calculateFees
-  // Capped per ticket exactly as checkout caps it (lib/fees.ts), so the ledger
-  // records the fee the organizer was actually charged, not an uncapped 10%.
-  const platformFee = calculateCappedPlatformFee(
+  // Exactly the rate, as checkout charges it (lib/fees.ts). A re-derived sale
+  // from the capped era keeps its capped fee (platformFeeForSale).
+  const platformFee = platformFeeForSale(
     grossEventCents,
     options.platformFeePercentage !== undefined ? options.platformFeePercentage : FEE_PERCENT_DEFAULT,
-    { capMinorPerTicket: options.capMinorPerTicket ?? null, quantity: options.quantity }
+    options.historical ?? { legacyCapMinorPerTicket: null, quantity: 1, purchasedAt: null }
   )
 
   // Processing fee depends on the payment rail.
@@ -221,8 +216,9 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   const platformFeePercentage = eventLocation === 'haiti'
     ? platformSettings.haiti.platformFeePercentage
     : platformSettings.usCanada.platformFeePercentage
-  const capMinorPerTicket = capFromSettings(
-    eventLocation === 'haiti' ? platformSettings.haiti : platformSettings.usCanada,
+  // Only sales made while the (now retired) per-ticket cap was in force use it.
+  const legacyCapMinorPerTicket = legacyPlatformFeeCapMinor(
+    eventLocation,
     normalizeCurrency(event.currency || 'HTG')
   )
   const settlementHoldDays = eventLocation === 'haiti'
@@ -251,6 +247,8 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       fxRate: number | null
       chargedAmountCents: number
       feeIncidence: FeeIncidence
+      /** Earliest purchase time in the order; null when a ticket has none. */
+      purchasedAt: Date | null
     }
   >()
   let ticketsSold = 0
@@ -302,11 +300,22 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
         fxRate: fxRate && Number.isFinite(fxRate) ? fxRate : null,
         chargedAmountCents: 0,
         feeIncidence,
+        purchasedAt: undefined,
       } as const)
 
     // Preserve first non-unknown payment method/fx.
     const methodToUse = current.paymentMethod !== 'unknown' ? current.paymentMethod : paymentMethod
     const fxToUse = current.fxRate ?? (fxRate && Number.isFinite(fxRate) ? fxRate : null)
+
+    // The order's purchase time: its earliest ticket, and unknown (null) as soon
+    // as any ticket lacks one, which reads as a sale from the capped era.
+    const ticketAt = ticketPurchasedAt(ticket)
+    const purchasedAt =
+      current.purchasedAt === undefined
+        ? ticketAt
+        : current.purchasedAt === null || ticketAt === null
+          ? null
+          : ticketAt.getTime() < current.purchasedAt.getTime() ? ticketAt : current.purchasedAt
 
     paymentGroups.set(paymentId, {
       grossEventCents: current.grossEventCents + grossEventCents,
@@ -319,6 +328,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       // organizer's net is recoverable, over-reporting it is not.
       feeIncidence:
         current.feeIncidence === 'buyer' && feeIncidence === 'buyer' ? 'buyer' : 'organizer',
+      purchasedAt,
     })
 
     ticketsSold += 1
@@ -340,8 +350,11 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       fxRate: group.fxRate,
       platformFeePercentage, // Pass dynamic platform fee
       feeIncidence: group.feeIncidence,
-      capMinorPerTicket,
-      quantity: group.ticketCount,
+      historical: {
+        legacyCapMinorPerTicket,
+        quantity: group.ticketCount,
+        purchasedAt: group.purchasedAt,
+      },
     })
     grossSales += fees.grossAmount
     platformFee += fees.platformFee
@@ -802,11 +815,7 @@ export async function addTicketToEarnings(
     fxRate,
     platformFeePercentage, // Pass dynamic platform fee
     feeIncidence: options?.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
-    capMinorPerTicket: capFromSettings(
-      eventLocation === 'haiti' ? platformSettings.haiti : platformSettings.usCanada,
-      normalizeCurrency(event?.currency || options?.currency || 'HTG')
-    ),
-    quantity: Math.max(1, Math.floor(Number(quantity) || 1)),
+    // A sale being recorded now: exactly the rate, no per-ticket cap.
   })
 
   // Promoter commission comes out of the organizer's net under BOTH incidences:
@@ -847,7 +856,7 @@ export async function addTicketToEarnings(
  *
  * WHAT is withdrawable is no longer this row's own running total. The caller
  * passes `ceilingMinor` from lib/payouts/availability.ts (ticket-derived net,
- * capped fee, refunds out, legacy batch payouts out), and the transaction checks
+ * platform fee, refunds out, legacy batch payouts out), and the transaction checks
  * `ceilingMinor − withdrawnAmount` with withdrawnAmount read INSIDE the
  * transaction — so two concurrent submits still serialize and the second sees
  * the first's debit. WHEN it is withdrawable is the release ladder's call, made

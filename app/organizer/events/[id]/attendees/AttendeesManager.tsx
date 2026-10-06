@@ -470,7 +470,12 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
         body: JSON.stringify({ ticketId: ticket.id }),
       })
       if (!res.ok) throw new Error()
-      showToast({ type: 'success', title: 'Refund processed', message: 'The ticket has been refunded.' })
+      if (res.status === 202) {
+        // Not covered by the remaining balance: a Tikèm admin decides.
+        showToast({ type: 'info', title: tx('attendees.refund_review_title'), message: tx('attendees.refund_review_body') })
+      } else {
+        showToast({ type: 'success', title: 'Refund processed', message: 'The ticket has been refunded.' })
+      }
       router.refresh()
     } catch {
       showToast({ type: 'error', title: 'Refund failed', message: 'Please try again.' })

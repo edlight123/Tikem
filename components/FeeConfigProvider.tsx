@@ -7,7 +7,7 @@ import {
 } from '@/lib/checkout/fee-config-store'
 
 /**
- * Seeds the admin-configured fee rates and caps into the pricing layer, so a
+ * Seeds the admin-configured fee rates into the pricing layer, so a
  * price the buyer READS is computed from the same settings the server CHARGES
  * from. Without it, display falls back to the compiled-in defaults and an admin
  * changing the rate would leave every advertised price stale.

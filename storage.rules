@@ -18,12 +18,12 @@ service firebase.storage {
     match /verification/{userId}/{allPaths=**} {
       allow read: if request.auth != null && (
         request.auth.uid == userId ||
-        request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com']
+        (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
       );
       allow write: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && (
         request.auth.uid == userId ||
-        request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com']
+        (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
       );
     }
     
@@ -48,12 +48,12 @@ service firebase.storage {
     match /payout-receipts/{organizerId}/{payoutId}/{allPaths=**} {
       allow read: if request.auth != null && (
         request.auth.uid == organizerId ||
-        request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com']
+        (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
       );
       allow write: if request.auth != null && 
-        request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'];
+        (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com']);
       allow delete: if request.auth != null &&
-        request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'];
+        (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com']);
     }
     
     // Default: deny all other access

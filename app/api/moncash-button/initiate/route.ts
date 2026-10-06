@@ -466,8 +466,8 @@ export async function POST(request: Request) {
     // on. This rail used to ignore that and always charge the face value, while the
     // app showed the buyer face + fee. The buyer total is now priced exactly the way
     // create-payment-intent prices it — the same lib/checkout/buyer-pricing call,
-    // the same STORED platform settings (rate + per-ticket cap in the event's own
-    // currency) — on the post-promo face total in the event currency. The incidence
+    // the same STORED platform rate (no per-ticket cap) — on the post-promo face
+    // total in the event currency. The incidence
     // and fee are then stamped on the ORDER, so fulfillment records what the buyer
     // actually paid, never whatever the event's (editable) setting says later.
     const faceValueCents = Math.round(originalAmount * 100)

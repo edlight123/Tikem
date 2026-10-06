@@ -4,7 +4,7 @@
  * ⚠️ MIRRORS THE WEB. This is the Expo-side twin of `lib/checkout/buyer-pricing.ts`
  * and `lib/fees.ts` in the web app — mobile is a separate bundle and cannot import
  * from it (the same reason `lib/ticketPricing.ts` and `lib/countrySupport.ts` are
- * duplicated here). The RATES, THE CAP TABLE AND THE ARITHMETIC MUST STAY IN STEP
+ * duplicated here). THE RATES AND THE ARITHMETIC MUST STAY IN STEP
  * with `types/platform-settings.ts` and `lib/fees.ts`; if you change one, change
  * both. The server is always authoritative — everything here is display.
  *
@@ -28,55 +28,37 @@ const PLATFORM_FEE_MIN_MINOR = 50;
 
 interface LocationFees {
   percentage: number;
-  /** Ceiling per ticket, in the event currency's own minor units. */
-  capMinorByCurrency: Record<string, number>;
-  fallbackCurrency: string;
 }
 
 /**
- * Per-location rate and per-ticket ceiling. Mirrors DEFAULT_PLATFORM_SETTINGS —
- * the values the bundle shipped with, used until the live config arrives.
+ * Per-location rate. Mirrors DEFAULT_PLATFORM_SETTINGS: the values the bundle
+ * shipped with, used until the live config arrives. There is no per-ticket cap
+ * (owner decision, 2026-10-05): the fee is exactly the rate, in every currency.
  */
 const DEFAULT_FEE_CONFIG: { haiti: LocationFees; usCanada: LocationFees } = {
-  haiti: {
-    percentage: 0.1,
-    capMinorByCurrency: { HTG: 75_000, USD: 500 },
-    fallbackCurrency: 'HTG',
-  },
-  usCanada: {
-    percentage: 0.1,
-    capMinorByCurrency: { USD: 500, CAD: 700, EUR: 450 },
-    fallbackCurrency: 'USD',
-  },
+  haiti: { percentage: 0.1 },
+  usCanada: { percentage: 0.1 },
 };
 
 let FEE_CONFIG = DEFAULT_FEE_CONFIG;
 
-/** One location's fee terms, as `/api/platform/fee-config` returns them. */
+/**
+ * One location's fee terms, as `/api/platform/fee-config` returns them. A
+ * `platformFeeCapMinorByCurrency` field, if a server still sends one, is ignored.
+ */
 export interface RemoteLocationFees {
   platformFeePercentage?: number;
-  platformFeeCapMinorByCurrency?: Record<string, number>;
 }
 
 function merge(remote: RemoteLocationFees | undefined, fallback: LocationFees): LocationFees {
   const percentage = Number(remote?.platformFeePercentage);
-  const caps = remote?.platformFeeCapMinorByCurrency;
   return {
-    fallbackCurrency: fallback.fallbackCurrency,
-    // A rate outside 0–100% is a corrupt payload, not an aggressive one: keep the
+    // A rate outside 0-100% is a corrupt payload, not an aggressive one: keep the
     // shipped default rather than pricing every ticket off a bad number.
     percentage:
       Number.isFinite(percentage) && percentage >= 0 && percentage < 1
         ? percentage
         : fallback.percentage,
-    capMinorByCurrency:
-      caps && typeof caps === 'object'
-        ? Object.entries(caps).reduce<Record<string, number>>((acc, [code, value]) => {
-            const minor = Number(value);
-            if (Number.isFinite(minor) && minor >= 0) acc[code.toUpperCase()] = Math.round(minor);
-            return acc;
-          }, {})
-        : fallback.capMinorByCurrency,
   };
 }
 
@@ -153,35 +135,12 @@ function fromMinor(minor: number): number {
 }
 
 /**
- * The per-ticket ceiling, in the event currency's minor units.
- *
- * Falls back to the LOCATION's currency when the event carries none — never to a
- * fixed one, because a $5 ceiling read as gourdes would be 5 HTG and would wipe
- * the fee out.
+ * The platform's cut of one order, in minor units: exactly the location's rate,
+ * floored by the minimum. No per-ticket cap, in any currency.
  */
-function capMinorFor(event: PricingEventLike | null | undefined): number | null {
+function platformFeeMinor(faceMinor: number, event: PricingEventLike | null | undefined): number {
   const config = isHaiti(event?.country) ? FEE_CONFIG.haiti : FEE_CONFIG.usCanada;
-  const code = String(event?.currency || '').toUpperCase() || config.fallbackCurrency;
-  return Object.prototype.hasOwnProperty.call(config.capMinorByCurrency, code)
-    ? config.capMinorByCurrency[code]
-    : null;
-}
-
-/**
- * The platform's cut of one order, in minor units: a percentage, floored by the
- * minimum and capped PER TICKET. Per ticket, because a per-order cap would let a
- * group of four pay a quarter of what four separate buyers pay for the same seats.
- */
-function platformFeeMinor(
-  faceMinor: number,
-  event: PricingEventLike | null | undefined,
-  quantity: number
-): number {
-  const config = isHaiti(event?.country) ? FEE_CONFIG.haiti : FEE_CONFIG.usCanada;
-  const fee = Math.max(Math.round(faceMinor * config.percentage), PLATFORM_FEE_MIN_MINOR);
-  const cap = capMinorFor(event);
-  if (cap == null) return fee;
-  return Math.min(fee, cap * Math.max(1, Math.floor(quantity) || 1));
+  return Math.max(Math.round(faceMinor * config.percentage), PLATFORM_FEE_MIN_MINOR);
 }
 
 export interface OrderPricing {
@@ -201,17 +160,16 @@ export interface OrderPricing {
  *
  * `faceTotal` is the post-discount total for every ticket in the order. The fee's
  * fixed component is per TRANSACTION, so pass the whole order rather than grossing
- * up each ticket separately.
+ * up each ticket separately. `quantity` is accepted for call-site compatibility;
+ * with no per-ticket cap the fee no longer depends on it.
  */
 export function priceOrder(
   faceTotal: number,
   event: PricingEventLike | null | undefined,
-  options?: { quantity?: number }
+  _options?: { quantity?: number }
 ): OrderPricing {
   const incidence = incidenceForEvent(event);
   const faceMinor = Math.max(0, toMinor(faceTotal));
-  const quantity = Math.max(1, Math.floor(options?.quantity ?? 1) || 1);
-
   if (faceMinor <= 0 || incidence === 'organizer') {
     return {
       incidence,
@@ -226,7 +184,7 @@ export function priceOrder(
   }
 
   // The buyer pays the platform fee only; the platform absorbs Stripe's cut.
-  const platformFee = platformFeeMinor(faceMinor, event, quantity);
+  const platformFee = platformFeeMinor(faceMinor, event);
   const chargeMinor = faceMinor + platformFee;
 
   return {
@@ -242,21 +200,20 @@ export function priceOrder(
  * What the ORGANIZER receives for an order. Display only, for the composer's
  * pass-the-fee switch.
  *
- * The capped platform fee covers payment processing in both models, so the
+ * The platform fee covers payment processing in both models, so the
  * organizer never pays a separate processing cut:
  *  - buyer pays the fee   → the organizer nets the face value;
- *  - organizer absorbs it → the organizer nets face − the capped platform fee.
+ *  - organizer absorbs it → the organizer nets face − the platform fee.
  */
 export function organizerNet(
   faceTotal: number,
   event: PricingEventLike | null | undefined,
-  options?: { quantity?: number }
+  _options?: { quantity?: number }
 ): number {
   const faceMinor = Math.max(0, toMinor(faceTotal));
   if (faceMinor <= 0) return 0;
   if (incidenceForEvent(event) === 'buyer') return fromMinor(faceMinor);
-  const quantity = Math.max(1, Math.floor(options?.quantity ?? 1) || 1);
-  return fromMinor(Math.max(0, faceMinor - platformFeeMinor(faceMinor, event, quantity)));
+  return fromMinor(Math.max(0, faceMinor - platformFeeMinor(faceMinor, event)));
 }
 
 /** The all-in price of a single ticket — what a listing or a headline advertises. */

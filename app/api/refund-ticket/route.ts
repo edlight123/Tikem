@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
 import { sumRefundsByCurrency } from '@/lib/tickets/refundPlan'
-import { refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
+import { ADMIN_REVIEW_MESSAGE, refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
 import { loadOwnedTickets, parseTicketIds } from '@/lib/organizer/ticketActions'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +26,11 @@ const MAX_TICKETS = 50
  *
  * Each ticket is CLAIMED in a transaction (refund_status: 'processing') before
  * any money moves, so a double tap or two devices cannot refund it twice.
+ *
+ * A refund of money Tikèm holds that the organizer's remaining unwithdrawn
+ * balance cannot cover is NOT sent: it goes to a Tikèm admin (`review` in the
+ * response, refund_status 'admin_review'). When every ticket went to review the
+ * answer is 202 with a message saying so.
  */
 export async function POST(request: Request) {
   try {
@@ -48,6 +53,7 @@ export async function POST(request: Request) {
     const queued: { ticketId: string; amount: number; currency: string }[] = []
     const failed: { ticketId: string; reason: string }[] = []
     const skipped: { ticketId: string; reason: string }[] = []
+    const review: { ticketId: string; amount: number; currency: string }[] = []
 
     // Claim, refund/queue and record each ticket through the same mechanics
     // event cancellation uses (lib/tickets/refundExecution.ts).
@@ -60,6 +66,7 @@ export async function POST(request: Request) {
       })
       if (res.outcome === 'refunded') refunded.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
       else if (res.outcome === 'queued') queued.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
+      else if (res.outcome === 'admin_review') review.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
       else if (res.outcome === 'skipped') skipped.push({ ticketId: res.ticketId, reason: res.reason })
       else failed.push({ ticketId: res.ticketId, reason: res.error })
     }
@@ -71,7 +78,13 @@ export async function POST(request: Request) {
       )
     }
 
-    const payload = { refunded, queued, failed, skipped }
+    const payload = { refunded, queued, failed, skipped, review }
+    if (refunded.length + queued.length === 0 && review.length > 0) {
+      return NextResponse.json(
+        { success: true, code: 'admin_review', message: ADMIN_REVIEW_MESSAGE, ...payload },
+        { status: 202 }
+      )
+    }
     if (refunded.length + queued.length === 0) {
       const code = failed.length > 0 ? 'refund_failed' : skipped[0]?.reason || 'not_refundable'
       return NextResponse.json(
@@ -79,7 +92,11 @@ export async function POST(request: Request) {
         { status: failed.length > 0 ? 502 : 409 }
       )
     }
-    return NextResponse.json({ success: true, ...payload })
+    return NextResponse.json({
+      success: true,
+      ...(review.length > 0 ? { message: `Some tickets were refunded. ${ADMIN_REVIEW_MESSAGE}` } : {}),
+      ...payload,
+    })
   } catch (error) {
     console.error('[refund-ticket] failed', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

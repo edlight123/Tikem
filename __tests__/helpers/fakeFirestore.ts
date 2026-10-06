@@ -66,7 +66,8 @@ export class FakeFirestore {
   async runTransaction(fn: (tx: any) => Promise<any>) {
     const writes: [string, Doc, any][] = []
     const tx = {
-      get: async (ref: any) => this.snap(ref._path),
+      // A doc ref has a _path; a query (where/limit) is read through its own get().
+      get: async (ref: any) => (ref?._path ? this.snap(ref._path) : ref.get()),
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
       update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true }]),
     }

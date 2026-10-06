@@ -51,9 +51,8 @@ export interface EventPricingLike {
    */
   country?: string | null
   /**
-   * Event currency. Selects the per-ticket fee cap, which is denominated in the
-   * event's own currency — a projection missing it would advertise an UNCAPPED
-   * total while checkout charges the capped one.
+   * Event currency. Carried for the pricing seam; the fee is a flat rate with
+   * no per-ticket cap, so it does not change the advertised total.
    */
   currency?: string | null
   /**

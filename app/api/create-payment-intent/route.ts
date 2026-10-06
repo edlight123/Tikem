@@ -376,11 +376,10 @@ export async function POST(request: Request) {
     // chargeAmount === faceValue and buyerFee === 0, so `amountCents` below is the
     // same number this route has always charged.
     //
-    // The rate and the per-ticket fee cap come from the STORED platform settings,
-    // so an admin can retune either without a deploy; the cap scales with quantity
-    // because it is per ticket. `stripeCurrency` is what the card is actually
-    // charged in — an HTG event converted to USD is capped in USD, matching the
-    // money that moves.
+    // The rate comes from the STORED platform settings, so an admin can retune it
+    // without a deploy. The fee is exactly that rate of the face total, with no
+    // per-ticket cap (owner decision, 2026-10-05), in whatever currency the card
+    // is charged.
     const faceValueCents = Math.round(stripeAmount * quantity * 100)
     const platformSettings = await getPlatformSettings()
     const locationFees =

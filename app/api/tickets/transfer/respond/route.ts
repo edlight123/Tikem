@@ -6,6 +6,9 @@ import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { isTicketQrSigningConfigured, rotatedTicketQrFields } from '@/lib/tickets/qr'
+import { ticketQrVersionOf } from '@/lib/scan/doorRules'
+import { voidPreviousHolderPasses } from '@/lib/wallet/revoke'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { DocumentReference, Transaction } from 'firebase-admin/firestore'
@@ -40,6 +43,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { transferToken, action } = validation.data
+
+    // Accepting rotates the ticket's QR code to a signed one. Without a key
+    // that cannot happen, and moving the ticket while the old holder's code
+    // keeps working is exactly what this guards against, so fail closed.
+    if (action === 'accept' && !isTicketQrSigningConfigured()) {
+      console.error('[transfer/respond] TICKET_QR_SECRET is not configured; refusing to accept')
+      return NextResponse.json(
+        { error: 'Ticket transfers are temporarily unavailable. Please try again later.' },
+        { status: 503 }
+      )
+    }
 
     // Find transfer by token
     const transfersQuery = await adminDb
@@ -135,6 +149,7 @@ export async function POST(request: NextRequest) {
           updated_at: nowIso
         }
 
+        const previousQrVersion = ticketQrVersionOf(ticket)
         if (action === 'reject') {
           tx.update(transferRef, { ...baseTransferUpdate, status: 'rejected' })
         } else {
@@ -143,6 +158,10 @@ export async function POST(request: NextRequest) {
             attendee_id: user.id,
             user_id: user.id,
             transfer_count: existingTransferCount + 1,
+            // New signed QR in the SAME write as the change of hands: the
+            // previous holder's code, screenshot and wallet pass stop
+            // admitting the moment the recipient owns the ticket.
+            ...rotatedTicketQrFields(ticketId, ticket),
             updated_at: nowIso
           })
           tx.update(transferRef, { ...baseTransferUpdate, status: 'accepted' })
@@ -155,7 +174,8 @@ export async function POST(request: NextRequest) {
           toEmailLower: toEmail,
           status: action === 'reject' ? 'rejected' : 'accepted',
           expiresAt: exp?.toISOString() || transfer?.expires_at || null,
-          ticketEventId: String(ticket?.event_id || '')
+          ticketEventId: String(ticket?.event_id || ''),
+          previousQrVersion
         }
       }
     )
@@ -163,7 +183,17 @@ export async function POST(request: NextRequest) {
     if (outcome.expired) {
       return NextResponse.json({ error: 'Transfer has expired' }, { status: 400 })
     }
-    const { ticketId, fromUserId, toEmailLower, status, expiresAt, ticketEventId } = outcome
+    const { ticketId, fromUserId, toEmailLower, status, expiresAt, ticketEventId, previousQrVersion } = outcome
+
+    // Void the previous holder's Apple / Google Wallet pass (best-effort; the
+    // door already refuses its code).
+    if (status === 'accepted') {
+      try {
+        await voidPreviousHolderPasses({ ticketId, previousVersion: previousQrVersion })
+      } catch (walletError) {
+        console.error('Failed to void previous wallet passes:', walletError)
+      }
+    }
 
     // Fetch event + sender/recipient for messages (best-effort)
     let eventTitle = 'Event'

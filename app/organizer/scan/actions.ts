@@ -31,6 +31,8 @@ async function authorize(params: CheckInParams): Promise<CheckInParams> {
     entryPoint,
     checkInMethod: params?.checkInMethod === 'manual' ? 'manual' : 'scan',
     scannedBy: access.uid,
+    // The raw scanned string, so its QR version and signature are judged.
+    code: typeof params?.code === 'string' ? params.code.slice(0, 512) : null,
   }
 }
 

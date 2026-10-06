@@ -253,8 +253,8 @@ export default function EventbriteStyleTicketSelector({
   // face total and `buyerFee` is 0, so the rows below collapse to what they always
   // showed. In a buyer-pays market the buyer sees the number their card will be
   // charged here, before they reach any payment screen.
-  // Quantity matters: the fee cap is per ticket, so a four-ticket order is capped
-  // at four times the single-ticket ceiling.
+  // The fee is a flat rate of the order total (no per-ticket cap), so quantity
+  // does not change it; it is passed for the pricing seam's order context.
   const orderQuantity = getSelections().reduce((sum, s) => sum + s.quantity, 0)
   const orderPricing = priceOrder(totalPrice, country, {
     quantity: orderQuantity,

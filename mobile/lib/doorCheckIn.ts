@@ -120,6 +120,8 @@ export async function postCheckIn(
   eventId: string,
   body: {
     ticketId: string;
+    /** The raw scanned code (scans only). Sending it is what opts this client into TRANSFERRED / INVALID_CODE verdicts. */
+    code?: string | null;
     method: 'scan' | 'manual';
     entryPoint?: string | null;
     reentry?: boolean;
@@ -215,6 +217,7 @@ export function flushCheckInQueue(uid: string, eventId?: string): Promise<FlushR
       try {
         const res = await postCheckIn(item.eventId, {
           ticketId: item.ticketId,
+          ...(item.code ? { code: item.code } : {}),
           method: item.method,
           entryPoint: item.entryPoint,
           reentry: item.reentry,

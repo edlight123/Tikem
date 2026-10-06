@@ -114,7 +114,13 @@ export async function getCurrentUser() {
 
   return {
     id: userDoc.id,
-    email: userData?.email || user.email || '',
+    // Identity email comes from the Firebase Auth record ONLY. users/{uid}.email
+    // is client-writable, and admin allowlisting, door access and transfer
+    // acceptance all key on this value; trusting the profile copy let any user
+    // claim an admin's address. The profile copy is kept as contact_email.
+    email: user.email || '',
+    email_verified: Boolean((user as any).email_verified),
+    contact_email: userData?.email || user.email || '',
     full_name: userData?.full_name || '',
     role: effectiveRole,
     phone_number: userData?.phone_number || null,
@@ -141,7 +147,7 @@ export async function requireAuth(requiredRole?: UserRole) {
       return { user, error: null }
     }
     // Bootstrap/override: allow emails in ADMIN_EMAILS to access admin routes
-    if (requiredRole === 'admin' && isAdminEmail(user.email)) {
+    if (requiredRole === 'admin' && (user as any).email_verified && isAdminEmail(user.email)) {
       return { user, error: null }
     }
     return { user: null, error: 'Unauthorized' }
@@ -155,7 +161,7 @@ export async function requireAdmin() {
   const decision = evaluateAdminAccess({
     authenticated: !!user,
     role: user?.role,
-    isAllowlistedEmail: user ? isAdminEmail(user.email) : false,
+    isAllowlistedEmail: user ? Boolean((user as any).email_verified) && isAdminEmail(user.email) : false,
   })
   return { user: decision.allowed ? user : null, error: decision.error }
 }
@@ -181,7 +187,7 @@ export async function requireDevTools() {
   const decision = evaluateDevToolsAccess({
     authenticated: !!user,
     role: user?.role,
-    isAllowlistedEmail: user ? isAdminEmail(user.email) : false,
+    isAllowlistedEmail: user ? Boolean((user as any).email_verified) && isAdminEmail(user.email) : false,
     isProduction: process.env.NODE_ENV === 'production',
     enableDevToolsEnv: process.env.ENABLE_DEV_TOOLS === 'true',
   })
@@ -195,5 +201,5 @@ export async function isOrganizer() {
 
 export async function isAdmin() {
   const user = await getCurrentUser()
-  return Boolean(user && (user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(user.email)))
+  return Boolean(user && (user.role === 'admin' || user.role === 'super_admin' || (Boolean((user as any).email_verified) && isAdminEmail(user.email))))
 }

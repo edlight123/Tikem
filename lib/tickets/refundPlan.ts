@@ -38,7 +38,9 @@ export type RefundPlan =
 const STRIPE_METHODS = new Set(['stripe', 'stripe_connect', 'card'])
 const FREE_METHODS = new Set(['free', 'comp', 'complimentary', 'rsvp'])
 // A refund that has started (or is waiting on a human) must not be started twice.
-const IN_FLIGHT_REFUND_STATUSES = new Set(['processing', 'manual_required', 'approved'])
+// 'admin_review': the organizer's balance could not cover it and a Tikèm admin
+// decides (lib/tickets/refundExecution.ts); only that approval re-plans it.
+export const IN_FLIGHT_REFUND_STATUSES = new Set(['processing', 'manual_required', 'approved', 'admin_review'])
 
 function positive(value: unknown): number {
   const n = Number(value)

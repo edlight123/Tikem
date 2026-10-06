@@ -427,7 +427,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           {getStatusBadge(earnings.settlementStatus)}
         </div>
         <div className="mt-1 text-xs text-white/70">
-          Revenue source: {earnings.dataSource === 'availability' ? 'Ticket sales (capped fee, refunds excluded)' : earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
+          Revenue source: {earnings.dataSource === 'availability' ? 'Ticket sales (platform fee and refunds excluded)' : earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
           {earnings.lastCalculatedAt ? ` • Last calculated: ${new Date(earnings.lastCalculatedAt).toLocaleString('en-US')}` : ''}
         </div>
       </div>

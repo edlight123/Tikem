@@ -146,7 +146,9 @@ const as = (user: any) => {
 }
 const OWNER = { id: 'owner1', email: 'o@x.co', role: 'organizer' }
 const COOWNER = { id: 'coowner', email: 'c@x.co', role: 'attendee' }
-const ADMIN = { id: 'admin1', email: 'boss@tikem.co', role: 'attendee' }
+const ADMIN = { id: 'admin1', email: 'boss@tikem.co', email_verified: true, role: 'attendee' }
+// Same allowlisted address, but not verified on the Auth record: not an admin.
+const FAKE_ADMIN = { id: 'faker', email: 'boss@tikem.co', email_verified: false, role: 'attendee' }
 const DOOR = { id: 'door1', email: 'd@x.co', role: 'attendee' }
 const VIEWER = { id: 'viewer1', email: 'v@x.co', role: 'attendee' }
 const STRANGER = { id: 'nobody', email: 'n@x.co', role: 'organizer' }
@@ -201,6 +203,7 @@ describe('route authorization matrix', () => {
     ['owner', OWNER, 200],
     ['owner-role member', COOWNER, 200],
     ['admin', ADMIN, 200],
+    ['unverified allowlisted email', FAKE_ADMIN, 403],
     ['check-in staff', DOOR, 200],
     ['view-only staff', VIEWER, 403],
     ['stranger', STRANGER, 403],
@@ -248,7 +251,7 @@ describe('GET door-list', () => {
     // t3 is refunded and never came in; `other` belongs to another event.
     expect(ids).toEqual(['t1', 't2', 't4', 't5'])
 
-    const allowed = ['id', 'code', 'name', 'tier', 'status', 'live', 'checkedIn', 'checkedInAt', 'endsAt', 'validFrom', 'validUntil']
+    const allowed = ['id', 'code', 'name', 'tier', 'status', 'live', 'checkedIn', 'checkedInAt', 'endsAt', 'validFrom', 'validUntil', 'qrVersion']
     for (const row of json.rows) expect(Object.keys(row).sort()).toEqual([...allowed].sort())
 
     const text = JSON.stringify(json)

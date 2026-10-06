@@ -131,6 +131,10 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
     REFUNDED: t('door.reason_refunded', { defaultValue: 'Ticket refunded' }),
     CANCELLED: t('door.reason_cancelled', { defaultValue: 'Ticket cancelled' }),
     PENDING_PAYMENT: t('door.reason_pending_payment', { defaultValue: 'Payment pending' }),
+    TRANSFERRED: t('door.reason_transferred', {
+      defaultValue: 'This ticket was transferred. The old code is no longer valid.',
+    }),
+    INVALID_CODE: t('door.reason_invalid_code', { defaultValue: 'This code is not valid.' }),
   }[result.reason]
 
   return (

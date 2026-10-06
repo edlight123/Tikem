@@ -158,9 +158,80 @@ ${items.length > 50 ? `<p>…and ${items.length - 50} more.</p>` : ''}
   }
 }
 
+// ── Refunds awaiting admin review ───────────────────────────────────────────
+
+/**
+ * `refund_reviews/{ticketId}`: a refund the organizer's remaining balance could
+ * not cover (lib/tickets/refundCoverage.ts). Written by refundExecution in the
+ * same transaction that puts the ticket on `refund_status: 'admin_review'`;
+ * worked by lib/tickets/refundReview.ts from /admin/money/refunds.
+ */
+export const REFUND_REVIEWS = 'refund_reviews'
+
+export type RefundReviewNotice = {
+  ticketId: string
+  eventTitle: string | null
+  /** What the buyer gets back, charged currency. */
+  amount: number
+  currency: string
+  method: string
+  reason: string
+  /** The gate's figures, EVENT currency minor units (null when it could not compute). */
+  eventCurrency: string | null
+  shortfallMinor: number | null
+  coverageMinor: number | null
+}
+
+/**
+ * Email every ADMIN_EMAILS address that a refund is waiting for a decision.
+ * Best-effort and never throws, like notifyAdminsOfQueuedRefunds: the
+ * refund_reviews doc is the record.
+ */
+export async function notifyAdminsOfRefundReview(item: RefundReviewNotice): Promise<boolean> {
+  try {
+    const recipients = getAdminEmails()
+    if (recipients.length === 0) {
+      console.warn('[refund-review] ADMIN_EMAILS is not configured, no admin was emailed', { ticketId: item.ticketId })
+      return false
+    }
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
+    const shortfall =
+      item.shortfallMinor != null && item.eventCurrency
+        ? money(item.shortfallMinor / 100, item.eventCurrency)
+        : null
+    const subject = `[Tikèm] Refund needs review: ${money(item.amount, item.currency)}${shortfall ? ` (short ${shortfall})` : ''}`
+    const html = `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px">
+<p>A ${escapeHtml(money(item.amount, item.currency))} ${escapeHtml(item.method)} refund for ${escapeHtml(
+      item.eventTitle || 'an event'
+    )} was NOT sent. ${
+      shortfall
+        ? `The organizer's remaining unwithdrawn balance covers ${escapeHtml(
+            money((item.coverageMinor || 0) / 100, item.eventCurrency || '')
+          )}; Tikèm would fund ${escapeHtml(shortfall)}.`
+        : "The organizer's balance could not be computed, so it was held for a person to check."
+    }</p>
+<p>Approve it (Tikèm funds the gap) or deny it. Until then the ticket is held: it cannot be used and its money cannot be withdrawn.</p>
+<p style="font-family:monospace;font-size:12px">ticket ${escapeHtml(item.ticketId)} · ${escapeHtml(item.reason)}</p>
+<p><a href="${appUrl}/admin/money/refunds">Open the refund queue</a></p>
+</body></html>`
+    const results = await Promise.all(
+      recipients.map((to) =>
+        sendEmail({ to, subject, html }).catch((err: any) => {
+          console.error('[refund-review] admin email failed', { to, message: err?.message })
+          return { success: false } as { success: boolean }
+        })
+      )
+    )
+    return results.some((r: any) => r?.success)
+  } catch (err: any) {
+    console.error('[refund-review] admin notification failed', { message: err?.message })
+    return false
+  }
+}
+
 // ── Read ────────────────────────────────────────────────────────────────────
 
-async function loadEventTitles(ids: string[]): Promise<Map<string, string>> {
+export async function loadEventTitles(ids: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>()
   const unique = Array.from(new Set(ids.filter(Boolean)))
   for (let i = 0; i < unique.length; i += 300) {
@@ -172,7 +243,7 @@ async function loadEventTitles(ids: string[]): Promise<Map<string, string>> {
   return out
 }
 
-async function loadUsers(ids: string[]): Promise<Map<string, Record<string, any>>> {
+export async function loadUsers(ids: string[]): Promise<Map<string, Record<string, any>>> {
   const out = new Map<string, Record<string, any>>()
   const unique = Array.from(new Set(ids.filter((id) => id && !id.startsWith('guest_'))))
   for (let i = 0; i < unique.length; i += 300) {
@@ -184,7 +255,7 @@ async function loadUsers(ids: string[]): Promise<Map<string, Record<string, any>
   return out
 }
 
-async function loadTickets(ids: string[]): Promise<Map<string, Record<string, any>>> {
+export async function loadTickets(ids: string[]): Promise<Map<string, Record<string, any>>> {
   const out = new Map<string, Record<string, any>>()
   const unique = Array.from(new Set(ids.filter(Boolean)))
   for (let i = 0; i < unique.length; i += 300) {

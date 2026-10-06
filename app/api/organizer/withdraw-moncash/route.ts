@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
     }
 
     // What this event can pay out — the one shared figure
-    // (lib/payouts/availability.ts): ticket-derived net with the capped fee
+    // (lib/payouts/availability.ts): ticket-derived net with the platform fee
     // checkout charged, refunds and every earlier withdrawal or batch payout
     // out. The earnings screens show this same number.
     const availability = await loadEventAvailability({ eventId: String(eventId), eventData })

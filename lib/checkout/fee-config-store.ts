@@ -1,8 +1,8 @@
 /**
- * The fee rates and caps currently in force, readable from anywhere — including
+ * The fee rates currently in force, readable from anywhere — including
  * the pure pricing functions and the client components that call them.
  *
- * The problem this solves: the rate and the per-ticket cap are admin-editable and
+ * The problem this solves: the rate is admin-editable and
  * live in Firestore, which only the server can await. Display surfaces therefore
  * used to fall back to the compiled-in defaults, so an admin changing the rate
  * would leave every advertised price quoting the old figure while checkout charged
@@ -38,28 +38,24 @@ const DEFAULTS: PlatformFeeConfig = {
 
 let current: PlatformFeeConfig = DEFAULTS
 
-/** Keep only the fee fields, and only when they are usable numbers. */
+/**
+ * Keep only the fee fields, and only when they are usable numbers. A stored
+ * `platformFeeCapMinorByCurrency` is dropped: the per-ticket cap is retired
+ * (owner decision, 2026-10-05) and must never reach a price.
+ */
 function sanitize(raw: unknown, fallback: LocationFeeConfig): LocationFeeConfig {
   const input = (raw || {}) as Partial<LocationFeeConfig>
   const percentage = Number(input.platformFeePercentage)
-  const caps = input.platformFeeCapMinorByCurrency
+  const { platformFeeCapMinorByCurrency: _retiredCap, ...base } = fallback
 
   return {
-    ...fallback,
-    // A rate outside 0–100% is a corrupt setting, not an aggressive one: keep the
+    ...base,
+    // A rate outside 0-100% is a corrupt setting, not an aggressive one: keep the
     // default rather than pricing every ticket from a bad number.
     platformFeePercentage:
       Number.isFinite(percentage) && percentage >= 0 && percentage < 1
         ? percentage
         : fallback.platformFeePercentage,
-    platformFeeCapMinorByCurrency:
-      caps && typeof caps === 'object'
-        ? Object.fromEntries(
-            Object.entries(caps)
-              .filter(([, v]) => Number.isFinite(Number(v)) && Number(v) >= 0)
-              .map(([k, v]) => [k.toUpperCase(), Math.round(Number(v))])
-          )
-        : fallback.platformFeeCapMinorByCurrency,
   }
 }
 

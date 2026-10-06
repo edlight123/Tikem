@@ -288,6 +288,7 @@ export default function TicketDetailScreen({ route }: any) {
                       {t('ticketDetail.transfer.expires')} {safeFormatForLanguage(pendingTransfer.expires_at, 'MMM dd, yyyy h:mm a', language)}
                     </Text>
                   )}
+                  <Text style={styles.pendingTransferExpiry}>{t('ticketDetail.transfer.newCodeNote')}</Text>
                   <TouchableOpacity
                     style={styles.cancelTransferButton}
                     onPress={handleCancelTransfer}
@@ -475,7 +476,7 @@ export default function TicketDetailScreen({ route }: any) {
             {/* Refund Status Badge */}
             {ticket.refund_status && ticket.refund_status !== 'none' && (
               <View style={[styles.refundStatusBadge, 
-                ticket.refund_status === 'requested' && styles.refundStatusPending,
+                ticket.refund_status !== 'approved' && ticket.refund_status !== 'denied' && styles.refundStatusPending,
                 ticket.refund_status === 'approved' && styles.refundStatusApproved,
                 ticket.refund_status === 'denied' && styles.refundStatusDenied,
               ]}>
@@ -487,9 +488,10 @@ export default function TicketDetailScreen({ route }: any) {
                   ticket.refund_status === 'approved' && { color: colors.success },
                   ticket.refund_status === 'denied' && { color: colors.error },
                 ]}>
-                  {ticket.refund_status === 'requested' ? (t('ticketDetail.refund.pending') || 'Refund Pending') :
+                  {ticket.refund_status === 'admin_review' ? t('ticketDetail.refund.underReview') :
                    ticket.refund_status === 'approved' ? (t('ticketDetail.refund.approved') || 'Refund Approved') :
-                   (t('ticketDetail.refund.denied') || 'Refund Denied')}
+                   ticket.refund_status === 'denied' ? (t('ticketDetail.refund.denied') || 'Refund Denied') :
+                   (t('ticketDetail.refund.pending') || 'Refund Pending')}
                 </Text>
               </View>
             )}

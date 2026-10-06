@@ -616,13 +616,14 @@ describe('validation and debit read the same row', () => {
 // One figure: what the screens show is what the withdrawal accepts
 // ---------------------------------------------------------------------------
 describe('display and validation agree (lib/payouts/availability.ts)', () => {
-  // A 10,000 HTG ticket absorbed by the organizer (fee capped at 750 HTG →
-  // nets 9,250 HTG), a refunded 2,000 HTG ticket, and a 1,000 HTG ticket that
+  // A 10,000 HTG ticket absorbed by the organizer, sold while the (now retired)
+  // per-ticket cap was in force: it has no purchase date, so it keeps the fee it
+  // was sold under (capped at 750 HTG → nets 9,250 HTG), a refunded 2,000 HTG ticket, and a 1,000 HTG ticket that
   // an APPROVED legacy batch payout already covers. The stored ledger row says
   // something else entirely (an uncapped 10%, refunds never removed) — it must
   // not matter.
   const EXPECTED = 925_000
-  // The shipped fee settings (10%, 750 HTG cap) rather than this file's 5% stub.
+  // The shipped fee settings (10%) rather than this file's 5% stub.
   const { getPlatformSettings } = jest.requireMock('@/lib/admin/platform-settings')
   let stub: any
   beforeEach(() => {

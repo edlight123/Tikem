@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
+import { ADMIN_REVIEW_MESSAGE, refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { adminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: Request) {
@@ -81,6 +81,21 @@ export async function POST(request: Request) {
       onFailure: 'release',
       keepRefundReason: true,
     })
+
+    if (res.outcome === 'admin_review') {
+      // The organizer's remaining balance doesn't cover it: nothing was sent,
+      // a Tikèm admin decides. The buyer is told once that decision is made.
+      return Response.json(
+        {
+          success: true,
+          code: 'admin_review',
+          message: ADMIN_REVIEW_MESSAGE,
+          refundAmount: res.amount,
+          refundCurrency: res.currency,
+        },
+        { status: 202 }
+      )
+    }
 
     let refundAmount = 0
     let refundCurrency: string | null = null

@@ -63,6 +63,11 @@ describe('firestore.rules — tickets (S1)', () => {
     }
   })
 
+  it('a transferred ticket (qr_version >= 1) never checks in by a direct client write', () => {
+    // Only the server can judge WHICH code was scanned (lib/tickets/qr.ts).
+    expect(update).toMatch(/\]\) &&\s*(\/\/[^\n]*\n\s*)*resource\.data\.get\('qr_version', 0\) == 0;/)
+  })
+
   it('clients may not create or delete tickets', () => {
     expect(block).toMatch(/allow create: if false;/)
     expect(block).not.toMatch(/allow (delete|write)/)

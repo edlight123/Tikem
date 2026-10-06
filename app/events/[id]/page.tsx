@@ -299,7 +299,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="surface-dark min-h-screen pb-mobile-nav md:pb-8">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
       {jsonLd && (
         <script
           type="application/ld+json"
@@ -314,7 +314,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         isFollowing={isFollowing}
         relatedEvents={serializedRelatedEvents}
       />
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )
 }

@@ -28,9 +28,13 @@ export function ticketTierLabel(ticket: any): string | undefined {
   return cleaned || undefined;
 }
 
-/** The value encoded into the QR — the signed code when present, else the id. */
+/**
+ * The value encoded into the QR: the ticket's current code when present, else
+ * the id. After a transfer the server writes a signed payload to BOTH qr_code
+ * and qr_code_data (lib/tickets/qr.ts) and the bare id stops admitting.
+ */
 export function ticketQrValue(ticket: any, fallbackId?: string): string {
-  return String(ticket?.qr_code || ticket?.id || fallbackId || 'no-ticket-id');
+  return String(ticket?.qr_code || ticket?.qr_code_data || ticket?.id || fallbackId || 'no-ticket-id');
 }
 
 /**

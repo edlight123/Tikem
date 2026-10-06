@@ -11,6 +11,7 @@ import {
   RefundQueueError,
   type RefundQueueKind,
 } from '@/lib/tickets/manualRefundQueue'
+import { approveRefundReview, denyRefundReview, listRefundReviews } from '@/lib/tickets/refundReview'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -30,25 +31,35 @@ export const dynamic = 'force-dynamic'
  *      records that an admin handled a flagged Stripe order.
  * POST { kind: 'reconciliation', id: ticketId, action: 'resolved', note? }
  *      closes a reconciliation record (and finishes the ticket if still claimed).
+ * GET also lists refund_reviews awaiting a decision: refunds the organizer's
+ *      remaining balance could not cover (lib/tickets/refundCoverage.ts).
+ * POST { kind: 'review', id: ticketId, action: 'approve' | 'deny', note? }
+ *      approve: Tikèm funds the gap. THIS MOVES MONEY: the refund runs through
+ *      the normal path (Stripe refund, or the manual mobile-money queue) and
+ *      the shortfall is recorded as a negative carry on the organizer.
+ *      deny: the ticket goes back to live with refund_status 'denied'.
  *
- * Nothing here moves money: the payout happens outside Tikèm (MonCash
- * merchant app, bank transfer). This only records it.
+ * Apart from approving a review, nothing here moves money: the payout happens
+ * outside Tikèm (MonCash merchant app, bank transfer). This only records it.
  */
 
 export async function GET() {
   try {
     const { user, error } = await requireAdmin()
     if (error || !user) return adminError('Unauthorized', 401)
-    const [queue, reconciliation, stripeOrders] = await Promise.all([
+    const [queue, reconciliation, stripeOrders, reviews] = await Promise.all([
       listRefundQueue(),
       listReconciliation(),
       listStripeOrderFlags(),
+      listRefundReviews(),
     ])
     return adminOk({
       ...queue,
       reconciliation,
       stripeOrders,
+      reviews,
       counts: {
+        reviews: reviews.length,
         open: queue.open.length,
         failed: queue.failed.length,
         resolved: queue.resolved.length,
@@ -76,6 +87,18 @@ export async function POST(request: NextRequest) {
       if (action !== 'resolved') return adminError('Invalid action', 400)
       const res = await resolveReconciliation({ ticketId: id, actorId: String(user.id), note })
       return adminOk({ status: 'resolved', appliedToTicket: res.appliedToTicket })
+    }
+
+    if (body?.kind === 'review') {
+      if (action === 'approve') {
+        const res = await approveRefundReview({ ticketId: id, actorId: String(user.id), note })
+        return adminOk({ status: 'approved', ...res })
+      }
+      if (action === 'deny') {
+        await denyRefundReview({ ticketId: id, actorId: String(user.id), note })
+        return adminOk({ status: 'denied' })
+      }
+      return adminError('Invalid action', 400)
     }
 
     if (body?.kind === 'stripe_order') {

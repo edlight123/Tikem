@@ -40,7 +40,7 @@ interface RefundRequest {
   currency?: string;
   reason: string;
   requested_at: string;
-  status: 'requested' | 'approved' | 'denied';
+  status: 'requested' | 'approved' | 'denied' | 'under_review';
 }
 
 export default function OrganizerRefundsScreen({ navigation }: any) {
@@ -99,12 +99,13 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
       // Get tickets with refund requests. Batch the per-event ticket queries by
       // chunking eventIds into `event_id in [...]` queries instead of issuing one
       // query per event (N+1). Firestore caps a query at 30 disjunctions across
-      // all `in` filters, and refund_status contributes 4, so keep each
-      // event_id chunk at <=7 (7 x 4 = 28).
+      // all `in` filters, and refund_status contributes 5, so keep each
+      // event_id chunk at <=6 (6 x 5 = 30).
       // 'manual_required' is an APPROVED mobile-money refund waiting on the
-      // admin payout queue — shown as approved.
-      const REFUND_STATUSES = ['requested', 'approved', 'denied', 'manual_required'];
-      const EVENT_CHUNK = 7;
+      // admin payout queue, shown as approved. 'admin_review' is an approved
+      // refund the remaining balance didn't cover, waiting on Tikèm.
+      const REFUND_STATUSES = ['requested', 'approved', 'denied', 'manual_required', 'admin_review'];
+      const EVENT_CHUNK = 6;
       const requests: RefundRequest[] = [];
       for (let i = 0; i < eventIds.length; i += EVENT_CHUNK) {
         const chunk = eventIds.slice(i, i + EVENT_CHUNK);
@@ -128,7 +129,12 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
             currency: (event as any)?.currency || data.currency || undefined,
             reason: data.refund_reason || '',
             requested_at: data.refund_requested_at || data.created_at,
-            status: data.refund_status === 'manual_required' ? 'approved' : data.refund_status,
+            status:
+              data.refund_status === 'manual_required'
+                ? 'approved'
+                : data.refund_status === 'admin_review'
+                ? 'under_review'
+                : data.refund_status,
           });
         });
       }
@@ -182,7 +188,9 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
 
               showAlert(
                 t('common.success'),
-                action === 'approve'
+                response.status === 202
+                  ? t('refunds.sentForReview')
+                  : action === 'approve'
                   ? (t('refunds.approvedSuccess') || 'Refund approved and processed')
                   : (t('refunds.deniedSuccess') || 'Refund request denied')
               );
@@ -308,6 +316,8 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
                   status={
                     request.status === 'requested'
                       ? 'actionNeeded'
+                      : request.status === 'under_review'
+                      ? 'pending'
                       : request.status === 'approved'
                       ? 'success'
                       : 'error'
@@ -315,6 +325,8 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
                   label={
                     request.status === 'requested'
                       ? (t('refunds.statusPending') || 'Pending')
+                      : request.status === 'under_review'
+                      ? (t('refunds.statusUnderReview') || 'Under review')
                       : request.status === 'approved'
                       ? (t('refunds.statusApproved') || 'Approved')
                       : (t('refunds.statusDenied') || 'Denied')

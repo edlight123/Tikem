@@ -1,5 +1,5 @@
 /**
- * SERVER-SIDE read of the fee rates and caps in force, for seeding the pricing
+ * SERVER-SIDE read of the fee rates in force, for seeding the pricing
  * layer (see FeeConfigProvider, rendered by the root layout).
  *
  * Cached, because the root layout renders on EVERY page: an uncached read would

@@ -1,5 +1,5 @@
 /**
- * The fee rates and per-ticket caps currently in force.
+ * The fee rates currently in force.
  *
  * Exists for the mobile app, which cannot read Firestore's platform settings the
  * way a server component can, and would otherwise price every display from the
@@ -26,13 +26,14 @@ export const runtime = 'nodejs'
 /** Seconds the client (and any CDN) may serve this without asking again. */
 const MAX_AGE_SECONDS = 300
 
-function feeFieldsOnly(config: {
-  platformFeePercentage: number
-  platformFeeCapMinorByCurrency?: Record<string, number>
-}) {
+function feeFieldsOnly(config: { platformFeePercentage: number }) {
   return {
     platformFeePercentage: config.platformFeePercentage,
-    platformFeeCapMinorByCurrency: config.platformFeeCapMinorByCurrency || {},
+    // The per-ticket cap is retired (owner decision, 2026-10-05). Always an EMPTY
+    // table, never omitted: mobile builds already in users' hands fall back to
+    // their compiled-in caps when the field is missing, but treat an empty table
+    // as "no cap", so this is what makes them price the flat rate too.
+    platformFeeCapMinorByCurrency: {} as Record<string, number>,
   }
 }
 
