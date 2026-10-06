@@ -31,7 +31,8 @@ export async function POST(request: Request) {
 
     const { paymentIntentId, clientSecret, guestToken } = await request.json()
 
-    if (!paymentIntentId) {
+    // One canonical string id for Stripe, the claim and the ledger alike.
+    if (typeof paymentIntentId !== 'string' || !/^pi_[A-Za-z0-9]+$/.test(paymentIntentId)) {
       return NextResponse.json({ error: 'Payment Intent ID is required' }, { status: 400 })
     }
 
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     // Verify payment intent exists and succeeded
     let paymentIntent: Awaited<ReturnType<typeof stripe.paymentIntents.retrieve>>
     try {
-      paymentIntent = await stripe.paymentIntents.retrieve(String(paymentIntentId))
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
     } catch (e: any) {
       // An unknown or malformed id is the caller's mistake, not a server error.
       if (e?.type === 'StripeInvalidRequestError') {
