@@ -1320,6 +1320,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 <p className="mt-2 text-xs text-white/45">
                   {t('checkout.total_includes_fees', {
                     defaultValue: 'Total includes all fees. This is what you pay.',
+                  })}{' '}
+                  {t('checkout.service_fee_nonrefundable', {
+                    defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
                   })}
                 </p>
               )}

@@ -174,6 +174,13 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
             <span className="font-semibold text-white">{t('events.total')}</span>
             <span className="text-lg font-bold text-brand-300">{formatAmount(chargeTotal)}</span>
           </div>
+          {showFeeLine && (
+            <p className="text-xs text-white/45">
+              {t('checkout.service_fee_nonrefundable', {
+                defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
+              })}
+            </p>
+          )}
         </div>
       </div>
 

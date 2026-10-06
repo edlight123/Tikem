@@ -109,6 +109,10 @@ beforeEach(() => {
   destinationCharge = false
   beforeTxHook = null
   db.write('events/ev1', { title: 'Rara Fest', organizer_id: 'org_1', currency: 'HTG', country: 'HT' })
+  // This suite tests the BALANCE gate on its own: the Haiti country gate
+  // (refundApprovalPolicy, default ['HT']) is switched off through its setting.
+  // __tests__/refund-fee-and-haiti.test.ts covers the country gate.
+  db.write('config/payouts', { refundsRequireAdminApproval: [] })
   db.write('users/org_1', { email: 'org@example.com', full_name: 'Org One' })
   db.write('users/buyer_1', { email: 'buyer@example.com', full_name: 'Buyer One' })
   const base = { event_id: 'ev1', currency: 'HTG', original_currency: 'HTG', fee_incidence: 'organizer' }

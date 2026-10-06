@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
 import { sumRefundsByCurrency } from '@/lib/tickets/refundPlan'
-import { ADMIN_REVIEW_MESSAGE, refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
+import { adminReviewMessage, refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
+import { HAITI_MANUAL_APPROVAL, SHORTFALL_REVIEW, type RefundReviewReason } from '@/lib/tickets/refundApprovalPolicy'
 import { loadOwnedTickets, parseTicketIds } from '@/lib/organizer/ticketActions'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +31,14 @@ const MAX_TICKETS = 50
  * A refund of money Tikèm holds that the organizer's remaining unwithdrawn
  * balance cannot cover is NOT sent: it goes to a Tikèm admin (`review` in the
  * response, refund_status 'admin_review'). When every ticket went to review the
- * answer is 202 with a message saying so.
+ * answer is 202 with a message saying so. Every refund for an event in a country
+ * that needs Tikèm's approval (Haiti by default, lib/tickets/refundApprovalPolicy)
+ * goes to that same review.
+ *
+ * The service fee is non-refundable: a refund here returns the face value only
+ * (lib/tickets/refundPlan.ts). The reason is NOT taken from the body: only an
+ * event cancellation (lib/events/cancel.ts) or a Tikèm admin's approval as
+ * 'event_changed' returns the fee.
  */
 export async function POST(request: Request) {
   try {
@@ -54,6 +62,7 @@ export async function POST(request: Request) {
     const failed: { ticketId: string; reason: string }[] = []
     const skipped: { ticketId: string; reason: string }[] = []
     const review: { ticketId: string; amount: number; currency: string }[] = []
+    const reviewReasons: RefundReviewReason[] = []
 
     // Claim, refund/queue and record each ticket through the same mechanics
     // event cancellation uses (lib/tickets/refundExecution.ts).
@@ -67,14 +76,17 @@ export async function POST(request: Request) {
       const res = await refundTicket(original.id, {
         reason: 'organizer_refund',
         actorId: user.id,
-        event: { id: event.id, title: event.title, organizer_id: event.organizer_id },
+        event: { id: event.id, title: event.title, organizer_id: event.organizer_id, country: event.country ?? null },
         onFailure: 'release',
         // Re-judged inside the claim: a check-in landing after the read above is still refused.
         allowCheckedIn: body?.allowCheckedIn === true,
       })
       if (res.outcome === 'refunded') refunded.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
       else if (res.outcome === 'queued') queued.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
-      else if (res.outcome === 'admin_review') review.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
+      else if (res.outcome === 'admin_review') {
+        review.push({ ticketId: res.ticketId, amount: res.amount, currency: res.currency })
+        reviewReasons.push(res.reviewReason)
+      }
       else if (res.outcome === 'skipped') skipped.push({ ticketId: res.ticketId, reason: res.reason })
       else failed.push({ ticketId: res.ticketId, reason: res.error })
     }
@@ -86,10 +98,21 @@ export async function POST(request: Request) {
       )
     }
 
-    const payload = { refunded, queued, failed, skipped, review }
+    const payload = {
+      refunded,
+      queued,
+      failed,
+      skipped,
+      review,
+      // 'haiti_manual_approval' when any ticket waits because the event's country
+      // needs Tikèm's approval; 'shortfall' when only the balance gate held them.
+      ...(review.length > 0
+        ? { reviewReason: reviewReasons.includes(HAITI_MANUAL_APPROVAL) ? HAITI_MANUAL_APPROVAL : SHORTFALL_REVIEW }
+        : {}),
+    }
     if (refunded.length + queued.length === 0 && review.length > 0) {
       return NextResponse.json(
-        { success: true, code: 'admin_review', message: ADMIN_REVIEW_MESSAGE, ...payload },
+        { success: true, code: 'admin_review', message: adminReviewMessage(reviewReasons), ...payload },
         { status: 202 }
       )
     }
@@ -102,7 +125,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({
       success: true,
-      ...(review.length > 0 ? { message: `Some tickets were refunded. ${ADMIN_REVIEW_MESSAGE}` } : {}),
+      ...(review.length > 0 ? { message: `Some tickets were refunded. ${adminReviewMessage(reviewReasons)}` } : {}),
       ...payload,
     })
   } catch (error) {

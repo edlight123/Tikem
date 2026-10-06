@@ -571,6 +571,9 @@ export function getRefundProcessedEmail(params: {
                         <div style="font-size: 14px; color: #64748b; line-height: 1.8;">
                           Your refund will appear on your statement within <strong>5-10 business days</strong>, depending on your bank or payment provider.
                         </div>
+                        <div style="font-size: 13px; color: #64748b; line-height: 1.6; margin-top: 8px;">
+                          Service fee is non-refundable unless the event is cancelled.
+                        </div>
                       </div>
                     ` : `
                       <!-- Denied Card -->

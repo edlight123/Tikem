@@ -112,6 +112,10 @@ type ReviewItem = {
   rail: string | null
   method: string | null
   reason: string | null
+  /** 'shortfall' or 'haiti_manual_approval' (every refund for the event's country needs approval). */
+  reviewReason?: string
+  /** 'retained': face value only, Tikèm keeps the service fee. */
+  feePolicy?: string | null
   buyerReason: string | null
   requestedBy: string | null
   buyerName: string | null
@@ -131,6 +135,7 @@ const RECONCILE_STEP_LABELS: Record<string, string> = {
 const REASON_LABELS: Record<string, string> = {
   organizer_refund: 'Refunded by the organizer',
   event_cancelled: 'Event cancelled',
+  event_changed: 'Event changed',
   capacity_exceeded: 'Paid after the event sold out, no ticket issued',
   amount_mismatch: 'Paid amount did not match the order, no ticket issued',
   needs_refund: 'Paid order could not be honored',
@@ -396,8 +401,22 @@ export default function RefundQueue() {
     const amount = formatMoney(item.amount, item.currency)
     const gap =
       item.shortfallMinor != null && item.eventCurrency ? formatMoney(item.shortfallMinor / 100, item.eventCurrency) : null
+    const countryReview = item.reviewReason === 'haiti_manual_approval' && !(Number(item.shortfallMinor) > 0)
     const ok = await confirmDialog(
-      action === 'approve'
+      action === 'approve' && countryReview
+        ? {
+            title: `Approve the ${amount} refund?`,
+            description: `${
+              item.rail === 'manual'
+                ? 'The ticket is voided and the payout moves to "Owed to buyers" for you to send.'
+                : 'The card is refunded in Stripe right away.'
+            } ${
+              item.feePolicy === 'retained' ? 'The service fee is not refunded.' : 'The service fee is refunded too.'
+            } This cannot be undone here.`,
+            confirmLabel: 'Approve refund',
+            variant: 'default',
+          }
+        : action === 'approve'
         ? {
             title: `Approve the ${amount} refund?`,
             description: `Tikèm funds ${gap ? `the ${gap} the organizer's balance doesn't cover` : 'whatever the organizer can no longer cover'}. ${
@@ -558,8 +577,8 @@ export default function RefundQueue() {
           <ConsolePanel className="px-4 py-8 text-center">
             <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">Nothing to decide</p>
             <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
-              A refund lands here when the organizer&apos;s remaining balance with Tikèm can&apos;t cover it. No money
-              is sent until you approve it.
+              A refund lands here when the organizer&apos;s remaining balance with Tikèm can&apos;t cover it, and every
+              refund for a Haiti event lands here. No money is sent until you approve it.
             </p>
           </ConsolePanel>
         ) : (
@@ -580,6 +599,8 @@ export default function RefundQueue() {
                       </span>
                       {item.status === 'approving' ? (
                         <ConsoleState tone="warn">Approval in progress</ConsoleState>
+                      ) : item.reviewReason === 'haiti_manual_approval' && !(Number(item.shortfallMinor) > 0) ? (
+                        <ConsoleState tone="warn">Haiti: needs approval</ConsoleState>
                       ) : item.shortfallMinor != null ? (
                         <ConsoleState tone="bad">Short {formatMoney(item.shortfallMinor / 100, ec)}</ConsoleState>
                       ) : (
@@ -600,7 +621,10 @@ export default function RefundQueue() {
                       {item.reason ? ` · ${REASON_LABELS[item.reason] || item.reason.replace(/_/g, ' ')}` : ''}
                       {item.organizerName ? ` · organizer ${item.organizerName}` : ''}
                     </p>
-                    {item.shortfallMinor != null && (
+                    {item.feePolicy === 'retained' && (
+                      <p className="mt-1 text-sm text-console-faint">Face value only: the service fee is non-refundable.</p>
+                    )}
+                    {item.shortfallMinor != null && Number(item.shortfallMinor) > 0 && (
                       <p className="mt-1 text-sm text-console-faint">
                         Face {item.faceMinor != null ? formatMoney(item.faceMinor / 100, ec) : 'unknown'} · organizer still
                         holds {item.coverageMinor != null ? formatMoney(item.coverageMinor / 100, ec) : 'unknown'} · Tikèm

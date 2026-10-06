@@ -138,6 +138,13 @@ export default function GuestCheckoutForm({
               {orderSummary.total.toLocaleString()} {orderSummary.currency}
             </span>
           </div>
+          {orderSummary.fee > 0 && (
+            <p className="text-xs text-white/45">
+              {t('checkout.service_fee_nonrefundable', {
+                defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
+              })}
+            </p>
+          )}
         </div>
       ) : (
         feesAddedOnTop && (
@@ -145,6 +152,9 @@ export default function GuestCheckoutForm({
             {t('checkout.fee_added_notice', {
               defaultValue:
                 'A service fee is added to the ticket price. You will see the full total before you pay.',
+            })}{' '}
+            {t('checkout.service_fee_nonrefundable', {
+              defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
             })}
           </p>
         )

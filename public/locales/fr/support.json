@@ -171,11 +171,11 @@
             },
             {
               "question": "Comment obtenir un remboursement ?",
-              "answer": "Les règles de remboursement sont définies par chaque organisateur. Pour demander un remboursement, ouvrez les détails du billet et choisissez \"Demander un remboursement\" (si disponible), ou contactez l’organisateur. Les remboursements approuvés prennent souvent 5 à 10 jours ouvrables."
+              "answer": "Les règles de remboursement sont définies par chaque organisateur. Pour demander un remboursement, ouvrez les détails du billet et choisissez \"Demander un remboursement\" (si disponible), ou contactez l’organisateur. Les remboursements approuvés prennent souvent 5 à 10 jours ouvrables. Les frais de service ne sont pas remboursables, sauf si l’événement est annulé."
             },
             {
               "question": "Puis-je être remboursé si l’événement est annulé ?",
-              "answer": "Oui. En cas d’annulation, vous êtes généralement éligible à un remboursement sur le moyen de paiement d’origine. Le traitement prend souvent 5 à 10 jours ouvrables."
+              "answer": "Oui. En cas d’annulation, vous êtes généralement éligible à un remboursement sur le moyen de paiement d’origine. Le traitement prend souvent 5 à 10 jours ouvrables. Les frais de service sont aussi remboursés."
             },
             {
               "question": "Dans quelle devise les prix sont-ils affichés ?",
@@ -265,7 +265,7 @@
             },
             {
               "question": "Que se passe-t-il avec les frais si j’effectue un remboursement ?",
-              "answer": "Le traitement dépend du fournisseur de paiement. Certains frais de traitement peuvent être non remboursables. Votre tableau de bord indique la répartition exacte par transaction."
+              "answer": "Les frais Tikèm ne sont pas remboursables : un remboursement que vous émettez, ou une demande d’acheteur que vous approuvez, rembourse la valeur faciale du billet et les frais restent déduits. Tikèm ne rembourse ses frais que si l’événement est annulé. Les remboursements pour les événements en Haïti sont examinés par Tikèm avant tout mouvement d’argent."
             },
             {
               "question": "Puis-je voir le détail de mes gains ?",

@@ -3,6 +3,7 @@ import {
   type SocialLinks,
   type PrivacySettings,
   DEFAULT_PRIVACY,
+  attendanceVisibilityUnset,
   sanitizeSocialLinks,
   sanitizePrivacy,
 } from '@/types/social'
@@ -49,6 +50,16 @@ export interface UserProfile {
   privacy?: PrivacySettings
   /** Appear in "people you may know" / "friends going". Top-level users field; missing = true. */
   discoverable?: boolean
+  /**
+   * True when the stored privacy has no attendance_visibility (the user never
+   * chose; `privacy` above shows the 'friends' default). Read-only.
+   */
+  attendanceVisibilityUnset?: boolean
+  /**
+   * When the one-time "your friends can now see your events" notice was seen.
+   * Writing ANY value through /api/profile/update stamps the server's time.
+   */
+  attendanceDefaultNoticeSeenAt?: string | boolean | null
   defaultCountry?: string
   defaultCity?: string
   subareaType?: 'COMMUNE' | 'NEIGHBORHOOD'
@@ -90,6 +101,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       socialLinks: data.social_links || {},
       privacy: { ...DEFAULT_PRIVACY, ...(data.privacy || {}) },
       discoverable: data.discoverable !== false,
+      attendanceVisibilityUnset: attendanceVisibilityUnset(data.privacy),
+      attendanceDefaultNoticeSeenAt: data.attendance_default_notice_seen_at || null,
       defaultCountry: data.default_country || data.defaultCountry || 'HT',
       defaultCity: data.default_city || data.defaultCity || '',
       subareaType: data.subarea_type || data.subareaType || 'COMMUNE',

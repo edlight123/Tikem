@@ -171,11 +171,11 @@
             },
             {
               "question": "Kijan pou mwen jwenn ranbousman?",
-              "answer": "Règ ranbousman an depann de òganizatè a. Pou mande ranbousman, ouvri detay tikè a epi chwazi \"Mande Ranbousman\" (si li disponib), oswa kontakte òganizatè a. Ranbousman ki apwouve souvan pran 5 a 10 jou ouvrab."
+              "answer": "Règ ranbousman an depann de òganizatè a. Pou mande ranbousman, ouvri detay tikè a epi chwazi \"Mande Ranbousman\" (si li disponib), oswa kontakte òganizatè a. Ranbousman ki apwouve souvan pran 5 a 10 jou ouvrab. Frè sèvis la pa ranbousab, sof si evènman an anile."
             },
             {
               "question": "Èske mwen ka jwenn ranbousman si evènman an anile?",
-              "answer": "Wi. Lè yon evènman anile, ou nòmalman kalifye pou yon ranbousman sou metòd peman orijinal la. Sa souvan pran 5 a 10 jou ouvrab."
+              "answer": "Wi. Lè yon evènman anile, ou nòmalman kalifye pou yon ranbousman sou metòd peman orijinal la. Sa souvan pran 5 a 10 jou ouvrab. Yo ranbouse frè sèvis la tou."
             },
             {
               "question": "Nan ki lajan yo montre pri yo?",
@@ -265,7 +265,7 @@
             },
             {
               "question": "Kisa k ap pase ak frè yo si mwen fè ranbousman?",
-              "answer": "Sa depann de founisè peman an. Gen kèk frè pwosesis ki ka pa ranbousab. Dashboard ou ap montre detay egzak pa tranzaksyon."
+              "answer": "Frè Tikèm yo pa ranbousab: yon ranbousman ou fè, oswa yon demann achtè ou apwouve, remèt valè tikè a epi frè a rete dedwi. Tikèm remèt frè li sèlman lè evènman an anile. Tikèm egzamine ranbousman pou evènman ann Ayiti anvan okenn lajan deplase."
             },
             {
               "question": "Èske mwen ka wè detay revni mwen?",

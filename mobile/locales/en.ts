@@ -996,6 +996,11 @@ export default {
     },
   },
   home: {
+    attendanceNotice: {
+      body: 'Your friends can now see which events you\'re going to. Change this in Privacy settings.',
+      cta: 'Privacy settings',
+      dismiss: 'Dismiss',
+    },
     nationalDay: {
       today: 'Today',
       tomorrow: 'Tomorrow',
@@ -1361,6 +1366,7 @@ export default {
     selectMethod: 'Choose a payment method',
     subtotal: 'Subtotal',
     serviceFee: 'Service fee',
+    serviceFeeNonRefundable: 'Service fee is non-refundable unless the event is cancelled.',
     methods: {
       card: 'Credit/Debit Card',
       cardBrands: 'Visa, Mastercard, AmEx',
@@ -2997,6 +3003,7 @@ export default {
     additionalDetails: 'Additional Details',
     reasonPlaceholder: 'Please explain your reason...',
     policyNote: 'Refund requests are reviewed by the event organizer. You will receive an email notification once your request has been processed.',
+    feeNonRefundable: 'Service fee is non-refundable unless the event is cancelled.',
     submit: 'Submit Request',
     selectReason: 'Please select a reason',
     enterReason: 'Please provide a reason',
@@ -3036,6 +3043,7 @@ export default {
     approvedSuccess: 'Refund approved and processed',
     deniedSuccess: 'Refund request denied',
     sentForReview: "Sent to Tikèm for review because your remaining balance doesn't cover it.",
+    sentForReviewHaiti: 'Sent to Tikèm for review. Refunds for events in Haiti are approved by Tikèm before any money moves.',
   },
   // Report / block (App Store guideline 1.2). See lib/moderation on the web side.
   moderation: {
@@ -3300,6 +3308,7 @@ export default {
       railCard: 'Refunded to the buyer’s card right away. It comes out of this event’s earnings.',
       railManual: 'Mobile-money refunds are paid out by Tikèm by hand within a few business days. The amount comes out of this event’s earnings.',
       voidNote: 'The tickets stop working at the door immediately. This can’t be undone.',
+      feeNote: 'The buyer gets back the ticket price. The service fee is non-refundable unless the event is cancelled.',
       cancel: 'Keep order',
       confirm: 'Refund',
       successTitle: 'Refund issued',
@@ -3307,6 +3316,7 @@ export default {
       successManual: '{amount} is queued and Tikèm will pay it out.',
       partialFailed: '{n} ticket(s) couldn’t be refunded. Try again.',
       successReview: '{n} ticket(s) sent to Tikèm for review because your remaining balance doesn’t cover the refund.',
+      successReviewHaiti: '{n} ticket(s) sent to Tikèm for review. Refunds for events in Haiti are approved by Tikèm before any money moves.',
       reviewTitle: 'Sent to Tikèm for review',
       failed: 'The refund didn’t go through and nothing was charged back. Please try again.',
     },

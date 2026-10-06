@@ -130,7 +130,14 @@ export default function EventOrderDetailScreen() {
       const lines = [
         card.length ? t('organizerOrders.refundSheet.successCard', { amount: sum(card) }) : '',
         queued.length ? t('organizerOrders.refundSheet.successManual', { amount: sum(queued) }) : '',
-        result.review?.length ? t('organizerOrders.refundSheet.successReview', { n: result.review.length }) : '',
+        result.review?.length
+          ? t(
+              result.reviewReason === 'haiti_manual_approval'
+                ? 'organizerOrders.refundSheet.successReviewHaiti'
+                : 'organizerOrders.refundSheet.successReview',
+              { n: result.review.length }
+            )
+          : '',
         result.failed?.length ? t('organizerOrders.refundSheet.partialFailed', { n: result.failed.length }) : '',
       ].filter(Boolean);
       const onlyReview = card.length + queued.length === 0 && (result.review?.length ?? 0) > 0;

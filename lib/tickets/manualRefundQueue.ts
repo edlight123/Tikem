@@ -206,6 +206,8 @@ export type RefundReviewNotice = {
   eventCurrency: string | null
   shortfallMinor: number | null
   coverageMinor: number | null
+  /** 'haiti_manual_approval': the event's country needs Tikèm to approve every refund. */
+  reviewReason?: string | null
 }
 
 /**
@@ -225,18 +227,26 @@ export async function notifyAdminsOfRefundReview(item: RefundReviewNotice): Prom
       item.shortfallMinor != null && item.eventCurrency
         ? money(item.shortfallMinor / 100, item.eventCurrency)
         : null
-    const subject = `[Tikèm] Refund needs review: ${money(item.amount, item.currency)}${shortfall ? ` (short ${shortfall})` : ''}`
+    const countryReview = item.reviewReason === 'haiti_manual_approval'
+    const short = shortfall && Number(item.shortfallMinor) > 0 ? shortfall : null
+    const subject = `[Tikèm] Refund needs review: ${money(item.amount, item.currency)}${
+      countryReview ? ' (Haiti: needs approval)' : shortfall ? ` (short ${shortfall})` : ''
+    }`
     const html = `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px">
 <p>A ${escapeHtml(money(item.amount, item.currency))} ${escapeHtml(item.method)} refund for ${escapeHtml(
       item.eventTitle || 'an event'
     )} was NOT sent. ${
-      shortfall
+      countryReview
+        ? `Refunds for events in Haiti are never automatic: a Tikèm admin approves each one.${
+            short ? ` The organizer's remaining unwithdrawn balance does not cover ${escapeHtml(short)} of it.` : ''
+          }`
+        : shortfall
         ? `The organizer's remaining unwithdrawn balance covers ${escapeHtml(
             money((item.coverageMinor || 0) / 100, item.eventCurrency || '')
           )}; Tikèm would fund ${escapeHtml(shortfall)}.`
         : "The organizer's balance could not be computed, so it was held for a person to check."
     }</p>
-<p>Approve it (Tikèm funds the gap) or deny it. Until then the ticket is held: it cannot be used and its money cannot be withdrawn.</p>
+<p>Approve it${countryReview && !short ? '' : ' (Tikèm funds the gap)'} or deny it. Until then the ticket is held: it cannot be used and its money cannot be withdrawn.</p>
 <p style="font-family:monospace;font-size:12px">ticket ${escapeHtml(item.ticketId)} · ${escapeHtml(item.reason)}</p>
 <p><a href="${appUrl}/admin/money/refunds">Open the refund queue</a></p>
 </body></html>`

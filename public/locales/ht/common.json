@@ -898,12 +898,18 @@
       "sublabel": "plaj · deyò · chape poul"
     }
   },
+  "attendance_notice": {
+    "body": "Zanmi w yo kapab wè ki evènman w prale kounye a. Chanje sa nan paramèt konfidansyalite yo.",
+    "cta": "Paramèt konfidansyalite",
+    "dismiss": "Fèmen"
+  },
   "checkout": {
     "guest_name_required": "Tanpri antre non ou.",
     "guest_email_required": "Tanpri antre yon adrès imel ki valab.",
     "guest_phone_required": "Tanpri antre nimewo telefòn ou.",
     "guest_intro": "Pa bezwen kont. Nou voye tikè ou ak kòd QR ou dirèkteman ba ou. Ou ka kreye yon kont apre si ou vle.",
     "service_fee": "Frè sèvis",
+    "service_fee_nonrefundable": "Frè sèvis la pa ranbousab, sof si evènman an anile.",
     "you_pay": "Ou pral peye",
     "fee_added_notice": "Gen yon frè sèvis ki ajoute sou pri tikè a. Ou ap wè total konplè a anvan ou peye.",
     "guest_name": "Non konplè",
@@ -1661,7 +1667,7 @@
     "examples_note": "Egzanp senp. Frè tretman reyèl yo chanje selon metòd peman patisipan ou yo itilize.",
     "refunds_title": "Ranbousman",
     "refunds_intro": "Lè ou ranbouse yon patisipan:",
-    "refunds_b1": "Frè platfòm lan retounen ba ou (nou pa pran l)",
+    "refunds_b1": "Tikèm kenbe frè li sou yon ranbousman ou fè oswa yon demann achtè ou apwouve; li remèt li sèlman lè evènman an anile",
     "refunds_b2_a": "Frè tretman yo",
     "refunds_b2_strong": "pa ranbousab",
     "refunds_b2_b": "paske yo gentan peye bay pwosesè peman yo",

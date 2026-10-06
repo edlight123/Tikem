@@ -25,8 +25,13 @@ const DAY = 24 * 60 * 60 * 1000
 const NOW = Date.UTC(2026, 9, 5)
 
 describe('privacyFromUserDoc', () => {
-  it('defaults discoverable to true and attendance to nobody', () => {
-    expect(privacyFromUserDoc({})).toEqual({ exists: true, discoverable: true, attendanceVisibility: 'nobody' })
+  it('defaults discoverable to true and an unset attendance to friends (owner decision, 2026-10)', () => {
+    expect(privacyFromUserDoc({})).toEqual({ exists: true, discoverable: true, attendanceVisibility: 'friends' })
+    expect(privacyFromUserDoc({ privacy: {} }).attendanceVisibility).toBe('friends')
+    expect(privacyFromUserDoc({ privacy: { attendance_visibility: null } }).attendanceVisibility).toBe('friends')
+  })
+  it('an explicit nobody still wins', () => {
+    expect(privacyFromUserDoc({ privacy: { attendance_visibility: 'nobody' } }).attendanceVisibility).toBe('nobody')
   })
   it('only an explicit false hides', () => {
     expect(privacyFromUserDoc({ discoverable: false }).discoverable).toBe(false)

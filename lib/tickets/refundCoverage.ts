@@ -26,7 +26,7 @@ import { refundFaceAmount } from '@/lib/tickets/refundPlan'
  * What the refund costs the organizer is the drop in their ceiling (the shared
  * "what Tikèm owes this organizer for this event" figure) when this ticket goes
  * from live to refunding: its face, less the share of the platform fee Tikèm
- * gives up on a refunded ticket. The shortfall is how much of that cost is not
+ * gives up on a refunded ticket (none when the refund retains the fee). The shortfall is how much of that cost is not
  * covered by what is still unwithdrawn:
  *
  *   deficit(x)  = max(0, withdrawn − ceilingRaw(x))
@@ -68,7 +68,13 @@ export type RefundCoverage = {
 export function computeRefundCoverage(
   input: EventAvailabilityInput,
   ticketId: string,
-  primaryWithdrawnMinor: number
+  primaryWithdrawnMinor: number,
+  /**
+   * What the refund does with Tikèm's fee (lib/tickets/refundPlan.ts). 'retained'
+   * (the default for a buyer/organizer refund) keeps the platform fee on an
+   * organizer-absorbs ticket, so the refund costs the organizer the whole face.
+   */
+  feePolicy: 'retained' | 'refunded' = 'refunded'
 ): RefundCoverage {
   const tickets = input.tickets || []
   const ticket = tickets.find((t) => String(t?.id) === String(ticketId)) || null
@@ -96,7 +102,7 @@ export function computeRefundCoverage(
     ...input,
     ledger,
     release: null,
-    tickets: withTicket({ refund_status: 'processing' }),
+    tickets: withTicket({ refund_status: 'processing', refund_fee_policy: feePolicy }),
   })
 
   const deficit = (ceilingRaw: number) => Math.max(0, primary - ceilingRaw)
@@ -138,7 +144,8 @@ export async function coverageInTransaction(
   tx: any,
   ctx: RefundCoverageContext,
   ticketId: string,
-  ticketData: Record<string, any>
+  ticketData: Record<string, any>,
+  feePolicy: 'retained' | 'refunded' = 'refunded'
 ): Promise<RefundCoverage> {
   // Nothing withdrawn yet: every refund is covered by definition (Tikèm still
   // holds the whole balance), so the event's tickets are not re-read. That
@@ -178,5 +185,8 @@ export async function coverageInTransaction(
   if (idx >= 0) tickets[idx] = { id: ticketId, ...ticketData }
   else tickets.push({ id: ticketId, ...ticketData })
 
-  return { ...computeRefundCoverage({ ...ctx.input, tickets }, ticketId, primaryWithdrawn), ledger: ledgerFirst }
+  return {
+    ...computeRefundCoverage({ ...ctx.input, tickets }, ticketId, primaryWithdrawn, feePolicy),
+    ledger: ledgerFirst,
+  }
 }

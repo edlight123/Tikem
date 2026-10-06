@@ -3,7 +3,12 @@
 import { useState } from 'react'
 import { Lock, Users, Globe, Phone, UserPlus } from 'lucide-react'
 import type { UserProfile } from '@/lib/firestore/user-profile'
-import { DEFAULT_PRIVACY, type AttendanceVisibility, type ProfileVisibility } from '@/types/social'
+import {
+  DEFAULT_PRIVACY,
+  normalizeAttendanceVisibility,
+  type AttendanceVisibility,
+  type ProfileVisibility,
+} from '@/types/social'
 import { ProfileSection, Panel, PanelRows, SwitchRow, FieldLabel } from './ui'
 
 interface PrivacyCardProps {
@@ -49,7 +54,12 @@ const ATTENDANCE_OPTIONS: Array<{
  * was invisible at both ends of the track.
  */
 export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
-  const initial = { ...DEFAULT_PRIVACY, ...(profile.privacy || {}) }
+  // An unset attendance visibility shows as 'Friends', the default.
+  const initial = {
+    ...DEFAULT_PRIVACY,
+    ...(profile.privacy || {}),
+    attendance_visibility: normalizeAttendanceVisibility(profile.privacy?.attendance_visibility),
+  }
   const [privacy, setPrivacy] = useState(initial)
   const [isUpdating, setIsUpdating] = useState(false)
   const [discoverable, setDiscoverable] = useState(profile.discoverable !== false)
@@ -90,7 +100,7 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
   return (
     <ProfileSection
       title="Privacy"
-      description="You control who sees your activity. Everything is private by default."
+      description="You control who sees your activity. Unless you change it, your friends can see the events you're going to."
     >
       {/* Attendance visibility */}
       <FieldLabel className="mb-2.5">Who can see events I&apos;m going to</FieldLabel>

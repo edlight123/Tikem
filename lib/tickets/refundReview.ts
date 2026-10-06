@@ -7,7 +7,8 @@ import {
   loadTickets,
   loadUsers,
 } from '@/lib/tickets/manualRefundQueue'
-import { refundTicket, resolveBuyerContact, type RefundReason } from '@/lib/tickets/refundExecution'
+import { parseRefundReason, refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
+import { refundIncludesServiceFee } from '@/lib/tickets/refundPlan'
 import { coverageInTransaction, loadRefundCoverageContext } from '@/lib/tickets/refundCoverage'
 
 /**
@@ -49,6 +50,10 @@ export type RefundReviewItem = {
   rail: string | null
   method: string | null
   reason: string | null
+  /** 'shortfall' (balance did not cover it) or 'haiti_manual_approval' (country needs approval). */
+  reviewReason: string
+  /** 'retained': face value only, Tikèm keeps the service fee. */
+  feePolicy: string | null
   buyerReason: string | null
   requestedBy: string | null
   buyerName: string | null
@@ -109,6 +114,8 @@ export async function listRefundReviews(): Promise<RefundReviewItem[]> {
         rail: str(r.rail),
         method: str(r.payment_method),
         reason: str(r.reason),
+        reviewReason: str(r.review_reason) || 'shortfall',
+        feePolicy: str(r.fee_policy),
         buyerReason: str(r.buyer_reason),
         requestedBy: str(r.requested_by),
         // Same resolution order as the manual refund queue.
@@ -132,14 +139,18 @@ async function loadEventRef(eventId: string | null) {
 }
 
 /** The shortfall as it stands NOW (new sales since the review may cover part of it). */
-async function currentShortfall(eventId: string, ticketId: string): Promise<{ shortfallMinor: number; currency: string } | null> {
+async function currentShortfall(
+  eventId: string,
+  ticketId: string,
+  feePolicy: 'retained' | 'refunded'
+): Promise<{ shortfallMinor: number; currency: string } | null> {
   try {
     const ctx = await loadRefundCoverageContext(eventId)
     const ticketRef = adminDb.collection('tickets').doc(ticketId)
     return await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ticketRef)
       const data = snap.exists ? ((snap.data() as any) ?? {}) : {}
-      const c = await coverageInTransaction(tx, ctx, ticketId, data)
+      const c = await coverageInTransaction(tx, ctx, ticketId, data, feePolicy)
       return { shortfallMinor: c.shortfallMinor, currency: c.currency }
     })
   } catch (e: any) {
@@ -239,6 +250,11 @@ export async function approveRefundReview(input: {
    * unless the admin confirmed refunding it anyway.
    */
   allowCheckedIn?: boolean
+  /**
+   * The admin may approve it as an 'event_changed' refund, which returns the
+   * service fee too. Anything else keeps the reason the review was opened with.
+   */
+  reason?: string | null
 }): Promise<ApproveResult> {
   const ticketId = String(input.ticketId || '').trim()
   const note = String(input.note ?? '').trim().slice(0, 500) || null
@@ -263,12 +279,24 @@ export async function approveRefundReview(input: {
   })
 
   const event = await loadEventRef(str(review.event_id))
-  const current = event.id ? await currentShortfall(event.id, ticketId) : null
+  const storedReason = parseRefundReason(review.reason)
+  const reason =
+    parseRefundReason(input.reason) === 'event_changed' && storedReason !== 'event_cancelled'
+      ? 'event_changed'
+      : storedReason
+  // The fee goes back only for a review the cancellation sweep opened (its
+  // stored reason is written server-side) or one the admin approves as
+  // 'event_changed'.
+  const includeServiceFee = refundIncludesServiceFee({
+    adminApprovedServiceFeeRefund: reason === 'event_cancelled' || reason === 'event_changed',
+  })
+  const feePolicy = includeServiceFee ? 'refunded' : 'retained'
+  const current = event.id ? await currentShortfall(event.id, ticketId, feePolicy) : null
   const shortfallMinor = current ? current.shortfallMinor : Math.max(0, Number(review.shortfall_minor) || 0)
   const eventCurrency = current?.currency || str(review.event_currency)
 
   const res = await refundTicket(ticketId, {
-    reason: (String(review.reason || 'organizer_refund') as RefundReason) || 'organizer_refund',
+    reason,
     actorId: input.actorId,
     event,
     onFailure: 'release',
@@ -276,6 +304,7 @@ export async function approveRefundReview(input: {
     // The approving admin is looking at the queue: no extra email for a manual payout.
     notifyAdmins: false,
     adminApprovedShortfall: { adminId: input.actorId },
+    includeServiceFee,
     // A cancelled event's buyer is refunded regardless, as the cancellation sweep does.
     allowCheckedIn: input.allowCheckedIn === true || String(review.reason || '') === 'event_cancelled',
   })

@@ -37,6 +37,15 @@
  *  3. Stripe Connect (destination charge) tickets were paid straight into the
  *     organizer's own Stripe account. Tikèm does not hold that money, so it is
  *     reported as `heldByStripeMinor` and is never withdrawable here.
+ *     A REFUND THAT RETAINS THE FEE (`refund_fee_policy: 'retained'`, every
+ *     refund that is not a cancellation or an "event changed" refund, see
+ *     lib/tickets/refundPlan.ts) returns the face value to the buyer while
+ *     Tikèm keeps its fee. On an organizer-absorbs ticket that fee was never
+ *     paid by the buyer, so it stays deducted from the organizer: the ticket
+ *     stays in its order's fee basis (same floor, same rate) while its face
+ *     leaves gross. The organizer loses the whole face; Tikèm's fee stays
+ *     earned. Under buyer incidence there is nothing to keep on the organizer's
+ *     side (the buyer's fee is simply not refunded).
  *  4. Funded promoter commission is the promoter's money and is deducted.
  *  5. Already paid = the per-event ledger's `withdrawnAmount` (debited atomically
  *     at request time by every live path, credited back when a request fails)
@@ -166,6 +175,15 @@ export const REFUND_REQUESTED_STATUSES = ['requested', 'pending'] as const
 export function isRefundRequested(ticket: any): boolean {
   const refundStatus = String(ticket?.refund_status ?? ticket?.refundStatus ?? '').toLowerCase().trim()
   return (REFUND_REQUESTED_STATUSES as readonly string[]).includes(refundStatus)
+}
+
+/**
+ * A refunded (or refunding) ticket whose refund keeps Tikèm's fee
+ * (lib/tickets/refundPlan.ts 'retained'). Legacy refunds carry no policy and
+ * returned the fee, so they read false.
+ */
+export function refundRetainsFee(ticket: any): boolean {
+  return String(ticket?.refund_fee_policy ?? '').toLowerCase().trim() === 'retained'
 }
 
 /** Paid straight into the organizer's own Stripe account (destination charge). */
@@ -473,7 +491,18 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   // ── classify tickets ─────────────────────────────────────────────────────
   // purchasedAt: the order's earliest ticket purchase; null once any ticket lacks
   // one (read as a sale from the capped era). It decides the fee rule only.
-  type Order = { grossMinor: number; count: number; incidence: 'buyer' | 'organizer'; legacyGrossMinor: number; legacyCount: number; purchasedAt: Date | null }
+  // grossMinor/count: the order's LIVE tickets. feeGrossMinor/feeCount: the fee
+  // basis, which also holds refunded tickets whose refund retained the fee.
+  type Order = {
+    grossMinor: number
+    count: number
+    feeGrossMinor: number
+    feeCount: number
+    incidence: 'buyer' | 'organizer'
+    legacyGrossMinor: number
+    legacyCount: number
+    purchasedAt: Date | null
+  }
   const orders = new Map<string, Order>()
   // Live tickets whose buyer has an undecided refund request: their net is held.
   const requestedTickets: Array<{ key: string; price: number }> = []
@@ -494,6 +523,42 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   const later = (d: Date | null) => {
     if (d && (!latestTicketMoment || d.getTime() > latestTicketMoment.getTime())) latestTicketMoment = d
   }
+  const orderKeyOf = (ticket: any, id: string) => {
+    // One payment is one order: the fee floor applies once, exactly as checkout
+    // priced it (and a capped-era order's retired cap scales with its count). A ticket with no
+    // payment id is its own order (the conservative reading: floor per ticket).
+    const paymentId = String(ticket.payment_id ?? ticket.paymentId ?? '').trim()
+    return paymentId ? `pay:${paymentId}` : `ticket:${id}`
+  }
+  const orderFor = (key: string, ticket: any): Order => {
+    const boughtAt = ticketPurchasedAt(ticket)
+    const order =
+      orders.get(key) ||
+      {
+        grossMinor: 0,
+        count: 0,
+        feeGrossMinor: 0,
+        feeCount: 0,
+        incidence: ticketIncidence(ticket),
+        legacyGrossMinor: 0,
+        legacyCount: 0,
+        purchasedAt: boughtAt,
+      }
+    order.purchasedAt = earlierPurchase(order.purchasedAt, boughtAt)
+    // Should one order's tickets ever disagree, take the fee-bearing reading:
+    // under-paying is recoverable, over-paying is not.
+    if (ticketIncidence(ticket) === 'organizer') order.incidence = 'organizer'
+    orders.set(key, order)
+    return order
+  }
+  // A Tikèm-held organizer-absorbs ticket refunded (or refunding) with the fee
+  // retained: its face leaves gross, its fee stays in the order's fee basis.
+  const keepRetainedFee = (ticket: any, id: string, price: number) => {
+    if (price <= 0 || !refundRetainsFee(ticket) || ticketIncidence(ticket) !== 'organizer') return
+    const order = orderFor(orderKeyOf(ticket, id), ticket)
+    order.feeGrossMinor += price
+    order.feeCount += 1
+  }
 
   for (const ticket of input.tickets || []) {
     if (!ticket) continue
@@ -512,6 +577,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
       if (!isStripeConnectTicket(ticket)) {
         grossMinor += price
         refundedMinor += ticketRefundedFaceMinor(ticket, eventCurrencyCode)
+        keepRetainedFee(ticket, id, price)
       }
       continue
     }
@@ -519,7 +585,10 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
 
     ticketsSold += 1
     if (isRefundInFlight(ticket)) {
-      if (!isStripeConnectTicket(ticket)) refundInFlightMinor += price
+      if (!isStripeConnectTicket(ticket)) {
+        refundInFlightMinor += price
+        keepRetainedFee(ticket, id, price)
+      }
       continue
     }
     if (price <= 0) {
@@ -528,11 +597,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
       if (!reservedTicketIds.has(id)) unpaid.push({ id, at: ticketPurchasedAt(ticket) })
       continue
     }
-    // One payment is one order: the fee floor applies once, exactly as checkout
-    // priced it (and a capped-era order's retired cap scales with its count). A ticket with no
-    // payment id is its own order (the conservative reading: floor per ticket).
-    const paymentId = String(ticket.payment_id ?? ticket.paymentId ?? '').trim()
-    const orderKey = paymentId ? `pay:${paymentId}` : `ticket:${id}`
+    const orderKey = orderKeyOf(ticket, id)
 
     if (isStripeConnectTicket(ticket)) {
       const boughtAt = ticketPurchasedAt(ticket)
@@ -550,19 +615,15 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
 
     const key = orderKey
     if (isRefundRequested(ticket)) requestedTickets.push({ key, price })
-    const boughtAt = ticketPurchasedAt(ticket)
-    const order = orders.get(key) || { grossMinor: 0, count: 0, incidence: ticketIncidence(ticket), legacyGrossMinor: 0, legacyCount: 0, purchasedAt: boughtAt }
-    order.purchasedAt = earlierPurchase(order.purchasedAt, boughtAt)
+    const order = orderFor(key, ticket)
     order.grossMinor += price
     order.count += 1
-    // Should one order's tickets ever disagree, take the fee-bearing reading:
-    // under-paying is recoverable, over-paying is not.
-    if (ticketIncidence(ticket) === 'organizer') order.incidence = 'organizer'
+    order.feeGrossMinor += price
+    order.feeCount += 1
     if (legacyBatchTickets.has(id)) {
       order.legacyGrossMinor += price
       order.legacyCount += 1
     }
-    orders.set(key, order)
   }
 
   const feeFor = (gross: number, count: number, incidence: 'buyer' | 'organizer', purchasedAt: Date | null) => {
@@ -578,11 +639,11 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   let platformFeeMinor = 0
   for (const order of Array.from(orders.values())) {
     liveGrossMinor += order.grossMinor
-    platformFeeMinor += feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt)
+    const orderFee = feeFor(order.feeGrossMinor, order.feeCount, order.incidence, order.purchasedAt)
+    platformFeeMinor += orderFee
     if (order.legacyCount > 0) {
       // Proportional share of the order's fee for the legacy-paid tickets.
-      const orderFee = feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt)
-      const legacyFee = Math.floor((orderFee * order.legacyGrossMinor) / Math.max(1, order.grossMinor))
+      const legacyFee = Math.floor((orderFee * order.legacyGrossMinor) / Math.max(1, order.feeGrossMinor))
       batchReservedMinor += Math.max(0, order.legacyGrossMinor - legacyFee)
     }
   }
@@ -595,8 +656,8 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   for (const r of requestedTickets) {
     const order = orders.get(r.key)
     if (!order) continue
-    const orderFee = feeFor(order.grossMinor, order.count, order.incidence, order.purchasedAt)
-    const feeShare = Math.floor((orderFee * r.price) / Math.max(1, order.grossMinor))
+    const orderFee = feeFor(order.feeGrossMinor, order.feeCount, order.incidence, order.purchasedAt)
+    const feeShare = Math.floor((orderFee * r.price) / Math.max(1, order.feeGrossMinor))
     refundRequestedMinor += Math.max(0, r.price - feeShare)
   }
 

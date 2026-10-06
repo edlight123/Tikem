@@ -898,12 +898,18 @@
       "sublabel": "beach · outdoor · getaways"
     }
   },
+  "attendance_notice": {
+    "body": "Your friends can now see which events you're going to. Change this in Privacy settings.",
+    "cta": "Privacy settings",
+    "dismiss": "Dismiss"
+  },
   "checkout": {
     "guest_name_required": "Please enter your name.",
     "guest_email_required": "Please enter a valid email address.",
     "guest_phone_required": "Please enter your phone number.",
     "guest_intro": "No account needed. We send your ticket and QR code straight to you, and you can create an account afterwards if you want.",
     "service_fee": "Service fee",
+    "service_fee_nonrefundable": "Service fee is non-refundable unless the event is cancelled.",
     "you_pay": "You'll pay",
     "fee_added_notice": "A service fee is added to the ticket price. You will see the full total before you pay.",
     "guest_name": "Full name",
@@ -1661,7 +1667,7 @@
     "examples_note": "Simplified examples. Actual processing fees vary with the payment method your attendees use.",
     "refunds_title": "Refunds",
     "refunds_intro": "When you issue a refund to an attendee:",
-    "refunds_b1": "The platform fee is refunded to you (not charged)",
+    "refunds_b1": "Tikèm keeps its fee on a refund you issue or a buyer's request you approve; it is returned only when the event is cancelled",
     "refunds_b2_a": "Processing fees are",
     "refunds_b2_strong": "not refundable",
     "refunds_b2_b": "as they were already paid to payment processors",

@@ -1,7 +1,20 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { bumpRefundClaimVersionInTransaction } from '@/lib/earnings'
 import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
-import { planTicketRefund, refundFaceAmount, type RefundIneligibleReason, type RefundPlan } from '@/lib/tickets/refundPlan'
+import {
+  planTicketRefund,
+  refundFaceAmount,
+  refundIncludesServiceFee,
+  type RefundFeePolicy,
+  type RefundIneligibleReason,
+  type RefundPlan,
+} from '@/lib/tickets/refundPlan'
+import {
+  eventRefundsRequireAdminApproval,
+  HAITI_MANUAL_APPROVAL,
+  SHORTFALL_REVIEW,
+  type RefundReviewReason,
+} from '@/lib/tickets/refundApprovalPolicy'
 import { reversePromoterSaleForTicket } from '@/lib/promoters'
 import {
   notifyAdminsOfQueuedRefunds,
@@ -58,14 +71,54 @@ import {
  * takes the money from the organizer's own Stripe balance). An admin who
  * approves the review re-runs this with `adminApprovedShortfall`, which skips
  * the gate and records who approved it.
+ *
+ * THE COUNTRY GATE (lib/tickets/refundApprovalPolicy.ts). For an event whose
+ * country is listed in config/payouts.refundsRequireAdminApproval (default
+ * ['HT']) EVERY refund goes to the same admin review, whatever the rail and
+ * whatever the balance, cancellations included: `review_reason`
+ * 'haiti_manual_approval' instead of 'shortfall'. Only the admin approval
+ * (adminApprovedShortfall) executes it.
+ *
+ * THE SERVICE FEE (lib/tickets/refundPlan.ts). A refund returns the face value
+ * only and Tikèm keeps its fee, unless it is an event cancellation or an
+ * 'event_changed' refund (refundIncludesServiceFee). On a Stripe destination
+ * charge that means `refund_application_fee` is sent only when the fee goes
+ * back. The ticket records `refund_fee_policy`, `refunded_fee_minor` and
+ * `fee_retained_minor` (the buyer service fee, refund-currency minor units);
+ * the payout engine reads `refund_fee_policy` to keep Tikèm's platform fee on a
+ * refunded organizer-absorbs ticket (lib/payouts/availability.ts).
  */
 
-export type RefundReason = 'organizer_refund' | 'event_cancelled'
+/**
+ * - organizer_refund  a buyer's request the organizer approved, or a refund the
+ *                     organizer issued on their own: face value only
+ * - event_changed     the organizer/admin refunds because the event changed
+ *                     (date, venue, lineup): the service fee goes back too
+ * - event_cancelled   event cancellation: the whole charge goes back
+ */
+export type RefundReason = 'organizer_refund' | 'event_cancelled' | 'event_changed'
+
+/**
+ * Parse a STORED or ADMIN-supplied refund reason; anything unknown is a plain
+ * organizer refund. Never feed it an organizer's or buyer's request body: the
+ * organizer routes always refund as 'organizer_refund'.
+ */
+export function parseRefundReason(raw: unknown): RefundReason {
+  const r = String(raw ?? '').toLowerCase().trim()
+  if (r === 'event_changed' || r === 'changed') return 'event_changed'
+  if (r === 'event_cancelled' || r === 'cancelled' || r === 'canceled') return 'event_cancelled'
+  return 'organizer_refund'
+}
 
 export type RefundEventRef = {
   id: string
   title?: string | null
   organizer_id?: string | null
+  /**
+   * The event's stored `country`, when the caller has the event doc. Undefined
+   * makes refundTicket read the event to decide the country gate.
+   */
+  country?: string | null
 }
 
 type Eligible = Extract<RefundPlan, { eligible: true }>
@@ -92,6 +145,8 @@ export type TicketRefundResult =
       currency: string
       /** Null when the balance could not be computed (sent to review to be safe). */
       coverage: RefundCoverage | null
+      /** Why: the balance did not cover it, or the event's country needs approval. */
+      reviewReason: RefundReviewReason
     }
   | { outcome: 'failed'; ticketId: string; ticket: Record<string, any>; error: string }
 
@@ -149,6 +204,18 @@ export type RefundTicketOptions = {
    * never makes the gate stale.
    */
   coverageContext?: () => Promise<RefundCoverageContext>
+  /**
+   * The country gate, decided once by a caller that refunds many tickets of the
+   * same event (the cancellation sweep). Undefined: refundTicket decides it.
+   */
+  requiresAdminApproval?: boolean
+  /**
+   * ADMIN APPROVAL ONLY (lib/tickets/refundReview.ts, together with
+   * adminApprovedShortfall): return the service fee too, because the event was
+   * cancelled or the admin approved it as an 'event_changed' refund. Ignored
+   * without adminApprovedShortfall. Organizer and buyer routes never set it.
+   */
+  includeServiceFee?: boolean
 }
 
 export type RefundSkipReason = RefundIneligibleReason | 'checked_in'
@@ -162,6 +229,15 @@ export const ADMIN_REVIEW_REFUND_STATUS = 'admin_review'
 /** Copy the organizer sees when a refund was sent to review. */
 export const ADMIN_REVIEW_MESSAGE =
   "Sent to Tikèm for review because your remaining balance doesn't cover it. The buyer's ticket is on hold until Tikèm decides."
+
+/** Copy the organizer sees when the event's country needs Tikèm to approve every refund. */
+export const ADMIN_APPROVAL_MESSAGE =
+  "Sent to Tikèm for review. Refunds for this event are approved by Tikèm before any money moves. The buyer's ticket is on hold until Tikèm decides."
+
+/** The organizer-facing message for a set of review outcomes. */
+export function adminReviewMessage(reasons: Array<RefundReviewReason | null | undefined>): string {
+  return reasons.some((r) => r === HAITI_MANUAL_APPROVAL) ? ADMIN_APPROVAL_MESSAGE : ADMIN_REVIEW_MESSAGE
+}
 
 const STRIPE_IDEMPOTENCY_PREFIX = 'tikem-ticket-refund-'
 const RECORD_ATTEMPTS = 3
@@ -246,7 +322,8 @@ function isAdminReview(ticket: Record<string, any>): boolean {
 function planForClaim(
   ticket: Record<string, any>,
   cancellation: boolean,
-  adminApproved = false
+  adminApproved = false,
+  includeServiceFee = cancellation
 ): { plan: RefundPlan; needsReview: boolean } {
   // A failed cancellation refund moved no money (a Stripe call that did succeed
   // is replayed by its idempotency key), so it is planned as the live ticket it
@@ -259,7 +336,7 @@ function planForClaim(
       : (cancellation || adminApproved) && isAdminReview(ticket)
         ? { ...ticket, refund_status: null }
         : ticket
-  const plan = planTicketRefund(source)
+  const plan = planTicketRefund(source, { includeServiceFee })
   if (plan.eligible || !cancellation) return { plan, needsReview: false }
 
   if (plan.reason === 'no_payment_reference' || plan.reason === 'amount_unknown') {
@@ -277,6 +354,8 @@ function planForClaim(
         amount: Math.round(amount * 100) / 100,
         currency,
         paymentRef: String(source.payment_id || source.payment_intent_id || source.transaction_id || '').trim() || null,
+        feePolicy: 'refunded',
+        buyerFee: 0,
       },
       needsReview: true,
     }
@@ -292,8 +371,31 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
   // an ADMIN cancellation (an organizer's own cancellation opts back in).
   const gated = !approvedBy && (!cancellation || Boolean(options.cancellationCoverageGate))
   const reasonFields = options.keepRefundReason ? { refund_source: reason } : { refund_reason: reason }
+  // TRUSTED inputs only: the cancellation flag (set by lib/events/cancel.ts) or
+  // the admin approval's explicit decision. Never derived from `reason`, which
+  // the organizer-facing routes must not be able to steer.
+  const includeServiceFee = refundIncludesServiceFee({
+    cancellation,
+    adminApprovedServiceFeeRefund: Boolean(approvedBy) && options.includeServiceFee === true,
+  })
   const ref = adminDb.collection('tickets').doc(ticketId)
   const nowIso = new Date().toISOString()
+
+  // The country gate: only the admin's approval of the review executes it.
+  let manualApproval = false
+  if (!approvedBy) {
+    if (typeof options.requiresAdminApproval === 'boolean') {
+      manualApproval = options.requiresAdminApproval
+    } else {
+      try {
+        manualApproval = await eventRefundsRequireAdminApproval(String(event.id || ''), event.country)
+      } catch (e: any) {
+        // Fail closed: an event whose country cannot be read goes to an admin.
+        console.error('[refund] country gate unavailable; sending to review', { ticketId, message: e?.message })
+        manualApproval = true
+      }
+    }
+  }
 
   // 0. Should the coverage gate run? Decided from a pre-read; the claim
   //    transaction re-plans from its own read and only gates an eligible plan.
@@ -306,7 +408,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       // Planned exactly as the claim will plan it (a cancellation re-plans a
       // failed or admin-review ticket as live), so a gated cancellation re-run
       // gates those tickets instead of tripping ticket_changed_retry.
-      const prePlan = planForClaim(preData, cancellation).plan
+      const prePlan = planForClaim(preData, cancellation, false, includeServiceFee).plan
       if (prePlan.eligible && prePlan.rail !== 'stripe_connect') {
         if (prePlan.rail === 'stripe') {
           // `payment_method` under-reports destination charges on older tickets.
@@ -335,7 +437,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
   let ticket: Record<string, any> = {}
   let plan: RefundPlan
   let needsReview = false
-  let review: { coverage: RefundCoverage | null; error: string | null } | null = null
+  let review: { coverage: RefundCoverage | null; error: string | null; reason: RefundReviewReason } | null = null
   try {
     const claimed = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
@@ -343,12 +445,31 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       if (!cancellation && !options.allowCheckedIn && isTicketCheckedIn(data)) {
         return { data, checkedIn: true as const }
       }
-      const decided = planForClaim(data, cancellation, Boolean(approvedBy))
+      const decided = planForClaim(data, cancellation, Boolean(approvedBy), includeServiceFee)
       const wasAdminReview = isAdminReview(data)
+      if (
+        manualApproval &&
+        wasAdminReview &&
+        String(data.refund_review_reason ?? '') === HAITI_MANUAL_APPROVAL &&
+        (data.refund_reason === reason || data.refund_source === reason)
+      ) {
+        // Already waiting for the same admin decision (a resumed cancellation
+        // sweep, a second tap): nothing to re-open, nobody to re-notify.
+        return {
+          data,
+          checkedIn: false as const,
+          plan: { eligible: false, reason: 'refund_in_progress' } as RefundPlan,
+          needsReview: false,
+          reviewNeeded: false,
+          coverage: null,
+          reviewReason: HAITI_MANUAL_APPROVAL as RefundReviewReason,
+        }
+      }
       let coverage: RefundCoverage | null = null
       let reviewNeeded = false
       if (
         decided.plan.eligible &&
+        !manualApproval &&
         !gate &&
         gated &&
         decided.plan.rail !== 'stripe_connect' &&
@@ -358,14 +479,17 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         // ticket changed in between). Never claim it ungated: ask for a retry.
         throw new Error('ticket_changed_retry')
       }
+      const feePolicy: RefundFeePolicy = decided.plan.eligible ? decided.plan.feePolicy ?? 'refunded' : 'refunded'
       if (decided.plan.eligible && gate && decided.plan.rail !== 'stripe_connect') {
         if (gate.ctx) {
-          coverage = await coverageInTransaction(tx, gate.ctx, ticketId, data)
+          coverage = await coverageInTransaction(tx, gate.ctx, ticketId, data, feePolicy)
           reviewNeeded = coverage.shortfallMinor > 0
         } else {
           reviewNeeded = true
         }
       }
+      const reviewReason: RefundReviewReason = manualApproval ? HAITI_MANUAL_APPROVAL : SHORTFALL_REVIEW
+      if (manualApproval) reviewNeeded = true
       // The claim changes this event's ceiling (the ticket goes to review or
       // processing): bump the ledger row the gate read, so a withdrawal whose
       // ceiling was computed before this claim fails its debit and retries.
@@ -380,6 +504,8 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
             refund_status: ADMIN_REVIEW_REFUND_STATUS,
             refund_review_requested_at: nowIso,
             refund_review_requested_by: actorId,
+            refund_review_reason: reviewReason,
+            refund_fee_policy: feePolicy,
             ...reasonFields,
             updated_at: nowIso,
           },
@@ -397,6 +523,12 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
           // What the buyer would get back, in the CHARGED currency.
           amount: p.amount,
           currency: p.currency,
+          // 'retained': face value only, Tikèm keeps the service fee (rule in refundPlan.ts).
+          fee_policy: p.feePolicy ?? 'refunded',
+          buyer_fee: p.buyerFee ?? 0,
+          // Why it is here: the balance did not cover it ('shortfall'), or the
+          // event's country needs Tikèm to approve every refund.
+          review_reason: reviewReason,
           // The gate's figures, EVENT currency minor units.
           event_currency: coverage?.currency ?? null,
           face_amount_minor: coverage?.faceMinor ?? Math.round(refundFaceAmount(data) * 100),
@@ -425,6 +557,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
             refund_status: 'processing',
             refund_claimed_at: nowIso,
             refund_claimed_by: actorId,
+            refund_fee_policy: feePolicy,
             ...(approvedBy
               ? { refund_shortfall_approved_by: approvedBy, refund_shortfall_approved_at: nowIso }
               : {}),
@@ -442,13 +575,15 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         }
       }
       if (coverage) delete coverage.ledger
-      return { data, checkedIn: false as const, ...decided, reviewNeeded, coverage }
+      return { data, checkedIn: false as const, ...decided, reviewNeeded, coverage, reviewReason }
     })
     if (claimed.checkedIn) return { outcome: 'skipped', ticketId, ticket: claimed.data, reason: 'checked_in' }
     ticket = claimed.data
     plan = claimed.plan
     needsReview = claimed.needsReview
-    if (claimed.reviewNeeded) review = { coverage: claimed.coverage, error: gate?.error ?? null }
+    if (claimed.reviewNeeded) {
+      review = { coverage: claimed.coverage, error: gate?.error ?? null, reason: claimed.reviewReason }
+    }
   } catch (e: any) {
     return { outcome: 'failed', ticketId, ticket, error: e?.message || 'claim_failed' }
   }
@@ -462,17 +597,27 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         amount: p.amount,
         currency: p.currency,
         method: String(ticket.payment_method || p.rail).toLowerCase(),
-        reason,
+        reason: review.reason === HAITI_MANUAL_APPROVAL ? `${reason} (${HAITI_MANUAL_APPROVAL})` : reason,
+        reviewReason: review.reason,
         eventCurrency: review.coverage?.currency ?? null,
         shortfallMinor: review.coverage?.shortfallMinor ?? null,
         coverageMinor: review.coverage?.coverageMinor ?? null,
       })
     }
-    return { outcome: 'admin_review', ticketId, ticket, amount: p.amount, currency: p.currency, coverage: review.coverage }
+    return {
+      outcome: 'admin_review',
+      ticketId,
+      ticket,
+      amount: p.amount,
+      currency: p.currency,
+      coverage: review.coverage,
+      reviewReason: review.reason,
+    }
   }
 
   if (!plan.eligible) return { outcome: 'skipped', ticketId, ticket, reason: plan.reason }
   const p = plan as Eligible
+  const feeFields = refundFeeFields(p)
 
   // 2. Move the money (or queue it).
   if (p.rail === 'stripe' || p.rail === 'stripe_connect') {
@@ -485,7 +630,9 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         p.rail === 'stripe_connect' || (knownDestination ?? (await isDestinationCharge(paymentIntentId)) === true)
       const res = await processStripeRefund(paymentIntentId, p.amount, {
         reverseTransfer: destination,
-        refundApplicationFee: destination,
+        // Tikèm's application fee goes back only when the service fee does
+        // (cancellation / event changed). A buyer-requested refund keeps it.
+        refundApplicationFee: destination && feeFields.refund_fee_policy === 'refunded',
         idempotencyKey: `${STRIPE_IDEMPOTENCY_PREFIX}${ticketId}`,
       })
       if (!res.success) throw new Error(res.error || 'Stripe refund failed')
@@ -505,6 +652,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         refund_amount: p.amount,
         refund_currency: p.currency,
         refund_face_amount: refundFaceAmount(ticket),
+        ...feeFields,
         refund_id: refundId,
         ...reasonFields,
         refund_error: null,
@@ -541,6 +689,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
         refund_amount: p.amount,
         refund_currency: p.currency,
         refund_face_amount: refundFaceAmount(ticket),
+        ...feeFields,
         ...reasonFields,
         refund_error: null,
         refunded_by: actorId,
@@ -560,6 +709,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       method,
       transactionId: p.paymentRef,
       reason,
+      feePolicy: feeFields.refund_fee_policy,
       requestedBy: actorId,
       // A card sale that could not be refunded automatically: the amount is the
       // best figure on the ticket and must be checked against Stripe first.
@@ -596,6 +746,26 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
           }
     await ref.set(release, { merge: true }).catch(() => undefined)
     return { outcome: 'failed', ticketId, ticket, error }
+  }
+}
+
+/**
+ * What the refund did with the fee, for the ticket. Minor units of the refund
+ * (charged) currency; the buyer service fee only (Tikèm's platform fee on an
+ * organizer-absorbs ticket is not charged to the buyer, so it is 0 here and the
+ * payout engine reads `refund_fee_policy` for it).
+ */
+export function refundFeeFields(plan: Eligible): {
+  refund_fee_policy: RefundFeePolicy
+  refunded_fee_minor: number
+  fee_retained_minor: number
+} {
+  const policy: RefundFeePolicy = plan.feePolicy ?? 'refunded'
+  const feeMinor = Math.max(0, Math.round((Number(plan.buyerFee) || 0) * 100))
+  return {
+    refund_fee_policy: policy,
+    refunded_fee_minor: policy === 'refunded' ? feeMinor : 0,
+    fee_retained_minor: policy === 'retained' ? feeMinor : 0,
   }
 }
 

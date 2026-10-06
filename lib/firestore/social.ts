@@ -1,7 +1,8 @@
 /**
  * Server-side helpers for the "Who's going" social layer on events.
  *
- * Privacy model (defaults are private):
+ * Privacy model (an UNSET attendance visibility reads as 'friends', the
+ * default since 2026-10; an explicit 'nobody' still wins):
  *  - A user appears in the PUBLIC face pile only if their
  *    `privacy.attendance_visibility` is 'everyone'.
  *  - A user appears in a viewer's FRIENDS-going list only if they are an
@@ -12,7 +13,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { getAcceptedFriendIds } from '@/lib/firestore/connections'
-import { DEFAULT_PRIVACY, type PublicUserSummary, type AttendanceVisibility } from '@/types/social'
+import { normalizeAttendanceVisibility, type PublicUserSummary, type AttendanceVisibility } from '@/types/social'
 
 // A ticket counts as "going" if it is live/valid or already checked in.
 // (Real ticket statuses observed: valid, confirmed, checked_in; legacy: active, used.)
@@ -39,7 +40,7 @@ function summaryFromUserDoc(id: string, data: any): PublicUserSummary {
 }
 
 function attendanceVisibilityOf(data: any): AttendanceVisibility {
-  return data?.privacy?.attendance_visibility || DEFAULT_PRIVACY.attendance_visibility
+  return normalizeAttendanceVisibility(data?.privacy?.attendance_visibility)
 }
 
 /** Batch-fetch raw user docs keyed by id via getAll. */

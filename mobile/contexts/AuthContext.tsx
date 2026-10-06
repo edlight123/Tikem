@@ -37,9 +37,11 @@ interface UserProfile {
   privacy?: PrivacySettings;
   /** Appear in "people you may know" / "friends going". Missing means true. */
   discoverable?: boolean;
+  /** When the "friends can now see your events" notice was seen (once per account). */
+  attendance_default_notice_seen_at?: string;
 }
 
-type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'default_country' | 'default_subarea' | 'photo_url' | 'organization_name' | 'organization_logo'>>;
+type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'default_country' | 'default_subarea' | 'photo_url' | 'organization_name' | 'organization_logo' | 'attendance_default_notice_seen_at'>>;
 
 interface AuthContextType {
   user: User | null;

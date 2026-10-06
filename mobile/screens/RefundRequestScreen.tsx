@@ -285,6 +285,8 @@ export default function RefundRequestScreen({ route, navigation }: any) {
               <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
               <Text style={styles.policyText}>
                 {t('refund.policyNote') || 'Refund requests are reviewed by the event organizer. You will receive an email notification once your request has been processed.'}
+                {' '}
+                {t('refund.feeNonRefundable')}
               </Text>
             </View>
 

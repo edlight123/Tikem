@@ -171,11 +171,11 @@
             },
             {
               "question": "How do I get a refund?",
-              "answer": "Refund policies are set by each organizer. To request a refund, open your ticket details and select \"Request Refund\" (if available), or contact the organizer. Approved refunds typically take 5 to 10 business days."
+              "answer": "Refund policies are set by each organizer. To request a refund, open your ticket details and select \"Request Refund\" (if available), or contact the organizer. Approved refunds typically take 5 to 10 business days. The service fee is non-refundable unless the event is cancelled."
             },
             {
               "question": "Can I get a refund if the event is cancelled?",
-              "answer": "Yes. If an event is cancelled, you’re generally eligible for a refund to the original payment method. Processing typically takes 5 to 10 business days."
+              "answer": "Yes. If an event is cancelled, you’re generally eligible for a refund to the original payment method. Processing typically takes 5 to 10 business days. The service fee is refunded too."
             },
             {
               "question": "What currency are prices shown in?",
@@ -265,7 +265,7 @@
             },
             {
               "question": "What happens to fees if I issue a refund?",
-              "answer": "Refund handling depends on the payment provider. Some processing fees may be non-refundable. Your dashboard shows the exact breakdown per transaction."
+              "answer": "Tikèm's fee is non-refundable: a refund you issue, or a buyer's request you approve, returns the ticket's face value and the fee stays deducted. Tikèm returns its fee only when the event is cancelled. Refunds for events in Haiti are reviewed by Tikèm before any money moves."
             },
             {
               "question": "Can I see a breakdown of my earnings?",

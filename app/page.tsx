@@ -15,6 +15,7 @@ import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/bl
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { getLocationFromVercelHeaders, mapToSupportedLocation } from '@/lib/geolocation'
 import { LocationBannerWrapper } from '@/components/LocationBannerWrapper'
+import { AttendanceDefaultBanner } from '@/components/profile/AttendanceDefaultBanner'
 import { COUNTRY_COOKIE, resolveCountry } from '@/lib/home/country'
 import NationalDayBanner from '@/components/home/NationalDayBanner'
 import { getActiveNationalDay, nationalDayPreviewKey } from '@/lib/nationalDaysServer'
@@ -82,11 +83,14 @@ export default async function HomePage({
 
   let profileCountry: string | undefined
   let profileCity = ''
+  // One-time notice: attendance visibility now defaults to Friends.
+  let showAttendanceNotice = false
   if (user?.id) {
     try {
       const profile = await getUserProfileAdmin(user.id)
       profileCountry = profile?.defaultCountry || undefined
       profileCity = profile?.defaultCity || ''
+      showAttendanceNotice = Boolean(profile?.attendanceVisibilityUnset && !profile?.attendanceDefaultNoticeSeenAt)
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
     }
@@ -197,6 +201,12 @@ export default async function HomePage({
       <CityRow country={country} cities={cities} active={active?.key ?? null} total={inCountry.length} />
 
       <LocationBannerWrapper userId={user?.id} currentCountry={country} currentCity={profileCity} />
+
+      {showAttendanceNotice && (
+        <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <AttendanceDefaultBanner show />
+        </div>
+      )}
 
       {dayActive && (
         <NationalDayBanner

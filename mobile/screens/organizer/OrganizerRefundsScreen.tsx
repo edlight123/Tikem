@@ -189,7 +189,9 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
               showAlert(
                 t('common.success'),
                 response.status === 202
-                  ? t('refunds.sentForReview')
+                  ? data.reviewReason === 'haiti_manual_approval'
+                    ? t('refunds.sentForReviewHaiti')
+                    : t('refunds.sentForReview')
                   : action === 'approve'
                   ? (t('refunds.approvedSuccess') || 'Refund approved and processed')
                   : (t('refunds.deniedSuccess') || 'Refund request denied')

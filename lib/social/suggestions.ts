@@ -20,7 +20,7 @@
 
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 import type { GuestlistVisibility } from '@/lib/guestlistVisibility'
-import type { AttendanceVisibility, SuggestionReason } from '@/types/social'
+import { normalizeAttendanceVisibility, type AttendanceVisibility, type SuggestionReason } from '@/types/social'
 
 export type { SuggestionReason }
 
@@ -52,11 +52,12 @@ export interface RankedSuggestion {
 /** Read the privacy bits we need from a raw users doc (missing doc = not eligible). */
 export function privacyFromUserDoc(data: Record<string, any> | null | undefined): CandidatePrivacy {
   if (!data) return { exists: false, discoverable: false, attendanceVisibility: 'nobody' }
-  const v = data?.privacy?.attendance_visibility
+  // Unset reads as the default, 'friends'; an explicit 'nobody' wins.
+  const v = normalizeAttendanceVisibility(data?.privacy?.attendance_visibility)
   return {
     exists: true,
     discoverable: data.discoverable !== false,
-    attendanceVisibility: v === 'everyone' || v === 'friends' ? v : 'nobody',
+    attendanceVisibility: v,
   }
 }
 

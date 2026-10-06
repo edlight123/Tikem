@@ -24,9 +24,17 @@ export interface PrivacySettings {
 
 export const DEFAULT_PRIVACY: PrivacySettings = {
   profile_visibility: 'private',
-  attendance_visibility: 'nobody',
+  // Owner decision (2026-10): an UNSET attendance visibility reads as 'friends'
+  // (types/social.ts on the web is the same). An explicit 'nobody' still wins.
+  attendance_visibility: 'friends',
   discoverable_by_phone: true,
 };
+
+/** True when the user has never chosen an attendance visibility (they get the default). */
+export function attendanceVisibilityUnset(privacy: Partial<PrivacySettings> | null | undefined): boolean {
+  const v = privacy?.attendance_visibility as unknown;
+  return v === undefined || v === null || v === '';
+}
 
 export type FriendshipState =
   | 'none'

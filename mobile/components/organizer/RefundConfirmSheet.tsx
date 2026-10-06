@@ -87,6 +87,7 @@ export default function RefundConfirmSheet({
 
           {card ? <Text style={styles.body}>{t('organizerOrders.refundSheet.railCard')}</Text> : null}
           {manual ? <Text style={styles.body}>{t('organizerOrders.refundSheet.railManual')}</Text> : null}
+          <Text style={styles.body}>{t('organizerOrders.refundSheet.feeNote')}</Text>
           <Text style={[styles.body, styles.warning]}>{t('organizerOrders.refundSheet.voidNote')}</Text>
 
           <View style={styles.buttonRow}>

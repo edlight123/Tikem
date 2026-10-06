@@ -12,7 +12,7 @@ describe('planTicketRefund', () => {
       charged_amount: 11.5,
       charged_currency: 'USD',
     })
-    expect(plan).toEqual({ eligible: true, rail: 'stripe', amount: 11.5, currency: 'USD', paymentRef: 'pi_123' })
+    expect(plan).toEqual({ eligible: true, rail: 'stripe', amount: 11.5, currency: 'USD', paymentRef: 'pi_123', feePolicy: 'retained', buyerFee: 0 })
   })
 
   it('marks destination charges as stripe_connect', () => {
@@ -40,7 +40,7 @@ describe('planTicketRefund', () => {
     for (const method of ['moncash', 'natcash', 'sogepay']) {
       expect(
         planTicketRefund({ status: 'confirmed', payment_method: method, price_paid: 2000, currency: 'HTG', transaction_id: 't1' })
-      ).toEqual({ eligible: true, rail: 'manual', amount: 2000, currency: 'HTG', paymentRef: 't1' })
+      ).toEqual({ eligible: true, rail: 'manual', amount: 2000, currency: 'HTG', paymentRef: 't1', feePolicy: 'retained', buyerFee: 0 })
     }
   })
 

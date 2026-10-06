@@ -80,6 +80,8 @@ export interface RefundResult {
   skipped: { ticketId: string; reason: string }[];
   /** Not covered by the organizer's remaining balance: sent to Tikèm for review (HTTP 202 when it is all of them). */
   review?: { ticketId: string; amount: number; currency: string }[];
+  /** Why tickets went to review: 'haiti_manual_approval' or 'shortfall'. */
+  reviewReason?: string;
   message?: string;
 }
 

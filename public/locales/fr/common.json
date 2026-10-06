@@ -898,12 +898,18 @@
       "sublabel": "plage · plein air · escapades"
     }
   },
+  "attendance_notice": {
+    "body": "Vos amis peuvent désormais voir les événements auxquels vous allez. Modifiez cela dans les paramètres de confidentialité.",
+    "cta": "Paramètres de confidentialité",
+    "dismiss": "Fermer"
+  },
   "checkout": {
     "guest_name_required": "Veuillez saisir votre nom.",
     "guest_email_required": "Veuillez saisir une adresse email valide.",
     "guest_phone_required": "Veuillez saisir votre numéro de téléphone.",
     "guest_intro": "Aucun compte requis. Nous vous envoyons votre billet et votre code QR directement. Vous pourrez créer un compte plus tard si vous le souhaitez.",
     "service_fee": "Frais de service",
+    "service_fee_nonrefundable": "Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.",
     "you_pay": "Vous paierez",
     "fee_added_notice": "Des frais de service s'ajoutent au prix du billet. Vous verrez le total complet avant de payer.",
     "guest_name": "Nom complet",
@@ -1661,7 +1667,7 @@
     "examples_note": "Exemples simplifiés. Les frais de traitement réels varient selon le moyen de paiement utilisé par vos participants.",
     "refunds_title": "Remboursements",
     "refunds_intro": "Lorsque vous remboursez un participant :",
-    "refunds_b1": "Les frais de plateforme vous sont restitués (ils ne sont pas facturés)",
+    "refunds_b1": "Tikèm conserve ses frais sur un remboursement que vous émettez ou une demande d’acheteur que vous approuvez ; ils ne sont restitués que si l’événement est annulé",
     "refunds_b2_a": "Les frais de traitement",
     "refunds_b2_strong": "ne sont pas remboursables",
     "refunds_b2_b": "car ils ont déjà été versés aux prestataires de paiement",

@@ -403,7 +403,7 @@ export default async function PayoutFeesPage() {
               </p>
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li>
-                  {t('fees_page.refunds_b1', 'The platform fee is refunded to you (not charged)')}
+                  {t('fees_page.refunds_b1', "Tikèm keeps its fee on a refund you issue or a buyer's request you approve; it is returned only when the event is cancelled")}
                 </li>
                 <li>
                   {t('fees_page.refunds_b2_a', 'Processing fees are')}{' '}

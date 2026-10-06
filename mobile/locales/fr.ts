@@ -653,6 +653,11 @@ export default {
     },
   },
   home: {
+    attendanceNotice: {
+      body: 'Vos amis peuvent désormais voir les événements auxquels vous allez. Modifiez cela dans les paramètres de confidentialité.',
+      cta: 'Confidentialité',
+      dismiss: 'Fermer',
+    },
     nationalDay: {
       today: "Aujourd'hui",
       tomorrow: 'Demain',
@@ -958,6 +963,7 @@ export default {
   paymentModal: {
     subtotal: 'Sous-total',
     serviceFee: 'Frais de service',
+    serviceFeeNonRefundable: 'Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.',
     selectMethod: 'Choisissez un moyen de paiement',
     methods: {
       card: 'Carte bancaire',
@@ -3017,6 +3023,7 @@ export default {
     additionalDetails: 'Détails supplémentaires',
     reasonPlaceholder: 'Veuillez expliquer votre raison…',
     policyNote: 'Les demandes de remboursement sont examinées par l’organisateur de l’événement. Vous recevrez une notification par e-mail une fois votre demande traitée.',
+    feeNonRefundable: 'Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.',
     submit: 'Envoyer la demande',
     selectReason: 'Veuillez sélectionner une raison',
     enterReason: 'Veuillez indiquer une raison',
@@ -3056,6 +3063,7 @@ export default {
     approvedSuccess: 'Remboursement approuvé et traité',
     deniedSuccess: 'Demande de remboursement refusée',
     sentForReview: 'Envoyé à Tikèm pour examen, car votre solde restant ne couvre pas ce remboursement.',
+    sentForReviewHaiti: 'Envoyé à Tikèm pour examen. Les remboursements pour les événements en Haïti sont approuvés par Tikèm avant tout mouvement d’argent.',
   },
   // Report / block (App Store guideline 1.2). See lib/moderation on the web side.
   moderation: {
@@ -3319,6 +3327,7 @@ export default {
       railCard: 'Remboursé immédiatement sur la carte de l’acheteur. Le montant est déduit des revenus de cet événement.',
       railManual: 'Les remboursements mobile money sont versés à la main par Tikèm sous quelques jours ouvrés. Le montant est déduit des revenus de cet événement.',
       voidNote: 'Les billets cessent immédiatement de fonctionner à l’entrée. Action irréversible.',
+      feeNote: 'L’acheteur récupère le prix du billet. Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.',
       cancel: 'Garder la commande',
       confirm: 'Rembourser',
       successTitle: 'Remboursement effectué',
@@ -3326,6 +3335,7 @@ export default {
       successManual: '{amount} est en file d’attente ; Tikèm le versera.',
       partialFailed: '{n} billet(s) n’ont pas pu être remboursés. Réessayez.',
       successReview: '{n} billet(s) envoyé(s) à Tikèm pour examen, car votre solde restant ne couvre pas le remboursement.',
+      successReviewHaiti: '{n} billet(s) envoyé(s) à Tikèm pour examen. Les remboursements pour les événements en Haïti sont approuvés par Tikèm avant tout mouvement d’argent.',
       reviewTitle: 'Envoyé à Tikèm pour examen',
       failed: 'Le remboursement a échoué et rien n’a été débité. Réessayez.',
     },

@@ -12,6 +12,7 @@ import { PrivacyCard } from '@/components/profile/PrivacyCard'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { NotificationsCard } from '@/components/profile/NotificationsCard'
 import { AccountCard } from '@/components/profile/AccountCard'
+import { AttendanceDefaultBanner } from '@/components/profile/AttendanceDefaultBanner'
 
 interface ProfileClientProps {
   initialProfile: UserProfile
@@ -95,13 +96,21 @@ export default function ProfileClient({ initialProfile, userId, isVerifiedOrgani
         }
       />
 
+      <AttendanceDefaultBanner
+        className="mt-7 sm:mt-9"
+        show={Boolean(initialProfile.attendanceVisibilityUnset && !initialProfile.attendanceDefaultNoticeSeenAt)}
+      />
+
       <div className="mt-7 space-y-9 sm:mt-9 sm:space-y-12">
         {/* Identity — the one section with no heading, because the page title is it. */}
         <ProfileHeaderCard profile={profile} onUpdate={handleUpdateProfile} />
 
         <SocialLinksCard profile={profile} onUpdate={handleUpdateProfile} />
 
-        <PrivacyCard profile={profile} onUpdate={handleUpdateProfile} />
+        {/* Anchor for the one-time attendance notice's link (/profile#privacy). */}
+        <div id="privacy" className="scroll-mt-24">
+          <PrivacyCard profile={profile} onUpdate={handleUpdateProfile} />
+        </div>
 
         <PreferencesCard profile={profile} onUpdate={handleUpdateProfile} />
 

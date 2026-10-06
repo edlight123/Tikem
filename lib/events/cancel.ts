@@ -10,6 +10,7 @@ import { notifyAdminsOfQueuedRefunds, notifyAdminsOfRefundReview, type QueuedRef
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import { eventEndsAt } from '@/lib/payouts/availability'
 import { loadRefundCoverageContext, type RefundCoverageContext } from '@/lib/tickets/refundCoverage'
+import { eventRefundsRequireAdminApproval, HAITI_MANUAL_APPROVAL } from '@/lib/tickets/refundApprovalPolicy'
 
 /**
  * Cancelling an event is a MONEY operation, not a status flag.
@@ -43,6 +44,13 @@ import { loadRefundCoverageContext, type RefundCoverageContext } from '@/lib/tic
  * (lib/tickets/refundCoverage.ts): what their unwithdrawn balance covers is
  * refunded now, the rest goes to refund_reviews for a Tikèm admin. An admin
  * cancellation refunds every buyer regardless, as before.
+ *
+ * HAITI (lib/tickets/refundApprovalPolicy.ts): for an event whose country needs
+ * Tikèm's approval, NO refund is executed by the sweep, by organizer or admin.
+ * Every paid ticket goes to refund_reviews ('haiti_manual_approval') with
+ * refund_status 'admin_review': the event is still frozen first (step 1), the
+ * door refuses an admin_review ticket (lib/scan/checkInTicket.ts) and the payout
+ * engine holds its net as a refund in flight. Free tickets are voided as usual.
  *
  * IDEMPOTENT: re-running on an already-cancelled event resumes the sweep
  * instead of refusing. Each ticket is claimed in a transaction before money
@@ -174,7 +182,20 @@ export async function cancelEventWithRefunds({
     ...(ledgerStampError ? { ledgerStampFailed: ledgerStampError } : {}),
   }
 
-  const refundEvent = { id: eventId, title: event?.title || null, organizer_id: event?.organizer_id || null }
+  const refundEvent = {
+    id: eventId,
+    title: event?.title || null,
+    organizer_id: event?.organizer_id || null,
+    country: event?.country ?? null,
+  }
+  // The country gate, decided ONCE for the sweep. A failed read fails closed:
+  // every refund waits for an admin rather than moving money unapproved.
+  const requiresAdminApproval = await eventRefundsRequireAdminApproval(eventId, refundEvent.country).catch(
+    (e: any) => {
+      console.error('[cancelEvent] country gate unavailable; sending refunds to review', { eventId, message: e?.message })
+      return true
+    }
+  )
   const queuedForAdmins: QueuedRefundNotice[] = []
   const sentToReview: Array<Extract<TicketRefundResult, { outcome: 'admin_review' }>> = []
 
@@ -208,6 +229,7 @@ export async function cancelEventWithRefunds({
       cancellationCoverageGate: !actor.isAdmin && !(alreadyCancelled && event?.cancelled_by_admin === true),
       // One summary email for the whole sweep, sent below.
       notifyAdmins: false,
+      requiresAdminApproval,
     })
 
     let notice: BuyerNotice | null = null
@@ -283,10 +305,15 @@ export async function cancelEventWithRefunds({
       amount: first.amount,
       currency: first.currency,
       method: String(first.ticket?.payment_method || 'unknown').toLowerCase(),
-      reason: `event_cancelled_by_organizer (${sentToReview.length} ticket${sentToReview.length === 1 ? '' : 's'} held for review)`,
+      reason: `${
+        sentToReview.some((r) => r.reviewReason === HAITI_MANUAL_APPROVAL)
+          ? `event_cancelled (${HAITI_MANUAL_APPROVAL})`
+          : 'event_cancelled_by_organizer'
+      } (${sentToReview.length} ticket${sentToReview.length === 1 ? '' : 's'} held for review)`,
       eventCurrency: first.coverage?.currency ?? null,
       shortfallMinor: first.coverage?.shortfallMinor ?? null,
       coverageMinor: first.coverage?.coverageMinor ?? null,
+      reviewReason: first.reviewReason,
     })
   }
 

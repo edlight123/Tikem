@@ -921,6 +921,7 @@
     "refund_confirm": "Rembourser ce billet ? Cette action est irréversible.",
     "refund_review_title": "Envoyé à Tikèm pour examen",
     "refund_review_body": "Envoyé à Tikèm pour examen, car votre solde restant ne couvre pas ce remboursement. Le billet est suspendu jusqu'à la décision de Tikèm.",
+    "refund_review_haiti_body": "Envoyé à Tikèm pour examen. Les remboursements pour les événements en Haïti sont approuvés par Tikèm avant tout mouvement d’argent. Le billet est suspendu jusqu’à la décision de Tikèm.",
     "search_placeholder": "Rechercher par nom, e-mail, téléphone ou ID de billet…",
     "ticket_id": "ID du billet",
     "attendee_information": "Informations sur le participant",

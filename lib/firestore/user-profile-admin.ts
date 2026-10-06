@@ -10,6 +10,7 @@ import {
   type SocialLinks,
   type PrivacySettings,
   DEFAULT_PRIVACY,
+  attendanceVisibilityUnset,
   sanitizeSocialLinks,
   sanitizePrivacy,
   phoneMatchKey,
@@ -30,6 +31,10 @@ export interface UserProfile {
    * missing means true. Turning it off only reduces exposure.
    */
   discoverable?: boolean
+  /** True when the stored privacy has no attendance_visibility (shows the 'friends' default). Read-only. */
+  attendanceVisibilityUnset?: boolean
+  /** One-time attendance notice seen. Writing ANY truthy value stamps the server's time. */
+  attendanceDefaultNoticeSeenAt?: string | boolean | null
   defaultCountry?: string
   defaultCity?: string
   subareaType?: 'COMMUNE' | 'NEIGHBORHOOD'
@@ -70,6 +75,8 @@ export async function getUserProfileAdmin(uid: string): Promise<UserProfile | nu
       socialLinks: data.social_links || {},
       privacy: { ...DEFAULT_PRIVACY, ...(data.privacy || {}) },
       discoverable: data.discoverable !== false,
+      attendanceVisibilityUnset: attendanceVisibilityUnset(data.privacy),
+      attendanceDefaultNoticeSeenAt: data.attendance_default_notice_seen_at || null,
       defaultCountry: data.default_country || data.defaultCountry || 'HT',
       defaultCity: data.default_city || data.defaultCity || '',
       subareaType: data.subarea_type || data.subareaType || 'COMMUNE',
@@ -158,6 +165,8 @@ export async function updateUserProfileAdmin(uid: string, updates: Partial<UserP
     if (updates.socialLinks !== undefined) updateData.social_links = sanitizeSocialLinks(updates.socialLinks)
     if (updates.privacy !== undefined) updateData.privacy = sanitizePrivacy(updates.privacy)
     if (typeof updates.discoverable === 'boolean') updateData.discoverable = updates.discoverable
+    // The one-time attendance notice: the server stamps its own time.
+    if (updates.attendanceDefaultNoticeSeenAt) updateData.attendance_default_notice_seen_at = new Date().toISOString()
     if (updates.defaultCountry !== undefined) updateData.default_country = updates.defaultCountry
     if (updates.defaultCity !== undefined) updateData.default_city = updates.defaultCity
     if (updates.subareaType !== undefined) updateData.subarea_type = updates.subareaType

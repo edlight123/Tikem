@@ -623,6 +623,11 @@ export default {
     },
   },
   home: {
+    attendanceNotice: {
+      body: 'Zanmi w yo kapab wè ki evènman w prale kounye a. Chanje sa nan paramèt konfidansyalite yo.',
+      cta: 'Konfidansyalite',
+      dismiss: 'Fèmen',
+    },
     nationalDay: {
       today: 'Jodi a',
       tomorrow: 'Demen',
@@ -927,6 +932,7 @@ export default {
   paymentModal: {
     subtotal: 'Sou-total',
     serviceFee: 'Frè sèvis',
+    serviceFeeNonRefundable: 'Frè sèvis la pa ranbousab, sof si evènman an anile.',
     selectMethod: 'Chwazi yon metòd peman',
     methods: {
       card: 'Kat kredi/debi',
@@ -2985,6 +2991,7 @@ export default {
     additionalDetails: 'Plis detay',
     reasonPlaceholder: 'Tanpri esplike rezon ou…',
     policyNote: 'Se òganizatè evènman an ki egzamine demann ranbousman yo. W ap resevwa yon notifikasyon pa imèl lè demann ou an fin trete.',
+    feeNonRefundable: 'Frè sèvis la pa ranbousab, sof si evènman an anile.',
     submit: 'Voye demann lan',
     selectReason: 'Tanpri chwazi yon rezon',
     enterReason: 'Tanpri bay yon rezon',
@@ -3024,6 +3031,7 @@ export default {
     approvedSuccess: 'Ranbousman apwouve epi trete',
     deniedSuccess: 'Demann ranbousman refize',
     sentForReview: 'Nou voye l bay Tikèm pou revizyon paske balans ki rete w la pa kouvri l.',
+    sentForReviewHaiti: 'Nou voye l bay Tikèm pou revizyon. Tikèm apwouve ranbousman pou evènman ann Ayiti anvan okenn lajan deplase.',
   },
   // Report / block (App Store guideline 1.2). See lib/moderation on the web side.
   moderation: {
@@ -3287,6 +3295,7 @@ export default {
       railCard: 'Lajan an retounen sou kat achtè a touswit. Li soti nan revni evènman sa a.',
       railManual: 'Tikèm voye ranbousman mobile money alamen nan kèk jou ouvrab. Montan an soti nan revni evènman sa a.',
       voidNote: 'Tikè yo sispann mache nan pòt la touswit. Ou pa ka defèt sa.',
+      feeNote: 'Achtè a resevwa pri tikè a. Frè sèvis la pa ranbousab, sof si evènman an anile.',
       cancel: 'Kenbe kòmand lan',
       confirm: 'Ranbouse',
       successTitle: 'Ranbousman fèt',
@@ -3294,6 +3303,7 @@ export default {
       successManual: '{amount} nan lis datant, Tikèm ap voye l.',
       partialFailed: '{n} tikè pa t ka ranbouse. Eseye ankò.',
       successReview: '{n} tikè voye bay Tikèm pou revizyon paske balans ki rete w la pa kouvri ranbousman an.',
+      successReviewHaiti: '{n} tikè voye bay Tikèm pou revizyon. Tikèm apwouve ranbousman pou evènman ann Ayiti anvan okenn lajan deplase.',
       reviewTitle: 'Voye bay Tikèm pou revizyon',
       failed: 'Ranbousman an pa pase, e pa gen lajan ki retire. Eseye ankò.',
     },

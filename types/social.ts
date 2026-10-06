@@ -37,7 +37,11 @@ export type ProfileVisibility = 'private' | 'public'
 export interface PrivacySettings {
   /** Visibility of the user's social profile page. Default 'private'. */
   profile_visibility: ProfileVisibility
-  /** Who can see which events the user is attending. Default 'nobody'. */
+  /**
+   * Who can see which events the user is attending. Default 'friends' (owner
+   * decision, 2026-10): an UNSET value reads as 'friends' everywhere. An
+   * explicit 'nobody' still wins.
+   */
   attendance_visibility: AttendanceVisibility
   /**
    * Whether the user can be found by someone who already has their phone
@@ -49,7 +53,7 @@ export interface PrivacySettings {
 
 export const DEFAULT_PRIVACY: PrivacySettings = {
   profile_visibility: 'private',
-  attendance_visibility: 'nobody',
+  attendance_visibility: 'friends',
   discoverable_by_phone: true,
 }
 
@@ -208,6 +212,23 @@ export function sanitizeSocialLinks(input: unknown): SocialLinks {
   return out
 }
 
+/**
+ * The one reading of a stored `privacy.attendance_visibility`: unset (never
+ * chosen) is the default, 'friends'; 'everyone' and 'nobody' are kept; any
+ * other value is malformed and reads as 'nobody', the safe choice.
+ */
+export function normalizeAttendanceVisibility(value: unknown): AttendanceVisibility {
+  if (value === undefined || value === null || value === '') return DEFAULT_PRIVACY.attendance_visibility
+  if (value === 'everyone' || value === 'friends' || value === 'nobody') return value
+  return 'nobody'
+}
+
+/** True when the user has never chosen an attendance visibility (they get the default). */
+export function attendanceVisibilityUnset(privacy: unknown): boolean {
+  const v = (privacy as Record<string, unknown> | null | undefined)?.attendance_visibility
+  return v === undefined || v === null || v === ''
+}
+
 /** Sanitize an incoming privacy object, falling back to safe defaults. */
 export function sanitizePrivacy(input: unknown, current?: Partial<PrivacySettings>): PrivacySettings {
   const obj = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
@@ -217,8 +238,7 @@ export function sanitizePrivacy(input: unknown, current?: Partial<PrivacySetting
 
   return {
     profile_visibility: profileVis === 'public' ? 'public' : 'private',
-    attendance_visibility:
-      attendanceVis === 'everyone' || attendanceVis === 'friends' ? attendanceVis : 'nobody',
+    attendance_visibility: normalizeAttendanceVisibility(attendanceVis),
     discoverable_by_phone: discoverable === false ? false : true,
   }
 }

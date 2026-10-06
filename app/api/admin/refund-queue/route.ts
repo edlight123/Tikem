@@ -32,8 +32,10 @@ export const dynamic = 'force-dynamic'
  * POST { kind: 'reconciliation', id: ticketId, action: 'resolved', note? }
  *      closes a reconciliation record (and finishes the ticket if still claimed).
  * GET also lists refund_reviews awaiting a decision: refunds the organizer's
- *      remaining balance could not cover (lib/tickets/refundCoverage.ts).
- * POST { kind: 'review', id: ticketId, action: 'approve' | 'deny', note? }
+ *      remaining balance could not cover (lib/tickets/refundCoverage.ts), and
+ *      every refund for an event whose country needs approval (review_reason
+ *      'haiti_manual_approval', lib/tickets/refundApprovalPolicy.ts).
+ * POST { kind: 'review', id: ticketId, action: 'approve' | 'deny', note?, reason? }
  *      approve: Tikèm funds the gap. THIS MOVES MONEY: the refund runs through
  *      the normal path (Stripe refund, or the manual mobile-money queue) and
  *      the shortfall is recorded as a negative carry on the organizer.
@@ -97,6 +99,8 @@ export async function POST(request: NextRequest) {
           note,
           // Sent only after the admin confirmed refunding a ticket already used at the door.
           allowCheckedIn: body?.allowCheckedIn === true,
+          // 'event_changed' returns the service fee too; anything else keeps the review's reason.
+          reason: typeof body?.reason === 'string' ? body.reason : null,
         })
         return adminOk({ status: 'approved', ...res })
       }

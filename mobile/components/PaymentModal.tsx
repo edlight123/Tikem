@@ -663,6 +663,7 @@ function PaymentForm({
                 {formatCurrency(orderPricing.buyerFee, currency)}
               </Text>
             </View>
+            <Text style={styles.feeNonRefundable}>{t('paymentModal.serviceFeeNonRefundable')}</Text>
           </View>
         )}
         <View style={[styles.totalContainer, showFeeLine && styles.totalContainerAttached]}>
@@ -899,6 +900,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   feeRowValue: {
     fontSize: 13,
+    color: colors.textSecondary,
+  },
+  feeNonRefundable: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textSecondary,
   },
   totalContainer: {

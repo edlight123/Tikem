@@ -175,15 +175,16 @@ describe('POST /api/refunds/process', () => {
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'buyer@example.com' }))
   })
 
-  it('reverses the transfer and application fee for a stripe_connect sale', async () => {
+  it('reverses the transfer but keeps Tikèm\'s application fee on a buyer-requested stripe_connect refund', async () => {
     const res = await call('t_connect', 'approve')
     expect(res.status).toBe(200)
+    // The service fee is non-refundable on a buyer's request: no refund_application_fee.
     expect(stripeRefundsCreate.mock.calls[0][0]).toEqual({
       payment_intent: 'pi_connect',
       amount: 2740,
       reverse_transfer: true,
-      refund_application_fee: true,
     })
+    expect(ticket('t_connect')).toMatchObject({ refund_fee_policy: 'retained' })
   })
 
   it('queues an approved MonCash request for a manual payout without calling Stripe', async () => {

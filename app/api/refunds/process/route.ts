@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { ADMIN_REVIEW_MESSAGE, refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
+import { adminReviewMessage, refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { adminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: Request) {
@@ -105,10 +105,17 @@ export async function POST(request: Request) {
     // sales in the charged currency, reverses the transfer + application fee on
     // destination charges, and queues mobile money for a manual payout. A
     // failure puts the request back to 'requested' so the organizer can retry.
+    // A buyer's request returns the face value only: the service fee is
+    // non-refundable. The reason is fixed here, never read from the body.
     const res = await refundTicket(String(ticketId), {
       reason: 'organizer_refund',
       actorId: user.id,
-      event: { id: event.id, title: event.title || null, organizer_id: event.organizer_id || null },
+      event: {
+        id: event.id,
+        title: event.title || null,
+        organizer_id: event.organizer_id || null,
+        country: event.country ?? null,
+      },
       onFailure: 'release',
       keepRefundReason: true,
       // Re-judged inside the claim: a check-in landing after the read above is still refused.
@@ -116,13 +123,15 @@ export async function POST(request: Request) {
     })
 
     if (res.outcome === 'admin_review') {
-      // The organizer's remaining balance doesn't cover it: nothing was sent,
-      // a Tikèm admin decides. The buyer is told once that decision is made.
+      // The organizer's remaining balance doesn't cover it, or the event's
+      // country needs Tikèm to approve every refund: nothing was sent, a Tikèm
+      // admin decides. The buyer is told once that decision is made.
       return Response.json(
         {
           success: true,
           code: 'admin_review',
-          message: ADMIN_REVIEW_MESSAGE,
+          reviewReason: res.reviewReason,
+          message: adminReviewMessage([res.reviewReason]),
           refundAmount: res.amount,
           refundCurrency: res.currency,
         },

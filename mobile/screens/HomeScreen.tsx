@@ -34,6 +34,7 @@ import EmptyState from '../components/EmptyState';
 import PeopleYouMayKnowRail from '../components/PeopleYouMayKnowRail';
 import { artForPlace } from '../lib/artLibrary';
 import NationalDayBanner from '../components/NationalDayBanner';
+import AttendanceDefaultNotice from '../components/AttendanceDefaultNotice';
 import { eventMatchesNationalDay, nationalDayName } from '../lib/nationalDays';
 import {
   dismissNationalDay,
@@ -479,6 +480,9 @@ export default function HomeScreen({ navigation }: any) {
             {/* (Removed the redundant "À l'affiche" masthead per beta feedback —
                 the tikèm wordmark in the top bar already brands the screen; the
                 section titles below carry the hierarchy.) */}
+
+            {/* One-time: attendance visibility now defaults to Friends. */}
+            <AttendanceDefaultNotice onOpenSettings={() => navigation.navigate('Profile')} />
 
             {/* National day: the poster, then its rail. A low-key day (Jou
                 Mò, Fèt Travay…) offers the pill only when events are tagged. */}

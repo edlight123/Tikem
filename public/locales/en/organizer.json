@@ -921,6 +921,7 @@
     "refund_confirm": "Refund this ticket? This cannot be undone.",
     "refund_review_title": "Sent to Tikèm for review",
     "refund_review_body": "Sent to Tikèm for review because your remaining balance doesn't cover it. The ticket is on hold until Tikèm decides.",
+    "refund_review_haiti_body": "Sent to Tikèm for review. Refunds for events in Haiti are approved by Tikèm before any money moves. The ticket is on hold until Tikèm decides.",
     "search_placeholder": "Search by name, email, phone, or ticket ID…",
     "ticket_id": "Ticket ID",
     "attendee_information": "Attendee Information",

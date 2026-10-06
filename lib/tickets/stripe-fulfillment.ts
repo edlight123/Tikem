@@ -378,6 +378,11 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   const pricePerTicketCharged = (Number(input.amountTotalCents) || 0) / 100 / quantity
   const priceInOriginal = Number(m.priceInOriginalCurrency || m.finalPrice || 0)
   const unitFace = Number.isFinite(priceInOriginal) && priceInOriginal > 0 ? priceInOriginal : pricePerTicketCharged
+  const buyerFeeCentsTotal = m.feeIncidence === 'buyer' ? Number(m.buyerFeeCents || 0) : 0
+  const perTicketBuyerFeeCharged =
+    Number.isFinite(buyerFeeCentsTotal) && buyerFeeCentsTotal > 0
+      ? Math.round(buyerFeeCentsTotal / quantity) / 100
+      : 0
   const orderGrossCents = Math.round(unitFace * quantity * 100)
   const exchangeRateUsed = m.exchangeRate ? parseFloat(String(m.exchangeRate)) : null
   const isConnect =
@@ -447,6 +452,10 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     exchange_rate_used: exchangeRateUsed,
     charged_amount: pricePerTicketCharged,
     charged_currency: chargedCurrency,
+    // The buyer service fee inside charged_amount (charged currency, major
+    // units), so a refund can return the face value without it
+    // (lib/tickets/refundPlan.ts: the service fee is non-refundable).
+    buyer_fee_charged_amount: perTicketBuyerFeeCharged,
     // Who paid the fee, from the payment that took the money (never the event's
     // editable setting). The earnings ledger and payout availability read it.
     fee_incidence: feeIncidence,

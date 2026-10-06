@@ -470,8 +470,17 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
       })
       if (!res.ok) throw new Error()
       if (res.status === 202) {
-        // Not covered by the remaining balance: a Tikèm admin decides.
-        showToast({ type: 'info', title: tx('attendees.refund_review_title'), message: tx('attendees.refund_review_body') })
+        // Not covered by the remaining balance, or a Haiti event (every refund
+        // is approved by Tikèm): a Tikèm admin decides.
+        const data = await res.json().catch(() => ({}))
+        showToast({
+          type: 'info',
+          title: tx('attendees.refund_review_title'),
+          message:
+            data?.reviewReason === 'haiti_manual_approval'
+              ? tx('attendees.refund_review_haiti_body')
+              : tx('attendees.refund_review_body'),
+        })
       } else {
         showToast({ type: 'success', title: 'Refund processed', message: 'The ticket has been refunded.' })
       }

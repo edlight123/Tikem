@@ -374,6 +374,9 @@ export async function fulfillPaidOrder(params: {
         // passed on to them.
         charged_amount: Math.round((Number(selection.unitPrice) + perTicketBuyerFee) * 100) / 100,
         charged_currency: chargedCurrency,
+        // The buyer service fee inside charged_amount, charged currency: a
+        // refund returns the face value without it (lib/tickets/refundPlan.ts).
+        buyer_fee_charged_amount: perTicketBuyerFee,
         payment_method: paymentMethod,
         payment_id: transactionId || orderId,
         // Promoter attribution: opaque ids only; the commission economics live in
@@ -458,6 +461,7 @@ export async function fulfillPaidOrder(params: {
               exchange_rate_fetched_at: fxFetchedAt,
               charged_amount: Math.round((Number(selection.unitPrice) + perTicketBuyerFee) * 100) / 100,
               charged_currency: chargedCurrency,
+              buyer_fee_charged_amount: perTicketBuyerFee,
               payment_method: paymentMethod,
               payment_id: transactionId || orderId,
               promoter_id: pendingTx.promoter_id || null,
