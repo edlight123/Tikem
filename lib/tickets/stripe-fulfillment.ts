@@ -53,6 +53,7 @@ import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
 import { attributionFromStripeMetadata, ticketAttributionFields } from '@/lib/attribution'
 import { recordAttributedSale } from '@/lib/tracking-links'
+import { recordInvitePurchase } from '@/lib/invites/server'
 import { attachTicketsToGuestOrder } from '@/lib/guest/identity'
 import type { GuestOrderRecipient } from '@/lib/guest/checkout'
 import { buildTierSoldIncrements, reserveInventoryAtomic } from '@/lib/tickets/inventory'
@@ -622,6 +623,19 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
       paymentMethod,
     })
   })
+
+  // Friend-invite credit (lib/invites): stamps invite_inviter_uid on the
+  // tickets and this order. Outside runStep on purpose: it is idempotent,
+  // never throws, and must never turn a paid order into a 'partial' one.
+  if (!guest && m.isGuest !== 'true') {
+    await recordInvitePurchase({
+      buyerUid: input.buyerId,
+      eventId,
+      ticketIds,
+      orderKey: input.paymentId,
+      orderRefs: [orderRef],
+    })
+  }
 
   // Earnings. Skipped while the promoter step is undecided elsewhere, because
   // the withheld commission depends on it. Deferred to an admin when the

@@ -14,6 +14,9 @@ export class FakeFirestore {
       get: async () => self.snap(path),
       set: async (data: Doc, opts?: { merge?: boolean }) => self.write(path, data, opts),
       update: async (data: Doc) => self.write(path, data, { merge: true }),
+      delete: async () => {
+        self.store.delete(path)
+      },
       collection: (name: string) => self.collection(`${path}/${name}`),
     }
   }
@@ -39,6 +42,7 @@ export class FakeFirestore {
       },
       where: (field: string, op: string, value: unknown) => self.query(name, [[field, op, value]]),
       select: () => self.query(name, []),
+      limit: () => self.query(name, []),
       get: async () => self.query(name, []).get(),
     }
   }

@@ -48,6 +48,7 @@ import { Skeleton, PosterCardSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import DeleteAccountSheet from '../components/DeleteAccountSheet';
 import PhoneLinkSheet from '../components/auth/PhoneLinkSheet';
+import InviteSummary from '../components/InviteSummary';
 import { usePhoneAuthEnabled } from '../lib/phoneAuth';
 import { findMetro } from '../data/metros';
 
@@ -930,6 +931,9 @@ export default function ProfileScreen() {
             )}
           </View>
         ) : null}
+
+        {/* Friend invite results (config/auth.invites); nothing when off or none sent. */}
+        <InviteSummary />
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{t('profile.actions')}</Text>

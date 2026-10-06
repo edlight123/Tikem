@@ -27,6 +27,7 @@ import {
 } from '../lib/notifications';
 import { addStaffEventId } from '../lib/staffAssignments';
 import { backendJson } from '../lib/api/backend';
+import { setInviteMute } from '../lib/api/invites';
 import EmptyState from '../components/EmptyState';
 import { artByKey } from '../lib/artLibrary';
 import { NotificationsSkeleton } from '../components/Skeleton';
@@ -350,6 +351,10 @@ export default function NotificationsScreen() {
       case 'organizer_message':
       case 'organizer_reply':
         return '💬';
+      case 'friend_invite':
+        return '💌';
+      case 'invite_joined':
+        return '🤝';
       default:
         return '🔔';
     }
@@ -368,6 +373,11 @@ export default function NotificationsScreen() {
       const eventId = notification.eventId || (notification.metadata as any)?.eventId;
       return { screen: 'OrganizerMessages', params: eventId ? { eventId } : undefined };
     }
+    // "X joined Tikèm from your invite" opens their profile.
+    if ((notification.type as string) === 'invite_joined') {
+      const actorId = (notification.metadata as any)?.actorId;
+      if (typeof actorId === 'string' && actorId) return { screen: 'OrganizerProfile', params: { organizerId: actorId } };
+    }
     // The national-day note opens the day's themed event list.
     if ((notification.type as string) === 'national_day') {
       const key = (notification.metadata as any)?.nationalDay;
@@ -380,6 +390,27 @@ export default function NotificationsScreen() {
       return { screen: 'EventDetail', params: { eventId: notification.eventId } };
     }
     return null;
+  };
+
+  // "Mute invites from {name}" on a friend's event invite (lib/invites). The
+  // inviter is never told; their picker just shows "can't invite".
+  const muteInvitesFrom = (notification: Notification) => {
+    const meta: any = notification.metadata || {};
+    const inviterId = typeof meta.inviterId === 'string' ? meta.inviterId : '';
+    const name = String(meta.inviterName || '');
+    if (!inviterId) return;
+    showAlert(t('invites.muteConfirmTitle'), t('invites.muteConfirmBody', { name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('invites.muteConfirm'),
+        style: 'destructive',
+        onPress: async () => {
+          const ok = await setInviteMute(inviterId, true);
+          if (ok) showAlert(t('invites.mutedTitle'), t('invites.mutedBody', { name }));
+          else showAlert(t('invites.errorTitle'), t('common.error'));
+        },
+      },
+    ]);
   };
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -529,6 +560,23 @@ export default function NotificationsScreen() {
                     </View>
                   )}
 
+                  {(notification.type as string) === 'friend_invite' &&
+                    typeof (notification.metadata as any)?.inviterId === 'string' && (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          muteInvitesFrom(notification);
+                        }}
+                        style={styles.muteInvitesButton}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.muteInvitesText}>
+                          {t('invites.muteAction', { name: String((notification.metadata as any)?.inviterName || '') })}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
                   {notification.type === 'ticket_transfer' && getTransferToken(notification) && (
                     <View style={styles.staffInviteActions}>
                       <TouchableOpacity
@@ -597,6 +645,17 @@ export default function NotificationsScreen() {
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  // A quiet text action under a friend's invite (fill-free, not a pill).
+  muteInvitesButton: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  muteInvitesText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

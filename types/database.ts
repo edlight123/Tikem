@@ -13,6 +13,10 @@ export type NotificationType =
   | 'organizer_nudge'
   // The one 09:00 note on a Haitian holiday (app/api/cron/national-day-push).
   | 'national_day'
+  // A connection invited you to an event, or someone joined from your invite
+  // link (lib/invites). Discretionary: policy category 'friend_invite'.
+  | 'friend_invite'
+  | 'invite_joined'
   | 'ticket_purchased' 
   | 'ticket_transfer'
   | 'event_updated' 

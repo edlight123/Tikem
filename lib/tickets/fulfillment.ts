@@ -25,6 +25,7 @@ import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
 import { sanitizeAttribution, ticketAttributionFields, withResolvedPromoter } from '@/lib/attribution'
 import { recordAttributedSale } from '@/lib/tracking-links'
+import { recordInvitePurchase } from '@/lib/invites/server'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, isGuestId } from '@/lib/guest/identity'
 import { validateStoredOrderLines } from '@/lib/tickets/purchasable'
@@ -545,6 +546,21 @@ export async function fulfillPaidOrder(params: {
       revenueCents: Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100),
       currency: eventCurrency,
       paymentMethod,
+    })
+  }
+
+  // Friend-invite credit (lib/invites): stamps invite_inviter_uid on the tickets
+  // and the order. Never throws, never blocks; a guest has no account to credit.
+  if (createdTickets.length > 0 && pendingTx.user_id && !pendingTx.is_guest && !isGuestId(pendingTx.user_id)) {
+    await recordInvitePurchase({
+      buyerUid: String(pendingTx.user_id),
+      eventId: String(pendingTx.event_id),
+      ticketIds: createdTickets.map((t: any) => String(t.id)),
+      orderKey: orderId,
+      orderRefs: async () => {
+        const snap = await adminDb.collection('pending_transactions').where('order_id', '==', orderId).limit(1).get()
+        return snap.docs.map((d: any) => d.ref)
+      },
     })
   }
 

@@ -23,6 +23,7 @@ export type NotificationCategory =
   | 'organizer_milestone' // 50% sold, sold out
   | 'organizer_nudge' // sales are slow, here is your promoter link
   | 'national_day' // a short note on a Haitian holiday (lib/nationalDays)
+  | 'friend_invite' // a connection invited you to an event / joined from your invite (lib/invites)
 
 const TRANSACTIONAL: ReadonlySet<NotificationCategory> = new Set([
   'purchase',
@@ -52,6 +53,7 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   organizer_milestone: 'notify_organizer_milestones',
   organizer_nudge: 'notify_organizer_nudges',
   national_day: 'notify_national_day',
+  friend_invite: 'notify_friend_invites',
 }
 
 export function isCategoryEnabled(

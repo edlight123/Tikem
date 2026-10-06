@@ -47,6 +47,8 @@ describe('linking config', () => {
   it('keeps the deep-linkable paths mapped', () => {
     expect(LINKING_CONFIG.screens).toEqual({
       InviteRedeem: 'invite',
+      InviteLink: 'i/:code',
+      OrganizerProfile: 'profile/organizer/:organizerId',
       Notifications: 'notifications',
       TicketDetail: 'tickets/:ticketId',
       EventDetail: 'events/:eventId',

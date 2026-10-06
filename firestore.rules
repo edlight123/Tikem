@@ -151,6 +151,15 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow write: if false;
       }
+
+      // Invite mutes (lib/invites): "stop event invites from this person".
+      // The owner reads their own list; only the server (POST/DELETE
+      // /api/users/me/invite-mutes/[uid]) writes it. Nobody else can read it:
+      // the muted person must never learn they were muted.
+      match /invite_mutes/{inviterId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
     }
 
     // Public profiles (H4) - a minimal, read-only projection of a user's SAFE
@@ -766,6 +775,26 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /organizer_moderation/{organizerId} {
+      allow read, write: if false;
+    }
+
+    // Invites (lib/invites/server.ts): event invites, invite codes, join
+    // attributions and the purchase ledger. Admin SDK only, never client
+    // readable (they map who invited whom). Explicit for documentation; the
+    // default deny below would refuse them anyway.
+    match /event_invites/{inviteId} {
+      allow read, write: if false;
+    }
+    match /invite_codes/{code} {
+      allow read, write: if false;
+    }
+    match /invite_code_owners/{uid} {
+      allow read, write: if false;
+    }
+    match /invite_attributions/{uid} {
+      allow read, write: if false;
+    }
+    match /invite_purchases/{purchaseId} {
       allow read, write: if false;
     }
 

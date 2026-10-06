@@ -1856,5 +1856,32 @@
   "friendsGoing": {
     "one": "{{name}} prale",
     "other": "{{count}} zanmi prale"
+  },
+  "invites": {
+    "inviteFriends": "Envite zanmi",
+    "pickerTitle": "Envite zanmi",
+    "pickerSubtitle": "Sèlman zanmi ou sou Tikèm. Yo resevwa yon notifikasyon nan men ou.",
+    "search": "Chèche zanmi ou",
+    "sendCount": "Envite {{count}}",
+    "sending": "Ap voye",
+    "sentToast": "Envitasyon yo ale",
+    "stateInvited": "Envite",
+    "stateGoing": "Ap vini",
+    "stateUnavailable": "Pa ka envite",
+    "empty": "Ajoute zanmi sou Tikèm pou w ka envite yo nan evènman.",
+    "noMatch": "Pa gen zanmi ki gen non sa a.",
+    "limit": "Ou rive nan limit envitasyon jodi a. Eseye ankò demen.",
+    "error": "Nou pa t ka voye envitasyon yo. Eseye ankò.",
+    "loadError": "Nou pa t ka chaje zanmi ou yo. Eseye ankò.",
+    "shareLink": "Envite zanmi sou Tikèm",
+    "shareLinkHint": "Lyen pèsonèl ou. Zanmi ki antre ak lyen sa a konekte avè w.",
+    "linkCopied": "Lyen envitasyon an kopye",
+    "messageEvent": "Vin nan {{event}} avè m sou Tikèm: {{link}}",
+    "messageApp": "Vin jwenn mwen sou Tikèm: {{link}}",
+    "summaryTitle": "Envitasyon ou yo",
+    "summarySent": "Envitasyon voye",
+    "summaryJoined": "Antre",
+    "summaryBought": "Achte tikè",
+    "close": "Fèmen"
   }
 }

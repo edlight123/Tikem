@@ -28,6 +28,7 @@ import { useSocialFlags } from '../lib/socialFlags';
 import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
+import InviteContactsCard, { type DeviceContact } from '../components/InviteContactsCard';
 import { useAppAlert } from '../components/AppAlert';
 import {
   fetchConnections,
@@ -188,7 +189,16 @@ export default function ConnectionsScreen() {
       {loading ? (
         <PeopleRowsSkeleton />
       ) : tab === 'find' ? (
-        <FindTab colors={colors} onOpen={openProfile} onChange={loadOverview} onRequireAuth={goToLogin} insets={insets} autoSync={autoSync} />
+        <FindTab
+          colors={colors}
+          onOpen={openProfile}
+          onChange={loadOverview}
+          onRequireAuth={goToLogin}
+          insets={insets}
+          autoSync={autoSync}
+          inviteEventId={typeof route?.params?.inviteEventId === 'string' ? route.params.inviteEventId : null}
+          inviteEventTitle={typeof route?.params?.inviteEventTitle === 'string' ? route.params.inviteEventTitle : null}
+        />
       ) : (
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
@@ -306,7 +316,7 @@ function RequestsTab({ overview, colors, onOpen, onChange, onRequireAuth }: any)
   );
 }
 
-function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: any) {
+function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, inviteEventId, inviteEventTitle }: any) {
   const styles = getStyles(colors);
   const { t } = useI18n();
   const showAlert = useAppAlert();
@@ -317,6 +327,9 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
 
   const [contactMatches, setContactMatches] = useState<ContactMatch[] | null>(null);
   const [contactLoading, setContactLoading] = useState(false);
+  // The synced contacts themselves, kept on the phone for "Invite to Tikèm"
+  // (config/auth.invites). Never sent anywhere.
+  const [deviceContacts, setDeviceContacts] = useState<DeviceContact[]>([]);
 
   // People you may know (config/auth.friend_suggestions; enforced server-side too).
   const flags = useSocialFlags();
@@ -370,13 +383,21 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
         return;
       }
       setContactLoading(true);
-      const { data } = await Contacts.getContactsAsync({ fields: [Contacts.Fields.PhoneNumbers] });
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Name],
+      });
       const phones: string[] = [];
-      data.forEach((c) => {
+      const list: DeviceContact[] = [];
+      data.forEach((c, i) => {
         (c.phoneNumbers || []).forEach((p) => {
           if (p.number) phones.push(p.number);
         });
+        const first = (c.phoneNumbers || []).find((p) => p.number)?.number;
+        const name = String(c.name || '').trim();
+        if (first && name) list.push({ id: String(c.id || i), name, phone: first });
       });
+      list.sort((a, b) => a.name.localeCompare(b.name));
+      setDeviceContacts(list);
       if (phones.length === 0) {
         showAlert(t('connections.find.noNumbersTitle'), t('connections.find.noNumbersBody'));
         setContactMatches([]);
@@ -505,6 +526,15 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync }: 
           </View>
         )}
       </View>
+
+      {flags.invites && contactMatches !== null && (
+        <InviteContactsCard
+          contacts={deviceContacts}
+          matchedNames={contactMatches.map((m) => m.displayName)}
+          eventId={inviteEventId}
+          eventTitle={inviteEventTitle}
+        />
+      )}
     </ScrollView>
   );
 }

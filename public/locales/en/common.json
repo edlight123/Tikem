@@ -1856,5 +1856,32 @@
   "friendsGoing": {
     "one": "{{name}} is going",
     "other": "{{count}} friends going"
+  },
+  "invites": {
+    "inviteFriends": "Invite friends",
+    "pickerTitle": "Invite friends",
+    "pickerSubtitle": "Only your Tikèm friends. They get a notification from you.",
+    "search": "Search your friends",
+    "sendCount": "Invite {{count}}",
+    "sending": "Sending",
+    "sentToast": "Invites sent",
+    "stateInvited": "Invited",
+    "stateGoing": "Going",
+    "stateUnavailable": "Can't invite",
+    "empty": "Add friends on Tikèm to invite them to events.",
+    "noMatch": "No friend matches that name.",
+    "limit": "You've reached today's invite limit. Try again tomorrow.",
+    "error": "Could not send invites. Try again.",
+    "loadError": "Could not load your friends. Try again.",
+    "shareLink": "Invite friends to Tikèm",
+    "shareLinkHint": "Your personal link. Friends who join from it are connected to you.",
+    "linkCopied": "Invite link copied",
+    "messageEvent": "Come to {{event}} with me on Tikèm: {{link}}",
+    "messageApp": "Join me on Tikèm: {{link}}",
+    "summaryTitle": "Your invites",
+    "summarySent": "Invites sent",
+    "summaryJoined": "Joined",
+    "summaryBought": "Bought tickets",
+    "close": "Close"
   }
 }
