@@ -34,6 +34,7 @@ import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { formatPrice } from '../../lib/currency';
+import { prefetchEarningsHub } from '../../lib/earningsHubCache';
 
 /** How many upcoming events the rail shows before "view all" takes over. */
 const UPCOMING_RAIL_MAX = 10;
@@ -75,6 +76,8 @@ export default function OrganizerDashboardScreen() {
 
   const loadData = useCallback(async () => {
     if (!userProfile?.id) return;
+    // Warm Earnings in the background so it opens on fresh numbers.
+    prefetchEarningsHub(userProfile.id);
 
     try {
       const [eventsData, statsData, organizerEvents] = await Promise.all([
@@ -337,10 +340,10 @@ export default function OrganizerDashboardScreen() {
     return (
       <View style={styles.container}>
         {greeting}
-        {/* Tonight: a poster-led hero card. */}
+        {/* Tonight: a poster-led hero, poster straight on the canvas. */}
         <View style={styles.section}>
           <Skeleton width={110} height={22} radius={7} style={{ marginBottom: 12 }} />
-          <Skeleton width="100%" height={420} radius={radius.xl} />
+          <Skeleton width="100%" aspectRatio={4 / 5} radius={radius.poster} />
         </View>
         {/* This week: section title + the metric triplet (••• while loading). */}
         <View style={styles.section}>
@@ -514,16 +517,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingTop: 20,
     paddingBottom: 4,
   },
-  // Tonight hero: filled surface, big 4:5 poster, text below it.
-  heroCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: 14,
-  },
+  // Tonight hero: no card fill (owner: "no background behind the posters").
+  // The 4:5 flyer sits on the canvas, uncropped, text below it.
+  heroCard: {},
+  // surfaceRaised is the poster's own placeholder while the image loads.
   heroPoster: {
     width: '100%',
     aspectRatio: 4 / 5,
-    borderRadius: radius.xl - 6,
+    borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
@@ -536,7 +537,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   heroTitle: {
     marginTop: 16,
-    paddingHorizontal: 4,
     fontSize: 22,
     lineHeight: 27,
     fontWeight: '700',
@@ -545,13 +545,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   heroMeta: {
     marginTop: 6,
-    paddingHorizontal: 4,
     fontSize: 15,
     color: colors.textSecondary,
   },
   heroStatusRow: {
     marginTop: 16,
-    paddingHorizontal: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -563,7 +561,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   progressTrack: {
     marginTop: 10,
-    marginHorizontal: 4,
     height: 3,
     borderRadius: 2,
     backgroundColor: colors.surfaceRaised,
@@ -576,7 +573,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   heroCheckedIn: {
     marginTop: 8,
-    paddingHorizontal: 4,
     fontSize: 13,
     color: T.textTertiary,
   },
@@ -595,19 +591,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 17,
     fontWeight: '700',
   },
+  // Standalone poster left, details right, no row fill (like EventListCard).
   tonightRow: {
-    marginTop: 10,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: 12,
   },
   tonightRowPoster: {
-    width: 64,
+    width: 72,
     aspectRatio: 4 / 5,
-    borderRadius: radius.sm,
+    borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
@@ -645,12 +639,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 14,
   },
   railCard: {
-    width: 170,
+    width: 160,
   },
+  // 4:5 like the flyers themselves (2:3 cropped their baked-in text), with
+  // the same whisper of rounding as the attendee posters.
   railPoster: {
     width: '100%',
-    aspectRatio: 2 / 3,
-    borderRadius: radius.xl,
+    aspectRatio: 4 / 5,
+    borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },

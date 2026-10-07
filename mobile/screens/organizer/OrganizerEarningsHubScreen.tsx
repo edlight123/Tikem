@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,16 +8,16 @@ import { Wallet } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
-import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
-import { backendJson } from '../../lib/api/backend';
 import { safeFormatForLanguage } from '../../lib/dates';
 import { formatCurrency } from '../../lib/currency';
+import { totalsByCurrency } from '../../lib/eventEarnings';
 import {
-  earningsCurrency,
-  totalsByCurrency,
-  withdrawableMinor,
-  type EventEarningsRow,
-} from '../../lib/eventEarnings';
+  getCachedEarningsHub,
+  peekEarningsHub,
+  refreshEarningsHub,
+  type EarningsHubSnapshot,
+  type EventMoney,
+} from '../../lib/earningsHubCache';
 import { radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
@@ -28,43 +28,6 @@ import StatTriplet from '../../components/StatTriplet';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import FormSheet from '../../components/organizer/FormSheet';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
-
-type EventMoney = {
-  /** Withdrawable now, minor units (the figure the per-event withdraw routes accept). */
-  availableMinor: number;
-  /** Net earned over the event's life, minor units. */
-  netMinor: number | null;
-  grossMinor: number;
-  withdrawnMinor: number;
-  currency: string;
-  /** Settlement state from the earnings row ('ready' | 'pending' | 'locked'). */
-  settlementStatus: string | null;
-};
-
-type PayoutHistoryItem = {
-  id: string;
-  amount: number;
-  status: string;
-  method?: string;
-  currency?: string;
-  createdAt: string;
-};
-
-/** How many per-event earnings requests run at once. */
-const FETCH_CONCURRENCY = 5;
-
-async function mapLimited<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i]);
-    }
-  });
-  await Promise.all(workers);
-  return out;
-}
 
 /**
  * Org-level Earnings: leads with what the organizer can withdraw RIGHT NOW,
@@ -77,6 +40,10 @@ async function mapLimited<T, R>(items: T[], limit: number, fn: (item: T) => Prom
  * organizer straight into that existing per-event withdrawal sheet: directly
  * when one event holds the balance, through a short "withdraw from" list when
  * several do. The by-event list below is an optional breakdown.
+ *
+ * The data is computed off-screen (lib/earningsHubCache.ts): the hub opens on
+ * the last snapshot, prefetched from the dashboard or persisted from a previous
+ * session, and refreshes quietly in the background on every focus.
  */
 export default function OrganizerEarningsHubScreen() {
   const { colors } = useTheme();
@@ -85,90 +52,60 @@ export default function OrganizerEarningsHubScreen() {
   const { userProfile } = useAuth();
   const { t, language } = useI18n();
   const { height: headerH, onHeight } = useOverlayHeaderInset();
+  const userId = userProfile?.id;
 
-  const [events, setEvents] = useState<OrganizerEvent[]>([]);
-  const [money, setMoney] = useState<Record<string, EventMoney>>({});
-  const [loaded, setLoaded] = useState(false);
-  const [moneyLoaded, setMoneyLoaded] = useState(false);
-  const [moneyFailed, setMoneyFailed] = useState(false);
+  const [snap, setSnap] = useState<EarningsHubSnapshot | null>(() =>
+    userId ? peekEarningsHub(userId) : null
+  );
+  // True once a fetch has settled with no snapshot to show (so the empty/zero
+  // states render instead of skeletons forever).
+  const [settled, setSettled] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [payouts, setPayouts] = useState<PayoutHistoryItem[] | null>(null);
-  const inFlight = useRef(false);
 
-  const load = useCallback(async () => {
-    if (!userProfile?.id || inFlight.current) return;
-    inFlight.current = true;
+  // Hydrate from memory or AsyncStorage as soon as the user is known.
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    getCachedEarningsHub(userId).then((cached) => {
+      if (alive && cached) setSnap((cur) => (cur && cur.fetchedAt >= cached.fetchedAt ? cur : cached));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  const refresh = useCallback(async () => {
+    if (!userId) return;
     try {
-      // Recent payouts load alongside; a failure only hides that section.
-      backendJson<{ payouts?: PayoutHistoryItem[] }>('/api/organizer/payout-history')
-        .then((d) =>
-          setPayouts(
-            (d?.payouts || [])
-              .slice()
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-              .slice(0, 3)
-          )
-        )
-        .catch(() => setPayouts(null));
-
-      const rows = await getOrganizerEvents(userProfile.id, 100);
-      // Most recent first: the event you're settling is almost always the latest.
-      rows.sort((a, b) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime());
-      setEvents(rows);
-      setLoaded(true);
-
-      // A draft has never sold anything, so it has nothing to withdraw.
-      const priced = rows.filter((e) => e.status !== 'draft' || (e.tickets_sold || 0) > 0);
-      let failures = 0;
-      const results = await mapLimited(priced, FETCH_CONCURRENCY, async (e) => {
-        try {
-          const res = await backendJson<{ earnings: EventEarningsRow | null }>(
-            `/api/organizer/events/${e.id}/earnings`
-          );
-          const row = res?.earnings || null;
-          if (!row) return [e.id, null] as const;
-          const net = typeof row.netAmount === 'number' && Number.isFinite(row.netAmount) ? row.netAmount : null;
-          return [
-            e.id,
-            {
-              availableMinor: withdrawableMinor(row),
-              netMinor: net,
-              grossMinor: Math.max(0, Number(row.grossSales || 0)),
-              withdrawnMinor: Math.max(0, Number(row.withdrawnAmount || 0)),
-              currency: earningsCurrency(row),
-              settlementStatus: row.settlementStatus ? String(row.settlementStatus) : null,
-            },
-          ] as const;
-        } catch {
-          failures += 1;
-          return [e.id, null] as const;
-        }
-      });
-      const next: Record<string, EventMoney> = {};
-      for (const [id, m] of results) if (m) next[id] = m;
-      setMoney(next);
-      setMoneyFailed(priced.length > 0 && failures === priced.length);
+      const next = await refreshEarningsHub(userId);
+      setSnap(next);
     } catch (e) {
-      console.error('Failed to load earnings hub', e);
+      console.warn('Earnings hub refresh failed; showing cached data', e);
     } finally {
-      setLoaded(true);
-      setMoneyLoaded(true);
-      inFlight.current = false;
+      setSettled(true);
     }
-  }, [userProfile?.id]);
+  }, [userId]);
 
+  // Background refresh on every focus; the cached snapshot stays on screen meanwhile.
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load])
+      refresh();
+    }, [refresh])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await refresh();
     setRefreshing(false);
-  }, [load]);
+  }, [refresh]);
+
+  const events = snap?.events ?? [];
+  const money: Record<string, EventMoney> = snap?.money ?? {};
+  const payouts = snap?.payouts ?? null;
+  const moneyFailed = snap?.moneyFailed ?? false;
+  const loaded = !!snap || settled;
+  const moneyLoaded = loaded;
 
   const withBalance = useMemo(
     () =>
@@ -381,22 +318,23 @@ export default function OrganizerEarningsHubScreen() {
                   activeOpacity={0.7}
                   onPress={() => navigation.navigate('OrganizerEventEarnings', { eventId: event.id })}
                 >
-                  {posterUri ? (
-                    <Image
-                      source={{ uri: posterUri }}
-                      style={styles.poster}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      transition={150}
-                      recyclingKey={event.id}
-                    />
-                  ) : (
-                    <View style={[styles.poster, styles.posterFallback]}>
+                  {/* Standalone 4:5 poster; the placeholder fill lives only inside its box. */}
+                  <View style={styles.poster}>
+                    {posterUri ? (
+                      <Image
+                        source={{ uri: posterUri }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={150}
+                        recyclingKey={event.id}
+                      />
+                    ) : (
                       <Ionicons name="image-outline" size={18} color={colors.textTertiary} />
-                    </View>
-                  )}
+                    )}
+                  </View>
                   <View style={styles.rowBody}>
-                    <Text style={styles.rowTitle} numberOfLines={1}>
+                    <Text style={styles.rowTitle} numberOfLines={2}>
                       {event.title}
                     </Text>
                     {!!when && (
@@ -575,23 +513,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     byEventHeader: {
       marginTop: 36,
     },
-    // Filled rows (POSH: fill, never a hairline): thumb, name, date, amount + status.
+    // By-event rows: no card behind them. Poster left, title + date, money right;
+    // rows are separated by space alone (no hairlines, no fills).
     row: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-      padding: 16,
-      borderRadius: radius.xl,
-      backgroundColor: colors.surface,
-      marginBottom: 12,
+      paddingVertical: 8,
+      marginBottom: 8,
     },
     poster: {
-      width: 64,
-      height: 64,
-      borderRadius: radius.md,
-      backgroundColor: colors.surfaceRaised,
-    },
-    posterFallback: {
+      width: 60,
+      aspectRatio: 4 / 5,
+      borderRadius: radius.poster,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceMuted,
       alignItems: 'center',
       justifyContent: 'center',
     },

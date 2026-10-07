@@ -191,9 +191,15 @@ export default function StaffEventsScreen() {
 
         {loading && !hasEvents ? (
           <View style={styles.loadingList}>
-            <Skeleton width="100%" height={420} radius={radius.xl} style={{ marginBottom: 16 }} />
+            <Skeleton width="100%" aspectRatio={4 / 5} radius={radius.poster} style={{ marginBottom: 16 }} />
             {[0, 1].map((i) => (
-              <Skeleton key={i} width="100%" height={88} radius={radius.lg} style={{ marginBottom: 12 }} />
+              <View key={i} style={styles.skeletonRow}>
+                <Skeleton width={72} aspectRatio={4 / 5} radius={radius.poster} />
+                <View style={styles.skeletonText}>
+                  <Skeleton width="75%" height={16} radius={6} />
+                  <Skeleton width="55%" height={12} radius={5} style={{ marginTop: 8 }} />
+                </View>
+              </View>
             ))}
           </View>
         ) : !hasEvents ? (
@@ -273,18 +279,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   section: {
     marginTop: 24,
   },
+  // Rows are separated by space, never a hairline or a fill.
   rows: {
-    gap: 12,
+    gap: 16,
   },
-  featured: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: 16,
-  },
+  // No card fill behind the featured poster: it sits on the canvas.
+  featured: {},
   featuredPoster: {
     width: '100%',
     aspectRatio: 4 / 5,
-    borderRadius: radius.lg,
+    borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     marginBottom: 16,
   },
@@ -317,6 +321,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   loadingList: {
     marginTop: 24,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 16,
+  },
+  skeletonText: {
+    flex: 1,
   },
   empty: {
     flex: 1,

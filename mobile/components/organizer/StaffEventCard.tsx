@@ -22,8 +22,9 @@ interface StaffEventCardProps {
   right?: React.ReactNode;
   /**
    * 'plain' (default): the background-less row used by team / invite lists.
-   * 'surface': a compact filled row (surface fill, radius 16) with a square
-   * poster thumb and a trailing chevron when tappable and no `right` is given.
+   * 'surface': the staff-events row: a larger standalone 4:5 poster and a
+   * trailing chevron when tappable and no `right` is given. Still no fill
+   * behind the poster (owner: "no background behind the posters").
    */
   variant?: 'plain' | 'surface';
 }
@@ -45,7 +46,7 @@ export default function StaffEventCard({
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const isSurface = variant === 'surface';
-  const posterStyle = isSurface ? [styles.poster, styles.posterSquare] : styles.poster;
+  const posterStyle = isSurface ? [styles.poster, styles.posterLarge] : styles.poster;
   const trailing =
     right ??
     (isSurface && onPress ? (
@@ -103,23 +104,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: 14,
       paddingVertical: 8,
     },
-    // Fill, never a hairline (POSH): the compact staff-events row.
+    // No row fill: the standalone poster carries it, like EventListCard.
     cardSurface: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      padding: 12,
-      paddingRight: 14,
+      paddingVertical: 4,
     },
+    // Flyers are 4:5 with text baked in, so the thumb never crops to a square.
+    // surfaceRaised is the poster's own placeholder while the image loads.
     poster: {
       width: 56,
-      height: 74,
-      borderRadius: radius.chip,
+      aspectRatio: 4 / 5,
+      borderRadius: radius.poster,
       backgroundColor: colors.surfaceRaised,
     },
-    posterSquare: {
-      width: 64,
-      height: 64,
-      borderRadius: radius.md,
+    posterLarge: {
+      width: 72,
     },
     posterFallback: {
       alignItems: 'center',

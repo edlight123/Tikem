@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  Animated,
   TouchableOpacity,
   RefreshControl,
   StatusBar,
@@ -35,6 +35,7 @@ import { Skeleton } from '../../components/Skeleton';
 import ActionTileGrid from '../../components/organizer/ActionTileGrid';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
+import ChromeBlur from '../../components/ChromeBlur';
 import StatusChip from '../../components/StatusChip';
 import StatTriplet from '../../components/StatTriplet';
 import SectionHeader from '../../components/SectionHeader';
@@ -68,6 +69,8 @@ export default function OrganizerEventManagementScreen() {
   // Centred poster: ~66% of the screen width, capped for tablets.
   const posterW = Math.min(Math.round(screenW * 0.66), 320);
   const { height: headerH, onHeight } = useOverlayHeaderInset();
+  // Drives the top chrome backdrop behind the floating back/share buttons.
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   // The stack registers this route with a generic "Manage Event" nav bar. Hide it
   // so the poster hero with its floating back/share buttons owns the top edge.
@@ -305,7 +308,7 @@ export default function OrganizerEventManagementScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <View style={[styles.skeletonBody, { paddingTop: insets.top + 64 }]}>
-          <Skeleton width={posterW} height={posterW * 1.25} radius={radius.xl} style={{ alignSelf: 'center' }} />
+          <Skeleton width={posterW} height={posterW * 1.25} radius={radius.poster} style={{ alignSelf: 'center' }} />
           <Skeleton width={90} height={12} radius={6} style={{ marginTop: 28 }} />
           <Skeleton width="80%" height={30} radius={8} style={{ marginTop: 12 }} />
           <Skeleton width="60%" height={14} radius={6} style={{ marginTop: 12 }} />
@@ -371,14 +374,32 @@ export default function OrganizerEventManagementScreen() {
   const canCancel = event?.status !== 'cancelled';
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
 
+  // Chrome covers the safe area plus the button row (8 + 40 + 8). The poster
+  // passing under the buttons is fine; the identity block (which starts right
+  // below the hero) is what must not. Begin the fade halfway down the poster
+  // and land fully opaque just before the title reaches the chrome's lower edge.
+  const chromeH = insets.top + 56;
+  const posterH = posterW * 1.25;
+  const chromeFull = Math.max(1, posterH + 36);
+  const chromeOpacity = scrollY.interpolate({
+    inputRange: [posterH * 0.5, chromeFull],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: ctaBlockH + 32 }}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -414,13 +435,18 @@ export default function OrganizerEventManagementScreen() {
               style={StyleSheet.absoluteFill}
             />
           </View>
+          {/* The flyer is the artwork: 4:5 with its text baked in, so it gets only
+              the poster whisper of rounding and nothing painted behind it. The
+              gradient is a stand-in for events without artwork, never an underlay. */}
           <View style={[styles.poster, { width: posterW }]}>
-            <LinearGradient
-              colors={posterTheme.colors}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
+            {!posterUri && (
+              <LinearGradient
+                colors={posterTheme.colors}
+                start={{ x: 0.1, y: 0 }}
+                end={{ x: 0.9, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
             {!!posterUri && (
               <ExpoImage
                 source={{ uri: posterUri }}
@@ -476,9 +502,10 @@ export default function OrganizerEventManagementScreen() {
         {/* Quick actions */}
         <View style={styles.section}>
           <SectionHeader title={t('organizerEventManagement.sections.quickActions')} />
+          {/* Two columns of compact icon + label tiles; labels wrap rather than
+              truncate, and an odd last tile spans the full row. */}
           <ActionTileGrid
-            variant="stacked"
-            columns={3}
+            variant="compact"
             tiles={[
               { key: 'scan', icon: 'qr-code-outline', label: t('organizerEventManagement.actions.scanTickets'), onPress: handleScanTickets },
               { key: 'staff', icon: 'people-outline', label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
@@ -539,7 +566,17 @@ export default function OrganizerEventManagementScreen() {
             )}
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Top chrome: invisible over the poster hero, it fades in as the title
+          and sections approach the floating buttons, so text scrolls under a
+          blurred backdrop instead of colliding with the status bar and buttons. */}
+      <Animated.View
+        style={[styles.topChrome, { height: chromeH, opacity: chromeOpacity }]}
+        pointerEvents="none"
+      >
+        <ChromeBlur edge="top" />
+      </Animated.View>
 
       {renderFloatingControls(true)}
 
@@ -573,6 +610,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   scroll: {
     flex: 1,
+  },
+  topChrome: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   floatingBar: {
     position: 'absolute',
@@ -616,9 +659,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   poster: {
     aspectRatio: 4 / 5,
-    borderRadius: radius.xl,
+    borderRadius: radius.poster,
     overflow: 'hidden',
-    backgroundColor: T.surface,
   },
   identity: {
     paddingHorizontal: 20,

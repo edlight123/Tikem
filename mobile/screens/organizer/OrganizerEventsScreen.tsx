@@ -39,9 +39,9 @@ type EventStatus =
   | 'rejected'
   | 'cancelled';
 
-// Card geometry, shared by the loaded rows and the skeleton so nothing jumps
-// when data lands.
-const THUMB_WIDTH = 92;
+// Row geometry, shared by the loaded rows and the skeleton so nothing jumps
+// when data lands. Flyers are 4:5 with text baked in, so the thumb keeps 4:5.
+const THUMB_WIDTH = 104;
 
 export default function OrganizerEventsScreen() {
   const { colors } = useTheme();
@@ -214,11 +214,11 @@ export default function OrganizerEventsScreen() {
     return (
       <View style={styles.container}>
         {header}
-        {/* Event cards: 2:3 poster thumb + status/title/meta/sales column. */}
+        {/* Event rows: 4:5 poster + status/title/meta/sales column. */}
         <View style={styles.list}>
           {[0, 1, 2].map((i) => (
             <View key={i} style={styles.eventCard}>
-              <Skeleton width={THUMB_WIDTH} aspectRatio={2 / 3} radius={radius.button} />
+              <Skeleton width={THUMB_WIDTH} aspectRatio={4 / 5} radius={radius.poster} />
               <View style={styles.eventContent}>
                 <View>
                   <Skeleton width={70} height={10} radius={4} />
@@ -326,8 +326,8 @@ export default function OrganizerEventsScreen() {
                 accessibilityHint={t('organizerEvents.manage')}
                 onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id, event })}
               >
-                {/* Portrait 2:3 poster thumb. Real image when we have one;
-                    otherwise the poster gradient with a small centered wordmark. */}
+                {/* Standalone 4:5 poster on the canvas. Real image when we have
+                    one; otherwise the poster gradient with a small centered wordmark. */}
                 <View style={styles.eventThumb}>
                   {!posterUri && (
                     <LinearGradient
@@ -462,20 +462,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   list: {
     paddingHorizontal: 16,
-    gap: 14,
+    gap: 20,
   },
-  // Filled surface card (never a hairline box).
+  // Like EventListCard: no card fill, poster left, details right. Rows are
+  // separated by the list gap, never a hairline.
   eventCard: {
     flexDirection: 'row',
     gap: 16,
-    padding: 14,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surface,
   },
+  // surfaceRaised is the poster's own placeholder while the image loads.
   eventThumb: {
     width: THUMB_WIDTH,
-    aspectRatio: 2 / 3,
-    borderRadius: radius.button,
+    aspectRatio: 4 / 5,
+    borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
@@ -488,7 +487,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   eventContent: {
     flex: 1,
-    paddingVertical: 4,
+    paddingVertical: 2,
     justifyContent: 'space-between',
   },
   statusRow: {
