@@ -702,8 +702,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   tierName: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: T.white,
     marginRight: 12,
   },
@@ -723,22 +723,25 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: T.white,
     borderRadius: 3,
   },
+  // Same fill, radius, inset and type as the quick-action tiles above, so the
+  // two sections read as one system (TestFlight: "text sizes aren't uniform").
   controlsGroup: {
-    backgroundColor: T.surface,
-    borderRadius: radius.xl,
+    backgroundColor: T.surfaceRaised,
+    borderRadius: radius.lg,
     overflow: 'hidden',
   },
   controlRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 20,
-    minHeight: 60,
+    paddingHorizontal: 14,
+    minHeight: 58,
   },
   controlText: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '600',
     color: T.white,
   },
   dangerText: {
@@ -748,13 +751,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    marginLeft: 20,
+    marginLeft: 14,
   },
   toggleTrack: {
     width: 46,
     height: 28,
     borderRadius: radius.sm,
-    backgroundColor: T.surfaceRaised,
+    // A tint, not surfaceRaised: the group itself is surfaceRaised now.
+    backgroundColor: 'rgba(255,255,255,0.10)',
     padding: 3,
     justifyContent: 'center',
   },
