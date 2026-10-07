@@ -31,6 +31,7 @@ export default function OrganizerScanScreen() {
   // last row ends up sitting behind it.
   const tabBarSpace = useTabBarSpace();
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<TodayEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEventSelector, setShowEventSelector] = useState(false);
@@ -44,10 +45,13 @@ export default function OrganizerScanScreen() {
 
     try {
       const events = await getTodayEvents(userProfile.id);
+      setLoadFailed(false);
       setTodayEvents(events);
       if (events.length > 0) setSelectedEvent(events[0]);
     } catch (error) {
       console.error('Error loading events:', error);
+      // Otherwise a failed load reads exactly like "no events today".
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -114,7 +118,17 @@ export default function OrganizerScanScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace + 16 }]}>
         {todayEvents.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <EmptyState icon={Calendar} title={t('organizerScan.noEventsToday')} compact />
+            {loadFailed ? (
+              <EmptyState
+                icon={Calendar}
+                title={t('organizerScan.loadFailed')}
+                actionLabel={t('common.retry')}
+                onAction={loadEvents}
+                compact
+              />
+            ) : (
+              <EmptyState icon={Calendar} title={t('organizerScan.noEventsToday')} compact />
+            )}
           </View>
         ) : selectedEvent ? (
           <>

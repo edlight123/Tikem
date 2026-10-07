@@ -27,6 +27,7 @@ import { useAppAlert } from '../../components/AppAlert';
 import OverlayHeader, { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { radius } from '../../theme/tokens';
 import DocumentScanner, { ResponseType } from 'react-native-document-scanner-plugin';
+import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 
 type DocumentType = 'passport' | 'national_id' | 'drivers_license';
 
@@ -268,26 +269,19 @@ export default function GovernmentIDUploadScreen() {
       [
         {
           text: t('verification.governmentId.scanDocument'),
-          onPress: () => scanDocument(side),
+          // Pickers wait for the alert to finish closing or iOS drops them.
+          onPress: () => setTimeout(() => scanDocument(side), AFTER_ALERT_MS),
         },
         {
           text: t('verification.common.takePhoto'),
           onPress: () => {
-            if (side === 'front') {
-              handleUploadFront(true);
-            } else {
-              handleUploadBack(true);
-            }
+            setTimeout(() => (side === 'front' ? handleUploadFront(true) : handleUploadBack(true)), AFTER_ALERT_MS);
           },
         },
         {
           text: t('verification.common.chooseFromLibrary'),
           onPress: () => {
-            if (side === 'front') {
-              handleUploadFront(false);
-            } else {
-              handleUploadBack(false);
-            }
+            setTimeout(() => (side === 'front' ? handleUploadFront(false) : handleUploadBack(false)), AFTER_ALERT_MS);
           },
         },
         { text: t('common.cancel'), style: 'cancel' },

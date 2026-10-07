@@ -527,7 +527,11 @@ export default function OrganizerEventEarningsScreen() {
             [
               {
                 text: t('organizerEarnings.openPayoutSettings'),
-                onPress: () => navigation.navigate('OrganizerPayoutSettings'),
+                onPress: () => {
+                  // Close the withdraw sheet first or the screen opens under it.
+                  setShowWithdraw(false)
+                  navigation.navigate('OrganizerPayoutSettings')
+                },
               },
               { text: t('common.cancel'), style: 'cancel' },
             ]
@@ -677,7 +681,10 @@ export default function OrganizerEventEarningsScreen() {
           [
             {
               text: t('organizerEarnings.openPayoutSettings'),
-              onPress: () => navigation.navigate('OrganizerPayoutSettings'),
+              onPress: () => {
+                setShowWithdraw(false)
+                navigation.navigate('OrganizerPayoutSettings')
+              },
             },
             { text: t('common.ok'), style: 'cancel' },
           ]

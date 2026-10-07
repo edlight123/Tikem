@@ -14,6 +14,7 @@ import VerifiedBadge from '../components/VerifiedBadge';
 import WhitePillCTA from '../components/WhitePillCTA';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
 import { font, radius } from '../theme/tokens';
+import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 
 type Subscription = {
   id: string;
@@ -29,6 +30,7 @@ type Subscription = {
  * a count only for privacy; there is no screen listing their identities.)
  */
 export default function SubscriptionsScreen({ navigation }: any) {
+  const openAttendeeTab = useOpenAttendeeTab();
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { user } = useAuth();
@@ -118,7 +120,7 @@ export default function SubscriptionsScreen({ navigation }: any) {
           />
           <WhitePillCTA
             label={t('favorites.explore')}
-            onPress={() => navigation.navigate('Main', { screen: 'Discover' })}
+            onPress={() => openAttendeeTab('Discover')}
             style={styles.emptyCta}
           />
         </View>

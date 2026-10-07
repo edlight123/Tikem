@@ -52,6 +52,7 @@ import {
   useDeclaredMarkets,
 } from '../../lib/organizerMarkets'
 import { Receipt, Wallet } from 'lucide-react-native'
+import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 
 type VerificationStatus = 'not_started' | 'pending' | 'verified' | 'failed'
 
@@ -577,14 +578,18 @@ export default function OrganizerPayoutSettingsScreenV2() {
 
   const handleAddMethodSelect = useCallback((type: 'bank' | 'moncash') => {
     if (!identityVerified) {
-      showAlert(
+      // Close the add sheet first: navigating from under an open Modal pushes
+      // the verification screen behind it, so the button looked dead. The
+      // alert waits for the sheet to finish closing or iOS drops it.
+      setShowAddModal(false)
+      setTimeout(() => showAlert(
         t('organizerPayoutSettings.identityRequired.title'),
         t('organizerPayoutSettings.identityRequired.body'),
         [
           { text: t('common.cancel'), style: 'cancel' },
           { text: t('organizerPayoutSettings.verifyIdentity'), onPress: () => navigation.navigate('OrganizerVerification') },
         ]
-      )
+      ), AFTER_ALERT_MS)
       return
     }
 
@@ -665,14 +670,15 @@ export default function OrganizerPayoutSettingsScreenV2() {
 
   const handleAddStripe = useCallback(() => {
     if (!identityVerified) {
-      showAlert(
+      setShowAddModal(false)
+      setTimeout(() => showAlert(
         t('organizerPayoutSettings.identityRequired.title'),
         t('organizerPayoutSettings.identityRequired.body'),
         [
           { text: t('common.cancel'), style: 'cancel' },
           { text: t('organizerPayoutSettings.verifyIdentity'), onPress: () => navigation.navigate('OrganizerVerification') },
         ]
-      )
+      ), AFTER_ALERT_MS)
       return
     }
     setShowAddModal(false)
@@ -793,12 +799,18 @@ export default function OrganizerPayoutSettingsScreenV2() {
             text: t('organizerPayoutSettings.alerts.verifyNow'),
             onPress: () => {
               setShowBankForm(false)
-              // Use the freshly-loaded list (not the stale `destinations` closure).
-              loadDestinations().then((fresh) => {
+              // Use the freshly-loaded list (not the stale `destinations` closure),
+              // and wait out the form's slide-down or iOS drops the next modal.
+              Promise.all([
+                loadDestinations(),
+                new Promise((resolve) => setTimeout(resolve, AFTER_ALERT_MS)),
+              ]).then(([fresh]) => {
                 const newDest = (fresh || []).find((d) => d.id === data.destinationId)
                 if (newDest) {
                   setSelectedDestination(newDest)
                   setShowVerificationModal(true)
+                } else {
+                  showAlert(t('organizerPayoutSettings.alerts.bankAddedTitle'), t('organizerPayoutSettings.alerts.verifyOpenFailed'))
                 }
               })
             },
@@ -1370,11 +1382,16 @@ export default function OrganizerPayoutSettingsScreenV2() {
       t('organizerPayoutSettings.identityRequired.body'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('organizerPayoutSettings.verifyIdentity'), onPress: () => setSetupStep(1) },
+        {
+          text: t('organizerPayoutSettings.verifyIdentity'),
+          // Step 1 only exists inside the first-time setup; from the summary
+          // (e.g. Change on an existing method) open the verification hub.
+          onPress: () => (showSetup ? setSetupStep(1) : navigation.navigate('OrganizerVerification')),
+        },
       ]
     )
     return false
-  }, [identityVerified, showAlert, t])
+  }, [identityVerified, showAlert, showSetup, navigation, t])
 
   const finishSetup = useCallback(async () => {
     if (setupMethod === 'moncash') {

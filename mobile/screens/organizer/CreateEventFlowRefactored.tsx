@@ -80,6 +80,7 @@ import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
+import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -768,17 +769,22 @@ export default function CreateEventFlowRefactored() {
   const [showFlyerLibrary, setShowFlyerLibrary] = useState(false);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      // Keep the whole flyer: iOS's built-in crop editor only ever crops to a
-      // square (the `aspect` prop is Android-only), which chopped posters. No
-      // editing → the full poster is uploaded and the card sizes to its ratio.
-      allowsEditing: false,
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // Keep the whole flyer: iOS's built-in crop editor only ever crops to a
+        // square (the `aspect` prop is Android-only), which chopped posters. No
+        // editing → the full poster is uploaded and the card sizes to its ratio.
+        allowsEditing: false,
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      updateDraft({ banner_image_url: result.assets[0].uri });
+      if (!result.canceled) {
+        updateDraft({ banner_image_url: result.assets[0].uri });
+      }
+    } catch (e) {
+      console.error('Error picking flyer:', e);
+      showAlert(t('common.error'), t('verification.common.failedToPickImageFromLibrary'));
     }
   };
 
@@ -3008,7 +3014,8 @@ export default function CreateEventFlowRefactored() {
         category={eventDraft.category}
         onUpload={() => {
           setShowFlyerLibrary(false);
-          pickImage();
+          // The picker waits for the sheet to finish sliding out or iOS drops it.
+          setTimeout(pickImage, AFTER_ALERT_MS);
         }}
       />
     </View>

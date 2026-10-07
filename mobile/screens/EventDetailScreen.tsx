@@ -68,6 +68,7 @@ import { useAppAlert } from '../components/AppAlert';
 import { EventDetailSkeleton } from '../components/Skeleton';
 import EventLineupRail from '../components/EventLineupRail';
 import SpotifyTrackCard from '../components/SpotifyTrackCard';
+import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 const { width } = Dimensions.get('window');
 const POSTER_W = width * 0.86;
 // The poster is 4:5, so its height follows from its width. The hero adds a
@@ -81,6 +82,7 @@ const HERO_BLEED = 52;
 const STARTS_IN_KEY = 'eventDetail.startsIn';
 
 export default function EventDetailScreen({ route, navigation }: any) {
+  const openAttendeeTab = useOpenAttendeeTab();
   const { eventId } = route.params;
   // Promoter attribution. Universal links open promoter share links
   // (tikem.co/events/{id}?ref=CODE) in THIS app instead of the browser, and React
@@ -1107,7 +1109,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         }}
         onViewTickets={() => {
           setSuccessQuantity(null);
-          navigation.navigate('Main', { screen: 'Tickets' });
+          openAttendeeTab('Tickets');
           requestPhonePrompt({ trigger: 'post_purchase' });
         }}
         event={event}

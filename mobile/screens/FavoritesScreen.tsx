@@ -23,11 +23,13 @@ import PosterEventCard from '../components/PosterEventCard';
 import { GridSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import { shareEvent } from '../lib/share';
+import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 
 const { width } = Dimensions.get('window');
 const FAV_COLUMN_WIDTH = (width - 32 - 12) / 2;
 
 export default function FavoritesScreen({ navigation }: any) {
+  const openAttendeeTab = useOpenAttendeeTab();
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { user } = useAuth();
@@ -198,7 +200,7 @@ export default function FavoritesScreen({ navigation }: any) {
             title={t('favorites.emptyTitle')}
             subtitle={t('favorites.emptyBody')}
             actionLabel={t('favorites.explore')}
-            onAction={() => navigation.navigate('Main', { screen: 'Discover' })}
+            onAction={() => openAttendeeTab('Discover')}
           />
         ) : (
           <View style={styles.eventsGrid}>

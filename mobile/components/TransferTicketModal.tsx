@@ -122,8 +122,14 @@ export default function TransferTicketModal({
     }
   };
 
-  const handleCopyLink = () => {
-    showAlert('Link Copied', 'Transfer link copied to clipboard');
+  // No clipboard module ships in the binary yet, so this used to claim "copied"
+  // while copying nothing. The share sheet with just the link has a real Copy.
+  const handleCopyLink = async () => {
+    try {
+      await Share.share({ message: transferLink });
+    } catch (error) {
+      console.error('Error sharing transfer link:', error);
+    }
   };
 
   const handleShare = async () => {

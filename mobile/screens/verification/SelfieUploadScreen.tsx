@@ -30,6 +30,7 @@ import {
 } from '../../lib/verification';
 import { useAppAlert } from '../../components/AppAlert';
 import { radius } from '../../theme/tokens';
+import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 
 type RouteParams = {
   SelfieUpload: {
@@ -222,11 +223,13 @@ export default function SelfieUploadScreen() {
     showAlert(t('verification.selfie.uploadTitle'), t('verification.common.chooseOption'), [
       {
         text: t('verification.selfie.buttons.takeSelfieWithCamera'),
-        onPress: () => setShowCamera(true),
+        // Wait for the alert to finish closing: iOS drops a modal or picker
+        // presented while it is still animating out.
+        onPress: () => setTimeout(() => setShowCamera(true), AFTER_ALERT_MS),
       },
       {
         text: t('verification.common.chooseFromLibrary'),
-        onPress: () => handleLibraryPick(),
+        onPress: () => setTimeout(() => handleLibraryPick(), AFTER_ALERT_MS),
       },
       { text: t('common.cancel'), style: 'cancel' },
     ]);

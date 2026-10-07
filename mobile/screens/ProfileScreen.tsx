@@ -67,6 +67,7 @@ import DeleteAccountSheet from '../components/DeleteAccountSheet';
 import PhoneLinkSheet from '../components/auth/PhoneLinkSheet';
 import InviteSummary from '../components/InviteSummary';
 import { usePhoneAuthEnabled } from '../lib/phoneAuth';
+import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -93,6 +94,7 @@ export default function ProfileScreen() {
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors);
   const navigation: any = useNavigation();
+  const openAttendeeTab = useOpenAttendeeTab();
   const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   // "Add phone number" (WhatsApp code), behind the phone-auth flag; hidden
@@ -449,7 +451,7 @@ export default function ProfileScreen() {
               key: 'attended',
               label: t('profile.eventsAttended'),
               value: accountStats.eventsAttended,
-              onPress: () => navigation.navigate('Main', { screen: 'Tickets' }),
+              onPress: () => openAttendeeTab('Tickets'),
             },
             {
               key: 'following',
@@ -562,7 +564,7 @@ export default function ProfileScreen() {
               title={t('profile.postersEmptyTitle')}
               subtitle={t('profile.postersEmptyBody')}
               actionLabel={t('profile.postersExplore')}
-              onAction={() => navigation.navigate('Main', { screen: 'Discover' })}
+              onAction={() => openAttendeeTab('Discover')}
               compact
             />
           )}

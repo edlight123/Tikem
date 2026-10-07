@@ -606,7 +606,7 @@ function StaffTabNavigator() {
 
 export default function AppNavigator() {
   const { user, loading, userProfile } = useAuth();
-  const { mode, setMode, isLoading: modeLoading } = useAppMode();
+  const { mode, setMode, takeLandingTab, isLoading: modeLoading } = useAppMode();
   const { t } = useI18n();
   // In-app sheet for the pending-payment resume prompt — the last surviving
   // native Alert after the app-wide migration. Referentially stable, so the
@@ -615,6 +615,9 @@ export default function AppNavigator() {
   const [isVerified, setIsVerified] = useState(false);
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const prevModeRef = useRef<string | null>(null);
+  // Current mode for long-lived listeners that must not re-subscribe on a switch.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // Handle notification taps (deep links / URLs).
   useEffect(() => {
@@ -750,6 +753,11 @@ export default function AppNavigator() {
           text: t('screens.payment.checkTickets'),
           onPress: async () => {
             await clearPendingPayment().catch(() => {});
+            // Tickets exists only in the attendee tabs.
+            if (modeRef.current !== 'attendee') {
+              setMode('attendee', { landingTab: 'Tickets' });
+              return;
+            }
             navigationRef.reset({
               index: 0,
               routes: [{ name: 'Main' as any, params: { screen: 'Tickets' } } as any],
@@ -819,17 +827,18 @@ export default function AppNavigator() {
     if (prevMode === null || prevMode === mode) return;
 
     const initialTab =
-      mode === 'staff'
+      takeLandingTab() ??
+      (mode === 'staff'
         ? 'Events'
         : mode === 'organizer' && canUseOrganizerMode
           ? 'Dashboard'
-          : 'Home';
+          : 'Home');
 
     navigationRef.reset({
       index: 0,
       routes: [{ name: 'Main' as any, params: { screen: initialTab } } as any],
     });
-  }, [canUseOrganizerMode, loading, mode, modeLoading, navigationRef, user]);
+  }, [canUseOrganizerMode, loading, mode, modeLoading, navigationRef, takeLandingTab, user]);
 
   if (loading || modeLoading) {
     // Normally still hidden behind the held native splash; drawn to match it

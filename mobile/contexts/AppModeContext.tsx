@@ -1,17 +1,21 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type AppMode = 'attendee' | 'organizer' | 'staff';
 
 interface AppModeContextType {
   mode: AppMode;
-  setMode: (mode: AppMode) => void;
+  /** `landingTab` picks the tab the navigator resets to (default: the mode's first tab). */
+  setMode: (mode: AppMode, opts?: { landingTab?: string }) => void;
+  /** Read-once: the navigator's mode-change reset consumes the requested landing tab. */
+  takeLandingTab: () => string | null;
   isLoading: boolean;
 }
 
 const AppModeContext = createContext<AppModeContextType>({
   mode: 'attendee',
   setMode: () => {},
+  takeLandingTab: () => null,
   isLoading: true,
 });
 
@@ -41,9 +45,17 @@ export const AppModeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const setMode = async (newMode: AppMode) => {
+  const landingTabRef = useRef<string | null>(null);
+  const takeLandingTab = useCallback(() => {
+    const tab = landingTabRef.current;
+    landingTabRef.current = null;
+    return tab;
+  }, []);
+
+  const setMode = async (newMode: AppMode, opts?: { landingTab?: string }) => {
     try {
       await AsyncStorage.setItem(MODE_STORAGE_KEY, newMode);
+      landingTabRef.current = opts?.landingTab ?? null;
       setModeState(newMode);
     } catch (error) {
       console.error('Error saving app mode:', error);
@@ -51,7 +63,7 @@ export const AppModeProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <AppModeContext.Provider value={{ mode, setMode, isLoading }}>
+    <AppModeContext.Provider value={{ mode, setMode, takeLandingTab, isLoading }}>
       {children}
     </AppModeContext.Provider>
   );

@@ -10,6 +10,7 @@ import { clearPendingPayment, setPendingPayment } from '../lib/pendingPayment'
 import { setTicketsRefreshHint } from '../lib/ticketsRefreshHint'
 import { requestPhonePrompt } from '../lib/phonePrompt'
 import { useI18n } from '../contexts/I18nContext'
+import { useAppMode } from '../contexts/AppModeContext'
 import { PaymentSkeleton } from '../components/Skeleton'
 import { useAppAlert } from '../components/AppAlert';
 import { radius } from '../theme/tokens';
@@ -366,6 +367,7 @@ export default function PaymentWebViewScreen() {
   const route = useRoute<any>()
   const { url, authToken, title, eventId } = (route.params || {}) as Params
   const { t } = useI18n()
+  const { mode, setMode } = useAppMode()
 
   // Host shown as a trust cue in the header (e.g. "tikem.co").
   const hostLabel = useMemo(() => {
@@ -429,16 +431,22 @@ export default function PaymentWebViewScreen() {
       {
         text: t('common.ok'),
         onPress: () => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Main', params: { screen: 'Tickets' } }],
-          })
+          // Tickets lives only in the attendee tabs; from organizer/staff mode
+          // switch modes and let the navigator land there.
+          if (mode === 'attendee') {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Main', params: { screen: 'Tickets' } }],
+            })
+          } else {
+            setMode('attendee', { landingTab: 'Tickets' })
+          }
           // "Add your number" (lib/phonePrompt.ts); the root host applies the policy.
           requestPhonePrompt({ trigger: 'post_purchase' })
         },
       },
     ])
-  }, [handledTerminal, navigation, t])
+  }, [handledTerminal, mode, navigation, setMode, t])
 
   const finishWithFailure = useCallback(
     (message?: string) => {
