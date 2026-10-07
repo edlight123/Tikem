@@ -17,6 +17,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import {
   Bell,
+  Pencil,
   BookOpen,
   Briefcase,
   Camera,
@@ -84,7 +85,7 @@ const AVATAR = 112;
  * a long edit form under the avatar; the form now lives on EditProfile.
  *
  * Top to bottom: the identity (big tappable avatar, name in display type,
- * location, Edit profile), the stat line, the organization card (organizers),
+ * location; edit is the header pencil or a tap on the name), the stat line, the organization card (organizers),
  * find friends, invites, the poster wall, privacy, then settings and sign out.
  * Visual direction: Stitch "Tikèm, Organizer flows (mobile)" profile concept.
  */
@@ -369,8 +370,19 @@ export default function ProfileScreen() {
         ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshAll} />}
       >
-        {/* Top-right: notifications. Settings live further down this page. */}
+        {/* Top-right: edit + notifications. Editing is occasional, so it's an
+            icon here rather than a full-width button in the hero. Settings
+            live further down this page. */}
         <View style={styles.topRow}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={openEdit}
+            accessibilityRole="button"
+            accessibilityLabel={t('profile.editProfile')}
+            hitSlop={8}
+          >
+            <Pencil size={21} color={colors.text} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconButton}
             onPress={() => navigation.navigate('Notifications', { userId: user?.uid || '' })}
@@ -410,12 +422,12 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          <View style={styles.nameRow}>
+          <TouchableOpacity style={styles.nameRow} onPress={openEdit} activeOpacity={0.7} accessibilityRole="button">
             <Text style={styles.nameText} numberOfLines={2}>
               {displayName}
             </Text>
             {verificationState === 'approved' ? <VerifiedBadge size="small" /> : null}
-          </View>
+          </TouchableOpacity>
           {verificationState === 'pending' ? (
             <StatusChip status="pending" label={t('profile.verificationPending')} />
           ) : null}
@@ -428,10 +440,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
           ) : null}
-
-          <TouchableOpacity style={styles.editButton} onPress={openEdit} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={styles.editButtonText}>{t('profile.editProfile')}</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Stats: big numerals, tiny captions, no rules between them. */}
@@ -877,7 +885,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     container: { flex: 1, backgroundColor: colors.background },
     scroll: { flex: 1 },
     scrollContent: { paddingHorizontal: 16 },
-    topRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+    topRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 4 },
     headerIconButton: { padding: 8 },
 
     hero: { alignItems: 'center', marginTop: 4 },
@@ -932,18 +940,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     locationRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
     locationText: { fontSize: 14, color: colors.textSecondary },
-    editButton: {
-      marginTop: 18,
-      alignSelf: 'stretch',
-      height: 48,
-      borderRadius: radius.button,
-      backgroundColor: T.white,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    editButtonText: { color: T.onWhite, fontSize: 15, fontWeight: '700' },
 
-    statsRow: { flexDirection: 'row', marginTop: 24, marginBottom: 8 },
+    statsRow: { flexDirection: 'row', marginTop: 20, marginBottom: 8 },
     statItem: { flex: 1, alignItems: 'center', paddingVertical: 6 },
     statValue: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
     statLabel: {
