@@ -1,0 +1,41 @@
+# EAS archives from the git root, and when this file exists it REPLACES every
+# .gitignore. Only the Expo app in mobile/ is built, so upload that alone (plus
+# the root package.json, which Expo checks for monorepo workspaces).
+/*
+!/mobile/
+!/package.json
+
+# --- mobile/.gitignore, re-applied (keep in sync) ---
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts
+mobile/.next/
+mobile/.kotlin/
+mobile/**/*.orig.*
+mobile/**/*.jks
+mobile/**/*.p8
+mobile/**/*.p12
+mobile/**/*.key
+mobile/**/*.mobileprovision
+mobile/**/*.pem
+mobile/.metro-health-check*
+mobile/**/npm-debug.*
+mobile/**/yarn-debug.*
+mobile/**/yarn-error.*
+mobile/**/.DS_Store
+mobile/.env*.local
+mobile/.env
+mobile/**/*.tsbuildinfo
+# Generated native folders: EAS runs prebuild itself.
+mobile/ios/
+mobile/android/
+mobile/**/*.ipa
+mobile/**/*.app
+mobile/**/*.aab
+mobile/**/*.apk
+
+# Docs the build never reads.
+mobile/*.md
+!mobile/README.md
