@@ -118,7 +118,7 @@ export default function OrganizerScanScreen() {
           </View>
         ) : selectedEvent ? (
           <>
-            {/* Event selector: one filled row, the poster thumb carries the color. */}
+            {/* Event selector: standalone 4:5 poster left, details right, no card fill. */}
             <View style={styles.eventRow}>
               {selectedEvent.posterUri ? (
                 <Image
@@ -264,19 +264,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: T.surface,
       paddingVertical: 8,
     },
-    // Filled selector row: no outline.
+    // Selector row: no card behind it; the poster carries the color.
     eventRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-      padding: 14,
-      borderRadius: radius.lg,
-      backgroundColor: T.surface,
+      paddingVertical: 8,
     },
     thumb: {
-      width: 52,
-      height: 52,
-      borderRadius: radius.sm,
+      width: 60,
+      aspectRatio: 4 / 5,
+      borderRadius: radius.poster,
+      overflow: 'hidden',
       backgroundColor: T.surfaceRaised,
     },
     thumbFallback: {
