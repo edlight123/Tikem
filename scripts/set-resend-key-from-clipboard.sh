@@ -2,14 +2,27 @@
 # Put the secret on the clipboard into a Vercel production env var. Never printed.
 # Run from the repo root right after clicking Copy in Resend:
 #   bash scripts/set-resend-key-from-clipboard.sh                                   # RESEND_API_KEY
-#   bash scripts/set-resend-key-from-clipboard.sh RESEND_INBOUND_API_KEY
-#   bash scripts/set-resend-key-from-clipboard.sh RESEND_INBOUND_WEBHOOK_SECRET whsec
+#   bash scripts/set-resend-key-from-clipboard.sh OTHER_VAR            # any re_ key
+#   bash scripts/set-resend-key-from-clipboard.sh OTHER_SECRET whsec   # a whsec_ secret
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VAR="${1:-RESEND_API_KEY}"
 KIND="${2:-key}"
+PATTERN='^re_[A-Za-z0-9_]{20,}$'
+[[ "$KIND" == "whsec" ]] && PATTERN='^whsec_[A-Za-z0-9+/=_]{20,}$'
+
+# Wait up to 3 minutes for the secret to land on the clipboard, so you can start
+# this first and click Copy afterwards (copying the command can't clobber the key).
 KEY="$(pbpaste | tr -d '[:space:]')"
+if [[ ! "$KEY" =~ $PATTERN ]]; then
+  echo "Waiting for you to click Copy in Resend (up to 3 minutes)..."
+  for _ in $(seq 1 180); do
+    sleep 1
+    KEY="$(pbpaste | tr -d '[:space:]')"
+    [[ "$KEY" =~ $PATTERN ]] && break
+  done
+fi
 if [[ "$KIND" == "whsec" ]]; then
   if [[ ! "$KEY" =~ ^whsec_[A-Za-z0-9+/=_]{20,}$ ]]; then
     echo "Clipboard does not hold a webhook signing secret (expected whsec_...)." >&2
