@@ -1,11 +1,58 @@
 // Email service for sending notifications
-// Using Resend API (direct fetch, no SDK) for production-ready email delivery
+// Using Resend API (direct fetch, no SDK) for production-ready email delivery.
+//
+// Templates use the shared Tikèm email kit (lib/email-kit): one premium dark layout
+// (Stitch "Tikèm POSH Dark", Oct 2026) and every message in English, French and
+// Kreyòl. Each template takes an optional `lang`; callers resolve it from the
+// recipient (see lib/email-kit/recipient.ts). Subjects live next to their template
+// in `emailSubjects` so the subject line and the body always share a language.
 import { escapeHtml } from '@/lib/html'
+import {
+  renderEmail,
+  appUrl,
+  poster,
+  title,
+  meta,
+  eyebrow,
+  serifHeading,
+  serifEyebrow,
+  p,
+  paragraphHtml,
+  strong,
+  gap,
+  button,
+  textLink,
+  rowsBlock,
+  facts,
+  metric,
+  bigFigure,
+  steps,
+  lines,
+  timeline,
+  eventRow,
+  quote,
+  linkBlock,
+  ticketStub,
+} from '@/lib/email-kit/layout'
+import { COMMON, formatMoney, pickLang, type EmailLang } from '@/lib/email-kit/i18n'
+
+export type { EmailLang } from '@/lib/email-kit/i18n'
+
+export type EmailAttachment = {
+  filename: string
+  /** Base64 content. */
+  content: string
+  contentType?: string
+  /** Set to reference the file inline as `<img src="cid:{contentId}">`. */
+  contentId?: string
+}
 
 type EmailParams = {
   to: string | null | undefined
   subject: string
   html: string
+  attachments?: EmailAttachment[]
+  replyTo?: string
 }
 
 /**
@@ -21,84 +68,6 @@ export type SendEmailResult = {
   code?: 'missing_recipient' | 'no_api_key' | 'dummy_api_key' | 'provider_error'
 }
 
-// Premium brand colors
-const BRAND = {
-  primary: '#f97316',
-  primaryDark: '#ea580c',
-  secondary: '#8b5cf6',
-  accent: '#ec4899',
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  dark: '#0f172a',
-  gray: '#64748b',
-  lightGray: '#f1f5f9',
-  white: '#ffffff',
-}
-
-// Shared email styles
-const emailStyles = {
-  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  monoFont: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-}
-
-// Premium footer component
-function getEmailFooter() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  return `
-    <tr>
-      <td style="padding: 32px 40px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border-top: 1px solid #e2e8f0;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center">
-              <div style="margin-bottom: 16px;">
-                <a href="${appUrl}" style="text-decoration: none;">
-                  <span style="font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Tikèm</span>
-                </a>
-              </div>
-              <div style="margin-bottom: 20px;">
-                <a href="${appUrl}/discover" style="display: inline-block; margin: 0 8px; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 500;">Discover</a>
-                <span style="color: #cbd5e1;">•</span>
-                <a href="${appUrl}/tickets" style="display: inline-block; margin: 0 8px; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 500;">My Tickets</a>
-                <span style="color: #cbd5e1;">•</span>
-                <a href="${appUrl}/support" style="display: inline-block; margin: 0 8px; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 500;">Help</a>
-              </div>
-              <div style="margin-bottom: 16px;">
-                <a href="https://instagram.com/tikem" style="display: inline-block; margin: 0 6px; width: 32px; height: 32px; background-color: #e2e8f0; border-radius: 8px; text-align: center; line-height: 32px; text-decoration: none; color: #64748b; font-size: 14px;">📷</a>
-                <a href="https://facebook.com/tikem" style="display: inline-block; margin: 0 6px; width: 32px; height: 32px; background-color: #e2e8f0; border-radius: 8px; text-align: center; line-height: 32px; text-decoration: none; color: #64748b; font-size: 14px;">📘</a>
-                <a href="https://twitter.com/tikem" style="display: inline-block; margin: 0 6px; width: 32px; height: 32px; background-color: #e2e8f0; border-radius: 8px; text-align: center; line-height: 32px; text-decoration: none; color: #64748b; font-size: 14px;">🐦</a>
-              </div>
-              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.6;">
-                © ${new Date().getFullYear()} Tikèm. All rights reserved.<br>
-                <a href="${appUrl}/privacy" style="color: #94a3b8; text-decoration: underline;">Privacy Policy</a> · <a href="${appUrl}/terms" style="color: #94a3b8; text-decoration: underline;">Terms of Service</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  `
-}
-
-// Premium button component
-function getButton(text: string, url: string, color: string = BRAND.primary, fullWidth: boolean = false) {
-  return `
-    <a href="${escapeHtml(url)}" style="display: inline-block; ${fullWidth ? 'width: 100%; text-align: center;' : ''} padding: 14px 28px; background: linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -15)} 100%); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px ${color}40; transition: all 0.2s;">
-      ${escapeHtml(text)}
-    </a>
-  `
-}
-
-// Helper to darken/lighten colors
-function adjustColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const amt = Math.round(2.55 * percent)
-  const R = (num >> 16) + amt
-  const G = (num >> 8 & 0x00FF) + amt
-  const B = (num & 0x0000FF) + amt
-  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)
-}
-
 /**
  * Escape text that a USER typed before it lands in an email's HTML.
  *
@@ -110,7 +79,9 @@ function adjustColor(hex: string, percent: number): string {
  */
 export { escapeHtml }
 
-export async function sendEmail({ to, subject, html }: EmailParams): Promise<SendEmailResult> {
+export const EMAIL_FROM_DEFAULT = 'Tikèm <noreply@tikem.co>'
+
+export async function sendEmail({ to, subject, html, attachments, replyTo }: EmailParams): Promise<SendEmailResult> {
   // NULL-GUARD THE RECIPIENT FIRST.
   //
   // A user document without an `email` (and a guest order whose contact resolution
@@ -153,10 +124,21 @@ export async function sendEmail({ to, subject, html }: EmailParams): Promise<Sen
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'Tikem <noreply@tikem.co>',
+        from: process.env.EMAIL_FROM || EMAIL_FROM_DEFAULT,
         to: recipient,
         subject,
         html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(attachments?.length
+          ? {
+              attachments: attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content,
+                ...(a.contentType ? { content_type: a.contentType } : {}),
+                ...(a.contentId ? { content_id: a.contentId } : {}),
+              })),
+            }
+          : {}),
       }),
     })
 
@@ -175,264 +157,341 @@ export async function sendEmail({ to, subject, html }: EmailParams): Promise<Sen
   }
 }
 
-// Email templates
+/** The inline QR attachment's content id; templates reference it as `cid:ticket-qr`. */
+export const TICKET_QR_CID = 'ticket-qr'
+
+const L = <T,>(lang: EmailLang | undefined, dict: Record<EmailLang, T>): T => dict[pickLang(lang)]
+const enc = (v: unknown) => encodeURIComponent(String(v ?? ''))
+
+// ---------------------------------------------------------------------------
+// Subjects
+// ---------------------------------------------------------------------------
+
+export const emailSubjects = {
+  ticketConfirmation: (lang: EmailLang | undefined, eventTitle: string, quantity = 1) =>
+    L(lang, {
+      en: quantity > 1 ? `Your ${quantity} tickets for ${eventTitle}` : `Your ticket for ${eventTitle}`,
+      fr: quantity > 1 ? `Vos ${quantity} billets pour ${eventTitle}` : `Votre billet pour ${eventTitle}`,
+      ht: quantity > 1 ? `${quantity} tikè ou yo pou ${eventTitle}` : `Tikè ou pou ${eventTitle}`,
+    }),
+  eventCreated: (lang: EmailLang | undefined, eventTitle: string) =>
+    L(lang, { en: `${eventTitle} is live`, fr: `${eventTitle} est en ligne`, ht: `${eventTitle} an liy` }),
+  refundRequest: (lang: EmailLang | undefined, eventTitle: string) =>
+    L(lang, {
+      en: `Refund request for ${eventTitle}`,
+      fr: `Demande de remboursement pour ${eventTitle}`,
+      ht: `Demann ranbousman pou ${eventTitle}`,
+    }),
+  refundProcessed: (lang: EmailLang | undefined, eventTitle: string, approved: boolean) =>
+    L(lang, {
+      en: approved ? `Your refund for ${eventTitle} is on its way` : `About your refund for ${eventTitle}`,
+      fr: approved ? `Votre remboursement pour ${eventTitle} est en route` : `À propos de votre remboursement pour ${eventTitle}`,
+      ht: approved ? `Ranbousman ou pou ${eventTitle} ap vini` : `Konsènan ranbousman ou pou ${eventTitle}`,
+    }),
+  waitlist: (lang: EmailLang | undefined, eventTitle: string) =>
+    L(lang, {
+      en: `Tickets are available for ${eventTitle}`,
+      fr: `Des billets sont disponibles pour ${eventTitle}`,
+      ht: `Gen tikè disponib pou ${eventTitle}`,
+    }),
+  transferRequest: (lang: EmailLang | undefined, senderName: string) =>
+    L(lang, {
+      en: `${senderName} sent you a ticket`,
+      fr: `${senderName} vous a envoyé un billet`,
+      ht: `${senderName} voye yon tikè ba ou`,
+    }),
+  transferResponse: (lang: EmailLang | undefined, eventTitle: string, accepted: boolean) =>
+    L(lang, {
+      en: accepted ? `Your ticket transfer for ${eventTitle} was accepted` : `Your ticket transfer for ${eventTitle} was declined`,
+      fr: accepted ? `Votre transfert de billet pour ${eventTitle} a été accepté` : `Votre transfert de billet pour ${eventTitle} a été refusé`,
+      ht: accepted ? `Yo aksepte tikè ou transfere pou ${eventTitle}` : `Yo refize tikè ou transfere pou ${eventTitle}`,
+    }),
+  transferCancelled: (lang: EmailLang | undefined, eventTitle: string) =>
+    L(lang, {
+      en: `Ticket transfer cancelled for ${eventTitle}`,
+      fr: `Transfert de billet annulé pour ${eventTitle}`,
+      ht: `Transfè tikè anile pou ${eventTitle}`,
+    }),
+  eventUpdate: (lang: EmailLang | undefined, eventTitle: string) =>
+    L(lang, { en: `Update: ${eventTitle}`, fr: `Mise à jour : ${eventTitle}`, ht: `Nouvèl: ${eventTitle}` }),
+  organizerReply: (lang: EmailLang | undefined, organizerName: string, eventTitle: string) =>
+    L(lang, {
+      en: `${organizerName} replied about ${eventTitle}`,
+      fr: `${organizerName} a répondu à propos de ${eventTitle}`,
+      ht: `${organizerName} reponn ou sou ${eventTitle}`,
+    }),
+  bankVerification: (lang: EmailLang | undefined, approved: boolean) =>
+    L(lang, {
+      en: approved ? 'Your bank account is verified' : 'We could not verify your bank account',
+      fr: approved ? 'Votre compte bancaire est vérifié' : "Nous n'avons pas pu vérifier votre compte bancaire",
+      ht: approved ? 'Kont labank ou verifye' : 'Nou pa t ka verifye kont labank ou',
+    }),
+}
+
+// ---------------------------------------------------------------------------
+// Buyer: ticket confirmation
+// ---------------------------------------------------------------------------
+
 export function getTicketConfirmationEmail(params: {
   attendeeName: string
   eventTitle: string
   eventDate: string
   eventVenue: string
   ticketId: string
+  /**
+   * The QR image. Pass `cid:ticket-qr` with the PNG attached (see TICKET_QR_CID):
+   * Gmail strips `data:` images, so a data URL only renders in Apple Mail.
+   */
   qrCodeDataURL?: string
   ticketTier?: string
   ticketPrice?: number
   currency?: string
+  quantity?: number
+  /** Fees and total, when known, for the receipt block. */
+  serviceFee?: number
+  total?: number
+  paidWith?: string
+  /** The event flyer (`banner_image_url`). */
+  posterUrl?: string | null
+  /** Doors time, already formatted. */
+  doorsTime?: string
   /**
-   * Where "View My Tickets" points. A GUEST has no /tickets page to log into, so
+   * Where "View my ticket" points. A GUEST has no /tickets page to log into, so
    * the caller passes their signed retrieval link instead. Omitted ⇒ the normal
    * account page, exactly as before.
    */
   ticketsUrl?: string
   /** Buyer-facing note under the button (e.g. "this link is yours — keep it"). */
   ticketsUrlNote?: string
+  walletUrl?: string
+  lang?: EmailLang
 }) {
-  const ticketCode = String(params.ticketId || '').slice(0, 12).toUpperCase()
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const ticketsUrl = params.ticketsUrl || `${appUrl}/tickets`
-  const tier = params.ticketTier || 'General Admission'
-  const price = params.ticketPrice ? `${params.currency || 'HTG'} ${params.ticketPrice.toLocaleString()}` : 'Free'
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      status: 'Confirmed',
+      holder: 'Holder',
+      ticket: 'Ticket',
+      general: 'General',
+      free: 'Free',
+      codeNote: 'Show this at the door',
+      view: 'View my ticket',
+      wallet: 'Add to Apple Wallet',
+      before: 'before you go',
+      doors: (d: string) => `Doors open at ${d}`,
+      tips: ['Turn your screen brightness up at the door', 'Your ticket is also in the Tikèm app'],
+      service: 'Service fee',
+      total: 'Total',
+      preheader: (e: string) => `Your ticket for ${e}. Show the QR code at the door.`,
+      guest: 'Guest',
+    },
+    fr: {
+      status: 'Confirmé',
+      holder: 'Titulaire',
+      ticket: 'Billet',
+      general: 'Général',
+      free: 'Gratuit',
+      codeNote: "Présentez-le à l'entrée",
+      view: 'Voir mon billet',
+      wallet: 'Ajouter à Apple Wallet',
+      before: 'avant de partir',
+      doors: (d: string) => `Ouverture des portes à ${d}`,
+      tips: ["Augmentez la luminosité de l'écran à l'entrée", "Votre billet est aussi dans l'application Tikèm"],
+      service: 'Frais de service',
+      total: 'Total',
+      preheader: (e: string) => `Votre billet pour ${e}. Présentez le QR code à l'entrée.`,
+      guest: 'Invité',
+    },
+    ht: {
+      status: 'Konfime',
+      holder: 'Pòtè',
+      ticket: 'Tikè',
+      general: 'Jeneral',
+      free: 'Gratis',
+      codeNote: 'Montre sa nan pòtay la',
+      view: 'Wè tikè m',
+      wallet: 'Mete l nan Apple Wallet',
+      before: 'anvan ou ale',
+      doors: (d: string) => `Pòtay la ouvri a ${d}`,
+      tips: ['Ogmante limyè ekran w nan pòtay la', 'Tikè w la nan app Tikèm tou'],
+      service: 'Frè sèvis',
+      total: 'Total',
+      preheader: (e: string) => `Tikè ou pou ${e}. Montre QR kòd la nan pòtay la.`,
+      guest: 'Envite',
+    },
+  })
+  const base = appUrl()
+  const qty = Math.max(1, Number(params.quantity || 1))
+  const tier = params.ticketTier || t.general
+  const code = String(params.ticketId || '').slice(0, 12).toUpperCase()
+  const ticketsUrl = params.ticketsUrl || `${base}/tickets`
+  const price = params.ticketPrice ? formatMoney(params.ticketPrice, params.currency, lang) : t.free
+  const metaLine = [params.eventDate, params.eventVenue].filter(Boolean).join(' · ')
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="color-scheme" content="light">
-        <meta name="supported-color-schemes" content="light">
-        <title>Your Tikèm Ticket</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              
-              <!-- Preheader text (hidden) -->
-              <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
-                Your ticket for ${escapeHtml(String(params.eventTitle ?? ""))} is confirmed! Show this QR code at entry.
-              </div>
-              
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Premium Header with Gradient -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%); padding: 40px 40px 100px; position: relative;">
-                      <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                          <td>
-                            <div style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Tikèm</div>
-                          </td>
-                          <td align="right">
-                            <div style="display: inline-block; padding: 8px 14px; background: rgba(255, 255, 255, 0.2); border-radius: 20px; backdrop-filter: blur(10px);">
-                              <span style="font-size: 12px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">✓ CONFIRMED</span>
-                            </div>
-                          </td>
-                        </tr>
-                      </table>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Ticket Card (overlapping header) -->
-                <tr>
-                  <td style="padding: 0 32px;">
-                    <div style="margin-top: -70px; background: #ffffff; border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; overflow: hidden;">
-                      
-                      <!-- Event Info Section -->
-                      <div style="padding: 28px 28px 20px;">
-                        <div style="font-size: 11px; font-weight: 700; color: #f97316; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px;">YOUR EVENT</div>
-                        <div style="font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${escapeHtml(String(params.eventTitle ?? ""))}</div>
-                        
-                        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                          <tr>
-                            <td style="padding: 12px 0; border-top: 1px solid #f1f5f9;">
-                              <div style="display: flex; align-items: center;">
-                                <span style="font-size: 18px; margin-right: 10px;">📅</span>
-                                <div>
-                                  <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Date & Time</div>
-                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${escapeHtml(String(params.eventDate ?? ""))}</div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 12px 0; border-top: 1px solid #f1f5f9;">
-                              <div style="display: flex; align-items: center;">
-                                <span style="font-size: 18px; margin-right: 10px;">📍</span>
-                                <div>
-                                  <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Location</div>
-                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${escapeHtml(String(params.eventVenue ?? ""))}</div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 12px 0; border-top: 1px solid #f1f5f9;">
-                              <div style="display: flex; align-items: center;">
-                                <span style="font-size: 18px; margin-right: 10px;">🎫</span>
-                                <div>
-                                  <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Ticket Type</div>
-                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${escapeHtml(tier)} · ${escapeHtml(price)}</div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        </table>
-                      </div>
-                      
-                      <!-- Dashed Divider -->
-                      <div style="position: relative; height: 24px; background: linear-gradient(90deg, #f1f5f9 50%, transparent 50%); background-size: 12px 2px; background-position: center; background-repeat: repeat-x;">
-                        <div style="position: absolute; left: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #ffffff; border-radius: 50%;"></div>
-                        <div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #ffffff; border-radius: 50%;"></div>
-                      </div>
-                      
-                      <!-- QR Code Section -->
-                      <div style="padding: 20px 28px 28px; text-align: center; background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px;">Scan at Entry</div>
-                        ${params.qrCodeDataURL ? `
-                          <div style="display: inline-block; padding: 16px; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
-                            <img src="${escapeHtml(params.qrCodeDataURL)}" alt="Ticket QR Code" style="width: 180px; height: 180px; display: block;">
-                          </div>
-                        ` : `
-                          <div style="display: inline-block; padding: 40px; background: #f1f5f9; border-radius: 16px;">
-                            <span style="font-size: 48px;">🎫</span>
-                          </div>
-                        `}
-                        <div style="margin-top: 16px; font-family: ${emailStyles.monoFont}; font-size: 16px; font-weight: 700; color: #0f172a; letter-spacing: 2px;">${escapeHtml(ticketCode)}</div>
-                        <div style="margin-top: 6px; font-size: 12px; color: #94a3b8;">Show this code if QR won't scan</div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Greeting & Tips -->
-                <tr>
-                  <td style="padding: 32px 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${escapeHtml(String(params.attendeeName ?? ""))}! 👋</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      You're all set for <strong style="color: #0f172a;">${escapeHtml(String(params.eventTitle ?? ""))}</strong>. We can't wait to see you there!
-                    </div>
-                    
-                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 14px; padding: 20px; border-left: 4px solid #f59e0b;">
-                      <div style="font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 10px;">💡 Entry Tips</div>
-                      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #78350f; line-height: 1.8;">
-                        <li>Arrive 15–30 minutes early</li>
-                        <li>Have your QR code ready (screenshot this email)</li>
-                        <li>Bring a valid ID if requested</li>
-                      </ul>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 28px;">
-                      ${getButton('View My Tickets', ticketsUrl, '#0f172a')}
-                      ${params.ticketsUrlNote ? `
-                        <div style="margin-top: 12px; font-size: 12px; color: #94a3b8; line-height: 1.6;">
-                          ${escapeHtml(params.ticketsUrlNote)}
-                        </div>
-                      ` : ''}
-                    </div>
-                  </td>
-                </tr>
+  const receiptRows: Array<{ label: string; value: string; strong?: boolean; muted?: boolean }> = []
+  if (params.ticketPrice) {
+    receiptRows.push({ label: qty > 1 ? `${tier} × ${qty}` : tier, value: formatMoney(params.ticketPrice * qty, params.currency, lang) })
+    if (params.serviceFee) receiptRows.push({ label: t.service, value: formatMoney(params.serviceFee, params.currency, lang), muted: true })
+    receiptRows.push({
+      label: t.total,
+      value: formatMoney(params.total ?? params.ticketPrice * qty + (params.serviceFee || 0), params.currency, lang),
+      strong: true,
+    })
+  }
 
-                <!-- Footer -->
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  return renderEmail({
+    lang,
+    title: params.eventTitle,
+    preheader: t.preheader(params.eventTitle),
+    status: { label: t.status, tone: 'teal' },
+    footer: 'attendee',
+    blocks: [
+      poster(params.posterUrl, params.eventTitle),
+      params.posterUrl ? gap(28) : '',
+      title(params.eventTitle),
+      metaLine ? meta(metaLine) : '',
+      gap(28),
+      ticketStub({
+        holderLabel: t.holder,
+        holder: params.attendeeName || t.guest,
+        ticketLabel: t.ticket,
+        ticket: `${tier} · ${qty}`,
+        qrSrc: params.qrCodeDataURL,
+        code,
+        codeNote: t.codeNote,
+      }),
+      gap(20),
+      button(t.view, ticketsUrl),
+      params.ticketsUrlNote ? `<div style="margin:12px 0 0;text-align:center;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#6B6B6B;">${escapeHtml(params.ticketsUrlNote)}</div>` : '',
+      params.walletUrl ? textLink(t.wallet, params.walletUrl) : '',
+      gap(40),
+      serifHeading(t.before),
+      lines([...(params.doorsTime ? [t.doors(params.doorsTime)] : []), ...t.tips]),
+      receiptRows.length ? gap(24) : '',
+      receiptRows.length ? rowsBlock(receiptRows, params.paidWith) : '',
+      !receiptRows.length ? gap(4) : '',
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Organizer: event published
+// ---------------------------------------------------------------------------
 
 export function getEventCreatedEmail(params: {
   organizerName: string
   eventTitle: string
   eventDate: string
   eventId: string
+  posterUrl?: string | null
+  venue?: string
+  /** Total capacity and lowest price, when known. */
+  capacity?: number
+  priceFrom?: number
+  currency?: string
+  eventUrl?: string
+  lang?: EmailLang
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const manageUrl = `${appUrl}/organizer/events/${encodeURIComponent(String(params.eventId))}`
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Event Published Successfully</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header with Celebration -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 64px; line-height: 1;">🎊</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Your Event is Live!</div>
-                      <div style="margin-top: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85);">Tikèm</div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
-                      Félicitations, ${escapeHtml(params.organizerName)}! 🎉
-                    </div>
-                    <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      Your event has been published and is now visible to thousands of potential attendees on Tikèm.
-                    </div>
-                    
-                    <!-- Event Card -->
-                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
-                      <div style="font-size: 11px; font-weight: 700; color: #10b981; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px;">NOW LIVE</div>
-                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${escapeHtml(params.eventTitle)}</div>
-                      <div style="display: flex; align-items: center; color: #64748b; font-size: 14px;">
-                        <span style="margin-right: 8px;">📅</span>
-                        <span>${escapeHtml(params.eventDate)}</span>
-                      </div>
-                    </div>
-                    
-                    <!-- Tips Section -->
-                    <div style="margin-top: 28px; padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 14px; border-left: 4px solid #3b82f6;">
-                      <div style="font-size: 14px; font-weight: 700; color: #1e40af; margin-bottom: 12px;">🚀 Next Steps</div>
-                      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #1e3a8a; line-height: 1.9;">
-                        <li>Share your event link on social media</li>
-                        <li>Invite your audience via email or WhatsApp</li>
-                        <li>Monitor ticket sales from your dashboard</li>
-                      </ul>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 32px;">
-                      ${getButton('Manage Your Event', manageUrl, '#0f172a')}
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      status: 'Live',
+      eyebrow: 'For organizers',
+      headline: (e: string) => `${e} is live.`,
+      tickets: 'Tickets',
+      from: 'Price from',
+      free: 'Free',
+      share: 'Share your event',
+      dashboard: 'Open dashboard',
+      sell: 'sell it out',
+      steps: [
+        'Post the link in your Instagram bio and stories',
+        'Send it to your WhatsApp groups',
+        'Give promoters their own links to see who sells',
+      ],
+      preheader: (e: string) => `${e} is published. Here is your link.`,
+    },
+    fr: {
+      status: 'En ligne',
+      eyebrow: 'Pour les organisateurs',
+      headline: (e: string) => `${e} est en ligne.`,
+      tickets: 'Billets',
+      from: 'À partir de',
+      free: 'Gratuit',
+      share: 'Partager votre événement',
+      dashboard: 'Ouvrir le tableau de bord',
+      sell: 'faites salle comble',
+      steps: [
+        'Mettez le lien dans votre bio et vos stories Instagram',
+        'Envoyez-le dans vos groupes WhatsApp',
+        'Donnez à vos promoteurs leur propre lien pour voir qui vend',
+      ],
+      preheader: (e: string) => `${e} est publié. Voici votre lien.`,
+    },
+    ht: {
+      status: 'An liy',
+      eyebrow: 'Pou òganizatè',
+      headline: (e: string) => `${e} an liy.`,
+      tickets: 'Tikè',
+      from: 'Apati',
+      free: 'Gratis',
+      share: 'Pataje evènman ou',
+      dashboard: 'Louvri tablo a',
+      sell: 'plen sal la',
+      steps: [
+        'Mete lyen an nan bio ak stories Instagram ou',
+        'Voye l nan gwoup WhatsApp ou yo',
+        'Bay pwomotè ou yo pwòp lyen pa yo pou w wè kiyès k ap vann',
+      ],
+      preheader: (e: string) => `${e} pibliye. Men lyen ou.`,
+    },
+  })
+  const base = appUrl()
+  const eventUrl = params.eventUrl || `${base}/events/${enc(params.eventId)}`
+  const manageUrl = `${base}/organizer/events/${enc(params.eventId)}`
+  const metaLine = [params.eventDate, params.venue].filter(Boolean).join(' · ')
+  const metrics = [
+    params.capacity ? metric(t.tickets, String(params.capacity)) : '',
+    params.priceFrom !== undefined
+      ? params.priceFrom > 0
+        ? metric(t.from, formatMoney(params.priceFrom, params.currency, lang).split(' ')[0], String(params.currency || 'HTG').toUpperCase())
+        : metric(t.from, t.free)
+      : '',
+  ].join('')
+  const posterBlock = params.posterUrl
+    ? metrics
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="352" valign="top">${poster(params.posterUrl, params.eventTitle, 352)}</td><td valign="top" style="padding-left:24px;">${metrics}</td></tr></table>`
+      : poster(params.posterUrl, params.eventTitle)
+    : metrics
+
+  return renderEmail({
+    lang,
+    title: params.eventTitle,
+    preheader: t.preheader(params.eventTitle),
+    status: { label: t.status, tone: 'teal' },
+    footer: 'organizer',
+    blocks: [
+      eyebrow(t.eyebrow),
+      title(t.headline(params.eventTitle)),
+      metaLine ? meta(metaLine) : '',
+      gap(28),
+      posterBlock,
+      posterBlock ? gap(24) : '',
+      linkBlock(eventUrl),
+      gap(16),
+      button(t.share, eventUrl),
+      gap(10),
+      button(t.dashboard, manageUrl, 'secondary'),
+      gap(40),
+      serifHeading(t.sell),
+      steps(t.steps),
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Organizer: a buyer asked for a refund
+// ---------------------------------------------------------------------------
 
 export function getRefundRequestEmail(params: {
   organizerName: string
@@ -441,78 +500,72 @@ export function getRefundRequestEmail(params: {
   reason: string
   ticketId: string
   amount: number
+  currency?: string
+  eventId?: string
+  lang?: EmailLang
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Refund Request</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px; text-align: center;">
-                      <div style="display: inline-block; padding: 10px 18px; background: rgba(0, 0, 0, 0.15); border-radius: 30px; margin-bottom: 16px;">
-                        <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">⚠️ ACTION REQUIRED</span>
-                      </div>
-                      <div style="font-size: 22px; font-weight: 800; color: #ffffff;">Refund Request Received</div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${escapeHtml(params.organizerName)},</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      An attendee has requested a refund for your event <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong>. Please review the details below.
-                    </div>
-                    
-                    <!-- Request Details Card -->
-                    <div style="background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
-                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Attendee</div>
-                        <div style="font-size: 16px; color: #0f172a; font-weight: 600; margin-top: 6px;">${escapeHtml(params.attendeeEmail)}</div>
-                      </div>
-                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
-                        <div style="font-size: 11px; font-weight: 700; color: #92400e; letter-spacing: 1px; text-transform: uppercase;">Refund Amount</div>
-                        <div style="font-size: 28px; color: #78350f; font-weight: 800; margin-top: 6px;">$${params.amount.toFixed(2)}</div>
-                      </div>
-                      <div style="padding: 20px;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Reason Given</div>
-                        <div style="font-size: 15px; color: #0f172a; margin-top: 6px; line-height: 1.6;">${escapeHtml(params.reason)}</div>
-                      </div>
-                    </div>
-                    
-                    <div style="font-family: ${emailStyles.monoFont}; font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
-                      Ticket ID: ${escapeHtml(params.ticketId)}
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 28px;">
-                      ${getButton('Review Request', `${appUrl}/organizer/events`, '#f59e0b')}
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      status: 'Action needed',
+      headline: 'A buyer asked for a refund',
+      body: (e: string) => `Someone with a ticket for ${e} would like their money back. Review it from your dashboard.`,
+      buyer: 'Buyer',
+      amount: 'Amount',
+      reason: 'Their reason',
+      review: 'Review the request',
+      preheader: (e: string) => `A refund request for ${e} is waiting for you.`,
+    },
+    fr: {
+      status: 'Action requise',
+      headline: 'Un acheteur demande un remboursement',
+      body: (e: string) => `Une personne ayant un billet pour ${e} souhaite être remboursée. Examinez la demande depuis votre tableau de bord.`,
+      buyer: 'Acheteur',
+      amount: 'Montant',
+      reason: 'Son motif',
+      review: 'Examiner la demande',
+      preheader: (e: string) => `Une demande de remboursement pour ${e} vous attend.`,
+    },
+    ht: {
+      status: 'Aksyon nesesè',
+      headline: 'Yon achtè mande ranbousman',
+      body: (e: string) => `Yon moun ki gen tikè pou ${e} ta renmen jwenn kòb li tounen. Gade demann lan nan tablo ou.`,
+      buyer: 'Achtè',
+      amount: 'Montan',
+      reason: 'Rezon li',
+      review: 'Gade demann lan',
+      preheader: (e: string) => `Gen yon demann ranbousman pou ${e} k ap tann ou.`,
+    },
+  })
+  const base = appUrl()
+  const reviewUrl = params.eventId ? `${base}/organizer/events/${enc(params.eventId)}` : `${base}/organizer/events`
+  return renderEmail({
+    lang,
+    title: t.headline,
+    preheader: t.preheader(params.eventTitle),
+    status: { label: t.status, tone: 'amber' },
+    footer: 'organizer',
+    blocks: [
+      title(t.headline, 34),
+      gap(14),
+      p(t.body(params.eventTitle)),
+      gap(8),
+      rowsBlock([
+        { label: t.buyer, value: params.attendeeEmail },
+        { label: t.amount, value: formatMoney(params.amount, params.currency, lang) },
+        { label: COMMON[lang].reference, value: String(params.ticketId).slice(0, 12).toUpperCase(), mono: true },
+      ]),
+      params.reason ? gap(14) : '',
+      params.reason ? quote(t.reason, params.reason) : '',
+      gap(24),
+      button(t.review, reviewUrl),
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Buyer: refund decided
+// ---------------------------------------------------------------------------
 
 export function getRefundProcessedEmail(params: {
   attendeeName: string
@@ -520,173 +573,200 @@ export function getRefundProcessedEmail(params: {
   status: 'approved' | 'denied'
   refundAmount: number
   ticketId: string
+  currency?: string
+  /** "MonCash", "card", … where the money goes back to. */
+  method?: string
+  posterUrl?: string | null
+  eventSub?: string
+  serviceFee?: number
+  lang?: EmailLang
 }) {
-  const isApproved = params.status === 'approved'
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Refund ${isApproved ? 'Approved' : 'Update'}</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: ${isApproved ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #64748b 0%, #475569 100%)'}; padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 56px; line-height: 1;">${isApproved ? '✅' : '📋'}</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">
-                        Refund ${isApproved ? 'Approved' : 'Denied'}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${escapeHtml(params.attendeeName)},</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      Your refund request for <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong> has been reviewed.
-                    </div>
-                    
-                    ${isApproved ? `
-                      <!-- Approved Amount Card -->
-                      <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 16px; padding: 28px; text-align: center; border: 1px solid #a7f3d0;">
-                        <div style="font-size: 11px; font-weight: 700; color: #059669; letter-spacing: 1.2px; text-transform: uppercase;">Refund Amount</div>
-                        <div style="font-size: 42px; font-weight: 800; color: #047857; margin-top: 8px;">$${params.refundAmount.toFixed(2)}</div>
-                        <div style="font-size: 13px; color: #10b981; margin-top: 8px;">Processing to your original payment method</div>
-                      </div>
-                      
-                      <div style="margin-top: 24px; padding: 20px; background: #f8fafc; border-radius: 14px;">
-                        <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 10px;">⏱️ What happens next?</div>
-                        <div style="font-size: 14px; color: #64748b; line-height: 1.8;">
-                          Your refund will appear on your statement within <strong>5-10 business days</strong>, depending on your bank or payment provider.
-                        </div>
-                        <div style="font-size: 13px; color: #64748b; line-height: 1.6; margin-top: 8px;">
-                          Service fee is non-refundable unless the event is cancelled.
-                        </div>
-                      </div>
-                    ` : `
-                      <!-- Denied Card -->
-                      <div style="background: #f8fafc; border-radius: 16px; padding: 24px; border-left: 4px solid #64748b;">
-                        <div style="font-size: 15px; color: #475569; line-height: 1.7;">
-                          Unfortunately, the organizer was unable to approve your refund request for this event. 
-                          If you have questions, please contact the organizer directly.
-                        </div>
-                      </div>
-                      
-                      <div style="text-align: center; margin-top: 28px;">
-                        ${getButton('Browse Other Events', appUrl, '#0f172a')}
-                      </div>
-                    `}
-                    
-                    <div style="font-family: ${emailStyles.monoFont}; font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
-                      Reference: ${escapeHtml(params.ticketId)}
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const approved = params.status === 'approved'
+  const t = L(lang, {
+    en: {
+      approvedEyebrow: 'Refund approved',
+      deniedEyebrow: 'Refund not approved',
+      backTo: (m: string) => `back to your ${m}`,
+      originalMethod: 'original payment method',
+      steps: [
+        { label: 'Approved', detail: 'Today' },
+        { label: 'Sent back', detail: 'within 24 hours' },
+        { label: 'In your account', detail: '5 to 10 business days', moncash: '1 to 3 days' },
+      ],
+      fee: 'Service fee (not refunded)',
+      refund: 'Refund',
+      ticket: 'Ticket',
+      deniedHead: 'Your refund was not approved',
+      deniedBody: (e: string) => `The organizer of ${e} reviewed your request and could not approve it. Your ticket is still valid.`,
+      questions: 'Questions? Write to the organizer from the event page.',
+      preheaderOk: (a: string) => `${a} is on its way back to you.`,
+      preheaderNo: (e: string) => `An update on your refund request for ${e}.`,
+    },
+    fr: {
+      approvedEyebrow: 'Remboursement approuvé',
+      deniedEyebrow: 'Remboursement refusé',
+      backTo: (m: string) => `retour sur votre ${m}`,
+      originalMethod: 'moyen de paiement initial',
+      steps: [
+        { label: 'Approuvé', detail: "Aujourd'hui" },
+        { label: 'Renvoyé', detail: 'sous 24 heures' },
+        { label: 'Sur votre compte', detail: '5 à 10 jours ouvrés', moncash: '1 à 3 jours' },
+      ],
+      fee: 'Frais de service (non remboursés)',
+      refund: 'Remboursement',
+      ticket: 'Billet',
+      deniedHead: "Votre remboursement n'a pas été approuvé",
+      deniedBody: (e: string) => `L'organisateur de ${e} a examiné votre demande et n'a pas pu l'approuver. Votre billet reste valable.`,
+      questions: "Des questions ? Écrivez à l'organisateur depuis la page de l'événement.",
+      preheaderOk: (a: string) => `${a} est en route vers vous.`,
+      preheaderNo: (e: string) => `Une mise à jour sur votre demande de remboursement pour ${e}.`,
+    },
+    ht: {
+      approvedEyebrow: 'Ranbousman apwouve',
+      deniedEyebrow: 'Ranbousman pa apwouve',
+      backTo: (m: string) => `ap tounen sou ${m} ou`,
+      originalMethod: 'mwayen peman ou te itilize a',
+      steps: [
+        { label: 'Apwouve', detail: 'Jodi a' },
+        { label: 'Voye tounen', detail: 'nan 24 èdtan' },
+        { label: 'Sou kont ou', detail: '5 a 10 jou ouvrab', moncash: '1 a 3 jou' },
+      ],
+      fee: 'Frè sèvis (pa ranbouse)',
+      refund: 'Ranbousman',
+      ticket: 'Tikè',
+      deniedHead: 'Yo pa t apwouve ranbousman ou',
+      deniedBody: (e: string) => `Òganizatè ${e} gade demann ou a, men li pa t ka apwouve l. Tikè ou toujou valab.`,
+      questions: 'Ou gen kesyon? Ekri òganizatè a sou paj evènman an.',
+      preheaderOk: (a: string) => `${a} ap tounen ba ou.`,
+      preheaderNo: (e: string) => `Nouvèl sou demann ranbousman ou pou ${e}.`,
+    },
+  })
+  const base = appUrl()
+  const amount = formatMoney(params.refundAmount, params.currency, lang)
+  const [num, cur] = [amount.slice(0, amount.lastIndexOf(' ')), amount.slice(amount.lastIndexOf(' ') + 1)]
+
+  if (!approved) {
+    return renderEmail({
+      lang,
+      title: t.deniedHead,
+      preheader: t.preheaderNo(params.eventTitle),
+      footer: 'attendee',
+      blocks: [
+        eyebrow(t.deniedEyebrow, 'grey'),
+        title(t.deniedHead, 34),
+        gap(14),
+        p(t.deniedBody(params.eventTitle)),
+        gap(8),
+        eventRow(params.posterUrl, params.eventTitle, params.eventSub),
+        gap(24),
+        rowsBlock([{ label: COMMON[lang].reference, value: String(params.ticketId).slice(0, 12).toUpperCase(), mono: true }]),
+        gap(20),
+        p(t.questions),
+        gap(4),
+        button(COMMON[lang].findEvents, `${base}/discover`, 'secondary'),
+      ],
+    })
+  }
+
+  const rows: Array<{ label: string; value: string; strong?: boolean; mono?: boolean; muted?: boolean }> = []
+  if (params.serviceFee) {
+    rows.push({ label: t.ticket, value: amount })
+    rows.push({ label: t.fee, value: formatMoney(params.serviceFee, params.currency, lang), muted: true })
+  }
+  rows.push({ label: t.refund, value: amount, strong: true })
+  rows.push({ label: COMMON[lang].reference, value: String(params.ticketId).slice(0, 12).toUpperCase(), mono: true })
+
+  return renderEmail({
+    lang,
+    title: t.approvedEyebrow,
+    preheader: t.preheaderOk(amount),
+    footer: 'attendee',
+    blocks: [
+      eyebrow(t.approvedEyebrow, 'teal'),
+      bigFigure(num, cur, t.backTo(params.method || t.originalMethod)),
+      gap(32),
+      eventRow(params.posterUrl, params.eventTitle, params.eventSub),
+      gap(28),
+      timeline(
+        t.steps.map((s: { label: string; detail: string; moncash?: string }, i) => ({
+          label: s.label,
+          detail: s.moncash && /moncash/i.test(String(params.method || '')) ? s.moncash : s.detail,
+          done: i === 0,
+        }))
+      ),
+      gap(24),
+      rowsBlock(rows),
+      gap(20),
+      p(t.questions),
+      gap(4),
+      button(COMMON[lang].findEvents, `${base}/discover`, 'secondary'),
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Waitlist: tickets freed up
+// ---------------------------------------------------------------------------
 
 export function getWaitlistNotificationEmail(params: {
   eventTitle: string
   eventDate: string
   quantity: number
   eventId: string
+  posterUrl?: string | null
+  venue?: string
+  lang?: EmailLang
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const eventUrl = `${appUrl}/events/${encodeURIComponent(String(params.eventId))}`
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tickets Now Available!</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Exciting Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #4f46e5 100%); padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 56px; line-height: 1;">🎟️</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">Tickets Available!</div>
-                      <div style="margin-top: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85);">You're off the waitlist</div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 12px; text-align: center;">
-                      Great News! 🎉
-                    </div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px; text-align: center;">
-                      Tickets are now available for the event you were waiting for!
-                    </div>
-                    
-                    <!-- Event Card -->
-                    <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 16px; padding: 24px; border: 1px solid #e9d5ff;">
-                      <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px;">🔥 HOT EVENT</div>
-                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${escapeHtml(params.eventTitle)}</div>
-                      <div style="padding-top: 16px; border-top: 1px solid #e9d5ff;">
-                        <div style="display: flex; align-items: center; color: #7c3aed; font-size: 14px; font-weight: 600;">
-                          <span style="margin-right: 8px;">📅</span>
-                          <span>${new Date(params.eventDate).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Urgency Notice -->
-                    <div style="margin-top: 24px; padding: 16px 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; text-align: center;">
-                      <div style="font-size: 14px; color: #92400e;">
-                        ⏰ <strong>Don't wait!</strong> You requested <strong>${escapeHtml(params.quantity)}</strong> ticket${params.quantity > 1 ? 's' : ''} - grab ${params.quantity > 1 ? 'them' : 'it'} before ${params.quantity > 1 ? "they're" : "it's"} gone!
-                      </div>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 28px;">
-                      ${getButton('Get My Tickets Now', eventUrl, '#8b5cf6')}
-                    </div>
-                    
-                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
-                      Tickets are available on a first-come, first-served basis.
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      status: 'Available',
+      eyebrow: "you're in luck",
+      body: (q: number) => `Tickets just opened up for the event you were waiting for. You asked for ${q}. They go to whoever buys first.`,
+      cta: 'Get my tickets',
+      preheader: (e: string) => `Tickets just opened up for ${e}.`,
+    },
+    fr: {
+      status: 'Disponible',
+      eyebrow: 'bonne nouvelle',
+      body: (q: number) => `Des billets viennent de se libérer pour l'événement que vous attendiez. Vous en vouliez ${q}. Premier arrivé, premier servi.`,
+      cta: 'Prendre mes billets',
+      preheader: (e: string) => `Des billets viennent de se libérer pour ${e}.`,
+    },
+    ht: {
+      status: 'Disponib',
+      eyebrow: 'bon nouvèl',
+      body: (q: number) => `Gen tikè ki sot libere pou evènman ou t ap tann lan. Ou te mande ${q}. Se moun ki achte an premye ki pran yo.`,
+      cta: 'Pran tikè m yo',
+      preheader: (e: string) => `Gen tikè ki sot libere pou ${e}.`,
+    },
+  })
+  const eventUrl = `${appUrl()}/events/${enc(params.eventId)}`
+  const metaLine = [params.eventDate, params.venue].filter(Boolean).join(' · ')
+  return renderEmail({
+    lang,
+    title: params.eventTitle,
+    preheader: t.preheader(params.eventTitle),
+    status: { label: t.status, tone: 'teal' },
+    footer: 'attendee',
+    blocks: [
+      poster(params.posterUrl, params.eventTitle),
+      params.posterUrl ? gap(28) : '',
+      serifEyebrow(t.eyebrow),
+      title(params.eventTitle),
+      metaLine ? meta(metaLine) : '',
+      gap(20),
+      p(t.body(Math.max(1, Number(params.quantity || 1)))),
+      gap(8),
+      button(t.cta, eventUrl),
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Transfers
+// ---------------------------------------------------------------------------
 
 export function getTicketTransferRequestEmail(params: {
   senderName: string
@@ -696,96 +776,62 @@ export function getTicketTransferRequestEmail(params: {
   message: string
   transferToken: string
   expiresAt: string
+  posterUrl?: string | null
+  lang?: EmailLang
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const acceptUrl = `${appUrl}/tickets/transfer/${encodeURIComponent(String(params.transferToken))}`
-  const declineUrl = `${appUrl}/tickets/transfer/${encodeURIComponent(String(params.transferToken))}?action=reject`
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Someone Sent You a Ticket!</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%); padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 56px; line-height: 1;">🎁</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">You've Received a Ticket!</div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      <strong style="color: #0f172a;">${escapeHtml(params.senderName)}</strong> wants to send you a ticket for an upcoming event!
-                    </div>
-                    
-                    ${params.message ? `
-                      <!-- Personal Message -->
-                      <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 16px 20px; margin-bottom: 24px; border-radius: 0 12px 12px 0;">
-                        <div style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Message from ${escapeHtml(params.senderName)}</div>
-                        <div style="font-size: 15px; color: #0f172a; font-style: italic; line-height: 1.6;">"${escapeHtml(params.message)}"</div>
-                      </div>
-                    ` : ''}
-                    
-                    <!-- Event Card -->
-                    <div style="background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
-                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
-                        <div style="font-size: 11px; font-weight: 700; color: #3b82f6; letter-spacing: 1px; text-transform: uppercase;">Event</div>
-                        <div style="font-size: 18px; color: #0f172a; font-weight: 800; margin-top: 6px;">${escapeHtml(params.eventTitle)}</div>
-                      </div>
-                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">When</div>
-                        <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 6px;">${new Date(params.eventDate).toLocaleString()}</div>
-                      </div>
-                      <div style="padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);">
-                        <div style="font-size: 11px; font-weight: 700; color: #dc2626; letter-spacing: 1px; text-transform: uppercase;">⏰ Expires</div>
-                        <div style="font-size: 14px; color: #b91c1c; font-weight: 600; margin-top: 6px;">${new Date(params.expiresAt).toLocaleString()}</div>
-                      </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div style="text-align: center; margin-top: 32px;">
-                      <table role="presentation" style="display: inline-block;">
-                        <tr>
-                          <td style="padding-right: 12px;">
-                            ${getButton('Accept Ticket', acceptUrl, '#10b981')}
-                          </td>
-                          <td>
-                            <a href="${escapeHtml(declineUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f1f5f9; color: #475569; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
-                              Decline
-                            </a>
-                          </td>
-                        </tr>
-                      </table>
-                    </div>
-                    
-                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
-                      This transfer will expire automatically if not accepted within 7 days.
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      eyebrow: 'A ticket for you',
+      headline: (s: string) => `${s} sent you a ticket`,
+      note: 'Their note',
+      accept: 'Accept the ticket',
+      decline: 'Decline',
+      expires: (d: string) => `If you don't accept it by ${d}, the ticket stays with ${'{s}'}.`,
+      preheader: (s: string, e: string) => `${s} wants to give you a ticket for ${e}.`,
+    },
+    fr: {
+      eyebrow: 'Un billet pour vous',
+      headline: (s: string) => `${s} vous a envoyé un billet`,
+      note: 'Son message',
+      accept: 'Accepter le billet',
+      decline: 'Refuser',
+      expires: (d: string) => `Sans réponse avant le ${d}, le billet reste à ${'{s}'}.`,
+      preheader: (s: string, e: string) => `${s} veut vous donner un billet pour ${e}.`,
+    },
+    ht: {
+      eyebrow: 'Yon tikè pou ou',
+      headline: (s: string) => `${s} voye yon tikè ba ou`,
+      note: 'Mesaj li',
+      accept: 'Aksepte tikè a',
+      decline: 'Refize',
+      expires: (d: string) => `Si ou pa aksepte l anvan ${d}, tikè a rete pou ${'{s}'}.`,
+      preheader: (s: string, e: string) => `${s} vle ba ou yon tikè pou ${e}.`,
+    },
+  })
+  const base = appUrl()
+  const acceptUrl = `${base}/tickets/transfer/${enc(params.transferToken)}`
+  const declineUrl = `${base}/tickets/transfer/${enc(params.transferToken)}?action=reject`
+  return renderEmail({
+    lang,
+    title: t.headline(params.senderName),
+    preheader: t.preheader(params.senderName, params.eventTitle),
+    footer: 'attendee',
+    blocks: [
+      eyebrow(t.eyebrow, 'teal'),
+      title(t.headline(params.senderName), 34),
+      gap(24),
+      eventRow(params.posterUrl, params.eventTitle, params.eventDate),
+      params.message ? gap(20) : '',
+      params.message ? quote(t.note, params.message) : '',
+      gap(24),
+      button(t.accept, acceptUrl),
+      gap(10),
+      button(t.decline, declineUrl, 'secondary'),
+      gap(16),
+      p(t.expires(params.expiresAt).replace('{s}', params.senderName), '#6B6B6B'),
+    ],
+  })
 }
 
 export function getTicketTransferResponseEmail(params: {
@@ -793,129 +839,94 @@ export function getTicketTransferResponseEmail(params: {
   eventTitle: string
   action: 'accepted' | 'rejected'
   ticketId: string
+  lang?: EmailLang
 }) {
-  const isAccepted = params.action === 'accepted'
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Transfer ${isAccepted ? 'Accepted' : 'Declined'}</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: ${isAccepted ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #64748b 0%, #475569 100%)'}; padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 56px; line-height: 1;">${isAccepted ? '🎉' : '↩️'}</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">
-                        Transfer ${isAccepted ? 'Successful!' : 'Declined'}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Transfer Update</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      <strong style="color: #0f172a;">${escapeHtml(params.recipientName)}</strong> has ${isAccepted ? 'accepted' : 'declined'} your ticket transfer for <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong>.
-                    </div>
-                    
-                    ${isAccepted ? `
-                      <!-- Success Message -->
-                      <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid #a7f3d0;">
-                        <div style="font-size: 14px; color: #065f46; line-height: 1.7;">
-                          ✅ The ticket has been successfully transferred.<br>
-                          The new owner will receive their own ticket confirmation.
-                        </div>
-                      </div>
-                    ` : `
-                      <!-- Ticket Still Yours -->
-                      <div style="background: #f8fafc; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 14px; color: #475569; line-height: 1.7; margin-bottom: 20px;">
-                          Your ticket is still yours. You can try transferring it to someone else or keep it for yourself!
-                        </div>
-                        <div style="text-align: center;">
-                          ${getButton('View My Ticket', `${appUrl}/tickets/${encodeURIComponent(String(params.ticketId))}`, '#f97316')}
-                        </div>
-                      </div>
-                    `}
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const accepted = params.action === 'accepted'
+  const t = L(lang, {
+    en: {
+      okEyebrow: 'Transfer complete',
+      noEyebrow: 'Transfer declined',
+      ok: (r: string, e: string) => `${r} accepted your ticket for ${e}. It is in their account now, with its own QR code.`,
+      no: (r: string, e: string) => `${r} declined your ticket for ${e}. It is still yours, so you can keep it or send it to someone else.`,
+      view: 'View my ticket',
+    },
+    fr: {
+      okEyebrow: 'Transfert terminé',
+      noEyebrow: 'Transfert refusé',
+      ok: (r: string, e: string) => `${r} a accepté votre billet pour ${e}. Il est maintenant sur son compte, avec son propre QR code.`,
+      no: (r: string, e: string) => `${r} a refusé votre billet pour ${e}. Il est toujours à vous : gardez-le ou envoyez-le à quelqu'un d'autre.`,
+      view: 'Voir mon billet',
+    },
+    ht: {
+      okEyebrow: 'Transfè fini',
+      noEyebrow: 'Transfè refize',
+      ok: (r: string, e: string) => `${r} aksepte tikè ou pou ${e}. Li sou kont li kounye a, ak pwòp QR kòd pa l.`,
+      no: (r: string, e: string) => `${r} refize tikè ou pou ${e}. Li toujou pou ou: kenbe l oswa voye l bay yon lòt moun.`,
+      view: 'Wè tikè m',
+    },
+  })
+  return renderEmail({
+    lang,
+    title: accepted ? t.okEyebrow : t.noEyebrow,
+    preheader: accepted ? t.ok(params.recipientName, params.eventTitle) : t.no(params.recipientName, params.eventTitle),
+    footer: 'attendee',
+    blocks: [
+      eyebrow(accepted ? t.okEyebrow : t.noEyebrow, accepted ? 'teal' : 'grey'),
+      title(params.eventTitle, 34),
+      gap(14),
+      p(accepted ? t.ok(params.recipientName, params.eventTitle) : t.no(params.recipientName, params.eventTitle)),
+      accepted ? '' : gap(8),
+      accepted ? '' : button(t.view, `${appUrl()}/tickets/${enc(params.ticketId)}`),
+    ],
+  })
 }
 
 export function getTicketTransferCancelledEmail(params: {
   eventTitle: string
   senderName: string
+  eventId?: string
+  lang?: EmailLang
 }) {
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Transfer Cancelled</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #64748b 0%, #475569 100%); padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 48px; line-height: 1;">🚫</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">Transfer Cancelled</div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Transfer Withdrawn</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      <strong style="color: #0f172a;">${escapeHtml(params.senderName)}</strong> has cancelled the ticket transfer for <strong style="color: #0f172a;">${escapeHtml(params.eventTitle)}</strong>.
-                    </div>
-                    
-                    <div style="background: #f8fafc; border-radius: 14px; padding: 20px; text-align: center;">
-                      <div style="font-size: 14px; color: #64748b;">
-                        No action is needed on your part. If you're still interested in attending this event, you can purchase tickets directly.
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      eyebrow: 'Transfer cancelled',
+      body: (s: string, e: string) => `${s} cancelled the ticket they were sending you for ${e}. You don't need to do anything.`,
+      still: 'Still want to go? Tickets may be available on the event page.',
+    },
+    fr: {
+      eyebrow: 'Transfert annulé',
+      body: (s: string, e: string) => `${s} a annulé le billet qu'il vous envoyait pour ${e}. Vous n'avez rien à faire.`,
+      still: "Vous voulez toujours y aller ? Des billets sont peut-être disponibles sur la page de l'événement.",
+    },
+    ht: {
+      eyebrow: 'Transfè anile',
+      body: (s: string, e: string) => `${s} anile tikè li t ap voye ba ou pou ${e}. Ou pa bezwen fè anyen.`,
+      still: 'Ou toujou vle ale? Ka gen tikè sou paj evènman an.',
+    },
+  })
+  const base = appUrl()
+  return renderEmail({
+    lang,
+    title: t.eyebrow,
+    preheader: t.body(params.senderName, params.eventTitle),
+    footer: 'attendee',
+    blocks: [
+      eyebrow(t.eyebrow, 'grey'),
+      title(params.eventTitle, 34),
+      gap(14),
+      p(t.body(params.senderName, params.eventTitle)),
+      p(t.still),
+      gap(4),
+      button(COMMON[lang].viewEvent, params.eventId ? `${base}/events/${enc(params.eventId)}` : `${base}/discover`, 'secondary'),
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Organizer → ticket holders: update / reply
+// ---------------------------------------------------------------------------
 
 export function getEventUpdateEmail(params: {
   attendeeName: string
@@ -923,80 +934,36 @@ export function getEventUpdateEmail(params: {
   updateTitle: string
   updateMessage: string
   eventId: string
+  posterUrl?: string | null
+  organizerName?: string
+  lang?: EmailLang
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const eventUrl = `${appUrl}/events/${encodeURIComponent(String(params.eventId))}`
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Event Update - ${escapeHtml(params.eventTitle)}</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 40px; text-align: center;">
-                      <div style="display: inline-block; padding: 10px 18px; background: rgba(0, 0, 0, 0.15); border-radius: 30px; margin-bottom: 16px;">
-                        <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">📢 EVENT UPDATE</span>
-                      </div>
-                      <div style="font-size: 20px; font-weight: 800; color: #ffffff;">${escapeHtml(params.eventTitle)}</div>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Hi ${escapeHtml(params.attendeeName)}! 👋</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      The organizer has posted an important update about your event.
-                    </div>
-                    
-                    <!-- Update Card -->
-                    <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-radius: 16px; padding: 24px; border-left: 4px solid #f59e0b;">
-                      <div style="font-size: 18px; font-weight: 800; color: #78350f; margin-bottom: 12px;">${escapeHtml(params.updateTitle)}</div>
-                      <div style="font-size: 15px; color: #92400e; line-height: 1.8; white-space: pre-line;">${escapeHtml(params.updateMessage)}</div>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 32px;">
-                      ${getButton('View Event Details', eventUrl, '#0f172a')}
-                    </div>
-                    
-                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
-                      This update was sent by the event organizer to all ticket holders.
-                    </div>
-                  </td>
-                </tr>
-                
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: { status: 'Update', from: (o: string) => `from ${o}`, generic: 'from the organizer', why: 'Sent by the organizer to everyone with a ticket.' },
+    fr: { status: 'Nouvelles', from: (o: string) => `de ${o}`, generic: "de l'organisateur", why: "Envoyé par l'organisateur à toutes les personnes ayant un billet." },
+    ht: { status: 'Nouvèl', from: (o: string) => `soti nan ${o}`, generic: 'soti nan òganizatè a', why: 'Òganizatè a voye sa bay tout moun ki gen tikè.' },
+  })
+  return renderEmail({
+    lang,
+    title: params.updateTitle,
+    preheader: `${params.eventTitle}: ${params.updateTitle}`,
+    status: { label: t.status, tone: 'amber' },
+    footer: 'attendee',
+    blocks: [
+      eventRow(params.posterUrl, params.eventTitle, params.organizerName ? t.from(params.organizerName) : t.generic),
+      gap(28),
+      title(params.updateTitle, 34),
+      gap(16),
+      `<div style="font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.7;color:#E5E5E5;white-space:pre-wrap;">${escapeHtml(params.updateMessage)}</div>`,
+      gap(28),
+      button(COMMON[lang].viewEvent, `${appUrl()}/events/${enc(params.eventId)}`),
+      gap(14),
+      p(t.why, '#6B6B6B'),
+    ],
+  })
 }
 
-/**
- * The organizer answered an attendee's question about an event.
- *
- * The reply text is the point of this email — someone asked "is this real?" and
- * this is the answer, so it is quoted in full rather than teased with a "you
- * have a new message" stub that forces a round trip.
- *
- * `to` is resolved server-side from the thread's sender_id. It is never taken
- * from a request body: the organizer types the words, never the address.
- */
 export function getOrganizerReplyEmail(params: {
   attendeeName: string
   organizerName: string
@@ -1004,156 +971,105 @@ export function getOrganizerReplyEmail(params: {
   eventId: string
   question: string
   reply: string
+  lang?: EmailLang
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const eventUrl = `${appUrl}/events/${encodeURIComponent(String(params.eventId))}`
-
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${escapeHtml(params.organizerName)} replied - ${escapeHtml(params.eventTitle)}</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); padding: 40px; text-align: center;">
-                      <div style="display: inline-block; padding: 10px 18px; background: rgba(0, 0, 0, 0.15); border-radius: 30px; margin-bottom: 16px;">
-                        <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">💬 THE ORGANIZER REPLIED</span>
-                      </div>
-                      <div style="font-size: 20px; font-weight: 800; color: #ffffff;">${escapeHtml(params.eventTitle)}</div>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Hi ${escapeHtml(params.attendeeName)} 👋</div>
-                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      ${escapeHtml(params.organizerName)} answered the question you sent about this event.
-                    </div>
-
-                    <!-- Your question -->
-                    <div style="border-left: 3px solid #e2e8f0; padding: 4px 0 4px 16px; margin-bottom: 24px;">
-                      <div style="font-size: 12px; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; margin-bottom: 6px;">YOU ASKED</div>
-                      <div style="font-size: 14px; color: #64748b; line-height: 1.7; white-space: pre-line;">${escapeHtml(params.question)}</div>
-                    </div>
-
-                    <!-- The reply -->
-                    <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-radius: 16px; padding: 24px; border-left: 4px solid #14b8a6;">
-                      <div style="font-size: 12px; font-weight: 700; color: #0f766e; letter-spacing: 0.5px; margin-bottom: 10px;">${escapeHtml(String(params.organizerName ?? "").toUpperCase())} REPLIED</div>
-                      <div style="font-size: 15px; color: #134e4a; line-height: 1.8; white-space: pre-line;">${escapeHtml(params.reply)}</div>
-                    </div>
-
-                    <div style="text-align: center; margin-top: 32px;">
-                      ${getButton('View the event', eventUrl, '#0f172a')}
-                    </div>
-
-                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
-                      Reply to this organizer from the event page. Your email address stays private.
-                    </div>
-                  </td>
-                </tr>
-
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: { eyebrow: 'The organizer replied', asked: 'You asked', replied: (o: string) => `${o} replied`, private: 'Reply from the event page. Your email address stays private.' },
+    fr: { eyebrow: "L'organisateur a répondu", asked: 'Votre question', replied: (o: string) => `Réponse de ${o}`, private: "Répondez depuis la page de l'événement. Votre adresse e-mail reste privée." },
+    ht: { eyebrow: 'Òganizatè a reponn', asked: 'Kesyon ou', replied: (o: string) => `${o} reponn`, private: 'Reponn sou paj evènman an. Adrès imèl ou rete prive.' },
+  })
+  return renderEmail({
+    lang,
+    title: params.eventTitle,
+    preheader: params.reply.slice(0, 120),
+    footer: 'attendee',
+    blocks: [
+      eyebrow(t.eyebrow, 'teal'),
+      title(params.eventTitle, 34),
+      gap(24),
+      quote(t.asked, params.question),
+      gap(12),
+      quote(t.replied(params.organizerName), params.reply),
+      gap(24),
+      button(COMMON[lang].viewEvent, `${appUrl()}/events/${enc(params.eventId)}`),
+      gap(14),
+      p(t.private, '#6B6B6B'),
+    ],
+  })
 }
+
+// ---------------------------------------------------------------------------
+// Organizer: bank verification
+// ---------------------------------------------------------------------------
 
 export function getBankVerificationDecisionEmail(params: {
   organizerName: string
   decision: 'approve' | 'reject'
   reason?: string
+  lang?: EmailLang
 }) {
-  const isApproved = params.decision === 'approve'
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const payoutUrl = `${appUrl}/organizer/payout-settings`
-
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Bank Verification ${isApproved ? 'Approved' : 'Update'}</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, ${isApproved ? '#10b981 0%, #059669 50%, #047857 100%' : '#ef4444 0%, #dc2626 50%, #b91c1c 100%'}); padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 64px; line-height: 1;">${isApproved ? '✅' : '⚠️'}</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                        Bank Account ${isApproved ? 'Verified' : 'Verification Update'}
-                      </div>
-                      <div style="margin-top: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85);">Tikèm</div>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
-                      Hi ${escapeHtml(params.organizerName)},
-                    </div>
-                    ${isApproved ? `
-                    <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      Great news! Your bank account has been verified. You can now receive payouts directly to your bank account for tickets sold on Tikèm.
-                    </div>
-                    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 14px; padding: 20px; border-left: 4px solid #10b981; margin-bottom: 28px;">
-                      <div style="font-size: 14px; font-weight: 700; color: #166534; margin-bottom: 8px;">✓ What this means for you</div>
-                      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #15803d; line-height: 1.9;">
-                        <li>Payouts will be processed to your verified bank account</li>
-                        <li>Funds settle within 2–5 business days after withdrawal</li>
-                        <li>You can request a payout from your organizer dashboard</li>
-                      </ul>
-                    </div>
-                    <div style="text-align: center;">
-                      ${getButton('Go to Payout Settings', payoutUrl, '#10b981')}
-                    </div>
-                    ` : `
-                    <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      We were unable to verify your bank account at this time. Please review the details below and resubmit your verification.
-                    </div>
-                    ${params.reason ? `
-                    <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 14px; padding: 20px; border-left: 4px solid #ef4444; margin-bottom: 28px;">
-                      <div style="font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 8px;">Reason</div>
-                      <div style="font-size: 14px; color: #b91c1c;">${escapeHtml(params.reason)}</div>
-                    </div>
-                    ` : ''}
-                    <div style="text-align: center;">
-                      ${getButton('Resubmit Verification', payoutUrl, '#ef4444')}
-                    </div>
-                    `}
-                  </td>
-                </tr>
-
-                ${getEmailFooter()}
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  const lang = pickLang(params.lang)
+  const ok = params.decision === 'approve'
+  const t = L(lang, {
+    en: {
+      okEyebrow: 'Verified',
+      okHead: 'Your bank account is verified',
+      okBody: 'Payouts for your ticket sales can now go straight to this account.',
+      okSteps: ['Request a payout from your dashboard', 'Money usually settles in 2 to 5 business days'],
+      okCta: 'Go to payouts',
+      noEyebrow: 'Action needed',
+      noHead: 'We could not verify your bank account',
+      noBody: 'Please check the details below and submit your bank account again.',
+      reason: 'Reason',
+      noCta: 'Update bank details',
+    },
+    fr: {
+      okEyebrow: 'Vérifié',
+      okHead: 'Votre compte bancaire est vérifié',
+      okBody: 'Les paiements de vos ventes de billets peuvent maintenant arriver directement sur ce compte.',
+      okSteps: ['Demandez un paiement depuis votre tableau de bord', "L'argent arrive généralement en 2 à 5 jours ouvrés"],
+      okCta: 'Aller aux paiements',
+      noEyebrow: 'Action requise',
+      noHead: "Nous n'avons pas pu vérifier votre compte bancaire",
+      noBody: 'Vérifiez les informations ci-dessous et soumettez à nouveau votre compte bancaire.',
+      reason: 'Motif',
+      noCta: 'Mettre à jour mes coordonnées',
+    },
+    ht: {
+      okEyebrow: 'Verifye',
+      okHead: 'Kont labank ou verifye',
+      okBody: 'Kòb tikè ou vann yo ka ale dirèk sou kont sa a kounye a.',
+      okSteps: ['Mande yon peman nan tablo ou', 'Kòb la konn rive nan 2 a 5 jou ouvrab'],
+      okCta: 'Ale nan peman',
+      noEyebrow: 'Aksyon nesesè',
+      noHead: 'Nou pa t ka verifye kont labank ou',
+      noBody: 'Tanpri gade enfòmasyon ki anba yo epi soumèt kont labank ou ankò.',
+      reason: 'Rezon',
+      noCta: 'Mete enfòmasyon labank yo ajou',
+    },
+  })
+  const payoutUrl = `${appUrl()}/organizer/payouts`
+  return renderEmail({
+    lang,
+    title: ok ? t.okHead : t.noHead,
+    preheader: ok ? t.okBody : t.noBody,
+    footer: 'organizer',
+    blocks: ok
+      ? [eyebrow(t.okEyebrow, 'teal'), title(t.okHead, 34), gap(14), p(t.okBody), gap(4), steps(t.okSteps), gap(20), button(t.okCta, payoutUrl)]
+      : [
+          eyebrow(t.noEyebrow, 'amber'),
+          title(t.noHead, 34),
+          gap(14),
+          p(t.noBody),
+          params.reason ? gap(4) : '',
+          params.reason ? quote(t.reason, params.reason) : '',
+          gap(24),
+          button(t.noCta, payoutUrl),
+        ],
+  })
 }
+
+// Building blocks for the one-off emails written inside routes, so they share the look.
+export * as emailKit from '@/lib/email-kit/layout'
+export { paragraphHtml, strong }

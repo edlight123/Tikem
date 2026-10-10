@@ -3,7 +3,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
-import { sendEmail, getBankVerificationDecisionEmail } from '@/lib/email'
+import { sendEmail, getBankVerificationDecisionEmail, emailSubjects } from '@/lib/email'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
 
 export async function POST(request: NextRequest) {
   try {
@@ -138,16 +139,17 @@ export async function POST(request: NextRequest) {
       const organizerDoc = await adminDb.collection('users').doc(organizerId).get()
       const organizerData = organizerDoc.data()
       if (organizerData?.email) {
+        // The profile is already loaded, so its language is passed straight in.
+        const lang = await resolveEmailLang({ explicit: organizerData.language })
         const html = getBankVerificationDecisionEmail({
+          lang,
           organizerName: organizerData.full_name || organizerData.email,
           decision,
           reason: decision === 'reject' ? reason : undefined,
         })
         await sendEmail({
           to: organizerData.email,
-          subject: decision === 'approve'
-            ? 'Your bank account has been verified | Tikèm'
-            : 'Bank verification update | Tikèm',
+          subject: emailSubjects.bankVerification(lang, decision === 'approve'),
           html,
         })
       }

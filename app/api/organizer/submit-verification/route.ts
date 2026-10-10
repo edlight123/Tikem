@@ -6,7 +6,9 @@ import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { escapeHtml } from '@/lib/html'
+import { renderEmail, title, eyebrow, p, gap, button, timeline, rowsBlock, appUrl } from '@/lib/email-kit/layout'
+import type { EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -222,27 +224,13 @@ export async function POST(request: NextRequest) {
 
     // Send confirmation email to user
     try {
+      const lang = await resolveEmailLang({ userId, email: user.email || null })
+      const { subject, html } = verificationReceivedEmail(lang, user.user_metadata?.full_name || null)
       await resend.emails.send({
         from: 'Tikem <noreply@tikem.co>',
         to: user.email || '',
-        subject: 'Verification Request Received',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0F766E;">Verification Request Received</h1>
-            <p>Hello ${escapeHtml(user.user_metadata?.full_name || 'there')},</p>
-            <p>We've received your identity verification request for Tikèm.</p>
-            <p><strong>What happens next?</strong></p>
-            <ul>
-              <li>Our team will review your submission within 24-48 hours</li>
-              <li>You'll receive an email once your verification is complete</li>
-              <li>Once verified, you'll be able to create events</li>
-            </ul>
-            <p>Thank you for helping us keep Tikèm safe and trustworthy!</p>
-            <p style="color: #666; font-size: 12px; margin-top: 40px;">
-              If you didn't request this verification, please contact support immediately.
-            </p>
-          </div>
-        `,
+        subject,
+        html,
       })
     } catch (emailError) {
       console.error('Error sending confirmation email:', emailError)
@@ -255,23 +243,11 @@ export async function POST(request: NextRequest) {
         from: 'Tikem <noreply@tikem.co>',
         to: process.env.ADMIN_EMAIL || 'admin@tikem.co',
         subject: 'New Verification Request',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0F766E;">New Verification Request</h1>
-            <p>A new organizer verification request has been submitted:</p>
-            <ul>
-              <li><strong>Name:</strong> ${escapeHtml(user.user_metadata?.full_name || 'N/A')}</li>
-              <li><strong>Email:</strong> ${escapeHtml(user.email)}</li>
-              <li><strong>Request ID:</strong> ${escapeHtml(verificationRequest.id)}</li>
-            </ul>
-            <p>
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/trust"
-                 style="background-color: #0F766E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Review Request
-              </a>
-            </p>
-          </div>
-        `,
+        html: verificationAdminEmail({
+          name: user.user_metadata?.full_name || 'N/A',
+          email: user.email || 'N/A',
+          requestId: String(verificationRequest.id),
+        }),
       })
     } catch (emailError) {
       console.error('Error sending admin notification:', emailError)
@@ -289,4 +265,109 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+
+const RECEIVED_COPY: Record<
+  EmailLang,
+  {
+    subject: string
+    status: string
+    head: string
+    hello: (name: string | null) => string
+    body: string
+    steps: [string, string, string]
+    review: string
+    cta: string
+    notYou: string
+  }
+> = {
+  en: {
+    subject: 'Verification request received',
+    status: 'In review',
+    head: 'We got your verification request',
+    hello: (n) => (n ? `Hi ${n},` : 'Hi,'),
+    body: 'Thanks for sending your ID. Our team checks every request by hand, and we will email you as soon as yours is done.',
+    steps: ['Request received', 'Review by our team', 'Verified: you can publish events'],
+    review: 'usually within 24 to 48 hours',
+    cta: 'See verification status',
+    notYou: 'If you did not submit this request, contact Tikèm support right away.',
+  },
+  fr: {
+    subject: 'Demande de vérification reçue',
+    status: 'En cours',
+    head: 'Nous avons bien reçu votre demande de vérification',
+    hello: (n) => (n ? `Bonjour ${n},` : 'Bonjour,'),
+    body: "Merci d'avoir envoyé votre pièce d'identité. Notre équipe examine chaque demande une par une, et nous vous écrirons dès que la vôtre sera traitée.",
+    steps: ['Demande reçue', 'Examen par notre équipe', 'Vérifié : vous pouvez publier des événements'],
+    review: 'généralement sous 24 à 48 heures',
+    cta: 'Voir le statut de la vérification',
+    notYou: "Si vous n'avez pas envoyé cette demande, contactez le support Tikèm sans attendre.",
+  },
+  ht: {
+    subject: 'Nou resevwa demann verifikasyon ou',
+    status: 'An revizyon',
+    head: 'Nou resevwa demann verifikasyon ou',
+    hello: (n) => (n ? `Bonjou ${n},` : 'Bonjou,'),
+    body: 'Mèsi paske ou voye pyès idantite ou. Ekip nou an gade chak demann youn pa youn, epi n ap ekri ou depi pa ou la fini.',
+    steps: ['Nou resevwa demann lan', 'Ekip nou an ap revize l', 'Verifye: ou ka pibliye evènman'],
+    review: 'anjeneral nan 24 a 48 èdtan',
+    cta: 'Wè kote verifikasyon an ye',
+    notYou: 'Si se pa ou ki voye demann sa a, kontakte sipò Tikèm touswit.',
+  },
+}
+
+function verificationReceivedEmail(lang: EmailLang, name: string | null): { subject: string; html: string } {
+  const t = RECEIVED_COPY[lang]
+  return {
+    subject: t.subject,
+    html: renderEmail({
+      lang,
+      title: t.head,
+      preheader: t.body,
+      status: { label: t.status, tone: 'grey' },
+      footer: 'organizer',
+      blocks: [
+        title(t.head, 34),
+        gap(14),
+        p(t.hello(name)),
+        p(t.body),
+        gap(8),
+        timeline([
+          { label: t.steps[0], done: true },
+          { label: t.steps[1], detail: t.review },
+          { label: t.steps[2] },
+        ]),
+        gap(28),
+        button(t.cta, `${appUrl()}/organizer/verify`),
+        gap(24),
+        p(t.notYou),
+      ],
+    }),
+  }
+}
+
+/** Admin-only, so English. */
+function verificationAdminEmail(v: { name: string; email: string; requestId: string }): string {
+  return renderEmail({
+    lang: 'en',
+    title: 'New verification request',
+    preheader: `${v.name} submitted an identity verification request.`,
+    status: { label: 'Needs review', tone: 'amber' },
+    footer: 'account',
+    blocks: [
+      eyebrow('Organizer verification'),
+      title('New verification request', 34),
+      gap(14),
+      p('An organizer submitted their ID and selfie for review.'),
+      gap(4),
+      rowsBlock([
+        { label: 'Name', value: v.name },
+        { label: 'Email', value: v.email },
+        { label: 'Request', value: v.requestId, mono: true },
+      ]),
+      gap(24),
+      button('Review request', `${appUrl()}/admin/trust`),
+    ],
+  })
 }

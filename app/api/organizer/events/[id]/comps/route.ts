@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { FieldValue } from 'firebase-admin/firestore'
-import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
-import { generateTicketQRCode } from '@/lib/qrcode'
+import { sendEmail, getTicketConfirmationEmail, emailSubjects, TICKET_QR_CID } from '@/lib/email'
+import { formatEventWhen } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { generateTicketQRCodeBuffer } from '@/lib/qrcode'
 import { releaseInventoryReservation, reserveInventoryAtomic } from '@/lib/tickets/inventory'
 import { consumeRateLimit } from '@/lib/rate-limit'
 
@@ -172,30 +174,52 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           : event?.start_datetime
             ? new Date(event.start_datetime)
             : null
-        const eventDate = startDate
-          ? startDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-          : 'TBA'
+        const startIso = startDate && !Number.isNaN(startDate.getTime()) ? startDate.toISOString() : null
+        // The recipient's profile language (by uid when they have an account, else by
+        // address), else the event's region. Resolved once: every comp goes to one person.
+        const lang = await resolveEmailLang({ userId: recipientUid, email: recipientEmail, event })
+        const when = formatEventWhen(startIso, lang, event)
+        const eventTitle = event?.title || { en: 'Your event', fr: 'Votre événement', ht: 'Evènman ou' }[lang]
+        const venue = [event?.venue_name, event?.city].filter(Boolean).join(', ')
+        const poster = String(event?.banner_image_url || '').trim() || null
+        const compLabel = { en: 'Complimentary', fr: 'Invitation', ht: 'Envitasyon' }[lang]
 
+        let sentAll = true
         for (const ticketId of created) {
-          const qrCodeDataURL = await generateTicketQRCode(ticketId)
+          // The QR rides along as an inline attachment (cid:): Gmail strips data: images.
+          let qrPng: Buffer | null = null
+          try {
+            qrPng = await generateTicketQRCodeBuffer(ticketId)
+          } catch (qrErr) {
+            // The email still carries the human-readable ticket code the door can key in.
+            console.warn('[comps] QR generation failed', { message: (qrErr as any)?.message })
+          }
           const html = getTicketConfirmationEmail({
+            lang,
             attendeeName: recipientName,
-            eventTitle: event?.title || 'Your event',
-            eventDate,
-            eventVenue: event?.venue_name || event?.city || '',
+            eventTitle,
+            eventDate: when ? when.line : '',
+            eventVenue: venue,
             ticketId,
-            qrCodeDataURL,
-            ticketTier: 'Complimentary',
+            qrCodeDataURL: qrPng ? `cid:${TICKET_QR_CID}` : undefined,
+            ticketTier: compLabel,
             ticketPrice: 0,
             currency: event?.currency || 'HTG',
+            posterUrl: poster,
+            doorsTime: String(event?.doors_open_time || '').trim() || undefined,
           })
-          await sendEmail({
+          const sent = await sendEmail({
             to: recipientEmail,
-            subject: `Your ticket for ${event?.title || 'the event'}`,
+            subject: emailSubjects.ticketConfirmation(lang, eventTitle),
             html,
+            attachments: qrPng
+              ? [{ filename: 'ticket-qr.png', content: qrPng.toString('base64'), contentType: 'image/png', contentId: TICKET_QR_CID }]
+              : undefined,
           })
+          if (!sent?.success) sentAll = false
         }
-        emailed = true
+        if (!sentAll) console.warn('[comps] some comp emails were not delivered', { eventId })
+        emailed = sentAll
       } catch (mailErr) {
         console.warn('[comps] ticket issued but email failed', { message: (mailErr as any)?.message })
       }

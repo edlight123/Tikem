@@ -25,6 +25,10 @@ const sendEmail = jest.fn(async (_args: any) => ({ success: true }))
 jest.mock('@/lib/email', () => ({
   sendEmail: (args: any) => sendEmail(args),
   getRefundRequestEmail: (p: any) => `request ${p.ticketId}`,
+  emailSubjects: { refundRequest: (_l: any, t: string) => `Refund request for ${t}` },
+}))
+jest.mock('@/lib/email-kit/recipient', () => ({
+  resolveEmailLang: async () => 'en',
 }))
 
 import { POST } from '@/app/api/refunds/request/route'

@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { getAdminEmails } from '@/lib/admin'
 import { sendEmail } from '@/lib/email'
+import { renderEmail, title, p, gap, button, metric, rowsBlock, quote, appUrl, C, FONT } from '@/lib/email-kit/layout'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 
 /**
@@ -123,6 +124,25 @@ function money(amount: number, currency: string) {
   return `${(Number(amount) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${currency}`
 }
 
+/** One row per queued refund on a filled block; values wrap (event titles can be long). */
+function queuedRefundTable(items: QueuedRefundNotice[]): string {
+  const rows = items
+    .map(
+      (i, idx) => `<tr><td style="padding:${idx === 0 ? 0 : 12}px 0 ${idx === items.length - 1 ? 0 : 12}px;${
+        idx === 0 ? '' : `border-top:1px solid ${C.line};`
+      }">
+<div style="font-family:${FONT.sans};font-size:15px;font-weight:700;color:${C.text};">${escapeHtml(money(i.amount, i.currency))}<span style="font-weight:500;color:${C.text2};"> · ${escapeHtml(i.method)}</span></div>
+${i.eventTitle ? `<div style="margin-top:3px;font-family:${FONT.sans};font-size:14px;color:${C.text2};">${escapeHtml(i.eventTitle)}</div>` : ''}
+<div style="margin-top:3px;font-family:${FONT.mono};font-size:12px;color:${C.text3};">${escapeHtml(i.ticketId)}</div>
+${i.needsReview ? `<div style="margin-top:4px;font-family:${FONT.sans};font-size:13px;font-weight:700;color:${C.amber};">Check the amount in Stripe first</div>` : ''}
+</td></tr>`
+    )
+    .join('')
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:20px;border-collapse:separate;"><tr><td style="padding:20px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>
+</td></tr></table>`
+}
+
 /**
  * Email every ADMIN_EMAILS address that refunds were queued for a manual payout.
  * Best-effort and never throws: the queue doc is the record, the email is the nudge.
@@ -138,7 +158,6 @@ export async function notifyAdminsOfQueuedRefunds(items: QueuedRefundNotice[]): 
       })
       return false
     }
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
     const totals = new Map<string, number>()
     for (const i of items) totals.set(i.currency, (totals.get(i.currency) || 0) + (Number(i.amount) || 0))
     const totalText = Array.from(totals.entries())
@@ -149,25 +168,30 @@ export async function notifyAdminsOfQueuedRefunds(items: QueuedRefundNotice[]): 
       items.length === 1
         ? `[Tikèm] Manual refund queued: ${money(items[0].amount, items[0].currency)} (${items[0].method})`
         : `[Tikèm] ${items.length} manual refunds queued: ${totalText}`
-    const rows = items
-      .slice(0, 50)
-      .map(
-        (i) =>
-          `<tr><td style="padding:4px 8px">${escapeHtml(money(i.amount, i.currency))}</td><td style="padding:4px 8px">${escapeHtml(
-            i.method
-          )}</td><td style="padding:4px 8px">${escapeHtml(i.eventTitle || '')}</td><td style="padding:4px 8px;font-family:monospace">${escapeHtml(
-            i.ticketId
-          )}</td><td style="padding:4px 8px">${i.needsReview ? 'check amount in Stripe first' : ''}</td></tr>`
-      )
-      .join('')
-    const html = `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px">
-<p>${items.length === 1 ? 'A refund was' : `${items.length} refunds were`} queued for a manual payout (${escapeHtml(
-      events.join(', ')
-    )}). Mobile-money rails have no refund API, so the buyer is waiting on a person.</p>
-<table style="border-collapse:collapse;font-size:13px">${rows}</table>
-${items.length > 50 ? `<p>…and ${items.length - 50} more.</p>` : ''}
-<p><a href="${appUrl}/admin/money/refunds">Open the refund queue</a></p>
-</body></html>`
+    const head = items.length === 1 ? 'A refund needs a manual payout' : `${items.length} refunds need a manual payout`
+    const html = renderEmail({
+      lang: 'en',
+      title: head,
+      preheader: `${totalText} queued for a manual payout.`,
+      status: { label: 'Manual payout', tone: 'amber' },
+      footer: 'account',
+      blocks: [
+        title(head, 34),
+        gap(14),
+        p(
+          `${items.length === 1 ? 'A refund was' : `${items.length} refunds were`} queued for a manual payout (${events.join(
+            ', '
+          )}). Mobile-money rails have no refund API, so the buyer is waiting on a person.`
+        ),
+        gap(4),
+        metric('Total', totalText),
+        queuedRefundTable(items.slice(0, 50)),
+        items.length > 50 ? gap(12) : '',
+        items.length > 50 ? p(`…and ${items.length - 50} more.`) : '',
+        gap(24),
+        button('Open the refund queue', `${appUrl()}/admin/money/refunds`),
+      ],
+    })
 
     const results = await Promise.all(
       recipients.map((to) =>
@@ -222,7 +246,6 @@ export async function notifyAdminsOfRefundReview(item: RefundReviewNotice): Prom
       console.warn('[refund-review] ADMIN_EMAILS is not configured, no admin was emailed', { ticketId: item.ticketId })
       return false
     }
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
     const shortfall =
       item.shortfallMinor != null && item.eventCurrency
         ? money(item.shortfallMinor / 100, item.eventCurrency)
@@ -232,24 +255,43 @@ export async function notifyAdminsOfRefundReview(item: RefundReviewNotice): Prom
     const subject = `[Tikèm] Refund needs review: ${money(item.amount, item.currency)}${
       countryReview ? ' (Haiti: needs approval)' : shortfall ? ` (short ${shortfall})` : ''
     }`
-    const html = `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px">
-<p>A ${escapeHtml(money(item.amount, item.currency))} ${escapeHtml(item.method)} refund for ${escapeHtml(
-      item.eventTitle || 'an event'
-    )} was NOT sent. ${
+    const explanation = `A ${money(item.amount, item.currency)} ${item.method} refund for ${item.eventTitle || 'an event'} was NOT sent. ${
       countryReview
         ? `Refunds for events in Haiti are never automatic: a Tikèm admin approves each one.${
-            short ? ` The organizer's remaining unwithdrawn balance does not cover ${escapeHtml(short)} of it.` : ''
+            short ? ` The organizer's remaining unwithdrawn balance does not cover ${short} of it.` : ''
           }`
         : shortfall
-        ? `The organizer's remaining unwithdrawn balance covers ${escapeHtml(
-            money((item.coverageMinor || 0) / 100, item.eventCurrency || '')
-          )}; Tikèm would fund ${escapeHtml(shortfall)}.`
+        ? `The organizer's remaining unwithdrawn balance covers ${money(
+            (item.coverageMinor || 0) / 100,
+            item.eventCurrency || ''
+          )}; Tikèm would fund ${shortfall}.`
         : "The organizer's balance could not be computed, so it was held for a person to check."
-    }</p>
-<p>Approve it${countryReview && !short ? '' : ' (Tikèm funds the gap)'} or deny it. Until then the ticket is held: it cannot be used and its money cannot be withdrawn.</p>
-<p style="font-family:monospace;font-size:12px">ticket ${escapeHtml(item.ticketId)} · ${escapeHtml(item.reason)}</p>
-<p><a href="${appUrl}/admin/money/refunds">Open the refund queue</a></p>
-</body></html>`
+    }`
+    const html = renderEmail({
+      lang: 'en',
+      title: 'A refund is waiting for your decision',
+      preheader: explanation,
+      status: { label: 'Needs review', tone: 'amber' },
+      footer: 'account',
+      blocks: [
+        title('A refund is waiting for your decision', 34),
+        gap(20),
+        metric('Refund', money(item.amount, item.currency)),
+        p(explanation),
+        p(
+          `Approve it${countryReview && !short ? '' : ' (Tikèm funds the gap)'} or deny it. Until then the ticket is held: it cannot be used and its money cannot be withdrawn.`
+        ),
+        gap(4),
+        rowsBlock([
+          { label: 'Ticket', value: item.ticketId, mono: true },
+          { label: 'Method', value: item.method },
+        ]),
+        item.reason ? gap(12) : '',
+        item.reason ? quote('Reason', item.reason) : '',
+        gap(24),
+        button('Open the refund queue', `${appUrl()}/admin/money/refunds`),
+      ],
+    })
     const results = await Promise.all(
       recipients.map((to) =>
         sendEmail({ to, subject, html }).catch((err: any) => {

@@ -1,5 +1,9 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail, getRefundProcessedEmail } from '@/lib/email'
+import { renderEmail, appUrl, title as titleBlock, eventRow, p, gap, rowsBlock, quote, button } from '@/lib/email-kit/layout'
+import { formatEventWhen, formatMoney, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { eventInstantIso } from '@/lib/email-templates/reminder'
 import {
   REFUND_REVIEWS,
   RefundQueueError,
@@ -131,11 +135,19 @@ export async function listRefundReviews(): Promise<RefundReviewItem[]> {
     .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
 }
 
+/**
+ * The event as refundTicket wants it (id/title/organizer only: an undefined
+ * `country` makes refundTicket read the country gate itself), plus the full doc
+ * for the emails (poster, language region, date).
+ */
 async function loadEventRef(eventId: string | null) {
-  if (!eventId) return { id: '', title: null, organizer_id: null }
+  if (!eventId) return { ref: { id: '', title: null, organizer_id: null }, doc: null as Record<string, any> | null }
   const snap = await adminDb.collection('events').doc(eventId).get()
   const e = snap.exists ? ((snap.data() as any) ?? {}) : {}
-  return { id: eventId, title: e.title || null, organizer_id: e.organizer_id || null }
+  return {
+    ref: { id: eventId, title: e.title || null, organizer_id: e.organizer_id || null },
+    doc: snap.exists ? (e as Record<string, any>) : null,
+  }
 }
 
 /** The shortfall as it stands NOW (new sales since the review may cover part of it). */
@@ -159,37 +171,134 @@ async function currentShortfall(
   }
 }
 
-function money(minor: number, currency: string) {
-  return `${(minor / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+function money(minor: number, currency: string, lang: EmailLang) {
+  return formatMoney(minor / 100, currency, lang)
 }
 
-function escapeHtml(value: string) {
-  return String(value).replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
-  )
+const oneLine = (v: unknown) => String(v ?? '').replace(/[\r\n]+/g, ' ').trim()
+
+const ORGANIZER_COPY = {
+  en: {
+    approvedSubject: (e: string) => `Refund approved: ${e}`,
+    approvedStatus: 'Approved',
+    approvedHead: (e: string) => `Tikèm approved a refund for ${e}`,
+    approvedBody: 'The refund you sent for review has been issued to the buyer.',
+    advanced: (m: string) => `Your remaining balance did not cover ${m} of it. Tikèm advanced that amount and it is recorded against your account.`,
+    advancedLabel: 'Advanced by Tikèm',
+    deniedSubject: (e: string) => `Refund not approved: ${e}`,
+    deniedStatus: 'Not approved',
+    deniedHead: (e: string) => `A refund for ${e} was not approved`,
+    deniedBody: "Tikèm reviewed the refund your remaining balance didn't cover and did not approve it. The buyer's ticket is valid again and no money moved.",
+    note: 'Note from Tikèm',
+    preheaderOk: (e: string) => `The refund for ${e} was issued to the buyer.`,
+    preheaderNo: (e: string) => `The refund for ${e} was not approved. No money moved.`,
+    manage: 'Open the event',
+  },
+  fr: {
+    approvedSubject: (e: string) => `Remboursement approuvé : ${e}`,
+    approvedStatus: 'Approuvé',
+    approvedHead: (e: string) => `Tikèm a approuvé un remboursement pour ${e}`,
+    approvedBody: "Le remboursement que vous aviez envoyé en vérification a été versé à l'acheteur.",
+    advanced: (m: string) => `Votre solde restant ne couvrait pas ${m} de ce montant. Tikèm a avancé cette somme, qui est enregistrée sur votre compte.`,
+    advancedLabel: 'Avancé par Tikèm',
+    deniedSubject: (e: string) => `Remboursement refusé : ${e}`,
+    deniedStatus: 'Refusé',
+    deniedHead: (e: string) => `Un remboursement pour ${e} n'a pas été approuvé`,
+    deniedBody: "Tikèm a examiné le remboursement que votre solde restant ne couvrait pas et ne l'a pas approuvé. Le billet de l'acheteur est de nouveau valable et aucun argent n'a bougé.",
+    note: 'Note de Tikèm',
+    preheaderOk: (e: string) => `Le remboursement pour ${e} a été versé à l'acheteur.`,
+    preheaderNo: (e: string) => `Le remboursement pour ${e} n'a pas été approuvé. Aucun argent n'a bougé.`,
+    manage: "Ouvrir l'événement",
+  },
+  ht: {
+    approvedSubject: (e: string) => `Ranbousman apwouve: ${e}`,
+    approvedStatus: 'Apwouve',
+    approvedHead: (e: string) => `Tikèm apwouve yon ranbousman pou ${e}`,
+    approvedBody: 'Ranbousman ou te voye pou verifikasyon an, yo peye l bay achtè a.',
+    advanced: (m: string) => `Balans ki te rete sou kont ou pa t kouvri ${m} ladan l. Tikèm avanse kòb sa a, epi li anrejistre sou kont ou.`,
+    advancedLabel: 'Tikèm avanse',
+    deniedSubject: (e: string) => `Ranbousman pa apwouve: ${e}`,
+    deniedStatus: 'Pa apwouve',
+    deniedHead: (e: string) => `Yo pa t apwouve yon ranbousman pou ${e}`,
+    deniedBody: 'Tikèm gade ranbousman balans ou pa t kouvri a, epi li pa apwouve l. Tikè achtè a valab ankò, e okenn kòb pa deplase.',
+    note: 'Nòt Tikèm',
+    preheaderOk: (e: string) => `Ranbousman pou ${e} la peye bay achtè a.`,
+    preheaderNo: (e: string) => `Ranbousman pou ${e} la pa apwouve. Okenn kòb pa deplase.`,
+    manage: 'Louvri evènman an',
+  },
+} satisfies Record<EmailLang, unknown>
+
+const BUYER_SUBJECT = {
+  en: (approved: boolean, e: string) => `Refund ${approved ? 'approved' : 'not approved'}: ${e}`,
+  fr: (approved: boolean, e: string) => `Remboursement ${approved ? 'approuvé' : 'refusé'} : ${e}`,
+  ht: (approved: boolean, e: string) => `Ranbousman ${approved ? 'apwouve' : 'pa apwouve'}: ${e}`,
+} satisfies Record<EmailLang, unknown>
+
+function organizerDecisionEmail(params: {
+  lang: EmailLang
+  decision: 'approved' | 'denied'
+  eventTitle: string
+  eventId: string
+  eventDoc: Record<string, any> | null
+  shortfall?: { minor: number; currency: string } | null
+  note?: string | null
+}): { subject: string; html: string } {
+  const t = ORGANIZER_COPY[params.lang]
+  const approved = params.decision === 'approved'
+  const eventTitle = oneLine(params.eventTitle)
+  const posterUrl = String(params.eventDoc?.banner_image_url || '').trim() || null
+  const when = formatEventWhen(eventInstantIso(params.eventDoc?.start_datetime), params.lang, params.eventDoc)
+  const advanced = approved && params.shortfall && params.shortfall.minor > 0 ? money(params.shortfall.minor, params.shortfall.currency, params.lang) : null
+  const html = renderEmail({
+    lang: params.lang,
+    title: approved ? t.approvedHead(eventTitle) : t.deniedHead(eventTitle),
+    preheader: approved ? t.preheaderOk(eventTitle) : t.preheaderNo(eventTitle),
+    status: approved ? { label: t.approvedStatus, tone: 'teal' } : { label: t.deniedStatus, tone: 'grey' },
+    footer: 'organizer',
+    blocks: [
+      eventRow(posterUrl, eventTitle, when?.line),
+      gap(28),
+      titleBlock(approved ? t.approvedHead(eventTitle) : t.deniedHead(eventTitle), 30),
+      gap(16),
+      p(approved ? t.approvedBody : t.deniedBody),
+      advanced ? p(t.advanced(advanced)) : '',
+      advanced ? rowsBlock([{ label: t.advancedLabel, value: advanced, strong: true }]) : '',
+      advanced ? gap(20) : '',
+      params.note ? quote(t.note, params.note) : '',
+      params.note ? gap(24) : '',
+      params.eventId ? button(t.manage, `${appUrl()}/organizer/events/${encodeURIComponent(params.eventId)}`, 'secondary') : '',
+    ],
+  })
+  return { subject: approved ? t.approvedSubject(eventTitle) : t.deniedSubject(eventTitle), html }
 }
 
-async function emailOrganizer(organizerId: string | null, subject: string, body: string) {
+async function emailOrganizer(
+  organizerId: string | null,
+  eventDoc: Record<string, any> | null,
+  build: (lang: EmailLang) => { subject: string; html: string }
+) {
   if (!organizerId) return
   try {
     const snap = await adminDb.collection('users').doc(organizerId).get()
-    const to = snap.exists ? (snap.data() as any)?.email : null
+    const profile = snap.exists ? ((snap.data() as any) ?? {}) : {}
+    const to = profile?.email || null
     if (!to) return
-    await sendEmail({
-      to,
-      subject,
-      html: `<!doctype html><html><body style="margin:0;padding:24px;background:#0A0A0A;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-  <div style="max-width:520px;margin:0 auto">
-    <p style="font-size:12px;letter-spacing:1px;color:#A3A3A3;text-transform:uppercase;margin:0 0 8px">Tikèm</p>
-    ${body}
-  </div></body></html>`,
-    })
+    const lang = await resolveEmailLang({ explicit: profile?.language, userId: organizerId, event: eventDoc })
+    const { subject, html } = build(lang)
+    await sendEmail({ to, subject, html })
   } catch (e: any) {
     console.error('[refund-review] organizer email failed', { organizerId, message: e?.message })
   }
 }
 
-async function emailBuyer(ticket: Record<string, any>, ticketId: string, eventTitle: string, status: 'approved' | 'denied', amount: number) {
+async function emailBuyer(
+  ticket: Record<string, any>,
+  ticketId: string,
+  eventTitle: string,
+  status: 'approved' | 'denied',
+  amount: number,
+  extras: { currency?: string | null; eventDoc?: Record<string, any> | null } = {}
+) {
   try {
     const { uid, email } = await resolveBuyerContact(ticket)
     if (uid) {
@@ -211,15 +320,23 @@ async function emailBuyer(ticket: Record<string, any>, ticketId: string, eventTi
         .catch(() => undefined)
     }
     if (!email) return
+    const eventDoc = extras.eventDoc || null
+    const lang = await resolveEmailLang({ userId: uid, email, event: eventDoc })
+    const when = formatEventWhen(eventInstantIso(eventDoc?.start_datetime), lang, eventDoc)
+    const currency = extras.currency || ticket.charged_currency || ticket.currency || eventDoc?.currency || undefined
     await sendEmail({
       to: email,
-      subject: `Refund ${status === 'approved' ? 'approved' : 'not approved'}: ${eventTitle}`,
+      subject: BUYER_SUBJECT[lang](status === 'approved', oneLine(eventTitle)),
       html: getRefundProcessedEmail({
+        lang,
         attendeeName: String(ticket.attendee_name || ticket.guest_name || 'there'),
         eventTitle,
         status,
         refundAmount: status === 'approved' ? amount : 0,
         ticketId,
+        currency: currency ? String(currency) : undefined,
+        posterUrl: String(eventDoc?.banner_image_url || '').trim() || null,
+        eventSub: when?.line,
       }),
     })
   } catch (e: any) {
@@ -278,7 +395,7 @@ export async function approveRefundReview(input: {
     return r
   })
 
-  const event = await loadEventRef(str(review.event_id))
+  const { ref: event, doc: eventDoc } = await loadEventRef(str(review.event_id))
   const storedReason = parseRefundReason(review.reason)
   const reason =
     parseRefundReason(input.reason) === 'event_changed' && storedReason !== 'event_cancelled'
@@ -383,16 +500,16 @@ export async function approveRefundReview(input: {
   )
 
   const title = String(event.title || 'your event')
-  await emailBuyer(res.ticket, ticketId, title, 'approved', res.amount)
-  await emailOrganizer(
-    event.organizer_id,
-    `Refund approved: ${title}`,
-    `<h1 style="font-size:22px;margin:0 0 12px">Tikèm approved a refund for ${escapeHtml(title)}</h1>
-    <p style="line-height:1.5;margin:0 0 16px">The refund you sent for review has been issued to the buyer.${
-      shortfallMinor > 0 && eventCurrency
-        ? ` Your remaining balance did not cover <strong>${escapeHtml(money(shortfallMinor, eventCurrency))}</strong> of it; Tikèm advanced that amount and it is recorded against your account.`
-        : ''
-    }</p>`
+  await emailBuyer(res.ticket, ticketId, title, 'approved', res.amount, { currency: res.currency, eventDoc })
+  await emailOrganizer(event.organizer_id, eventDoc, (lang) =>
+    organizerDecisionEmail({
+      lang,
+      decision: 'approved',
+      eventTitle: title,
+      eventId: event.id,
+      eventDoc,
+      shortfall: shortfallMinor > 0 && eventCurrency ? { minor: shortfallMinor, currency: eventCurrency } : null,
+    })
   )
 
   return { outcome: res.outcome, amount: res.amount, currency: res.currency, shortfallMinor, eventCurrency, adjustmentId }
@@ -450,15 +567,10 @@ export async function denyRefundReview(input: { ticketId: string; actorId: strin
   })
   if (!held) throw new RefundQueueError('This ticket is no longer on hold for review. The review was closed.', 409)
 
-  const event = await loadEventRef(str(review.event_id))
+  const { ref: event, doc: eventDoc } = await loadEventRef(str(review.event_id))
   const title = String(event.title || review.event_title || 'your event')
-  await emailBuyer(ticket, ticketId, title, 'denied', 0)
-  await emailOrganizer(
-    event.organizer_id || str(review.organizer_id),
-    `Refund not approved: ${title}`,
-    `<h1 style="font-size:22px;margin:0 0 12px">A refund for ${escapeHtml(title)} was not approved</h1>
-    <p style="line-height:1.5;margin:0 0 16px">Tikèm reviewed the refund your remaining balance didn't cover and did not approve it. The buyer's ticket is valid again and no money moved.${
-      note ? ` Note from Tikèm: ${escapeHtml(note)}` : ''
-    }</p>`
+  await emailBuyer(ticket, ticketId, title, 'denied', 0, { eventDoc })
+  await emailOrganizer(event.organizer_id || str(review.organizer_id), eventDoc, (lang) =>
+    organizerDecisionEmail({ lang, decision: 'denied', eventTitle: title, eventId: event.id, eventDoc, note })
   )
 }

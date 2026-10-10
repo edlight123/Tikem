@@ -183,23 +183,46 @@ export async function POST(request: Request) {
 
     // Send confirmation email to attendee
     try {
-      const { sendEmail, getRefundProcessedEmail } = await import('@/lib/email')
+      const { sendEmail, getRefundProcessedEmail, emailSubjects } = await import('@/lib/email')
+      const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
       const { data: attendee } = await supabase
         .from('users')
-        .select('email, full_name, phone')
+        .select('email, full_name, phone, language')
         .eq('id', ticket.attendee_id)
         .single()
 
       if (attendee?.email) {
+        const lang = await resolveEmailLang({ explicit: (attendee as any).language, event })
+        const approved = action === 'approve'
+        // The currency the money actually moves in (refundTicket reports it); a free
+        // ticket has none, so fall back to what the ticket was priced in.
+        const currency =
+          String(refundCurrency || ticket.charged_currency || ticket.currency || event.currency || '').trim() ||
+          undefined
+        // Where the money goes back to: Stripe refunds land on the card, mobile money
+        // is paid out to the wallet it came from. Nothing to name for a free ticket.
+        const rawMethod = String(ticket.payment_method || '').toLowerCase()
+        const wallet =
+          rawMethod.includes('moncash') ? 'MonCash'
+            : rawMethod.includes('natcash') ? 'NatCash'
+            : rawMethod.includes('sogepay') ? 'SogePay'
+            : undefined
+        const cardWord = { en: 'card', fr: 'carte', ht: 'kat' }[lang]
+        const method =
+          res.outcome === 'refunded' ? cardWord : res.outcome === 'queued' ? wallet : undefined
         await sendEmail({
           to: attendee.email,
-          subject: `Refund ${action === 'approve' ? 'Approved' : 'Denied'} - ${event.title}`,
+          subject: emailSubjects.refundProcessed(lang, event.title, approved),
           html: getRefundProcessedEmail({
-            attendeeName: attendee.full_name || 'Attendee',
+            lang,
+            attendeeName: attendee.full_name || '',
             eventTitle: event.title,
-            status: action === 'approve' ? 'approved' : 'denied',
-            refundAmount: action === 'approve' ? refundAmount : 0,
-            ticketId: ticketId
+            status: approved ? 'approved' : 'denied',
+            refundAmount: approved ? refundAmount : 0,
+            ticketId: ticketId,
+            currency,
+            method,
+            posterUrl: String(event.banner_image_url || '').trim() || null,
           })
         })
       }

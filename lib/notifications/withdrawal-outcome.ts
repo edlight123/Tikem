@@ -22,7 +22,8 @@ import { resolvePayeeReason } from '@/lib/payouts/payee-reasons'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { isTransactional } from '@/lib/notifications/policy'
-import { escapeHtml, sendEmail } from '@/lib/email'
+import { sendEmail } from '@/lib/email'
+import { renderEmail, title as titleBlock, p, gap, button, bigFigure, timeline, appUrl, type Tone } from '@/lib/email-kit/layout'
 import { intlLocaleFor } from '@/lib/dateLocale'
 
 export type WithdrawalOutcome =
@@ -192,26 +193,132 @@ function payeeOf(row: any): { uid: string | null; isPromoter: boolean } {
   return { uid: uid ? String(uid) : null, isPromoter }
 }
 
-/** Which figure the payee should see for this outcome. */
-function amountFor(outcome: WithdrawalOutcome, row: any, lang: Lang): string {
+/** Which figure the payee should see for this outcome: minor units + currency. */
+function amountSourceFor(outcome: WithdrawalOutcome, row: any): { minor: number; currency: string } {
   const returnedToBalance = outcome === 'failed' || outcome === 'admin_rejected'
   if (!returnedToBalance && Number(row?.payoutAmountHtgCents) > 0) {
     // What lands on their phone — always HTG on this rail, net of any instant fee.
-    return formatWithdrawalAmount(Number(row.payoutAmountHtgCents), 'HTG', lang)
+    return { minor: Number(row.payoutAmountHtgCents), currency: 'HTG' }
   }
   // What goes back into the balance they withdrew from, in that balance's currency.
-  return formatWithdrawalAmount(Number(row?.amount) || 0, String(row?.currency || 'HTG'), lang)
+  return { minor: Number(row?.amount) || 0, currency: String(row?.currency || 'HTG') }
 }
 
-function emailHtml(copy: Copy, url: string): string {
-  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-<table role="presentation" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;border-collapse:collapse;width:100%;">
-<tr><td style="padding:32px 32px 8px;"><div style="font-size:20px;font-weight:800;color:#0f172a;">Tikèm</div></td></tr>
-<tr><td style="padding:8px 32px;"><h1 style="margin:0 0 12px;font-size:22px;color:#0f172a;">${escapeHtml(copy.title)}</h1>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155;">${escapeHtml(copy.body)}</p>
-<a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;">${escapeHtml(copy.cta)}</a></td></tr>
-<tr><td style="padding:24px 32px 32px;font-size:12px;color:#94a3b8;">© ${new Date().getFullYear()} Tikèm</td></tr>
-</table></body></html>`
+function amountFor(outcome: WithdrawalOutcome, row: any, lang: Lang): string {
+  const a = amountSourceFor(outcome, row)
+  return formatWithdrawalAmount(a.minor, a.currency, lang)
+}
+
+/** Email-only strings: the status label, the figure caption and the stage names. */
+const EMAIL_COPY: Record<
+  Lang,
+  {
+    status: Record<WithdrawalOutcome, string>
+    toMoncash: (phone: string) => string
+    backInBalance: string
+    manual: [string, string, string]
+    instant: [string, string]
+  }
+> = {
+  en: {
+    status: {
+      completed: 'Sent',
+      submitted: 'In review',
+      confirming: 'Confirming',
+      failed: 'Failed',
+      approved: 'Approved',
+      admin_completed: 'Paid',
+      admin_rejected: 'Declined',
+    },
+    toMoncash: (ph) => (ph ? `To MonCash ${ph}` : 'To MonCash'),
+    backInBalance: 'Back in your balance',
+    manual: ['Request received', 'Approved', 'Paid to MonCash'],
+    instant: ['Sent to MonCash', 'Confirmed by MonCash'],
+  },
+  fr: {
+    status: {
+      completed: 'Envoyé',
+      submitted: "En cours d'examen",
+      confirming: 'En confirmation',
+      failed: 'Échec',
+      approved: 'Approuvé',
+      admin_completed: 'Payé',
+      admin_rejected: 'Refusé',
+    },
+    toMoncash: (ph) => (ph ? `Vers MonCash ${ph}` : 'Vers MonCash'),
+    backInBalance: 'Remis sur votre solde',
+    manual: ['Demande reçue', 'Approuvée', 'Payée sur MonCash'],
+    instant: ['Envoyé sur MonCash', 'Confirmé par MonCash'],
+  },
+  ht: {
+    status: {
+      completed: 'Voye',
+      submitted: 'An revizyon',
+      confirming: 'N ap konfime',
+      failed: 'Pa pase',
+      approved: 'Apwouve',
+      admin_completed: 'Peye',
+      admin_rejected: 'Refize',
+    },
+    toMoncash: (ph) => (ph ? `Sou MonCash ${ph}` : 'Sou MonCash'),
+    backInBalance: 'Retounen nan balans ou',
+    manual: ['Nou resevwa demann lan', 'Apwouve', 'Peye sou MonCash'],
+    instant: ['Voye sou MonCash', 'MonCash konfime l'],
+  },
+}
+
+const STATUS_TONE: Record<WithdrawalOutcome, Tone> = {
+  completed: 'teal',
+  admin_completed: 'teal',
+  approved: 'teal',
+  submitted: 'grey',
+  confirming: 'grey',
+  failed: 'red',
+  admin_rejected: 'red',
+}
+
+/** Pure email renderer, exported for tests. */
+export function withdrawalOutcomeEmailHtml(
+  outcome: WithdrawalOutcome,
+  lang: Lang,
+  copy: Copy,
+  v: { minor: number; currency: string; phone: string; url: string }
+): string {
+  const e = EMAIL_COPY[lang]
+  const cur = String(v.currency || 'HTG').toUpperCase()
+  // The figure without its code; the code sits beside it, smaller.
+  const full = formatWithdrawalAmount(v.minor, cur, lang)
+  const figure = full.endsWith(` ${cur}`) ? full.slice(0, -(cur.length + 1)) : full
+  const returned = outcome === 'failed' || outcome === 'admin_rejected'
+  const caption = returned ? e.backInBalance : e.toMoncash(v.phone)
+
+  let stages: Array<{ label: string; done?: boolean }> | null = null
+  if (outcome === 'submitted' || outcome === 'approved' || outcome === 'admin_completed') {
+    const reached = outcome === 'submitted' ? 1 : outcome === 'approved' ? 2 : 3
+    stages = e.manual.map((label, i) => ({ label, done: i < reached }))
+  } else if (outcome === 'confirming' || outcome === 'completed') {
+    const reached = outcome === 'confirming' ? 1 : 2
+    stages = e.instant.map((label, i) => ({ label, done: i < reached }))
+  }
+
+  return renderEmail({
+    lang,
+    title: copy.title,
+    preheader: copy.body,
+    status: { label: e.status[outcome], tone: STATUS_TONE[outcome] },
+    footer: 'organizer',
+    blocks: [
+      titleBlock(copy.title, 34),
+      gap(24),
+      bigFigure(figure, cur, caption),
+      gap(24),
+      p(copy.body),
+      stages ? gap(8) : '',
+      stages ? timeline(stages) : '',
+      gap(28),
+      button(copy.cta, v.url),
+    ],
+  })
 }
 
 export type NotifyWithdrawalResult = { sent: boolean; reason?: 'duplicate' | 'no_row' | 'no_payee' | 'error' }
@@ -274,8 +381,14 @@ export async function notifyWithdrawalOutcome(
 
     const email = typeof user?.email === 'string' ? user.email : null
     if (email) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.tikem.co'
-      const result = await sendEmail({ to: email, subject: copy.title, html: emailHtml(copy, `${appUrl}${actionUrl}`) })
+      const src = amountSourceFor(outcome, row)
+      const html = withdrawalOutcomeEmailHtml(outcome, lang, copy, {
+        minor: src.minor,
+        currency: src.currency,
+        phone: maskPhone(row?.moncashNumber),
+        url: `${appUrl()}${actionUrl}`,
+      })
+      const result = await sendEmail({ to: email, subject: copy.title, html })
       if (!result.success) {
         console.warn('[withdrawal-outcome] email not sent', { withdrawalId, outcome, code: result.code })
       }

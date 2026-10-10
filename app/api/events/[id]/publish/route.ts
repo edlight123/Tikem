@@ -8,17 +8,109 @@ import { normalizeCountryCode } from '@/lib/payment-provider'
 import { checkPaidPublishGate } from '@/lib/events/publish-gate'
 import { isAdmin as isAdminEmail } from '@/lib/admin'
 import { isEventCancelled, publishBlockReason, PUBLISH_BLOCK_MESSAGES } from '@/lib/events/publishGuard'
+import { sendEmail, getEventCreatedEmail, emailSubjects } from '@/lib/email'
+import { formatEventWhen } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { appUrl } from '@/lib/email-kit/layout'
 
-async function isPaidEvent(eventId: string, eventData: any): Promise<boolean> {
-  if ((eventData?.ticket_price || 0) > 0) return true
+const TIER_LIMIT = 25
 
+async function loadTiers(eventId: string): Promise<any[]> {
   const tiersSnapshot = await adminDb
     .collection('ticket_tiers')
     .where('event_id', '==', eventId)
-    .limit(25)
+    .limit(TIER_LIMIT)
     .get()
+  return tiersSnapshot.docs.map((d: any) => d.data() || {})
+}
 
-  return tiersSnapshot.docs.some((d: any) => (d.data()?.price || 0) > 0)
+function isPaidEvent(eventData: any, tiers: any[]): boolean {
+  if ((eventData?.ticket_price || 0) > 0) return true
+  return tiers.some((t: any) => (t?.price || 0) > 0)
+}
+
+function toIso(value: any): string | null {
+  if (!value) return null
+  const d = typeof value?.toDate === 'function' ? value.toDate() : new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+/**
+ * "Your event is live" — sent to the organizer ONCE per event, on its first publish.
+ *
+ * `live_email_sent_at` is claimed in a transaction BEFORE sending, so a double tap or
+ * an unpublish/republish never sends a second copy. If the send fails the claim is
+ * released, so the next publish can try again. Best-effort throughout: the event is
+ * already published and nothing here may fail that.
+ */
+async function sendEventLiveEmailOnce(params: {
+  eventId: string
+  eventData: any
+  organizerData: any
+  organizerName: string
+  tiers: any[] | null
+}) {
+  const { eventId, eventData, organizerData } = params
+  const to = String(organizerData?.email || '').trim()
+  if (!to || eventData?.live_email_sent_at) return
+
+  // An event that already happened is being re-listed, not launched.
+  const startIso = toIso(eventData?.start_datetime)
+  if (startIso && new Date(startIso).getTime() < Date.now()) return
+
+  const eventRef = adminDb.collection('events').doc(eventId)
+  const claimedAt = new Date().toISOString()
+  const claimed = await adminDb.runTransaction(async (tx: any) => {
+    const snap = await tx.get(eventRef)
+    if (!snap.exists || (snap.data() as any)?.live_email_sent_at) return false
+    tx.update(eventRef, { live_email_sent_at: claimedAt })
+    return true
+  })
+  if (!claimed) return
+
+  try {
+    const lang = await resolveEmailLang({ explicit: organizerData?.language, event: eventData })
+    const when = formatEventWhen(startIso, lang, eventData)
+    const tiers = params.tiers ?? (await loadTiers(eventId))
+
+    // Capacity: the sum of tier quantities (only when we saw every tier), else the
+    // event-level cap. Price from: the lowest tier price, else the event price.
+    let capacity: number | undefined
+    if (tiers.length > 0 && tiers.length < TIER_LIMIT) {
+      const total = tiers.reduce((sum, t) => sum + (Number(t?.total_quantity ?? t?.quantity ?? 0) || 0), 0)
+      if (total > 0) capacity = total
+    } else if (tiers.length === 0) {
+      const cap = Number(eventData?.max_tickets ?? eventData?.capacity ?? eventData?.total_tickets ?? 0)
+      if (cap > 0) capacity = cap
+    }
+    const prices = tiers.map((t) => Number(t?.price)).filter((n) => Number.isFinite(n) && n >= 0)
+    const eventPrice = Number(eventData?.ticket_price)
+    const priceFrom = prices.length > 0 ? Math.min(...prices) : Number.isFinite(eventPrice) ? eventPrice : undefined
+
+    const eventTitle = String(eventData?.title || '').trim() || 'Tikèm'
+    const sent = await sendEmail({
+      to,
+      subject: emailSubjects.eventCreated(lang, eventTitle),
+      html: getEventCreatedEmail({
+        lang,
+        organizerName: params.organizerName,
+        eventTitle,
+        eventDate: when ? when.line : '',
+        eventId,
+        posterUrl: String(eventData?.banner_image_url || '').trim() || null,
+        venue: [eventData?.venue_name, eventData?.city].filter(Boolean).join(', ') || undefined,
+        capacity,
+        priceFrom,
+        currency: String(eventData?.currency || '').trim() || undefined,
+        eventUrl: `${appUrl()}/events/${encodeURIComponent(eventId)}`,
+      }),
+    })
+    if (!sent?.success) throw new Error(sent?.error || 'send failed')
+  } catch (err) {
+    console.error('[publish] event-live email failed', (err as any)?.message)
+    // Release the claim so a later publish can retry.
+    await eventRef.update({ live_email_sent_at: null }).catch(() => {})
+  }
 }
 
 export async function POST(
@@ -89,8 +181,10 @@ export async function POST(
     // Stripe Connect markets (US/CA/FR) keep the full pre-publish gate: destination charges require
     // completed Connect onboarding (identity + charges/payouts enabled) before any
     // money can be collected, so those checks must pass before publishing.
+    let tiers: any[] | null = null
     if (is_published) {
-      const paid = await isPaidEvent(id, eventData)
+      tiers = await loadTiers(id)
+      const paid = isPaidEvent(eventData, tiers)
       if (paid) {
         const resolvedCountry = await resolveEventCountry(eventData)
         const gate = await checkPaidPublishGate({
@@ -201,6 +295,15 @@ export async function POST(
       } catch (notifyError) {
         console.error('Error notifying followers:', notifyError)
         // Don't fail the publish operation if notifications fail
+      }
+    }
+
+    // First publish: tell the organizer their event is live (once per event, best-effort).
+    if (is_published && !eventData.is_published) {
+      try {
+        await sendEventLiveEmailOnce({ eventId: id, eventData, organizerData, organizerName, tiers })
+      } catch (liveEmailError) {
+        console.error('[publish] event-live email skipped', (liveEmailError as any)?.message)
       }
     }
 

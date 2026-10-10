@@ -1,6 +1,22 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
 import {
+  renderEmail,
+  appUrl,
+  title,
+  eventRow,
+  quote,
+  paragraphHtml,
+  strong,
+  p,
+  gap,
+  rowsBlock,
+  button,
+} from '@/lib/email-kit/layout'
+import { COMMON, formatEventWhen, formatMoney, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { eventInstantIso } from '@/lib/email-templates/reminder'
+import {
   refundTicket,
   resolveBuyerContact,
   reversePromoterCommission,
@@ -395,11 +411,9 @@ async function notifyBuyer(
         })
     }
     if (email) {
-      await sendEmail({
-        to: email,
-        subject: `Cancelled: ${event?.title || 'your event'}`,
-        html: cancellationEmailHtml({ eventTitle: event?.title || 'your event', reason, notice }),
-      })
+      const lang = await resolveEmailLang({ userId: uid, email, event })
+      const message = cancellationEmail({ lang, event, reason, notice })
+      await sendEmail({ to: email, subject: message.subject, html: message.html })
     }
     return true
   } catch (e) {
@@ -408,35 +422,106 @@ async function notifyBuyer(
   }
 }
 
-function cancellationEmailHtml({
-  eventTitle,
+const CANCEL_COPY = {
+  en: {
+    fallbackTitle: 'your event',
+    subject: (e: string) => `Cancelled: ${e}`,
+    status: 'Cancelled',
+    headline: (e: string) => `${e} was cancelled`,
+    preheader: (e: string) => `${e} was cancelled. Here is what happens to your ticket.`,
+    reason: 'Reason from the organizer',
+    refunded: (m: string) => `Your ticket is cancelled and ${m} has been refunded to your original payment method. It can take 5 to 10 days to appear.`,
+    manual: (m: string) => `Your ticket is cancelled and a refund of ${m} is being processed. Mobile-money refunds are sent by hand, so allow a few business days.`,
+    pending: "Your ticket is cancelled and your refund is being processed. We'll be in touch if we need anything from you.",
+    free: 'Your free registration has been cancelled. Nothing was charged.',
+    refund: 'Refund',
+    wrong: 'If anything looks wrong, write to us from the Help page and we will sort it out.',
+  },
+  fr: {
+    fallbackTitle: 'votre événement',
+    subject: (e: string) => `Annulé : ${e}`,
+    status: 'Annulé',
+    headline: (e: string) => `${e} est annulé`,
+    preheader: (e: string) => `${e} est annulé. Voici ce qu'il advient de votre billet.`,
+    reason: "Motif donné par l'organisateur",
+    refunded: (m: string) => `Votre billet est annulé et ${m} vous ont été remboursés sur votre moyen de paiement initial. Comptez 5 à 10 jours pour les voir apparaître.`,
+    manual: (m: string) => `Votre billet est annulé et un remboursement de ${m} est en cours. Les remboursements mobile money sont envoyés manuellement : comptez quelques jours ouvrés.`,
+    pending: 'Votre billet est annulé et votre remboursement est en cours. Nous vous contacterons si nous avons besoin de quoi que ce soit.',
+    free: "Votre inscription gratuite est annulée. Rien ne vous a été facturé.",
+    refund: 'Remboursement',
+    wrong: "Si quelque chose ne va pas, écrivez-nous depuis la page Aide, on s'en occupe.",
+  },
+  ht: {
+    fallbackTitle: 'evènman ou an',
+    subject: (e: string) => `Anile: ${e}`,
+    status: 'Anile',
+    headline: (e: string) => `Yo anile ${e}`,
+    preheader: (e: string) => `Yo anile ${e}. Men sa k ap pase ak tikè ou.`,
+    reason: 'Rezon òganizatè a bay',
+    refunded: (m: string) => `Tikè ou anile, epi yo ranbouse ${m} sou mwayen peman ou te itilize a. Li ka pran 5 a 10 jou pou w wè l.`,
+    manual: (m: string) => `Tikè ou anile, epi yon ranbousman ${m} ap trete. Ranbousman mobile money yo voye alamen, kidonk konte kèk jou ouvrab.`,
+    pending: 'Tikè ou anile, epi ranbousman ou ap trete. N ap kontakte w si nou bezwen kèk lòt bagay.',
+    free: 'Enskripsyon gratis ou an anile. Ou pa t peye anyen.',
+    refund: 'Ranbousman',
+    wrong: 'Si gen yon bagay ki pa bon, ekri nou sou paj Èd la, n ap regle sa.',
+  },
+} satisfies Record<EmailLang, unknown>
+
+function cancellationEmail({
+  lang,
+  event,
   reason,
   notice,
 }: {
-  eventTitle: string
+  lang: EmailLang
+  event: Record<string, any>
   reason: string | null
   notice: BuyerNotice
-}) {
+}): { subject: string; html: string } {
+  const t = CANCEL_COPY[lang]
+  const eventTitle = String(event?.title || '').replace(/[\r\n]+/g, ' ').trim() || t.fallbackTitle
+  const posterUrl = String(event?.banner_image_url || '').trim() || null
+  const when = formatEventWhen(eventInstantIso(event?.start_datetime), lang, event)
+  const sub = [when?.line, [event?.venue_name, event?.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
   const money =
-    notice.kind === 'refunded' || notice.kind === 'manual'
-      ? `${notice.amount.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${notice.currency}`
-      : null
-  const body =
+    notice.kind === 'refunded' || notice.kind === 'manual' ? formatMoney(notice.amount, notice.currency, lang) : null
+  // The amount is bolded inside the sentence; every piece around it is escaped.
+  const MARK = '\u0000'
+  const sentence =
     notice.kind === 'refunded'
-      ? `<p style="line-height:1.5;margin:0 0 16px">Your ticket is cancelled and <strong>${money}</strong> has been refunded to your original payment method. It can take 5–10 days to appear.</p>`
+      ? t.refunded(MARK)
       : notice.kind === 'manual'
-        ? `<p style="line-height:1.5;margin:0 0 16px">Your ticket is cancelled and a refund of <strong>${money}</strong> is being processed. Mobile-money refunds are sent by hand, so allow a few business days.</p>`
+        ? t.manual(MARK)
         : notice.kind === 'pending'
-          ? `<p style="line-height:1.5;margin:0 0 16px">Your ticket is cancelled and your refund is being processed. We'll be in touch if we need anything from you.</p>`
-          : `<p style="line-height:1.5;margin:0 0 16px">Your free registration has been cancelled. Nothing was charged.</p>`
-  return `<!doctype html><html><body style="margin:0;padding:24px;background:#0A0A0A;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-  <div style="max-width:520px;margin:0 auto">
-    <p style="font-size:12px;letter-spacing:1px;color:#A3A3A3;text-transform:uppercase;margin:0 0 8px">Tikèm</p>
-    <h1 style="font-size:24px;margin:0 0 12px">${escapeHtml(eventTitle)} was cancelled</h1>
-    ${reason ? `<p style="color:#A3A3A3;line-height:1.5;margin:0 0 16px">Reason: ${escapeHtml(reason)}</p>` : ''}
-    ${body}
-    <p style="color:#A3A3A3;font-size:13px;line-height:1.5;margin:24px 0 0">If anything looks wrong, reply to this email and we'll sort it out.</p>
-  </div></body></html>`
+          ? t.pending
+          : t.free
+  const bodyHtml = sentence
+    .split(MARK)
+    .map((part) => escapeHtml(part))
+    .join(money ? strong(money) : '')
+  const html = renderEmail({
+    lang,
+    title: t.headline(eventTitle),
+    preheader: t.preheader(eventTitle),
+    status: { label: t.status, tone: 'red' },
+    footer: 'attendee',
+    blocks: [
+      eventRow(posterUrl, eventTitle, sub),
+      gap(28),
+      title(t.headline(eventTitle), 34),
+      gap(16),
+      reason ? quote(t.reason, reason) : '',
+      reason ? gap(20) : '',
+      paragraphHtml(bodyHtml),
+      money ? gap(4) : '',
+      money ? rowsBlock([{ label: t.refund, value: money, strong: true }]) : '',
+      gap(24),
+      p(t.wrong),
+      gap(4),
+      button(COMMON[lang].findEvents, `${appUrl()}/discover`, 'secondary'),
+    ],
+  })
+  return { subject: t.subject(eventTitle), html }
 }
 
 function escapeHtml(value: string) {

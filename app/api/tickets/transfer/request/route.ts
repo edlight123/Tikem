@@ -161,31 +161,42 @@ export async function POST(request: NextRequest) {
 
     // Send email notification to recipient
     try {
-      const { sendEmail, getTicketTransferRequestEmail } = await import('@/lib/email')
+      const { sendEmail, getTicketTransferRequestEmail, emailSubjects } = await import('@/lib/email')
+      const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
+      const { formatEventWhen } = await import('@/lib/email-kit/i18n')
       
       // Get sender info from Firestore
       const senderDoc = await adminDb.collection('users').doc(user.id).get()
       const sender = senderDoc.data()
 
-      await sendEmail({
-        to: toEmail,
-        subject: `${sender?.full_name || sender?.name || 'Someone'} wants to transfer you a ticket`,
-        html: getTicketTransferRequestEmail({
-          senderName: sender?.full_name || sender?.name || 'A friend',
-          senderEmail: sender?.email || user.email || '',
-          eventTitle: event?.title || 'Event',
-          eventDate: event?.start_datetime || new Date().toISOString(),
-          message: message || '',
-          transferToken: transfer.transfer_token,
-          expiresAt: transfer.expires_at
-        })
-      })
-
-      // Check if recipient has account with phone number using Firestore
+      // Check if recipient has account with phone number using Firestore. Looked up
+      // before the email so their profile language can pick the email's language.
       const recipientQuery = await adminDb.collection('users')
         .where('email', '==', toEmail.toLowerCase())
         .limit(1)
         .get()
+
+      const lang = await resolveEmailLang({
+        explicit: recipientQuery.empty ? null : (recipientQuery.docs[0].data() as any)?.language,
+        event,
+      })
+      const friend = { en: 'A friend', fr: 'Un ami', ht: 'Yon zanmi' }[lang]
+      const senderName = sender?.full_name || sender?.name || friend
+      await sendEmail({
+        to: toEmail,
+        subject: emailSubjects.transferRequest(lang, senderName),
+        html: getTicketTransferRequestEmail({
+          lang,
+          senderName,
+          senderEmail: sender?.email || user.email || '',
+          eventTitle: event?.title || 'Event',
+          eventDate: formatEventWhen(event?.start_datetime, lang, event)?.line || '',
+          message: message || '',
+          transferToken: transfer.transfer_token,
+          expiresAt: formatEventWhen(transfer.expires_at, lang, event)?.line || transfer.expires_at,
+          posterUrl: String(event?.banner_image_url || '').trim() || null,
+        })
+      })
 
       if (!recipientQuery.empty) {
         const recipientDoc = recipientQuery.docs[0]

@@ -126,20 +126,29 @@ export async function POST(request: Request) {
     try {
       const organizerId = String(event.organizer_id || '')
       if (organizerId) {
-        const { sendEmail, getRefundRequestEmail } = await import('@/lib/email')
+        const { sendEmail, getRefundRequestEmail, emailSubjects } = await import('@/lib/email')
+        const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
         const orgSnap = await adminDb.collection('users').doc(organizerId).get()
         const organizer = orgSnap.exists ? ((orgSnap.data() as any) ?? {}) : null
         if (organizer?.email) {
+          // The organizer's profile is already loaded: their language, else the event's region.
+          const lang = await resolveEmailLang({ explicit: organizer.language, event })
+          const eventTitle = String(event.title || '').trim() || { en: 'your event', fr: 'votre événement', ht: 'evènman ou' }[lang]
+          // price_paid is the face value in the ticket's (event) currency.
+          const currency = String(first.currency || event.currency || '').trim() || undefined
           await sendEmail({
             to: organizer.email,
-            subject: `Refund Request for ${event.title || 'your event'}`,
+            subject: emailSubjects.refundRequest(lang, eventTitle),
             html: getRefundRequestEmail({
-              organizerName: organizer.full_name || 'Organizer',
-              eventTitle: event.title || 'your event',
-              attendeeEmail: user.email || 'Unknown',
+              lang,
+              organizerName: organizer.full_name || '',
+              eventTitle,
+              attendeeEmail: user.email || '—',
               reason,
               ticketId,
               amount: Number(first.price_paid ?? first.price ?? 0) || 0,
+              currency,
+              eventId,
             }),
           })
         }

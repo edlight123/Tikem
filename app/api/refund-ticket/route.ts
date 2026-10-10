@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
+import { renderEmail, eyebrow, bigFigure, title, eventRow, p, gap, rowsBlock, C } from '@/lib/email-kit/layout'
+import { COMMON, formatEventWhen, formatMoney, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { eventInstantIso } from '@/lib/email-templates/reminder'
 import { sumRefundsByCurrency } from '@/lib/tickets/refundPlan'
 import { adminReviewMessage, refundTicket, resolveBuyerContact } from '@/lib/tickets/refundExecution'
 import { HAITI_MANUAL_APPROVAL, SHORTFALL_REVIEW, type RefundReviewReason } from '@/lib/tickets/refundApprovalPolicy'
@@ -145,10 +149,6 @@ async function notifyBuyer(
   const title = String(event.title || 'your event')
   const toPlans = (rows: { amount: number; currency: string }[]) =>
     rows.map((r) => ({ eligible: true as const, rail: 'manual' as const, amount: r.amount, currency: r.currency, paymentRef: null }))
-  const fmt = (rows: { amount: number; currency: string }[]) =>
-    sumRefundsByCurrency(toPlans(rows))
-      .map((r) => `${r.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${r.currency}`)
-      .join(' + ')
 
   if (uid) {
     await adminDb
@@ -170,32 +170,95 @@ async function notifyBuyer(
   }
 
   if (!to) return
-  const lines: string[] = []
-  if (refunded.length > 0) {
-    lines.push(
-      `<p style="line-height:1.5;margin:0 0 16px"><strong>${fmt(refunded)}</strong> has been refunded to your original payment method. It can take 5–10 days to appear.</p>`
-    )
-  }
-  if (queued.length > 0) {
-    lines.push(
-      `<p style="line-height:1.5;margin:0 0 16px">A refund of <strong>${fmt(queued)}</strong> is being processed. Mobile-money refunds are sent by hand, so allow a few business days.</p>`
-    )
-  }
-  await sendEmail({
-    to,
-    subject: `Refund: ${title}`,
-    html: `<!doctype html><html><body style="margin:0;padding:24px;background:#0A0A0A;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-  <div style="max-width:520px;margin:0 auto">
-    <p style="font-size:12px;letter-spacing:1px;color:#A3A3A3;text-transform:uppercase;margin:0 0 8px">Tikèm</p>
-    <h1 style="font-size:24px;margin:0 0 12px">Your ticket for ${escapeHtml(title)} was refunded</h1>
-    ${lines.join('\n    ')}
-    <p style="color:#A3A3A3;font-size:13px;line-height:1.5;margin:24px 0 0">The organizer issued this refund, so the ticket no longer admits entry. If anything looks wrong, reply to this email.</p>
-  </div></body></html>`,
-  })
+  const lang = await resolveEmailLang({ userId: uid, email: to, event })
+  const message = refundEmail(lang, event, ticket, sumRefundsByCurrency(toPlans(refunded)), sumRefundsByCurrency(toPlans(queued)), sumRefundsByCurrency(toPlans([...refunded, ...queued])))
+  await sendEmail({ to, subject: message.subject, html: message.html })
 }
 
-function escapeHtml(value: string) {
-  return String(value).replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
-  )
+const REFUND_COPY = {
+  en: {
+    fallbackTitle: 'your event',
+    subject: (e: string) => `Refund: ${e}`,
+    status: 'Refunded',
+    eyebrow: 'Refund issued',
+    headline: (e: string) => `Your ticket for ${e} was refunded`,
+    preheader: (m: string) => `${m} is on its way back to you.`,
+    captionRefunded: 'back to your original payment method',
+    captionQueued: 'refund being processed',
+    captionMixed: 'refunded in total',
+    refunded: (m: string) => `${m} has been refunded to your original payment method. It can take 5 to 10 days to appear.`,
+    queued: (m: string) => `A refund of ${m} is being processed. Mobile-money refunds are sent by hand, so allow a few business days.`,
+    note: 'The organizer issued this refund, so the ticket no longer admits entry. If anything looks wrong, write to us from the Help page.',
+  },
+  fr: {
+    fallbackTitle: 'votre événement',
+    subject: (e: string) => `Remboursement : ${e}`,
+    status: 'Remboursé',
+    eyebrow: 'Remboursement effectué',
+    headline: (e: string) => `Votre billet pour ${e} a été remboursé`,
+    preheader: (m: string) => `${m} est en route vers vous.`,
+    captionRefunded: 'sur votre moyen de paiement initial',
+    captionQueued: 'remboursement en cours',
+    captionMixed: 'remboursés au total',
+    refunded: (m: string) => `${m} vous ont été remboursés sur votre moyen de paiement initial. Comptez 5 à 10 jours pour les voir apparaître.`,
+    queued: (m: string) => `Un remboursement de ${m} est en cours. Les remboursements mobile money sont envoyés manuellement : comptez quelques jours ouvrés.`,
+    note: "C'est l'organisateur qui a effectué ce remboursement : le billet ne donne plus accès à l'événement. Si quelque chose ne va pas, écrivez-nous depuis la page Aide.",
+  },
+  ht: {
+    fallbackTitle: 'evènman ou an',
+    subject: (e: string) => `Ranbousman: ${e}`,
+    status: 'Ranbouse',
+    eyebrow: 'Ranbousman fèt',
+    headline: (e: string) => `Yo ranbouse tikè ou pou ${e}`,
+    preheader: (m: string) => `${m} ap tounen ba ou.`,
+    captionRefunded: 'ap tounen sou mwayen peman ou te itilize a',
+    captionQueued: 'ranbousman an ap trete',
+    captionMixed: 'ranbouse an total',
+    refunded: (m: string) => `Yo ranbouse ${m} sou mwayen peman ou te itilize a. Li ka pran 5 a 10 jou pou w wè l.`,
+    queued: (m: string) => `Yon ranbousman ${m} ap trete. Ranbousman mobile money yo voye alamen, kidonk konte kèk jou ouvrab.`,
+    note: 'Se òganizatè a ki fè ranbousman sa a, kidonk tikè a pa ka fè w antre ankò. Si gen yon bagay ki pa bon, ekri nou sou paj Èd la.',
+  },
+} satisfies Record<EmailLang, unknown>
+
+type CurrencyTotal = { amount: number; currency: string }
+
+function refundEmail(
+  lang: EmailLang,
+  event: Record<string, any>,
+  ticket: Record<string, any>,
+  refunded: CurrencyTotal[],
+  queued: CurrencyTotal[],
+  all: CurrencyTotal[]
+): { subject: string; html: string } {
+  const t = REFUND_COPY[lang]
+  const eventTitle = String(event?.title || '').replace(/[\r\n]+/g, ' ').trim() || t.fallbackTitle
+  const posterUrl = String(event?.banner_image_url || '').trim() || null
+  const when = formatEventWhen(eventInstantIso(event?.start_datetime), lang, event)
+  const fmt = (rows: CurrencyTotal[]) => rows.map((r) => formatMoney(r.amount, r.currency, lang)).join(' + ')
+  const total = fmt(all)
+  // One currency: the amount is the hero figure. Several: the sentences carry them.
+  const single = all.length === 1 ? formatMoney(all[0].amount, all[0].currency, lang) : null
+  const caption = refunded.length && queued.length ? t.captionMixed : queued.length ? t.captionQueued : t.captionRefunded
+  const html = renderEmail({
+    lang,
+    title: t.headline(eventTitle),
+    preheader: t.preheader(total),
+    status: { label: t.status, tone: 'teal' },
+    footer: 'attendee',
+    blocks: [
+      eyebrow(t.eyebrow, 'teal'),
+      single
+        ? bigFigure(single.slice(0, single.lastIndexOf(' ')), single.slice(single.lastIndexOf(' ') + 1), caption)
+        : title(t.headline(eventTitle), 34),
+      gap(32),
+      eventRow(posterUrl, eventTitle, when?.line),
+      gap(28),
+      refunded.length ? p(t.refunded(fmt(refunded))) : '',
+      queued.length ? p(t.queued(fmt(queued))) : '',
+      rowsBlock([{ label: COMMON[lang].reference, value: String(ticket?.id || '').slice(0, 12).toUpperCase(), mono: true }]),
+      gap(20),
+      p(t.note, C.text3),
+    ],
+  })
+  return { subject: t.subject(eventTitle), html }
 }

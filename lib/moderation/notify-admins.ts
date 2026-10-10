@@ -14,7 +14,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { getAdminEmails } from '@/lib/admin'
-import { escapeHtml, sendEmail } from '@/lib/email'
+import { sendEmail } from '@/lib/email'
+import { renderEmail, title as titleBlock, p as para, gap, button, rowsBlock, quote, appUrl } from '@/lib/email-kit/layout'
 import { AUTO_HIDE_THRESHOLD, type ReportReason, type ReportTargetKind } from './reports'
 
 export function shouldNotifyAdmins(openCount: number, autoHidden: boolean): boolean {
@@ -80,11 +81,27 @@ export async function notifyAdminsOfReport(p: {
       })
     )
 
-    const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.tikem.co').replace(/\/$/, '')
-    const html = `<p>${escapeHtml(message)}</p>
-<p><strong>Reason:</strong> ${escapeHtml(p.reason)}</p>
-${p.details ? `<p><strong>Details:</strong> ${escapeHtml(p.details)}</p>` : ''}
-<p><a href="${base}${actionUrl}">Open in the admin console</a></p>`
+    const html = renderEmail({
+      lang: 'en',
+      title,
+      preheader: message,
+      status: { label: p.autoHidden ? 'Auto-hidden' : 'Needs review', tone: p.autoHidden ? 'red' : 'amber' },
+      footer: 'account',
+      blocks: [
+        titleBlock(title, 34),
+        gap(14),
+        para(message),
+        gap(4),
+        rowsBlock([
+          { label: 'Reason', value: p.reason.replace(/_/g, ' ') },
+          { label: 'Open reports', value: String(p.openCount) },
+        ]),
+        p.details ? gap(12) : '',
+        p.details ? quote('Details', p.details) : '',
+        gap(24),
+        button('Open in the admin console', `${appUrl()}${actionUrl}`),
+      ],
+    })
     await Promise.all(
       getAdminEmails().map((to) =>
         sendEmail({ to, subject: `[Tikèm] ${title}: ${p.targetTitle}`, html }).catch((err) => {

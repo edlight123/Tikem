@@ -2,7 +2,10 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
-import { escapeHtml } from '@/lib/html'
+import { renderEmail, poster, title, meta, eyebrow, p, gap, button, textLink, C } from '@/lib/email-kit/layout'
+import { formatEventWhen, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { eventInstantIso } from '@/lib/email-templates/reminder'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { sendSms } from '@/lib/sms'
 import { createNotification } from '@/lib/notifications/helpers'
@@ -183,23 +186,9 @@ export async function POST(request: NextRequest) {
       if (method === 'email' && targetEmail) {
         try {
           const eventSnap = await adminDb.collection('events').doc(eventId).get()
-          const eventTitle = eventSnap.exists
-            ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
-            : 'an event'
-
-          const subject = `You're invited to be staff: ${eventTitle.replace(/[\r\n]+/g, ' ')}`
-          const html = `
-            <!doctype html>
-            <html>
-              <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                <h2>Tikèm staff invitation</h2>
-                <p>You have been invited to join <strong>${escapeHtml(eventTitle)}</strong> as staff.</p>
-                <p><a href="${escapeHtml(inviteDeepLink)}">Open in the Tikèm app</a></p>
-                <p><a href="${escapeHtml(inviteUrl)}">Accept your invite</a></p>
-                <p style="color:#6b7280;font-size:12px;">This invite expires in 48 hours.</p>
-              </body>
-            </html>
-          `.trim()
+          const eventData = eventSnap.exists ? ((eventSnap.data() as any) ?? {}) : null
+          const lang = await resolveEmailLang({ email: targetEmail, event: eventData })
+          const { subject, html } = staffInviteEmail(lang, eventData, inviteUrl, inviteDeepLink)
 
           await sendEmail({ to: targetEmail, subject, html })
         } catch (emailError) {
@@ -280,4 +269,79 @@ export async function POST(request: NextRequest) {
     const status = message === 'Event not found' ? 404 : message.includes('Only the event owner') ? 403 : 500
     return NextResponse.json({ error: message }, { status })
   }
+}
+
+const STAFF_INVITE_COPY = {
+  en: {
+    fallbackTitle: 'an event',
+    subject: (e: string) => `You're invited to be staff: ${e}`,
+    preheader: (e: string) => `You have been invited to join ${e} as staff.`,
+    status: 'Invite',
+    eyebrow: 'Staff invitation',
+    headline: (e: string) => `Join the team for ${e}`,
+    body: 'You have been invited to join this event as staff on Tikèm. Accept the invite to get access in the Tikèm app.',
+    accept: 'Accept your invite',
+    openApp: 'Open in the Tikèm app',
+    expires: 'This invite expires in 48 hours.',
+  },
+  fr: {
+    fallbackTitle: 'un événement',
+    subject: (e: string) => `Invitation à rejoindre l'équipe : ${e}`,
+    preheader: (e: string) => `Vous êtes invité à rejoindre l'équipe de ${e}.`,
+    status: 'Invitation',
+    eyebrow: "Invitation à l'équipe",
+    headline: (e: string) => `Rejoignez l'équipe de ${e}`,
+    body: "Vous êtes invité à rejoindre l'équipe de cet événement sur Tikèm. Acceptez l'invitation pour y accéder dans l'application Tikèm.",
+    accept: "Accepter l'invitation",
+    openApp: "Ouvrir dans l'application Tikèm",
+    expires: 'Cette invitation expire dans 48 heures.',
+  },
+  ht: {
+    fallbackTitle: 'yon evènman',
+    subject: (e: string) => `Yo envite w nan ekip la: ${e}`,
+    preheader: (e: string) => `Yo envite w vin nan ekip ${e}.`,
+    status: 'Envitasyon',
+    eyebrow: 'Envitasyon ekip',
+    headline: (e: string) => `Vin nan ekip ${e}`,
+    body: 'Yo envite w vin nan ekip evènman sa a sou Tikèm. Aksepte envitasyon an pou w ka antre nan app Tikèm nan.',
+    accept: 'Aksepte envitasyon an',
+    openApp: 'Louvri l nan app Tikèm nan',
+    expires: 'Envitasyon sa a ap ekspire nan 48 èdtan.',
+  },
+} satisfies Record<EmailLang, unknown>
+
+function staffInviteEmail(
+  lang: EmailLang,
+  event: Record<string, any> | null,
+  inviteUrl: string,
+  inviteDeepLink: string
+): { subject: string; html: string } {
+  const t = STAFF_INVITE_COPY[lang]
+  const eventTitle =
+    String(event?.title || event?.name || '').replace(/[\r\n]+/g, ' ').trim() || t.fallbackTitle
+  const posterUrl = String(event?.banner_image_url || '').trim() || null
+  const when = event ? formatEventWhen(eventInstantIso(event.start_datetime), lang, event) : null
+  const metaLine = [when?.line, [event?.venue_name, event?.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+  const html = renderEmail({
+    lang,
+    title: t.headline(eventTitle),
+    preheader: t.preheader(eventTitle),
+    status: { label: t.status, tone: 'teal' },
+    footer: 'account',
+    blocks: [
+      poster(posterUrl, eventTitle),
+      posterUrl ? gap(28) : '',
+      eyebrow(t.eyebrow),
+      title(t.headline(eventTitle), 34),
+      metaLine ? meta(metaLine) : '',
+      gap(20),
+      p(t.body),
+      gap(4),
+      button(t.accept, inviteUrl),
+      textLink(t.openApp, inviteDeepLink),
+      gap(20),
+      p(t.expires, C.text3),
+    ],
+  })
+  return { subject: t.subject(eventTitle), html }
 }

@@ -15,7 +15,8 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
-import { sendEmail, getOrganizerReplyEmail } from '@/lib/email'
+import { sendEmail, getOrganizerReplyEmail, emailSubjects } from '@/lib/email'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import {
   appendOrganizerReply,
   getThreadForOrganizer,
@@ -115,12 +116,18 @@ export async function POST(
         const attendee = attendeeSnap.data() || {}
         const to = String(attendee.email || '').trim()
         if (to) {
+          // The attendee's profile is already loaded: write in their language.
+          const lang = await resolveEmailLang({ explicit: (attendee as any).language })
+          const namedOrganizer =
+            String((user as any).full_name || '').trim() ||
+            { en: 'The organizer', fr: "L'organisateur", ht: 'Òganizatè a' }[lang]
           await sendEmail({
             to,
-            subject: `${organizerName} replied about ${eventTitle}`,
+            subject: emailSubjects.organizerReply(lang, namedOrganizer, eventTitle),
             html: getOrganizerReplyEmail({
-              attendeeName: String(attendee.full_name || '').trim() || 'there',
-              organizerName,
+              lang,
+              attendeeName: String(attendee.full_name || '').trim(),
+              organizerName: namedOrganizer,
               eventTitle,
               eventId,
               question: String(thread.data.message || ''),

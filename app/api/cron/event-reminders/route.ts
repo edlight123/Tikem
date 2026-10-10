@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
-import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
+import { sendEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getEventReminderWhatsApp } from '@/lib/whatsapp'
 import { sendEventReminder } from '@/lib/notification-triggers'
 import { claimReminder, releaseReminderClaim } from '@/lib/notifications/reminder-claim'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 import { reminderWindows } from '@/lib/notifications/reminder-windows'
-import { escapeHtml } from '@/lib/html'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { appUrl } from '@/lib/email-kit/layout'
+import { getEventReminderEmail } from '@/lib/email-templates/reminder'
 
 export const dynamic = 'force-dynamic'
 
@@ -146,73 +148,22 @@ export async function GET(request: Request) {
           for (const ticket of tickets) {
             if (!ticket.attendee) continue
 
-            // Send email reminder
+            // Send email reminder, in the attendee's language, as the shared
+            // "it's tomorrow" template (poster, facts, ticket, directions).
+            const lang = await resolveEmailLang({
+              explicit: ticket.attendee.language,
+              userId: ticket.attendee_id || ticket.attendee.id,
+              event,
+            })
+            const reminderEmail = getEventReminderEmail({
+              lang,
+              event,
+              ticketUrl: `${appUrl()}/tickets/${encodeURIComponent(String(ticket.id))}`,
+            })
             const emailResult = await sendEmail({
               to: ticket.attendee.email,
-              subject: `Reminder: ${event.title} starts tomorrow!`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); padding: 40px 20px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 28px;">Event Reminder</h1>
-                  </div>
-                  
-                  <div style="padding: 40px 20px; background: #f9fafb;">
-                    <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                      <p style="font-size: 18px; color: #111827; margin-bottom: 10px;">Hi ${escapeHtml(ticket.attendee.full_name || 'there')}!</p>
-                      
-                      <p style="font-size: 16px; color: #374151; line-height: 1.6;">
-                        This is a friendly reminder that <strong>${escapeHtml(event.title)}</strong> starts in ${escapeHtml(reminder.label)}!
-                      </p>
-                      
-                      <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                          <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">📅 Date:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">
-                              ${new Date(event.start_datetime).toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">🕐 Time:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">
-                              ${new Date(event.start_datetime).toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">📍 Location:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">
-                              ${escapeHtml(event.venue_name)}, ${escapeHtml(event.city)}
-                            </td>
-                          </tr>
-                        </table>
-                      </div>
-                      
-                      <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
-                        Don't forget to bring your ticket (digital or printed)!
-                      </p>
-                      
-                      <div style="text-align: center; margin-top: 30px;">
-                        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/tickets/${encodeURIComponent(String(ticket.id))}"
-                           style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                          View My Ticket
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style="padding: 20px; text-align: center; color: #6b7280; font-size: 12px;">
-                    <p>Tikèm - Experience Haiti's Best Events</p>
-                  </div>
-                </div>
-              `,
+              subject: reminderEmail.subject,
+              html: reminderEmail.html,
             })
 
             if (emailResult.success) emailsSent++

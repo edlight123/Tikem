@@ -34,9 +34,9 @@ const actor = { id: 'org_1', email: 'org@example.com', isAdmin: false }
 function seed() {
   db.store.clear()
   db.write('events/ev1', { title: 'Konpa Night', organizer_id: 'org_1', status: 'published', currency: 'HTG' })
-  db.write('users/buyer_card', { email: 'card@example.com' })
+  db.write('users/buyer_card', { email: 'card@example.com', language: 'en' })
   db.write('users/buyer_connect', { email: 'connect@example.com' })
-  db.write('users/buyer_moncash', { email: 'moncash@example.com' })
+  db.write('users/buyer_moncash', { email: 'moncash@example.com', language: 'en' })
   db.write('users/buyer_free', { email: 'free@example.com' })
   db.write('users/buyer_done', { email: 'done@example.com' })
 
@@ -199,7 +199,7 @@ describe('cancelEventWithRefunds', () => {
     const recipients = sendEmail.mock.calls.map(([a]) => a.to).sort()
     expect(recipients).toEqual(['card@example.com', 'connect@example.com', 'free@example.com', 'moncash@example.com'])
     const cardEmail = sendEmail.mock.calls.find(([a]) => a.to === 'card@example.com')![0]
-    expect(cardEmail.html).toContain('11.5 USD')
+    expect(cardEmail.html).toContain('11.50 USD')
     expect(cardEmail.html).toContain('refunded to your original payment method')
     expect(cardEmail.html).toContain('Venue flooded')
     const moncashEmail = sendEmail.mock.calls.find(([a]) => a.to === 'moncash@example.com')![0]

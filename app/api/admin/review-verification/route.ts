@@ -7,7 +7,9 @@ import { sendPushNotification } from '@/lib/notification-triggers'
 import { FieldValue } from 'firebase-admin/firestore'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
-import { escapeHtml } from '@/lib/html'
+import { renderEmail, title, eyebrow, p, gap, button, lines, quote, serifHeading, appUrl } from '@/lib/email-kit/layout'
+import type { EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
 
 /** A request can only be decided while it is awaiting review. */
 const REVIEWABLE_STATUSES = new Set(['pending', 'pending_review', 'in_review', 'in_progress'])
@@ -177,59 +179,18 @@ export async function POST(request: NextRequest) {
     // Send notification email to organizer
     if ((organizer as any)?.email && resend) {
       try {
-        if (normalizedStatus === 'approved') {
-          await resend.emails.send({
-            from: 'Tikem <noreply@tikem.co>',
-            to: (organizer as any).email,
-            subject: '✅ Your Tikèm Account is Verified!',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1 style="color: #059669;">🎉 Congratulations!</h1>
-                <p>Hello ${escapeHtml((organizer as any).full_name || '')},</p>
-                <p>Great news! Your identity verification has been <strong>approved</strong>.</p>
-                <p>You can now:</p>
-                <ul>
-                  <li>✅ Create and publish events</li>
-                  <li>✅ Display a verified badge on your events</li>
-                  <li>✅ Access all organizer features</li>
-                </ul>
-                <p>
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/organizer/events/new" 
-                     style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
-                    Create Your First Event
-                  </a>
-                </p>
-                <p style="margin-top: 40px;">Thank you for being part of the Tikèm community!</p>
-              </div>
-            `,
-          })
-        } else {
-          await resend.emails.send({
-            from: 'Tikem <noreply@tikem.co>',
-            to: (organizer as any).email,
-            subject: 'Tikèm Verification Update',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1 style="color: #DC2626;">Verification Not Approved</h1>
-                <p>Hello ${escapeHtml((organizer as any).full_name || '')},</p>
-                <p>Unfortunately, we were unable to approve your verification request.</p>
-                ${rejectionReason ? `<p><strong>Reason:</strong> ${escapeHtml(rejectionReason)}</p>` : ''}
-                <p>Please submit a new verification request with:</p>
-                <ul>
-                  <li>Clear, well-lit photos</li>
-                  <li>All text on ID card clearly visible</li>
-                  <li>Face clearly visible in selfie</li>
-                </ul>
-                <p>
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/organizer/verify" 
-                     style="background-color: #0F766E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
-                    Try Again
-                  </a>
-                </p>
-              </div>
-            `,
-          })
-        }
+        const lang = await resolveEmailLang({ userId, email: (organizer as any).email })
+        const { subject, html } = verificationDecisionEmail(lang, {
+          approved: normalizedStatus === 'approved',
+          name: (organizer as any).full_name || null,
+          reason: typeof rejectionReason === 'string' ? rejectionReason : null,
+        })
+        await resend.emails.send({
+          from: 'Tikem <noreply@tikem.co>',
+          to: (organizer as any).email,
+          subject,
+          html,
+        })
       } catch (emailError) {
         console.error('Error sending notification email:', emailError)
       }
@@ -257,5 +218,140 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Review verification error:', error)
     return adminError('Internal server error', 500)
+  }
+}
+
+
+const DECISION_COPY: Record<
+  EmailLang,
+  {
+    hello: (name: string | null) => string
+    okSubject: string
+    okStatus: string
+    okHead: string
+    okBody: string
+    okLines: string[]
+    okCta: string
+    noSubject: string
+    noStatus: string
+    noHead: string
+    noBody: string
+    reason: string
+    tipsHead: string
+    tips: string[]
+    noCta: string
+  }
+> = {
+  en: {
+    hello: (n) => (n ? `Hi ${n},` : 'Hi,'),
+    okSubject: 'Your Tikèm account is verified',
+    okStatus: 'Verified',
+    okHead: 'Your account is verified',
+    okBody: 'We checked your ID and approved your verification. Here is what is open to you now.',
+    okLines: ['Create and publish events', 'Show a verified badge on your events', 'Use every organizer tool'],
+    okCta: 'Create an event',
+    noSubject: 'Tikèm verification update',
+    noStatus: 'Action needed',
+    noHead: 'We could not approve your verification yet',
+    noBody: 'Something in your submission kept us from approving it. You can send a new request at any time.',
+    reason: 'Reason',
+    tipsHead: 'for your next try',
+    tips: ['Take clear, well-lit photos', 'Make sure all the text on your ID can be read', 'Keep your face fully visible in the selfie'],
+    noCta: 'Submit again',
+  },
+  fr: {
+    hello: (n) => (n ? `Bonjour ${n},` : 'Bonjour,'),
+    okSubject: 'Votre compte Tikèm est vérifié',
+    okStatus: 'Vérifié',
+    okHead: 'Votre compte est vérifié',
+    okBody: "Nous avons examiné votre pièce d'identité et approuvé votre vérification. Voici ce que vous pouvez faire dès maintenant.",
+    okLines: ['Créer et publier des événements', 'Afficher un badge vérifié sur vos événements', 'Utiliser tous les outils organisateur'],
+    okCta: 'Créer un événement',
+    noSubject: 'Mise à jour de votre vérification Tikèm',
+    noStatus: 'Action requise',
+    noHead: "Nous n'avons pas encore pu approuver votre vérification",
+    noBody: "Un élément de votre dossier nous a empêchés de l'approuver. Vous pouvez envoyer une nouvelle demande à tout moment.",
+    reason: 'Motif',
+    tipsHead: 'pour votre prochaine demande',
+    tips: [
+      'Prenez des photos nettes et bien éclairées',
+      "Vérifiez que tout le texte de votre pièce d'identité est lisible",
+      'Gardez votre visage entièrement visible sur le selfie',
+    ],
+    noCta: 'Envoyer une nouvelle demande',
+  },
+  ht: {
+    hello: (n) => (n ? `Bonjou ${n},` : 'Bonjou,'),
+    okSubject: 'Kont Tikèm ou verifye',
+    okStatus: 'Verifye',
+    okHead: 'Kont ou verifye',
+    okBody: 'Nou gade pyès idantite ou epi nou apwouve verifikasyon ou. Men sa ou ka fè kounye a.',
+    okLines: ['Kreye epi pibliye evènman', 'Montre yon badj verifye sou evènman ou yo', 'Sèvi ak tout zouti òganizatè yo'],
+    okCta: 'Kreye yon evènman',
+    noSubject: 'Nouvèl sou verifikasyon Tikèm ou',
+    noStatus: 'Aksyon nesesè',
+    noHead: 'Nou poko ka apwouve verifikasyon ou',
+    noBody: 'Gen yon bagay nan dosye ou a ki anpeche nou apwouve l. Ou ka voye yon nouvo demann nenpòt lè.',
+    reason: 'Rezon',
+    tipsHead: 'pou pwochen fwa a',
+    tips: [
+      'Pran foto ki klè, ak bon limyè',
+      'Asire w tout ekriti ki sou pyès idantite a ka li',
+      'Kite figi ou parèt nèt nan selfi a',
+    ],
+    noCta: 'Voye l ankò',
+  },
+}
+
+function verificationDecisionEmail(
+  lang: EmailLang,
+  v: { approved: boolean; name: string | null; reason: string | null }
+): { subject: string; html: string } {
+  const t = DECISION_COPY[lang]
+  const base = appUrl()
+  if (v.approved) {
+    return {
+      subject: t.okSubject,
+      html: renderEmail({
+        lang,
+        title: t.okHead,
+        preheader: t.okBody,
+        status: { label: t.okStatus, tone: 'teal' },
+        footer: 'organizer',
+        blocks: [
+          title(t.okHead, 34),
+          gap(14),
+          p(t.hello(v.name)),
+          p(t.okBody),
+          gap(4),
+          lines(t.okLines),
+          gap(20),
+          button(t.okCta, `${base}/organizer/events/new`),
+        ],
+      }),
+    }
+  }
+  return {
+    subject: t.noSubject,
+    html: renderEmail({
+      lang,
+      title: t.noHead,
+      preheader: t.noBody,
+      status: { label: t.noStatus, tone: 'amber' },
+      footer: 'organizer',
+      blocks: [
+        title(t.noHead, 34),
+        gap(14),
+        p(t.hello(v.name)),
+        p(t.noBody),
+        v.reason ? gap(4) : '',
+        v.reason ? quote(t.reason, v.reason) : '',
+        gap(28),
+        serifHeading(t.tipsHead),
+        lines(t.tips),
+        gap(20),
+        button(t.noCta, `${base}/organizer/verify`),
+      ],
+    }),
   }
 }

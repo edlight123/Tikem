@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
+import { renderEmail, title, p, gap, codeBlock } from '@/lib/email-kit/layout'
+import type { EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import crypto from 'crypto'
 
 const DOC_ID = 'payoutDetailsChangeVerification'
@@ -23,6 +26,48 @@ const toIso = (value: any): string | null => {
     return new Date(value).toISOString()
   } catch {
     return null
+  }
+}
+
+const CODE_COPY: Record<EmailLang, { subject: string; status: string; head: string; body: string; note: string; ignore: string }> = {
+  en: {
+    subject: 'Tikèm: Confirm payout details change',
+    status: 'Security',
+    head: 'Confirm your payout details change',
+    body: 'Enter this code in Tikèm to confirm the change to your payout or bank details.',
+    note: 'Expires in 10 minutes',
+    ignore: 'If you did not ask for this change, ignore this email and check your account security. Your payout details stay as they are.',
+  },
+  fr: {
+    subject: 'Tikèm : confirmez la modification de vos coordonnées de paiement',
+    status: 'Sécurité',
+    head: 'Confirmez la modification de vos coordonnées de paiement',
+    body: 'Saisissez ce code dans Tikèm pour confirmer la modification de vos coordonnées de paiement ou bancaires.',
+    note: 'Expire dans 10 minutes',
+    ignore: "Si vous n'avez pas demandé cette modification, ignorez cet e-mail et vérifiez la sécurité de votre compte. Vos coordonnées de paiement restent inchangées.",
+  },
+  ht: {
+    subject: 'Tikèm: konfime chanjman enfòmasyon peman ou',
+    status: 'Sekirite',
+    head: 'Konfime chanjman enfòmasyon peman ou',
+    body: 'Antre kòd sa a nan Tikèm pou konfime chanjman enfòmasyon peman oswa labank ou.',
+    note: 'Li ekspire nan 10 minit',
+    ignore: 'Si se pa ou ki mande chanjman sa a, pa okipe imèl sa a epi tcheke sekirite kont ou. Enfòmasyon peman ou yo rete jan yo ye a.',
+  },
+}
+
+function payoutCodeEmail(lang: EmailLang, code: string): { subject: string; html: string } {
+  const t = CODE_COPY[lang]
+  return {
+    subject: t.subject,
+    html: renderEmail({
+      lang,
+      title: t.head,
+      preheader: `${t.body} ${t.note}.`,
+      status: { label: t.status, tone: 'grey' },
+      footer: 'account',
+      blocks: [title(t.head, 34), gap(14), p(t.body), gap(4), codeBlock(code, t.note), gap(24), p(t.ignore)],
+    }),
   }
 }
 
@@ -77,18 +122,16 @@ export async function POST(_request: NextRequest) {
 
     const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString()
 
-    const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-        <h2 style="margin:0 0 12px;">Confirm payout details change</h2>
-        <p style="margin:0 0 12px; color:#374151;">Use this code to confirm your payout/banking details update. This code expires in 10 minutes.</p>
-        <div style="font-size:28px; font-weight:700; letter-spacing:6px; padding:12px 16px; border:1px solid #e5e7eb; display:inline-block; border-radius:10px;">${verificationCode}</div>
-        <p style="margin:16px 0 0; color:#6b7280; font-size:13px;">If you didn’t request this change, ignore this email and review your account security.</p>
-      </div>
-    `
+    const lang = await resolveEmailLang({
+      explicit: userDoc.exists ? (userDoc.data() as any)?.language : null,
+      userId: organizerId,
+      email,
+    })
+    const { subject, html } = payoutCodeEmail(lang, verificationCode)
 
     const emailResult = await sendEmail({
       to: email,
-      subject: 'Tikèm: Confirm payout details change',
+      subject,
       html,
     })
 

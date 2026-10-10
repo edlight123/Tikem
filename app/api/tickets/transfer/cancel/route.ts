@@ -94,30 +94,39 @@ export async function POST(request: NextRequest) {
 
     // Optionally notify recipient
     try {
-      const { sendEmail, getTicketTransferCancelledEmail } = await import('@/lib/email')
+      const { sendEmail, getTicketTransferCancelledEmail, emailSubjects } = await import('@/lib/email')
+      const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
 
       // Resolve event title if possible
       let eventTitle = 'Event'
+      let eventId: string | undefined
+      let eventData: any = null
       try {
         const ticketId = String(transfer?.ticket_id || '')
         if (ticketId) {
           const ticketSnap = await adminDb.collection('tickets').doc(ticketId).get()
-          const eventId = (ticketSnap.data() as any)?.event_id
+          eventId = (ticketSnap.data() as any)?.event_id || undefined
           if (eventId) {
-            const eventSnap = await adminDb.collection('events').doc(eventId).get()
-            eventTitle = (eventSnap.data() as any)?.title || eventTitle
+            const eventSnap = await adminDb.collection('events').doc(String(eventId)).get()
+            eventData = (eventSnap.data() as any) || null
+            eventTitle = eventData?.title || eventTitle
           }
         }
       } catch {
         // ignore
       }
 
+      // The recipient may not have an account yet: their profile language if they
+      // do (looked up by the address the transfer was sent to), else the event's region.
+      const lang = await resolveEmailLang({ email: transfer.to_email, event: eventData })
       await sendEmail({
         to: transfer.to_email,
-        subject: `Ticket transfer cancelled - ${eventTitle}`,
+        subject: emailSubjects.transferCancelled(lang, eventTitle),
         html: getTicketTransferCancelledEmail({
+          lang,
           eventTitle,
-          senderName: user.name || user.email || 'The sender'
+          senderName: user.name || user.email || { en: 'The sender', fr: "L'expéditeur", ht: 'Moun ki te voye l la' }[lang],
+          eventId,
         })
       })
 

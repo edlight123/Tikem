@@ -6,6 +6,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html'
+import { renderEmail, title, gap, rowsBlock, quote, textLink, appUrl, C, FONT } from '@/lib/email-kit/layout'
 import { getAdminEmails } from '@/lib/admin'
 
 interface PurchaseAttempt {
@@ -239,16 +240,36 @@ export async function logSuspiciousActivity(activity: SuspiciousActivity): Promi
     const adminEmails = getAdminEmails()
     if (adminEmails.length > 0) {
       const subject = `[Tikèm] Critical Security Alert: ${activity.activityType}`
-      const html = `<div style="font-family:sans-serif;padding:24px">
-<h2 style="color:#ef4444">🚨 Critical Security Alert</h2>
-<p><strong>Type:</strong> ${escapeHtml(activity.activityType)}</p>
-<p><strong>Description:</strong> ${escapeHtml(activity.description)}</p>
-${activity.userId ? `<p><strong>User ID:</strong> ${escapeHtml(activity.userId)}</p>` : ''}
-${activity.ipAddress ? `<p><strong>IP Address:</strong> ${escapeHtml(activity.ipAddress)}</p>` : ''}
-<p><strong>Detected at:</strong> ${new Date().toISOString()}</p>
-${activity.metadata ? `<pre style="background:#f1f5f9;padding:12px;border-radius:8px">${escapeHtml(JSON.stringify(activity.metadata, null, 2))}</pre>` : ''}
-<p style="color:#94a3b8;font-size:12px">Tikèm Security System</p>
-</div>`
+      const detectedAt = new Date().toISOString()
+      const rows: Array<{ label: string; value: string; mono?: boolean }> = [
+        { label: 'Type', value: String(activity.activityType), mono: true },
+        { label: 'Detected at', value: detectedAt, mono: true },
+      ]
+      if (activity.userId) rows.push({ label: 'User ID', value: String(activity.userId), mono: true })
+      if (activity.ipAddress) rows.push({ label: 'IP address', value: String(activity.ipAddress), mono: true })
+      const html = renderEmail({
+        lang: 'en',
+        title: 'Critical security alert',
+        preheader: String(activity.description || activity.activityType),
+        status: { label: 'Critical', tone: 'red' },
+        footer: 'account',
+        blocks: [
+          title('Critical security alert', 34),
+          gap(20),
+          quote('What happened', String(activity.description || '')),
+          gap(12),
+          rowsBlock(rows),
+          activity.metadata ? gap(12) : '',
+          activity.metadata
+            ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:20px;border-collapse:separate;"><tr><td style="padding:18px 22px;">
+<div style="font-family:${FONT.sans};font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:${C.text3};margin-bottom:8px;">Metadata</div>
+<pre style="margin:0;font-family:${FONT.mono};font-size:12px;line-height:1.6;color:${C.text2};white-space:pre-wrap;word-break:break-all;">${escapeHtml(JSON.stringify(activity.metadata, null, 2))}</pre>
+</td></tr></table>`
+            : '',
+          gap(8),
+          textLink('Open the admin console', `${appUrl()}/admin`),
+        ],
+      })
       Promise.all(
         adminEmails.map(to => sendEmail({ to, subject, html }).catch(e => console.error('[security] Failed to send alert email to', to, e)))
       ).catch(() => {})

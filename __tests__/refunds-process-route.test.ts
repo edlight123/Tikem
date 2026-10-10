@@ -56,6 +56,10 @@ const sendEmail = jest.fn(async (_args: any) => ({ success: true }))
 jest.mock('@/lib/email', () => ({
   sendEmail: (args: any) => sendEmail(args),
   getRefundProcessedEmail: (p: any) => `refund ${p.status} ${p.refundAmount}`,
+  emailSubjects: { refundProcessed: (_l: any, t: string) => `Refund for ${t}` },
+}))
+jest.mock('@/lib/email-kit/recipient', () => ({
+  resolveEmailLang: async () => 'en',
 }))
 jest.mock('@/lib/sms', () => ({
   sendSms: jest.fn(async () => ({ success: true })),

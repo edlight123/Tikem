@@ -14,7 +14,8 @@ import 'server-only'
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
-import { escapeHtml, sendEmail } from '@/lib/email'
+import { sendEmail } from '@/lib/email'
+import { renderEmail, eyebrow, title as titleBlock, p, gap, button, appUrl } from '@/lib/email-kit/layout'
 import { maskPhone } from './phone'
 
 type Lang = 'en' | 'fr' | 'ht'
@@ -35,6 +36,47 @@ const COPY: Record<Lang, { title: string; body: (phone: string) => string }> = {
     body: (p) =>
       `Kounye a, ${p} ka sèvi pou konekte nan kont Tikèm ou. Si se pa t ou, kontakte sipò Tikèm touswit.`,
   },
+}
+
+/** Email-only strings around the shared title/body. */
+const EMAIL_COPY: Record<Lang, { eyebrow: string; notYou: string; cta: string }> = {
+  en: {
+    eyebrow: 'Account security',
+    notYou: 'If you added this number, there is nothing else to do.',
+    cta: 'Review your account',
+  },
+  fr: {
+    eyebrow: 'Sécurité du compte',
+    notYou: 'Si c’est vous qui avez ajouté ce numéro, vous n’avez rien d’autre à faire.',
+    cta: 'Vérifier mon compte',
+  },
+  ht: {
+    eyebrow: 'Sekirite kont',
+    notYou: 'Si se ou ki ajoute nimewo sa a, ou pa bezwen fè anyen ankò.',
+    cta: 'Gade kont ou',
+  },
+}
+
+/** The phone-linked notice as a full email in the Tikèm layout. */
+export function phoneLinkedEmailHtml(language: unknown, e164: string): string {
+  const lang: Lang = language === 'fr' || language === 'ht' ? language : 'en'
+  const { title, body } = phoneLinkedCopy(lang, e164)
+  const e = EMAIL_COPY[lang]
+  return renderEmail({
+    lang,
+    title,
+    preheader: body,
+    footer: 'account',
+    blocks: [
+      eyebrow(e.eyebrow, 'amber'),
+      titleBlock(title, 34),
+      gap(14),
+      p(body),
+      p(e.notYou),
+      gap(12),
+      button(e.cta, `${appUrl()}/profile`),
+    ],
+  })
 }
 
 export function phoneLinkedCopy(language: unknown, e164: string) {
@@ -61,7 +103,7 @@ export async function notifyPhoneLinked(uid: string, e164: string): Promise<void
 
   const email = typeof user.email === 'string' ? user.email.trim() : ''
   if (email) {
-    const html = `<p style="font-family:sans-serif;font-size:15px;line-height:1.5">${escapeHtml(body)}</p>`
+    const html = phoneLinkedEmailHtml(user.language, e164)
     await sendEmail({ to: email, subject: title, html }).catch(() => {})
   }
 }

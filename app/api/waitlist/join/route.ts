@@ -1,7 +1,84 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
-import { escapeHtml } from '@/lib/html'
+import { renderEmail, appUrl, poster, title, meta, serifEyebrow, serifHeading, metric, steps, gap, button } from '@/lib/email-kit/layout'
+import { formatEventWhen, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { eventInstantIso } from '@/lib/email-templates/reminder'
+
+const WAITLIST_COPY = {
+  en: {
+    fallbackTitle: 'this event',
+    subject: (e: string) => `You're on the waitlist for ${e}`,
+    preheader: (e: string, n: number) => `You're number ${n} on the waitlist for ${e}.`,
+    status: 'Waitlist',
+    eyebrow: "you're on the list",
+    position: 'Your place',
+    next: 'what happens next',
+    steps: [
+      'If tickets open up, we email you right away with a link to buy.',
+      'Freed-up tickets go to whoever buys first, so act quickly when that email comes.',
+    ],
+    view: 'View the event',
+  },
+  fr: {
+    fallbackTitle: 'cet événement',
+    subject: (e: string) => `Vous êtes sur la liste d'attente pour ${e}`,
+    preheader: (e: string, n: number) => `Vous êtes numéro ${n} sur la liste d'attente pour ${e}.`,
+    status: "Liste d'attente",
+    eyebrow: 'vous êtes sur la liste',
+    position: 'Votre place',
+    next: 'la suite',
+    steps: [
+      'Si des billets se libèrent, on vous envoie tout de suite un e-mail avec un lien pour acheter.',
+      'Les billets libérés vont à la première personne qui achète : ne tardez pas quand cet e-mail arrive.',
+    ],
+    view: "Voir l'événement",
+  },
+  ht: {
+    fallbackTitle: 'evènman sa a',
+    subject: (e: string) => `Ou sou lis datant pou ${e}`,
+    preheader: (e: string, n: number) => `Ou se nimewo ${n} sou lis datant pou ${e}.`,
+    status: 'Lis datant',
+    eyebrow: 'ou sou lis la',
+    position: 'Plas ou',
+    next: 'sa k ap vini apre',
+    steps: [
+      'Si gen tikè ki libere, n ap voye yon imèl ba ou touswit ak yon lyen pou achte.',
+      'Se moun ki achte an premye ki pran tikè ki libere yo, kidonk aji vit lè imèl la rive.',
+    ],
+    view: 'Wè evènman an',
+  },
+} satisfies Record<EmailLang, unknown>
+
+function waitlistJoinedEmail(lang: EmailLang, event: Record<string, any>, position: number) {
+  const t = WAITLIST_COPY[lang]
+  const eventTitle = String(event?.title || '').replace(/[\r\n]+/g, ' ').trim() || t.fallbackTitle
+  const posterUrl = String(event?.banner_image_url || '').trim() || null
+  const when = formatEventWhen(eventInstantIso(event?.start_datetime), lang, event)
+  const metaLine = [when?.line, [event?.venue_name, event?.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+  const html = renderEmail({
+    lang,
+    title: eventTitle,
+    preheader: t.preheader(eventTitle, position),
+    status: { label: t.status, tone: 'grey' },
+    footer: 'attendee',
+    blocks: [
+      poster(posterUrl, eventTitle),
+      posterUrl ? gap(28) : '',
+      serifEyebrow(t.eyebrow),
+      title(eventTitle),
+      metaLine ? meta(metaLine) : '',
+      gap(28),
+      metric(t.position, `#${position}`),
+      button(t.view, `${appUrl()}/events/${encodeURIComponent(String(event?.id || ''))}`),
+      gap(40),
+      serifHeading(t.next),
+      steps(t.steps),
+    ],
+  })
+  return { subject: t.subject(eventTitle), html }
+}
 
 export async function POST(request: Request) {
   try {
@@ -73,50 +150,12 @@ export async function POST(request: Request) {
     // the client-writable profile copy); a phone-only account has none and is
     // skipped by sendEmail's null guard. Every organizer-typed value is escaped.
     try {
-      const eventPath = `/events/${encodeURIComponent(String(eventId))}`
+      const lang = await resolveEmailLang({ userId: user.id, email: user.email || null, event })
+      const email = waitlistJoinedEmail(lang, { ...event, id: event.id || eventId }, position)
       await sendEmail({
         to: user.email || null,
-        subject: `You're on the waitlist for ${String(event.title || 'this event').replace(/[\r\n]+/g, ' ')}`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #0d9488 0%, #ea580c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-              .button { display: inline-block; background: #0d9488; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1 style="margin: 0;">📋 Waitlist Confirmed</h1>
-              </div>
-              <div class="content">
-                <p>Hi ${escapeHtml(user.full_name || 'there')},</p>
-                <p>You've been added to the waitlist for <strong>${escapeHtml(event.title)}</strong>!</p>
-                <p><strong>Your position:</strong> #${position}</p>
-                <p>We'll notify you immediately if tickets become available. Keep an eye on your inbox!</p>
-                <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                  <strong>💡 What happens next?</strong>
-                  <ul style="margin: 10px 0 0 0;">
-                    <li>If tickets become available, you'll receive an email with a link to purchase</li>
-                    <li>You'll have 24 hours to complete your purchase</li>
-                    <li>If you don't purchase, the next person on the waitlist will be notified</li>
-                  </ul>
-                </div>
-                <div style="text-align: center;">
-                  <a href="${escapeHtml((process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co') + eventPath)}" class="button">
-                    View Event Details
-                  </a>
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `
+        subject: email.subject,
+        html: email.html,
       })
     } catch (emailError) {
       console.error('Error sending waitlist email:', emailError)

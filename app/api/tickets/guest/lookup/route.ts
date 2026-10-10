@@ -15,7 +15,11 @@ import {
   normalizeEmail,
   normalizePhone,
 } from '@/lib/guest/identity'
-import { sendEmail, escapeHtml } from '@/lib/email'
+import { sendEmail } from '@/lib/email'
+import { renderEmail, poster, title, meta, serifEyebrow, p, gap, button, C } from '@/lib/email-kit/layout'
+import { formatEventWhen, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { eventInstantIso } from '@/lib/email-templates/reminder'
 import { sendSms } from '@/lib/sms'
 import { adminDb } from '@/lib/firebase/admin'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
@@ -33,13 +37,75 @@ const OPAQUE_OK = {
     'If we have tickets for that email or phone number, we just sent the link to it.',
 }
 
-async function eventTitle(eventId: string): Promise<string> {
+async function loadEvent(eventId: string): Promise<Record<string, any> | null> {
   try {
     const snap = await adminDb.collection('events').doc(eventId).get()
-    return snap.exists ? String((snap.data() as any)?.title || 'your event') : 'your event'
+    return snap.exists ? ((snap.data() as any) ?? {}) : null
   } catch {
-    return 'your event'
+    return null
   }
+}
+
+const LINK_COPY = {
+  en: {
+    fallbackTitle: 'your event',
+    subject: (e: string) => `Your Tikèm ticket link for ${e}`,
+    preheader: (e: string) => `Here is your ticket link for ${e}.`,
+    status: 'Your ticket',
+    eyebrow: 'here it is',
+    body: 'Open this link to show your QR code at the door.',
+    view: 'View my ticket',
+    note: 'Keep this link private: anyone who has it can view your ticket.',
+  },
+  fr: {
+    fallbackTitle: 'votre événement',
+    subject: (e: string) => `Votre lien de billet Tikèm pour ${e}`,
+    preheader: (e: string) => `Voici le lien de votre billet pour ${e}.`,
+    status: 'Votre billet',
+    eyebrow: 'le voici',
+    body: "Ouvrez ce lien pour présenter votre QR code à l'entrée.",
+    view: 'Voir mon billet',
+    note: 'Gardez ce lien pour vous : toute personne qui l’a peut voir votre billet.',
+  },
+  ht: {
+    fallbackTitle: 'evènman ou an',
+    subject: (e: string) => `Lyen tikè Tikèm ou pou ${e}`,
+    preheader: (e: string) => `Men lyen tikè ou pou ${e}.`,
+    status: 'Tikè ou',
+    eyebrow: 'men li',
+    body: 'Louvri lyen sa a pou w montre QR kòd ou nan pòtay la.',
+    view: 'Wè tikè m',
+    note: 'Pa bay pèsonn lyen sa a: nenpòt moun ki genyen l ka wè tikè ou.',
+  },
+} satisfies Record<EmailLang, unknown>
+
+function ticketLinkEmail(lang: EmailLang, event: Record<string, any> | null, url: string) {
+  const t = LINK_COPY[lang]
+  const eventTitle = String(event?.title || '').replace(/[\r\n]+/g, ' ').trim() || t.fallbackTitle
+  const posterUrl = String(event?.banner_image_url || '').trim() || null
+  const when = event ? formatEventWhen(eventInstantIso(event.start_datetime), lang, event) : null
+  const metaLine = [when?.line, [event?.venue_name, event?.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+  const html = renderEmail({
+    lang,
+    title: eventTitle,
+    preheader: t.preheader(eventTitle),
+    status: { label: t.status, tone: 'teal' },
+    footer: 'attendee',
+    blocks: [
+      poster(posterUrl, eventTitle),
+      posterUrl ? gap(28) : '',
+      serifEyebrow(t.eyebrow),
+      title(eventTitle),
+      metaLine ? meta(metaLine) : '',
+      gap(20),
+      p(t.body),
+      gap(4),
+      button(t.view, url),
+      gap(16),
+      p(t.note, C.text3),
+    ],
+  })
+  return { subject: t.subject(eventTitle), html }
 }
 
 async function deliverLinks(params: { email?: string; phone?: string }): Promise<void> {
@@ -51,26 +117,15 @@ async function deliverLinks(params: { email?: string; phone?: string }): Promise
 
   for (const order of orders) {
     const url = guestTicketUrl(guestTokenFor(order.orderKey))
-    const title = await eventTitle(order.eventId)
+    const event = await loadEvent(order.eventId)
+    const title = String(event?.title || 'your event')
 
     // Delivered to the address ON THE ORDER — never to an address in this request.
     if (order.email) {
-      await sendEmail({
-        to: order.email,
-        subject: `Your Tikèm ticket link for ${title}`,
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px;color:#0f172a">
-            <p style="font-size:16px">Hi ${escapeHtml(order.name || 'there')},</p>
-            <p style="font-size:15px;line-height:1.7">
-              Here is your ticket link for <strong>${escapeHtml(title)}</strong>. Open it to show your QR code at the door.
-            </p>
-            <p style="margin:24px 0">
-              <a href="${encodeURI(url)}" style="background:#0f172a;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600">View my ticket</a>
-            </p>
-            <p style="font-size:12px;color:#64748b">Keep this link private: anyone with it can view your ticket.</p>
-          </div>
-        `,
-      })
+      // A guest has no profile language: the event's region decides (Kreyòl in Haiti).
+      const lang = await resolveEmailLang({ email: order.email, event })
+      const email = ticketLinkEmail(lang, event, url)
+      await sendEmail({ to: order.email, subject: email.subject, html: email.html })
     }
 
     if (params.phone && order.phone) {

@@ -224,10 +224,12 @@ export async function POST(request: NextRequest) {
 
     // Fetch event + sender/recipient for messages (best-effort)
     let eventTitle = 'Event'
+    let eventData: any = null
     if (ticketEventId) {
       try {
         const eventSnap = await adminDb.collection('events').doc(ticketEventId).get()
-        eventTitle = (eventSnap.data() as any)?.title || eventTitle
+        eventData = (eventSnap.data() as any) || null
+        eventTitle = eventData?.title || eventTitle
       } catch {
         // ignore
       }
@@ -235,11 +237,13 @@ export async function POST(request: NextRequest) {
 
     let senderEmail: string | undefined
     let senderName: string | undefined
+    let senderLanguage: unknown = null
     try {
       const senderSnap = await adminDb.collection('users').doc(fromUserId).get()
       const sender = senderSnap.data() as any
       senderEmail = sender?.email
       senderName = sender?.full_name || sender?.name
+      senderLanguage = sender?.language
     } catch {
       // ignore
     }
@@ -255,13 +259,17 @@ export async function POST(request: NextRequest) {
 
     // Email notifications (best-effort)
     try {
-      const { sendEmail, getTicketTransferResponseEmail } = await import('@/lib/email')
+      const { sendEmail, getTicketTransferResponseEmail, emailSubjects } = await import('@/lib/email')
+      const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
 
       if (senderEmail) {
+        // The email goes to the SENDER, whose profile is already loaded.
+        const lang = await resolveEmailLang({ explicit: senderLanguage, event: eventData })
         await sendEmail({
           to: senderEmail,
-          subject: `Ticket transfer ${status} - ${eventTitle}`,
+          subject: emailSubjects.transferResponse(lang, eventTitle, status === 'accepted'),
           html: getTicketTransferResponseEmail({
+            lang,
             recipientName: recipientName || user.email || toEmailLower,
             eventTitle,
             action: status === 'accepted' ? 'accepted' : 'rejected',

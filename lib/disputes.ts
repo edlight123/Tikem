@@ -26,7 +26,27 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { escapeHtml, sendEmail } from '@/lib/email'
+import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html'
+import {
+  renderEmail,
+  title,
+  p,
+  paragraphHtml,
+  strong,
+  gap,
+  button,
+  bigFigure,
+  rowsBlock,
+  quote,
+  lines,
+  serifHeading,
+  appUrl,
+  C,
+  FONT,
+} from '@/lib/email-kit/layout'
+import { formatMoney, pickLang, type EmailLang } from '@/lib/email-kit/i18n'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { createNotification } from '@/lib/notifications/helpers'
 import { getAdminEmails } from '@/lib/admin'
 import type { NotificationType } from '@/types/database'
@@ -639,16 +659,180 @@ async function upsertDispute(params: {
 
 // ── Email ───────────────────────────────────────────────────────────────────
 
-const BRAND_ERROR = '#ef4444'
+/** Stripe's reason codes in French and Kreyòl (English lives in REASON_LABELS). */
+const REASON_LABELS_I18N: Record<'fr' | 'ht', Record<string, string>> = {
+  fr: {
+    bank_cannot_process: "la banque du titulaire n'a pas pu traiter le paiement",
+    check_returned: 'le chèque du titulaire a été rejeté',
+    credit_not_processed: "le titulaire dit qu'un remboursement promis n'a jamais été versé",
+    customer_initiated: 'le titulaire a contacté directement sa banque',
+    debit_not_authorized: "le titulaire dit n'avoir jamais autorisé ce débit",
+    duplicate: 'le titulaire dit avoir été débité deux fois pour le même billet',
+    fraudulent: "le titulaire dit ne pas reconnaître ce paiement ni l'avoir autorisé",
+    general: 'le titulaire a contesté le paiement sans donner de motif précis',
+    incorrect_account_details: 'les coordonnées du compte utilisées pour le paiement étaient erronées',
+    insufficient_funds: "le titulaire n'avait pas assez de fonds",
+    product_not_received: "le titulaire dit n'avoir jamais reçu son billet",
+    product_unacceptable: "le titulaire dit que l'événement ne correspondait pas à la description",
+    subscription_canceled: 'le titulaire dit que le paiement avait été annulé',
+    unrecognized: 'le titulaire ne reconnaît pas ce paiement sur son relevé',
+  },
+  ht: {
+    bank_cannot_process: 'bank moun ki gen kat la pa t ka trete peman an',
+    check_returned: 'chèk moun ki gen kat la te retounen',
+    credit_not_processed: 'moun ki gen kat la di yo te pwomèt li yon ranbousman li pa janm resevwa',
+    customer_initiated: 'moun ki gen kat la rele bank li dirèkteman',
+    debit_not_authorized: 'moun ki gen kat la di li pa t janm otorize peman sa a',
+    duplicate: 'moun ki gen kat la di yo fè l peye de fwa pou menm tikè a',
+    fraudulent: 'moun ki gen kat la di li pa rekonèt ni otorize peman sa a',
+    general: 'moun ki gen kat la konteste peman an san li pa bay yon rezon presi',
+    incorrect_account_details: 'enfòmasyon kont ki te sou peman an pa t bon',
+    insufficient_funds: 'moun ki gen kat la pa t gen ase kòb',
+    product_not_received: 'moun ki gen kat la di li pa janm resevwa tikè li',
+    product_unacceptable: 'moun ki gen kat la di evènman an pa t jan yo te dekri l la',
+    subscription_canceled: 'moun ki gen kat la di peman an te anile',
+    unrecognized: 'moun ki gen kat la pa rekonèt peman sa a sou relve li',
+  },
+}
+
+function describeDisputeReasonIn(reason: string | null, lang: EmailLang): string {
+  const key = String(reason || '').toLowerCase()
+  if (lang !== 'en') {
+    const label = REASON_LABELS_I18N[lang][key]
+    if (label) return label
+    if (!key) return lang === 'fr' ? 'aucun motif donné' : 'okenn rezon pa bay'
+    return key.replace(/_/g, ' ')
+  }
+  return describeDisputeReason(reason)
+}
+
+const capitalize = (v: string) => (v ? v.charAt(0).toUpperCase() + v.slice(1) : v)
+
+const DISPUTE_COPY: Record<
+  EmailLang,
+  {
+    subject: (amount: string, event: string) => string
+    yourEvent: string
+    status: string
+    head: string
+    hello: (name: string | null) => string
+    body: (amount: string, event: string) => string
+    forEvent: (event: string) => string
+    reason: string
+    buyer: string
+    ticket: string
+    reference: string
+    deadlineHead: string
+    deadlineBody: string
+    helpsHead: string
+    helps: string[]
+    merchant: string
+    cta: string
+  }
+> = {
+  en: {
+    subject: (a, e) => `Action needed: a buyer disputed a ${a} payment for "${e}"`,
+    yourEvent: 'your event',
+    status: 'Action needed',
+    head: 'A buyer disputed their payment',
+    hello: (n) => (n ? `Hi ${n},` : 'Hi,'),
+    body: (a, e) =>
+      `A buyer asked their bank to reverse a ${a} ticket payment for ${e}. The bank has taken the money back while it investigates, and it gave us a deadline to answer with evidence.`,
+    forEvent: (e) => `For ${e}`,
+    reason: 'Stated reason',
+    buyer: 'Buyer',
+    ticket: 'Ticket',
+    reference: 'Reference',
+    deadlineHead: 'evidence deadline',
+    deadlineBody:
+      'Send us what you have before this date. If the deadline passes with no response, the bank decides for the cardholder automatically and the money is gone.',
+    helpsHead: 'what helps us win this',
+    helps: [
+      'Proof the buyer showed up, such as a scan record or a signed door list',
+      'Anything they sent you: messages, a name at the door, a transfer',
+      'Your event page, terms and refund policy as the buyer saw them',
+      'If this looks like a genuine mistake, tell us. A refund now costs less than a lost dispute',
+    ],
+    merchant:
+      'Tikèm is the merchant of record for this sale, so we file the response to the bank. You cannot answer it directly in Stripe. Reply to this email or contact support with your evidence and we will submit it for you.',
+    cta: 'Send evidence to support',
+  },
+  fr: {
+    subject: (a, e) => `Action requise : un acheteur conteste un paiement de ${a} pour « ${e} »`,
+    yourEvent: 'votre événement',
+    status: 'Action requise',
+    head: 'Un acheteur conteste son paiement',
+    hello: (n) => (n ? `Bonjour ${n},` : 'Bonjour,'),
+    body: (a, e) =>
+      `Un acheteur a demandé à sa banque d'annuler un paiement de billet de ${a} pour ${e}. La banque a repris l'argent le temps de son enquête et nous a fixé une date limite pour répondre avec des preuves.`,
+    forEvent: (e) => `Pour ${e}`,
+    reason: 'Motif indiqué',
+    buyer: 'Acheteur',
+    ticket: 'Billet',
+    reference: 'Référence',
+    deadlineHead: 'date limite des preuves',
+    deadlineBody:
+      "Envoyez-nous ce que vous avez avant cette date. Sans réponse à temps, la banque tranche automatiquement en faveur du titulaire de la carte et l'argent est perdu.",
+    helpsHead: 'ce qui nous aide à gagner',
+    helps: [
+      "Une preuve que l'acheteur est venu : un scan du billet ou une liste d'entrée signée",
+      "Tout ce qu'il vous a envoyé : messages, nom donné à l'entrée, transfert",
+      "Votre page d'événement, vos conditions et votre politique de remboursement telles que l'acheteur les a vues",
+      "Si cela ressemble à une vraie erreur, dites-le-nous. Un remboursement maintenant coûte moins cher qu'un litige perdu",
+    ],
+    merchant:
+      "Tikèm est le marchand officiel de cette vente : c'est nous qui répondons à la banque. Vous ne pouvez pas répondre directement dans Stripe. Répondez à cet e-mail ou contactez le support avec vos preuves et nous les transmettrons pour vous.",
+    cta: 'Envoyer des preuves au support',
+  },
+  ht: {
+    subject: (a, e) => `Aksyon nesesè: yon achtè konteste yon peman ${a} pou "${e}"`,
+    yourEvent: 'evènman ou an',
+    status: 'Aksyon nesesè',
+    head: 'Yon achtè konteste peman li',
+    hello: (n) => (n ? `Bonjou ${n},` : 'Bonjou,'),
+    body: (a, e) =>
+      `Yon achtè mande bank li anile yon peman tikè ${a} pou ${e}. Bank lan reprann kòb la pandan l ap fè ankèt, epi li ban nou yon dat limit pou nou reponn ak prèv.`,
+    forEvent: (e) => `Pou ${e}`,
+    reason: 'Rezon yo bay',
+    buyer: 'Achtè',
+    ticket: 'Tikè',
+    reference: 'Referans',
+    deadlineHead: 'dat limit pou prèv yo',
+    deadlineBody:
+      'Voye sa ou genyen ban nou anvan dat sa a. Si dat la pase san repons, bank lan deside an favè moun ki gen kat la otomatikman, epi kòb la pèdi.',
+    helpsHead: 'sa k ap ede nou genyen',
+    helps: [
+      'Prèv achtè a te vini: yon tikè ki te eskane oswa yon lis antre ki siyen',
+      'Nenpòt sa li te voye ba ou: mesaj, yon non nan pòt la, yon transfè',
+      'Paj evènman ou, kondisyon ou ak règ ranbousman ou jan achtè a te wè yo',
+      'Si sa sanble yon vrè erè, di nou sa. Yon ranbousman kounye a koute mwens pase yon diskisyon nou pèdi',
+    ],
+    merchant:
+      'Tikèm se machann ofisyèl vant sa a, se nou ki reponn bank lan. Ou pa ka reponn dirèkteman nan Stripe. Reponn imèl sa a oswa kontakte sipò ak prèv ou yo, n ap voye yo pou ou.',
+    cta: 'Voye prèv bay sipò',
+  },
+}
+
+/** Subject for the organizer's chargeback email, in the organizer's language. */
+export function getDisputeOpenedSubject(params: {
+  amountMinor: number
+  currency: string
+  eventTitle: string | null
+  lang?: EmailLang
+}): string {
+  const lang = pickLang(params.lang)
+  const t = DISPUTE_COPY[lang]
+  return t.subject(formatMoney((Number(params.amountMinor) || 0) / 100, currencyKey(params.currency), lang), params.eventTitle || t.yourEvent)
+}
 
 /**
  * The organizer's chargeback email.
  *
  * EVERY interpolated value that a person could have chosen — event title,
- * attendee name, the dispute reason, the organizer's own name — goes through
- * escapeHtml. A dispute reason is written by a cardholder's bank and stored by us;
- * treating it as trusted markup would let an outsider inject live HTML into an
- * organizer's inbox.
+ * attendee name, the dispute reason, the organizer's own name — is escaped (the
+ * kit blocks escape their text). A dispute reason is written by a cardholder's
+ * bank and stored by us; treating it as trusted markup would let an outsider
+ * inject live HTML into an organizer's inbox.
  */
 export function getDisputeOpenedEmail(params: {
   organizerName: string | null
@@ -660,23 +844,21 @@ export function getDisputeOpenedEmail(params: {
   attendeeName: string | null
   ticketId: string | null
   disputeId: string
+  lang?: EmailLang
 }): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
-  const supportUrl = `${appUrl}/support`
-  const amount = escapeHtml(formatMinor(params.amountMinor, params.currency))
-  const eventTitle = escapeHtml(params.eventTitle || 'your event')
-  const greeting = escapeHtml(params.organizerName || 'there')
-  const reason = escapeHtml(describeDisputeReason(params.reason))
-  const attendee = params.attendeeName ? escapeHtml(params.attendeeName) : null
-  const ticketId = params.ticketId ? escapeHtml(params.ticketId) : null
-  const disputeId = escapeHtml(params.disputeId)
+  const lang = pickLang(params.lang)
+  const t = DISPUTE_COPY[lang]
+  const cur = currencyKey(params.currency)
+  const amount = formatMoney((Number(params.amountMinor) || 0) / 100, cur, lang)
+  const figure = amount.endsWith(` ${cur}`) ? amount.slice(0, -(cur.length + 1)) : amount
+  const eventTitle = params.eventTitle || t.yourEvent
 
   const deadline = (() => {
     if (!params.evidenceDueBy) return null
     const date = new Date(params.evidenceDueBy)
     if (Number.isNaN(date.getTime())) return null
-    return escapeHtml(
-      date.toLocaleString('en-US', {
+    return (
+      date.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR', {
         dateStyle: 'full',
         timeStyle: 'short',
         timeZone: 'UTC',
@@ -684,154 +866,89 @@ export function getDisputeOpenedEmail(params: {
     )
   })()
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>A ticket buyer disputed a payment</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td align="center" style="padding: 48px 16px;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+  const rows: Array<{ label: string; value: string; mono?: boolean }> = []
+  if (params.attendeeName) rows.push({ label: t.buyer, value: params.attendeeName })
+  if (params.ticketId) rows.push({ label: t.ticket, value: params.ticketId, mono: true })
+  rows.push({ label: t.reference, value: params.disputeId, mono: true })
 
-                <tr>
-                  <td style="padding: 0;">
-                    <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%); padding: 50px 40px; text-align: center;">
-                      <div style="font-size: 64px; line-height: 1;">⚠️</div>
-                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                        A ticket buyer disputed their payment
-                      </div>
-                      <div style="margin-top: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85);">Tikèm</div>
-                    </div>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding: 40px;">
-                    <div style="font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
-                      Hi ${greeting},
-                    </div>
-                    <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
-                      A buyer has asked their bank to reverse a ${amount} ticket payment for
-                      <strong style="color: #0f172a;">${eventTitle}</strong>. Their bank has taken the money back
-                      while it investigates, and it has given us a deadline to answer with evidence.
-                    </div>
-
-                    <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 14px; padding: 20px; border-left: 4px solid ${BRAND_ERROR}; margin-bottom: 24px;">
-                      <div style="font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 10px;">The dispute</div>
-                      <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px; color: #b91c1c;">
-                        <tr><td style="padding: 3px 0; width: 130px;">Amount</td><td style="padding: 3px 0; font-weight: 700;">${amount}</td></tr>
-                        <tr><td style="padding: 3px 0;">Event</td><td style="padding: 3px 0; font-weight: 700;">${eventTitle}</td></tr>
-                        <tr><td style="padding: 3px 0;">Stated reason</td><td style="padding: 3px 0;">${reason}</td></tr>
-                        ${attendee ? `<tr><td style="padding: 3px 0;">Buyer</td><td style="padding: 3px 0;">${attendee}</td></tr>` : ''}
-                        ${ticketId ? `<tr><td style="padding: 3px 0;">Ticket</td><td style="padding: 3px 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;">${ticketId}</td></tr>` : ''}
-                        <tr><td style="padding: 3px 0;">Reference</td><td style="padding: 3px 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;">${disputeId}</td></tr>
-                      </table>
-                    </div>
-
-                    ${
-                      deadline
-                        ? `
-                    <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-radius: 14px; padding: 20px; border-left: 4px solid #f59e0b; margin-bottom: 24px;">
-                      <div style="font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 6px;">⏰ Evidence deadline</div>
-                      <div style="font-size: 15px; color: #b45309; font-weight: 700;">${deadline}</div>
-                      <div style="font-size: 13px; color: #b45309; margin-top: 6px; line-height: 1.6;">
-                        Send us what you have before this date. If the deadline passes with no response, the bank
-                        decides for the cardholder automatically and the money is gone.
-                      </div>
-                    </div>`
-                        : ''
-                    }
-
-                    <div style="background: #f8fafc; border-radius: 14px; padding: 20px; margin-bottom: 28px;">
-                      <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">What helps us win this</div>
-                      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #475569; line-height: 1.9;">
-                        <li>Proof the buyer showed up, such as a scan record or a signed door list</li>
-                        <li>Anything they sent you: messages, a name at the door, a transfer</li>
-                        <li>Your event page, terms and refund policy as the buyer saw them</li>
-                        <li>If this looks like a genuine mistake, tell us. A refund now costs less than a lost dispute</li>
-                      </ul>
-                    </div>
-
-                    <div style="font-size: 14px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
-                      Tikèm is the merchant of record for this sale, so we file the response to the bank.
-                      You cannot answer it directly in Stripe. Reply to this email or contact support with your
-                      evidence and we will submit it for you.
-                    </div>
-
-                    <div style="text-align: center;">
-                      <a href="${supportUrl}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, ${BRAND_ERROR} 0%, #c53030 100%); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; letter-spacing: 0.3px;">
-                        Send evidence to support
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding: 24px 40px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-                    <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.6;">
-                      © ${new Date().getFullYear()} Tikèm. All rights reserved.<br>
-                      <a href="${appUrl}/support" style="color: #94a3b8; text-decoration: underline;">Help &amp; support</a>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `
+  return renderEmail({
+    lang,
+    title: t.head,
+    preheader: t.body(amount, eventTitle),
+    status: { label: t.status, tone: 'red' },
+    footer: 'organizer',
+    blocks: [
+      title(t.head, 34),
+      gap(14),
+      p(t.hello(params.organizerName)),
+      p(t.body(amount, eventTitle)),
+      gap(12),
+      bigFigure(figure, cur, t.forEvent(eventTitle)),
+      gap(24),
+      quote(t.reason, capitalize(describeDisputeReasonIn(params.reason, lang))),
+      gap(12),
+      rowsBlock(rows),
+      deadline ? gap(32) : '',
+      deadline ? serifHeading(t.deadlineHead) : '',
+      deadline ? paragraphHtml(strong(deadline), C.text) : '',
+      deadline ? p(t.deadlineBody) : '',
+      gap(deadline ? 16 : 32),
+      serifHeading(t.helpsHead),
+      lines(t.helps),
+      gap(12),
+      p(t.merchant),
+      gap(12),
+      button(t.cta, `${appUrl()}/support`),
+    ],
+  })
 }
 
-/** The admin copy — terse, and sent even when nothing could be attributed. */
+/** The admin copy — terse, and sent even when nothing could be attributed. English: admin-only. */
 function getDisputeAdminEmail(record: DisputeRecord, eventType: string): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'
   const a = record.attribution
-  const rows: [string, string][] = [
-    ['Dispute', escapeHtml(record.disputeId)],
-    ['Status', escapeHtml(record.status || 'unknown')],
-    ['Amount', escapeHtml(formatMinor(record.amountMinor, record.currency))],
-    ['Reason', escapeHtml(describeDisputeReason(record.reason))],
-    ['Stripe event', escapeHtml(eventType)],
-    ['Charge', escapeHtml(record.chargeId || '—')],
-    ['PaymentIntent', escapeHtml(record.paymentIntentId || '—')],
-    ['Evidence due', escapeHtml(record.evidenceDueBy || 'not set by Stripe')],
-    [
-      'Attributed to',
-      a.attributed
-        ? `${escapeHtml(a.eventTitle || a.eventId || 'event')} (organizer ${escapeHtml(
-            a.organizerName || a.organizerId || 'unknown'
-          )})`
-        : `<strong style="color:#b91c1c">UNATTRIBUTED (${escapeHtml(
-            a.unattributedReason || 'unknown'
-          )})</strong>`,
-    ],
-    ['Ticket', escapeHtml(a.ticketId || '—')],
+  const rows: Array<{ label: string; value: string; mono?: boolean }> = [
+    { label: 'Dispute', value: record.disputeId, mono: true },
+    { label: 'Status', value: record.status || 'unknown' },
+    { label: 'Amount', value: formatMinor(record.amountMinor, record.currency) },
+    { label: 'Stripe event', value: eventType, mono: true },
+    { label: 'Charge', value: record.chargeId || '—', mono: true },
+    { label: 'PaymentIntent', value: record.paymentIntentId || '—', mono: true },
+    { label: 'Evidence due', value: record.evidenceDueBy || 'not set by Stripe' },
+    { label: 'Ticket', value: a.ticketId || '—', mono: true },
   ]
+  const attributed = a.attributed
+    ? `${a.eventTitle || a.eventId || 'event'} (organizer ${a.organizerName || a.organizerId || 'unknown'})`
+    : `UNATTRIBUTED (${a.unattributedReason || 'unknown'})`
 
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px;color:#0f172a">
-  <h2 style="color:#ef4444;margin:0 0 4px">Chargeback ${escapeHtml(record.status || '')}</h2>
-  <p style="margin:0 0 16px;color:#64748b;font-size:14px">Tikèm is merchant of record, so this debits the PLATFORM balance.</p>
-  <table style="border-collapse:collapse;font-size:14px">
-    ${rows
-      .map(
-        ([label, value]) =>
-          `<tr><td style="padding:4px 12px 4px 0;color:#64748b">${escapeHtml(label)}</td><td style="padding:4px 0">${value}</td></tr>`
-      )
-      .join('')}
-  </table>
-  ${
-    a.lookupFailed
-      ? `<p style="margin:16px 0 0;color:#b45309;font-size:13px">⚠️ A ticket lookup ERRORED while attributing this dispute, so "unattributed" here may be a Firestore failure, not a missing order.</p>`
-      : ''
-  }
-  <p style="margin:20px 0 0"><a href="${appUrl}/admin/disputes" style="color:#ef4444;font-weight:600">Open the disputes log</a></p>
-</div>`
+  return renderEmail({
+    lang: 'en',
+    title: `Chargeback ${record.status || ''}`.trim(),
+    preheader: `${formatMinor(record.amountMinor, record.currency)} chargeback, ${a.attributed ? 'attributed' : 'UNATTRIBUTED'}.`,
+    status: { label: 'Chargeback', tone: 'red' },
+    footer: 'account',
+    blocks: [
+      title(`Chargeback ${record.status || ''}`.trim(), 34),
+      gap(14),
+      p('Tikèm is merchant of record, so this debits the PLATFORM balance.'),
+      gap(4),
+      rowsBlock(rows),
+      gap(12),
+      quote('Reason', capitalize(describeDisputeReason(record.reason))),
+      gap(12),
+      a.attributed
+        ? quote('Attributed to', attributed)
+        : `<div style="font-family:${FONT.sans};font-size:15px;font-weight:700;line-height:1.5;color:${C.red};">${escapeHtml(attributed)}</div>`,
+      a.lookupFailed ? gap(16) : '',
+      a.lookupFailed
+        ? p(
+            'A ticket lookup ERRORED while attributing this dispute, so "unattributed" here may be a Firestore failure, not a missing order.',
+            C.amber
+          )
+        : '',
+      gap(24),
+      button('Open the disputes log', `${appUrl()}/admin/disputes`),
+    ],
+  })
 }
 
 // ── Notification ────────────────────────────────────────────────────────────
@@ -883,10 +1000,17 @@ async function notifyOrganizer(record: DisputeRecord): Promise<{
   }
 
   if (a.organizerEmail) {
+    const lang = await resolveEmailLang({ userId: organizerId, email: a.organizerEmail })
     const sent = await sendEmail({
       to: a.organizerEmail,
-      subject: `Action needed: a buyer disputed a ${amount} payment for "${a.eventTitle || 'your event'}"`,
+      subject: getDisputeOpenedSubject({
+        amountMinor: record.amountMinor,
+        currency: record.currency,
+        eventTitle: a.eventTitle,
+        lang,
+      }),
       html: getDisputeOpenedEmail({
+        lang,
         organizerName: a.organizerName,
         eventTitle: a.eventTitle,
         amountMinor: record.amountMinor,

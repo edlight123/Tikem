@@ -112,22 +112,31 @@ export async function notifyWaitlist(eventId: string, availableQuantity: number)
 
       // Send email notification
       try {
-        const { sendEmail, getWaitlistNotificationEmail } = await import('@/lib/email')
+        const { sendEmail, getWaitlistNotificationEmail, emailSubjects } = await import('@/lib/email')
+        const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
+        const { formatEventWhen } = await import('@/lib/email-kit/i18n')
         const { data: event } = await supabase
           .from('events')
-          .select('title, start_datetime')
+          .select('title, start_datetime, banner_image_url, venue_name, city, country, timezone')
           .eq('id', eventId)
           .single()
 
         if (event) {
+          const ev = event as any
+          // The person on the waitlist: their profile language, else the event's region.
+          const lang = await resolveEmailLang({ userId: entry.user_id, email: entry.email, event: ev })
+          const when = formatEventWhen(ev.start_datetime, lang, ev)
           await sendEmail({
             to: entry.email,
-            subject: `Tickets Available: ${event.title}`,
+            subject: emailSubjects.waitlist(lang, ev.title),
             html: getWaitlistNotificationEmail({
-              eventTitle: event.title,
-              eventDate: event.start_datetime,
+              lang,
+              eventTitle: ev.title,
+              eventDate: when ? when.line : '',
               quantity: entry.quantity,
-              eventId: eventId
+              eventId: eventId,
+              posterUrl: String(ev.banner_image_url || '').trim() || null,
+              venue: [ev.venue_name, ev.city].filter(Boolean).join(', ') || undefined,
             })
           })
 

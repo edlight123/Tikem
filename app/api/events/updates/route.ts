@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Verify organizer owns this event
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, organizer_id')
+      .select('id, title, organizer_id, organizer_name, banner_image_url, country, city, timezone')
       .eq('id', eventId)
       .eq('organizer_id', user.id)
       .single()
@@ -152,21 +152,35 @@ export async function POST(request: NextRequest) {
     // Send email notifications
     if (sendEmail) {
       try {
-        const { sendEmail: sendEmailFn, getEventUpdateEmail } = await import('@/lib/email')
-        
+        const { sendEmail: sendEmailFn, getEventUpdateEmail, emailSubjects } = await import('@/lib/email')
+        const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
+
+        const ev = event as any
+        const posterUrl = String(ev.banner_image_url || '').trim() || null
+        // The users list above is already in memory, so the organizer's name costs nothing.
+        const organizerProfile = (attendeesList || []).find((u: any) => u.id === user.id) as any
+        const organizerName =
+          String(ev.organizer_name || organizerProfile?.full_name || user.user_metadata?.full_name || '').trim() ||
+          undefined
+
         for (const attendee of attendees) {
           if (!attendee.email) continue
           
           try {
+            // Each attendee's profile is already loaded: their language, else the event's region.
+            const lang = await resolveEmailLang({ explicit: attendee.language, event: ev })
             await sendEmailFn({
               to: attendee.email,
-              subject: `Update: ${event.title}`,
+              subject: emailSubjects.eventUpdate(lang, event.title),
               html: getEventUpdateEmail({
-                attendeeName: attendee.full_name || 'Attendee',
+                lang,
+                attendeeName: attendee.full_name || '',
                 eventTitle: event.title,
                 updateTitle: title,
                 updateMessage: message,
-                eventId: eventId
+                eventId: eventId,
+                posterUrl,
+                organizerName,
               })
             })
             emailsSent++
