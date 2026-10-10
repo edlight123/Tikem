@@ -32,51 +32,28 @@ const ROUTES: Record<string, string[]> = {
 
 const FORWARD_HEADER = 'X-Tikem-Forwarded'
 
+/** The address part of a header value. The LAST <...> wins, so a display name like
+ *  "billing@stripe.com <x" <evil@x.com> can't make us read the wrong address. */
 function addressOnly(v: string): string {
-  const m = String(v || '').match(/<([^>]+)>/)
-  return (m ? m[1] : String(v || '')).trim().toLowerCase()
+  const str = String(v || '')
+  const open = str.lastIndexOf('<')
+  const close = str.lastIndexOf('>')
+  const addr = open >= 0 && close > open ? str.slice(open + 1, close) : str
+  return addr.trim().toLowerCase()
 }
 
 function escapeHtml(v: string): string {
   return String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 }
 
-/**
- * Did the ORIGINAL sender authenticate? Our forward is DKIM-signed by tikem.co, so
- * without this a forged "From: billing@stripe.com" would arrive looking legitimate
- * (authentication laundering).
- *
- * Senders can include their own Authentication-Results header, so only the TOPMOST
- * one in the raw message counts (the receiving MTA prepends its result), and only
- * when its authserv-id is the receiving service (Amazon SES behind Resend Receiving).
- * Comments in parentheses are stripped before matching. Pass = dmarc=pass, or
- * dkim=pass signed by the From domain. Anything else, or a parse failure, is
- * "unverified": the forward still arrives, with a warning.
+/*
+ * Sender authenticity: we deliberately make NO claim. Our forward is DKIM-signed by
+ * tikem.co, so anything that looked like "verified" would launder a forged sender,
+ * and the Authentication-Results we could read can be supplied by the sender
+ * (we can't prove which hop wrote it). Instead every forward opens with the real
+ * sender address and a standing caution, and the From display name is reduced to
+ * plain text with the address shown beside it.
  */
-const TRUSTED_AUTHSERV = /^(amazonses\.com|[a-z0-9.-]*\.amazonses\.com|[a-z0-9.-]*\.resend\.(com|app))\b/
-
-function topAuthResults(raw: string): string | null {
-  const head = raw.split(/\r?\n\r?\n/, 1)[0] || ''
-  const unfolded = head.replace(/\r?\n[ \t]+/g, ' ')
-  for (const line of unfolded.split(/\r?\n/)) {
-    const m = line.match(/^authentication-results:\s*(.*)$/i)
-    if (m) return m[1]
-  }
-  return null
-}
-
-function senderVerifiedFromRaw(raw: string, fromAddress: string): boolean {
-  const ar = topAuthResults(raw)
-  if (!ar) return false
-  const clean = ar.toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
-  if (!TRUSTED_AUTHSERV.test(clean)) return false
-  const domain = (fromAddress.split('@')[1] || '').toLowerCase()
-  if (!domain) return false
-  const results = clean.split(';').slice(1).map((r) => r.trim())
-  const dmarc = results.find((r) => r.startsWith('dmarc='))
-  if (dmarc) return /^dmarc=pass\b/.test(dmarc) && (!/header\.from=/.test(dmarc) || dmarc.includes(`header.from=${domain}`))
-  return results.some((r) => /^dkim=pass\b/.test(r) && new RegExp(`header\\.(d|i)=@?${domain.replace(/\./g, '\\.')}(\\s|$)`).test(r))
-}
 
 function forwardMark(secret: string): string {
   return crypto.createHmac('sha256', secret).update('tikem-inbound-forward-v1').digest('hex').slice(0, 32)
@@ -156,31 +133,21 @@ export async function POST(req: Request) {
 
   const replyTo = (email.reply_to && email.reply_to.length ? email.reply_to : [email.from]).filter(Boolean)
   // The display name is attacker-controlled: keep it short and plain.
-  const name = displayName(email.from).replace(/["<>\r\n]/g, '').slice(0, 60) || from
-  let verified = false
-  try {
-    const rawUrl = (email as any).raw?.download_url
-    if (rawUrl) {
-      const res = await fetch(rawUrl)
-      if (res.ok) verified = senderVerifiedFromRaw(await res.text(), from)
-    }
-  } catch (err) {
-    console.warn('[inbound] could not read raw message for sender checks', emailId, (err as any)?.message)
-  }
-  const subject = `${verified ? '' : '[Unverified sender] '}${email.subject || '(no subject)'}`
+  const safeFrom = from.replace(/["\\\r\n<>]/g, '')
+  const name = displayName(email.from).replace(/["<>\\()\r\n@]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40)
+  const subject = email.subject || '(no subject)'
 
-  // Every forward opens with the real sender address, so a spoofed display name
-  // can't hide it, and a red warning when the sender didn't authenticate.
-  const banner = `<div style="font-family:Arial,sans-serif;font-size:12px;line-height:1.5;padding:10px 12px;margin:0 0 14px;border-radius:6px;${
-    verified ? 'background:#f3f4f3;color:#444;' : 'background:#fdecea;color:#8a1c12;'
-  }">${verified ? '' : '<b>Unverified sender.</b> This message failed sender checks and may be forged. Do not click links or share codes.<br>'}From <b>${escapeHtml(
+  // Every forward opens with the real sender address and a standing caution, so a
+  // spoofed display name can't hide who actually wrote.
+  const banner = `<div style="font-family:Arial,sans-serif;font-size:12px;line-height:1.5;padding:10px 12px;margin:0 0 14px;border-radius:6px;background:#f3f4f3;color:#444;">External message from <b>${escapeHtml(
     from
-  )}</b> to ${escapeHtml(original)} · forwarded by Tikèm</div>`
-  const textBanner = `${verified ? '' : 'UNVERIFIED SENDER: this message failed sender checks and may be forged.\n'}From ${from} to ${original}, forwarded by Tikèm\n\n`
+  )}</b> to ${escapeHtml(original)}, forwarded by Tikèm. Tikèm can't confirm who sent it: be careful with links, attachments and payment or code requests.</div>`
+  const textBanner = `External message from ${from} to ${original}, forwarded by Tikèm. Tikèm can't confirm who sent it: be careful with links, attachments and payment or code requests.\n\n`
 
   const sent = await resend.emails.send(
     {
-      from: `${name} via Tikèm <${original}>`,
+      // The real address rides in the display name, so the inbox list shows it too.
+      from: `"${name ? `${name} (${safeFrom})` : safeFrom} via Tikèm" <${original}>`,
       to: [original],
       bcc: destinations,
       replyTo,
