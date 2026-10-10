@@ -35,6 +35,7 @@ You can also sign in as the organizer, switch to Profile > View as: Organizer, a
 
 3. PAYMENTS (Guidelines 3.1.3(e) and 3.1.5)
 Every ticket sold in Tikèm admits the holder to a physical, in-person event at a real venue. Under 3.1.3(e) (goods and services consumed outside the app) these are not in-app purchases, so card and Apple Pay payments run through Stripe, and MonCash (a Haitian mobile-money wallet) is offered only for events in Haiti. The app sells no digital content, subscriptions or unlocks. The free test event lets you complete checkout without being charged.
+APPLE PAY / PASSKIT (2.1): PassKit is linked by the Stripe SDK, which offers Apple Pay in the Stripe payment sheet when a buyer pays by card for a paid ticket. Card payments are not yet enabled for organizers in this version, so Apple Pay cannot be reached in the app today; it will appear in card checkout once organizers can accept cards. (Add to Apple Wallet opens a signed .pkpass from our server; it does not use PassKit in the app.)
 Organizers who sell paid tickets verify their identity once before payout (government ID and a short selfie video, reviewed by our team). The camera and microphone prompts only appear inside that flow and the ticket scanner; the recording is saved muted.
 
 4. ACCOUNT DELETION (5.1.1(v))
