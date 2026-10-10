@@ -34,6 +34,24 @@ function addressOnly(v: string): string {
   return (m ? m[1] : String(v || '')).trim().toLowerCase()
 }
 
+function escapeHtml(v: string): string {
+  return String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
+}
+
+/**
+ * Did the ORIGINAL sender authenticate? Our forward is DKIM-signed by tikem.co, so
+ * without this a forged "From: billing@stripe.com" would arrive looking legitimate
+ * (authentication laundering). Trust only an explicit dmarc=pass, or dkim=pass for
+ * the From domain, in the receiving server's Authentication-Results.
+ */
+function senderVerified(headers: Record<string, string>, fromAddress: string): boolean {
+  const ar = String(headers['authentication-results'] || '').toLowerCase()
+  if (!ar) return false
+  if (/\bdmarc=pass\b/.test(ar)) return true
+  const domain = fromAddress.split('@')[1] || ''
+  return Boolean(domain) && new RegExp(`dkim=pass[^;]*header\\.(d|i)=@?${domain.replace(/\./g, '\\.')}`).test(ar)
+}
+
 function displayName(v: string): string {
   const m = String(v || '').match(/^\s*"?([^"<]*?)"?\s*</)
   return (m && m[1].trim()) || addressOnly(v)
@@ -106,7 +124,19 @@ export async function POST(req: Request) {
   }
 
   const replyTo = (email.reply_to && email.reply_to.length ? email.reply_to : [email.from]).filter(Boolean)
-  const name = displayName(email.from).replace(/["<>]/g, '')
+  // The display name is attacker-controlled: keep it short and plain.
+  const name = displayName(email.from).replace(/["<>\r\n]/g, '').slice(0, 60) || from
+  const verified = senderVerified(headers, from)
+  const subject = `${verified ? '' : '[Unverified sender] '}${email.subject || '(no subject)'}`
+
+  // Every forward opens with the real sender address, so a spoofed display name
+  // can't hide it, and a red warning when the sender didn't authenticate.
+  const banner = `<div style="font-family:Arial,sans-serif;font-size:12px;line-height:1.5;padding:10px 12px;margin:0 0 14px;border-radius:6px;${
+    verified ? 'background:#f3f4f3;color:#444;' : 'background:#fdecea;color:#8a1c12;'
+  }">${verified ? '' : '<b>Unverified sender.</b> This message failed sender checks and may be forged. Do not click links or share codes.<br>'}From <b>${escapeHtml(
+    from
+  )}</b> to ${escapeHtml(original)} · forwarded by Tikèm</div>`
+  const textBanner = `${verified ? '' : 'UNVERIFIED SENDER: this message failed sender checks and may be forged.\n'}From ${from} to ${original}, forwarded by Tikèm\n\n`
 
   const sent = await resend.emails.send(
     {
@@ -114,9 +144,9 @@ export async function POST(req: Request) {
       to: [original],
       bcc: destinations,
       replyTo,
-      subject: email.subject || '(no subject)',
-      html: email.html || undefined,
-      text: email.text || (email.html ? undefined : ' '),
+      subject,
+      html: banner + (email.html || (email.text ? `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(email.text)}</pre>` : '')),
+      text: textBanner + (email.text || ''),
       attachments: attachments.length ? (attachments as any) : undefined,
       headers: { [FORWARD_HEADER]: '1', ...(email.message_id ? { 'X-Tikem-Original-Message-Id': email.message_id } : {}) },
     } as any,
