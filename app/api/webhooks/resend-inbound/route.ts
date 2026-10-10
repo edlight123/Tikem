@@ -10,8 +10,11 @@
 // through Resend SMTP), and the reply lands with the customer, not back here.
 //
 // Loop guard: the copy addressed To: support@ comes back through Resend Receiving.
-// It is dropped twice over: it carries X-Tikem-Forwarded, and it is FROM tikem.co.
+// It is dropped twice over: it carries X-Tikem-Forwarded (an HMAC only this server
+// can produce, so a sender can't set it to suppress their own mail), and it is
+// FROM tikem.co.
 
+import crypto from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
@@ -41,15 +44,42 @@ function escapeHtml(v: string): string {
 /**
  * Did the ORIGINAL sender authenticate? Our forward is DKIM-signed by tikem.co, so
  * without this a forged "From: billing@stripe.com" would arrive looking legitimate
- * (authentication laundering). Trust only an explicit dmarc=pass, or dkim=pass for
- * the From domain, in the receiving server's Authentication-Results.
+ * (authentication laundering).
+ *
+ * Senders can include their own Authentication-Results header, so only the TOPMOST
+ * one in the raw message counts (the receiving MTA prepends its result), and only
+ * when its authserv-id is the receiving service (Amazon SES behind Resend Receiving).
+ * Comments in parentheses are stripped before matching. Pass = dmarc=pass, or
+ * dkim=pass signed by the From domain. Anything else, or a parse failure, is
+ * "unverified": the forward still arrives, with a warning.
  */
-function senderVerified(headers: Record<string, string>, fromAddress: string): boolean {
-  const ar = String(headers['authentication-results'] || '').toLowerCase()
+const TRUSTED_AUTHSERV = /^(amazonses\.com|[a-z0-9.-]*\.amazonses\.com|[a-z0-9.-]*\.resend\.(com|app))\b/
+
+function topAuthResults(raw: string): string | null {
+  const head = raw.split(/\r?\n\r?\n/, 1)[0] || ''
+  const unfolded = head.replace(/\r?\n[ \t]+/g, ' ')
+  for (const line of unfolded.split(/\r?\n/)) {
+    const m = line.match(/^authentication-results:\s*(.*)$/i)
+    if (m) return m[1]
+  }
+  return null
+}
+
+function senderVerifiedFromRaw(raw: string, fromAddress: string): boolean {
+  const ar = topAuthResults(raw)
   if (!ar) return false
-  if (/\bdmarc=pass\b/.test(ar)) return true
-  const domain = fromAddress.split('@')[1] || ''
-  return Boolean(domain) && new RegExp(`dkim=pass[^;]*header\\.(d|i)=@?${domain.replace(/\./g, '\\.')}`).test(ar)
+  const clean = ar.toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!TRUSTED_AUTHSERV.test(clean)) return false
+  const domain = (fromAddress.split('@')[1] || '').toLowerCase()
+  if (!domain) return false
+  const results = clean.split(';').slice(1).map((r) => r.trim())
+  const dmarc = results.find((r) => r.startsWith('dmarc='))
+  if (dmarc) return /^dmarc=pass\b/.test(dmarc) && (!/header\.from=/.test(dmarc) || dmarc.includes(`header.from=${domain}`))
+  return results.some((r) => /^dkim=pass\b/.test(r) && new RegExp(`header\\.(d|i)=@?${domain.replace(/\./g, '\\.')}(\\s|$)`).test(r))
+}
+
+function forwardMark(secret: string): string {
+  return crypto.createHmac('sha256', secret).update('tikem-inbound-forward-v1').digest('hex').slice(0, 32)
 }
 
 function displayName(v: string): string {
@@ -93,7 +123,8 @@ export async function POST(req: Request) {
 
   const from = addressOnly(email.from)
   const headers = Object.fromEntries(Object.entries(email.headers || {}).map(([k, v]) => [k.toLowerCase(), v]))
-  if (headers[FORWARD_HEADER.toLowerCase()] || from.endsWith('@tikem.co')) {
+  const mark = forwardMark(secret)
+  if (String(headers[FORWARD_HEADER.toLowerCase()] || '') === mark || from.endsWith('@tikem.co')) {
     return NextResponse.json({ ignored: 'own_forward' })
   }
 
@@ -126,7 +157,16 @@ export async function POST(req: Request) {
   const replyTo = (email.reply_to && email.reply_to.length ? email.reply_to : [email.from]).filter(Boolean)
   // The display name is attacker-controlled: keep it short and plain.
   const name = displayName(email.from).replace(/["<>\r\n]/g, '').slice(0, 60) || from
-  const verified = senderVerified(headers, from)
+  let verified = false
+  try {
+    const rawUrl = (email as any).raw?.download_url
+    if (rawUrl) {
+      const res = await fetch(rawUrl)
+      if (res.ok) verified = senderVerifiedFromRaw(await res.text(), from)
+    }
+  } catch (err) {
+    console.warn('[inbound] could not read raw message for sender checks', emailId, (err as any)?.message)
+  }
   const subject = `${verified ? '' : '[Unverified sender] '}${email.subject || '(no subject)'}`
 
   // Every forward opens with the real sender address, so a spoofed display name
@@ -148,7 +188,7 @@ export async function POST(req: Request) {
       html: banner + (email.html || (email.text ? `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(email.text)}</pre>` : '')),
       text: textBanner + (email.text || ''),
       attachments: attachments.length ? (attachments as any) : undefined,
-      headers: { [FORWARD_HEADER]: '1', ...(email.message_id ? { 'X-Tikem-Original-Message-Id': email.message_id } : {}) },
+      headers: { [FORWARD_HEADER]: mark, ...(email.message_id ? { 'X-Tikem-Original-Message-Id': email.message_id } : {}) },
     } as any,
     { idempotencyKey: `inbound-${emailId}` }
   )
