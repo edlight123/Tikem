@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
-# Replace RESEND_API_KEY in Vercel production with the key on the clipboard.
-# The key is never printed. Run from the repo root right after clicking Copy in Resend:
-#   bash scripts/set-resend-key-from-clipboard.sh
+# Put the secret on the clipboard into a Vercel production env var. Never printed.
+# Run from the repo root right after clicking Copy in Resend:
+#   bash scripts/set-resend-key-from-clipboard.sh                                   # RESEND_API_KEY
+#   bash scripts/set-resend-key-from-clipboard.sh RESEND_INBOUND_API_KEY
+#   bash scripts/set-resend-key-from-clipboard.sh RESEND_INBOUND_WEBHOOK_SECRET whsec
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+VAR="${1:-RESEND_API_KEY}"
+KIND="${2:-key}"
 KEY="$(pbpaste | tr -d '[:space:]')"
+if [[ "$KIND" == "whsec" ]]; then
+  if [[ ! "$KEY" =~ ^whsec_[A-Za-z0-9+/=_]{20,}$ ]]; then
+    echo "Clipboard does not hold a webhook signing secret (expected whsec_...)." >&2
+    exit 1
+  fi
+  vercel env rm "$VAR" production --yes >/dev/null 2>&1 || true
+  printf '%s' "$KEY" | vercel env add "$VAR" production --sensitive >/dev/null
+  echo "$VAR replaced in Vercel production. Redeploy production for it to take effect."
+  exit 0
+fi
 if [[ ! "$KEY" =~ ^re_[A-Za-z0-9_]{20,}$ ]]; then
   echo "Clipboard does not hold a Resend key (expected re_...). Click Copy in Resend and rerun." >&2
   exit 1
@@ -21,6 +35,6 @@ if [[ "$STATUS" == "401" || "$STATUS" == "403" ]]; then
 fi
 echo "Key accepted by Resend (validation HTTP $STATUS)."
 
-vercel env rm RESEND_API_KEY production --yes >/dev/null 2>&1 || true
-printf '%s' "$KEY" | vercel env add RESEND_API_KEY production --sensitive >/dev/null
-echo "RESEND_API_KEY replaced in Vercel production. Redeploy production for it to take effect."
+vercel env rm "$VAR" production --yes >/dev/null 2>&1 || true
+printf '%s' "$KEY" | vercel env add "$VAR" production --sensitive >/dev/null
+echo "$VAR replaced in Vercel production. Redeploy production for it to take effect."
