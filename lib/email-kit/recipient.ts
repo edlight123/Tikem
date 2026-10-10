@@ -1,7 +1,7 @@
 // Which language to write an email in, server-side.
 //
 // Order: an explicit language the caller already knows → the recipient's profile
-// (`users/{uid}.language`, found by uid or by email) → the event's region (Kreyòl
+// (`users/{uid}.language`, found by uid or by email) → the event's region (French
 // for Haiti, English elsewhere). Never throws: a lookup failure falls through to the
 // event fallback, because a wrong-language email beats no email.
 

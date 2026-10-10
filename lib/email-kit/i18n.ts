@@ -2,7 +2,8 @@
 //
 // Every email is written in the three languages the app speaks. The recipient's
 // language comes from their profile (`users/{uid}.language`); guests have none, so
-// `fallbackLangForEvent` picks Kreyòl for events in Haiti and English elsewhere.
+// `fallbackLangForEvent` picks French for events in Haiti (owner's call, 2026-10-10)
+// and English elsewhere.
 
 import { eventZone } from '@/lib/home/feed'
 
@@ -18,11 +19,11 @@ export function normalizeLang(value: unknown): EmailLang | null {
   return null
 }
 
-/** Guests have no language setting: Kreyòl for events in Haiti, English elsewhere. */
+/** Guests have no language setting: French for events in Haiti, English elsewhere. */
 export function fallbackLangForEvent(event?: { country?: unknown; city?: unknown; timezone?: unknown } | null): EmailLang {
   const country = String(event?.country || '').trim().toUpperCase()
-  if (country === 'HT' || country === 'HAITI' || country === 'HAÏTI' || country === 'AYITI') return 'ht'
-  if (!country && event && eventZone(event as any) === 'America/Port-au-Prince') return 'ht'
+  if (country === 'HT' || country === 'HAITI' || country === 'HAÏTI' || country === 'AYITI') return 'fr'
+  if (!country && event && eventZone(event as any) === 'America/Port-au-Prince') return 'fr'
   return 'en'
 }
 
