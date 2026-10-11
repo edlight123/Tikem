@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
@@ -127,7 +128,22 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** The stored evidence paths of a request, as one comparable string ('' when none). */
+/** Deterministic JSON (sorted keys) so equal data always hashes the same. */
+function stableJson(value: any): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value ?? null)
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`
+  if (typeof value?.toDate === 'function') return JSON.stringify(value.toDate().toISOString())
+  return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${stableJson(value[k])}`).join(',')}}`
+}
+
+/**
+ * Everything the reviewer approved, as one comparable string ('' when no ID +
+ * selfie). It covers the document paths AND the submitted details (`steps`:
+ * legal name, organization, address…). While a revoked request sits in
+ * changes_requested the organizer may edit both, so a re-instate must refuse if
+ * either changed — otherwise an edited legal name (used to match bank account
+ * holders) would be approved without review.
+ */
 function evidenceFingerprint(req: any): string {
   if (!req) return ''
   const front = req?.files?.governmentId?.front || req?.id_front_url || ''
@@ -135,5 +151,6 @@ function evidenceFingerprint(req: any): string {
   if (!front || !selfie) return ''
   const back = req?.files?.governmentId?.back || req?.id_back_url || ''
   const liveness = req?.files?.liveness?.path || ''
-  return [front, back, selfie, liveness].join('|')
+  const details = crypto.createHash('sha256').update(stableJson(req?.steps || {})).digest('hex')
+  return [front, back, selfie, liveness, details].join('|')
 }
