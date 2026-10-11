@@ -110,6 +110,11 @@ export const metadata: Metadata = {
   other: {
     'mobile-web-app-capable': 'yes',
   },
+  verification: {
+    other: {
+      'facebook-domain-verification': 'x7w7o11goa7molm2rpi5y2ecfa8f64',
+    },
+  },
 }
 
 export const viewport: Viewport = {
