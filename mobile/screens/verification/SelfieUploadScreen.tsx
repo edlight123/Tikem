@@ -26,6 +26,7 @@ import {
   updateVerificationFiles,
   updateVerificationStep,
   getDocumentDownloadURL,
+  imageTypeFromUri,
   getVerificationRequest,
 } from '../../lib/verification';
 import { useAppAlert } from '../../components/AppAlert';
@@ -142,14 +143,14 @@ export default function SelfieUploadScreen() {
       const { storage } = await import('../../config/firebase');
       const { ref, uploadBytes } = await import('firebase/storage');
       
-      const timestamp = Date.now();
-      const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `selfie_${timestamp}.${extension}`;
+      // A new object name every time: KYC uploads are create-only (storage.rules).
+      const { extension, contentType } = imageTypeFromUri(uri);
+      const fileName = `selfie_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
       const storagePath = `verification/${userProfile.id}/${fileName}`;
       const storageRef = ref(storage, storagePath);
 
       const metadata = {
-        contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`,
+        contentType,
         customMetadata: {
           uploadedAt: new Date().toISOString(),
           documentType: 'selfie',

@@ -91,11 +91,59 @@ function reasonSuffix(lang: Lang, reason: string | null): string {
 export function withdrawalOutcomeCopy(
   outcome: WithdrawalOutcome,
   lang: Lang,
-  v: { amount: string; phone: string; reason: string | null }
+  v: { amount: string; phone: string; reason: string | null; method?: 'moncash' | 'bank' }
 ): Copy {
   const to = (en: string, fr: string, ht: string) => ({ en, fr, ht })[lang]
   const phone = v.phone ? ` (${v.phone})` : ''
   const cta = CTA[lang]
+  if (v.method === 'bank') {
+    // Bank withdrawals are always manual: filed, approved, paid, or declined.
+    switch (outcome) {
+      case 'submitted':
+        return {
+          title: to('Withdrawal request received', 'Demande de retrait reçue', 'Nou resevwa demann retrè a'),
+          body: to(
+            `Your request for ${v.amount} to your bank account is in review. We'll let you know when it's paid.`,
+            `Votre demande de ${v.amount} vers votre compte bancaire est en cours d'examen. Nous vous préviendrons dès qu'elle sera payée.`,
+            `Demann ${v.amount} pou kont bank ou an ap revize. N ap fè w konnen lè li peye.`
+          ),
+          cta,
+        }
+      case 'approved':
+        return {
+          title: to('Withdrawal approved', 'Retrait approuvé', 'Retrè apwouve'),
+          body: to(
+            `Your ${v.amount} bank withdrawal was approved and is being paid.`,
+            `Votre retrait bancaire de ${v.amount} a été approuvé et est en cours de paiement.`,
+            `Yo apwouve retrè bank ${v.amount} ou a, y ap peye l kounye a.`
+          ),
+          cta,
+        }
+      case 'admin_completed':
+      case 'completed':
+        return {
+          title: to('Withdrawal paid', 'Retrait payé', 'Retrè peye'),
+          body: to(
+            `${v.amount} was paid to your bank account.`,
+            `${v.amount} a été payé sur votre compte bancaire.`,
+            `Nou peye ${v.amount} sou kont bank ou.`
+          ),
+          cta,
+        }
+      case 'failed':
+        return {
+          title: to("Withdrawal didn't go through", "Le retrait n'a pas abouti", 'Retrè a pa pase'),
+          body: to(
+            `Your ${v.amount} bank withdrawal failed and the money is back in your balance. You can try again.`,
+            `Votre retrait bancaire de ${v.amount} a échoué et le montant a été remis sur votre solde. Vous pouvez réessayer.`,
+            `Retrè bank ${v.amount} ou a pa pase, lajan an retounen nan balans ou. Ou ka eseye ankò.`
+          ) + reasonSuffix(lang, v.reason),
+          cta,
+        }
+      default:
+        break
+    }
+  }
   switch (outcome) {
     case 'completed':
       return {
@@ -267,6 +315,12 @@ const EMAIL_COPY: Record<
   },
 }
 
+const BANK_EMAIL_COPY: Record<Lang, { toBank: string; manual: [string, string, string] }> = {
+  en: { toBank: 'To your bank account', manual: ['Request received', 'Approved', 'Paid to your bank'] },
+  fr: { toBank: 'Vers votre compte bancaire', manual: ['Demande reçue', 'Approuvée', 'Payée sur votre compte'] },
+  ht: { toBank: 'Sou kont bank ou', manual: ['Nou resevwa demann lan', 'Apwouve', 'Peye sou kont bank ou'] },
+}
+
 const STATUS_TONE: Record<WithdrawalOutcome, Tone> = {
   completed: 'teal',
   admin_completed: 'teal',
@@ -282,20 +336,21 @@ export function withdrawalOutcomeEmailHtml(
   outcome: WithdrawalOutcome,
   lang: Lang,
   copy: Copy,
-  v: { minor: number; currency: string; phone: string; url: string }
+  v: { minor: number; currency: string; phone: string; url: string; method?: 'moncash' | 'bank' }
 ): string {
   const e = EMAIL_COPY[lang]
+  const bank = v.method === 'bank'
   const cur = String(v.currency || 'HTG').toUpperCase()
   // The figure without its code; the code sits beside it, smaller.
   const full = formatWithdrawalAmount(v.minor, cur, lang)
   const figure = full.endsWith(` ${cur}`) ? full.slice(0, -(cur.length + 1)) : full
   const returned = outcome === 'failed' || outcome === 'admin_rejected'
-  const caption = returned ? e.backInBalance : e.toMoncash(v.phone)
+  const caption = returned ? e.backInBalance : bank ? BANK_EMAIL_COPY[lang].toBank : e.toMoncash(v.phone)
 
   let stages: Array<{ label: string; done?: boolean }> | null = null
   if (outcome === 'submitted' || outcome === 'approved' || outcome === 'admin_completed') {
     const reached = outcome === 'submitted' ? 1 : outcome === 'approved' ? 2 : 3
-    stages = e.manual.map((label, i) => ({ label, done: i < reached }))
+    stages = (bank ? BANK_EMAIL_COPY[lang].manual : e.manual).map((label, i) => ({ label, done: i < reached }))
   } else if (outcome === 'confirming' || outcome === 'completed') {
     const reached = outcome === 'confirming' ? 1 : 2
     stages = e.instant.map((label, i) => ({ label, done: i < reached }))
@@ -353,6 +408,7 @@ export async function notifyWithdrawalOutcome(
     const copy = withdrawalOutcomeCopy(outcome, lang, {
       amount: amountFor(outcome, row, lang),
       phone: maskPhone(row?.moncashNumber),
+      method: String(row?.method || '') === 'bank' ? 'bank' : 'moncash',
       // Only an admin-authored payee reason is ever shown — never internal notes
       // or raw provider errors. Presets are localized; "other" text is verbatim.
       reason:
@@ -387,6 +443,7 @@ export async function notifyWithdrawalOutcome(
         currency: src.currency,
         phone: maskPhone(row?.moncashNumber),
         url: `${appUrl()}${actionUrl}`,
+        method: String(row?.method || '') === 'bank' ? 'bank' : 'moncash',
       })
       const result = await sendEmail({ to: email, subject: copy.title, html })
       if (!result.success) {

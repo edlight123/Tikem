@@ -619,27 +619,34 @@ service cloud.firestore {
     }
     
     // Verification requests (KYC). The owner drafts their own request from the
-    // mobile wizard (mobile/lib/verification.ts): create it 'in_progress', then
-    // fill `steps` and `files`. Its STATUS is server-owned: submission goes
-    // through /api/organizer/submit-verification (-> pending_review) and the
-    // decision through the admin routes, all on the Admin SDK.
+    // web/mobile wizard (lib/verification.ts, mobile/lib/verification.ts):
+    // create it 'in_progress', then fill `steps` and `files`. Its STATUS is
+    // server-owned: submission goes through /api/organizer/submit-verification
+    // (-> pending_review), a restart through /api/organizer/reset-verification,
+    // and the decision through /api/admin/review-verification, all on the
+    // Admin SDK.
     //
-    // lib/firestore/payout.ts treats status == 'approved' as identity-verified,
-    // which activates payouts — so a client must never be able to set it. It
-    // used to be fully owner-writable.
+    // lib/kyc/identity.ts treats status == 'approved' as identity-verified,
+    // which activates payouts — so a client must never be able to set it.
+    //
+    // The evidence is FROZEN once submitted: the owner may edit steps/files only
+    // while the request is a draft (in_progress / not_started) or the reviewer
+    // asked for changes (changes_requested). While pending_review / in_review
+    // the admin is looking at exactly these files; once approved they are the
+    // record behind payouts; once rejected the request is restarted
+    // server-side. Storage uploads are create-only (storage.rules), so a
+    // re-upload during changes_requested is a new object at a new path.
     match /verification_requests/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
-        && request.resource.data.get('status', '') in ['in_progress', 'pending']
+        && request.resource.data.get('status', '') == 'in_progress'
         // The server also looks requests up by userId / user_id (legacy docs
         // whose id is not the uid), so those must name the creator.
         && request.resource.data.get('userId', request.auth.uid) == request.auth.uid
         && request.resource.data.get('user_id', request.auth.uid) == request.auth.uid
         && request.resource.data.keys().hasOnly(['userId', 'user_id', 'status', 'steps', 'files', 'createdAt', 'updatedAt']);
-      // Draft edits only: status and identity untouched, no reviewer fields,
-      // and nothing once approved (the reviewed evidence is frozen).
       allow update: if isOwner(userId)
-        && resource.data.get('status', '') != 'approved'
+        && resource.data.get('status', '') in ['in_progress', 'not_started', 'changes_requested']
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['steps', 'files', 'updatedAt']);
       allow delete: if false; // Only allow deletion server-side via Admin SDK
     }
@@ -799,6 +806,12 @@ service cloud.firestore {
     }
 
     // Default deny for everything else
+    // KYC exemptions for internal accounts (the store-review demo organizer).
+    // Server-only: lib/kyc/identity.ts reads it with the Admin SDK.
+    match /kyc_exemptions/{uid} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

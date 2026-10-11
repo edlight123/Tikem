@@ -3,7 +3,11 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
-import { unpublishOrganizerEvents } from '@/lib/moderation/ban'
+import {
+  freezeOrganizerPayouts,
+  unfreezeOrganizerPayouts,
+  unpublishOrganizerEvents,
+} from '@/lib/moderation/ban'
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +23,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate action
-    const validActions = ['ban', 'unban', 'disable_posting', 'enable_posting']
+    // freeze_payouts / unfreeze_payouts: the explicit admin decision on a
+    // payout freeze. A ban freezes payouts; an unban does NOT lift that freeze
+    // (owner decision: frozen until an admin decides about the money).
+    const validActions = ['ban', 'unban', 'disable_posting', 'enable_posting', 'freeze_payouts', 'unfreeze_payouts']
     if (!validActions.includes(action)) {
       return adminError('Invalid action', 400)
     }
@@ -57,7 +64,16 @@ export async function POST(request: NextRequest) {
         updates.can_create_events = true
         updates.banned_at = null
         updates.banned_by = null
-        successMessage = 'Organizer has been unbanned successfully'
+        successMessage =
+          'Organizer has been unbanned. Their payouts stay frozen until you lift the freeze (Unfreeze payouts).'
+        break
+
+      case 'freeze_payouts':
+        successMessage = 'Payouts are frozen for this organizer'
+        break
+
+      case 'unfreeze_payouts':
+        successMessage = 'Payouts are unfrozen for this organizer'
         break
       
       case 'disable_posting':
@@ -73,6 +89,22 @@ export async function POST(request: NextRequest) {
 
     // Update the user document
     await organizerDocRef.update(updates)
+
+    // A ban freezes ALL payouts, including money already earned and released
+    // (owner decision). Done right after the status flip: every withdraw path
+    // also refuses on users.status === 'banned', so there is no window where
+    // the ban is visible but money can still leave.
+    if (action === 'ban' || action === 'freeze_payouts') {
+      await freezeOrganizerPayouts(organizerId, {
+        adminId: user.id,
+        reason: action === 'ban' ? 'organizer_banned' : 'admin_freeze',
+      })
+      updates.payouts_frozen = true
+    }
+    if (action === 'unfreeze_payouts') {
+      await unfreezeOrganizerPayouts(organizerId, { adminId: user.id })
+      updates.payouts_frozen = false
+    }
 
     // A ban takes the organizer's live events down too — the confirm dialog
     // promises "their events will be hidden", which the status flag alone
@@ -96,6 +128,7 @@ export async function POST(request: NextRequest) {
       if (action === 'ban') return 'user.ban'
       if (action === 'unban') return 'user.unban'
       if (action === 'disable_posting') return 'user.disable_posting'
+      if (action === 'freeze_payouts' || action === 'unfreeze_payouts') return 'payout.release_override.update'
       return 'user.enable_posting'
     })()
 

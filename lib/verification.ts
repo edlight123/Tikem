@@ -3,6 +3,9 @@
  * Handles organizer verification requests and document uploads
  */
 
+// Pure data (no Firebase), so a static import costs nothing.
+import { blankVerificationSteps, OWNER_EDITABLE_STATUSES } from '@/lib/kyc/request-template'
+
 /**
  * DELIBERATE LAZY FIREBASE — DO NOT MAKE THESE IMPORTS STATIC AGAIN.
  *
@@ -121,50 +124,7 @@ export async function initializeVerificationRequest(userId: string): Promise<Ver
   const initialRequest: VerificationRequest = {
     userId,
     status: 'in_progress',
-    steps: {
-      organizerInfo: {
-        id: 'organizerInfo',
-        title: 'Organizer Information',
-        description: 'Basic information about you and your organization',
-        status: 'incomplete',
-        required: true,
-        fields: {},
-        missingFields: ['full_name', 'phone', 'organization_name']
-      },
-      governmentId: {
-        id: 'governmentId',
-        title: 'Government ID Upload',
-        description: 'Upload a valid government-issued ID (front and back)',
-        status: 'incomplete',
-        required: true,
-        fields: {},
-        missingFields: ['id_front', 'id_back']
-      },
-      selfie: {
-        id: 'selfie',
-        title: 'Identity Verification',
-        description: 'Take a selfie holding your ID for verification',
-        status: 'incomplete',
-        required: true,
-        fields: {}
-      },
-      businessDetails: {
-        id: 'businessDetails',
-        title: 'Business Details',
-        description: 'Optional business registration and tax information',
-        status: 'incomplete',
-        required: false,
-        fields: {}
-      },
-      payoutSetup: {
-        id: 'payoutSetup',
-        title: 'Payout Setup',
-        description: 'Configure how you receive payments (can be set up later)',
-        status: 'incomplete',
-        required: false,
-        fields: {}
-      }
-    },
+    steps: blankVerificationSteps(),
     files: {},
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -215,21 +175,49 @@ export async function updateVerificationStep(
   }
 }
 
+/**
+ * Image types storage.rules accepts under verification/{uid}/ (no SVG, no GIF,
+ * no PDF). Checked here too so the organizer gets a clear message instead of a
+ * bare permission error.
+ */
+export const VERIFICATION_IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+}
+export const VERIFICATION_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif'
+export const VERIFICATION_IMAGE_MAX_BYTES = 15 * 1024 * 1024
+
 // Helper: Upload verification document
+//
+// Every upload gets a NEW object name (type + timestamp + random suffix):
+// storage.rules make KYC uploads create-only, so a re-upload while changes are
+// requested can never overwrite — and so never silently swap — a file an
+// admin may already have looked at.
 export async function uploadVerificationDocument(
   userId: string,
   file: File,
   documentType: 'id_front' | 'id_back' | 'selfie' | 'business_registration' | 'tax_id'
 ): Promise<string> {
   try {
-    const timestamp = Date.now()
-    const extension = file.name.split('.').pop() || 'jpg'
-    const fileName = `${documentType}_${timestamp}.${extension}`
+    const type = String(file.type || '').toLowerCase()
+    const extension = VERIFICATION_IMAGE_TYPES[type]
+    if (!extension) {
+      throw new Error('Please upload a JPEG, PNG, WebP or HEIC photo.')
+    }
+    if (file.size > VERIFICATION_IMAGE_MAX_BYTES) {
+      throw new Error('This photo is too large. The maximum size is 15MB.')
+    }
+    const suffix = Math.random().toString(36).slice(2, 8)
+    const fileName = `${documentType}_${Date.now()}_${suffix}.${extension}`
     const storagePath = `verification/${userId}/${fileName}`
 
     const [{ ref, uploadBytes }, { storage }] = await Promise.all([storageSdk(), fb()])
     const storageRef = ref(storage, storagePath)
-    await uploadBytes(storageRef, file)
+    await uploadBytes(storageRef, file, { contentType: type === 'image/jpg' ? 'image/jpeg' : type })
 
     // Return the storage path (not the download URL for security)
     return storagePath
@@ -251,16 +239,30 @@ export async function getDocumentDownloadURL(storagePath: string): Promise<strin
   }
 }
 
-// Helper: Delete verification document
-export async function deleteVerificationDocument(storagePath: string): Promise<void> {
-  try {
-    const [{ ref, deleteObject }, { storage }] = await Promise.all([storageSdk(), fb()])
-    const storageRef = ref(storage, storagePath)
-    await deleteObject(storageRef)
-  } catch (error) {
-    console.error('Error deleting verification document:', error)
-    throw error
+/** Can the owner still edit this request's steps/files? Mirrors firestore.rules. */
+export function isOwnerEditableStatus(status: string | null | undefined): boolean {
+  return (OWNER_EDITABLE_STATUSES as readonly string[]).includes(String(status || ''))
+}
+
+async function authedPost(path: string): Promise<any> {
+  const { auth } = await fb()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const current = auth.currentUser
+  if (current) headers.Authorization = `Bearer ${await current.getIdToken()}`
+  const res = await fetch(path, {
+    method: 'POST',
+    headers,
+    credentials: 'same-origin',
+    body: JSON.stringify(current ? { userId: current.uid } : {}),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const err = new Error(data?.error || `Request failed (${res.status})`) as Error & { code?: string; status?: number }
+    err.code = data?.code
+    err.status = res.status
+    throw err
   }
+  return data
 }
 
 // Helper: Update verification files
@@ -294,31 +296,20 @@ export async function updateVerificationFiles(
 }
 
 // Helper: Submit verification for review
+//
+// Goes through /api/organizer/submit-verification: the request's status is
+// server-owned (firestore.rules), and the server reviews the documents STORED
+// on the request rather than anything the browser sends.
 export async function submitVerificationForReview(userId: string): Promise<void> {
   try {
-    const [{ doc, getDoc, updateDoc, serverTimestamp }, { db }] = await Promise.all([fs(), fb()])
-    const docRef = doc(db, 'verification_requests', userId)
-    const docSnap = await getDoc(docRef)
-
-    if (!docSnap.exists()) {
+    const current = await getVerificationRequest(userId)
+    if (!current) {
       throw new Error('Verification request not found')
     }
-
-    const currentData = docSnap.data() as VerificationRequest
-
-    // Validate all required steps are complete
-    const requiredSteps = Object.values(currentData.steps).filter(step => step.required)
-    const incompleteSteps = requiredSteps.filter(step => step.status !== 'complete')
-    
-    if (incompleteSteps.length > 0) {
+    if (!canSubmitForReview(current)) {
       throw new Error('Please complete all required steps before submitting')
     }
-    
-    await updateDoc(docRef, {
-      status: 'pending_review',
-      submittedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
+    await authedPost('/api/organizer/submit-verification')
   } catch (error) {
     console.error('Error submitting verification:', error)
     throw error
@@ -355,105 +346,12 @@ export function canSubmitForReview(request: VerificationRequest): boolean {
   return requiredSteps.every(step => step.status === 'complete')
 }
 
-// Helper: Restart rejected verification (allows resubmission)
-export async function restartVerification(userId: string): Promise<void> {
+// Helper: Restart a rejected / changes-requested verification (fresh draft).
+// Server-side: it resets status and review fields and removes the previous
+// attempt's uploads, none of which the owner may do from the client.
+export async function restartVerification(_userId: string): Promise<void> {
   try {
-    const [{ doc, getDoc, updateDoc, serverTimestamp }, { db }] = await Promise.all([fs(), fb()])
-    const docRef = doc(db, 'verification_requests', userId)
-    const docSnap = await getDoc(docRef)
-
-    if (!docSnap.exists()) {
-      throw new Error('Verification request not found')
-    }
-
-    const currentData = docSnap.data() as VerificationRequest
-
-    // Only allow restart if rejected
-    if (currentData.status !== 'rejected') {
-      throw new Error('Can only restart rejected verifications')
-    }
-    
-    // Delete old uploaded files to start fresh
-    const filesToDelete: string[] = []
-    
-    if (currentData.files.governmentId?.front) {
-      filesToDelete.push(currentData.files.governmentId.front)
-    }
-    if (currentData.files.governmentId?.back) {
-      filesToDelete.push(currentData.files.governmentId.back)
-    }
-    if (currentData.files.selfie?.path) {
-      filesToDelete.push(currentData.files.selfie.path)
-    }
-    if (currentData.files.businessDocs?.registration) {
-      filesToDelete.push(currentData.files.businessDocs.registration)
-    }
-    if (currentData.files.businessDocs?.taxId) {
-      filesToDelete.push(currentData.files.businessDocs.taxId)
-    }
-    
-    // Delete files in parallel (ignore errors for files that don't exist)
-    await Promise.allSettled(
-      filesToDelete.map(path => deleteVerificationDocument(path))
-    )
-    
-    // Reset all steps to incomplete and clear all data
-    const resetSteps = {
-      organizerInfo: {
-        id: 'organizerInfo',
-        title: 'Organizer Information',
-        description: 'Basic information about you and your organization',
-        status: 'incomplete' as StepStatus,
-        required: true,
-        fields: {},
-        missingFields: ['full_name', 'phone', 'organization_name']
-      },
-      governmentId: {
-        id: 'governmentId',
-        title: 'Government ID Upload',
-        description: 'Upload a valid government-issued ID (front and back)',
-        status: 'incomplete' as StepStatus,
-        required: true,
-        fields: {},
-        missingFields: ['id_front', 'id_back']
-      },
-      selfie: {
-        id: 'selfie',
-        title: 'Identity Verification',
-        description: 'Take a selfie holding your ID for verification',
-        status: 'incomplete' as StepStatus,
-        required: true,
-        fields: {}
-      },
-      businessDetails: {
-        id: 'businessDetails',
-        title: 'Business Details',
-        description: 'Optional business registration and tax information',
-        status: 'incomplete' as StepStatus,
-        required: false,
-        fields: {}
-      },
-      payoutSetup: {
-        id: 'payoutSetup',
-        title: 'Payout Setup',
-        description: 'Configure how you receive payments (can be set up later)',
-        status: 'incomplete' as StepStatus,
-        required: false,
-        fields: {}
-      }
-    }
-    
-    // Reset to in_progress with clean state
-    await updateDoc(docRef, {
-      status: 'in_progress',
-      steps: resetSteps,
-      files: {},
-      reviewNotes: null,
-      reasonCodes: null,
-      reviewedAt: null,
-      submittedAt: null,
-      updatedAt: serverTimestamp()
-    })
+    await authedPost('/api/organizer/reset-verification')
   } catch (error) {
     console.error('Error restarting verification:', error)
     throw error

@@ -8,6 +8,7 @@ import { executePrefundedTransfer, normalizeMoncashReceiver } from '@/lib/payout
 import { finalizeWithdrawalCompleted } from '@/lib/payouts/withdrawal-finalize'
 import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
+import { loadMoncashTransferCaps } from '@/lib/payouts/instant-moncash-policy'
 
 /**
  * Pay ONE approved MonCash withdrawal request over the prefunded pool.
@@ -27,26 +28,13 @@ import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 
 const BodySchema = z.object({ withdrawalId: z.string().min(3).max(128) })
 
-/** 250,000 HTG per transfer, 1,000,000 HTG per day, unless config says lower/higher. */
-const DEFAULT_PER_CALL_CAP_HTG_CENTS = 25_000_000
-const DEFAULT_DAILY_CAP_HTG_CENTS = 100_000_000
+// Caps: lib/payouts/instant-moncash-policy.ts — one definition shared with the
+// organizer/promoter INSTANT rail, so one setting bounds every prefunded path.
+const loadCaps = loadMoncashTransferCaps
 
 class Refused extends Error {
   constructor(message: string, public status = 409) {
     super(message)
-  }
-}
-
-async function loadCaps(): Promise<{ perCall: number; daily: number }> {
-  const snap = await adminDb.collection('config').doc('payouts').get()
-  const caps = snap.exists ? (snap.data() as any)?.adminTransferCaps : null
-  const pick = (raw: unknown, fallback: number) => {
-    const n = Math.round(Number(raw))
-    return Number.isFinite(n) && n > 0 ? n : fallback
-  }
-  return {
-    perCall: pick(caps?.perCallHtgCents, DEFAULT_PER_CALL_CAP_HTG_CENTS),
-    daily: pick(caps?.dailyHtgCents, DEFAULT_DAILY_CAP_HTG_CENTS),
   }
 }
 

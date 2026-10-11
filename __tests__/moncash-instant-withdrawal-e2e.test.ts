@@ -293,7 +293,7 @@ function savedFingerprint(): string {
   return jest.requireActual('@/lib/firestore/payout').mobileMoneyFingerprint('50937007294')
 }
 
-function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: string; enabled?: boolean; available?: boolean; optedIn?: boolean } = {}) {
+function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: string; enabled?: boolean; available?: boolean; optedIn?: boolean; otpVerified?: boolean } = {}) {
   for (const k of Object.keys(db)) delete db[k]
   currentCurrency = opts.currency || 'HTG'
   const ended = '2026-09-01T23:00:00.000Z'
@@ -317,6 +317,8 @@ function seed(opts: { currency?: 'HTG' | 'USD'; net?: number; storedStatus?: str
     status: 'active',
     method: 'mobile_money',
     allowInstantMoncash: opts.optedIn ?? true,
+    // The instant rail requires an SMS-verified number (lib/payouts/instant-moncash-policy).
+    mobileMoneyOtpVerified: opts.otpVerified ?? true,
     mobileMoneyDetails: { provider: 'moncash', phoneNumber: '****7294', phoneNumberLast4: '7294', phoneNumberFingerprint: savedFingerprint() },
   }
   session.uid = 'org1'
@@ -646,5 +648,147 @@ describe('refund claimed while a withdrawal is being computed', () => {
     })
     expect(r).toMatchObject({ success: false, code: 'balance_changed_by_refund' })
     expect(earnings().withdrawnAmount).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Payout freeze (ban), instant-rail guards (OTP, caps), organizer debt netting
+// ---------------------------------------------------------------------------
+describe('payout freeze', () => {
+  it('a banned organizer withdraws nothing, instant or manual', async () => {
+    seed()
+    coll('users').org1 = { status: 'banned' }
+    const res = await withdraw(post(body()))
+    expect(res.status).toBe(403)
+    expect((await res.json()).code).toBe('payouts_frozen')
+    expect(digicel.transfers).toHaveLength(0)
+    expect(withdrawals()).toHaveLength(0)
+    expect(earnings().withdrawnAmount).toBe(0)
+  })
+
+  it('an admin payout freeze (organizers.payoutsFrozen) blocks too', async () => {
+    seed()
+    coll('organizers').org1 = { payoutsFrozen: true }
+    const res = await withdraw(post(body()))
+    expect(res.status).toBe(403)
+    expect(withdrawals()).toHaveLength(0)
+  })
+})
+
+describe('instant rail guards (falls back to the manual queue)', () => {
+  it('a MonCash number not confirmed by SMS code is never paid instantly', async () => {
+    seed({ otpVerified: false })
+    const out = await (await withdraw(post(body()))).json()
+    expect(out).toMatchObject({ success: true, instant: false, instantFallbackReason: 'moncash_number_not_otp_verified' })
+    expect(digicel.transfers).toHaveLength(0)
+    expect(withdrawals()[0].status).toBe('pending')
+    expect(withdrawals()[0].feeCents).toBeUndefined()
+  })
+
+  it('above the shared per-transfer cap: manual', async () => {
+    seed()
+    coll('config').payouts = { prefunding: { enabled: true, available: true }, adminTransferCaps: { perCallHtgCents: 50_000 } }
+    const out = await (await withdraw(post(body()))).json()
+    expect(out).toMatchObject({ instant: false, instantFallbackReason: 'above_per_transfer_cap' })
+    expect(digicel.transfers).toHaveLength(0)
+  })
+
+  it('the daily instant cap is counted in the reservation; over it: manual, nothing reserved twice', async () => {
+    seed()
+    coll('config').payouts = { prefunding: { enabled: true, available: true }, adminTransferCaps: { dailyHtgCents: 150_000 } }
+    const today = new Date().toISOString().slice(0, 10)
+    coll('instant_moncash_transfer_days')[today] = { totalHtgCents: 100_000, count: 1 }
+    const out = await (await withdraw(post(body()))).json()
+    expect(out).toMatchObject({ success: true, instant: false, instantFallbackReason: 'daily_instant_cap_reached' })
+    expect(digicel.transfers).toHaveLength(0)
+    expect(withdrawals()).toHaveLength(1)
+    expect(withdrawals()[0].status).toBe('pending')
+    expect(earnings().withdrawnAmount).toBe(NET)
+    expect(coll('instant_moncash_transfer_days')[today].totalHtgCents).toBe(100_000)
+  })
+
+  it('a successful instant transfer adds its pool debit to the daily total', async () => {
+    seed()
+    const out = await (await withdraw(post(body()))).json()
+    expect(out.instant).toBe(true)
+    const today = new Date().toISOString().slice(0, 10)
+    expect(coll('instant_moncash_transfer_days')[today]).toMatchObject({ count: 1 })
+    expect(coll('instant_moncash_transfer_days')[today].totalHtgCents).toBeGreaterThan(0)
+  })
+
+  it('a wallet name that does not match the KYC legal name: manual', async () => {
+    seed()
+    coll('verification_requests').org1 = {
+      status: 'approved',
+      steps: { organizerInfo: { fields: { full_name: 'Marie Claire Joseph' } } },
+    }
+    ;(profiles.org1 as any).mobileMoneyDetails.accountName = 'Someone Else'
+    const out = await (await withdraw(post(body()))).json()
+    expect(out).toMatchObject({ instant: false, instantFallbackReason: 'wallet_name_mismatch' })
+    ;(profiles.org1 as any).mobileMoneyDetails.accountName = 'Joseph Marie Claire'
+    seed()
+    coll('verification_requests').org1 = {
+      status: 'approved',
+      steps: { organizerInfo: { fields: { full_name: 'Marie Claire Joseph' } } },
+    }
+    ;(profiles.org1 as any).mobileMoneyDetails.accountName = 'Joseph Marie Claire'
+    expect((await (await withdraw(post(body()))).json()).instant).toBe(true)
+  })
+})
+
+describe('organizer debt (refunds after an earlier payout)', () => {
+  const seedDebt = (byCurrency: any) => {
+    coll('organizers/org1/ledger').debt = { byCurrency }
+  }
+
+  // 2,000 HTG available, 300 HTG owed: the 1,000 HTG MonCash floor still fits.
+  const BIG = 200_000
+  it('instant: the debt is repaid from this balance first; the rest is withdrawable', async () => {
+    seed({ net: BIG })
+    seedDebt({ HTG: { eventDeficits: { evtOld: 30_000 } } })
+    const refused = await withdraw(post(body({ amount: BIG })))
+    expect(refused.status).toBe(409)
+    expect((await refused.json()).code).toBe('organizer_debt_outstanding')
+    expect(withdrawals()).toHaveLength(0)
+    expect(earnings().withdrawnAmount).toBe(0)
+
+    const ok = await (await withdraw(post(body({ amount: BIG - 30_000 })))).json()
+    expect(ok).toMatchObject({ success: true, instant: true })
+    // 170,000 to the organizer + 30,000 kept against the debt.
+    expect(earnings().withdrawnAmount).toBe(BIG)
+    expect(earnings().debtAppliedMinor).toBe(30_000)
+    const debt = coll('organizers/org1/ledger').debt
+    expect(debt.byCurrency.HTG.repaidMinor).toBe(30_000)
+    expect(Object.values(debt.byCurrency.HTG.repayments)).toEqual([
+      expect.objectContaining({ eventId: 'evt1', amountMinor: 30_000 }),
+    ])
+  })
+
+  it('manual: netted inside the debit transaction too', async () => {
+    seed({ enabled: false, net: BIG })
+    seedDebt({ HTG: { eventDeficits: { evtOld: 30_000 } } })
+    expect((await withdraw(post(body({ amount: BIG })))).status).toBe(409)
+    const ok = await (await withdraw(post(body({ amount: BIG - 30_000 })))).json()
+    expect(ok).toMatchObject({ success: true, instant: false })
+    expect(earnings().withdrawnAmount).toBe(BIG)
+    expect(withdrawals()[0].reservedCents).toBe(BIG - 30_000)
+    expect(coll('organizers/org1/ledger').debt.byCurrency.HTG.repaidMinor).toBe(30_000)
+  })
+
+  it('a USD debt never touches an HTG withdrawal', async () => {
+    seed()
+    seedDebt({ USD: { eventDeficits: { evtUsd: 99_999 } } })
+    const ok = await (await withdraw(post(body()))).json()
+    expect(ok).toMatchObject({ success: true, instant: true })
+    expect(earnings().withdrawnAmount).toBe(NET)
+    expect(coll('organizers/org1/ledger').debt.byCurrency.HTG).toBeUndefined()
+  })
+
+  it('a repaid debt no longer holds anything back', async () => {
+    seed()
+    seedDebt({ HTG: { eventDeficits: { evtOld: 30_000 }, repaidMinor: 30_000 } })
+    const ok = await (await withdraw(post(body()))).json()
+    expect(ok).toMatchObject({ success: true })
+    expect(earnings().withdrawnAmount).toBe(NET)
   })
 })

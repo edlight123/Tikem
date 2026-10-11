@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { requireAuth } from '@/lib/auth'
+import { isStaleStripeAccountError, reconnectNeededBody } from '@/lib/stripe-connect-account'
 
 export const runtime = 'nodejs'
 
@@ -63,6 +64,12 @@ export async function POST() {
       publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null,
     })
   } catch (error: any) {
+    if (isStaleStripeAccountError(error)) {
+      // The stored id is not on this platform. /connect replaces it.
+      return NextResponse.json(reconnectNeededBody(String(error?.code || error?.raw?.code || 'no_such_account')), {
+        status: 409,
+      })
+    }
     console.error('account-session failed', error)
     return NextResponse.json(
       { error: 'Could not start onboarding. Try again.', code: 'internal_error' },

@@ -8,32 +8,11 @@ import {
 } from '@/lib/firestore/payout-destinations'
 import {
   consumePayoutDetailsChangeVerification,
+  NEW_PAYOUT_DESTINATION_HOLD_MS,
   requireRecentPayoutDetailsChangeVerification,
 } from '@/lib/firestore/payout'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
-
-const normalizeName = (value: string) =>
-  String(value || '')
-    .toLowerCase()
-    .replace(/[']/g, '') // Remove apostrophes
-    .replace(/[-]/g, ' ') // Replace hyphens with spaces
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-const nameMatchesOrganizer = (accountHolder: string, organizerNames: string[]): boolean => {
-  const holder = normalizeName(accountHolder)
-  if (!holder) return false
-
-  const candidates = organizerNames.map(normalizeName).filter(Boolean)
-  for (const candidate of candidates) {
-    if (!candidate) continue
-    if (holder === candidate) return true
-    if (holder.includes(candidate) || candidate.includes(holder)) return true
-  }
-
-  return false
-}
+import { holderMatchesKyc, loadKycLegalNames } from '@/lib/payouts/payee-identity'
 
 export async function GET(_req: NextRequest) {
   try {
@@ -151,38 +130,43 @@ export async function POST(req: NextRequest) {
       throw e
     }
 
-    // Enforce basic ownership naming rule.
-    const [userDoc, organizerDoc] = await Promise.all([
-      adminDb.collection('users').doc(user.id).get(),
-      adminDb.collection('organizers').doc(user.id).get(),
-    ])
-
-    const userData = userDoc.exists ? (userDoc.data() as any) : null
-    const organizerData = organizerDoc.exists ? (organizerDoc.data() as any) : null
-
-    const organizerNames = [
-      userData?.full_name,
-      userData?.name,
-      userData?.displayName,
-      organizerData?.organizationName,
-      organizerData?.legalName,
-    ].filter(Boolean)
-
-    if (!nameMatchesOrganizer(bankDetails.accountHolder, organizerNames)) {
+    // The account must be in the organizer's KYC-verified legal (or
+    // organization) name, read server-side from the APPROVED verification
+    // request — exact token match. The old rule matched a substring of the
+    // editable users.full_name, so "Jean" covered anyone's "Jean …" account.
+    const kyc = await loadKycLegalNames(user.id)
+    if (!kyc.verified || (!kyc.legalName && !kyc.organizationName)) {
+      return NextResponse.json(
+        {
+          error: 'Identity verification required',
+          code: 'IDENTITY_REQUIRED',
+          message: 'Complete identity verification before adding a bank account for withdrawals.',
+        },
+        { status: 403 }
+      )
+    }
+    if (!holderMatchesKyc(bankDetails.accountHolder, kyc)) {
       return NextResponse.json(
         {
           error: 'Bank account name mismatch',
+          code: 'PAYOUT_HOLDER_NAME_MISMATCH',
           message:
-            'For security, the bank account holder name must match your organizer legal name (or organization name).',
+            'For security, the bank account holder name must exactly match the legal name (or organization name) on your approved identity verification.',
         },
         { status: 400 }
       )
     }
 
-    const created = await addSecondaryBankDestination({ organizerId: user.id, bankDetails })
+    // Held: payable only after NEW_PAYOUT_DESTINATION_HOLD_MS (withdraw-bank refuses before).
+    const created = await addSecondaryBankDestination({
+      organizerId: user.id,
+      bankDetails,
+      addedVia: 'payout_destinations',
+      holdMs: NEW_PAYOUT_DESTINATION_HOLD_MS,
+    })
     await consumePayoutDetailsChangeVerification(user.id)
 
-    return NextResponse.json({ success: true, destinationId: created.id })
+    return NextResponse.json({ success: true, destinationId: created.id, holdUntil: created.holdUntil })
   } catch (e: any) {
     return NextResponse.json(
       { error: 'Failed to add bank destination', message: e?.message || String(e) },

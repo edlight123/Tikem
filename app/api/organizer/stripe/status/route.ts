@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { reconnectNeededBody, resolveConnectedAccount } from '@/lib/stripe-connect-account'
 
 export const runtime = 'nodejs'
 
@@ -36,7 +37,14 @@ export async function GET(_request: NextRequest) {
     }
 
     const stripe = getStripe()
-    const account = await stripe.accounts.retrieve(stripeAccountId)
+    // An id from the pre-September platform (or one stamped for another
+    // organizer) is reported as a state, not thrown as a 4xx/5xx: the client
+    // shows "reconnect", and /connect replaces the id.
+    const resolution = await resolveConnectedAccount(stripe, organizerId, String(stripeAccountId))
+    if (resolution.state === 'stale') {
+      return NextResponse.json(reconnectNeededBody(resolution.reason), { status: 200 })
+    }
+    const account = resolution.account
 
     const requirementsCurrentlyDue = Array.isArray(account?.requirements?.currently_due)
       ? account.requirements.currently_due

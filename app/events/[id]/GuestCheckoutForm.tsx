@@ -217,10 +217,10 @@ export default function GuestCheckoutForm({
         <p className="mt-1.5 text-xs text-white/40">
           {requirePhone
             ? t('checkout.guest_phone_hint_ht', {
-                defaultValue: 'We text your ticket here too, so you always have it.',
+                defaultValue: 'It helps us find your ticket if you lose the email.',
               })
             : t('checkout.guest_phone_hint', {
-                defaultValue: 'Add it and we can text you your ticket as well.',
+                defaultValue: 'Optional. It helps us find your ticket if you lose the email.',
               })}
         </p>
       </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
+import { withdrawalApprovalBlockers } from '@/lib/payouts/approval-checks'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,12 +65,18 @@ export async function GET(req: NextRequest) {
           flags.push('own_account')
         }
 
+        // The same re-checks the approve/complete action enforces, shown before
+        // anyone clicks. Only for rows an admin can still act on.
+        const approvalBlockers =
+          data.status === 'pending' || data.status === 'processing' ? await withdrawalApprovalBlockers(data) : []
+
         return {
           id: doc.id,
           ...data,
           amount,
           destinationReview,
           reviewFlags: flags,
+          approvalBlockers,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
           updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
           processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,

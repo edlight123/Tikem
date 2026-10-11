@@ -14,9 +14,9 @@
  * a normal, actionable state (it is exactly what an organizer looks like after a
  * platform-account migration), not a server error.
  */
-import { adminDb } from '@/lib/firebase/admin'
 import { countrySupport, isComingSoon, normalizeSupportedCountry } from '@/lib/country-support'
 import { getPayoutProfile, getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
+import { isIdentityVerified } from '@/lib/kyc/identity'
 
 export type PublishGateBlockCode =
   | 'coming_soon'
@@ -44,16 +44,9 @@ function defaultStripe(): StripeAccountsReader {
   return require('stripe')(process.env.STRIPE_SECRET_KEY)
 }
 
+/** Same identity definition as payouts: lib/kyc/identity.ts. */
 export async function isOrganizerVerified(userId: string): Promise<boolean> {
-  const userDoc = await adminDb.collection('users').doc(userId).get()
-  const userData = userDoc.exists ? userDoc.data() : null
-
-  const userVerified = userData?.is_verified === true || userData?.verification_status === 'approved'
-  if (userVerified) return true
-
-  const requestDoc = await adminDb.collection('verification_requests').doc(userId).get()
-  const requestData = requestDoc.exists ? requestDoc.data() : null
-  return requestData?.status === 'approved'
+  return isIdentityVerified(userId)
 }
 
 /**

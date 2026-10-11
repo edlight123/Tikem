@@ -11,8 +11,19 @@ import { renderEmail, title, eyebrow, p, gap, button, lines, quote, serifHeading
 import type { EmailLang } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 
-/** A request can only be decided while it is awaiting review. */
-const REVIEWABLE_STATUSES = new Set(['pending', 'pending_review', 'in_review', 'in_progress'])
+/**
+ * A request can only be decided while it is awaiting review — i.e. after the
+ * organizer submitted it. A draft (in_progress) has not been submitted, so its
+ * files are still changing and there is nothing to approve.
+ */
+const REVIEWABLE_STATUSES = new Set(['pending', 'pending_review', 'in_review'])
+
+/** Did the request carry an ID and a selfie to look at? (stored paths, or a legacy URL) */
+function hasReviewableEvidence(data: any): boolean {
+  const front = data?.files?.governmentId?.front || data?.id_front_url
+  const selfie = data?.files?.selfie?.path || data?.face_photo_url
+  return Boolean(front && selfie)
+}
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -60,6 +71,14 @@ export async function POST(request: NextRequest) {
         if (!REVIEWABLE_STATUSES.has(current)) {
           throw Object.assign(new Error(`not_reviewable:${current || 'unknown'}`), { code: 409 })
         }
+        const subjectId = String(data.userId || data.user_id || requestId)
+        // Nobody approves their own identity, admin or not.
+        if (normalizedStatus === 'approved' && (subjectId === user.id || requestId === user.id)) {
+          throw Object.assign(new Error('self_review'), { code: 403 })
+        }
+        if (normalizedStatus === 'approved' && !hasReviewableEvidence(data)) {
+          throw Object.assign(new Error('no_evidence'), { code: 422 })
+        }
         const reason = typeof rejectionReason === 'string' ? rejectionReason.slice(0, 2000) : null
         tx.update(verificationRef, {
           status: normalizedStatus,
@@ -74,12 +93,24 @@ export async function POST(request: NextRequest) {
           updated_at: new Date(),
           rejection_reason: normalizedStatus !== 'approved' ? reason : null,
         })
+        // The user/organizer flags move WITH the decision (same transaction):
+        // lib/kyc/identity.ts reads an explicit is_verified:false as a
+        // revocation, so an approval whose flag write failed separately would
+        // leave an approved organizer unable to withdraw.
+        const approved = normalizedStatus === 'approved'
+        const mirror = { is_verified: approved, verification_status: normalizedStatus, updated_at: new Date().toISOString() }
+        tx.set(adminDb.collection('users').doc(subjectId), mirror, { merge: true })
+        tx.set(adminDb.collection('organizers').doc(subjectId), mirror, { merge: true })
         return data
       })
     } catch (txError: any) {
       if (txError?.code === 404) return adminError('Verification request not found', 404)
       if (txError?.code === 409) {
         return adminError('This request has already been reviewed or is not awaiting review', 409)
+      }
+      if (txError?.code === 403) return adminError('You cannot approve your own verification', 403)
+      if (txError?.code === 422) {
+        return adminError('This request has no ID and selfie on file, so it cannot be approved', 422)
       }
       throw txError
     }
@@ -96,34 +127,7 @@ export async function POST(request: NextRequest) {
     // Update user verification status
     // Handle both old format (user_id) and new format (userId or document ID)
     const userId = verificationRequest.userId || verificationRequest.user_id || requestId
-    const nowIso = new Date().toISOString()
-
-    try {
-      // Keep the user/organizer docs in sync without overwriting unrelated fields.
-      const approved = normalizedStatus === 'approved'
-      const userVerificationStatus = normalizedStatus
-
-      await adminDb.collection('users').doc(userId).set(
-        {
-          is_verified: approved,
-          verification_status: userVerificationStatus,
-          updated_at: nowIso,
-        },
-        { merge: true }
-      )
-
-      await adminDb.collection('organizers').doc(userId).set(
-        {
-          is_verified: approved,
-          verification_status: userVerificationStatus,
-          updated_at: nowIso,
-        },
-        { merge: true }
-      )
-    } catch (err) {
-      console.error('Error updating user via Admin SDK:', err)
-      return adminError('Failed to update user status', 500)
-    }
+    // users/organizers flags were written in the decision transaction above.
 
     // Fetch user details for notifications/emails.
     const organizerDoc = await adminDb.collection('users').doc(userId).get()
@@ -136,7 +140,7 @@ export async function POST(request: NextRequest) {
           userId,
           'verification',
           '✅ Verification Approved!',
-          'Congratulations! Your Tikèm account has been verified. You can now create and publish events.',
+          'Congratulations! Your identity is verified. You can now withdraw your earnings.',
           '/organizer/verify',
           { status: 'approved' }
         )
@@ -145,8 +149,8 @@ export async function POST(request: NextRequest) {
         await sendPushNotification(
           userId,
           '✅ You\'re Verified!',
-          'Your account is now verified. Start creating events!',
-          '/organizer/events/new',
+          'Your identity is verified. You can now withdraw your earnings.',
+          '/organizer/verify',
           { type: 'verification_approved' }
         )
       } else {
@@ -247,9 +251,9 @@ const DECISION_COPY: Record<
     okSubject: 'Your Tikèm account is verified',
     okStatus: 'Verified',
     okHead: 'Your account is verified',
-    okBody: 'We checked your ID and approved your verification. Here is what is open to you now.',
-    okLines: ['Create and publish events', 'Show a verified badge on your events', 'Use every organizer tool'],
-    okCta: 'Create an event',
+    okBody: 'We checked your ID and approved your verification. You can now withdraw your earnings.',
+    okLines: ['Withdraw your earnings', 'Show a verified badge on your events', 'Use every organizer tool'],
+    okCta: 'See your earnings',
     noSubject: 'Tikèm verification update',
     noStatus: 'Action needed',
     noHead: 'We could not approve your verification yet',
@@ -264,9 +268,9 @@ const DECISION_COPY: Record<
     okSubject: 'Votre compte Tikèm est vérifié',
     okStatus: 'Vérifié',
     okHead: 'Votre compte est vérifié',
-    okBody: "Nous avons examiné votre pièce d'identité et approuvé votre vérification. Voici ce que vous pouvez faire dès maintenant.",
-    okLines: ['Créer et publier des événements', 'Afficher un badge vérifié sur vos événements', 'Utiliser tous les outils organisateur'],
-    okCta: 'Créer un événement',
+    okBody: "Nous avons examiné votre pièce d'identité et approuvé votre vérification. Vous pouvez maintenant retirer vos gains.",
+    okLines: ['Retirer vos gains', 'Afficher un badge vérifié sur vos événements', 'Utiliser tous les outils organisateur'],
+    okCta: 'Voir vos gains',
     noSubject: 'Mise à jour de votre vérification Tikèm',
     noStatus: 'Action requise',
     noHead: "Nous n'avons pas encore pu approuver votre vérification",
@@ -285,9 +289,9 @@ const DECISION_COPY: Record<
     okSubject: 'Kont Tikèm ou verifye',
     okStatus: 'Verifye',
     okHead: 'Kont ou verifye',
-    okBody: 'Nou gade pyès idantite ou epi nou apwouve verifikasyon ou. Men sa ou ka fè kounye a.',
-    okLines: ['Kreye epi pibliye evènman', 'Montre yon badj verifye sou evènman ou yo', 'Sèvi ak tout zouti òganizatè yo'],
-    okCta: 'Kreye yon evènman',
+    okBody: 'Nou gade pyès idantite ou epi nou apwouve verifikasyon ou. Kounye a ou ka retire lajan w.',
+    okLines: ['Retire lajan w', 'Montre yon badj verifye sou evènman ou yo', 'Sèvi ak tout zouti òganizatè yo'],
+    okCta: 'Wè lajan w',
     noSubject: 'Nouvèl sou verifikasyon Tikèm ou',
     noStatus: 'Aksyon nesesè',
     noHead: 'Nou poko ka apwouve verifikasyon ou',
@@ -326,7 +330,7 @@ function verificationDecisionEmail(
           gap(4),
           lines(t.okLines),
           gap(20),
-          button(t.okCta, `${base}/organizer/events/new`),
+          button(t.okCta, `${base}/organizer/settings/payouts`),
         ],
       }),
     }

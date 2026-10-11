@@ -86,6 +86,8 @@ import {
   remainingAfterReversal,
   normalizePromoterCode,
   calculateCommissionCents,
+  cappedSaleCommissionCents,
+  maxFlatCommissionCents,
   promoterTokenFor,
   verifyPromoterToken,
   mintPromoterStatsKey,
@@ -145,9 +147,9 @@ describe('calculateCommissionCents', () => {
     expect(calculateCommissionCents(pct, 0, 2)).toBe(0)
     expect(calculateCommissionCents(flat, 0, 2)).toBe(0)
   })
-  it('never exceeds the order gross', () => {
-    expect(calculateCommissionCents({ commission_type: 'flat_per_ticket', commission_value: 5_000 }, 4_000, 1)).toBe(4_000)
-    expect(calculateCommissionCents({ commission_type: 'percentage', commission_value: 500 }, 4_000, 1)).toBe(4_000)
+  it('never exceeds HALF the order gross (owner decision: 50% cap on both types)', () => {
+    expect(calculateCommissionCents({ commission_type: 'flat_per_ticket', commission_value: 5_000 }, 4_000, 1)).toBe(2_000)
+    expect(calculateCommissionCents({ commission_type: 'percentage', commission_value: 500 }, 4_000, 1)).toBe(2_000)
   })
   it('rejects non-positive or non-finite values', () => {
     expect(calculateCommissionCents({ commission_type: 'percentage', commission_value: -5 }, 4_000, 1)).toBe(0)
@@ -362,10 +364,12 @@ describe('commission ceiling: gross minus platform fee', () => {
   const flat = { commission_type: 'flat_per_ticket' as const, commission_value: 5_000 }
   const pct = { commission_type: 'percentage' as const, commission_value: 100 }
 
-  it('caps a flat fee at the gross minus the platform fee, not the gross', () => {
-    // 4,000 gross, 400 fee: the organizer's net is 3,600 and that is the most a promoter can take.
-    expect(calculateCommissionCents(flat, 4_000, 1, 400)).toBe(3_600)
-    expect(calculateCommissionCents(pct, 4_000, 1, 400)).toBe(3_600)
+  it('caps a flat fee at the lower of gross minus the platform fee and half the gross', () => {
+    // 4,000 gross, 400 fee: net 3,600, but the 50% cap (2,000) is lower.
+    expect(calculateCommissionCents(flat, 4_000, 1, 400)).toBe(2_000)
+    expect(calculateCommissionCents(pct, 4_000, 1, 400)).toBe(2_000)
+    // A fee above half the gross: the net is the binding ceiling.
+    expect(calculateCommissionCents(flat, 4_000, 1, 2_500)).toBe(1_500)
   })
 
   it('earns nothing when the fee eats the whole order', () => {
@@ -384,8 +388,8 @@ describe('commission ceiling: gross minus platform fee', () => {
       paymentMethod: 'moncash',
     })
     expect(result.recorded).toBe(true)
-    // Default 10% fee on 10,000 → ceiling 9,000.
-    expect(result.commissionCents).toBe(9_000)
+    // Default 10% fee on 10,000 → net 9,000; the 50% cap (5,000) binds.
+    expect(result.commissionCents).toBe(5_000)
   })
 
   it('honours an explicit platformFeeCents', async () => {
@@ -398,9 +402,10 @@ describe('commission ceiling: gross minus platform fee', () => {
       orderGrossCents: 10_000,
       currency: 'HTG',
       paymentMethod: 'moncash',
-      platformFeeCents: 2_500,
+      platformFeeCents: 6_000,
     })
-    expect(result.commissionCents).toBe(7_500)
+    // Net 4,000 is below the 50% cap (5,000), so the net binds.
+    expect(result.commissionCents).toBe(4_000)
   })
 })
 
@@ -429,6 +434,32 @@ describe('getFundedCommissionForEvent', () => {
     } finally {
       admin.adminDb.collection = original
     }
+  })
+})
+
+describe('50% commission cap', () => {
+  it('maxFlatCommissionCents is half the ticket price, rounded down', () => {
+    expect(maxFlatCommissionCents(10_000)).toBe(5_000)
+    expect(maxFlatCommissionCents(9_999)).toBe(4_999)
+    expect(maxFlatCommissionCents(0)).toBe(0)
+  })
+
+  it('cappedSaleCommissionCents caps a pre-cap row at half its order gross, and logs', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(cappedSaleCommissionCents({ commission_cents: 9_000, order_gross_cents: 10_000 })).toBe(5_000)
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+    expect(cappedSaleCommissionCents({ commission_cents: 3_000, order_gross_cents: 10_000 })).toBe(3_000)
+    // No recorded gross: nothing to cap against, the row stands.
+    expect(cappedSaleCommissionCents({ commission_cents: 3_000 })).toBe(3_000)
+  })
+
+  it('getFundedCommissionForEvent withholds the CAPPED figure from the organizer', async () => {
+    store.clear()
+    store.set('promoter_sales/c1', { event_id: 'evt_c', funded: true, status: 'accrued', commission_cents: 9_000, order_gross_cents: 10_000, payment_method: 'moncash' })
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(await getFundedCommissionForEvent('evt_c')).toBe(5_000)
+    warn.mockRestore()
   })
 })
 

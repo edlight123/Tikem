@@ -41,9 +41,28 @@ import {
 } from '@/lib/payouts/moncash-withdrawal-minimum'
 import { finalizeWithdrawalCompleted, releaseWithdrawalReservation } from '@/lib/payouts/withdrawal-finalize'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
+import { payoutFreezeStatus } from '@/lib/moderation/ban'
+import { payoutProfileInactiveReason } from '@/lib/payouts/profile-readiness'
+import { loadKycLegalNames, moncashNumberOtpVerified } from '@/lib/payouts/payee-identity'
+import {
+  INSTANT_MONCASH_DAYS_COLLECTION,
+  dailyCapAllows,
+  decideInstantMoncash,
+  instantDayKey,
+  loadMoncashTransferCaps,
+} from '@/lib/payouts/instant-moncash-policy'
+import {
+  bookDebtRepaymentInTransaction,
+  netDebtAgainstWithdrawal,
+  readDebtInTransaction,
+  syncOrganizerDebt,
+} from '@/lib/payouts/organizer-debt'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+/** The instant rail's daily cap was reached inside the reservation transaction. */
+class InstantDailyCapReached extends Error {}
 
 /** A refusal raised inside the reservation transaction — a 4xx, not a crash. */
 class ReservationRefused extends Error {
@@ -61,6 +80,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // A banned organizer, or one whose payouts an admin froze, withdraws
+    // nothing — including money already earned and released (owner decision).
+    const freeze = await payoutFreezeStatus(user.id)
+    if (freeze.frozen) {
+      return NextResponse.json({ error: freeze.message, message: freeze.message, code: freeze.code }, { status: 403 })
+    }
+
     const haitiProfile = await getPayoutProfile(user.id, 'haiti')
     if (!haitiProfile) {
       return NextResponse.json(
@@ -72,14 +98,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (haitiProfile.status !== 'active') {
-      return NextResponse.json(
-        {
-          error: 'Payout profile not active',
-          message: 'Please complete payout verification before requesting MonCash withdrawals.',
-        },
-        { status: 400 }
-      )
+    // The REAL reason (identity pending, on hold until <time>, not set up),
+    // not one "complete payout verification" for every inactive state.
+    const inactive = payoutProfileInactiveReason(haitiProfile, 'MonCash')
+    if (inactive) {
+      return NextResponse.json(inactive, { status: 400 })
     }
 
     if (haitiProfile.method !== 'mobile_money') {
@@ -268,6 +291,29 @@ export async function POST(req: NextRequest) {
     let shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
     let instantFallbackReason: string | null = null
 
+    // The instant rail has no human in the loop, so it is used only when what a
+    // human would check is already proven (lib/payouts/instant-moncash-policy):
+    // an SMS-verified MonCash number, a wallet name that matches the KYC name,
+    // and the shared per-transfer / daily caps. Otherwise: the manual queue.
+    const caps = shouldUsePrefunding ? await loadMoncashTransferCaps() : null
+    if (shouldUsePrefunding && caps) {
+      const [otpVerified, kyc] = await Promise.all([
+        moncashNumberOtpVerified(user.id, haitiProfile),
+        loadKycLegalNames(user.id),
+      ])
+      const verdict = decideInstantMoncash({
+        otpVerified,
+        kyc,
+        walletHolderName: haitiProfile.mobileMoneyDetails?.accountName,
+        poolDebitHtgCents: instantPricing.poolDebitHtgCents,
+        caps,
+      })
+      if (!verdict.instant) {
+        shouldUsePrefunding = false
+        instantFallbackReason = verdict.reason
+      }
+    }
+
     // The cron refreshes `available` every 15 minutes; the pool can be drained
     // in between. Check it covers THIS transfer plus Digicel's fee, or file the
     // request for the manual queue (fee-free) instead of attempting it.
@@ -303,12 +349,6 @@ export async function POST(req: NextRequest) {
       await enrollLegacyMobileMoneyFingerprint(user.id, destination.fingerprint)
     }
 
-    const feeCents = shouldUsePrefunding ? instantPricing.feeCents : 0
-    const payoutAmountCents = shouldUsePrefunding ? instantPricing.payoutAmountCents : amount
-    const payoutAmountHtgCents = shouldUsePrefunding
-      ? instantPricing.payoutAmountHtgCents
-      : Math.max(0, Math.round(amount * usdToHtgRate))
-
     // Pre-create withdrawal request ref so we can use it as MonCash `reference`
     // — which is also what PrefundedTransactionStatus is asked about when the
     // transfer's outcome is unknown.
@@ -316,49 +356,68 @@ export async function POST(req: NextRequest) {
     const now = new Date()
     const nowIso = now.toISOString()
 
-    const baseWithdrawalRequest: WithdrawalRequest = {
-      organizerId: user.id,
-      eventId,
-      amount,
-      currency,
-      method: 'moncash',
-      status: shouldUsePrefunding ? 'processing' : 'pending',
-      moncashNumber: receiver,
-      feeCents: feeCents || undefined,
-      payoutAmountCents: payoutAmountCents || undefined,
-      payoutCurrency: 'HTG',
-      payoutAmountHtgCents: payoutAmountHtgCents || undefined,
-      usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
-      prefundingUsed: shouldUsePrefunding || undefined,
-      prefundingFeePercent: shouldUsePrefunding ? PREFUNDING_FEE_PERCENT : undefined,
-      prefundingProviderFeeHtgCents: shouldUsePrefunding ? instantPricing.providerFeeHtgCents : undefined,
-      prefundingPoolDebitHtgCents: shouldUsePrefunding ? instantPricing.poolDebitHtgCents : undefined,
-      prefundingPlatformNetHtgCents: shouldUsePrefunding
-        ? Math.round(instantPricing.feeCents * usdToHtgRate) - instantPricing.providerFeeHtgCents
-        : undefined,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    // Built per rail: an instant attempt refused by the daily cap inside its
+    // transaction is re-filed on the manual rail (no fee) with the same ref.
+    const buildRequest = (instant: boolean) => {
+      const feeCents = instant ? instantPricing.feeCents : 0
+      const payoutAmountCents = instant ? instantPricing.payoutAmountCents : amount
+      const payoutAmountHtgCents = instant
+        ? instantPricing.payoutAmountHtgCents
+        : Math.max(0, Math.round(amount * usdToHtgRate))
+      const row: WithdrawalRequest = {
+        organizerId: user.id,
+        eventId,
+        amount,
+        currency,
+        method: 'moncash',
+        status: instant ? 'processing' : 'pending',
+        moncashNumber: receiver,
+        feeCents: feeCents || undefined,
+        payoutAmountCents: payoutAmountCents || undefined,
+        payoutCurrency: 'HTG',
+        payoutAmountHtgCents: payoutAmountHtgCents || undefined,
+        usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
+        prefundingUsed: instant || undefined,
+        prefundingFeePercent: instant ? PREFUNDING_FEE_PERCENT : undefined,
+        prefundingProviderFeeHtgCents: instant ? instantPricing.providerFeeHtgCents : undefined,
+        prefundingPoolDebitHtgCents: instant ? instantPricing.poolDebitHtgCents : undefined,
+        prefundingPlatformNetHtgCents: instant
+          ? Math.round(instantPricing.feeCents * usdToHtgRate) - instantPricing.providerFeeHtgCents
+          : undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      if (instantFallbackReason) (row as any).instantFallbackReason = instantFallbackReason
+      // Proof for the admin queue that this number IS the profile's destination
+      // (the queue and the admin transfer re-check it against the live profile).
+      ;(row as any).destinationFingerprint = destination.fingerprint
+      ;(row as any).destinationCheck = destination.via === 'profile' ? 'profile_fingerprint' : 'legacy_last4_step_up'
+      return { row, feeCents, payoutAmountCents, payoutAmountHtgCents }
     }
-    if (instantFallbackReason) (baseWithdrawalRequest as any).instantFallbackReason = instantFallbackReason
-    // Proof for the admin queue that this number IS the profile's destination
-    // (the queue and the admin transfer re-check it against the live profile).
-    ;(baseWithdrawalRequest as any).destinationFingerprint = destination.fingerprint
-    ;(baseWithdrawalRequest as any).destinationCheck =
-      destination.via === 'profile' ? 'profile_fingerprint' : 'legacy_last4_step_up'
+
+    // Refunds that landed after an earlier event was paid out are organizer
+    // debt (lib/payouts/organizer-debt.ts); record them now so the debit below
+    // nets them in its own transaction.
+    await syncOrganizerDebt(user.id)
 
     if (shouldUsePrefunding) {
+      const { row: baseWithdrawalRequest } = buildRequest(true)
       // For instant prefunding, reserve (debit) earnings first so we never end up
       // transferring money without deducting the organizer's available balance.
       // The transaction serializes concurrent submits on the earnings doc: the
       // second one sees the reduced balance and is refused.
       const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId), { seedFromTickets: true })
+      const dailyRef = adminDb.collection(INSTANT_MONCASH_DAYS_COLLECTION).doc(instantDayKey(now))
 
+      let fellBackToManual = false
       try {
         await adminDb.runTransaction(async (tx: any) => {
-          const [earningsSnap, withdrawalSnap] = await Promise.all([
+          const [earningsSnap, withdrawalSnap, dailySnap] = await Promise.all([
             tx.get(earningsRef),
             tx.get(withdrawalRef),
+            tx.get(dailyRef),
           ])
+          const debt = await readDebtInTransaction(tx, user.id)
 
           if (withdrawalSnap.exists) {
             // Defensive: this should not happen since we just created the ref.
@@ -394,8 +453,45 @@ export async function POST(req: NextRequest) {
             )
           }
 
-          const remaining = Math.max(0, availableToWithdraw - Number(amount))
-          const newWithdrawn = withdrawnAmount + Number(amount)
+          // Organizer debt in this currency is repaid from this balance first.
+          const netting = netDebtAgainstWithdrawal({
+            debt: debt.data,
+            currency,
+            availableMinor: availableToWithdraw,
+            amountMinor: Number(amount),
+          })
+          if (!netting.ok) throw new ReservationRefused(netting.error, netting.code)
+
+          // Daily instant cap, counted in the transaction that reserves.
+          const sentToday = Math.max(0, Number(dailySnap?.exists ? (dailySnap.data() as any)?.totalHtgCents : 0) || 0)
+          if (caps && !dailyCapAllows(sentToday, instantPricing.poolDebitHtgCents, caps)) {
+            throw new InstantDailyCapReached()
+          }
+
+          const debtApplied = netting.appliedMinor
+          const remaining = Math.max(0, availableToWithdraw - Number(amount) - debtApplied)
+          const newWithdrawn = withdrawnAmount + Number(amount) + debtApplied
+          tx.set(
+            dailyRef,
+            {
+              totalHtgCents: sentToday + instantPricing.poolDebitHtgCents,
+              count: (Number(dailySnap?.exists ? (dailySnap.data() as any)?.count : 0) || 0) + 1,
+              updatedAt: now,
+            },
+            { merge: true }
+          )
+          bookDebtRepaymentInTransaction(tx, debt, {
+            currency,
+            appliedMinor: debtApplied,
+            withdrawalId: withdrawalRef.id,
+            eventId: String(eventId),
+            now,
+          })
+          if (debtApplied > 0) {
+            tx.update(earningsRef, {
+              debtAppliedMinor: Math.max(0, Number(earningsData?.debtAppliedMinor) || 0) + debtApplied,
+            })
+          }
 
           tx.set(withdrawalRef, {
             ...baseWithdrawalRequest,
@@ -413,12 +509,22 @@ export async function POST(req: NextRequest) {
           })
         })
       } catch (e: any) {
-        if (e instanceof ReservationRefused) {
+        if (e instanceof InstantDailyCapReached) {
+          fellBackToManual = true
+        } else if (e instanceof ReservationRefused) {
           return NextResponse.json({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: 409 })
+        } else {
+          throw e
         }
-        throw e
       }
+      if (fellBackToManual) {
+        shouldUsePrefunding = false
+        instantFallbackReason = 'daily_instant_cap_reached'
+      }
+    }
 
+    if (shouldUsePrefunding) {
+      const { row: baseWithdrawalRequest, feeCents, payoutAmountCents, payoutAmountHtgCents } = buildRequest(true)
       const outcome = await executePrefundedTransfer({
         amount: Number((payoutAmountHtgCents / 100).toFixed(2)),
         receiver,
@@ -524,10 +630,12 @@ export async function POST(req: NextRequest) {
     // Standard (manual) MonCash request: filed in the SAME transaction as the
     // debit, so a request exists only if its money was reserved. A refused
     // debit (a concurrent submit already took the balance) writes nothing.
+    const { row: baseWithdrawalRequest, payoutAmountHtgCents } = buildRequest(false)
     const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
       ceilingMinor: availability.ceilingMinor,
       fileRequest: { ref: withdrawalRef, data: baseWithdrawalRequest as any },
       expectedRefundClaimVersion,
+      debt: { organizerId: user.id, currency },
     })
     if (!debit.success) {
       return NextResponse.json(

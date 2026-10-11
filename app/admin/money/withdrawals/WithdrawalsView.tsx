@@ -43,6 +43,8 @@ interface Withdrawal {
   completionNote?: string
   payeeReasonCode?: string | null
   payeeReasonText?: string | null
+  /** Server re-checks (lib/payouts/approval-checks.ts) that block approve/complete. */
+  approvalBlockers?: Array<{ code: string; message: string; overridable?: boolean }>
   event: {
     id: string
     title: string
@@ -160,7 +162,11 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || `Failed to ${action} withdrawal`)
+        // A blocked approval carries every reason; show them all, not just the first.
+        const reasons = Array.isArray(data.blockers) && data.blockers.length
+          ? data.blockers.map((b: any) => b.message).join(' ')
+          : data.details
+        throw new Error([data.error || `Failed to ${action} withdrawal`, reasons].filter(Boolean).join(' — '))
       }
 
       showToast({
@@ -290,7 +296,17 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-4">{getStatusBadge(withdrawal.status)}</td>
+                    <td className="px-4 py-4">
+                      {getStatusBadge(withdrawal.status)}
+                      {(withdrawal.approvalBlockers?.length ?? 0) > 0 && (
+                        <div
+                          className="label-mono mt-1 text-[10px] uppercase tracking-[0.1em] text-console-red"
+                          title={withdrawal.approvalBlockers!.map((b) => b.message).join(' ')}
+                        >
+                          Blocked
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-4">
                       <div className="font-mono text-sm tabular-nums text-console-mut">
                         {new Date(withdrawal.createdAt).toLocaleDateString()}
@@ -511,6 +527,22 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                 )}
               </div>
             )}
+
+            {/* Re-checks that block approving / completing this request */}
+            {(selectedWithdrawal.status === 'pending' || selectedWithdrawal.status === 'processing') &&
+              (selectedWithdrawal.approvalBlockers?.length ?? 0) > 0 && (
+                <div className="mb-6 rounded-lg bg-console-ground p-4">
+                  <div className="font-bold text-console-red mb-1">Cannot be paid right now</div>
+                  <ul className="list-disc pl-5 text-sm text-console-mut space-y-1">
+                    {selectedWithdrawal.approvalBlockers!.map((b) => (
+                      <li key={b.code}>{b.message}</li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 text-xs text-console-faint">
+                    Approve and Complete are refused until these are resolved. Reject returns the money to the payee&apos;s balance.
+                  </div>
+                </div>
+              )}
 
             {/* Failure Reason */}
             {selectedWithdrawal.failureReason && (

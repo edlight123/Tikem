@@ -127,6 +127,44 @@ export async function resolvePromoterCode(
  * at the gross alone let a large flat fee push the organizer's net negative, so
  * the promoter was paid out of money that was never the organizer's.
  */
+/**
+ * Owner decision (2026-10): a promoter commission is at most HALF of what the
+ * buyer paid for the ticket — the percentage cap (50%) and, now, a flat
+ * per-ticket commission too. A flat fee up to the full ticket price let an
+ * organizer route almost an entire sale to a "promoter" wallet, which pays out
+ * with lighter identity checks than the organizer's own.
+ */
+export const PROMOTER_COMMISSION_MAX_SHARE = 0.5
+
+/** The most a flat per-ticket commission may be on a ticket of this price (minor units). */
+export function maxFlatCommissionCents(ticketPriceCents: number): number {
+  return Math.floor(Math.max(0, Math.round(Number(ticketPriceCents) || 0)) * PROMOTER_COMMISSION_MAX_SHARE)
+}
+
+/**
+ * One promoter_sales row's commission, capped at 50% of its order gross. Rows
+ * written before the cap may exceed it: they are paid (and withheld from the
+ * organizer) at the capped figure, and the cut is logged.
+ */
+export function cappedSaleCommissionCents(sale: Record<string, any>): number {
+  const commission = Math.max(0, Math.round(Number(sale?.commission_cents) || 0))
+  const gross = Math.max(0, Math.round(Number(sale?.order_gross_cents) || 0))
+  if (gross <= 0) return commission
+  const cap = Math.floor(gross * PROMOTER_COMMISSION_MAX_SHARE)
+  if (commission > cap) {
+    console.warn('[promoters] commission above the 50% cap; capped', {
+      promoterId: sale?.promoter_id ?? null,
+      eventId: sale?.event_id ?? null,
+      ticketId: sale?.ticket_id ?? null,
+      commissionCents: commission,
+      orderGrossCents: gross,
+      cappedCents: cap,
+    })
+    return cap
+  }
+  return commission
+}
+
 export function calculateCommissionCents(
   promoter: Pick<PromoterDoc, 'commission_type' | 'commission_value'>,
   orderGrossCents: number,
@@ -139,7 +177,8 @@ export function calculateCommissionCents(
   if (gross <= 0 || qty <= 0 || !Number.isFinite(value) || value <= 0) return 0
 
   const fee = Math.max(0, Math.round(Number(platformFeeCents) || 0))
-  const ceiling = Math.max(0, gross - fee)
+  // Never more than the organizer's net, and never more than half the sale.
+  const ceiling = Math.min(Math.max(0, gross - fee), Math.floor(gross * PROMOTER_COMMISSION_MAX_SHARE))
   if (ceiling <= 0) return 0
 
   if (promoter.commission_type === 'flat_per_ticket') {
@@ -466,7 +505,9 @@ export async function getFundedCommissionForEvent(eventId: string): Promise<numb
     // Tikèm-held net. The promoter wallet excludes the same rows.
     const sales = await excludeStripeConnectSales(accrued)
     let total = 0
-    for (const s of sales) total += Math.max(0, Number(s.commission_cents) || 0)
+    // Capped exactly as the promoter wallet pays it, so the organizer's net
+    // gets back whatever a pre-cap row over-withheld.
+    for (const s of sales) total += cappedSaleCommissionCents(s)
     return total
   } catch (err: any) {
     console.error('[promoters] funded-commission lookup failed', {

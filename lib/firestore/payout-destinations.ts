@@ -35,6 +35,8 @@ type StoredBankDestination = {
     tag: string
     ciphertext: string
   }
+  /** ISO. A secondary destination cannot be paid before this (new-destination hold). */
+  holdUntil?: string
   createdAt: string
   updatedAt: string
 }
@@ -110,13 +112,30 @@ export async function upsertPrimaryBankDestinationFromPayoutSettings(params: {
   return { id }
 }
 
+const DEFAULT_NEW_DESTINATION_HOLD_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Add a non-primary bank destination. It is ALWAYS created on the
+ * new-destination hold (NEW_PAYOUT_DESTINATION_HOLD_MS): a stolen session plus
+ * an emailed code must not be able to add an account and drain to it at once.
+ * withdraw-bank refuses a destination whose holdUntil is in the future.
+ */
 export async function addSecondaryBankDestination(params: {
   organizerId: string
   bankDetails: BankDestinationDetails
-}): Promise<{ id: string }> {
+  addedVia?: string
+  /** NEW_PAYOUT_DESTINATION_HOLD_MS; defaults to the same 24h. */
+  holdMs?: number
+  now?: Date
+}): Promise<{ id: string; holdUntil: string }> {
   const { organizerId, bankDetails } = params
 
-  const now = new Date().toISOString()
+  const nowDate = params.now || new Date()
+  const now = nowDate.toISOString()
+  // Callers pass NEW_PAYOUT_DESTINATION_HOLD_MS (lib/firestore/payout); it is
+  // not imported here because payout.ts imports this module (import cycle).
+  const holdMs = Number(params.holdMs) > 0 ? Number(params.holdMs) : DEFAULT_NEW_DESTINATION_HOLD_MS
+  const holdUntil = new Date(nowDate.getTime() + holdMs).toISOString()
 
   const accountNumber = String(bankDetails.accountNumber)
   const last4 = accountNumber.slice(-4)
@@ -138,12 +157,13 @@ export async function addSecondaryBankDestination(params: {
     accountNumberLast4: last4,
     isPrimary: false,
     encrypted,
+    holdUntil,
     createdAt: now,
     updatedAt: now,
   }
 
-  await docRef.set(toStore)
-  return { id: docRef.id }
+  await docRef.set({ ...toStore, ...(params.addedVia ? { addedVia: params.addedVia } : {}) })
+  return { id: docRef.id, holdUntil }
 }
 
 export async function getDecryptedBankDestination(params: {

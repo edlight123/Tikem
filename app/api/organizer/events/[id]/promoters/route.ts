@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import {
+  maxFlatCommissionCents,
   maxTierPriceCentsForEvent,
   mintPromoterStatsKey,
   normalizePromoterCode,
@@ -124,9 +125,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           { status: 400 }
         )
       }
-      if (Math.round(commissionValue * 100) > maxTierCents) {
+      // Owner decision: at most HALF the ticket price (lib/promoters
+      // PROMOTER_COMMISSION_MAX_SHARE); each order is clamped to 50% too.
+      if (Math.round(commissionValue * 100) > maxFlatCommissionCents(maxTierCents)) {
         return NextResponse.json(
-          { error: 'A flat commission cannot be more than the ticket price' },
+          {
+            error: 'A flat commission cannot be more than half the ticket price',
+            code: 'flat_commission_above_cap',
+            maxCents: maxFlatCommissionCents(maxTierCents),
+          },
           { status: 400 }
         )
       }

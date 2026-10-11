@@ -26,6 +26,7 @@ jest.mock('@/lib/firebase/admin', () => {
     adminDb: {
       collection: (name: string) => ({
         doc: (id: string) => makeDocRef(`${name}/${id}`),
+        where: () => ({ limit: () => ({ get: async () => ({ empty: true, docs: [] }) }) }),
       }),
     },
   }
@@ -68,8 +69,10 @@ const GOOD_ACCOUNT = {
 beforeEach(() => {
   store.clear()
   mockGetPayoutProfile.mockReset()
-  // Verified organizer by default; individual tests override.
+  // Verified organizer by default (an APPROVED verification request — the one
+  // identity definition, lib/kyc/identity.ts); individual tests override.
   store.set(`users/${ORGANIZER}`, { is_verified: true })
+  store.set(`verification_requests/${ORGANIZER}`, { status: 'approved' })
   mockGetPayoutProfile.mockResolvedValue({ stripeAccountId: 'acct_old' })
 })
 
@@ -99,6 +102,18 @@ describe('Stripe Connect markets', () => {
     const res = await checkPaidPublishGate({ organizerId: ORGANIZER, country })
 
     expect(res).toMatchObject({ ok: false, code: 'stripe_connect_required' })
+  })
+
+  it('the verified flag alone (no approved request) does not verify', async () => {
+    store.delete(`verification_requests/${ORGANIZER}`)
+    store.set(`users/${ORGANIZER}`, { is_verified: true, verification_status: 'approved' })
+
+    const res = await checkPaidPublishGate({
+      organizerId: ORGANIZER,
+      country: 'US',
+      stripe: stripeReturning(GOOD_ACCOUNT),
+    })
+    expect(res).toMatchObject({ ok: false, code: 'verification_required' })
   })
 
   it('requires identity verification first', async () => {

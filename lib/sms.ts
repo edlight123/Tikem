@@ -6,6 +6,11 @@ type SmsParams = {
   message: string
 }
 
+/** True when an SMS provider is configured, so UI copy can promise a text. */
+export function isSmsConfigured(): boolean {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER)
+}
+
 export async function sendSms({ to, message }: SmsParams) {
   // In development or if no Twilio credentials, just log
   const accountSid = process.env.TWILIO_ACCOUNT_SID
@@ -15,11 +20,14 @@ export async function sendSms({ to, message }: SmsParams) {
   if (!accountSid || !authToken || !fromNumber) {
     // Message bodies carry ticket links and verification codes; only print
     // them outside production.
+    // No SMS provider is configured in production yet (2026-10). Report that
+    // honestly: callers used to read `success: true` here and believe a code or a
+    // ticket link had been texted when nothing left the server.
     if (process.env.NODE_ENV === 'production') {
       console.warn('SMS not sent: no Twilio credentials configured')
-    } else {
-      console.log('📱 SMS would be sent (no Twilio credentials configured):', { to, message })
+      return { success: false, messageId: undefined, code: 'sms_not_configured' as const }
     }
+    console.log('📱 SMS would be sent (no Twilio credentials configured):', { to, message })
     return { success: true, messageId: 'dev-mode' }
   }
 

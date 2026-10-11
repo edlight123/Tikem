@@ -39,7 +39,7 @@ export default function OnboardingClient({ bearerToken }: { bearerToken: string 
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.clientSecret) {
-          setFailed(data?.code === 'no_account' ? 'no_account' : 'error')
+          setFailed(data?.code === 'no_account' || data?.code === 'reconnect_needed' ? 'no_account' : 'error')
           throw new Error(data?.error || 'Failed to create account session')
         }
         return data.clientSecret

@@ -1,202 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
-import { adminDb } from '@/lib/firebase/admin'
+import { adminDb, adminStorage } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { renderEmail, title, eyebrow, p, gap, button, timeline, rowsBlock, appUrl } from '@/lib/email-kit/layout'
 import type { EmailLang } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { validateStoredSubmission } from '@/lib/kyc/submission'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
+/**
+ * Submit the caller's KYC request for review.
+ *
+ * The documents reviewed are the ones STORED on verification_requests/{uid}
+ * (`files.governmentId.front/back`, `files.selfie.path`), each of which must be
+ * a Storage path under verification/{uid}/. Anything else in the body —
+ * including the idFrontUrl / idBackUrl / facePhotoUrl older mobile builds still
+ * send — is ignored: a client-supplied URL could point at someone else's ID,
+ * and a stored permanent download URL is a public link to an identity document.
+ *
+ * Refused when the request is already approved (re-submitting used to drop an
+ * approved organizer back to pending_review and unset is_verified), already
+ * awaiting review, or rejected (a rejected request is restarted first through
+ * /api/organizer/reset-verification).
+ */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { userId, idFrontUrl, idBackUrl, facePhotoUrl } = await request.json()
-
-    if (userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const body = await request.json().catch(() => ({} as any))
+    const userId: string = user.id
+    if (body?.userId != null && body.userId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!idFrontUrl || !idBackUrl || !facePhotoUrl) {
+    const verificationRef = adminDb.collection('verification_requests').doc(userId)
+    const existing = await verificationRef.get()
+    if (!existing.exists) {
       return NextResponse.json(
-        { error: 'Missing verification images' },
+        { error: 'Start your verification and upload your documents before submitting.', code: 'not_started' },
         { status: 400 }
       )
     }
 
-    const supabase = await createClient()
+    const precheck = validateStoredSubmission(existing.data() || {}, userId)
+    if (!precheck.ok) return NextResponse.json({ error: precheck.error, code: precheck.code }, { status: precheck.status })
 
-    // Create verification request with Firebase Storage URLs
-    // Use userId as document ID for consistency with Firestore structure
-    const { data: verificationRequest, error: requestError } = await supabase
-      .from('verification_requests')
-      .upsert({
-        id: userId,
-        userId: userId,
-        id_front_url: idFrontUrl,
-        id_back_url: idBackUrl,
-        face_photo_url: facePhotoUrl,
-        status: 'pending_review',
-      })
-      .select()
-      .single()
-
-    if (requestError) {
-      console.error('Error creating verification request:', requestError)
-      return NextResponse.json(
-        { error: 'Failed to create verification request' },
-        { status: 500 }
-      )
-    }
-
-    // Update user verification status to pending
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ verification_status: 'pending_review' })
-      .eq('id', userId)
-
-    if (updateError) {
-      console.error('Error updating user status:', updateError)
-    }
-
-    // Mirror submission into Firestore so the admin review UI can reliably render
-    // sections + proof (older flows used a SQL upsert + public URLs only).
+    // The stored paths must name objects that actually exist.
     try {
-      const verificationRef = adminDb.collection('verification_requests').doc(userId)
-      const existing = await verificationRef.get()
-      const now = new Date()
-
-      const hasStructuredSteps = existing.exists && (existing.data() as any)?.steps
-
-      if (!hasStructuredSteps) {
-        await verificationRef.set(
-          {
-            userId,
-            status: 'pending_review',
-            submittedAt: FieldValue.serverTimestamp(),
-            reviewedAt: null,
-            reviewed_by: null,
-            reviewed_at: null,
-            rejection_reason: null,
-            reviewNotes: null,
-            createdAt: existing.exists ? (existing.data() as any)?.createdAt || now : now,
-            updatedAt: FieldValue.serverTimestamp(),
-            // Legacy flat URLs (still supported)
-            id_front_url: idFrontUrl,
-            id_back_url: idBackUrl,
-            face_photo_url: facePhotoUrl,
-            // New structured schema expected by the premium verification UI
-            steps: {
-              organizerInfo: {
-                id: 'organizerInfo',
-                title: 'Organizer Information',
-                description: 'Basic information about you and your organization',
-                status: 'incomplete',
-                required: true,
-                fields: {},
-                missingFields: ['full_name', 'phone', 'organization_name'],
-              },
-              governmentId: {
-                id: 'governmentId',
-                title: 'Government ID Upload',
-                description: 'Upload a valid government-issued ID (front and back)',
-                status: 'complete',
-                required: true,
-                fields: {},
-                missingFields: [],
-              },
-              selfie: {
-                id: 'selfie',
-                title: 'Identity Verification',
-                description: 'Take a selfie holding your ID for verification',
-                status: 'complete',
-                required: true,
-                fields: {},
-              },
-              businessDetails: {
-                id: 'businessDetails',
-                title: 'Business Details',
-                description: 'Optional business registration and tax information',
-                status: 'incomplete',
-                required: false,
-                fields: {},
-              },
-              payoutSetup: {
-                id: 'payoutSetup',
-                title: 'Payout Setup',
-                description: 'Configure how you receive payments (can be set up later)',
-                status: 'incomplete',
-                required: false,
-                fields: {},
-              },
-            },
-            files: {
-              governmentId: {
-                // For this legacy flow these are public URLs, but the admin UI
-                // can still display them (it supports URL-or-path).
-                front: idFrontUrl,
-                back: idBackUrl,
-                uploadedAt: now,
-              },
-              selfie: {
-                path: facePhotoUrl,
-                uploadedAt: now,
-              },
-            },
-          },
-          { merge: true }
-        )
-      } else {
-        // Keep existing structured payload, but ensure admin can still see proof + timing.
-        await verificationRef.set(
-          {
-            status: 'pending_review',
-            submittedAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-            id_front_url: idFrontUrl,
-            id_back_url: idBackUrl,
-            face_photo_url: facePhotoUrl,
-          },
-          { merge: true }
+      const bucket = adminStorage.bucket()
+      const found = await Promise.all(precheck.paths.map((path) => bucket.file(path).exists().then((r: any) => Boolean(r?.[0]))))
+      if (found.some((ok) => !ok)) {
+        return NextResponse.json(
+          { error: 'One of your documents is missing. Please upload it again before submitting.', code: 'document_missing' },
+          { status: 400 }
         )
       }
+    } catch (storageError: any) {
+      console.error('[submit-verification] could not confirm stored documents', { message: storageError?.message })
+      return NextResponse.json({ error: 'Could not check your documents. Please try again.' }, { status: 503 })
+    }
 
-      // Keep Firestore user/organizer docs in sync for flows that read from Firestore.
+    // Decide and write in one transaction so a concurrent approval, a second
+    // submit, or a file edit between the check and the write cannot slip in.
+    let outcome: { ok: true } | { ok: false; status: number; error: string; code: string }
+    outcome = await adminDb.runTransaction(async (tx: any) => {
+      const snap = await tx.get(verificationRef)
+      if (!snap.exists) return { ok: false as const, status: 400, error: 'Verification request not found', code: 'not_started' }
+      const v = validateStoredSubmission(snap.data() || {}, userId)
+      if (!v.ok) return { ok: false as const, status: v.status, error: v.error, code: v.code }
+      if (v.paths.join('|') !== precheck.paths.join('|')) {
+        return { ok: false as const, status: 409, error: 'Your documents changed while submitting. Please try again.', code: 'documents_changed' }
+      }
+      tx.update(verificationRef, {
+        status: 'pending_review',
+        submittedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        reviewedAt: null,
+        reviewedBy: null,
+        reviewNotes: null,
+        reviewed_by: null,
+        reviewed_at: null,
+        rejection_reason: null,
+        userId,
+        // Legacy permanent download URLs: never stored again, and removed
+        // from requests that still carry them.
+        id_front_url: FieldValue.delete(),
+        id_back_url: FieldValue.delete(),
+        face_photo_url: FieldValue.delete(),
+      })
       const nowIso = new Date().toISOString()
-      await adminDb.collection('users').doc(userId).set(
-        {
-          is_verified: false,
-          verification_status: 'pending_review',
-          updated_at: nowIso,
-        },
-        { merge: true }
-      )
-      await adminDb.collection('organizers').doc(userId).set(
-        {
-          is_verified: false,
-          verification_status: 'pending_review',
-          updated_at: nowIso,
-        },
-        { merge: true }
-      )
-    } catch (firestoreError) {
-      console.error('Error mirroring verification request into Firestore:', firestoreError)
-      // Non-fatal: the primary submission is already stored.
+      const mirror = { is_verified: false, verification_status: 'pending_review', updated_at: nowIso }
+      tx.set(adminDb.collection('users').doc(userId), mirror, { merge: true })
+      tx.set(adminDb.collection('organizers').doc(userId), mirror, { merge: true })
+      return { ok: true as const }
+    })
+
+    if (!outcome.ok) {
+      return NextResponse.json({ error: outcome.error, code: outcome.code }, { status: outcome.status })
     }
 
     // Create in-app notification
@@ -225,7 +133,7 @@ export async function POST(request: NextRequest) {
     // Send confirmation email to user
     try {
       const lang = await resolveEmailLang({ userId, email: user.email || null })
-      const { subject, html } = verificationReceivedEmail(lang, user.user_metadata?.full_name || null)
+      const { subject, html } = verificationReceivedEmail(lang, (user as any).user_metadata?.full_name || (user as any).full_name || null)
       await resend.emails.send({
         from: 'Tikem <noreply@tikem.co>',
         to: user.email || '',
@@ -244,9 +152,9 @@ export async function POST(request: NextRequest) {
         to: process.env.ADMIN_EMAIL || 'admin@tikem.co',
         subject: 'New Verification Request',
         html: verificationAdminEmail({
-          name: user.user_metadata?.full_name || 'N/A',
+          name: (user as any).user_metadata?.full_name || (user as any).full_name || 'N/A',
           email: user.email || 'N/A',
-          requestId: String(verificationRequest.id),
+          requestId: userId,
         }),
       })
     } catch (emailError) {
@@ -256,7 +164,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Verification request submitted successfully',
-      requestId: verificationRequest.id,
+      requestId: userId,
     })
   } catch (error) {
     console.error('Verification submission error:', error)
@@ -266,7 +174,6 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
 
 const RECEIVED_COPY: Record<
   EmailLang,

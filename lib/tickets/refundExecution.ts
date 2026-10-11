@@ -16,6 +16,7 @@ import {
   type RefundReviewReason,
 } from '@/lib/tickets/refundApprovalPolicy'
 import { reversePromoterSaleForTicket } from '@/lib/promoters'
+import { syncEventDeficitAfterRefund } from '@/lib/payouts/organizer-debt'
 import {
   notifyAdminsOfQueuedRefunds,
   notifyAdminsOfRefundReview,
@@ -663,6 +664,9 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       { eventId: event.id, amount: p.amount, currency: p.currency, refundId, actorId, reason }
     )
     await reversePromoterCommission(ticketId, reason)
+    // A refund after the event was paid out is organizer debt (netted from
+    // their next withdrawal). A cancellation sweep syncs once at its end.
+    if (!cancellation) await syncEventDeficitAfterRefund(String(event.id), event.organizer_id || null)
     return {
       outcome: 'refunded',
       ticketId,
@@ -720,6 +724,7 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
     await batch.commit()
 
     await reversePromoterCommission(ticketId, reason)
+    if (!cancellation) await syncEventDeficitAfterRefund(String(event.id), event.organizer_id || null)
     if (options.notifyAdmins !== false) {
       await notifyAdminsOfQueuedRefunds([
         { ticketId, eventTitle: event.title || null, amount: p.amount, currency: p.currency, method, reason, needsReview },

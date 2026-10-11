@@ -66,6 +66,19 @@ function seed() {
   db.write('config/payouts', { prefunding: { enabled: false } })
   authUsers.promoter1 = { uid: 'promoter1', phoneNumber: '+50937007294' }
   authUsers.org1 = { uid: 'org1', email: 'org@example.com', emailVerified: true }
+  // Owner decision: commission is withdrawable only once the ORGANIZER is KYC-verified.
+  kyc.org1 = 'verified'
+}
+
+const fingerprint = (n: string) => jest.requireActual('@/lib/firestore/payout').mobileMoneyFingerprint(n)
+/** A promoter wallet whose saved number is payable now. */
+function payableWallet(extra: Record<string, any> = {}) {
+  db.write('promoter_wallets/promoter1', {
+    moncash_phone: '50937007294',
+    moncash_phone_fingerprint: fingerprint('50937007294'),
+    moncash_phone_hold_until: new Date(Date.now() - 1000).toISOString(),
+    ...extra,
+  })
 }
 
 beforeEach(seed)
@@ -159,5 +172,63 @@ describe('promoter withdrawal', () => {
       moncash_phone_hold_until: new Date(Date.now() - 1000).toISOString(),
     })
     expect(await executePromoterWithdrawal('org1', '37007294')).toMatchObject({ ok: false, code: 'nothing_available' })
+  })
+
+  it('holds every commission until the event ORGANIZER is identity-verified', async () => {
+    payableWallet()
+    kyc.org1 = 'pending'
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: false, code: 'nothing_available' })
+    kyc.org1 = 'verified'
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: true })
+  })
+
+  it("holds commission paid to the organizer's own MonCash payout number", async () => {
+    payableWallet()
+    db.write('organizers/org1/payoutProfiles/haiti', { mobileMoneyDetails: { phoneNumberFingerprint: fingerprint('50937007294') } })
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: false, code: 'nothing_available' })
+    warn.mockRestore()
+    expect(db.docsIn('withdrawal_requests')).toHaveLength(0)
+  })
+
+  it("holds commission paid to the organizer's own sign-in phone", async () => {
+    payableWallet()
+    authUsers.org1.phoneNumber = '+50937007294'
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: false, code: 'nothing_available' })
+    warn.mockRestore()
+  })
+
+  it('a banned organizer freezes the commission on their events', async () => {
+    payableWallet()
+    db.write('users/org1', { status: 'banned' })
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: false, code: 'nothing_available' })
+  })
+
+  it('a banned or frozen promoter withdraws nothing', async () => {
+    payableWallet()
+    db.write('users/promoter1', { status: 'banned' })
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: false, code: 'payouts_frozen' })
+    db.write('users/promoter1', { status: 'active' })
+    db.write('organizers/promoter1', { payoutsFrozen: true })
+    expect(await executePromoterWithdrawal('promoter1', '37007294')).toMatchObject({ ok: false, code: 'payouts_frozen' })
+  })
+
+  it('a pre-cap commission above 50% of the order is paid at the cap', async () => {
+    payableWallet()
+    db.write('promoter_sales/s1', { commission_cents: 90_000, order_gross_cents: 100_000 }, { merge: true })
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const paid = await executePromoterWithdrawal('promoter1', '37007294')
+    warn.mockRestore()
+    expect(paid).toMatchObject({ ok: true, grossHtgCents: 50_000 })
+  })
+
+  it('instant promoter payouts respect the shared per-transfer cap (above it: manual queue)', async () => {
+    payableWallet()
+    db.write('config/payouts', { prefunding: { enabled: true, available: true }, adminTransferCaps: { perCallHtgCents: 10_000 } })
+    const paid = await executePromoterWithdrawal('promoter1', '37007294')
+    expect(paid).toMatchObject({ ok: true, instant: false, feeCents: 0 })
+    const [[, row]] = db.docsIn('withdrawal_requests')
+    expect(row.status).toBe('pending')
   })
 })

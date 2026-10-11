@@ -15,21 +15,36 @@ service firebase.storage {
       allow delete: if request.auth != null && imageId.matches('^' + request.auth.uid + '_.*');
     }
     
-    // Verification images - only accessible by user who uploaded or admins
-    // Admins are identified by email (check ADMIN_EMAILS env var)
+    // KYC uploads (ID front/back, selfie, liveness clip). Read: the owner and
+    // the admin allowlist. Admin review signs short-lived URLs server-side
+    // (/api/admin/verification-image) and cleanup runs on the Admin SDK
+    // (reset-verification, account deletion), which bypass these rules.
     match /verification/{userId}/{allPaths=**} {
       allow read: if request.auth != null && (
         request.auth.uid == userId ||
         (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
       );
-      allow write: if request.auth != null && request.auth.uid == userId
-        // IDs and selfies (images/PDF) and the liveness clip (video).
-        && request.resource.size < 60 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*|application/pdf|video/.*');
-      allow delete: if request.auth != null && (
-        request.auth.uid == userId ||
-        (request.auth.token.email_verified == true && request.auth.token.email in ['info@edlight.org', 'ted.jacquet@edlight.org', 'info.ht.edlight@gmail.com'])
-      );
+    }
+
+    // CREATE-ONLY, flat files directly under verification/{uid}/. No client
+    // overwrite and no client delete: once uploaded, a document an admin may
+    // already have reviewed cannot be swapped or removed. Re-uploads use a new
+    // timestamped name (web lib/verification.ts, mobile lib/verification.ts).
+    //  - photos: jpeg/png/webp/heic/heif only (no SVG, GIF or PDF), < 15MB
+    //  - liveness clip (mobile LivenessChallenge, 480p): liveness_* named,
+    //    video/mp4 or video/quicktime, < 40MB
+    match /verification/{userId}/{fileName} {
+      allow create: if request.auth != null && request.auth.uid == userId
+        && resource == null
+        && (
+          (request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif)')
+            && request.resource.size < 15 * 1024 * 1024)
+          ||
+          (fileName.matches('liveness_[^/]+')
+            && request.resource.contentType.matches('video/(mp4|quicktime)')
+            && request.resource.size < 40 * 1024 * 1024)
+        );
+      allow update, delete: if false;
     }
     
     // User profile images

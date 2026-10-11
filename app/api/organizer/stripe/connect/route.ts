@@ -3,6 +3,16 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { updatePayoutProfileConfig } from '@/lib/firestore/payout'
 import { requireAuth } from '@/lib/auth'
+import { getDeclaredMarkets } from '@/lib/firestore/organizer-markets'
+import { marketsForRail } from '@/lib/organizer-markets'
+import {
+  accountLocationForCountry,
+  createExpressAccount,
+  deleteOrphanAccount,
+  replaceStripeAccountId,
+  resolveConnectedAccount,
+  toStripeConnectCountry,
+} from '@/lib/stripe-connect-account'
 
 export const runtime = 'nodejs'
 
@@ -39,13 +49,6 @@ function normalizeAppUrl(request: NextRequest) {
   return request.nextUrl.origin || 'http://localhost:3000'
 }
 
-function toStripeCountry(accountLocation: string): 'US' | 'CA' | 'FR' {
-  const loc = String(accountLocation || '').toLowerCase()
-  if (loc === 'canada' || loc === 'ca') return 'CA'
-  if (loc === 'france' || loc === 'fr') return 'FR'
-  return 'US'
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth('organizer')
@@ -56,21 +59,37 @@ export async function POST(request: NextRequest) {
     const organizerId = user.id
 
     const body = await request.json().catch(() => ({}))
-    const requestedLocation = String(body?.accountLocation || '').toLowerCase()
+    const requestedLocation = String(body?.accountLocation || '').trim()
 
     // Read payout profile (source of truth)
     const profile = await getPayoutProfile(organizerId, 'stripe_connect')
 
-    const accountLocation =
-      requestedLocation ||
-      String(profile?.accountLocation || '').toLowerCase()
-
-    if (
-      !accountLocation ||
-      (accountLocation !== 'united_states' && accountLocation !== 'canada' && accountLocation !== 'france')
-    ) {
+    // Validate the requested country BEFORE falling back to the stored one: an
+    // unsupported value must be refused, not silently replaced (audit L9).
+    const stripeCountry = toStripeConnectCountry(requestedLocation || profile?.accountLocation || '')
+    if (!stripeCountry) {
       return NextResponse.json(
-        { error: 'Stripe Connect is only available for United States, Canada, or France accounts.' },
+        {
+          error: 'Stripe Connect is only available for United States, Canada, or France accounts.',
+          code: 'unsupported_location',
+        },
+        { status: 400 }
+      )
+    }
+    const accountLocation = accountLocationForCountry(stripeCountry)
+
+    // Consistency with the organizer's declared markets. Declarations are a UI
+    // hint and an EMPTY one means "anything" — so this only refuses the case
+    // where the organizer declared Stripe-rail markets and this is not one of
+    // them. They can edit their markets at any time; nothing is locked.
+    const stripeMarkets = marketsForRail('stripe_connect', await getDeclaredMarkets(organizerId))
+    if (stripeMarkets.length > 0 && !stripeMarkets.includes(stripeCountry)) {
+      return NextResponse.json(
+        {
+          error: `Your payout markets are ${stripeMarkets.join(', ')}. Add ${stripeCountry} to your markets before connecting a Stripe account there.`,
+          code: 'location_not_in_markets',
+          markets: stripeMarkets,
+        },
         { status: 400 }
       )
     }
@@ -81,35 +100,66 @@ export async function POST(request: NextRequest) {
     const userDoc = await adminDb.collection('users').doc(organizerId).get()
     const email = userDoc.exists ? (userDoc.data()?.email as string | undefined) : undefined
 
-    const stripeCountry = toStripeCountry(accountLocation)
+    let stripeAccountId: string | null = profile?.stripeAccountId ? String(profile.stripeAccountId) : null
+    let replacedStaleAccount: { previousId: string; reason: string } | null = null
 
-    let stripeAccountId = profile?.stripeAccountId || null
+    // A stored id is only reused once Stripe confirms it is THIS platform's
+    // account for THIS organizer. Ids from the pre-September platform answer
+    // account_invalid / "No such account" — reusing them made every onboarding
+    // attempt throw, forever.
+    if (stripeAccountId) {
+      const resolution = await resolveConnectedAccount(stripe, organizerId, stripeAccountId)
+      let replaceReason: string | null = null
+      if (resolution.state === 'stale') {
+        replaceReason = resolution.reason
+      } else {
+        const existingCountry = String(resolution.account?.country || '').toUpperCase()
+        if (existingCountry && existingCountry !== stripeCountry) {
+          // Stripe never changes an account's country. Before details are
+          // submitted nothing is lost by starting over in the right country;
+          // after, a human has to decide.
+          if (resolution.account?.details_submitted === true) {
+            return NextResponse.json(
+              {
+                error: `Your Stripe account is registered in ${existingCountry}. Stripe does not allow changing an account's country; contact support to move it to ${stripeCountry}.`,
+                code: 'country_mismatch',
+                accountCountry: existingCountry,
+              },
+              { status: 409 }
+            )
+          }
+          replaceReason = `country_changed_${existingCountry}_to_${stripeCountry}`
+        }
+      }
+
+      if (replaceReason) {
+        const previousId: string = stripeAccountId
+        const fresh = await createExpressAccount(stripe, { organizerId, country: stripeCountry, email })
+        const swap = await replaceStripeAccountId({
+          organizerId,
+          oldId: previousId,
+          newId: fresh.id,
+          reason: replaceReason,
+          accountLocation,
+        })
+        if (!swap.replaced) {
+          // A concurrent request replaced it first; use theirs, drop ours.
+          await deleteOrphanAccount(stripe, fresh.id)
+        } else {
+          replacedStaleAccount = { previousId, reason: replaceReason }
+          console.warn('[stripe-connect] replaced unusable connected account', {
+            organizerId,
+            previousId,
+            newId: fresh.id,
+            reason: replaceReason,
+          })
+        }
+        stripeAccountId = swap.stripeAccountId
+      }
+    }
 
     if (!stripeAccountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: stripeCountry,
-        email,
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
-        },
-        settings: {
-          payouts: {
-            // MANUAL payout schedule. Ticket sales are destination charges, so the
-            // money is the organizer's from the moment of sale — this does not put
-            // it in Tikèm's custody. What it stops is the automatic hop from their
-            // Stripe balance to their bank, which is the only thing that made an
-            // attendance/hold policy unenforceable: previously Stripe paid out on
-            // its own schedule, before the event had even happened.
-            // Release is triggered by /api/cron/release-payouts.
-            schedule: { interval: 'manual' },
-          },
-        },
-        metadata: {
-          organizerId,
-        },
-      })
+      const account = await createExpressAccount(stripe, { organizerId, country: stripeCountry, email })
 
       stripeAccountId = account.id
       const createdStripeAccountId = account.id
@@ -166,6 +216,7 @@ export async function POST(request: NextRequest) {
         url: `${embeddedBase}/organizer/onboarding`,
         stripeAccountId,
         embedded: true,
+        ...(replacedStaleAccount ? { reconnected: true } : {}),
       })
     }
 
@@ -179,6 +230,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       url: link.url,
       stripeAccountId,
+      ...(replacedStaleAccount ? { reconnected: true } : {}),
     })
   } catch (error: any) {
     const statusCode = Number(error?.statusCode) || Number(error?.raw?.statusCode) || 500

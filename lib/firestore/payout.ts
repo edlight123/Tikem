@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { adminDb } from '@/lib/firebase/admin'
 import { upsertPrimaryBankDestinationFromPayoutSettings } from '@/lib/firestore/payout-destinations'
 import { normalizeMoncashReceiver } from '@/lib/payouts/moncash-prefunded'
+import { getIdentityStatus } from '@/lib/kyc/identity'
 
 export type PayoutStatus = 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
 export type PayoutMethod = 'bank_transfer' | 'mobile_money'
@@ -46,6 +47,14 @@ export interface PayoutConfig {
     bank: 'pending' | 'verified' | 'failed'
     phone: 'pending' | 'verified' | 'failed'
   }
+  /**
+   * Server-computed, never stored or accepted from a client: was the CURRENT
+   * MonCash number on this profile confirmed by the SMS one-time code
+   * (send-phone-verification-code / submit-phone-verification)? Manual,
+   * admin-released MonCash payouts do not need it; the INSTANT (automated)
+   * MonCash path must require it. See isMobileMoneyNumberOtpVerified.
+   */
+  mobileMoneyOtpVerified?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -74,7 +83,7 @@ const getPayoutChangeVerificationRef = (organizerId: string) =>
  * (status, hold) or derived from verification records (verificationStatus),
  * so callers never need to pass them.
  */
-const SERVER_OWNED_PAYOUT_FIELDS = ['status', 'payoutHoldUntil', 'verificationStatus', 'createdAt', 'updatedAt'] as const
+const SERVER_OWNED_PAYOUT_FIELDS = ['status', 'payoutHoldUntil', 'verificationStatus', 'mobileMoneyOtpVerified', 'createdAt', 'updatedAt'] as const
 
 function stripServerOwnedPayoutFields(updates: Partial<PayoutConfig> | null | undefined): Partial<PayoutConfig> {
   const out: Record<string, unknown> = { ...(updates || {}) }
@@ -212,69 +221,84 @@ export async function consumePayoutDetailsChangeVerification(organizerId: string
   }
 }
 
+/**
+ * Payout-shaped view of THE identity definition (lib/kyc/identity.ts):
+ * 'verified' only for an approved verification request that has not been
+ * revoked; 'failed' for a rejected one; everything else 'pending'. The old
+ * flags-only shortcut and the verificationDocuments/identity fallback are gone.
+ */
 export async function getOrganizerIdentityVerificationStatus(
   organizerId: string
 ): Promise<NonNullable<PayoutConfig['verificationStatus']>['identity']> {
-  // Determine organizer identity verification status (approved/pending/failed)
-  const [userDoc, organizerDoc] = await Promise.all([
-    adminDb.collection('users').doc(organizerId).get(),
-    adminDb.collection('organizers').doc(organizerId).get(),
-  ])
-
-  const userData = userDoc.exists ? userDoc.data() : null
-  const organizerData = organizerDoc.exists ? organizerDoc.data() : null
-
-  const userSaysApproved =
-    userData?.verification_status === 'approved' ||
-    userData?.is_verified === true ||
-    organizerData?.verification_status === 'approved' ||
-    organizerData?.is_verified === true
-
-  // Primary lookup: doc id == organizerId
-  let verificationData: any | null = null
-  const organizerVerificationDoc = await adminDb
-    .collection('verification_requests')
-    .doc(organizerId)
-    .get()
-
-  if (organizerVerificationDoc.exists) {
-    verificationData = organizerVerificationDoc.data()
-  } else {
-    // Fallback for older/migrated data where docId != organizerId
-    const [byUserId, byUser_id] = await Promise.all([
-      adminDb
-        .collection('verification_requests')
-        .where('userId', '==', organizerId)
-        .limit(1)
-        .get(),
-      adminDb
-        .collection('verification_requests')
-        .where('user_id', '==', organizerId)
-        .limit(1)
-        .get(),
-    ])
-
-    const hit =
-      (!byUserId.empty && byUserId.docs[0]) ||
-      (!byUser_id.empty && byUser_id.docs[0]) ||
-      null
-
-    verificationData = hit ? hit.data() : null
-  }
-
-  const requestStatus = String(verificationData?.status || '').trim().toLowerCase()
-  if (userSaysApproved || requestStatus === 'approved') return 'verified'
-  if (requestStatus === 'rejected') return 'failed'
-  if (
-    requestStatus === 'pending' ||
-    requestStatus === 'pending_review' ||
-    requestStatus === 'in_review' ||
-    requestStatus === 'changes_requested'
-  ) {
-    return 'pending'
-  }
-
+  const status = await getIdentityStatus(organizerId)
+  if (status === 'verified') return 'verified'
+  if (status === 'rejected') return 'failed'
   return 'pending'
+}
+
+/**
+ * Was the profile's CURRENT MonCash number confirmed by the SMS code?
+ *
+ * `phoneDoc` is organizers/{id}/verificationDocuments/phone. It must be
+ * 'verified' AFTER the number now on the profile was saved
+ * (mobileMoneyDetails.phoneNumberFingerprintSetAt, which only moves when the
+ * number changes), so a code confirmed for a previous number never vouches for
+ * a new one. No fingerprint on file -> not verified.
+ */
+export function isMobileMoneyNumberOtpVerified(
+  profile: Pick<PayoutConfig, 'mobileMoneyDetails'> | null | undefined,
+  phoneDoc: Record<string, any> | null | undefined
+): boolean {
+  const mm: any = profile?.mobileMoneyDetails || {}
+  if (!mm.phoneNumberFingerprint) return false
+  if (String(phoneDoc?.status || '') !== 'verified') return false
+  const verifiedAt = Date.parse(String(phoneDoc?.verifiedAt || ''))
+  const setAt = Date.parse(String(mm.phoneNumberFingerprintSetAt || ''))
+  if (!Number.isFinite(verifiedAt) || !Number.isFinite(setAt)) return false
+  return verifiedAt >= setAt
+}
+
+const isHaitiDestinationUpdate = (updates: Partial<PayoutConfig>): boolean =>
+  Boolean(updates?.bankDetails?.accountNumber || updates?.mobileMoneyDetails?.phoneNumber)
+
+/**
+ * Must this payout-details update pass the email step-up and start the 24h
+ * hold (NEW_PAYOUT_DESTINATION_HOLD_MS)?
+ *  - changing an existing destination (as before); or
+ *  - saving a FIRST Haiti destination (bank / MonCash) for an organizer who is
+ *    already identity-verified. A verified account can withdraw at once, so a
+ *    hijacked session adding the first destination is as dangerous as one
+ *    changing it. Before KYC no withdrawal is possible, so the usual order —
+ *    destination first, KYC later — stays frictionless.
+ */
+export async function payoutUpdateNeedsStepUp(params: {
+  organizerId: string
+  current: PayoutConfig | null
+  sanitizedUpdates: Partial<PayoutConfig>
+  isStripeConnectAccount: boolean
+}): Promise<boolean> {
+  const { organizerId, current, sanitizedUpdates, isStripeConnectAccount } = params
+  if (!isSensitivePayoutDetailsUpdate(sanitizedUpdates)) return false
+  if (current && hasPayoutMethod(current)) return true
+  if (isStripeConnectAccount || !isHaitiDestinationUpdate(sanitizedUpdates)) return false
+  return (await getIdentityStatus(organizerId)) === 'verified'
+}
+
+/**
+ * A different MonCash number invalidates any phone OTP state (including a code
+ * sent to the previous number that has not been entered yet).
+ */
+async function resetPhoneVerificationForNewNumber(organizerId: string) {
+  try {
+    await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('verificationDocuments')
+      .doc('phone')
+      .set({ type: 'phone', status: 'pending', invalidatedAt: new Date().toISOString(), reason: 'number_changed' })
+  } catch (e) {
+    console.warn('Failed to reset phone verification after number change:', e)
+  }
 }
 
 export interface Payout {
@@ -462,9 +486,9 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     verificationDocs.docs.forEach((doc: any) => {
       const docData = doc.data()
       const type = doc.id as 'identity' | 'bank' | 'phone'
-      if (type in verificationStatus) {
-        // Keep organizer-approved identity as verified
-        if (type === 'identity' && organizerIdentityStatus === 'verified') return
+      // Identity comes ONLY from getOrganizerIdentityVerificationStatus; a
+      // verificationDocuments/identity doc is never trusted.
+      if (type === 'bank' || type === 'phone') {
         verificationStatus[type] = docData.status || 'pending'
       }
     })
@@ -547,15 +571,19 @@ export async function updatePayoutConfig(
       }
     }
 
-    const sensitiveUpdate = isSensitivePayoutDetailsUpdate(sanitizedUpdates)
-    const existingHasMethod = hasPayoutMethod(current)
-    const shouldRequireStepUp = Boolean(configDoc.exists && existingHasMethod && sensitiveUpdate)
+    const shouldRequireStepUp = await payoutUpdateNeedsStepUp({
+      organizerId,
+      current: configDoc.exists ? current : null,
+      sanitizedUpdates,
+      isStripeConnectAccount,
+    })
 
     if (shouldRequireStepUp) {
       await requireRecentPayoutDetailsChangeVerification(organizerId)
     }
     
     // Mask sensitive data before saving
+    let phoneNumberChanged = false
     const updateData: any = {
       ...sanitizedUpdates,
       updatedAt: now,
@@ -606,12 +634,17 @@ export async function updatePayoutConfig(
       // shown, which has no fingerprint. Writing that null would erase the
       // stored fingerprint of the real number (merge keeps it when omitted).
       const fingerprint = mobileMoneyFingerprint(phoneNumber)
+      const previousFingerprint = (current as any)?.mobileMoneyDetails?.phoneNumberFingerprint || null
+      const numberChanged = Boolean(fingerprint && fingerprint !== previousFingerprint)
       updateData.mobileMoneyDetails = {
         ...sanitizedUpdates.mobileMoneyDetails,
         phoneNumber: maskPhoneNumber(phoneNumber),
         phoneNumberLast4: phoneNumber.slice(-4),
-        ...(fingerprint ? { phoneNumberFingerprint: fingerprint, phoneNumberFingerprintSetAt: now } : {}),
+        // setAt moves only when the number really changes: it is what a phone
+        // OTP must post-date (isMobileMoneyNumberOtpVerified).
+        ...(numberChanged ? { phoneNumberFingerprint: fingerprint, phoneNumberFingerprintSetAt: now } : {}),
       }
+      if (numberChanged && previousFingerprint) phoneNumberChanged = true
     }
 
     if (!configDoc.exists) {
@@ -619,6 +652,8 @@ export async function updatePayoutConfig(
     }
 
     await configRef.set(updateData, { merge: true })
+
+    if (phoneNumberChanged) await resetPhoneVerificationForNewNumber(organizerId)
 
     if (shouldRequireStepUp) {
       await consumePayoutDetailsChangeVerification(organizerId)
@@ -688,14 +723,18 @@ export async function updatePayoutProfileConfig(
       }
     }
 
-    const sensitiveUpdate = isSensitivePayoutDetailsUpdate(sanitizedUpdates)
-    const existingHasMethod = hasPayoutMethod(current)
-    const shouldRequireStepUp = Boolean(current && existingHasMethod && sensitiveUpdate)
+    const shouldRequireStepUp = await payoutUpdateNeedsStepUp({
+      organizerId,
+      current,
+      sanitizedUpdates,
+      isStripeConnectAccount,
+    })
 
     if (shouldRequireStepUp) {
       await requireRecentPayoutDetailsChangeVerification(organizerId)
     }
 
+    let phoneNumberChanged = false
     const updateData: any = {
       ...sanitizedUpdates,
       updatedAt: now,
@@ -744,12 +783,17 @@ export async function updatePayoutProfileConfig(
       // shown, which has no fingerprint. Writing that null would erase the
       // stored fingerprint of the real number (merge keeps it when omitted).
       const fingerprint = mobileMoneyFingerprint(phoneNumber)
+      const previousFingerprint = (current as any)?.mobileMoneyDetails?.phoneNumberFingerprint || null
+      const numberChanged = Boolean(fingerprint && fingerprint !== previousFingerprint)
       updateData.mobileMoneyDetails = {
         ...sanitizedUpdates.mobileMoneyDetails,
         phoneNumber: maskPhoneNumber(phoneNumber),
         phoneNumberLast4: phoneNumber.slice(-4),
-        ...(fingerprint ? { phoneNumberFingerprint: fingerprint, phoneNumberFingerprintSetAt: now } : {}),
+        // setAt moves only when the number really changes: it is what a phone
+        // OTP must post-date (isMobileMoneyNumberOtpVerified).
+        ...(numberChanged ? { phoneNumberFingerprint: fingerprint, phoneNumberFingerprintSetAt: now } : {}),
       }
+      if (numberChanged && previousFingerprint) phoneNumberChanged = true
     }
 
     if (!configDoc.exists) {
@@ -757,6 +801,8 @@ export async function updatePayoutProfileConfig(
     }
 
     await configRef.set(updateData, { merge: true })
+
+    if (phoneNumberChanged) await resetPhoneVerificationForNewNumber(organizerId)
 
     if (shouldRequireStepUp) {
       await consumePayoutDetailsChangeVerification(organizerId)

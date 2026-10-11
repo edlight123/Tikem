@@ -41,7 +41,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
       const s = (status || '').toLowerCase()
       // Explicitly exclude non-pending statuses
       if (s === 'changes_requested' || s === 'rejected' || s === 'approved') return false
-      return s === 'pending' || s === 'pending_review' || s === 'in_review' || s === 'in_progress'
+      return s === 'pending' || s === 'pending_review' || s === 'in_review'
     }
 
     // Status filter
@@ -98,7 +98,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
   const analytics = useMemo(() => {
     const pending = requestsWithUsers.filter((r: any) => {
       const s = (r.status || '').toLowerCase()
-      return s === 'pending' || s === 'pending_review' || s === 'in_review' || s === 'in_progress'
+      return s === 'pending' || s === 'pending_review' || s === 'in_review'
     }).length
     const approved = requestsWithUsers.filter((r: any) => r.status === 'approved').length
     const rejected = requestsWithUsers.filter((r: any) => r.status === 'rejected').length

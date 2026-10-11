@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
-import { getDocumentDownloadURL } from '@/lib/verification'
+import { getDocumentDownloadURL, VERIFICATION_IMAGE_ACCEPT } from '@/lib/verification'
 
 interface Props {
   title: string
@@ -29,7 +29,7 @@ export default function DocumentUploadCard({
   existingFileUrl,
   onUpload,
   onRemove,
-  accept = 'image/*',
+  accept = VERIFICATION_IMAGE_ACCEPT,
   maxSizeMB = 10,
   required = false,
   disabled = false

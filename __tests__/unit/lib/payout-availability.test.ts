@@ -616,3 +616,29 @@ describe('refund face value and fee incidence helpers', () => {
     expect(ticketFeeIncidence({ payment_method: 'stripe' })).toBe('organizer')
   })
 })
+
+describe('deficitMinor: paid beyond what the event earned (organizer debt)', () => {
+  it('is 0 while the withdrawals are covered', () => {
+    const a = run({ tickets: [ticket(1_000)], ledger: { withdrawnMinor: 90_000, primaryWithdrawnMinor: 90_000 } as any })
+    expect(a.balanceMinor).toBe(0)
+    expect(a.deficitMinor).toBe(0)
+  })
+
+  it('a refund that lands after the event was paid out becomes a deficit (the balance only reads 0)', () => {
+    // Two 1,000 HTG tickets, 180,000 net withdrawn, then one is refunded.
+    const a = run({
+      tickets: [ticket(1_000), ticket(1_000, { status: 'refunded', refund_status: 'approved' })],
+      ledger: { withdrawnMinor: 180_000, primaryWithdrawnMinor: 180_000 } as any,
+    })
+    expect(a.balanceMinor).toBe(0)
+    expect(a.deficitMinor).toBe(90_000)
+  })
+
+  it('a refund still waiting for an admin (admin_review) is not debt yet', () => {
+    const a = run({
+      tickets: [ticket(1_000), ticket(1_000, { refund_status: 'admin_review' })],
+      ledger: { withdrawnMinor: 180_000, primaryWithdrawnMinor: 180_000 } as any,
+    })
+    expect(a.deficitMinor).toBe(0)
+  })
+})

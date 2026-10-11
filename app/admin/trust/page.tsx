@@ -42,7 +42,8 @@ export default async function AdminVerifyPage({
   const requestedStatusRaw = ((await searchParams)?.status || 'pending').toLowerCase()
 
   // Support both legacy and canonical statuses.
-  const pendingStatuses = ['pending_review', 'in_review', 'in_progress', 'pending']
+  // in_progress is a draft: not submitted, not approvable (review-verification).
+  const pendingStatuses = ['pending_review', 'in_review', 'pending']
   const supported = new Set(['pending', 'approved', 'rejected', 'changes_requested', 'in_progress', 'all'])
   const requestedStatus = supported.has(requestedStatusRaw) ? requestedStatusRaw : 'pending'
 
@@ -72,15 +73,15 @@ export default async function AdminVerifyPage({
     let snapshot: any
     
     if (requestedStatus === 'pending') {
-      // Try with submitted_at ordering first
+      // submittedAt is what submit-verification writes (nothing writes submitted_at)
       try {
         snapshot = await adminDb.collection('verification_requests')
           .where('status', 'in', pendingStatuses)
-          .orderBy('submitted_at', 'desc')
+          .orderBy('submittedAt', 'desc')
           .limit(50)
           .get()
       } catch (e1) {
-        console.log('[verify/page] Failed with submitted_at order, trying without order:', e1)
+        console.log('[verify/page] Failed with submittedAt order, trying without order:', e1)
         // Fallback: query without ordering if index doesn't exist
         snapshot = await adminDb.collection('verification_requests')
           .where('status', 'in', pendingStatuses)
@@ -91,7 +92,7 @@ export default async function AdminVerifyPage({
       try {
         snapshot = await adminDb.collection('verification_requests')
           .where('status', '==', requestedStatus)
-          .orderBy('submitted_at', 'desc')
+          .orderBy('submittedAt', 'desc')
           .limit(50)
           .get()
       } catch (e2) {
@@ -104,7 +105,7 @@ export default async function AdminVerifyPage({
       // 'all' status - just get recent ones
       try {
         snapshot = await adminDb.collection('verification_requests')
-          .orderBy('submitted_at', 'desc')
+          .orderBy('submittedAt', 'desc')
           .limit(50)
           .get()
       } catch (e3) {

@@ -17,7 +17,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { listOpenReports, resolveReports, type ReportTargetKind } from '@/lib/moderation/reports'
-import { unpublishOrganizerEvents } from '@/lib/moderation/ban'
+import { freezeOrganizerPayouts, unpublishOrganizerEvents } from '@/lib/moderation/ban'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
       banned_by: user.id,
       updated_at: now,
     })
+    // Same as the organizer-actions ban: every payout is frozen until an admin
+    // lifts it (lib/moderation/ban.ts freezeOrganizerPayouts).
+    await freezeOrganizerPayouts(organizerId, { adminId: user.id, reason: 'organizer_banned' })
     const eventsUnpublished = await unpublishOrganizerEvents(organizerId, undefined, now)
     const { resolved } = await resolveReports({ kind, targetId, resolution: 'actioned', adminId: user.id, note, now })
     const orgData = orgSnap.data() || {}

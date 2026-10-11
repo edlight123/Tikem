@@ -328,6 +328,7 @@ function seed(
     status: 'active',
     method: 'mobile_money',
     allowInstantMoncash: instant,
+    mobileMoneyOtpVerified: true,
     mobileMoneyDetails: { provider: 'moncash', phoneNumber: '****7294', phoneNumberLast4: '7294', phoneNumberFingerprint: savedFingerprint() },
   }
   session.uid = 'org1'

@@ -13,7 +13,7 @@ import {
   releaseWithdrawalReservation,
 } from '@/lib/payouts/withdrawal-finalize'
 import { classifyStatusCheck, RECONCILE_RELEASE_GRACE_MS, toMillis } from '@/lib/payouts/withdrawal-reconcile'
-import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
+import { withdrawalApprovalBlockers } from '@/lib/payouts/approval-checks'
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,16 +66,48 @@ export async function POST(req: NextRequest) {
       return adminError('You cannot act on a withdrawal paid to your own account. Ask another admin.', 403)
     }
 
-    // A MonCash number that is not the payee's saved destination is not paid
-    // without an explicit, logged override.
+    // Re-check, at the moment of paying, everything that had to be true when
+    // the request was filed (lib/payouts/approval-checks.ts): not banned or
+    // frozen, identity still verified, payout profile active (not on_hold),
+    // event not cancelled/frozen, and the destination still the profile's —
+    // MonCash number AND bank account (holder, number, proof).
+    //
+    // Only the MonCash number mismatch keeps its explicit override. A
+    // `complete` (the admin already sent the money by hand) can acknowledge
+    // the blockers with acknowledgeBlockers: true and an internal note, so a
+    // paid row is never stuck; that is logged.
     if (action === 'approve' || action === 'complete') {
-      const destinationReview = await reviewWithdrawalDestination(pre)
-      if (destinationReview === 'mismatch' && body.overrideDestinationMismatch !== true) {
-        return adminError(
-          "This MonCash number is not the payee's saved payout number",
-          409,
-          'Check with the payee, then retry with overrideDestinationMismatch: true if it is correct.'
+      const blockers = (await withdrawalApprovalBlockers(pre)).filter(
+        (b) => !(b.overridable && body.overrideDestinationMismatch === true)
+      )
+      const acknowledged = action === 'complete' && body.acknowledgeBlockers === true && Boolean(internalNote)
+      if (blockers.length > 0 && !acknowledged) {
+        return NextResponse.json(
+          {
+            ok: false,
+            success: false,
+            error: `Cannot ${action}: ${blockers[0].message}`,
+            details:
+              blockers.map((b) => b.message).join(' ') +
+              (blockers.some((b) => b.overridable)
+                ? ' If the MonCash number is confirmed with the payee, retry with overrideDestinationMismatch: true.'
+                : ''),
+            // Machine-readable reasons for the admin UI.
+            code: 'approval_blocked',
+            blockers,
+          },
+          { status: 409 }
         )
+      }
+      if (blockers.length > 0 && acknowledged) {
+        logAdminAction({
+          action: 'withdrawal.complete',
+          adminId: user.id,
+          adminEmail: user.email || 'unknown',
+          resourceType: 'withdrawal',
+          resourceId: String(withdrawalId),
+          details: { withdrawalId, acknowledgedBlockers: blockers.map((b) => b.code), internalNote },
+        }).catch(() => {})
       }
     }
 

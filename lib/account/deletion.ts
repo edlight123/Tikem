@@ -438,7 +438,8 @@ export async function scrubAccountData(uid: string, email: string | null, nowIso
   let storageFiles = 0
   try {
     const bucket = adminStorage.bucket()
-    for (const prefix of [`profile-images/${uid}/`, `verification/${uid}/`]) {
+    // KYC uploads and bank-proof documents are identity documents: both go.
+    for (const prefix of [`profile-images/${uid}/`, `verification/${uid}/`, `verifications/bank/${uid}/`]) {
       const [files] = await bucket.getFiles({ prefix })
       storageFiles += files.length
       if (files.length) await bucket.deleteFiles({ prefix, force: true })

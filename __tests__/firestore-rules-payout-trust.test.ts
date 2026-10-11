@@ -80,15 +80,32 @@ describe('firestore.rules — verification_requests', () => {
   const update = vr.slice(vr.indexOf('allow update'), vr.indexOf('allow delete'))
 
   it('create is limited to a draft status and the creator identity', () => {
-    expect(create).toMatch(/get\('status', ''\) in \['in_progress', 'pending'\]/)
+    // Only a draft: a client-created 'pending' would land in the admin queue
+    // without passing through /api/organizer/submit-verification.
+    expect(create).toContain("request.resource.data.get('status', '') == 'in_progress'")
     expect(create).toContain("get('userId', request.auth.uid) == request.auth.uid")
     expect(create).toContain('keys().hasOnly(')
     expect(create).not.toMatch(/'approved'|'reviewedAt'|'reviewNotes'|'reasonCodes'/)
   })
 
-  it('update can touch only steps/files/updatedAt, never status, and not once approved', () => {
+  it('update can touch only steps/files/updatedAt, never status, and only while editable', () => {
     expect(update).toContain("affectedKeys().hasOnly(['steps', 'files', 'updatedAt'])")
-    expect(update).toContain("resource.data.get('status', '') != 'approved'")
+    // Frozen once submitted (pending_review / in_review), approved or rejected.
+    expect(update).toContain("resource.data.get('status', '') in ['in_progress', 'not_started', 'changes_requested']")
+    expect(update).not.toMatch(/pending_review|in_review|'approved'|'rejected'/)
+  })
+
+  it('the web wizard writes fit the rule and never set status', () => {
+    const src = read('lib/verification.ts')
+    const updates = src.match(/updateDoc\(docRef, \{[\s\S]*?\}\)/g) || []
+    expect(updates.length).toBeGreaterThan(0)
+    for (const u of updates) {
+      const keys = Array.from(u.matchAll(/^\s+([a-zA-Z_]+):/gm)).map((m) => m[1])
+      for (const k of keys) expect(['steps', 'files', 'updatedAt']).toContain(k)
+    }
+    // Submit and restart go through the server routes.
+    expect(src).toContain("'/api/organizer/submit-verification'")
+    expect(src).toContain("'/api/organizer/reset-verification'")
   })
 
   it('the mobile wizard writes fit the rule', () => {

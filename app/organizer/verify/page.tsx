@@ -26,6 +26,7 @@ import {
   updateVerificationStep,
   submitVerificationForReview,
   restartVerification,
+  isOwnerEditableStatus,
   calculateCompletionPercentage,
   canSubmitForReview,
   type VerificationRequest
@@ -86,7 +87,8 @@ export default function VerifyOrganizerPage() {
           verificationRequest = await initializeVerificationRequest(uid)
         } else {
           // Migrate old payout step to optional (persisted so submit validation won't be blocked).
-          if (verificationRequest.steps.payoutSetup?.required === true) {
+          if (verificationRequest.steps.payoutSetup?.required === true && isOwnerEditableStatus(verificationRequest.status)) {
+            // Only while the owner may still edit: a submitted/approved request is frozen in firestore.rules.
             await updateVerificationStep(uid, 'payoutSetup', {
               required: false,
               missingFields: [],

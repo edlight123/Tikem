@@ -154,7 +154,7 @@ export async function sendTicketConfirmation(params: {
         // Without an account the link IS the ticket, so only send when we have one.
         const smsUrl = guestUrl
         if (smsUrl) {
-          await sendSms({
+          const sms = await sendSms({
             to: phone,
             message: getTicketConfirmationSms({
               eventTitle,
@@ -163,7 +163,7 @@ export async function sendTicketConfirmation(params: {
               quantity,
             }),
           })
-          result.smsSent = true
+          result.smsSent = Boolean((sms as any)?.success)
         }
       } catch (err) {
         console.error(`${logPrefix} failed to send confirmation SMS`, (err as any)?.message)

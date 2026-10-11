@@ -144,6 +144,8 @@ jest.mock('@/lib/firestore/payout', () => ({
   ...jest.requireActual('@/lib/firestore/payout'),
   requireRecentPayoutDetailsChangeVerification: jest.fn(async () => {}),
   consumePayoutDetailsChangeVerification: jest.fn(async () => {}),
+  // The admin approve/complete re-checks identity (lib/payouts/approval-checks).
+  getOrganizerIdentityVerificationStatus: jest.fn(async () => 'verified'),
 }))
 jest.mock('@/lib/payouts/withdrawal-gate', () => ({
   gateHaitiWithdrawal: jest.fn(async () => ({ allowed: true, reviewStatus: null })),
@@ -319,6 +321,7 @@ function seed(opts: { language?: string; autoReleaseNotFound?: boolean } = {}) {
     status: 'active',
     method: 'mobile_money',
     allowInstantMoncash: true,
+    mobileMoneyOtpVerified: true,
     mobileMoneyDetails: { provider: 'moncash', phoneNumberLast4: '7294', phoneNumberFingerprint: savedFingerprint() },
   }
   session.uid = 'org1'

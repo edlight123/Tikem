@@ -432,6 +432,15 @@ export type EventAvailability = {
    * before/after a refund, which the floored ceiling would under-state.
    */
   ceilingRawMinor: number
+  /**
+   * What the organizer was paid for this event BEYOND what it earned: max(0,
+   * withdrawn + legacy batches − (live gross − fee − promoter)). Non-zero when a
+   * refund or chargeback landed after the event's money was withdrawn. The
+   * floored balance hides it (it reads 0), so it is carried to the
+   * organizer-level debt ledger (lib/payouts/organizer-debt.ts) and netted
+   * against the organizer's NEXT withdrawal in the same currency.
+   */
+  deficitMinor: number
 
   /** Withdrawable RIGHT NOW. The one number a button may be gated on. */
   availableNowMinor: number
@@ -512,6 +521,10 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   let grossMinor = 0
   let refundedMinor = 0
   let refundInFlightMinor = 0
+  // Refunds waiting for a Tikèm admin to fund or deny (a shortfall review).
+  // Held from withdrawals like any in-flight refund, but NOT yet a loss, so the
+  // deficit below does not count them as debt until an admin approves.
+  let adminReviewMinor = 0
   let ticketsSold = 0
   const unpaid: Array<{ id: string; at: Date | null }> = []
 
@@ -587,6 +600,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     if (isRefundInFlight(ticket)) {
       if (!isStripeConnectTicket(ticket)) {
         refundInFlightMinor += price
+        if (String(ticket?.refund_status ?? '').toLowerCase().trim() === 'admin_review') adminReviewMinor += price
         keepRetainedFee(ticket, id, price)
       }
       continue
@@ -691,6 +705,14 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
   const ceilingRawMinor =
     liveGrossMinor - platformFeeMinor - promoterCommissionMinor - batchReservedMinor - paidElsewhere - refundRequestedMinor
   const ceilingMinor = Math.max(0, netMinor - batchReservedMinor - paidElsewhere - refundRequestedMinor)
+  // Earned (unfloored) vs everything paid out for this event. A pending refund
+  // REQUEST is not a loss yet, so it is not part of the deficit.
+  const deficitMinor = Math.max(
+    0,
+    withdrawnMinor +
+      batchReservedMinor -
+      (liveGrossMinor - platformFeeMinor - promoterCommissionMinor + adminReviewMinor)
+  )
   const balanceMinor = Math.max(0, ceilingMinor - primaryWithdrawn)
 
   unpaid.sort((a, b) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0))
@@ -716,6 +738,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
     ceilingMinor,
     balanceMinor,
     ceilingRawMinor,
+    deficitMinor,
     ticketsSold,
     unpaidTicketIds: unpaid.map((u) => u.id),
     periodStart,

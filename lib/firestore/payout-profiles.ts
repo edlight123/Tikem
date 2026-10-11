@@ -1,6 +1,10 @@
 import { adminDb } from '@/lib/firebase/admin'
 import type { PayoutConfig } from '@/lib/firestore/payout'
-import { determinePayoutStatus, getOrganizerIdentityVerificationStatus } from '@/lib/firestore/payout'
+import {
+  determinePayoutStatus,
+  getOrganizerIdentityVerificationStatus,
+  isMobileMoneyNumberOtpVerified,
+} from '@/lib/firestore/payout'
 import { countrySupport } from '@/lib/country-support'
 
 export type PayoutProfileId = 'haiti' | 'stripe_connect'
@@ -30,7 +34,9 @@ function convertTimestamp(value: any, fallback: string = new Date().toISOString(
   }
 }
 
-async function computeVerificationStatus(organizerId: string): Promise<PayoutConfig['verificationStatus']> {
+async function computeVerificationStatus(
+  organizerId: string
+): Promise<{ verificationStatus: NonNullable<PayoutConfig['verificationStatus']>; phoneDoc: Record<string, any> | null }> {
   const organizerIdentityStatus = await getOrganizerIdentityVerificationStatus(organizerId)
 
   const verificationDocs = await adminDb
@@ -49,6 +55,7 @@ async function computeVerificationStatus(organizerId: string): Promise<PayoutCon
   // - verificationDocuments/bank_<destinationId>
   // Primary bank destination uses destinationId = "bank_primary", so docId == "bank_bank_primary".
   // Legacy behavior stored a single bank doc as "bank".
+  let phoneDoc: Record<string, any> | null = null
   let primaryBankStatus: 'pending' | 'verified' | 'failed' | null = null
   let legacyBankStatus: 'pending' | 'verified' | 'failed' | null = null
 
@@ -57,6 +64,7 @@ async function computeVerificationStatus(organizerId: string): Promise<PayoutCon
     const docId = String(doc.id || '')
 
     if (docId === 'phone') {
+      phoneDoc = docData
       derived.phone = docData.status || 'pending'
       return
     }
@@ -72,14 +80,10 @@ async function computeVerificationStatus(organizerId: string): Promise<PayoutCon
     }
   })
 
-  // Identity is driven primarily by organizer verification request status.
-  if (organizerIdentityStatus !== 'verified') {
-    const identityDoc = verificationDocs.docs.find((d: any) => String(d.id || '') === 'identity')
-    if (identityDoc) {
-      const docData = identityDoc.data() as any
-      derived.identity = docData.status || derived.identity
-    }
-  }
+  // Identity comes ONLY from the approved verification request
+  // (lib/kyc/identity.ts via getOrganizerIdentityVerificationStatus). A
+  // verificationDocuments/identity doc is never read: it was written by a stub
+  // route that discarded the uploaded images, so it proved nothing.
 
   // Prefer primary destination-specific verification; fall back to legacy bank doc.
   if (primaryBankStatus) derived.bank = primaryBankStatus
@@ -93,9 +97,12 @@ async function computeVerificationStatus(organizerId: string): Promise<PayoutCon
   // spread the client's object into the profile — so any value there is a
   // self-asserted claim.
   return {
-    identity: derived.identity,
-    bank: derived.bank,
-    phone: derived.phone,
+    verificationStatus: {
+      identity: derived.identity,
+      bank: derived.bank,
+      phone: derived.phone,
+    },
+    phoneDoc,
   }
 }
 
@@ -159,11 +166,14 @@ export async function getPayoutProfile(organizerId: string, profileId: PayoutPro
 
   // Always derived server-side; see computeVerificationStatus. (Stripe Connect
   // previously echoed the stored value, which nothing legitimate ever wrote.)
-  const verificationStatus = await computeVerificationStatus(organizerId)
+  const { verificationStatus, phoneDoc } = await computeVerificationStatus(organizerId)
 
   const merged: PayoutConfig = {
     ...base,
     verificationStatus: verificationStatus as any,
+    // Instant (automated) MonCash payouts must require this; manual,
+    // admin-released ones do not. Computed, never read from the stored doc.
+    mobileMoneyOtpVerified: profileId === 'haiti' ? isMobileMoneyNumberOtpVerified(base, phoneDoc) : false,
   }
 
   return {

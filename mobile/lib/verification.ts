@@ -291,6 +291,26 @@ export async function pickAndUploadImage(
   return await uploadImageToStorage(userId, uri, documentType);
 }
 
+/** Mirrors storage.rules for verification/{uid}/. */
+const IMAGE_MAX_BYTES = 15 * 1024 * 1024;
+const LIVENESS_MAX_BYTES = 40 * 1024 * 1024;
+const IMAGE_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
+
+/** An allowed image type for this URI (camera/picker output is JPEG unless it says otherwise). */
+export function imageTypeFromUri(uri: string): { extension: string; contentType: string } {
+  const raw = (uri.split('?')[0].split('.').pop() || '').toLowerCase();
+  const contentType = IMAGE_TYPES[raw];
+  if (!contentType) return { extension: 'jpg', contentType: 'image/jpeg' };
+  return { extension: raw === 'jpeg' ? 'jpg' : raw, contentType };
+}
+
 /**
  * Upload image blob to Firebase Storage
  */
@@ -326,11 +346,14 @@ async function uploadImageToStorage(
     if (!blob || blob.size === 0) {
       throw new Error('Invalid image file');
     }
+    if (blob.size >= IMAGE_MAX_BYTES) {
+      throw new Error('This photo is too large. Please take it again');
+    }
 
-    // Create storage reference
-    const timestamp = Date.now();
-    const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${documentType}_${timestamp}.${extension}`;
+    // Always a NEW object name: storage.rules make KYC uploads create-only,
+    // so a re-upload (e.g. while changes are requested) must not reuse a path.
+    const { extension, contentType } = imageTypeFromUri(uri);
+    const fileName = `${documentType}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
     const storagePath = `verification/${userId}/${fileName}`;
     const storageRef = ref(storage, storagePath);
 
@@ -338,7 +361,7 @@ async function uploadImageToStorage(
 
     // Upload with metadata
     const metadata = {
-      contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`,
+      contentType,
       customMetadata: {
         uploadedAt: new Date().toISOString(),
         documentType,
@@ -374,10 +397,13 @@ export async function uploadLivenessVideo(userId: string, uri: string): Promise<
   const blob = await response.blob();
   if (!blob || blob.size === 0) throw new Error('The recording was empty. Please try again');
 
-  const extension = uri.split('.').pop()?.toLowerCase() || 'mp4';
-  const storagePath = `verification/${userId}/liveness_${Date.now()}.${extension}`;
+  const isMov = (uri.split('.').pop()?.toLowerCase() || '') === 'mov';
+  const extension = isMov ? 'mov' : 'mp4';
+  // storage.rules: liveness_* only, video/mp4 or video/quicktime, under 40MB.
+  if (blob.size >= LIVENESS_MAX_BYTES) throw new Error('The recording is too large. Please record it again');
+  const storagePath = `verification/${userId}/liveness_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
   await uploadBytes(ref(storage, storagePath), blob, {
-    contentType: extension === 'mov' ? 'video/quicktime' : 'video/mp4',
+    contentType: isMov ? 'video/quicktime' : 'video/mp4',
     customMetadata: { uploadedAt: new Date().toISOString(), documentType: 'liveness' },
   });
 
@@ -448,35 +474,28 @@ export async function updateVerificationFiles(
  */
 export async function submitVerificationForReview(userId: string): Promise<void> {
   try {
-    // Submit through the SERVER endpoint (not a bare client updateDoc). The
-    // server marks the request pending_review, mirrors verification_status onto
-    // the user/organizer docs, and alerts the admin to review — a client-only
-    // write would leave the KYC submission invisible to review and unmirrored,
-    // so the organizer could wait forever and never get verified/paid.
+    // Submit through the SERVER endpoint (not a bare client updateDoc): the
+    // request's status is server-owned. The server reviews the documents
+    // STORED on the request (Storage paths under verification/{uid}/), so no
+    // URLs are sent — a permanent download URL to an ID image must never be
+    // stored. A passport is a single photo page: it needs no back.
     const snap = await getDoc(doc(db, 'verification_requests', userId));
     const files = (snap.exists() ? (snap.data() as any)?.files : null) || {};
-    const frontRaw = files?.governmentId?.front;
-    const backRaw = files?.governmentId?.back;
-    const selfieRaw = files?.selfie?.path;
-    if (!frontRaw || !backRaw || !selfieRaw) {
+    const isPassport = files?.governmentId?.documentType === 'passport';
+    const hasFront = !!files?.governmentId?.front;
+    const hasBack = !!files?.governmentId?.back;
+    const hasSelfie = !!files?.selfie?.path;
+    if (!hasFront || !hasSelfie || (!isPassport && !hasBack)) {
       throw new Error(
-        'Please upload the front and back of your ID and a selfie before submitting.'
+        isPassport
+          ? 'Please upload your passport photo page and a selfie before submitting.'
+          : 'Please upload the front and back of your ID and a selfie before submitting.'
       );
     }
 
-    // Documents are stored as Storage paths; resolve to download URLs the
-    // reviewer can open. If a value is already an http(s) URL, use it as-is.
-    const resolve = async (v: string) =>
-      /^https?:\/\//i.test(v) ? v : await getDocumentDownloadURL(v);
-    const [idFrontUrl, idBackUrl, facePhotoUrl] = await Promise.all([
-      resolve(String(frontRaw)),
-      resolve(String(backRaw)),
-      resolve(String(selfieRaw)),
-    ]);
-
     await backendJson('/api/organizer/submit-verification', {
       method: 'POST',
-      body: JSON.stringify({ userId, idFrontUrl, idBackUrl, facePhotoUrl }),
+      body: JSON.stringify({ userId }),
     });
   } catch (error) {
     console.error('Error submitting verification:', error);

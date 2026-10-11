@@ -107,6 +107,11 @@ export type OrganizerReleaseContext = {
   endedEventIds: Set<string>
   lifetimeGrossMinorByCurrency: Record<string, number>
   fxWarnings: string[]
+  /**
+   * organizers/{id}.payoutsFrozen (lib/moderation/ban.ts): a ban or an admin
+   * freeze. Every event of this organizer releases nothing while it is set.
+   */
+  payoutsFrozen?: boolean
 }
 
 function toDateOrNull(value: any): Date | null {
@@ -191,6 +196,7 @@ export async function loadOrganizerReleaseContext(
     endedEventIds,
     lifetimeGrossMinorByCurrency,
     fxWarnings: resolvedRates.warnings,
+    payoutsFrozen: organizerSnap?.exists ? (organizerSnap.data() as any)?.payoutsFrozen === true : false,
   }
 }
 
@@ -381,11 +387,11 @@ export async function previewRelease(args: {
   const currency = args.currency ? String(args.currency).toUpperCase() : null
   const availableMinor = Math.max(0, toMinor(args.availableMinor))
 
-  const frozen =
+  const eventFrozen =
     args.eventData?.payouts_frozen === true ||
     String(args.eventData?.status || '') === 'cancelled'
 
-  const { decision, endsAt, history, config } = await buildReleaseInputs({
+  const { decision, endsAt, history, config, context } = await buildReleaseInputs({
     eventId: String(args.eventId),
     organizerId: String(args.organizerId),
     eventData: args.eventData || {},
@@ -413,6 +419,7 @@ export async function previewRelease(args: {
 
   const heldByReview =
     (decision.release === 'review' && reviewStatus !== 'released') || reviewStatus === 'pending'
+  const frozen = eventFrozen || context.payoutsFrozen === true
 
   return {
     releasedNow: !frozen && decision.release !== 'hold' && !heldByReview,
@@ -526,6 +533,15 @@ export async function gateHaitiWithdrawal(input: ReleaseGateInput): Promise<Rele
     now,
   })
   const { decision, endsAt, refundedMinor, history, config } = built
+
+  // A banned / admin-frozen organizer releases nothing, on any event.
+  if (built.context.payoutsFrozen === true) {
+    return blocked(
+      'payouts_frozen',
+      'Payouts on this account are on hold while Tikèm reviews it. Please contact Tikèm support.',
+      { status: 403, reason: 'organizer_payouts_frozen', decision }
+    )
+  }
 
   // ── hold: refuse with something the organizer can act on ──────────────────
   if (decision.release === 'hold') {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { isStaleStripeAccountError, reconnectNeededBody } from '@/lib/stripe-connect-account'
 
 export const runtime = 'nodejs'
 
@@ -32,6 +33,11 @@ export async function POST(_request: NextRequest) {
 
     return NextResponse.json({ url: link.url })
   } catch (error: any) {
+    if (isStaleStripeAccountError(error)) {
+      return NextResponse.json(reconnectNeededBody(String(error?.code || error?.raw?.code || 'no_such_account')), {
+        status: 409,
+      })
+    }
     const statusCode = Number(error?.statusCode) || Number(error?.raw?.statusCode) || 500
     const rawMessage = String(error?.raw?.message || error?.message || 'Failed to create Stripe login link')
     console.error('Stripe login link error:', error)

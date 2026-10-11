@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
       return adminError('Invalid status', 400)
     }
 
+    // Identity is decided ONLY by an approved verification_requests record
+    // (/api/admin/review-verification; lib/kyc/identity.ts). An
+    // organizers/{id}/verificationDocuments/identity doc is no longer read by
+    // anything, and this route must not be a second way to "verify" a person.
+    if (String(verificationType).toLowerCase() === 'identity' || String(documentId).toLowerCase() === 'identity') {
+      return adminError('Identity is reviewed from the organizer verification request in Trust', 400)
+    }
+
     // Update verification document
     const verificationRef = adminDb
       .collection('organizers')

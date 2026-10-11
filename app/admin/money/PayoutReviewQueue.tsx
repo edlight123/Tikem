@@ -189,12 +189,33 @@ export default function PayoutReviewQueue() {
     load()
   }, [load])
 
-  const act = async (item: ReviewItem, action: 'release' | 'dismiss') => {
+  const [refundReasons, setRefundReasons] = useState<Record<string, string>>({})
+
+  const act = async (item: ReviewItem, action: 'release' | 'dismiss' | 'reopen' | 'refund_buyers') => {
     const amount = formatMinor(item.amountMinor, item.currency)
     const who = item.organizerName || item.organizerEmail || item.organizerId
+    const note = action === 'refund_buyers' ? String(refundReasons[item.eventId] || '').trim() : ''
+    if (action === 'refund_buyers' && !note) {
+      setMessage({ type: 'error', text: 'Write the reason buyers will see before refunding them.' })
+      return
+    }
 
     const ok = await confirmDialog(
-      action === 'release'
+      action === 'reopen'
+        ? {
+            title: 'Reopen this review?',
+            description: `“${item.eventTitle || item.eventId}” (${who}) goes back to pending so it can be decided again. Nothing is paid until someone approves it.`,
+            confirmLabel: 'Reopen',
+            variant: 'default',
+          }
+        : action === 'refund_buyers'
+        ? {
+            title: 'Cancel the event and refund its buyers?',
+            description: `“${item.eventTitle || item.eventId}” is cancelled and every buyer is refunded from its earnings (Haiti refunds go to the refund review queue to execute). The organizer and buyers are told. This cannot be undone.`,
+            confirmLabel: 'Cancel and refund buyers',
+            variant: 'danger',
+          }
+        : action === 'release'
         ? {
             title: `Approve release of ${amount}?`,
             description: `This lifts the review hold on “${item.eventTitle || item.eventId}” for ${who}. The hourly release run pays it out on its next pass, nothing moves from this page.`,
@@ -216,7 +237,7 @@ export default function PayoutReviewQueue() {
       const res = await fetch(`/api/admin/payouts/review/${encodeURIComponent(item.eventId)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(note ? { action, note } : { action }),
       })
       const data = await res.json().catch(() => ({}))
 
@@ -235,6 +256,10 @@ export default function PayoutReviewQueue() {
         text:
           action === 'release'
             ? `Release approved, ${amount} is queued for the next payout run.`
+            : action === 'reopen'
+            ? 'Reopened: the review is pending again.'
+            : action === 'refund_buyers'
+            ? `Event cancelled; ${data?.outcome?.refundsSucceeded ?? 0} refunded, ${data?.outcome?.refundsQueuedManual ?? 0} queued for manual payout, ${data?.outcome?.refundsSentToReview ?? 0} sent to refund review, ${data?.outcome?.refundsFailed ?? 0} failed.`
             : `Dismissed, ${amount} stays held and will not be paid.`,
       })
       await load(false)
@@ -484,6 +509,34 @@ export default function PayoutReviewQueue() {
                       {item.resolvedByEmail ? ` by ${item.resolvedByEmail}` : ''}
                     </p>
                   </div>
+                  {item.status === 'dismissed' && (
+                    <div className="flex w-full flex-col gap-2 pt-1 sm:flex-row sm:items-center">
+                      <input
+                        type="text"
+                        value={refundReasons[item.eventId] || ''}
+                        onChange={(e) => setRefundReasons((r) => ({ ...r, [item.eventId]: e.target.value }))}
+                        placeholder="Reason buyers will see (needed to refund)"
+                        className="min-w-0 flex-1 rounded-md bg-console-raise px-3 py-2 text-base text-console-text placeholder:text-console-faint sm:text-sm"
+                        maxLength={500}
+                      />
+                      <div className="flex gap-2">
+                        <ConsoleButton
+                          variant="quiet"
+                          onClick={() => act(item, 'reopen')}
+                          disabled={busyId === item.eventId}
+                        >
+                          Reopen
+                        </ConsoleButton>
+                        <ConsoleButton
+                          variant="danger"
+                          onClick={() => act(item, 'refund_buyers')}
+                          disabled={busyId === item.eventId}
+                        >
+                          Refund buyers
+                        </ConsoleButton>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

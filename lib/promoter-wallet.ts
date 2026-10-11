@@ -24,7 +24,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { previewRelease } from '@/lib/payouts/withdrawal-gate'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import { gateEventData, type EventAvailability } from '@/lib/payouts/availability'
-import { excludeStripeConnectSales } from '@/lib/promoters'
+import { cappedSaleCommissionCents, excludeStripeConnectSales } from '@/lib/promoters'
+import { payoutFreezeStatus } from '@/lib/moderation/ban'
 import {
   computePrefundedPayout,
   executePrefundedTransfer,
@@ -32,6 +33,12 @@ import {
   prefundedBalanceCovers,
 } from '@/lib/payouts/moncash-prefunded'
 import { fetchUsdToHtgRate } from '@/lib/currency'
+import {
+  INSTANT_MONCASH_DAYS_COLLECTION,
+  dailyCapAllows,
+  instantDayKey,
+  loadMoncashTransferCaps,
+} from '@/lib/payouts/instant-moncash-policy'
 import { finalizeWithdrawalCompleted, releaseWithdrawalReservation } from '@/lib/payouts/withdrawal-finalize'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 import {
@@ -55,6 +62,14 @@ export interface WalletEventLine {
   commissionCents: number
   released: boolean
   availableAt: string | null
+  /**
+   * Why a commission is held regardless of the release ladder:
+   * 'organizer_identity_unverified' (owner decision: commission is withdrawable
+   * only once the event's ORGANIZER passed KYC), 'organizer_payouts_frozen'
+   * (banned/frozen organizer), 'promoter_is_organizer_destination' (the
+   * promoter's payout number is the organizer's own payout or sign-in phone).
+   */
+  holdReason?: string | null
 }
 
 export interface PromoterWalletView {
@@ -182,7 +197,8 @@ async function loadFundedLines(uid: string): Promise<Array<{ eventId: string; cu
         .filter((s: any) => s.funded === true && s.status === 'accrued')
       const sales = await excludeStripeConnectSales(candidates)
       sales.forEach((s: any) => {
-        const cents = Math.max(0, Number(s.commission_cents) || 0)
+        // Rows written before the 50% cap are paid at the capped figure.
+        const cents = cappedSaleCommissionCents(s)
         if (cents <= 0) return
         const eventId = String(s.event_id)
         const currency = String(s.currency || 'HTG').toUpperCase()
@@ -230,15 +246,73 @@ export function promoterHoldFromAvailability(
  * availability reads "nothing owed", so the ladder is asked again with the
  * promoter's own commission as the amount at stake.
  */
+/** Fingerprints of the organizer's own MonCash payout number and sign-in phone. */
+async function organizerOwnPhoneFingerprints(organizerId: string): Promise<Set<string>> {
+  const out = new Set<string>()
+  try {
+    const organizerRef = adminDb.collection('organizers').doc(organizerId)
+    const profileSnap = await organizerRef.collection('payoutProfiles').doc('haiti').get()
+    const snap = profileSnap?.exists ? profileSnap : await organizerRef.collection('payoutConfig').doc('main').get()
+    const stored = snap?.exists ? (snap.data() as any)?.mobileMoneyDetails?.phoneNumberFingerprint : null
+    if (stored) out.add(String(stored))
+  } catch (err: any) {
+    console.error('[promoter-wallet] organizer destination lookup failed', { organizerId, message: err?.message })
+    // Fail closed: an unknown destination counts as a match.
+    out.add('*')
+  }
+  const authPhone = await verifiedAuthPhone(organizerId)
+  const fp = authPhone ? mobileMoneyFingerprint(authPhone) : null
+  if (fp) out.add(fp)
+  return out
+}
+
+/**
+ * Organizer-side holds on a promoter commission (owner decisions, 2026-10):
+ * the event's organizer must be identity-verified and not banned/frozen, and
+ * the promoter must not be paying out to the organizer's own phone.
+ */
+async function organizerHoldFor(
+  organizerId: string,
+  promoterDestinationFingerprint: string | null
+): Promise<string | null> {
+  if (!organizerId) return 'organizer_identity_unverified'
+  const freeze = await payoutFreezeStatus(organizerId)
+  if (freeze.frozen) return 'organizer_payouts_frozen'
+  let identity: string = 'pending'
+  try {
+    identity = await getOrganizerIdentityVerificationStatus(organizerId)
+  } catch {
+    identity = 'pending'
+  }
+  if (identity !== 'verified') return 'organizer_identity_unverified'
+  if (promoterDestinationFingerprint) {
+    const own = await organizerOwnPhoneFingerprints(organizerId)
+    if (own.has('*') || own.has(promoterDestinationFingerprint)) {
+      console.warn('[promoter-wallet] promoter destination is the organizer\'s own phone; commission held', {
+        organizerId,
+      })
+      return 'promoter_is_organizer_destination'
+    }
+  }
+  return null
+}
+
 async function isEventReleased(
   eventId: string,
-  commissionMinor: number
-): Promise<{ released: boolean; availableAt: string | null; title: string }> {
+  commissionMinor: number,
+  promoterDestinationFingerprint: string | null = null
+): Promise<{ released: boolean; availableAt: string | null; title: string; holdReason?: string | null }> {
   try {
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     const eventData = eventDoc.exists ? (eventDoc.data() as any) : {}
     const title = String(eventData?.title || 'Event')
     if (!eventDoc.exists) return { released: false, availableAt: null, title }
+
+    const organizerHold = await organizerHoldFor(
+      String(eventData?.organizer_id || eventData?.organizerId || ''),
+      promoterDestinationFingerprint
+    )
+    if (organizerHold) return { released: false, availableAt: null, title, holdReason: organizerHold }
 
     const a = await loadEventAvailability({ eventId, eventData })
     if (!a) return { released: false, availableAt: null, title }
@@ -270,13 +344,17 @@ export async function getPromoterWalletView(uid: string): Promise<PromoterWallet
   const [lines, walletSnap] = await Promise.all([loadFundedLines(uid), (await walletRef(uid)).get()])
   const wallet = walletSnap.exists ? (walletSnap.data() as any) : {}
   const withdrawnByCurrency: Record<string, number> = { ...(wallet?.withdrawn_by_currency || {}) }
+  const destinationFingerprint = wallet?.moncash_phone_fingerprint ? String(wallet.moncash_phone_fingerprint) : null
 
-  const releaseByEvent = new Map<string, { released: boolean; availableAt: string | null; title: string }>()
+  const releaseByEvent = new Map<
+    string,
+    { released: boolean; availableAt: string | null; title: string; holdReason?: string | null }
+  >()
   const commissionByEvent = new Map<string, number>()
   for (const l of lines) commissionByEvent.set(l.eventId, (commissionByEvent.get(l.eventId) || 0) + l.commissionCents)
   await Promise.all(
     Array.from(commissionByEvent.entries()).map(async ([eventId, commission]) => {
-      releaseByEvent.set(eventId, await isEventReleased(eventId, commission))
+      releaseByEvent.set(eventId, await isEventReleased(eventId, commission, destinationFingerprint))
     })
   )
 
@@ -289,6 +367,7 @@ export async function getPromoterWalletView(uid: string): Promise<PromoterWallet
       commissionCents: l.commissionCents,
       released: release.released,
       availableAt: release.availableAt,
+      holdReason: release.holdReason ?? null,
     }
   })
 
@@ -358,6 +437,7 @@ export type PromoterWithdrawalResult =
         | 'verification_required'
         | 'destination_on_hold'
         | 'balance_negative'
+        | 'payouts_frozen'
       error: string
       availableAt?: string
     }
@@ -374,6 +454,12 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
   const fingerprint = mobileMoneyFingerprint(phone)
   if (!phone || !fingerprint) {
     return { ok: false, code: 'invalid_phone', error: 'Enter a valid MonCash phone number.' }
+  }
+
+  // 0. A banned or frozen account withdraws nothing.
+  const freeze = await payoutFreezeStatus(uid)
+  if (freeze.frozen) {
+    return { ok: false, code: 'payouts_frozen', error: freeze.message }
   }
 
   // 1. Identity (see promoterIdentityOk), before anything is saved or spent.
@@ -470,16 +556,21 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
   // The cron's `available` is up to 15 minutes old; check the pool covers THIS
   // transfer plus Digicel's 3% before promising an instant payout.
   const instantPricing = computePrefundedPayout(grossHtgCents)
-  const instant =
+  // Same per-transfer and daily caps as every prefunded path
+  // (lib/payouts/instant-moncash-policy); above them a human pays it.
+  const caps = await loadMoncashTransferCaps()
+  let instant =
     Boolean(prefunding?.enabled) &&
     Boolean(prefunding?.available) &&
+    instantPricing.poolDebitHtgCents <= caps.perCall &&
     (await prefundedBalanceCovers(instantPricing.poolDebitHtgCents))
 
   // Promoter pays the 3% on the instant rail; the manual/admin rail is free,
   // exactly like organizer withdrawals.
-  const { feeCents, payoutCents } = instant
-    ? computeWithdrawalFee(grossHtgCents)
-    : { feeCents: 0, payoutCents: grossHtgCents }
+  const priceFor = (isInstant: boolean) =>
+    isInstant ? computeWithdrawalFee(grossHtgCents) : { feeCents: 0, payoutCents: grossHtgCents }
+  let { feeCents, payoutCents } = priceFor(instant)
+  const dailyRef = adminDb.collection(INSTANT_MONCASH_DAYS_COLLECTION).doc(instantDayKey())
 
   const withdrawalRef = adminDb.collection('withdrawal_requests').doc()
   const now = new Date()
@@ -489,6 +580,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
   try {
     await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
+      const dailySnap = instant ? await tx.get(dailyRef) : null
       const walletNow = snap.exists ? ((snap.data() as any) ?? {}) : {}
       // The destination checked above must still be the saved, payable one.
       const holdNow = Date.parse(String(walletNow.moncash_phone_hold_until || ''))
@@ -499,6 +591,25 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
       for (const currency of Object.keys({ ...stored, ...view.withdrawnByCurrency })) {
         if ((Number(stored[currency]) || 0) !== (Number(view.withdrawnByCurrency[currency]) || 0)) {
           throw new Error('conflict')
+        }
+      }
+      // The daily instant cap is counted in the transaction that reserves; a
+      // request over it is filed for the manual queue instead (no fee).
+      if (instant) {
+        const sentToday = Math.max(0, Number(dailySnap?.exists ? (dailySnap.data() as any)?.totalHtgCents : 0) || 0)
+        if (dailyCapAllows(sentToday, instantPricing.poolDebitHtgCents, caps)) {
+          tx.set(
+            dailyRef,
+            {
+              totalHtgCents: sentToday + instantPricing.poolDebitHtgCents,
+              count: (Number(dailySnap?.exists ? (dailySnap.data() as any)?.count : 0) || 0) + 1,
+              updatedAt: now,
+            },
+            { merge: true }
+          )
+        } else {
+          instant = false
+          ;({ feeCents, payoutCents } = priceFor(false))
         }
       }
       tx.set(

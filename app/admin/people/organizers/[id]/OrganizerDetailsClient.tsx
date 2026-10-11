@@ -63,12 +63,16 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
     stats,
   } = organizerDetails
 
-  const handleToggleStatus = async (action: 'ban' | 'unban' | 'disable_posting' | 'enable_posting') => {
+  const handleToggleStatus = async (
+    action: 'ban' | 'unban' | 'disable_posting' | 'enable_posting' | 'freeze_payouts' | 'unfreeze_payouts'
+  ) => {
     const actionLabel = action.replace('_', ' ')
-    const isDestructive = action === 'ban' || action === 'disable_posting'
+    const isDestructive = action === 'ban' || action === 'disable_posting' || action === 'freeze_payouts'
     const descriptions: Record<typeof action, string> = {
-      ban: `${user.full_name || user.email || 'This organizer'} will lose access and their events will be hidden.`,
-      unban: `${user.full_name || user.email || 'This organizer'} will regain access to their account.`,
+      ban: `${user.full_name || user.email || 'This organizer'} will lose access, their events will be hidden, and ALL their payouts (including money already earned) will be frozen until you unfreeze them.`,
+      unban: `${user.full_name || user.email || 'This organizer'} will regain access to their account. Their payouts stay frozen until you unfreeze them separately.`,
+      freeze_payouts: `No withdrawal or payout will leave for ${user.full_name || user.email || 'this organizer'} (MonCash, bank, promoter commissions on their events, Stripe release) until you unfreeze.`,
+      unfreeze_payouts: `${user.full_name || user.email || 'This organizer'} will be able to withdraw released funds again.`,
       disable_posting: `${user.full_name || user.email || 'This organizer'} will no longer be able to create or publish events.`,
       enable_posting: `${user.full_name || user.email || 'This organizer'} will be able to create and publish events again.`,
     }
@@ -149,6 +153,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
   }
 
   const isBanned = user.status === 'banned'
+  const payoutsFrozen = organizer?.payoutsFrozen === true
   const canPost = user.can_create_events !== false
   const isVerified = user.is_verified === true || user.verification_status === 'approved'
   const displayName = user.full_name || user.email || 'Organizer'
@@ -204,6 +209,16 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
             </ConsoleButton>
           )}
 
+          {payoutsFrozen ? (
+            <ConsoleButton variant="quiet" onClick={() => handleToggleStatus('unfreeze_payouts')} disabled={isUpdating}>
+              Unfreeze Payouts
+            </ConsoleButton>
+          ) : (
+            <ConsoleButton variant="quiet" onClick={() => handleToggleStatus('freeze_payouts')} disabled={isUpdating}>
+              Freeze Payouts
+            </ConsoleButton>
+          )}
+
           {canPost ? (
             <ConsoleButton variant="quiet" onClick={() => handleToggleStatus('disable_posting')} disabled={isUpdating}>
               Disable Event Posting
@@ -222,6 +237,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
           <span className="label-mono uppercase text-console-green">Verified</span>
         )}
         {isBanned && <span className="label-mono uppercase text-console-red">Banned</span>}
+        {payoutsFrozen && <span className="label-mono uppercase text-console-red">Payouts Frozen</span>}
         {!canPost && <span className="label-mono uppercase text-console-amber">Posting Disabled</span>}
       </div>
 

@@ -1,3 +1,4 @@
+import { payoutFreezeStatus } from '@/lib/moderation/ban'
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
@@ -28,6 +29,18 @@ import {
   type OrganizerAvailabilityContext,
 } from '@/lib/payouts/availability-server'
 import { loadCompletedPaidEventIds } from '@/lib/payouts/completed-events'
+import { isStaleStripeAccountError } from '@/lib/stripe-connect-account'
+import {
+  MAX_STRIPE_PAYOUT_FAILURES,
+  NON_RELEASING_STATUSES,
+  failureCapCleared,
+  flagRepeatedPayoutFailures,
+  loadEventReleaseSummary,
+  reconcileStuckPayoutReleases,
+  recordCreatedPayout,
+  releaseAttemptDocId,
+  type ReconcileSummary,
+} from '@/lib/stripe-payout-releases'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,9 +77,6 @@ const OPEN_DISPUTE_STATUSES = new Set([
   'needs_response',
   'under_review',
 ])
-
-/** payout_releases statuses that mean "money may already be on its way". */
-const NON_RELEASING_STATUSES = new Set(['failed', 'canceled', 'cancelled'])
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -193,16 +203,19 @@ type OrganizerState = {
   /** Completed paid events (lib/payouts/completed-events) — the current event is subtracted at use time. */
   endedEventIds: Set<string>
   lifetimeGrossMinorByCurrency: Record<string, number>
+  /** Banned or payouts frozen by an admin: never released automatically. */
+  frozen: boolean
 }
 
 async function loadOrganizerState(organizerId: string, now: Date): Promise<OrganizerState> {
-  const [profile, organizerSnap, endedEventIds, earningsSnap] = await Promise.all([
+  const [profile, organizerSnap, endedEventIds, earningsSnap, freeze] = await Promise.all([
     getPayoutProfile(organizerId, 'stripe_connect').catch(() => null),
     adminDb.collection('organizers').doc(organizerId).get(),
     // Published, standing events with paid live tickets whose EFFECTIVE end has
     // passed — never zero-sale drafts with a backdated end_datetime.
     loadCompletedPaidEventIds(organizerId, now),
     adminDb.collection('event_earnings').where('organizerId', '==', organizerId).select('grossSales', 'currency').get(),
+    payoutFreezeStatus(organizerId),
   ])
 
   // Lifetime gross is kept per currency: summing USD cents with EUR cents would
@@ -223,6 +236,7 @@ async function loadOrganizerState(organizerId: string, now: Date): Promise<Organ
     override: rawOverride as PayoutReleaseOverride | null,
     endedEventIds,
     lifetimeGrossMinorByCurrency,
+    frozen: Boolean(freeze?.frozen),
   }
 }
 
@@ -250,7 +264,18 @@ async function loadAccountState(stripe: any, stripeAccountId: string): Promise<A
     unavailable: null,
   }
 
-  const account = await stripe.accounts.retrieve(stripeAccountId)
+  let account: any
+  try {
+    account = await stripe.accounts.retrieve(stripeAccountId)
+  } catch (error: any) {
+    // An id from the old platform: say so once for the account instead of
+    // failing every one of the organizer's events with a raw Stripe error.
+    if (isStaleStripeAccountError(error)) {
+      state.unavailable = 'stripe_account_reconnect_needed'
+      return state
+    }
+    throw error
+  }
   state.payoutsEnabled = account?.payouts_enabled === true
   state.currency = account?.default_currency ? String(account.default_currency).toLowerCase() : null
 
@@ -390,21 +415,6 @@ async function loadTicketFacts(
   return facts
 }
 
-// ── Already-released accounting ─────────────────────────────────────────────
-
-async function sumAlreadyReleasedMinor(eventId: string): Promise<number> {
-  const snapshot = await adminDb.collection('payout_releases').where('eventId', '==', eventId).get()
-  let total = 0
-  for (const doc of snapshot.docs) {
-    const data = (doc.data() || {}) as any
-    // A `reserved` row is one whose Stripe outcome we never confirmed. Counting
-    // it as released is the only safe reading: the payout may well exist.
-    if (NON_RELEASING_STATUSES.has(String(data.status || '').toLowerCase())) continue
-    total += Math.max(0, toMinor(data.amountMinor))
-  }
-  return total
-}
-
 // ── Route ───────────────────────────────────────────────────────────────────
 
 type EventResult = {
@@ -470,6 +480,15 @@ export async function GET(request: Request) {
       referenceRates: resolvedRates.rates,
     }
 
+    // Settle rows Stripe should have finished with BEFORE deciding releases, so
+    // a payout that failed without a webhook reaching us is releasable now.
+    let reconciliation: ReconcileSummary | null = null
+    try {
+      reconciliation = await reconcileStuckPayoutReleases(stripe, now)
+    } catch (error: any) {
+      console.error('release-payouts: reconciliation failed:', error?.message || error)
+    }
+
     const { scanned, candidates } = await findCandidateEvents(now)
 
     const organizerCache = new Map<string, OrganizerState>()
@@ -486,6 +505,21 @@ export async function GET(request: Request) {
         if (!organizer) {
           organizer = await loadOrganizerState(organizerId, now)
           organizerCache.set(organizerId, organizer)
+        }
+
+        // Banned or payout-frozen organizers are never paid automatically
+        // (lib/moderation/ban.ts; a failed lookup counts as frozen).
+        if (organizer.frozen) {
+          results.push({
+            eventId,
+            organizerId,
+            outcome: 'skipped',
+            reason: 'payouts_frozen',
+            tier: null,
+            amountMinor: 0,
+            currency: null,
+          })
+          continue
         }
 
         if (!organizer.stripeAccountId) {
@@ -675,7 +709,10 @@ export async function GET(request: Request) {
           0,
           toMinor(earnings.netAmount) - Math.max(0, toMinor(earnings.withdrawnAmount))
         )
-        const alreadyReleasedMinor = await sumAlreadyReleasedMinor(eventId)
+        // Failed / canceled payouts do not count (the money is back in the
+        // balance); `reserved` rows do (the payout may exist).
+        const releaseSummary = await loadEventReleaseSummary(eventId)
+        const alreadyReleasedMinor = releaseSummary.releasedMinor
 
         const reviewRef = adminDb.collection('payout_review_queue').doc(eventId)
         const reviewSnap = await reviewRef.get()
@@ -689,6 +726,34 @@ export async function GET(request: Request) {
         // forever and an approval would mean nothing. Deleting the row instead
         // would just make the next run write a fresh 'pending' one and loop.
         const reviewReleased = reviewStatus === 'released'
+
+        // Retry cap: after MAX_STRIPE_PAYOUT_FAILURES payouts Stripe accepted and
+        // then failed, stop re-sending and park it for an admin. An admin who
+        // resolves the review as `released` after the last failure buys one
+        // more round.
+        if (
+          releaseSummary.stripeFailureCount >= MAX_STRIPE_PAYOUT_FAILURES &&
+          !failureCapCleared(reviewSnap.exists ? (reviewSnap.data() as any) : null, releaseSummary.lastFailureAt)
+        ) {
+          await flagRepeatedPayoutFailures({
+            eventId,
+            organizerId,
+            stripeAccountId,
+            summary: releaseSummary,
+            currency: account.currency,
+            now,
+          })
+          results.push({
+            eventId,
+            organizerId,
+            outcome: 'hold',
+            reason: `payout_failed_repeatedly:${releaseSummary.stripeFailureCount}`,
+            tier: decision.tier,
+            amountMinor: 0,
+            currency: account.currency,
+          })
+          continue
+        }
 
         // Three independent ceilings. releasableMinor is the rules' answer and is
         // never exceeded; the entitlement cap stops one event draining another
@@ -769,7 +834,9 @@ export async function GET(request: Request) {
         }
 
         // ── Step 6: automatic release ────────────────────────────────────────
-        const releaseDocId = `${eventId}_${attemptDay}`
+        // A Stripe-side failure bumps the id, so the retry gets a fresh
+        // idempotency key instead of replaying the payout that failed.
+        const releaseDocId = releaseAttemptDocId(eventId, attemptDay, releaseSummary.stripeFailureCount)
         const idempotencyKey = `tikem_release_${releaseDocId}`
         const releaseRef = adminDb.collection('payout_releases').doc(releaseDocId)
 
@@ -838,16 +905,11 @@ export async function GET(request: Request) {
             { stripeAccount: stripeAccountId, idempotencyKey }
           )
 
-          await releaseRef.set(
-            {
-              payoutId: payout?.id || null,
-              status: String(payout?.status || 'paid'),
-              stripePayoutStatus: payout?.status || null,
-              arrivalDate: payout?.arrival_date || null,
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          )
+          // Status moves along the same rules as the webhook, so a payout.failed
+          // that beat this write is not overwritten with create()'s 'pending'.
+          // Later movement (paid / failed / canceled) arrives via the Connect
+          // webhook or the reconciliation pass above.
+          await recordCreatedPayout(releaseRef, payout)
 
           account.availableMinor = Math.max(0, account.availableMinor - amountMinor)
           totalReleasedMinor += amountMinor
@@ -915,6 +977,9 @@ export async function GET(request: Request) {
       scannedEvents: scanned,
       consideredEvents: candidates.length,
       accountsTouched: accountCache.size,
+      reconciliation: reconciliation
+        ? { ...reconciliation, details: reconciliation.details.slice(0, 50) }
+        : null,
       counts,
       totalReleasedMinor,
       releasedByCurrency,

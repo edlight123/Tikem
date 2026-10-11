@@ -14,6 +14,7 @@ import { getFundedCommissionForEvent } from '@/lib/promoters'
 import { isLiveTicketStatus, liveTicketStatusesForQuery } from '@/lib/tickets/status'
 import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
 import { ticketPurchasedAt } from '@/lib/payouts/availability'
+import { bookDebtRepaymentInTransaction, netDebtAgainstWithdrawal, readDebtInTransaction } from '@/lib/payouts/organizer-debt'
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
@@ -919,8 +920,15 @@ export async function withdrawFromEarnings(
      * ceilingMinor no longer reflects that refund.
      */
     expectedRefundClaimVersion?: number
+    /**
+     * Net the organizer's outstanding debt in this currency (refunds that
+     * landed after an earlier event was paid out, lib/payouts/organizer-debt.ts)
+     * inside THIS transaction: the debt is repaid from this event's available
+     * balance first, and the withdrawal must fit in what is left.
+     */
+    debt?: { organizerId: string; currency: string }
   }
-): Promise<{ success: boolean; error?: string; code?: string }> {
+): Promise<{ success: boolean; error?: string; code?: string; debtAppliedMinor?: number }> {
   // Never throws: every failure is a refusal the caller can report, and with
   // fileRequest nothing was written.
   try {
@@ -942,9 +950,11 @@ export async function withdrawFromEarnings(
       return { success: false, error: EARNINGS_CURRENCY_REVIEW_MESSAGE, code: EARNINGS_CURRENCY_REVIEW_CODE }
     }
 
-    const result = await adminDb.runTransaction(async (tx: any) => {
+    type DebitResult = { success: boolean; error?: string; code?: string; debtAppliedMinor?: number }
+    const result: DebitResult = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
       const requestSnap = opts.fileRequest ? await tx.get(opts.fileRequest.ref) : null
+      const debtRead = opts.debt ? await readDebtInTransaction(tx, opts.debt.organizerId) : null
       const cur = snap.exists ? (snap.data() as any) : {}
       const withdrawn = Math.max(0, Number(cur?.withdrawnAmount || 0) || 0)
       const available = Math.max(0, ceilingMinor - withdrawn)
@@ -979,21 +989,45 @@ export async function withdrawFromEarnings(
         } as { success: boolean; error?: string; code?: string }
       }
 
-      const remaining = Math.max(0, available - amount)
+      let debtApplied = 0
+      if (debtRead && opts.debt) {
+        const netting = netDebtAgainstWithdrawal({
+          debt: debtRead.data,
+          currency: opts.debt.currency,
+          availableMinor: available,
+          amountMinor: amount,
+        })
+        if (!netting.ok) {
+          return { success: false, error: netting.error, code: netting.code } as DebitResult
+        }
+        debtApplied = netting.appliedMinor
+      }
+
+      const remaining = Math.max(0, available - amount - debtApplied)
       const now = new Date()
       tx.update(ref, {
         // A cache of the shared figure after this debit, for legacy readers.
         availableToWithdraw: remaining,
-        withdrawnAmount: withdrawn + amount,
+        withdrawnAmount: withdrawn + amount + debtApplied,
+        ...(debtApplied > 0 ? { debtAppliedMinor: Math.max(0, Number(cur?.debtAppliedMinor) || 0) + debtApplied } : {}),
         settlementStatus: remaining === 0 ? 'locked' : 'ready',
         updatedAt: now.toISOString(),
       })
+      if (debtRead && opts.debt && debtApplied > 0) {
+        bookDebtRepaymentInTransaction(tx, debtRead, {
+          currency: opts.debt.currency,
+          appliedMinor: debtApplied,
+          withdrawalId: payoutId,
+          eventId,
+          now,
+        })
+      }
       if (opts.fileRequest) {
         // reservedAt/reservedCents mark the request as backed by a debit: the
         // admin reject path credits back only requests that carry them.
         tx.set(opts.fileRequest.ref, { ...opts.fileRequest.data, reservedAt: now, reservedCents: amount })
       }
-      return { success: true } as { success: boolean; error?: string; code?: string }
+      return { success: true, ...(debtApplied > 0 ? { debtAppliedMinor: debtApplied } : {}) } as DebitResult
     })
 
     if (result.success) {

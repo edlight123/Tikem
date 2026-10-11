@@ -25,15 +25,42 @@ import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
 import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
+import { payoutFreezeStatus } from '@/lib/moderation/ban'
+import { payoutProfileInactiveReason } from '@/lib/payouts/profile-readiness'
+import { holderMatchesKyc, loadKycLegalNames, type KycLegalNames } from '@/lib/payouts/payee-identity'
+import { syncOrganizerDebt } from '@/lib/payouts/organizer-debt'
+import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
 
 /** 5,000 minor units of the event's own currency (50.00 HTG / 50.00 USD). */
 const BANK_MIN_WITHDRAWAL_MINOR = 5000
+
+/**
+ * Is this account holder the organizer? Against the KYC-verified legal (or
+ * organization) name with EXACT token matching when Tikèm has one; only a
+ * profile approved before KYC names were recorded falls back to the payout
+ * profile's own holder name.
+ */
+function holderIsOrganizer(holder: unknown, kyc: KycLegalNames, profileHolderName: string): boolean {
+  if (kyc.verified && (kyc.legalName || kyc.organizationName)) return holderMatchesKyc(holder, kyc)
+  return sameAccountHolderName(holder, profileHolderName)
+}
+
+/** The bank-proof verification doc ids that judge this destination. */
+function bankProofDocIds(destinationId: string): string[] {
+  return destinationId === 'bank_primary' ? ['bank_bank_primary', 'bank'] : [`bank_${destinationId}`]
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { user, error } = await requireAuth()
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Banned or admin-frozen: nothing leaves, including earned money.
+    const freeze = await payoutFreezeStatus(user.id)
+    if (freeze.frozen) {
+      return NextResponse.json({ error: freeze.message, message: freeze.message, code: freeze.code }, { status: 403 })
     }
 
     const haitiProfile = await getPayoutProfile(user.id, 'haiti')
@@ -47,14 +74,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (haitiProfile.status !== 'active') {
-      return NextResponse.json(
-        {
-          error: 'Payout profile not active',
-          message: 'Please complete payout verification before requesting bank withdrawals.',
-        },
-        { status: 400 }
-      )
+    // The REAL reason, not one message for every inactive state.
+    const inactive = payoutProfileInactiveReason(haitiProfile, 'bank')
+    if (inactive) {
+      return NextResponse.json(inactive, { status: 400 })
     }
 
     if (haitiProfile.method !== 'bank_transfer') {
@@ -207,6 +230,7 @@ export async function POST(req: NextRequest) {
     // Flags for the admin who releases this request by hand.
     const reviewFlags: string[] = []
     const profileHolderName = String((haitiProfile as any)?.bankDetails?.accountName || '')
+    const kyc = await loadKycLegalNames(user.id)
 
     if (bankDestinationId) {
       resolvedDestinationId = String(bankDestinationId)
@@ -242,8 +266,36 @@ export async function POST(req: NextRequest) {
       if (!resolvedBankDetails) {
         return NextResponse.json({ error: 'Bank destination not found' }, { status: 404 })
       }
-      if (!sameAccountHolderName(resolvedBankDetails.accountHolder, profileHolderName)) {
-        reviewFlags.push('holder_name_mismatch')
+
+      // A destination whose bank proof an admin REJECTED is not payable.
+      const proofSnaps = await Promise.all(
+        bankProofDocIds(resolvedDestinationId).map((docId) =>
+          adminDb.collection('organizers').doc(user.id).collection('verificationDocuments').doc(docId).get()
+        )
+      )
+      const proof = proofSnaps.find((snap: any) => snap?.exists)
+      if (proof && String((proof.data() as any)?.status || '') === 'failed') {
+        return NextResponse.json(
+          {
+            error:
+              'The bank proof for this account was not approved, so it cannot receive withdrawals. Upload a new proof or choose another account.',
+            code: 'BANK_PROOF_REJECTED',
+          },
+          { status: 409 }
+        )
+      }
+
+      // The account must be in the organizer's own (KYC-verified) name. This
+      // used to only flag the request for the admin; now it refuses.
+      if (!holderIsOrganizer(resolvedBankDetails.accountHolder, kyc, profileHolderName)) {
+        return NextResponse.json(
+          {
+            error:
+              'The account holder on this bank account does not match your verified legal name, so it cannot receive withdrawals.',
+            code: 'PAYOUT_HOLDER_NAME_MISMATCH',
+          },
+          { status: 409 }
+        )
       }
     } else {
       const details = bankDetails as BankDestinationDetails
@@ -252,11 +304,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Incomplete bank details' }, { status: 400 })
       }
 
-      // A new account must be in the payout profile's account-holder name.
-      if (!sameAccountHolderName(details.accountHolder, profileHolderName)) {
+      // A new account must be in the organizer's verified name.
+      if (!holderIsOrganizer(details.accountHolder, kyc, profileHolderName)) {
         return NextResponse.json(
           {
-            error: 'The account holder must match the name on your payout profile.',
+            error: 'The account holder must match your verified legal name.',
             code: 'PAYOUT_HOLDER_NAME_MISMATCH',
           },
           { status: 400 }
@@ -286,14 +338,13 @@ export async function POST(req: NextRequest) {
       // The new account is SAVED (always) and held for 24 hours, the same hold
       // a payout-settings destination change gets. Nothing is filed now; the
       // organizer withdraws to it once the hold ends.
-      const created = await addSecondaryBankDestination({ organizerId: user.id, bankDetails: details })
-      const holdUntil = new Date(Date.now() + NEW_PAYOUT_DESTINATION_HOLD_MS).toISOString()
-      await adminDb
-        .collection('organizers')
-        .doc(user.id)
-        .collection('payoutDestinations')
-        .doc(created.id)
-        .set({ holdUntil, addedVia: 'withdraw_bank' }, { merge: true })
+      const created = await addSecondaryBankDestination({
+        organizerId: user.id,
+        bankDetails: details,
+        addedVia: 'withdraw_bank',
+        holdMs: NEW_PAYOUT_DESTINATION_HOLD_MS,
+      })
+      const holdUntil = created.holdUntil
       await consumePayoutDetailsChangeVerification(user.id)
 
       return NextResponse.json(
@@ -342,21 +393,28 @@ export async function POST(req: NextRequest) {
     // withdrawFromEarnings): a request exists only if its money was reserved,
     // so a refused or failed debit leaves nothing for an admin to pay.
     const withdrawalRef = adminDb.collection('withdrawal_requests').doc()
+    // Organizer debt (refunds after an earlier payout) is recorded now and
+    // netted inside the debit's transaction, in this currency only.
+    await syncOrganizerDebt(user.id)
     const debit = await withdrawFromEarnings(eventId, amount, withdrawalRef.id, {
       ceilingMinor: availability.ceilingMinor,
       fileRequest: { ref: withdrawalRef, data: withdrawalRequest as any },
       expectedRefundClaimVersion,
+      debt: { organizerId: user.id, currency },
     })
     if (!debit?.success) {
       const isReview = debit?.code === EARNINGS_CURRENCY_REVIEW_CODE
       return NextResponse.json(
         {
           error: debit?.error || 'Your balance changed. Please refresh and try again.',
-          ...(isReview ? { code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true } : {}),
+          ...(isReview ? { code: EARNINGS_CURRENCY_REVIEW_CODE, needsAdminReview: true } : debit?.code ? { code: debit.code } : {}),
         },
         { status: 409 }
       )
     }
+
+    // Same "request received" notice the MonCash rail sends (deduped, never throws).
+    await notifyWithdrawalOutcome(withdrawalRef.id, 'submitted', { row: withdrawalRequest })
 
     return NextResponse.json({
       success: true,

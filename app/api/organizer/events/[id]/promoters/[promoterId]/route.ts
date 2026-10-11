@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { maxTierPriceCentsForEvent, normalizePromoterCode } from '@/lib/promoters'
+import { maxFlatCommissionCents, maxTierPriceCentsForEvent, normalizePromoterCode } from '@/lib/promoters'
 
 async function loadOwnedPromoter(eventId: string, promoterId: string, userId: string): Promise<
   | { ok: true; ref: FirebaseFirestore.DocumentReference; data: any; event: any }
@@ -106,9 +106,13 @@ export async function PATCH(
             { status: 400 }
           )
         }
-        if (Math.round(rawValue * 100) > maxTierCents) {
+        if (Math.round(rawValue * 100) > maxFlatCommissionCents(maxTierCents)) {
           return NextResponse.json(
-            { error: 'A flat commission cannot be more than the ticket price' },
+            {
+              error: 'A flat commission cannot be more than half the ticket price',
+              code: 'flat_commission_above_cap',
+              maxCents: maxFlatCommissionCents(maxTierCents),
+            },
             { status: 400 }
           )
         }

@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
+import { syncEventDeficitAfterRefund } from '@/lib/payouts/organizer-debt'
 import { sendEmail } from '@/lib/email'
 import {
   renderEmail,
@@ -332,6 +333,11 @@ export async function cancelEventWithRefunds({
       reviewReason: first.reviewReason,
     })
   }
+
+  // Refunds on an event that was already paid out are organizer debt (netted
+  // from the next withdrawal, lib/payouts/organizer-debt.ts). Once per sweep,
+  // not per ticket. Best-effort, never throws.
+  await syncEventDeficitAfterRefund(eventId, event?.organizer_id || null)
 
   return outcome
 }

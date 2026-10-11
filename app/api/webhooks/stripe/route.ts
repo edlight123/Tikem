@@ -12,6 +12,32 @@ import {
   stripeOrderHasTickets,
   type StripeFulfillmentResult,
 } from '@/lib/tickets/stripe-fulfillment'
+import { recordStripeAccountStatus } from '@/lib/stripe-connect-account'
+import { handleStripePayoutUpdate } from '@/lib/stripe-payout-releases'
+
+/**
+ * Connect events — about a CONNECTED account, so `event.account` is set.
+ *
+ * They only arrive on a Connect webhook endpoint ("Events on Connected
+ * accounts"), which Stripe signs with its OWN secret. Both endpoints may point
+ * at this URL: the signature is checked against STRIPE_WEBHOOK_SECRET and
+ * STRIPE_CONNECT_WEBHOOK_SECRET (either may hold a comma-separated list for
+ * secret rotation).
+ *
+ *  - payout.*        → the release cron's payouts, by payout id
+ *                      (lib/stripe-payout-releases). failed / canceled stop
+ *                      counting as released and become re-releasable.
+ *  - account.updated → requirements / charges / payouts / disabled_reason on
+ *                      the organizer's stripe_connect profile, so the UI can
+ *                      say "Stripe needs more info".
+ */
+const CONNECT_PAYOUT_EVENT_TYPES = new Set([
+  'payout.paid',
+  'payout.failed',
+  'payout.canceled',
+  'payout.updated',
+])
+const CONNECT_EVENT_TYPES = new Set([...CONNECT_PAYOUT_EVENT_TYPES, 'account.updated'])
 
 /**
  * Chargeback events.
@@ -44,7 +70,40 @@ const HANDLED_EVENT_TYPES = new Set([
   // this event in the Stripe dashboard for it to arrive.
   'charge.refunded',
   ...DISPUTE_EVENT_TYPES,
+  ...CONNECT_EVENT_TYPES,
 ])
+
+function webhookSecrets(): string[] {
+  return [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET]
+    .flatMap((v) => String(v || '').split(','))
+    .map((v) => v.trim())
+    .filter(Boolean)
+}
+
+/** Verify against every configured secret; throws the last error if none match. */
+function constructVerifiedEvent(stripe: any, body: string, signature: string, secrets: string[]) {
+  let lastError: any = null
+  for (const secret of secrets) {
+    try {
+      return stripe.webhooks.constructEvent(body, signature, secret)
+    } catch (error: any) {
+      lastError = error
+    }
+  }
+  throw lastError || new Error('No webhook secret configured')
+}
+
+/**
+ * Should this event be handled here? Connect types only when they ARE about a
+ * connected account (a platform payout.paid is Tikèm's own bank payout and
+ * means nothing to payout_releases); platform types only when they are NOT (a
+ * connected account's own checkout/charge events are not Tikèm orders).
+ */
+function isHandledEvent(event: any): boolean {
+  if (!event || !HANDLED_EVENT_TYPES.has(event.type)) return false
+  const connected = typeof event.account === 'string' && event.account.length > 0
+  return CONNECT_EVENT_TYPES.has(event.type) ? connected : !connected
+}
 
 // Lazy load Stripe to avoid build-time initialization
 function getStripe() {
@@ -104,22 +163,30 @@ export async function POST(request: Request) {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
-    if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+    const secrets = webhookSecrets()
+    if (!signature || secrets.length === 0) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    // Verify webhook signature
-    const event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    )
+    // Verify webhook signature (platform endpoint secret, then Connect endpoint secret)
+    let event: any
+    try {
+      event = constructVerifiedEvent(stripe, body, signature, secrets)
+    } catch (verifyError: any) {
+      console.error('[stripe] webhook signature verification failed', { message: verifyError?.message })
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    }
+
+    if (!isHandledEvent(event)) {
+      // Acknowledge anything we do not act on, so Stripe stops retrying it.
+      return NextResponse.json({ received: true, ignored: true })
+    }
     stripeEvent = event
 
     // Idempotency: Stripe delivers events at least once. Dedupe on the stable event id so a
     // redelivery (or a concurrent delivery) never creates a second set of tickets, double-counts
     // earnings, or double-increments inventory.
-    if (HANDLED_EVENT_TYPES.has(event.type)) {
+    {
       const claim = await claimWebhookEvent({
         provider: 'stripe',
         eventId: event.id,
@@ -133,6 +200,60 @@ export async function POST(request: Request) {
         })
         return NextResponse.json({ received: true, idempotent: true, outcome: claim.outcome })
       }
+    }
+
+    // Connect: a release payout moved (paid / failed / canceled / in transit).
+    if (CONNECT_PAYOUT_EVENT_TYPES.has(event.type)) {
+      const payout = event.data.object
+      const result = await handleStripePayoutUpdate({
+        payout,
+        stripeAccountId: String(event.account),
+        source: 'webhook',
+        stripeEventId: event.id,
+      })
+      if (!result.matched) {
+        // An organizer-initiated payout from their Express dashboard, or one
+        // from before payout_releases existed. Nothing of ours to move.
+        console.log('[stripe] payout event with no matching release', {
+          eventId: event.id,
+          type: event.type,
+          account: event.account,
+          payoutId: payout?.id,
+        })
+      }
+      await markWebhookEventCompleted({
+        provider: 'stripe',
+        eventId: event.id,
+        metadata: {
+          type: event.type,
+          account: event.account,
+          payoutId: payout?.id || null,
+          releaseDocId: result.releaseDocId,
+          status: result.status,
+          newlyFailed: result.newlyFailed,
+        },
+      })
+      return NextResponse.json({ received: true, payout: { matched: result.matched, status: result.status } })
+    }
+
+    // Connect: the organizer's account requirements / capabilities changed.
+    if (event.type === 'account.updated') {
+      const account = event.data.object
+      const recorded = await recordStripeAccountStatus(
+        { ...account, id: account?.id || event.account },
+        { eventCreated: Number(event.created) || null }
+      )
+      await markWebhookEventCompleted({
+        provider: 'stripe',
+        eventId: event.id,
+        metadata: {
+          type: event.type,
+          account: event.account,
+          recorded: recorded.recorded,
+          reason: recorded.recorded ? null : recorded.reason,
+        },
+      })
+      return NextResponse.json({ received: true, account: { recorded: recorded.recorded } })
     }
 
     // Handle the event
