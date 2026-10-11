@@ -123,8 +123,11 @@ export default function RefundRequestScreen({ route, navigation }: any) {
       return;
     }
 
-    const finalReason = selectedReason === 'other' ? reason : selectedReason;
-    if (!finalReason.trim()) {
+    // The server requires a category AND a written explanation of at least
+    // 20 characters for every reason (refunds are reviewed, never automatic —
+    // lib/tickets/refundRequest.ts).
+    const details = reason.trim();
+    if (details.length < 20) {
       showAlert(t('common.error'), t('refund.enterReason') || 'Please provide a reason');
       return;
     }
@@ -135,7 +138,8 @@ export default function RefundRequestScreen({ route, navigation }: any) {
         method: 'POST',
         body: JSON.stringify({
           ticketId,
-          reason: finalReason,
+          reasonCategory: selectedReason,
+          details,
         }),
       });
 
@@ -263,7 +267,7 @@ export default function RefundRequestScreen({ route, navigation }: any) {
             </View>
 
             {/* Additional Details */}
-            {selectedReason === 'other' && (
+            {selectedReason && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{t('refund.additionalDetails') || 'Additional Details'}</Text>
                 <TextInput

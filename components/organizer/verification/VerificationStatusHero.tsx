@@ -58,7 +58,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-brand-500/20',
       iconColor: 'text-brand-300',
       title: 'Start Verification',
-      description: 'Complete identity verification to publish paid events and receive payouts.'
+      description: 'Complete identity verification to withdraw your earnings.'
     },
     in_progress: {
       icon: Clock,
@@ -74,7 +74,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-amber-500/20',
       iconColor: 'text-amber-300',
       title: 'Verification Submitted',
-      description: 'Your verification is pending review. Our team will review within 24-48 hours.',
+      description: 'Your verification is pending review. Our team reviews it usually within 1–2 business days.',
       readonly: true
     },
     // Legacy alias (older documents used "pending")
@@ -84,7 +84,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-amber-500/20',
       iconColor: 'text-amber-300',
       title: 'Verification Submitted',
-      description: 'Your verification is pending review. Our team will review within 24-48 hours.',
+      description: 'Your verification is pending review. Our team reviews it usually within 1–2 business days.',
       readonly: true
     },
     in_review: {

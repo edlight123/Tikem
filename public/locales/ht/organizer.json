@@ -44,7 +44,7 @@
     "pending_balance": "Balans an atant",
     "last_payout": "Dènye peman",
     "next_payout_est": "Pwochen peman (estime)",
-    "processing_time": "Peman yo trete nan 2-5 jou travay"
+    "processing_time": "Retrè: MonCash anjeneral nan 24 èdtan, transfè labank nan 3 a 5 jou ouvrab."
   },
   "event_card": {
     "published": "Pibliye",
@@ -173,7 +173,7 @@
     "how_payouts_work": "Kijan peman yo fonksyone",
     "processed_friday": "Peman yo trete chak vandredi pou balans disponib ki pi wo pase {{amount}}.",
     "min_threshold": "Limit minimòm {{amount}} obligatwa",
-    "processing_time": "Peman yo pran tipikman 2-5 jou travay",
+    "processing_time": "Retrè: MonCash anjeneral nan 24 èdtan, transfè labank nan 3 a 5 jou ouvrab.",
     "payout_history": "Istorik peman",
     "no_payouts": "Poko gen peman",
     "no_payouts_desc": "Yon fwa ou gen evènman ak vant, peman ou yo ap parèt la a",
@@ -206,7 +206,7 @@
     "profile_us_canada": "Etazini ak Kanada",
     "profile_payouts_title": "Peman {{profile}}",
     "profile_stripe_sub": "Peman nan bank ou atravè Stripe Connect.",
-    "profile_haiti_sub": "Transfè bankè oswa mobile money (MonCash / NatCash).",
+    "profile_haiti_sub": "Transfè bankè oswa MonCash.",
     "payout_profiles": "Pwofil peman",
     "payout_profiles_desc": "Chak rejyon peye atravè pwofil pa l. Se peyi evènman an ki deside kilès ki resevwa lajan an. Konfigire youn pa konfigire lòt la.",
     "profile_haiti_title": "Evènman an Ayiti",
@@ -316,7 +316,7 @@
     "done_back_to_overview": "Fini, retounen nan apèsi a",
     "back_to_payouts": "Retounen nan peman",
     "all_set_title": "Tout bagay pare!",
-    "all_set_desc": "Enfòmasyon peman ou sove. Verifikasyon an ka pran 1 a 2 jou travay.",
+    "all_set_desc": "Enfòmasyon peman ou sove. Si idantite w poko verifye, fè l verifye pou w ka retire lajan. Ekip nou an revize l anjeneral nan 1 a 2 jou ouvrab.",
     "view": "Gade",
     "cancel": "Anile",
     "loading": "Chajman…",
@@ -473,7 +473,7 @@
       "friday_5pm": "vandredi a 5:00 PM",
       "minimum_payout": "Montan peman minimòm:",
       "bank_transfer_time": "Transfè bankè pran",
-      "bank_days": "1-3 jou travay",
+      "bank_days": "3 a 5 jou ouvrab",
       "bank_arrival": "pou rive",
       "mobile_money_time": "Peman mobile money tipikman",
       "mobile_instant": "enstantan a 24 èdtan",
@@ -485,7 +485,7 @@
       "status_not_setup": "Peman pa konfigure",
       "status_not_setup_desc": "Konplete konfigirasyon peman ou pou kòmanse resevwa lajan ou genyen. Sa pran kèk minit sèlman.",
       "status_pending": "Verifikasyon an kous",
-      "status_pending_desc": "N ap revize enfòmasyon peman ou. Sa pran 1-2 jou travay anjeneral.",
+      "status_pending_desc": "N ap revize enfòmasyon peman ou, anjeneral nan 1 a 2 jou ouvrab.",
       "status_active": "Peman aktif",
       "status_active_desc": "Kont peman ou aktif epi pare pou resevwa peman.",
       "status_hold": "Peman an atant",
@@ -499,8 +499,8 @@
     "group_money": "jwenn lajan w",
     "group_events": "jere evènman w yo",
     "group_account": "kont",
-    "verify_banner_title": "Fini verifikasyon an pou w vann tikè peye",
-    "verify_banner_body": "Se yon sèl tchèk idantite. Evènman gratis ak bouyon mache san li. Se sèlman vant tikè peye k ap tann.",
+    "verify_banner_title": "Verifye idantite w pou w ka touche",
+    "verify_banner_body": "Se yon sèl tchèk idantite. Ann Ayiti ou ka pibliye epi vann touswit, men ou bezwen l anvan ou retire kòb ou. Ozetazini, Kanada ak an Frans, ou bezwen l anvan yon evènman peye ka parèt.",
     "verify_banner_cta": "Kòmanse verifikasyon an",
     "verify_banner_pending_title": "Y ap egzamine verifikasyon an",
     "verify_banner_pending_body": "N ap gade enfòmasyon w yo. Ou ka kontinye kreye evènman, n ap ekri w kou l fin apwouve."
@@ -666,7 +666,7 @@
         "business_details": "Enfòmasyon biznis",
         "reg_number": "Nimewo anrejistreman",
         "tax_id": "Nimewo fiskal (NIF)",
-        "submit_disclaimer": "Lè ou voye l, ou konfime enfòmasyon sa yo kòrèk. Ekip nou an revize sa anjeneral nan 1 a 2 jou travay, epi n ap avèti ou lè li apwouve, se sa k ap debloke evènman ki gen tikè peye."
+        "submit_disclaimer": "Lè ou voye l, ou konfime enfòmasyon sa yo kòrèk. Ekip nou an revize l anjeneral nan 1 a 2 jou ouvrab, epi n ap avèti ou lè li apwouve, se sa k ap debloke retrè yo."
       },
       "nav": {
         "previous": "Anvan",
@@ -716,7 +716,13 @@
         "stripe_start_failed": "Nou pa ka kòmanse konfigirasyon Stripe la",
         "stripe_url_missing": "Lyen konfigirasyon Stripe la manke",
         "save_payout_failed": "Nou pa ka sove enfòmasyon peman yo",
-        "generic": "Gen yon pwoblèm ki rive. Tanpri eseye ankò."
+        "generic": "Gen yon pwoblèm ki rive. Tanpri eseye ankò.",
+        "account_number_invalid": "Antre yon nimewo kont ki valab (lèt ak chif sèlman, 4 a 34 karaktè)",
+        "routing_invalid": "Antre yon nimewo routing ki valab, oswa kite l vid",
+        "select_location": "Tanpri chwazi ki kote bank ou ye",
+        "select_method": "Tanpri chwazi kijan ou vle resevwa lajan w",
+        "step_up_required": "Pou sekirite w, pou chanje yon metòd peman ki egziste deja, ou bezwen yon kòd nou voye pa imèl. Fini chanjman sa a nan paramèt peman avanse yo.",
+        "step_up_cta": "Louvri paramèt peman avanse yo"
       },
       "save_exit": "Sove epi soti",
       "progress_title": "Konfigirasyon peman",
@@ -727,7 +733,7 @@
         "secure_title": "An sekirite",
         "secure_desc": "Kriptaj nivo bank pwoteje done ou yo",
         "fast_title": "Rapid",
-        "fast_desc": "Resevwa lajan ou nan 48 èdtan apre evènman an",
+        "fast_desc": "Lajan an disponib pou w retire l 72 èdtan apre evènman w lan fini (24 èdtan depi w fin fè 3 evènman oswa vann 1 000 $).",
         "flexible_title": "Fleksib",
         "flexible_desc": "Plizyè metòd peman disponib",
         "cta": "Konfigire peman"
@@ -752,19 +758,23 @@
         "title": "Ki kote bank ou ye?",
         "subtitle": "Se sa ki deside ki metòd peman ki disponib pou ou",
         "method_stripe": "Transfè bankè atravè Stripe",
-        "method_haiti": "Transfè bankè oswa mobile money"
+        "method_haiti": "Transfè bankè oswa mobile money",
+        "haiti": "Ayiti",
+        "united_states": "Etazini",
+        "canada": "Kanada",
+        "france": "Lafrans"
       },
       "method": {
         "title_stripe": "Metòd peman",
         "title_haiti": "Kijan ou vle resevwa peman ou yo?",
-        "subtitle_stripe": "Stripe Connect jere peman pou Etazini ak Kanada",
+        "subtitle_stripe": "Stripe Connect jere peman pou Etazini, Kanada ak Lafrans",
         "subtitle_haiti": "Chwazi metòd peman ou pi renmen an",
-        "stripe_connect_desc": "Stripe jere trètman peman pou kont Etazini ak Kanada. N ap voye ou sou Stripe pou w fini konfigirasyon an.",
+        "stripe_connect_desc": "Stripe jere peman pou kont labank Ameriken, Kanadyen ak Fransè. Y ap voye w sou Stripe pou fini konfigirasyon an.",
         "stripe_direct_deposits": "Depo dirèk nan bank ou",
         "bank_transfer": "Transfè bankè",
         "bank_transfer_desc": "Depo dirèk nan kont bank ou",
         "mobile_money": "Mobile Money",
-        "mobile_money_desc": "MonCash oswa NatCash"
+        "mobile_money_desc": "MonCash"
       },
       "details": {
         "title_stripe": "Pare pou Stripe",
@@ -802,7 +812,8 @@
         "account_holder": "Moun ki gen kont lan",
         "account_number": "Nimewo kont",
         "provider": "Konpayi",
-        "phone_number": "Nimewo telefòn"
+        "phone_number": "Nimewo telefòn",
+        "identity_note": "Ou ka sove metòd peman sa a kounye a. Retrè yo louvri lè idantite w verifye. Ekip nou an revize l anjeneral nan 1 a 2 jou ouvrab."
       }
     },
     "payments_not_configured": "Peman yo pa konfigire sou deplwaman sa a.",
@@ -1312,7 +1323,7 @@
     "quick_easy_process": "Yon pwosesis rapid e fasil",
     "start_verification": "Kòmanse verifikasyon an",
     "to_match_id_photo": "Pou l matche ak foto kat idantite ou",
-    "reviewed_24_48": "Anjeneral yo egzamine l nan 24-48 èdtan"
+    "reviewed_24_48": "Anjeneral yo revize l nan 1 a 2 jou ouvrab"
   },
   "verification_business": {
     "optional_registration": "Opsyonèl: bay enfòmasyon anrejistreman biznis la si sa aplikab",
@@ -1426,7 +1437,7 @@
     "go_to_dashboard": "Ale nan tablodbò a",
     "something_went_wrong": "Yon bagay pa mache",
     "submission": "Soumisyon",
-    "reviewed_24_48": "Anjeneral yo egzamine soumisyon yo nan 24 a 48 èdtan.",
+    "reviewed_24_48": "Anjeneral yo revize soumisyon yo nan 1 a 2 jou ouvrab.",
     "verification": "Verifikasyon",
     "verify_to_publish": "Verifye idantite ou pou w pibliye evènman peyan epi resevwa peman.",
     "view_verification_details": "Gade detay verifikasyon an",
@@ -1494,5 +1505,17 @@
     "need_help": "Bezwen èd?",
     "support_can_help": "Ekip sipò nou an ka ede w entegre gwo ekip epi konfigire aksè yo.",
     "back_to_settings": "Retounen nan paramèt yo"
+  },
+  "verify_to_withdraw": {
+    "title": "Verifye idantite w pou w retire lajan",
+    "body": "Metòd peman ou sove. Retrè yo louvri lè idantite w verifye. Ekip nou an revize l anjeneral nan 1 a 2 jou ouvrab.",
+    "body_failed": "Nou pa t ka verifye idantite w. Voye l ankò pou w kòmanse retire lajan. Ekip nou an revize l anjeneral nan 1 a 2 jou ouvrab.",
+    "no_method_body": "Ajoute yon metòd peman (MonCash oswa transfè labank) epi verifye idantite w pou w retire lajan. Ekip nou an revize idantite anjeneral nan 1 a 2 jou ouvrab.",
+    "cta": "Verifye idantite m",
+    "add_method_cta": "Konfigire peman yo"
+  },
+  "payout_timing": {
+    "release_rule": "Lajan an disponib pou w retire l 72 èdtan apre evènman w lan fini (24 èdtan depi w fin fè 3 evènman oswa vann 1 000 $). Premye gwo evènman yo ka pase anba revizyon ekip nou an anvan.",
+    "nothing_yet": "Poko gen anyen pou retire. Lajan an disponib pou w retire l 72 èdtan apre evènman w lan fini (24 èdtan depi w fin fè 3 evènman oswa vann 1 000 $). Premye gwo evènman yo ka pase anba revizyon ekip nou an anvan."
   }
 }

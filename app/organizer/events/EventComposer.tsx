@@ -63,7 +63,25 @@ import {
 } from '@/lib/guestlistVisibility'
 import GuestlistVisibilityPicker from '@/components/organizer/GuestlistVisibility'
 import { DatePicker, TimePicker } from '@/components/ui/DateTimePickers'
-import { normalizeEventCurrencyForCountry, getAllowedEventCurrencies, type EventCurrency } from '@/lib/currency-policy'
+import { normalizeEventCurrencyForCountry, type EventCurrency } from '@/lib/currency-policy'
+import {
+  COMPOSER_COUNTRIES,
+  composerCurrencyOptions,
+  countryDisplayName,
+  currencyAfterCountryChange,
+  defaultCityForCountry,
+  defaultComposerCurrency,
+  defaultPassFeesToBuyer,
+  editorBlocksPaidPublish,
+  exampleCityForCountry,
+  isDefaultCity,
+  missingPublishStep,
+  pickDefaultComposerCountry,
+  publishRequiresServerGate,
+  timezoneForEvent,
+  type PublishEligibility,
+} from '@/lib/events/composer-country'
+import { normalizeSupportedCountry } from '@/lib/country-support'
 import { withStoredMoneyFields } from '@/lib/events/stored-money-fields'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
@@ -173,6 +191,14 @@ interface EventComposerProps {
   guest?: boolean
   /** Guest mode only: the visitor IS signed in, just not an organizer yet. */
   authed?: boolean
+  /**
+   * CREATE only: the country a new event starts in (the organizer's declared
+   * market / default country). Any value; unknown resolves to Haiti. Edit mode
+   * always uses the event's own stored country.
+   */
+  defaultCountry?: string
+  /** CREATE only: the organizer's default city, used when it belongs to `defaultCountry`. */
+  defaultCity?: string
 }
 
 /** Where a signed-out composition survives the trip through sign-up. */
@@ -495,6 +521,8 @@ export default function EventComposer({
   initialTiers,
   guest = false,
   authed = false,
+  defaultCountry,
+  defaultCity,
 }: EventComposerProps) {
   const { t: tx } = useTranslation('organizer')
   const router = useRouter()
@@ -536,13 +564,33 @@ export default function EventComposer({
   const [venueName, setVenueName] = useState(event?.venue_name || '')
   const [category, setCategory] = useState(event?.category || 'Concert')
   const [isOnline, setIsOnline] = useState(!!event?.is_online)
-  const [city, setCity] = useState(event?.city || 'Port-au-Prince')
 
-  // Currency — HT organizers may price in HTG or USD. Attendee views default to
-  // HTG, so new events default to HTG here (edit mode keeps the stored choice).
-  const allowedCurrencies = getAllowedEventCurrencies('HT')
-  const [currency, setCurrency] = useState<EventCurrency>(
-    isEdit ? normalizeEventCurrencyForCountry('HT', event?.currency || 'HTG') : 'HTG'
+  // Country — decides the currency, the default fee incidence, the timezone
+  // and which payout rail (and so which publish gate) the event goes through.
+  // A NEW event starts in the organizer's own market; an EDIT always shows the
+  // event's stored country and never changes it (withStoredMoneyFields keeps
+  // the stored value on save, and firestore.rules locks it once tickets sell).
+  // A stored event with no country is a legacy Haiti event.
+  const [country, setCountry] = useState<string>(() =>
+    isEdit
+      ? normalizeSupportedCountry(event?.country) || 'HT'
+      : pickDefaultComposerCountry(defaultCountry)
+  )
+  const [city, setCity] = useState<string>(() => {
+    if (isEdit) return event?.city || ''
+    // The organizer's default city only when it belongs to the starting country.
+    if (defaultCity && pickDefaultComposerCountry(defaultCountry) === country) return defaultCity
+    return defaultCityForCountry(country)
+  })
+
+  // Currency — follows the country: HT may price in HTG or USD (attendee views
+  // default to HTG, so new Haiti events start in HTG), US in USD, CA in CAD,
+  // FR in EUR. Edit mode keeps the stored choice, normalised for its country.
+  const allowedCurrencies = composerCurrencyOptions(country)
+  const [currency, setCurrency] = useState<EventCurrency>(() =>
+    isEdit
+      ? normalizeEventCurrencyForCountry(country, event?.currency || defaultComposerCurrency(country))
+      : defaultComposerCurrency(country)
   )
 
   // Tickets — multiple tiers.
@@ -725,8 +773,23 @@ export default function EventComposer({
   // organizer selling to the diaspora can pass it on, and a US organizer running
   // a community night can absorb it.
   const [passFeesToBuyer, setPassFeesToBuyer] = useState(
-    incidenceForEvent({ country: 'HT', fee_incidence: event?.fee_incidence }) === 'buyer'
+    incidenceForEvent({ country, fee_incidence: event?.fee_incidence }) === 'buyer'
   )
+
+  /**
+   * Switching country on a NEW event re-derives everything the country
+   * decides: the currency (a stale HTG never carries over to a US event), the
+   * default fee incidence (Haiti absorbs, US/CA/FR pass on — the organizer can
+   * still flip it), and the city when it is still some country's untouched
+   * default. Not offered in edit mode.
+   */
+  const changeCountry = (next: string) => {
+    if (isEdit || next === country) return
+    setCountry(next)
+    setCurrency((cur) => currencyAfterCountryChange(next, cur))
+    setPassFeesToBuyer(defaultPassFeesToBuyer(next))
+    setCity((c) => (isDefaultCity(c) ? defaultCityForCountry(next) : c))
+  }
 
   // Style
   const [spotifyUrl, setSpotifyUrl] = useState(event?.spotify_url || '')
@@ -813,8 +876,14 @@ export default function EventComposer({
     if (d.venue_name) setVenueName(d.venue_name)
     if (d.category) setCategory(d.category)
     if (d.is_online) setIsOnline(true)
+    // Country before city/currency: both are read against it. A draft from
+    // before the country picker has no country and keeps the starting one.
+    const draftCountry = d.country ? pickDefaultComposerCountry(d.country) : country
+    if (d.country) setCountry(draftCountry)
     if (d.city) setCity(d.city)
-    if (d.currency) setCurrency(normalizeEventCurrencyForCountry('HT', d.currency))
+    else if (d.country) setCity(defaultCityForCountry(draftCountry))
+    if (d.currency) setCurrency(normalizeEventCurrencyForCountry(draftCountry, d.currency))
+    else if (d.country) setCurrency(defaultComposerCurrency(draftCountry))
     if (Array.isArray(d.tiers) && d.tiers.length > 0) {
       setTiers(
         d.tiers.map((t: any) => {
@@ -901,12 +970,13 @@ export default function EventComposer({
         if (!res.ok) return
         const data = await res.json()
         if (cancelled || !data?.profiles) return
-        const country = String(event?.country || 'HT').toUpperCase()
-        const needsStripe = country === 'US' || country === 'CA' || country === 'FR'
+        const needsStripe = publishRequiresServerGate(country)
         if (needsStripe && !data.profiles.stripeConnect?.configured) {
           setPayoutProfileGap('stripe_connect')
         } else if (!needsStripe && !data.profiles.haiti?.configured) {
           setPayoutProfileGap('haiti')
+        } else {
+          setPayoutProfileGap(null)
         }
       } catch {
         // Nudge only — no summary, no notice.
@@ -916,7 +986,7 @@ export default function EventComposer({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.country])
+  }, [country])
 
   // Edit-only: when this event belongs to a recurring series, the organizer can
   // opt to apply the shared field edits to every sibling (each keeps its own
@@ -1033,7 +1103,7 @@ export default function EventComposer({
     const price = Math.min(...paidPrices)
     const pricing = priceOrder(
       price,
-      { country: 'HT', currency, fee_incidence: passFeesToBuyer ? 'buyer' : 'organizer' },
+      { country, currency, fee_incidence: passFeesToBuyer ? 'buyer' : 'organizer' },
       { quantity: 1, currency }
     )
     const money = (amount: number) => `${amount.toLocaleString()} ${currency}`
@@ -1051,7 +1121,47 @@ export default function EventComposer({
           net: money(fromCents(pricing.cents.organizerNet)),
         })
   })()
-  const paidPublishingBlocked = isPaid && !isVerified
+
+  /* ------------------------------------------------------------------------
+   * Paid publishing — ask the server, don't re-decide it here.
+   *
+   * Haiti is "publish now, verify before withdrawing": the server lets an
+   * unverified organizer publish a paid event (withdrawals enforce KYC), so the
+   * editor must too. It used to disable Publish for ANY unverified paid event,
+   * which blocked exactly the Haiti organizers the policy was written for.
+   *
+   * US/CA/FR need identity verification AND a Stripe account that can take a
+   * charge. Only the server can see charges_enabled, so the editor asks the
+   * same gate the publish route runs (/api/organizer/publish-eligibility) and
+   * shows which step is missing. A pending or failed check never blocks — the
+   * publish route stays the real gate and answers with its own message.
+   * ---------------------------------------------------------------------- */
+  const [eligibility, setEligibility] = useState<PublishEligibility | null>(null)
+  // Every non-Haiti country is asked (DO answers "coming soon"); Haiti has no
+  // publish-time gate to ask about.
+  const checksPaidGate = isPaid && !guest && country !== 'HT'
+  useEffect(() => {
+    setEligibility(null)
+    if (!checksPaidGate || isDemoMode()) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/organizer/publish-eligibility?country=${encodeURIComponent(country)}`)
+        if (!res.ok) return
+        const data = (await res.json()) as PublishEligibility
+        if (!cancelled) setEligibility(data)
+      } catch {
+        // Advisory only — the publish route still decides.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [checksPaidGate, country])
+  const paidPublishingBlocked = editorBlocksPaidPublish({ country, isPaid, verdict: eligibility })
+  const missingStep = paidPublishingBlocked ? missingPublishStep(eligibility) : null
+  // Haiti, paid, not yet verified: publishing is allowed — say what is still owed.
+  const haitiVerifyNote = isPaid && !isVerified && !guest && country === 'HT'
 
   // Build the shared event payload from the current form state.
   const buildEventData = () => {
@@ -1097,8 +1207,10 @@ export default function EventComposer({
       summary: summary.trim(),
       category,
       venue_name: isOnline ? '' : venueName.trim(),
-      country: 'HT',
-      city: isOnline ? '' : city.trim() || 'Port-au-Prince',
+      // The chosen country (edit mode: withStoredMoneyFields swaps the stored
+      // one back in before the write, so an edit never relabels an event).
+      country,
+      city: isOnline ? '' : city.trim() || defaultCityForCountry(country),
       commune: '',
       address: isOnline ? '' : address.trim(),
       start_datetime: composeISO(startDate, startTime),
@@ -1112,7 +1224,7 @@ export default function EventComposer({
       total_tickets: isRsvp ? 0 : totalQty,
       ticket_name: isRsvp ? 'RSVP' : firstTier.name,
       guestlist: cleanGuests,
-      currency: normalizeEventCurrencyForCountry('HT', currency),
+      currency: normalizeEventCurrencyForCountry(country, currency),
       banner_image_url: bannerUrl || null,
       is_online: isOnline,
       // Recurrence is create-only: on edit preserve the stored flag; on create it
@@ -1141,6 +1253,11 @@ export default function EventComposer({
       title_font: titleFont,
       accent_color: accentColor,
     }
+    // The zone the event happens in, by city then country — the same rule the
+    // event page already falls back to (lib/home/feed eventZone), now stored so
+    // every reader agrees. Create only: an edit leaves a stored zone (the
+    // mobile composer writes its own) untouched.
+    if (!isEdit) data.timezone = timezoneForEvent(country, isOnline ? '' : city)
     return { data, cleanTiers, isRsvp }
   }
 
@@ -1681,9 +1798,12 @@ export default function EventComposer({
       showToast({
         type: 'error',
         title: t('composer.toasts.verifyTitle', { defaultValue: 'Verification required' }),
-        message: t('composer.verifyToPublish', {
-          defaultValue: 'Complete identity verification to publish paid events.',
-        }),
+        message:
+          (eligibility && !eligibility.allowed && eligibility.reason) ||
+          t('composer.publishGate.generic', {
+            defaultValue: 'Finish your payout setup to publish paid events in {{country}}.',
+            country: countryDisplayName(country),
+          }),
         duration: 5000,
       })
       return
@@ -1694,9 +1814,9 @@ export default function EventComposer({
         await new Promise((r) => setTimeout(r, 400))
         setIsPublished(next)
       } else {
-        // Publish through the server route so all gates are enforced:
-        // identity verification, the country's payout profile, and (for US/CA)
-        // completed Stripe Connect onboarding. Writing is_published directly from
+        // Publish through the server route so all gates are enforced: for
+        // US/CA/FR, identity verification and completed Stripe Connect
+        // onboarding (Haiti has no publish-time gate; KYC is at withdrawal). Writing is_published directly from
         // the client would bypass those checks.
         const res = await fetch(`/api/events/${event.id}/publish`, {
           method: 'POST',
@@ -1804,6 +1924,57 @@ export default function EventComposer({
   const quartersDone = quarters.filter(Boolean).length
   const readyToPublish = quartersDone === quarters.length
 
+  // What a paid event still needs before it can publish, in the server's own
+  // terms (see the eligibility check above). Null when nothing is owed.
+  const countryName = t(`composer.country.names.${country}`, { defaultValue: countryDisplayName(country) })
+  const linkCls = 'font-medium underline underline-offset-2'
+  const paidPublishNotice = missingStep ? (
+    <p className="text-center text-xs text-amber-300">
+      {missingStep === 'identity'
+        ? t('composer.publishGate.identity', {
+            defaultValue:
+              'To publish paid events in {{country}}, verify your identity first, then connect Stripe for payouts.',
+            country: countryName,
+          })
+        : missingStep === 'stripe_connect'
+        ? t('composer.publishGate.stripeConnect', {
+            defaultValue: 'Identity verified. Connect Stripe for payouts to publish paid events in {{country}}.',
+            country: countryName,
+          })
+        : missingStep === 'stripe_onboarding'
+        ? t('composer.publishGate.stripeOnboarding', {
+            defaultValue:
+              'Identity verified. Finish your Stripe onboarding (charges and payouts enabled) to publish paid events in {{country}}.',
+            country: countryName,
+          })
+        : t('composer.publishGate.stripeReconnect', {
+            defaultValue:
+              'Your Stripe payout account could not be found. Reconnect Stripe to publish paid events in {{country}}.',
+            country: countryName,
+          })}{' '}
+      <a
+        href={missingStep === 'identity' ? '/organizer/verify' : '/organizer/settings/payouts'}
+        className={`${linkCls} hover:text-amber-200`}
+      >
+        {missingStep === 'identity'
+          ? t('composer.publishGate.verifyCta', { defaultValue: 'Verify identity' })
+          : t('composer.publishGate.stripeCta', { defaultValue: 'Set up Stripe' })}
+      </a>
+    </p>
+  ) : paidPublishingBlocked && eligibility && !eligibility.allowed && eligibility.reason ? (
+    // A block with no organizer step (e.g. a coming-soon market): the server's words.
+    <p className="text-center text-xs text-amber-300">{eligibility.reason}</p>
+  ) : haitiVerifyNote ? (
+    <p className="text-center text-xs text-white/70">
+      {t('composer.publishGate.haitiVerifyLater', {
+        defaultValue: 'You can publish now. Verify your identity before you withdraw your earnings.',
+      })}{' '}
+      <a href="/organizer/verify" className={`${linkCls} text-brand-300 hover:text-brand-200`}>
+        {t('composer.publishGate.verifyCta', { defaultValue: 'Verify identity' })}
+      </a>
+    </p>
+  ) : null
+
   return (
     <div>
       {/* Outside the padded wrapper so it can span the full width and pin
@@ -1827,12 +1998,14 @@ export default function EventComposer({
                 {payoutProfileGap === 'stripe_connect'
                   ? t('composer.payoutGap.stripe', {
                       defaultValue:
-                        'Events in the US, Canada or France pay out through your Stripe profile. It isn’t set up yet, so paid tickets can’t publish. ',
+                        'Events in the US, Canada or France pay out through your Stripe profile. It isn’t set up yet, so paid tickets can’t publish.',
                     })
-                  : t('composer.payoutGap.haiti', {
+                  : /* Haiti: publishing is NOT gated on the payout profile
+                       (lib/events/publish-gate.ts) — only withdrawing is. */
+                    t('composer.payoutGap.haitiPublishNow', {
                       defaultValue:
-                        'Events in Haiti pay out through your Haiti profile (MonCash or bank). It isn’t set up yet, so paid tickets can’t publish. ',
-                    })}
+                        'Events in Haiti pay out through your Haiti profile (MonCash or bank). You can publish now; set it up before you withdraw your earnings.',
+                    })}{' '}
                 <a
                   href="/organizer/settings/payouts"
                   className="font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200"
@@ -2103,6 +2276,43 @@ export default function EventComposer({
                 </button>
               )}
 
+              {/* Country — stays visible for online events too: it still
+                  decides the currency, the fee default and the payout rail. */}
+              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
+                <div className="mb-2.5 flex items-center gap-2 text-[13px] font-medium text-white/50">
+                  <MapPin className="h-4 w-4" /> {t('composer.country.label', { defaultValue: 'Country' })}
+                </div>
+                {isEdit ? (
+                  <p className="text-[15px] text-white/80">
+                    {t(`composer.country.names.${country}`, { defaultValue: countryDisplayName(country) })}
+                    <span className="mt-0.5 block text-xs text-white/50">
+                      {t('composer.country.locked', {
+                        defaultValue: 'An event’s country is set when it’s created.',
+                      })}
+                    </span>
+                  </p>
+                ) : (
+                  <div
+                    className="flex flex-wrap gap-2"
+                    role="radiogroup"
+                    aria-label={t('composer.country.label', { defaultValue: 'Country' })}
+                  >
+                    {COMPOSER_COUNTRIES.map((code) => (
+                      <button
+                        key={code}
+                        type="button"
+                        role="radio"
+                        aria-checked={country === code}
+                        onClick={() => changeCountry(code)}
+                        className={chipCls(country === code)}
+                      >
+                        {t(`composer.country.names.${code}`, { defaultValue: countryDisplayName(code) })}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Online toggle (kept compact) */}
               <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3.5">
                 <span className="flex items-center gap-2 text-[15px] text-white/80">
@@ -2146,7 +2356,14 @@ export default function EventComposer({
                     <input
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder={t('composer.cityPlaceholder', { defaultValue: 'City' })}
+                      placeholder={
+                        exampleCityForCountry(country)
+                          ? t('composer.cityPlaceholderExample', {
+                              defaultValue: 'City, e.g. {{city}}',
+                              city: exampleCityForCountry(country),
+                            })
+                          : t('composer.cityPlaceholder', { defaultValue: 'City' })
+                      }
                       aria-label="City"
                       className={field}
                     />
@@ -2203,7 +2420,7 @@ export default function EventComposer({
                 {t('composer.tickets', { defaultValue: 'Tickets' })}
               </SectionTitle>
 
-              {/* Currency — HTG or USD (attendees see HTG by default) */}
+              {/* Currency — follows the country (HT: HTG or USD; US: USD; CA: CAD; FR: EUR) */}
               <div className="mb-3 flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
                 <span className="label-mono text-[11px] uppercase tracking-wide text-white/70">
                   {t('composer.currency', { defaultValue: 'Currency' })}
@@ -3099,13 +3316,8 @@ export default function EventComposer({
                     ? t('composer.unpublish', { defaultValue: 'Unpublish (move to draft)' })
                     : t('composer.publishEvent', { defaultValue: 'Publish event' })}
                 </button>
-                {!isPublished && paidPublishingBlocked ? (
-                  <p className="text-center text-xs text-amber-300">
-                    {t('composer.verifyToPublish', {
-                      defaultValue: 'Complete identity verification to publish paid events.',
-                    })}
-                  </p>
-                ) : !isPublished && !readyToPublish ? (
+                {!isPublished && paidPublishNotice}
+                {!isPublished && paidPublishingBlocked ? null : !isPublished && !readyToPublish ? (
                   /* A disabled button with no explanation is a dead end. The
                      bar at the top shows HOW far; this says how much is left. */
                   <p className="text-center text-xs text-white/70">
@@ -3131,19 +3343,30 @@ export default function EventComposer({
                 </p>
                 {isPaid && (
                   <p className="text-center text-xs text-amber-300/90">
-                    {t('composer.guestPaidNote', {
-                      defaultValue:
-                        'Paid tickets need a one-time identity verification before the event can go live. You can finish setting everything up first.',
-                    })}
+                    {country === 'HT'
+                      ? t('composer.guestPaidNoteHaiti', {
+                          defaultValue:
+                            'Paid events in Haiti can go live right away. Verify your identity before you withdraw your earnings.',
+                        })
+                      : t('composer.guestPaidNoteStripe', {
+                          defaultValue:
+                            'Paid events in {{country}} need identity verification and a connected Stripe account before they go live. You can finish setting everything up first.',
+                          country: countryName,
+                        })}
                   </p>
                 )}
               </>
             ) : (
-              <p className="text-center text-xs text-white/70">
-                {t('composer.savedPrivateNote', {
-                  defaultValue: 'Saved as a private draft. Publish when you’re ready.',
-                })}
-              </p>
+              <>
+                <p className="text-center text-xs text-white/70">
+                  {t('composer.savedPrivateNote', {
+                    defaultValue: 'Saved as a private draft. Publish when you’re ready.',
+                  })}
+                </p>
+                {/* Said before the draft exists, so a US/CA/FR organizer learns
+                    what publishing will need while still composing. */}
+                {paidPublishNotice}
+              </>
             )}
 
             {/* A restored draft always offers a way out — without this, an

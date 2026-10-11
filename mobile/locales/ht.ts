@@ -642,7 +642,7 @@ export default {
         successBody: 'Demann ou soumèt pou revizyon. N ap avèti ou lè yo trete li.',
         failed: 'Pa t kapab soumèt demann lan',
         button: 'Soumèt pou revizyon',
-        reviewTimeNote: 'Verifikasyon an revize anjeneral nan 48 èdtan. N ap avèti ou lè li fini.',
+        reviewTimeNote: 'Verifikasyon an revize anjeneral nan 1 a 2 jou ouvrab. N ap avèti ou lè li fini.',
       },
       pendingNotice: 'Demann ou sou revizyon. N ap avèti ou lè yo trete li.',
       comingSoon: 'Byento',
@@ -1746,7 +1746,7 @@ export default {
       title: 'Verifikasyon idantite obligatwa',
       body: 'Tanpri fini verifikasyon idantite w anvan w ajoute metòd peman.',
     },
-    identityNotice: 'Verifikasyon idantite obligatwa anvan w ka ajoute metòd peman epi retire lajan w. N ap revize l nan 48 èdtan.',
+    identityNotice: 'Verifikasyon idantite obligatwa anvan w ka ajoute metòd peman epi retire lajan w. N ap revize l anjeneral nan 1 a 2 jou ouvrab.',
     stripeSetup: {
       title: 'Konfigire Stripe',
       question: 'Nan ki peyi kont ou ye?',
@@ -1837,7 +1837,7 @@ export default {
       documentSelected: 'Dokiman chwazi',
       imageFallback: 'Imaj',
       submit: 'Soumèt pou revizyon',
-      hint: 'Ekip nou an ap revize dokiman w la nan 1 a 2 jou ouvrab. W ap resevwa yon notifikasyon lè li apwouve.',
+      hint: 'Ekip nou an ap revize dokiman w la, anjeneral nan 1 a 2 jou ouvrab. W ap resevwa yon notifikasyon lè li apwouve.',
     },
     alerts: {
       missingInfoTitle: 'Enfòmasyon ki manke',
@@ -1891,8 +1891,8 @@ export default {
     submitting: 'Nap soumèt...',
     identity: {
       title: 'Verifye idantite w pou w retire',
-      alertBody: "Fè verifikasyon idantite anvan w ka retire lajan w. Li rapid epi n ap revize l nan 48 èdtan.",
-      noticeBody: "Fè yon ti verifikasyon idantite pou w retire lajan w. N ap revize verifikasyon an nan 48 èdtan.",
+      alertBody: "Fè verifikasyon idantite anvan w ka retire lajan w. Li rapid epi n ap revize l anjeneral nan 1 a 2 jou ouvrab.",
+      noticeBody: "Fè yon ti verifikasyon idantite pou w retire lajan w. N ap revize verifikasyon an anjeneral nan 1 a 2 jou ouvrab.",
       cta: 'Verifye idantite',
     },
     stripeConnectRequired: {
@@ -3045,7 +3045,7 @@ export default {
     feeNonRefundable: 'Frè sèvis la pa ranbousab, sof si evènman an anile.',
     submit: 'Voye demann lan',
     selectReason: 'Tanpri chwazi yon rezon',
-    enterReason: 'Tanpri bay yon rezon',
+    enterReason: 'Tanpri esplike rezon ou nan omwen 20 karaktè',
     submitted: 'Demann ranbousman an voye. Òganizatè a ap egzamine demann ou an.',
     submitError: 'Voye demann ranbousman an echwe',
     loadError: 'Pa kapab chaje detay biyè a',

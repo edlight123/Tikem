@@ -767,7 +767,7 @@ export default function VerificationWizard({
               )}
 
               <div className="rounded-xl bg-brand-500/10 p-4 text-sm text-brand-300">
-                {t('onboarding.verification.review.submit_disclaimer', { defaultValue: 'By submitting, you confirm this information is accurate. Our team typically reviews within 1 to 2 business days, and you’ll be notified once approved, which unlocks paid events.' })}
+                {t('onboarding.verification.review.submit_disclaimer', { defaultValue: 'By submitting, you confirm this information is accurate. Our team reviews it usually within 1–2 business days, and you’ll be notified once approved, which unlocks withdrawals.' })}
               </div>
             </div>
           )}

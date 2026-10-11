@@ -73,6 +73,13 @@ export default function PayoutsSummaryDashboard({
     return 'active'
   })()
 
+  // Withdrawals need an ACTIVE profile: method saved + identity verified. A
+  // saved method waiting on identity is the common case, so name it plainly
+  // and link straight to /organizer/verify instead of a vague "in progress".
+  const identityStatus = (haitiMethod || stripeMethod)?.verificationStatus?.identity
+  const needsIdentity =
+    overallStatus !== 'none' && overallStatus !== 'active' && identityStatus !== 'verified'
+
   const statusHero = {
     none: {
       icon: <Wallet className="h-7 w-7" />,
@@ -93,7 +100,7 @@ export default function PayoutsSummaryDashboard({
       ring: 'bg-amber-500/10 border-amber-500/30',
       chip: 'text-amber-300',
       title: 'Verification in progress',
-      description: 'We’re reviewing your payout details. This usually takes 1 to 2 business days, we’ll notify you once it’s approved.',
+      description: 'We’re reviewing your payout details. This usually takes 1–2 business days, we’ll notify you once it’s approved.',
     },
     needs_attention: {
       icon: <AlertCircle className="h-7 w-7" />,
@@ -103,6 +110,14 @@ export default function PayoutsSummaryDashboard({
       description: 'One of your payout methods needs attention before you can receive funds. Open it below to resolve.',
     },
   }[overallStatus]
+
+  if (needsIdentity) {
+    statusHero.title = t('verify_to_withdraw.title', { defaultValue: 'Verify your identity to withdraw' })
+    statusHero.description =
+      identityStatus === 'failed'
+        ? t('verify_to_withdraw.body_failed', { defaultValue: 'We couldn’t verify your identity. Resubmit it to start withdrawing. Our team reviews it usually within 1–2 business days.' })
+        : t('verify_to_withdraw.body', { defaultValue: 'Your payout method is saved. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days.' })
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -197,6 +212,15 @@ export default function PayoutsSummaryDashboard({
               <p className="mt-1 text-sm text-white/60">{statusHero.description}</p>
             </div>
           </div>
+          {needsIdentity && (
+            <Link
+              href="/organizer/verify"
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-brand-800"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
+            </Link>
+          )}
           {overallStatus === 'none' && (
             <button
               type="button"

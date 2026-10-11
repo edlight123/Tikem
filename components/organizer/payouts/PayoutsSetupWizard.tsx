@@ -16,8 +16,13 @@ import {
   AlertCircle,
   Sparkles
 } from 'lucide-react'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { updateDeclaredMarkets } from '@/app/organizer/settings/payouts/actions'
+// Same server actions the advanced payouts page (PayoutsPageNew) saves through.
+// There is no /api/organizer/payout-profile-config route: the wizard used to
+// POST there and 404'd, so nobody could finish setup from it.
+import { updateDeclaredMarkets, updatePayoutProfileConfig } from '@/app/organizer/settings/payouts/actions'
+import type { PayoutConfig } from '@/lib/firestore/payout'
 import { COUNTRY_SUPPORT } from '@/lib/country-support'
 import {
   DECLARABLE_MARKETS,
@@ -38,7 +43,12 @@ const SUPPORTED_LOCATIONS = [
   { id: 'haiti', name: 'Haiti', flag: '🇭🇹', methods: ['bank_transfer', 'mobile_money'] },
   { id: 'united_states', name: 'United States', flag: '🇺🇸', methods: ['stripe'] },
   { id: 'canada', name: 'Canada', flag: '🇨🇦', methods: ['stripe'] },
+  // /api/organizer/stripe/connect onboards FR accounts (country 'FR').
+  { id: 'france', name: 'France', flag: '🇫🇷', methods: ['stripe'] },
 ]
+
+/** Locations paid out through Stripe Connect (everything except Haiti). */
+const STRIPE_LOCATIONS = new Set(['united_states', 'canada', 'france'])
 
 const HAITI_BANKS = [
   { value: 'unibank', label: 'Unibank' },
@@ -50,10 +60,36 @@ const HAITI_BANKS = [
   { value: 'other', label: 'Other Bank' }
 ]
 
+// Haiti payouts are MonCash or bank transfer only (owner decision 2026-10-10).
+// NatCash stays behind this flag so the code path still compiles; mirrors
+// NATCASH_ENABLED in PayoutsPageNew, BuyTicketButton and the mobile app.
+const NATCASH_ENABLED = false
+
 const MOBILE_PROVIDERS = [
   { value: 'moncash', label: 'MonCash', icon: '📱' },
-  { value: 'natcash', label: 'NatCash', icon: '💳' },
+  ...(NATCASH_ENABLED ? [{ value: 'natcash', label: 'NatCash', icon: '💳' }] : []),
 ]
+
+const providerLabel = (value: string) =>
+  MOBILE_PROVIDERS.find((p) => p.value === value)?.label || 'MonCash'
+
+/** +509 followed by 8 digits. Accepts "3412 3456", "50934123456", "+509 3412-3456". */
+function normalizeHaitiPhone(raw: string): string {
+  const compact = String(raw || '').replace(/[\s\-().]/g, '')
+  if (!compact) return ''
+  if (compact.startsWith('+')) return compact
+  if (compact.startsWith('00509')) return `+${compact.slice(2)}`
+  if (compact.startsWith('509') && compact.length === 11) return `+${compact}`
+  if (/^\d{8}$/.test(compact)) return `+509${compact}`
+  return compact
+}
+
+const inputClass = (fieldError?: string) =>
+  `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 ${
+    fieldError ? 'border-red-500/60' : 'border-white/15'
+  }`
+
+type FieldKey = 'bankName' | 'customBankName' | 'accountName' | 'accountNumber' | 'routingNumber' | 'phoneNumber'
 
 type Step = 'welcome' | 'markets' | 'location' | 'method' | 'details' | 'review'
 
@@ -68,6 +104,11 @@ export default function PayoutsSetupWizard({
   const [currentStep, setCurrentStep] = useState<Step>('welcome')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Per-field messages for the details step, shown under each input.
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({})
+  // Changing an EXISTING payout method needs an emailed code (payout step-up).
+  // The wizard has no code UI, so it hands off to the advanced page, which does.
+  const [needsStepUp, setNeedsStepUp] = useState(false)
 
   // Where the organizer says they'll run events. Asked FIRST, because it is what
   // decides whether Stripe is ever mentioned to them at all. Saving it is
@@ -86,6 +127,7 @@ export default function PayoutsSetupWizard({
     const country = organizerDefaultCountry?.toLowerCase()
     if (country === 'us' || country === 'united_states') return 'united_states'
     if (country === 'ca' || country === 'canada') return 'canada'
+    if (country === 'fr' || country === 'france') return 'france'
     return 'haiti'
   })
   const [selectedMethod, setSelectedMethod] = useState<'bank_transfer' | 'mobile_money' | 'stripe'>('bank_transfer')
@@ -107,7 +149,7 @@ export default function PayoutsSetupWizard({
   })
 
   const locationData = SUPPORTED_LOCATIONS.find(l => l.id === selectedLocation)
-  const isStripeLocation = selectedLocation === 'united_states' || selectedLocation === 'canada'
+  const isStripeLocation = STRIPE_LOCATIONS.has(selectedLocation)
 
   // Auto-set method when location changes
   useEffect(() => {
@@ -137,6 +179,9 @@ export default function PayoutsSetupWizard({
 
   const handleNext = () => {
     setError('')
+    // Validate the step being left, so a bad field is caught where it was
+    // typed, not three screens later on Review.
+    if (!validateStep(currentStep)) return
     const nextIndex = currentStepIndex + 1
     if (nextIndex < steps.length) {
       setCurrentStep(steps[nextIndex].id)
@@ -175,48 +220,107 @@ export default function PayoutsSetupWizard({
     handleNext()
   }
 
-  const normalizeHaitiPhone = (raw: string) => {
-    const compact = raw.replace(/[\s\-()]/g, '')
-    if (!compact) return ''
-    if (compact.startsWith('+')) return compact
-    if (compact.startsWith('509')) return `+${compact}`
-    return compact
+  const clearFieldError = (key: FieldKey) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }
 
-  const validateMethod = (): boolean => {
+  /** Haiti bank / MonCash field errors for the current form, without side effects. */
+  const computeMethodErrors = (): Partial<Record<FieldKey, string>> => {
+    const errs: Partial<Record<FieldKey, string>> = {}
     if (selectedMethod === 'bank_transfer') {
       if (!bankForm.bankName) {
-        setError(t('onboarding.payouts.errors.select_bank', { defaultValue: 'Please select a bank' }))
-        return false
+        errs.bankName = t('onboarding.payouts.errors.select_bank', { defaultValue: 'Please select a bank' })
       }
-      if (bankForm.bankName === 'other' && !bankForm.customBankName.trim()) {
-        setError(t('onboarding.payouts.errors.bank_name_required', { defaultValue: 'Please enter your bank name' }))
-        return false
+      if (bankForm.bankName === 'other' && bankForm.customBankName.trim().length < 2) {
+        errs.customBankName = t('onboarding.payouts.errors.bank_name_required', { defaultValue: 'Please enter your bank name' })
       }
-      if (!bankForm.accountName.trim()) {
-        setError(t('onboarding.payouts.errors.account_holder_required', { defaultValue: 'Please enter the account holder name' }))
-        return false
+      if (bankForm.accountName.trim().length < 2) {
+        errs.accountName = t('onboarding.payouts.errors.account_holder_required', { defaultValue: 'Please enter the account holder name' })
       }
-      if (!bankForm.accountNumber.trim()) {
-        setError(t('onboarding.payouts.errors.account_number_required', { defaultValue: 'Please enter your account number' }))
-        return false
+      const accountNumber = bankForm.accountNumber.replace(/[\s-]/g, '')
+      if (!accountNumber) {
+        errs.accountNumber = t('onboarding.payouts.errors.account_number_required', { defaultValue: 'Please enter your account number' })
+      } else if (!/^[A-Za-z0-9]{4,34}$/.test(accountNumber)) {
+        errs.accountNumber = t('onboarding.payouts.errors.account_number_invalid', { defaultValue: 'Enter a valid account number (letters and digits only, 4 to 34 characters)' })
+      }
+      const routing = bankForm.routingNumber.trim()
+      if (routing && !/^[A-Za-z0-9\s-]{3,20}$/.test(routing)) {
+        errs.routingNumber = t('onboarding.payouts.errors.routing_invalid', { defaultValue: 'Enter a valid routing number, or leave it empty' })
       }
     } else if (selectedMethod === 'mobile_money') {
       if (!mobileForm.phoneNumber.trim()) {
-        setError(t('onboarding.payouts.errors.phone_required', { defaultValue: 'Please enter your phone number' }))
-        return false
+        errs.phoneNumber = t('onboarding.payouts.errors.phone_required', { defaultValue: 'Please enter your phone number' })
+      } else if (!/^\+509\d{8}$/.test(normalizeHaitiPhone(mobileForm.phoneNumber))) {
+        errs.phoneNumber = t('onboarding.payouts.errors.phone_invalid', { defaultValue: 'Please enter a valid Haiti phone number (e.g., +509 1234 5678)' })
       }
-      const normalizedPhone = normalizeHaitiPhone(mobileForm.phoneNumber)
-      if (!/^\+509\d{8}$/.test(normalizedPhone)) {
-        setError(t('onboarding.payouts.errors.phone_invalid', { defaultValue: 'Please enter a valid Haiti phone number (e.g., +509 1234 5678)' }))
-        return false
-      }
+    }
+    return errs
+  }
+
+  /** On blur: check just the field they left, so untouched fields stay quiet. */
+  const validateField = (key: FieldKey) => {
+    const message = computeMethodErrors()[key]
+    setFieldErrors((prev) => {
+      const next = { ...prev }
+      if (message) next[key] = message
+      else delete next[key]
+      return next
+    })
+  }
+
+  /** All Haiti bank / MonCash fields. Sets per-field messages; returns validity. */
+  const validateMethod = (): boolean => {
+    const errs = computeMethodErrors()
+    setFieldErrors(errs)
+    const first = Object.values(errs)[0]
+    if (first) {
+      setError(first)
+      return false
     }
     return true
   }
 
+  const validateStep = (step: Step): boolean => {
+    if (step === 'location') {
+      if (!availableLocations.some((l) => l.id === selectedLocation)) {
+        setError(t('onboarding.payouts.errors.select_location', { defaultValue: 'Please choose where your bank is located' }))
+        return false
+      }
+      return true
+    }
+    if (step === 'method') {
+      const ok = isStripeLocation ? selectedMethod === 'stripe' : selectedMethod === 'bank_transfer' || selectedMethod === 'mobile_money'
+      if (!ok) {
+        setError(t('onboarding.payouts.errors.select_method', { defaultValue: 'Please choose how you want to be paid' }))
+        return false
+      }
+      return true
+    }
+    if (step === 'details' && !isStripeLocation) {
+      return validateMethod()
+    }
+    return true
+  }
+
+  /** A failed save from the server action, mapped to what the organizer can do. */
+  const failSave = (result: { error?: string; requiresVerification?: boolean } | undefined, fallback: string): never => {
+    if (result?.requiresVerification) {
+      setNeedsStepUp(true)
+      throw new Error(t('onboarding.payouts.errors.step_up_required', { defaultValue: 'For your security, changing an existing payout method needs a code we email you. Finish this change in advanced payout settings.' }))
+    }
+    throw new Error(result?.error || fallback)
+  }
+
   const handleSubmit = async () => {
-    if (selectedMethod !== 'stripe' && !validateMethod()) {
+    setNeedsStepUp(false)
+    if (!isStripeLocation && !validateMethod()) {
+      // Send them back to the screen with the bad field.
+      setCurrentStep('details')
       return
     }
 
@@ -224,37 +328,28 @@ export default function PayoutsSetupWizard({
       setSaving(true)
       setError('')
 
-      // For Stripe locations, redirect to Stripe onboarding
-      if (isStripeLocation || selectedMethod === 'stripe') {
-        // First save the profile config
-        const configRes = await fetch('/api/organizer/payout-profile-config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            profile: 'stripe_connect',
-            updates: {
-              accountLocation: selectedLocation,
-              payoutProvider: 'stripe_connect',
-              method: 'bank_transfer',
-            }
-          })
-        })
-
-        if (!configRes.ok) {
-          const data = await configRes.json().catch(() => ({}))
-          throw new Error(data?.error || t('onboarding.payouts.errors.save_config_failed', { defaultValue: 'Failed to save configuration' }))
+      // US / Canada / France: record the Stripe profile, then hand off to Stripe
+      // onboarding. Same two calls the advanced page makes (PayoutsPageNew).
+      if (isStripeLocation) {
+        const stripeSetupUpdate: Partial<PayoutConfig> = {
+          accountLocation: selectedLocation,
+          payoutProvider: 'stripe_connect',
+          method: 'bank_transfer',
+        }
+        const configResult = await updatePayoutProfileConfig('stripe_connect', stripeSetupUpdate)
+        if (!configResult?.success) {
+          failSave(configResult, t('onboarding.payouts.errors.save_config_failed', { defaultValue: 'Failed to save configuration' }))
         }
 
-        // Then start Stripe onboarding
         const stripeRes = await fetch('/api/organizer/stripe/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accountLocation: selectedLocation })
+          body: JSON.stringify({ accountLocation: selectedLocation }),
         })
-        
-        const stripeData = await stripeRes.json()
+
+        const stripeData = await stripeRes.json().catch(() => ({}))
         if (!stripeRes.ok) {
-          throw new Error(stripeData?.error || t('onboarding.payouts.errors.stripe_start_failed', { defaultValue: 'Failed to start Stripe setup' }))
+          throw new Error(stripeData?.error || stripeData?.message || t('onboarding.payouts.errors.stripe_start_failed', { defaultValue: 'Failed to start Stripe setup' }))
         }
 
         if (stripeData?.url) {
@@ -264,46 +359,39 @@ export default function PayoutsSetupWizard({
         throw new Error(t('onboarding.payouts.errors.stripe_url_missing', { defaultValue: 'Missing Stripe onboarding URL' }))
       }
 
-      // For Haiti payouts
-      const updates: any = {
+      // Haiti: bank transfer or MonCash, saved on the 'haiti' payout profile.
+      const updates: Partial<PayoutConfig> = {
         accountLocation: 'haiti',
-        method: selectedMethod,
+        method: selectedMethod === 'mobile_money' ? 'mobile_money' : 'bank_transfer',
       }
 
       if (selectedMethod === 'bank_transfer') {
         updates.bankDetails = {
           accountLocation: 'haiti',
-          bankName: bankForm.bankName === 'other' ? bankForm.customBankName : bankForm.bankName,
-          accountName: bankForm.accountName,
-          accountNumber: bankForm.accountNumber,
-          routingNumber: bankForm.routingNumber || '',
+          bankName: bankForm.bankName === 'other' ? bankForm.customBankName.trim() : bankForm.bankName,
+          accountName: bankForm.accountName.trim(),
+          accountNumber: bankForm.accountNumber.replace(/[\s-]/g, ''),
+          routingNumber: bankForm.routingNumber.trim(),
         }
-      } else if (selectedMethod === 'mobile_money') {
+      } else {
+        const phoneNumber = normalizeHaitiPhone(mobileForm.phoneNumber)
+        const provider = NATCASH_ENABLED && mobileForm.provider === 'natcash' ? 'natcash' : 'moncash'
         updates.mobileMoneyDetails = {
-          provider: mobileForm.provider,
-          phoneNumber: normalizeHaitiPhone(mobileForm.phoneNumber),
-          accountName: mobileForm.accountName || mobileForm.phoneNumber,
+          provider,
+          phoneNumber,
+          accountName: mobileForm.accountName.trim() || phoneNumber,
         }
-        updates.payoutProvider = mobileForm.provider
+        updates.payoutProvider = provider
       }
 
-      const res = await fetch('/api/organizer/payout-profile-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: 'haiti',
-          updates,
-        })
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data?.error || t('onboarding.payouts.errors.save_payout_failed', { defaultValue: 'Failed to save payout details' }))
+      const result = await updatePayoutProfileConfig('haiti', updates)
+      if (!result?.success) {
+        failSave(result, t('onboarding.payouts.errors.save_payout_failed', { defaultValue: 'Failed to save payout details' }))
       }
 
       onComplete()
     } catch (err: any) {
-      setError(err.message || t('onboarding.payouts.errors.generic', { defaultValue: 'Something went wrong. Please try again.' }))
+      setError(err?.message || t('onboarding.payouts.errors.generic', { defaultValue: 'Something went wrong. Please try again.' }))
     } finally {
       setSaving(false)
     }
@@ -355,7 +443,18 @@ export default function PayoutsSetupWizard({
         {error && (
           <div className="mb-6 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-300">{error}</p>
+            <div className="text-sm text-red-300">
+              <p>{error}</p>
+              {needsStepUp ? (
+                <Link
+                  href={`/organizer/settings/payouts?view=advanced&edit=${isStripeLocation ? 'stripe_connect' : 'haiti'}`}
+                  className="mt-2 inline-flex items-center gap-1 font-semibold text-white underline underline-offset-2"
+                >
+                  {t('onboarding.payouts.errors.step_up_cta', { defaultValue: 'Open advanced payout settings' })}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              ) : null}
+            </div>
           </div>
         )}
 
@@ -386,7 +485,7 @@ export default function PayoutsSetupWizard({
                   <Sparkles className="w-5 h-5 text-brand-300" />
                 </div>
                 <h3 className="font-semibold text-white mb-1">{t('onboarding.payouts.welcome.fast_title', { defaultValue: 'Fast' })}</h3>
-                <p className="text-sm text-white/60">{t('onboarding.payouts.welcome.fast_desc', { defaultValue: 'Receive funds within 48 hours of events' })}</p>
+                <p className="text-sm text-white/60">{t('onboarding.payouts.welcome.fast_desc', { defaultValue: 'Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000).' })}</p>
               </div>
               <div className="bg-white/[0.03] rounded-xl  p-4 text-left">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3">
@@ -556,7 +655,7 @@ export default function PayoutsSetupWizard({
               </h2>
               <p className="text-white/60">
                 {isStripeLocation
-                  ? t('onboarding.payouts.method.subtitle_stripe', { defaultValue: 'Stripe Connect handles payments for US and Canada' })
+                  ? t('onboarding.payouts.method.subtitle_stripe', { defaultValue: 'Stripe Connect handles payouts for the US, Canada and France' })
                   : t('onboarding.payouts.method.subtitle_haiti', { defaultValue: 'Choose your preferred payout method' })}
               </p>
             </div>
@@ -572,7 +671,7 @@ export default function PayoutsSetupWizard({
                   <div className="flex-1">
                     <h3 className="font-semibold text-white text-lg mb-1">Stripe Connect</h3>
                     <p className="text-white/60 text-sm mb-3">
-                      {t('onboarding.payouts.method.stripe_connect_desc', { defaultValue: 'Stripe handles payment processing for US and Canada accounts. You’ll be redirected to complete setup.' })}
+                      {t('onboarding.payouts.method.stripe_connect_desc', { defaultValue: 'Stripe handles payouts for US, Canadian and French bank accounts. You’ll be redirected to complete setup.' })}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-emerald-300">
                       <Check className="w-4 h-4" />
@@ -616,7 +715,7 @@ export default function PayoutsSetupWizard({
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-white">{t('onboarding.payouts.method.mobile_money', { defaultValue: 'Mobile Money' })}</div>
-                    <div className="text-sm text-white/50">{t('onboarding.payouts.method.mobile_money_desc', { defaultValue: 'MonCash or NatCash' })}</div>
+                    <div className="text-sm text-white/50">{t('onboarding.payouts.method.mobile_money_desc', { defaultValue: 'MonCash' })}</div>
                   </div>
                   {selectedMethod === 'mobile_money' && (
                     <Check className="w-5 h-5 text-brand-300" />
@@ -691,8 +790,9 @@ export default function PayoutsSetupWizard({
                   </label>
                   <select
                     value={bankForm.bankName}
-                    onChange={(e) => setBankForm(prev => ({ ...prev, bankName: e.target.value }))}
-                    className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    onChange={(e) => { clearFieldError('bankName'); clearFieldError('customBankName'); setBankForm(prev => ({ ...prev, bankName: e.target.value })) }}
+                    aria-invalid={Boolean(fieldErrors.bankName)}
+                    className={inputClass(fieldErrors.bankName)}
                   >
                     {HAITI_BANKS.map((bank) => (
                       <option key={bank.value} value={bank.value}>{t(`onboarding.payouts.banks.${bank.value}`, { defaultValue: bank.label })}</option>
@@ -708,10 +808,14 @@ export default function PayoutsSetupWizard({
                     <input
                       type="text"
                       value={bankForm.customBankName}
-                      onChange={(e) => setBankForm(prev => ({ ...prev, customBankName: e.target.value }))}
+                      onChange={(e) => { clearFieldError('customBankName'); setBankForm(prev => ({ ...prev, customBankName: e.target.value })) }}
+                      onBlur={() => { if (bankForm.customBankName.trim()) validateField('customBankName') }}
+                      aria-invalid={Boolean(fieldErrors.customBankName)}
+                      aria-describedby={fieldErrors.customBankName ? 'err-customBankName' : undefined}
                       placeholder={t('onboarding.payouts.field.bank_name_placeholder', { defaultValue: 'Enter your bank name' })}
-                      className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                      className={inputClass(fieldErrors.customBankName)}
                     />
+                    {fieldErrors.customBankName ? <p id="err-customBankName" className="mt-1.5 text-xs text-red-300">{fieldErrors.customBankName}</p> : null}
                   </div>
                 )}
 
@@ -723,10 +827,14 @@ export default function PayoutsSetupWizard({
                   <input
                     type="text"
                     value={bankForm.accountName}
-                    onChange={(e) => setBankForm(prev => ({ ...prev, accountName: e.target.value }))}
+                    onChange={(e) => { clearFieldError('accountName'); setBankForm(prev => ({ ...prev, accountName: e.target.value })) }}
+                    onBlur={() => { if (bankForm.accountName.trim()) validateField('accountName') }}
+                    aria-invalid={Boolean(fieldErrors.accountName)}
+                    aria-describedby={fieldErrors.accountName ? 'err-accountName' : undefined}
                     placeholder={t('onboarding.payouts.field.account_holder_name_placeholder', { defaultValue: 'Name as it appears on account' })}
-                    className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    className={inputClass(fieldErrors.accountName)}
                   />
+                  {fieldErrors.accountName ? <p id="err-accountName" className="mt-1.5 text-xs text-red-300">{fieldErrors.accountName}</p> : null}
                 </div>
 
                 {/* Account Number */}
@@ -737,10 +845,14 @@ export default function PayoutsSetupWizard({
                   <input
                     type="text"
                     value={bankForm.accountNumber}
-                    onChange={(e) => setBankForm(prev => ({ ...prev, accountNumber: e.target.value }))}
+                    onChange={(e) => { clearFieldError('accountNumber'); setBankForm(prev => ({ ...prev, accountNumber: e.target.value })) }}
+                    onBlur={() => { if (bankForm.accountNumber.trim()) validateField('accountNumber') }}
+                    aria-invalid={Boolean(fieldErrors.accountNumber)}
+                    aria-describedby={fieldErrors.accountNumber ? 'err-accountNumber' : undefined}
                     placeholder={t('onboarding.payouts.field.account_number_placeholder', { defaultValue: 'Your bank account number' })}
-                    className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    className={inputClass(fieldErrors.accountNumber)}
                   />
+                  {fieldErrors.accountNumber ? <p id="err-accountNumber" className="mt-1.5 text-xs text-red-300">{fieldErrors.accountNumber}</p> : null}
                 </div>
 
                 {/* Routing Number (Optional) */}
@@ -751,10 +863,14 @@ export default function PayoutsSetupWizard({
                   <input
                     type="text"
                     value={bankForm.routingNumber}
-                    onChange={(e) => setBankForm(prev => ({ ...prev, routingNumber: e.target.value }))}
+                    onChange={(e) => { clearFieldError('routingNumber'); setBankForm(prev => ({ ...prev, routingNumber: e.target.value })) }}
+                    onBlur={() => { if (bankForm.routingNumber.trim()) validateField('routingNumber') }}
+                    aria-invalid={Boolean(fieldErrors.routingNumber)}
+                    aria-describedby={fieldErrors.routingNumber ? 'err-routingNumber' : undefined}
                     placeholder={t('onboarding.payouts.field.routing_number_placeholder', { defaultValue: 'If applicable' })}
-                    className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    className={inputClass(fieldErrors.routingNumber)}
                   />
+                  {fieldErrors.routingNumber ? <p id="err-routingNumber" className="mt-1.5 text-xs text-red-300">{fieldErrors.routingNumber}</p> : null}
                 </div>
               </div>
             ) : (
@@ -764,7 +880,7 @@ export default function PayoutsSetupWizard({
                   <label className="block text-sm font-medium text-white/70 mb-2">
                     {t('onboarding.payouts.field.provider', { defaultValue: 'Provider' })} <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid gap-3 ${MOBILE_PROVIDERS.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {MOBILE_PROVIDERS.map((provider) => (
                       <button
                         key={provider.value}
@@ -791,14 +907,18 @@ export default function PayoutsSetupWizard({
                   <input
                     type="tel"
                     value={mobileForm.phoneNumber}
-                    onChange={(e) => setMobileForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                    onChange={(e) => { clearFieldError('phoneNumber'); setMobileForm(prev => ({ ...prev, phoneNumber: e.target.value })) }}
+                    onBlur={() => { if (mobileForm.phoneNumber.trim()) validateField('phoneNumber') }}
+                    aria-invalid={Boolean(fieldErrors.phoneNumber)}
+                    aria-describedby={fieldErrors.phoneNumber ? 'err-phoneNumber' : undefined}
                     placeholder={t('onboarding.payouts.field.phone_number_placeholder', { defaultValue: '+509 1234 5678' })}
-                    className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    className={inputClass(fieldErrors.phoneNumber)}
                   />
+                  {fieldErrors.phoneNumber ? <p id="err-phoneNumber" className="mt-1.5 text-xs text-red-300">{fieldErrors.phoneNumber}</p> : null}
                   <p className="mt-1.5 text-xs text-white/50">
                     {t('onboarding.payouts.field.phone_hint', {
                       defaultValue: 'Enter the phone number linked to your {{provider}} account',
-                      provider: mobileForm.provider === 'moncash' ? 'MonCash' : 'NatCash',
+                      provider: providerLabel(mobileForm.provider),
                     })}
                   </p>
                 </div>
@@ -910,7 +1030,7 @@ export default function PayoutsSetupWizard({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-white/50">{t('onboarding.payouts.review.provider', { defaultValue: 'Provider' })}</span>
                       <span className="font-medium text-white">
-                        {mobileForm.provider === 'moncash' ? 'MonCash' : 'NatCash'}
+                        {providerLabel(mobileForm.provider)}
                       </span>
                     </div>
                   </div>
@@ -918,13 +1038,33 @@ export default function PayoutsSetupWizard({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-white/50">{t('onboarding.payouts.review.phone_number', { defaultValue: 'Phone Number' })}</span>
                       <span className="font-medium text-white">
-                        {mobileForm.phoneNumber}
+                        {normalizeHaitiPhone(mobileForm.phoneNumber)}
                       </span>
                     </div>
                   </div>
                 </>
               )}
             </div>
+
+            {/* Saving a method never needed identity; WITHDRAWING does (the
+                withdraw routes require an `active` profile). Say so up front. */}
+            {!isStripeLocation && (
+              <div className="mb-8 rounded-xl bg-white/[0.05] p-4 flex items-start gap-3">
+                <Shield className="w-5 h-5 text-brand-300 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-white/70">
+                  <p className="font-semibold text-white">
+                    {t('verify_to_withdraw.title', { defaultValue: 'Verify your identity to withdraw' })}
+                  </p>
+                  <p className="mt-1">
+                    {t('onboarding.payouts.review.identity_note', { defaultValue: 'You can save this payout method now. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days.' })}
+                  </p>
+                  <Link href="/organizer/verify" className="mt-2 inline-flex items-center gap-1 font-semibold text-brand-300 hover:text-white">
+                    {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <button

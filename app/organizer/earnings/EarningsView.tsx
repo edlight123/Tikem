@@ -217,10 +217,13 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
               Withdraw from an event
               <ArrowRight className="h-4 w-4" />
             </a>
-            <p className="mt-2 max-w-[14rem] text-xs text-white/55 lg:text-right">
+            <p className="mt-2 max-w-[18rem] text-xs text-white/55 lg:text-right">
               {anyAvailable
                 ? 'Open an event below and withdraw its released funds to MonCash or your bank.'
-                : 'Nothing to withdraw yet. Funds are released 24–72 hours after each event ends.'}
+                : tx('payout_timing.nothing_yet', {
+                    defaultValue:
+                      'Nothing to withdraw yet. Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first.',
+                  })}
             </p>
           </div>
         </div>

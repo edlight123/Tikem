@@ -424,7 +424,7 @@
     "payout_review_description": "We are reviewing your payout details. Hang tight!",
     "view_status": "View status",
     "how_payouts_work": "How Payouts Work",
-    "funds_available_7_days": "Funds become available 7 days after your event ends",
+    "funds_available_7_days": "Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first.",
     "payouts_processed_friday": "Payouts are processed every Friday at 5:00 PM",
     "platform_fee_deducted": "10% platform fee is automatically deducted",
     "payment_sent_method": "Payment is sent to your configured payout method",
@@ -582,7 +582,7 @@
     "pending_balance": "Pending Balance",
     "last_payout": "Last Payout",
     "next_payout_est": "Next Payout (Est.)",
-    "processing_time": "Payouts typically processed within 2-5 business days"
+    "processing_time": "Withdrawals: MonCash usually within 24 hours, bank transfer 3–5 business days."
   },
   "event_card": {
     "published": "Published",
@@ -722,7 +722,7 @@
       "line": "Throw the fèt. We’ll run the door.",
       "fact_fee": "10% all-in, processing included",
       "fact_pay": "MonCash in Haiti, cards in the diaspora",
-      "fact_payout": "Payouts released 24–72 hours after your event",
+      "fact_payout": "Funds available 72 hours after your event ends, 24 hours once you’re established",
       "cta": "Start selling",
       "how": "How it works"
     },
@@ -1070,7 +1070,7 @@
     "show_code_fallback": "Show this code if the QR won't scan",
     "lost_page_email_and_text": "Lost this page? It is in your confirmation email and text message.",
     "lost_page_email": "Lost this page? It is in your confirmation email.",
-    "lost_page_support": "For help with a refund or a change, contact support with the email or phone number you used at checkout.",
+    "lost_page_support": "For help with a change to your ticket, contact support with the email or phone number you used at checkout.",
     "claim_failed": "Could not add these tickets to your account.",
     "claim_success": "Your tickets are now in your account.",
     "claim_network_error": "Could not reach Tikèm. Please try again.",
@@ -1287,7 +1287,8 @@
     "payoutGap": {
       "stripe": "Events in the US, Canada or France pay out through your Stripe profile. It isn’t set up yet, so paid tickets can’t publish.",
       "haiti": "Events in Haiti pay out through your Haiti profile (MonCash or bank). It isn’t set up yet, so paid tickets can’t publish.",
-      "cta": "Set up payouts"
+      "cta": "Set up payouts",
+      "haitiPublishNow": "Events in Haiti pay out through your Haiti profile (MonCash or bank). You can publish now; set it up before you withdraw your earnings."
     },
     "draftBanner": {
       "saved": "Draft saved.",
@@ -1452,7 +1453,30 @@
     "nationalDay": {
       "label": "Part of {{day}}?",
       "hint": "Feature it on the {{day}} banner."
-    }
+    },
+    "country": {
+      "label": "Country",
+      "locked": "An event’s country is set when it’s created.",
+      "names": {
+        "HT": "Haiti",
+        "US": "United States",
+        "CA": "Canada",
+        "FR": "France"
+      }
+    },
+    "cityPlaceholderExample": "City, e.g. {{city}}",
+    "publishGate": {
+      "generic": "Finish your payout setup to publish paid events in {{country}}.",
+      "identity": "To publish paid events in {{country}}, verify your identity first, then connect Stripe for payouts.",
+      "stripeConnect": "Identity verified. Connect Stripe for payouts to publish paid events in {{country}}.",
+      "stripeOnboarding": "Identity verified. Finish your Stripe onboarding (charges and payouts enabled) to publish paid events in {{country}}.",
+      "stripeReconnect": "Your Stripe payout account could not be found. Reconnect Stripe to publish paid events in {{country}}.",
+      "verifyCta": "Verify identity",
+      "stripeCta": "Set up Stripe",
+      "haitiVerifyLater": "You can publish now. Verify your identity before you withdraw your earnings."
+    },
+    "guestPaidNoteHaiti": "Paid events in Haiti can go live right away. Verify your identity before you withdraw your earnings.",
+    "guestPaidNoteStripe": "Paid events in {{country}} need identity verification and a connected Stripe account before they go live. You can finish setting everything up first."
   },
   "promoter": {
     "portal_eyebrow": "Promoter portal",
@@ -1646,11 +1670,11 @@
     "moncash_value": "2.5% per transaction",
     "processing_note": "Tikèm pays these out of its own fee, in every country and whoever bears the fee. They are never added to your buyer's total or deducted from your payout.",
     "payout_schedule": "Payout schedule",
-    "schedule_a": "Payouts are processed",
-    "schedule_strong": "7 days after your event ends",
-    "schedule_b": ". This holding period allows time for any refund requests or payment disputes to be resolved.",
-    "schedule_c": "Once the holding period is complete, you can request a payout from your organizer dashboard. Payouts are typically processed within",
-    "schedule_strong2": "3-5 business days",
+    "schedule_a": "Funds become available to withdraw",
+    "schedule_strong": "72 hours after your event ends",
+    "schedule_b": " (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first. This hold leaves time for refund requests and payment disputes.",
+    "schedule_c": "Once funds are available, request a withdrawal from your organizer dashboard. MonCash withdrawals usually arrive within 24 hours; bank transfers take",
+    "schedule_strong2": "3–5 business days",
     "note_label": "Note:",
     "note_body": "For free events, there are no fees charged. Platform and processing fees only apply to paid ticket sales.",
     "examples_title": "Example calculations",

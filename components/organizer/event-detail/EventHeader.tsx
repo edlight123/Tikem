@@ -37,13 +37,27 @@ export function EventHeader({ event }: EventHeaderProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_published: !event.is_published }),
       })
-      if (!response.ok) return
+      const data = await response.json().catch(() => ({}))
+
+      // A refused publish used to return here silently — the button just
+      // stopped spinning. The route always says why (verification, Stripe
+      // onboarding, a moderation hold…), so show that.
+      if (!response.ok) {
+        showToast({
+          type: 'error',
+          title: t('composer.toasts.errUpdateTitle', { defaultValue: 'Could not update' }),
+          message:
+            (typeof data?.error === 'string' && data.error) ||
+            t('composer.toasts.publishStatusErr', { defaultValue: 'Could not update publish status' }),
+          duration: 6000,
+        })
+        return
+      }
 
       // Non-blocking advisories from the publish route (today: the event's
       // country differs from the connected Stripe account's country, so the
       // payout converts into that account's currency). A full page reload would
       // wipe the toast before it could be read, so refresh in place instead.
-      const data = await response.json().catch(() => ({}))
       const warnings: Array<{ message?: string }> = Array.isArray(data?.warnings) ? data.warnings : []
 
       if (warnings.length > 0) {
@@ -62,7 +76,12 @@ export function EventHeader({ event }: EventHeaderProps) {
 
       window.location.reload()
     } catch {
-      // publish toggle failed silently; user can retry
+      showToast({
+        type: 'error',
+        title: t('composer.toasts.errUpdateTitle', { defaultValue: 'Could not update' }),
+        message: t('composer.toasts.tryAgain', { defaultValue: 'Please try again.' }),
+        duration: 5000,
+      })
     } finally {
       setIsPublishing(false)
     }

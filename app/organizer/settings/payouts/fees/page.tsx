@@ -246,19 +246,19 @@ export default async function PayoutFeesPage() {
             </h2>
             <div className="space-y-3 text-white/70">
               <p>
-                {t('fees_page.schedule_a', 'Payouts are processed')}{' '}
-                <strong>{t('fees_page.schedule_strong', '7 days after your event ends')}</strong>
+                {t('fees_page.schedule_a', 'Funds become available to withdraw')}{' '}
+                <strong>{t('fees_page.schedule_strong', '72 hours after your event ends')}</strong>
                 {t(
                   'fees_page.schedule_b',
-                  '. This holding period allows time for any refund requests or payment disputes to be resolved.'
+                  ' (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first. This hold leaves time for refund requests and payment disputes.'
                 )}
               </p>
               <p>
                 {t(
                   'fees_page.schedule_c',
-                  'Once the holding period is complete, you can request a payout from your organizer dashboard. Payouts are typically processed within'
+                  'Once funds are available, request a withdrawal from your organizer dashboard. MonCash withdrawals usually arrive within 24 hours; bank transfers take'
                 )}{' '}
-                <strong>{t('fees_page.schedule_strong2', '3-5 business days')}</strong>.
+                <strong>{t('fees_page.schedule_strong2', '3–5 business days')}</strong>.
               </p>
               <div className="border border-brand-500/30 rounded-lg p-4 mt-4">
                 <div className="flex gap-3">

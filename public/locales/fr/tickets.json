@@ -142,5 +142,40 @@
       "save_ticket": "Enregistrez votre billet sur votre téléphone pour un accès facile le jour de l'événement",
       "arrive_early": "Arrivez tôt et présentez votre code QR à l'entrée"
     }
+  },
+  "refund_request": {
+    "action": "Demander un remboursement",
+    "title": "demander un remboursement",
+    "reason_label": "Pourquoi cette demande ?",
+    "reasons": {
+      "cant_attend": "Je ne peux pas y assister",
+      "event_changed": "L'événement a changé ou a été annulé",
+      "billing_issue": "J'ai été débité deux fois ou du mauvais montant",
+      "other": "Autre raison"
+    },
+    "details_label": "Expliquez-nous ce qui s'est passé",
+    "details_placeholder": "Décrivez votre situation pour que l'organisateur puisse l'examiner.",
+    "details_hint": "Au moins {{min}} caractères ({{count}}/{{min}})",
+    "note": "Les remboursements ne sont pas automatiques. L'organisateur et Tikèm examinent chaque demande ; vous recevrez la décision par e-mail. Les frais de service ne sont pas remboursés, sauf si l'événement est annulé.",
+    "submit": "Envoyer la demande",
+    "submitting": "Envoi…",
+    "cancel": "Annuler",
+    "sent": "Votre demande a été envoyée. Vous recevrez la décision par e-mail.",
+    "status_requested": "Remboursement demandé — en cours d'examen",
+    "status_requested_detail": "Vous recevrez la décision par e-mail.",
+    "status_in_progress": "Remboursement en cours",
+    "status_denied": "Demande de remboursement refusée",
+    "errors": {
+      "reason_required": "Choisissez une raison.",
+      "details_too_short": "Merci d'expliquer en au moins {{min}} caractères.",
+      "deadline_passed": "Le délai est dépassé : les remboursements doivent être demandés au moins 24 heures avant l'événement.",
+      "already_requested": "Une demande de remboursement existe déjà pour ce billet.",
+      "checked_in": "Ce billet a déjà été utilisé.",
+      "not_live": "Ce billet n'est plus actif.",
+      "event_past": "Cet événement a déjà eu lieu.",
+      "event_cancelled": "Cet événement a été annulé. Son remboursement est géré pour vous : il n'y a rien à demander.",
+      "too_many": "Trop de tentatives. Réessayez plus tard.",
+      "generic": "Impossible d'envoyer votre demande. Réessayez."
+    }
   }
 }

@@ -56,7 +56,14 @@ export async function POST(request: Request) {
       // hands (or a request with no recorded requester on a transferred ticket)
       // must not refund the money while the seat sits with someone else.
       const requestedBy = String(ticket.refund_requested_by || '')
-      const holders = [String(ticket.attendee_id || ''), String(ticket.user_id || '')].filter(Boolean)
+      // claimed_from_guest_id: a guest who asked from their ticket link and then
+      // moved the ticket onto their own account is still the same buyer — but
+      // only while the ticket has never been transferred since.
+      const holders = [
+        String(ticket.attendee_id || ''),
+        String(ticket.user_id || ''),
+        Number(ticket.transfer_count) > 0 ? '' : String(ticket.claimed_from_guest_id || ''),
+      ].filter(Boolean)
       const holderMatches = requestedBy ? holders.includes(requestedBy) : !(Number(ticket.transfer_count) > 0)
       if (!holderMatches) {
         return Response.json(

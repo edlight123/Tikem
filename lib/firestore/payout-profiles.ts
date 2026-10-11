@@ -143,7 +143,7 @@ export async function getPayoutProfile(organizerId: string, profileId: PayoutPro
     // Backward compat: infer profile from existing payoutConfig/main.
     const legacyProvider = String(legacy?.payoutProvider || '').toLowerCase()
     const legacyLocation = String(legacy?.accountLocation || legacy?.bankDetails?.accountLocation || '').toLowerCase()
-    const legacyIsStripeConnect = legacyProvider === 'stripe_connect' || legacyLocation === 'united_states' || legacyLocation === 'canada'
+    const legacyIsStripeConnect = legacyProvider === 'stripe_connect' || legacyLocation === 'united_states' || legacyLocation === 'canada' || legacyLocation === 'france'
 
     if (profileId === 'stripe_connect') {
       return legacyIsStripeConnect ? legacy : null

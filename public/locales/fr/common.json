@@ -424,7 +424,7 @@
     "payout_review_description": "Nous examinons vos détails de paiement. Patience!",
     "view_status": "Voir le statut",
     "how_payouts_work": "Comment Fonctionnent les Paiements",
-    "funds_available_7_days": "Les fonds deviennent disponibles 7 jours après la fin de votre événement",
+    "funds_available_7_days": "Les fonds deviennent disponibles au retrait 72 heures après la fin de votre événement (24 heures une fois que vous avez organisé 3 événements ou vendu 1 000 $). Les premiers événements de grande taille peuvent d’abord être examinés par notre équipe.",
     "payouts_processed_friday": "Les paiements sont traités chaque vendredi à 17h00",
     "platform_fee_deducted": "Frais de plateforme de 10% automatiquement déduits",
     "payment_sent_method": "Le paiement est envoyé à votre méthode de paiement configurée",
@@ -582,7 +582,7 @@
     "pending_balance": "Solde en attente",
     "last_payout": "Dernier paiement",
     "next_payout_est": "Prochain paiement (est.)",
-    "processing_time": "Les paiements sont généralement traités sous 2 à 5 jours ouvrables"
+    "processing_time": "Retraits : MonCash généralement sous 24 heures, virement bancaire sous 3 à 5 jours ouvrables."
   },
   "event_card": {
     "published": "Publié",
@@ -722,7 +722,7 @@
       "line": "Organisez la fête. On s’occupe de l’entrée.",
       "fact_fee": "10 % tout compris, frais de paiement inclus",
       "fact_pay": "MonCash en Haïti, cartes bancaires dans la diaspora",
-      "fact_payout": "Versements débloqués 24 à 72 heures après l’événement",
+      "fact_payout": "Fonds disponibles 72 heures après la fin de votre événement, 24 heures une fois établi",
       "cta": "Commencer à vendre",
       "how": "Comment ça marche"
     },
@@ -1070,7 +1070,7 @@
     "show_code_fallback": "Montrez ce code si le QR ne scanne pas",
     "lost_page_email_and_text": "Vous avez perdu cette page ? Elle se trouve dans votre email de confirmation et votre SMS.",
     "lost_page_email": "Vous avez perdu cette page ? Elle se trouve dans votre email de confirmation.",
-    "lost_page_support": "Pour une demande de remboursement ou de modification, contactez le support avec l'email ou le numéro de téléphone utilisé lors de l'achat.",
+    "lost_page_support": "Pour une modification de votre billet, contactez le support avec l'email ou le numéro de téléphone utilisé lors de l'achat.",
     "claim_failed": "Impossible d'ajouter ces billets à votre compte.",
     "claim_success": "Vos billets sont maintenant dans votre compte.",
     "claim_network_error": "Impossible de contacter Tikèm. Veuillez réessayer.",
@@ -1287,7 +1287,8 @@
     "payoutGap": {
       "stripe": "Les événements aux États-Unis, au Canada ou en France sont payés via votre profil Stripe. Il n’est pas encore configuré, donc les billets payants ne peuvent pas être publiés.",
       "haiti": "Les événements en Haïti sont payés via votre profil Haïti (MonCash ou banque). Il n’est pas encore configuré, donc les billets payants ne peuvent pas être publiés.",
-      "cta": "Configurer les paiements"
+      "cta": "Configurer les paiements",
+      "haitiPublishNow": "Les événements en Haïti sont payés via votre profil Haïti (MonCash ou banque). Vous pouvez publier dès maintenant ; configurez-le avant de retirer vos gains."
     },
     "draftBanner": {
       "saved": "Brouillon enregistré.",
@@ -1452,7 +1453,30 @@
     "nationalDay": {
       "label": "Un événement pour {{day}} ?",
       "hint": "Mettez-le en avant sur la bannière {{day}}."
-    }
+    },
+    "country": {
+      "label": "Pays",
+      "locked": "Le pays d’un événement est fixé à sa création.",
+      "names": {
+        "HT": "Haïti",
+        "US": "États-Unis",
+        "CA": "Canada",
+        "FR": "France"
+      }
+    },
+    "cityPlaceholderExample": "Ville, ex. {{city}}",
+    "publishGate": {
+      "generic": "Terminez la configuration de vos paiements pour publier des événements payants ({{country}}).",
+      "identity": "Pour publier des événements payants ({{country}}), vérifiez d’abord votre identité, puis connectez Stripe pour les paiements.",
+      "stripeConnect": "Identité vérifiée. Connectez Stripe pour les paiements afin de publier des événements payants ({{country}}).",
+      "stripeOnboarding": "Identité vérifiée. Terminez votre inscription Stripe (paiements et virements activés) pour publier des événements payants ({{country}}).",
+      "stripeReconnect": "Votre compte de paiement Stripe est introuvable. Reconnectez Stripe pour publier des événements payants ({{country}}).",
+      "verifyCta": "Vérifier mon identité",
+      "stripeCta": "Configurer Stripe",
+      "haitiVerifyLater": "Vous pouvez publier dès maintenant. Vérifiez votre identité avant de retirer vos gains."
+    },
+    "guestPaidNoteHaiti": "Les événements payants en Haïti peuvent être publiés tout de suite. Vérifiez votre identité avant de retirer vos gains.",
+    "guestPaidNoteStripe": "Les événements payants ({{country}}) nécessitent une vérification d’identité et un compte Stripe connecté avant d’être publiés. Vous pouvez tout préparer d’abord."
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",
@@ -1646,11 +1670,11 @@
     "moncash_value": "2.5% par transaction",
     "processing_note": "Tikèm les paie sur sa propre commission, dans tous les pays et quel que soit celui qui supporte les frais : ils ne sont jamais ajoutés au total de l’acheteur ni déduits de votre paiement.",
     "payout_schedule": "Calendrier des paiements",
-    "schedule_a": "Les paiements sont traités",
-    "schedule_strong": "7 jours après la fin de votre événement",
-    "schedule_b": ". Cette période de rétention laisse le temps de résoudre les demandes de remboursement ou les litiges de paiement.",
-    "schedule_c": "Une fois la période de rétention terminée, vous pouvez demander un paiement depuis votre tableau de bord organisateur. Les paiements sont généralement traités sous",
-    "schedule_strong2": "3-5 jours ouvrables",
+    "schedule_a": "Les fonds deviennent disponibles au retrait",
+    "schedule_strong": "72 heures après la fin de votre événement",
+    "schedule_b": " (24 heures une fois que vous avez organisé 3 événements ou vendu 1 000 $). Les premiers événements de grande taille peuvent d’abord être examinés par notre équipe. Ce délai laisse le temps de traiter les demandes de remboursement et les litiges de paiement.",
+    "schedule_c": "Une fois les fonds disponibles, demandez un retrait depuis votre tableau de bord organisateur. Les retraits MonCash arrivent généralement sous 24 heures ; les virements bancaires prennent",
+    "schedule_strong2": "3 à 5 jours ouvrables",
     "note_label": "Note :",
     "note_body": "Pour les événements gratuits, aucun frais n’est facturé. Les frais de plateforme et de traitement ne s’appliquent qu’aux ventes de billets payants.",
     "examples_title": "Exemples de calcul",

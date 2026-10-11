@@ -294,7 +294,8 @@ export default function PayoutsPageNew({
   const isStripeConnectSelection =
     activeProfile === 'stripe_connect' ||
     String(effectiveAccountLocation || '').toLowerCase() === 'united_states' ||
-    String(effectiveAccountLocation || '').toLowerCase() === 'canada'
+    String(effectiveAccountLocation || '').toLowerCase() === 'canada' ||
+    String(effectiveAccountLocation || '').toLowerCase() === 'france'
 
   const isStripeConnectAccount =
     activeProfile === 'stripe_connect' ||
@@ -305,6 +306,7 @@ export default function PayoutsPageNew({
     if (!value) return t('payouts_page.location_not_set', { defaultValue: 'Not set' })
     if (value.toLowerCase() === 'united_states') return t('payouts_page.country_united_states', { defaultValue: 'United States' })
     if (value.toLowerCase() === 'canada') return t('payouts_page.country_canada', { defaultValue: 'Canada' })
+    if (value.toLowerCase() === 'france') return t('payouts_page.country_france', { defaultValue: 'France' })
     if (value.toLowerCase() === 'haiti') return t('payouts_page.country_haiti', { defaultValue: 'Haiti' })
     return value.replace(/_/g, ' ')
   }
@@ -471,13 +473,13 @@ export default function PayoutsPageNew({
     setPayoutChangeMessage(null)
 
     const normalizedLocation = String(formData.accountLocation || '').toLowerCase()
-    const wantsStripeConnect = normalizedLocation === 'united_states' || normalizedLocation === 'canada'
+    const wantsStripeConnect = normalizedLocation === 'united_states' || normalizedLocation === 'canada' || normalizedLocation === 'france'
     
     // Stripe Connect profile: redirect to Stripe onboarding instead of collecting bank fields here.
     if (activeProfile === 'stripe_connect') {
       try {
         if (!wantsStripeConnect) {
-          setError(t('payouts_page.error_stripe_country', { defaultValue: 'Stripe Connect is only available for United States or Canada accounts' }))
+          setError(t('payouts_page.error_stripe_country', { defaultValue: 'Stripe Connect is only available for United States, Canada or France accounts' }))
           setIsSaving(false)
           return
         }
@@ -1092,7 +1094,7 @@ export default function PayoutsPageNew({
                     <div>
                       <h2 className="font-display !text-[22px] !leading-tight text-white">{t('payouts_page.profile_payouts_title', { profile: focusedProfileLabel, defaultValue: '{{profile}} payouts' })}</h2>
                       <p className="mt-0.5 text-sm text-white/60">
-                        {activeProfile === 'stripe_connect' ? t('payouts_page.profile_stripe_sub', { defaultValue: 'Bank payouts via Stripe Connect.' }) : t('payouts_page.profile_haiti_sub', { defaultValue: 'Bank transfer or mobile money (MonCash / NatCash).' })}
+                        {activeProfile === 'stripe_connect' ? t('payouts_page.profile_stripe_sub', { defaultValue: 'Bank payouts via Stripe Connect.' }) : t('payouts_page.profile_haiti_sub', { defaultValue: 'Bank transfer or MonCash.' })}
                       </p>
                     </div>
                   </div>
@@ -1218,14 +1220,14 @@ export default function PayoutsPageNew({
                             onChange={(e) => {
                               const nextLocation = e.target.value
                               if (activeProfile === 'haiti') { setFormData({ ...formData, accountLocation: 'haiti' }); return }
-                              const wantsStripe = nextLocation === 'united_states' || nextLocation === 'canada'
+                              const wantsStripe = nextLocation === 'united_states' || nextLocation === 'canada' || nextLocation === 'france'
                               setFormData({ ...formData, accountLocation: wantsStripe ? nextLocation : 'united_states', method: 'bank_transfer' })
                             }}
                             className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                           >
-                            {activeProfile === 'haiti' ? <option value="haiti">{t('payouts_page.country_haiti', { defaultValue: 'Haiti' })}</option> : (<><option value="united_states">{t('payouts_page.country_united_states', { defaultValue: 'United States' })}</option><option value="canada">{t('payouts_page.country_canada', { defaultValue: 'Canada' })}</option></>)}
+                            {activeProfile === 'haiti' ? <option value="haiti">{t('payouts_page.country_haiti', { defaultValue: 'Haiti' })}</option> : (<><option value="united_states">{t('payouts_page.country_united_states', { defaultValue: 'United States' })}</option><option value="canada">{t('payouts_page.country_canada', { defaultValue: 'Canada' })}</option><option value="france">{t('payouts_page.country_france', { defaultValue: 'France' })}</option></>)}
                           </select>
-                          {activeProfile === 'stripe_connect' ? <p className="mt-1 !text-xs text-white/50">{t('payouts_page.stripe_handles_us_ca', { defaultValue: 'US/Canada payouts are handled via Stripe Connect.' })}</p> : null}
+                          {activeProfile === 'stripe_connect' ? <p className="mt-1 !text-xs text-white/50">{t('payouts_page.stripe_handles_us_ca', { defaultValue: 'US, Canada and France payouts are handled via Stripe Connect.' })}</p> : null}
                         </div>
 
                         {activeProfile === 'haiti' ? (
@@ -1453,7 +1455,7 @@ export default function PayoutsPageNew({
                       <CheckCircle className="h-7 w-7 text-emerald-300" />
                     </div>
                     <h2 className="font-display !text-2xl !leading-tight text-white">{t('payouts_page.all_set_title', { defaultValue: "You're all set!" })}</h2>
-                    <p className="mt-2 text-sm text-white/60">{t('payouts_page.all_set_desc', { defaultValue: 'Your payout details have been saved. Verification may take 1 to 2 business days.' })}</p>
+                    <p className="mt-2 text-sm text-white/60">{t('payouts_page.all_set_desc', { defaultValue: 'Your payout details have been saved. If your identity isn’t verified yet, verify it to withdraw. Our team reviews it usually within 1–2 business days.' })}</p>
                     <Link href="/organizer/settings/payouts" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
                       {t('payouts_page.back_to_payouts', { defaultValue: 'Back to payouts' })}
                     </Link>

@@ -128,7 +128,7 @@ async function resolveCurrentPayoutProfileForStepUp(
   const legacy = legacySnap.data() as any
   const provider = String(legacy?.payoutProvider || '').toLowerCase()
   const location = String(legacy?.accountLocation || legacy?.bankDetails?.accountLocation || '').toLowerCase()
-  const legacyIsStripeConnect = provider === 'stripe_connect' || location === 'united_states' || location === 'canada'
+  const legacyIsStripeConnect = provider === 'stripe_connect' || location === 'united_states' || location === 'canada' || location === 'france'
   // Same split getPayoutProfile uses.
   if (profileId === 'stripe_connect') return legacyIsStripeConnect ? (legacy as PayoutConfig) : null
   return legacyIsStripeConnect ? null : (legacy as PayoutConfig)
@@ -337,7 +337,7 @@ const bankVerified = (config?: PayoutConfig | null) => {
   const provider = String(config?.payoutProvider || '').toLowerCase()
   const loc = String(config?.accountLocation || '').toLowerCase()
   const isManagedStripe =
-    provider === 'stripe_connect' || loc === 'united_states' || loc === 'canada'
+    provider === 'stripe_connect' || loc === 'united_states' || loc === 'canada' || loc === 'france'
   if (isManagedStripe) return config?.verificationStatus?.bank === 'verified'
   return true // Haiti manual bank rail — identity is the gate
 }
@@ -532,7 +532,8 @@ export async function updatePayoutConfig(
     const isStripeConnectAccount =
       effectiveProvider === 'stripe_connect' ||
       normalizedLocation === 'united_states' ||
-      normalizedLocation === 'canada'
+      normalizedLocation === 'canada' ||
+      normalizedLocation === 'france'
 
     // US/CA payouts are handled via Stripe Connect, so we should not store bank/mobile-money details.
     const sanitizedUpdates: Partial<PayoutConfig> = stripServerOwnedPayoutFields(updates)
@@ -673,7 +674,8 @@ export async function updatePayoutProfileConfig(
       profileId === 'stripe_connect' ||
       effectiveProvider === 'stripe_connect' ||
       normalizedLocation === 'united_states' ||
-      normalizedLocation === 'canada'
+      normalizedLocation === 'canada' ||
+      normalizedLocation === 'france'
 
     // Stripe Connect profile should never store bank/mobile money details.
     const sanitizedUpdates: Partial<PayoutConfig> = stripServerOwnedPayoutFields(updates)

@@ -44,7 +44,7 @@
     "pending_balance": "Pending Balance",
     "last_payout": "Last Payout",
     "next_payout_est": "Next Payout (Est.)",
-    "processing_time": "Payouts are processed within 2-5 business days"
+    "processing_time": "Withdrawals: MonCash usually within 24 hours, bank transfer 3–5 business days."
   },
   "event_card": {
     "published": "Published",
@@ -173,7 +173,7 @@
     "how_payouts_work": "How Payouts Work",
     "processed_friday": "Payouts are processed every Friday at 5:00 PM",
     "min_threshold": "Minimum withdrawal is 50 HTG",
-    "processing_time": "Processing takes 2-5 business days",
+    "processing_time": "Withdrawals: MonCash usually within 24 hours, bank transfer 3–5 business days.",
     "payout_history": "Payout History",
     "no_payouts": "No payouts yet",
     "no_payouts_desc": "Your payout history will appear here once you start receiving payments.",
@@ -206,7 +206,7 @@
     "profile_us_canada": "US & Canada",
     "profile_payouts_title": "{{profile}} payouts",
     "profile_stripe_sub": "Bank payouts via Stripe Connect.",
-    "profile_haiti_sub": "Bank transfer or mobile money (MonCash / NatCash).",
+    "profile_haiti_sub": "Bank transfer or MonCash.",
     "payout_profiles": "Payout profiles",
     "payout_profiles_desc": "Each region pays out through its own profile. An event's country decides which one gets paid. Completing one does not cover the other.",
     "profile_haiti_title": "Haiti events",
@@ -316,7 +316,7 @@
     "done_back_to_overview": "Done, back to overview",
     "back_to_payouts": "Back to payouts",
     "all_set_title": "You're all set!",
-    "all_set_desc": "Your payout details have been saved. Verification may take 1 to 2 business days.",
+    "all_set_desc": "Your payout details have been saved. If your identity isn’t verified yet, verify it to withdraw. Our team reviews it usually within 1–2 business days.",
     "view": "View",
     "cancel": "Cancel",
     "loading": "Loading…",
@@ -473,7 +473,7 @@
       "friday_5pm": "Friday at 5:00 PM",
       "minimum_payout": "Minimum payout amount:",
       "bank_transfer_time": "Bank transfers take",
-      "bank_days": "1-3 business days",
+      "bank_days": "3–5 business days",
       "bank_arrival": "to arrive",
       "mobile_money_time": "Mobile money payouts are typically",
       "mobile_instant": "instant to 24 hours",
@@ -485,7 +485,7 @@
       "status_not_setup": "Payouts Not Set Up",
       "status_not_setup_desc": "Complete your payout setup to start receiving your earnings. This only takes a few minutes.",
       "status_pending": "Verification In Progress",
-      "status_pending_desc": "We're reviewing your payout information. This usually takes 1-2 business days.",
+      "status_pending_desc": "We're reviewing your payout information, usually within 1–2 business days.",
       "status_active": "Payouts Active",
       "status_active_desc": "Your payout account is active and ready to receive payments.",
       "status_hold": "Payouts On Hold",
@@ -499,8 +499,8 @@
     "group_money": "getting paid",
     "group_events": "running your events",
     "group_account": "account",
-    "verify_banner_title": "Finish verification to sell paid tickets",
-    "verify_banner_body": "A one-time identity check. Free events and drafts work without it. Only paid ticket sales are held until it’s done.",
+    "verify_banner_title": "Verify your identity to get paid",
+    "verify_banner_body": "A one-time identity check. In Haiti you can publish and sell right away, and you need it before you withdraw. In the US, Canada and France it's required before paid events go live.",
     "verify_banner_cta": "Start verification",
     "verify_banner_pending_title": "Verification under review",
     "verify_banner_pending_body": "We’re reviewing your details. You can keep building events in the meantime, and we’ll email you as soon as it clears."
@@ -666,7 +666,7 @@
         "business_details": "Business details",
         "reg_number": "Reg. number",
         "tax_id": "Tax ID",
-        "submit_disclaimer": "By submitting, you confirm this information is accurate. Our team typically reviews within 1 to 2 business days, and you’ll be notified once approved, which unlocks paid events."
+        "submit_disclaimer": "By submitting, you confirm this information is accurate. Our team reviews it usually within 1–2 business days, and you’ll be notified once approved, which unlocks withdrawals."
       },
       "nav": {
         "previous": "Previous",
@@ -716,7 +716,13 @@
         "stripe_start_failed": "Failed to start Stripe setup",
         "stripe_url_missing": "Missing Stripe onboarding URL",
         "save_payout_failed": "Failed to save payout details",
-        "generic": "Something went wrong. Please try again."
+        "generic": "Something went wrong. Please try again.",
+        "account_number_invalid": "Enter a valid account number (letters and digits only, 4 to 34 characters)",
+        "routing_invalid": "Enter a valid routing number, or leave it empty",
+        "select_location": "Please choose where your bank is located",
+        "select_method": "Please choose how you want to be paid",
+        "step_up_required": "For your security, changing an existing payout method needs a code we email you. Finish this change in advanced payout settings.",
+        "step_up_cta": "Open advanced payout settings"
       },
       "save_exit": "Save & Exit",
       "progress_title": "Setting up payouts",
@@ -727,7 +733,7 @@
         "secure_title": "Secure",
         "secure_desc": "Bank-level encryption protects your data",
         "fast_title": "Fast",
-        "fast_desc": "Receive funds within 48 hours of events",
+        "fast_desc": "Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000).",
         "flexible_title": "Flexible",
         "flexible_desc": "Multiple payout methods available",
         "cta": "Set Up Payouts"
@@ -752,19 +758,23 @@
         "title": "Where is your bank located?",
         "subtitle": "This determines the payment methods available to you",
         "method_stripe": "Bank transfers via Stripe",
-        "method_haiti": "Bank transfer or mobile money"
+        "method_haiti": "Bank transfer or mobile money",
+        "haiti": "Haiti",
+        "united_states": "United States",
+        "canada": "Canada",
+        "france": "France"
       },
       "method": {
         "title_stripe": "Payment Method",
         "title_haiti": "How would you like to receive payouts?",
-        "subtitle_stripe": "Stripe Connect handles payments for US and Canada",
+        "subtitle_stripe": "Stripe Connect handles payouts for the US, Canada and France",
         "subtitle_haiti": "Choose your preferred payout method",
-        "stripe_connect_desc": "Stripe handles payment processing for US and Canada accounts. You’ll be redirected to complete setup.",
+        "stripe_connect_desc": "Stripe handles payouts for US, Canadian and French bank accounts. You’ll be redirected to complete setup.",
         "stripe_direct_deposits": "Direct bank deposits",
         "bank_transfer": "Bank Transfer",
         "bank_transfer_desc": "Direct deposit to your bank account",
         "mobile_money": "Mobile Money",
-        "mobile_money_desc": "MonCash or NatCash"
+        "mobile_money_desc": "MonCash"
       },
       "details": {
         "title_stripe": "Ready for Stripe",
@@ -802,7 +812,8 @@
         "account_holder": "Account Holder",
         "account_number": "Account Number",
         "provider": "Provider",
-        "phone_number": "Phone Number"
+        "phone_number": "Phone Number",
+        "identity_note": "You can save this payout method now. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days."
       }
     },
     "payments_not_configured": "Payments are not configured on this deployment.",
@@ -1312,7 +1323,7 @@
     "quick_easy_process": "Quick and easy process",
     "start_verification": "Start Verification",
     "to_match_id_photo": "To match your ID photo",
-    "reviewed_24_48": "Typically reviewed within 24-48 hours"
+    "reviewed_24_48": "Reviewed usually within 1–2 business days"
   },
   "verification_business": {
     "optional_registration": "Optional: Provide business registration information if applicable",
@@ -1426,7 +1437,7 @@
     "go_to_dashboard": "Go to Dashboard",
     "something_went_wrong": "Something went wrong",
     "submission": "Submission",
-    "reviewed_24_48": "Submissions are typically reviewed within 24 to 48 hours.",
+    "reviewed_24_48": "Submissions are reviewed usually within 1–2 business days.",
     "verification": "Verification",
     "verify_to_publish": "Verify your identity to publish paid events and receive payouts.",
     "view_verification_details": "View Verification Details",
@@ -1494,5 +1505,17 @@
     "need_help": "Need help?",
     "support_can_help": "Our support team can help onboard large teams and set up access.",
     "back_to_settings": "Back to Settings"
+  },
+  "verify_to_withdraw": {
+    "title": "Verify your identity to withdraw",
+    "body": "Your payout method is saved. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days.",
+    "body_failed": "We couldn’t verify your identity. Resubmit it to start withdrawing. Our team reviews it usually within 1–2 business days.",
+    "no_method_body": "Add a payout method (MonCash or bank transfer) and verify your identity to withdraw. Our team reviews identity usually within 1–2 business days.",
+    "cta": "Verify your identity",
+    "add_method_cta": "Set up payouts"
+  },
+  "payout_timing": {
+    "release_rule": "Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first.",
+    "nothing_yet": "Nothing to withdraw yet. Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first."
   }
 }

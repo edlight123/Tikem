@@ -671,7 +671,7 @@ export default {
           'Votre demande a été soumise pour examen. Nous vous notifierons une fois traitée.',
         failed: 'Impossible de soumettre la demande',
         button: 'Soumettre pour examen',
-        reviewTimeNote: 'La vérification est généralement examinée sous 48 heures. Nous vous notifierons une fois terminée.',
+        reviewTimeNote: 'La vérification est généralement examinée sous 1 à 2 jours ouvrables. Nous vous notifierons une fois terminée.',
       },
       pendingNotice:
         'Votre demande est en cours d’examen. Nous vous notifierons une fois traitée.',
@@ -1777,7 +1777,7 @@ export default {
       title: "Vérification d'identité requise",
       body: "Veuillez terminer la vérification d'identité avant d'ajouter des moyens de paiement.",
     },
-    identityNotice: "La vérification d'identité est requise avant de pouvoir ajouter des moyens de paiement et retirer vos gains. Examinée sous 48 heures.",
+    identityNotice: "La vérification d'identité est requise avant de pouvoir ajouter des moyens de paiement et retirer vos gains. Examinée généralement sous 1 à 2 jours ouvrables.",
     stripeSetup: {
       title: 'Configurer Stripe',
       question: 'Dans quel pays se trouve votre compte ?',
@@ -1868,7 +1868,7 @@ export default {
       documentSelected: 'Document sélectionné',
       imageFallback: 'Image',
       submit: 'Soumettre pour examen',
-      hint: "Votre document sera examiné par notre équipe sous 1 à 2 jours ouvrés. Vous recevrez une notification une fois qu'il sera approuvé.",
+      hint: "Votre document sera examiné par notre équipe, généralement sous 1 à 2 jours ouvrables. Vous recevrez une notification une fois qu'il sera approuvé.",
     },
     alerts: {
       missingInfoTitle: 'Informations manquantes',
@@ -1922,8 +1922,8 @@ export default {
     submitting: 'Envoi…',
     identity: {
       title: 'Vérifiez votre identité pour retirer',
-      alertBody: "Terminez la vérification d'identité avant de pouvoir retirer vos gains. C'est rapide et examiné sous 48 heures.",
-      noticeBody: "Effectuez une vérification d'identité rapide pour retirer vos gains. La vérification est examinée sous 48 heures.",
+      alertBody: "Terminez la vérification d'identité avant de pouvoir retirer vos gains. C'est rapide et examiné généralement sous 1 à 2 jours ouvrables.",
+      noticeBody: "Effectuez une vérification d'identité rapide pour retirer vos gains. La vérification est examinée généralement sous 1 à 2 jours ouvrables.",
       cta: "Vérifier l'identité",
     },
     stripeConnectRequired: {
@@ -3077,7 +3077,7 @@ export default {
     feeNonRefundable: 'Les frais de service ne sont pas remboursables, sauf si l’événement est annulé.',
     submit: 'Envoyer la demande',
     selectReason: 'Veuillez sélectionner une raison',
-    enterReason: 'Veuillez indiquer une raison',
+    enterReason: 'Veuillez expliquer votre raison en au moins 20 caractères',
     submitted: 'Demande de remboursement envoyée. L’organisateur examinera votre demande.',
     submitError: 'Échec de l’envoi de la demande de remboursement',
     loadError: 'Impossible de charger les détails du billet',

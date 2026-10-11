@@ -644,7 +644,7 @@ export default {
           'Your application has been submitted for review. We will notify you once it is processed.',
         failed: 'Failed to submit application',
         button: 'Submit for Review',
-        reviewTimeNote: "Verification is typically reviewed within 48 hours. We'll notify you once it's done.",
+        reviewTimeNote: "Verification is reviewed usually within 1–2 business days. We'll notify you once it's done.",
       },
       pendingNotice: "Your application is under review. We'll notify you once it's processed.",
       comingSoon: 'Coming soon',
@@ -2182,7 +2182,7 @@ export default {
       title: 'Identity Verification Required',
       body: 'Please complete identity verification before adding payout methods.',
     },
-    identityNotice: 'Identity verification is required before you can add payout methods and withdraw earnings. Reviewed within 48 hours.',
+    identityNotice: 'Identity verification is required before you can add payout methods and withdraw earnings. Reviewed usually within 1–2 business days.',
     stripeSetup: {
       title: 'Set up Stripe',
       question: 'Which country is your account in?',
@@ -2273,7 +2273,7 @@ export default {
       documentSelected: 'Document selected',
       imageFallback: 'Image',
       submit: 'Submit for Review',
-      hint: "Your document will be reviewed by our team within 1-2 business days. You'll receive a notification once it's approved.",
+      hint: "Your document will be reviewed by our team, usually within 1–2 business days. You'll receive a notification once it's approved.",
     },
     alerts: {
       missingInfoTitle: 'Missing Information',
@@ -2327,8 +2327,8 @@ export default {
     submitting: 'Submitting...',
     identity: {
       title: 'Verify your identity to withdraw',
-      alertBody: "Complete identity verification before you can withdraw your earnings. It's quick and reviewed within 48 hours.",
-      noticeBody: 'Complete a quick identity check to withdraw your earnings. Verification is reviewed within 48 hours.',
+      alertBody: "Complete identity verification before you can withdraw your earnings. It's quick and reviewed usually within 1–2 business days.",
+      noticeBody: 'Complete a quick identity check to withdraw your earnings. Verification is reviewed usually within 1–2 business days.',
       cta: 'Verify Identity',
     },
     stripeConnectRequired: {
@@ -3057,7 +3057,7 @@ export default {
     feeNonRefundable: 'Service fee is non-refundable unless the event is cancelled.',
     submit: 'Submit Request',
     selectReason: 'Please select a reason',
-    enterReason: 'Please provide a reason',
+    enterReason: 'Please explain your reason in at least 20 characters',
     submitted: 'Refund request submitted. The organizer will review your request.',
     submitError: 'Failed to submit refund request',
     loadError: 'Failed to load ticket details',

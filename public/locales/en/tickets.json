@@ -142,5 +142,40 @@
       "save_ticket": "Save your ticket to your phone for easy access at the event",
       "arrive_early": "Arrive early and present your QR code at the entrance"
     }
+  },
+  "refund_request": {
+    "action": "Request a refund",
+    "title": "request a refund",
+    "reason_label": "Why are you asking?",
+    "reasons": {
+      "cant_attend": "I can't attend",
+      "event_changed": "The event changed or was cancelled",
+      "billing_issue": "I was charged twice or the wrong amount",
+      "other": "Something else"
+    },
+    "details_label": "Tell us what happened",
+    "details_placeholder": "Explain your situation so the organizer can review it.",
+    "details_hint": "At least {{min}} characters ({{count}}/{{min}})",
+    "note": "Refunds aren't automatic. The organizer and Tikèm review every request; you'll get an email with the decision. Service fees aren't refunded unless the event is cancelled.",
+    "submit": "Send request",
+    "submitting": "Sending…",
+    "cancel": "Cancel",
+    "sent": "Your request was sent. We'll email you the decision.",
+    "status_requested": "Refund requested — under review",
+    "status_requested_detail": "We'll email you the decision.",
+    "status_in_progress": "Refund in progress",
+    "status_denied": "Refund request not approved",
+    "errors": {
+      "reason_required": "Choose a reason.",
+      "details_too_short": "Please explain in at least {{min}} characters.",
+      "deadline_passed": "The deadline has passed: refunds must be requested at least 24 hours before the event.",
+      "already_requested": "A refund request already exists for this ticket.",
+      "checked_in": "This ticket has already been used.",
+      "not_live": "This ticket is no longer active.",
+      "event_past": "This event has already happened.",
+      "event_cancelled": "This event was cancelled. Its refunds are handled for you, so there is nothing to request.",
+      "too_many": "Too many attempts. Try again later.",
+      "generic": "We couldn't send your request. Try again."
+    }
   }
 }

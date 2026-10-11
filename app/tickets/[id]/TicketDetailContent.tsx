@@ -9,6 +9,8 @@ import Badge from '@/components/ui/Badge'
 import QRCodeDisplay from './QRCodeDisplay'
 import TicketActions from './TicketActions'
 import AddToWalletButton from '@/components/AddToWalletButton'
+import RefundRequestAction from '@/components/tickets/RefundRequestAction'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 
 interface TicketDetailContentProps {
   ticket: any
@@ -116,6 +118,14 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
                 ticketStatus={ticket.status}
                 checkedIn={!!ticket.checked_in_at}
                 eventTitle={event.title}
+              />
+
+              {/* Low-emphasis by design: a request, reviewed by people. */}
+              <RefundRequestAction
+                ticketId={ticket.id}
+                refundStatus={ticket.refund_status}
+                eligible={isLiveTicketStatus(ticket.status) && !ticket.checked_in_at && ticket.checked_in !== true}
+                eventStartIso={event.start_datetime || event.date || null}
               />
             </div>
           </div>

@@ -15,6 +15,7 @@ import {
   MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
   type MoncashMinimumInfo,
 } from '@/lib/payouts/moncash-withdrawal-minimum'
+import { countrySupport } from '@/lib/country-support'
 
 /** Haiti bank-transfer floor, as enforced by /api/organizer/withdraw-bank (unchanged). */
 const BANK_MIN_WITHDRAWAL_MINOR = 5000
@@ -88,6 +89,32 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
   // Held for admin review: the withdraw routes refuse it, so show nothing withdrawable.
   const withdrawalBlocked = Boolean(earnings?.withdrawalBlocked)
+
+  // The Haiti payout profile's status. withdraw-moncash / withdraw-bank refuse
+  // anything but 'active' (method saved + identity verified), so when it isn't
+  // active we say why up front instead of letting the request bounce.
+  // undefined = still loading / unknown (show the buttons, the server decides).
+  const [haitiProfileStatus, setHaitiProfileStatus] = useState<string | null | undefined>(undefined)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/organizer/payout-config-summary', { cache: 'no-store' as any })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        setHaitiProfileStatus(data?.status ?? null)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  // Only Haiti-rail events withdraw through MonCash / bank here; Stripe Connect
+  // markets (US/CA/FR) pay out through Stripe, so the Haiti profile is moot.
+  const isHaitiRailEvent = countrySupport(event?.country)?.requiredProfile !== 'stripe_connect'
+  // on_hold is the 24h hold after a payout-detail change, not an identity gap.
+  const needsIdentityToWithdraw = isHaitiRailEvent && haitiProfileStatus === 'pending_verification'
+  const needsPayoutMethodToWithdraw =
+    isHaitiRailEvent && (haitiProfileStatus === null || haitiProfileStatus === 'not_setup')
 
   const availableToWithdraw = useMemo(() => {
     if (!earnings) return 0
@@ -363,6 +390,9 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         router.refresh()
         throw new Error(t('event_earnings.balance_changed'))
       }
+      if (data?.error === 'Payout profile not active' && haitiProfileStatus !== 'on_hold') {
+        throw new Error(t('verify_to_withdraw.body', { defaultValue: 'Your payout method is saved. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days.' }))
+      }
       throw new Error(data?.error || data?.message || 'Failed to submit withdrawal')
     }
 
@@ -533,9 +563,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 {earnings.settlementStatus === 'pending' ? 'Settlement Pending' : 'Funds Locked'}
               </h3>
               <p className="text-amber-300 text-sm mb-2">
-                {earnings.settlementStatus === 'pending'
-                  ? 'Funds are held for 7 days after your event to allow for refunds and disputes.'
-                  : 'Funds will become available 7 days after your event ends.'}
+                {t('payout_timing.release_rule', {
+                  defaultValue:
+                    'Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first.',
+                })}
               </p>
               {settlementDate && (
                 <p className="text-amber-300 text-sm font-medium">
@@ -558,7 +589,36 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         </div>
       )}
 
-      {!withdrawalBlocked && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
+      {!withdrawalBlocked && (needsIdentityToWithdraw || needsPayoutMethodToWithdraw) && (
+        <div className="rounded-xl bg-amber-500/10 p-5 mb-6">
+          <h2 className="font-semibold text-amber-100">
+            {t('verify_to_withdraw.title', { defaultValue: 'Verify your identity to withdraw' })}
+          </h2>
+          <p className="mt-1 text-sm text-amber-100/80">
+            {needsPayoutMethodToWithdraw
+              ? t('verify_to_withdraw.no_method_body', { defaultValue: 'Add a payout method (MonCash or bank transfer) and verify your identity to withdraw. Our team reviews identity usually within 1–2 business days.' })
+              : t('verify_to_withdraw.body', { defaultValue: 'Your payout method is saved. Withdrawals open once your identity is verified. Our team reviews it usually within 1–2 business days.' })}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              href="/organizer/verify"
+              className="inline-flex items-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
+            </Link>
+            {needsPayoutMethodToWithdraw && (
+              <Link
+                href="/organizer/settings/payouts"
+                className="inline-flex items-center rounded-lg bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.1]"
+              >
+                {t('verify_to_withdraw.add_method_cta', { defaultValue: 'Set up payouts' })}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!withdrawalBlocked && !needsIdentityToWithdraw && !needsPayoutMethodToWithdraw && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
         <div className="rounded-xl bg-white/[0.03] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>

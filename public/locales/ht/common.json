@@ -424,7 +424,7 @@
     "payout_review_description": "N ap revize detay peman ou. Tann!",
     "view_status": "Gade estati",
     "how_payouts_work": "Kijan Peman Fonksyone",
-    "funds_available_7_days": "Lajan an disponib 7 jou apre evènman an fini",
+    "funds_available_7_days": "Lajan an disponib pou w retire l 72 èdtan apre evènman w lan fini (24 èdtan depi w fin fè 3 evènman oswa vann 1 000 $). Premye gwo evènman yo ka pase anba revizyon ekip nou an anvan.",
     "payouts_processed_friday": "Peman yo trete chak vandredi a 5:00 PM",
     "platform_fee_deducted": "Frè platfòm 10% otomatikman dedwi",
     "payment_sent_method": "Peman voye nan metòd peman ou konfigire",
@@ -582,7 +582,7 @@
     "pending_balance": "Balans an atant",
     "last_payout": "Dènye peman",
     "next_payout_est": "Pwochen peman (est.)",
-    "processing_time": "Peman yo toujou trete nan 2-5 jou travay"
+    "processing_time": "Retrè: MonCash anjeneral nan 24 èdtan, transfè labank nan 3 a 5 jou ouvrab."
   },
   "event_card": {
     "published": "Pibliye",
@@ -722,7 +722,7 @@
       "line": "Ou fè fèt la. Nou okipe pòt la.",
       "fact_fee": "10% tout ladan, frè peman yo ladan tou",
       "fact_pay": "MonCash an Ayiti, kat bankè nan dyaspora a",
-      "fact_payout": "Lajan ou debloke 24 a 72 èdtan apre evènman an",
+      "fact_payout": "Lajan disponib 72 èdtan apre evènman w lan fini, 24 èdtan lè w fin etabli",
       "cta": "Kòmanse vann",
       "how": "Kijan sa mache"
     },
@@ -1070,7 +1070,7 @@
     "show_code_fallback": "Montre kòd sa a si QR a pa vle eskane",
     "lost_page_email_and_text": "Ou pèdi paj sa a? Li nan imel konfimasyon ou ak SMS ou.",
     "lost_page_email": "Ou pèdi paj sa a? Li nan imel konfimasyon ou.",
-    "lost_page_support": "Pou èd ak yon ranbousman oswa yon chanjman, kontakte sipò ak imel oswa nimewo telefòn ou te itilize lè ou t ap achte a.",
+    "lost_page_support": "Pou èd ak yon chanjman sou tikè ou, kontakte sipò ak imel oswa nimewo telefòn ou te itilize lè ou t ap achte a.",
     "claim_failed": "Nou pa t kapab ajoute tikè sa yo nan kont ou.",
     "claim_success": "Tikè ou yo kounye a nan kont ou.",
     "claim_network_error": "Nou pa t kapab kontakte Tikèm. Tanpri eseye ankò.",
@@ -1287,7 +1287,8 @@
     "payoutGap": {
       "stripe": "Evènman Ozetazini, Kanada oswa Lafrans peye atravè pwofil Stripe ou. Li poko konfigire, kidonk tikè peye pa ka pibliye.",
       "haiti": "Evènman ann Ayiti peye atravè pwofil Ayiti ou (MonCash oswa bank). Li poko konfigire, kidonk tikè peye pa ka pibliye.",
-      "cta": "Konfigire peman"
+      "cta": "Konfigire peman",
+      "haitiPublishNow": "Evènman ann Ayiti peye atravè pwofil Ayiti ou (MonCash oswa bank). Ou ka pibliye kounye a; konfigire l anvan ou retire lajan ou."
     },
     "draftBanner": {
       "saved": "Bouyon anrejistre.",
@@ -1452,7 +1453,30 @@
     "nationalDay": {
       "label": "Evènman sa a pou {{day}}?",
       "hint": "Fè l parèt sou banyè {{day}} an."
-    }
+    },
+    "country": {
+      "label": "Peyi",
+      "locked": "Peyi yon evènman fikse lè ou kreye l.",
+      "names": {
+        "HT": "Ayiti",
+        "US": "Etazini",
+        "CA": "Kanada",
+        "FR": "Lafrans"
+      }
+    },
+    "cityPlaceholderExample": "Vil, pa egzanp {{city}}",
+    "publishGate": {
+      "generic": "Fini konfigirasyon peman ou pou pibliye evènman peye ({{country}}).",
+      "identity": "Pou pibliye evènman peye ({{country}}), verifye idantite ou dabò, epi konekte Stripe pou peman.",
+      "stripeConnect": "Idantite verifye. Konekte Stripe pou peman pou pibliye evènman peye ({{country}}).",
+      "stripeOnboarding": "Idantite verifye. Fini enskripsyon Stripe ou (peman ak transfè aktive) pou pibliye evènman peye ({{country}}).",
+      "stripeReconnect": "Nou pa jwenn kont peman Stripe ou. Rekonekte Stripe pou pibliye evènman peye ({{country}}).",
+      "verifyCta": "Verifye idantite",
+      "stripeCta": "Konfigire Stripe",
+      "haitiVerifyLater": "Ou ka pibliye kounye a. Verifye idantite ou anvan ou retire lajan ou."
+    },
+    "guestPaidNoteHaiti": "Evènman peye ann Ayiti ka pibliye touswit. Verifye idantite ou anvan ou retire lajan ou.",
+    "guestPaidNoteStripe": "Evènman peye ({{country}}) bezwen verifikasyon idantite ak yon kont Stripe konekte anvan yo pibliye. Ou ka prepare tout bagay dabò."
   },
   "promoter": {
     "portal_eyebrow": "Pòtay pwomotè",
@@ -1646,11 +1670,11 @@
     "moncash_value": "2.5% pou chak tranzaksyon",
     "processing_note": "Se Tikèm ki peye yo sou pwòp frè li, nan tout peyi e kèlkeswa moun ki pote frè a: yo pa janm ajoute sou total achtè a ni retire nan peman ou.",
     "payout_schedule": "Orè peman",
-    "schedule_a": "Peman yo trete",
-    "schedule_strong": "7 jou apre evènman ou fini",
-    "schedule_b": ". Peryòd tann sa a bay tan pou regle nenpòt demann ranbousman oswa kontestasyon peman.",
-    "schedule_c": "Yon fwa peryòd tann lan fini, ou ka mande yon peman nan dashbòd òganizatè ou. Peman yo anjeneral trete nan",
-    "schedule_strong2": "3-5 jou travay",
+    "schedule_a": "Lajan an disponib pou w retire l",
+    "schedule_strong": "72 èdtan apre evènman w lan fini",
+    "schedule_b": " (24 èdtan depi w fin fè 3 evènman oswa vann 1 000 $). Premye gwo evènman yo ka pase anba revizyon ekip nou an anvan. Delè sa a bay tan pou trete demann ranbousman ak diskisyon sou peman.",
+    "schedule_c": "Lè lajan an disponib, mande yon retrè nan tablo òganizatè w la. Retrè MonCash yo anjeneral rive nan 24 èdtan; transfè labank yo pran",
+    "schedule_strong2": "3 a 5 jou ouvrab",
     "note_label": "Nòt:",
     "note_body": "Pou evènman gratis, pa gen okenn frè. Frè platfòm ak frè tretman aplike sèlman sou vant tikè peye.",
     "examples_title": "Egzanp kalkil",

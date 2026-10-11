@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
         userId,
         'verification',
         '📝 Verification Submitted',
-        'Your verification request has been received. We\'ll review it within 24-48 hours.',
+        'Your verification request has been received. We\'ll review it, usually within 1–2 business days.',
         '/organizer/verify',
         { status: 'pending_review' }
       )
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
       await sendPushNotification(
         userId,
         '📝 Verification Submitted',
-        'Your request is under review. We\'ll notify you within 24-48 hours.',
+        'Your request is under review, usually within 1–2 business days. We\'ll notify you when it\'s done.',
         '/organizer/verify',
         { type: 'verification_submitted' }
       )
@@ -288,8 +288,8 @@ const RECEIVED_COPY: Record<
     head: 'We got your verification request',
     hello: (n) => (n ? `Hi ${n},` : 'Hi,'),
     body: 'Thanks for sending your ID. Our team checks every request by hand, and we will email you as soon as yours is done.',
-    steps: ['Request received', 'Review by our team', 'Verified: you can publish events'],
-    review: 'usually within 24 to 48 hours',
+    steps: ['Request received', 'Review by our team', 'Verified: you can withdraw your earnings'],
+    review: 'usually within 1–2 business days',
     cta: 'See verification status',
     notYou: 'If you did not submit this request, contact Tikèm support right away.',
   },
@@ -299,8 +299,8 @@ const RECEIVED_COPY: Record<
     head: 'Nous avons bien reçu votre demande de vérification',
     hello: (n) => (n ? `Bonjour ${n},` : 'Bonjour,'),
     body: "Merci d'avoir envoyé votre pièce d'identité. Notre équipe examine chaque demande une par une, et nous vous écrirons dès que la vôtre sera traitée.",
-    steps: ['Demande reçue', 'Examen par notre équipe', 'Vérifié : vous pouvez publier des événements'],
-    review: 'généralement sous 24 à 48 heures',
+    steps: ['Demande reçue', 'Examen par notre équipe', 'Vérifié : vous pouvez retirer vos gains'],
+    review: 'généralement sous 1 à 2 jours ouvrables',
     cta: 'Voir le statut de la vérification',
     notYou: "Si vous n'avez pas envoyé cette demande, contactez le support Tikèm sans attendre.",
   },
@@ -310,8 +310,8 @@ const RECEIVED_COPY: Record<
     head: 'Nou resevwa demann verifikasyon ou',
     hello: (n) => (n ? `Bonjou ${n},` : 'Bonjou,'),
     body: 'Mèsi paske ou voye pyès idantite ou. Ekip nou an gade chak demann youn pa youn, epi n ap ekri ou depi pa ou la fini.',
-    steps: ['Nou resevwa demann lan', 'Ekip nou an ap revize l', 'Verifye: ou ka pibliye evènman'],
-    review: 'anjeneral nan 24 a 48 èdtan',
+    steps: ['Nou resevwa demann lan', 'Ekip nou an ap revize l', 'Verifye: ou ka retire lajan w'],
+    review: 'anjeneral nan 1 a 2 jou ouvrab',
     cta: 'Wè kote verifikasyon an ye',
     notYou: 'Si se pa ou ki voye demann sa a, kontakte sipò Tikèm touswit.',
   },

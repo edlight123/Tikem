@@ -18,7 +18,7 @@ export default function OrganizerBand() {
   const facts = [
     t('home.org.fact_fee', { defaultValue: '10% all-in, processing included' }),
     t('home.org.fact_pay', { defaultValue: 'MonCash in Haiti, cards in the diaspora' }),
-    t('home.org.fact_payout', { defaultValue: 'Payouts released 24–72 hours after your event' }),
+    t('home.org.fact_payout', { defaultValue: 'Funds available 72 hours after your event ends, 24 hours once you’re established' }),
   ]
   return (
     <section className="rounded-2xl bg-white/[0.045] px-6 py-10 sm:px-10 sm:py-14 lg:px-14 lg:py-16">

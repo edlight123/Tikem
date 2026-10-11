@@ -183,7 +183,7 @@ export default function SettingsContent({
                         defaultValue: 'Verification under review',
                       })
                     : t('settings.verify_banner_title', {
-                        defaultValue: 'Finish verification to sell paid tickets',
+                        defaultValue: 'Verify your identity to get paid',
                       })}
                 </h2>
                 <p className="mt-1 max-w-[60ch] text-[13px] leading-relaxed text-white/65">

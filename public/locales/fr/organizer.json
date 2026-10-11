@@ -44,7 +44,7 @@
     "pending_balance": "Solde en attente",
     "last_payout": "Dernier paiement",
     "next_payout_est": "Prochain paiement (est.)",
-    "processing_time": "Les paiements sont traités sous 2-5 jours ouvrables"
+    "processing_time": "Retraits : MonCash généralement sous 24 heures, virement bancaire sous 3 à 5 jours ouvrables."
   },
   "event_card": {
     "published": "Publié",
@@ -173,7 +173,7 @@
     "how_payouts_work": "Comment fonctionnent les paiements",
     "processed_friday": "Les paiements sont traités tous les vendredis pour les soldes disponibles supérieurs à {{amount}}.",
     "min_threshold": "Seuil minimum de {{amount}} requis",
-    "processing_time": "Les paiements prennent généralement 2 à 5 jours ouvrables",
+    "processing_time": "Retraits : MonCash généralement sous 24 heures, virement bancaire sous 3 à 5 jours ouvrables.",
     "payout_history": "Historique des paiements",
     "no_payouts": "Aucun paiement encore",
     "no_payouts_desc": "Une fois que vous aurez des événements avec des ventes, vos paiements apparaîtront ici",
@@ -206,7 +206,7 @@
     "profile_us_canada": "États-Unis et Canada",
     "profile_payouts_title": "Paiements: {{profile}}",
     "profile_stripe_sub": "Paiements bancaires via Stripe Connect.",
-    "profile_haiti_sub": "Virement bancaire ou mobile money (MonCash / NatCash).",
+    "profile_haiti_sub": "Virement bancaire ou MonCash.",
     "payout_profiles": "Profils de paiement",
     "payout_profiles_desc": "Chaque région est payée via son propre profil. Le pays de l'événement détermine lequel reçoit l'argent. Configurer l'un ne configure pas l'autre.",
     "profile_haiti_title": "Événements en Haïti",
@@ -316,7 +316,7 @@
     "done_back_to_overview": "Terminé, retour à l'aperçu",
     "back_to_payouts": "Retour aux paiements",
     "all_set_title": "Tout est prêt !",
-    "all_set_desc": "Vos coordonnées de paiement ont été enregistrées. La vérification peut prendre 1 à 2 jours ouvrables.",
+    "all_set_desc": "Vos coordonnées de paiement ont été enregistrées. Si votre identité n’est pas encore vérifiée, faites-la vérifier pour pouvoir retirer. Notre équipe l’examine généralement sous 1 à 2 jours ouvrables.",
     "view": "Voir",
     "cancel": "Annuler",
     "loading": "Chargement…",
@@ -473,7 +473,7 @@
       "friday_5pm": "vendredis à 17h00",
       "minimum_payout": "Montant minimum de paiement :",
       "bank_transfer_time": "Les virements bancaires prennent",
-      "bank_days": "1 à 3 jours ouvrables",
+      "bank_days": "3 à 5 jours ouvrables",
       "bank_arrival": "pour arriver",
       "mobile_money_time": "Les paiements par mobile money sont généralement",
       "mobile_instant": "instantanés à 24 heures",
@@ -485,7 +485,7 @@
       "status_not_setup": "Paiements non configurés",
       "status_not_setup_desc": "Complétez votre configuration de paiement pour commencer à recevoir vos gains. Cela ne prend que quelques minutes.",
       "status_pending": "Vérification en cours",
-      "status_pending_desc": "Nous examinons vos informations de paiement. Cela prend généralement 1 à 2 jours ouvrables.",
+      "status_pending_desc": "Nous examinons vos informations de paiement, généralement sous 1 à 2 jours ouvrables.",
       "status_active": "Paiements actifs",
       "status_active_desc": "Votre compte de paiement est actif et prêt à recevoir des paiements.",
       "status_hold": "Paiements suspendus",
@@ -499,8 +499,8 @@
     "group_money": "être payé",
     "group_events": "gérer vos événements",
     "group_account": "compte",
-    "verify_banner_title": "Terminez la vérification pour vendre des billets payants",
-    "verify_banner_body": "Une vérification d’identité unique. Les événements gratuits et les brouillons fonctionnent sans elle. Seules les ventes de billets payants attendent.",
+    "verify_banner_title": "Vérifiez votre identité pour être payé",
+    "verify_banner_body": "Une vérification d’identité unique. En Haïti, vous pouvez publier et vendre tout de suite, et elle est nécessaire avant de retirer votre argent. Aux États-Unis, au Canada et en France, elle est requise avant de mettre en ligne un événement payant.",
     "verify_banner_cta": "Commencer la vérification",
     "verify_banner_pending_title": "Vérification en cours d’examen",
     "verify_banner_pending_body": "Nous examinons vos informations. Vous pouvez continuer à créer des événements, nous vous écrirons dès que c’est validé."
@@ -666,7 +666,7 @@
         "business_details": "Informations sur l’entreprise",
         "reg_number": "N° d’enregistrement",
         "tax_id": "N° fiscal (NIF)",
-        "submit_disclaimer": "En soumettant, vous confirmez que ces informations sont exactes. Notre équipe examine généralement les dossiers sous 1 à 2 jours ouvrables, et vous serez averti dès l’approbation, ce qui débloque les événements payants."
+        "submit_disclaimer": "En soumettant, vous confirmez que ces informations sont exactes. Notre équipe les examine généralement sous 1 à 2 jours ouvrables, et vous serez averti dès l’approbation, ce qui débloque les retraits."
       },
       "nav": {
         "previous": "Précédent",
@@ -716,7 +716,13 @@
         "stripe_start_failed": "Impossible de démarrer la configuration Stripe",
         "stripe_url_missing": "L’adresse de configuration Stripe est manquante",
         "save_payout_failed": "Impossible d’enregistrer les coordonnées de paiement",
-        "generic": "Une erreur est survenue. Veuillez réessayer."
+        "generic": "Une erreur est survenue. Veuillez réessayer.",
+        "account_number_invalid": "Saisissez un numéro de compte valide (lettres et chiffres uniquement, de 4 à 34 caractères)",
+        "routing_invalid": "Saisissez un numéro de routage valide, ou laissez ce champ vide",
+        "select_location": "Veuillez choisir où se trouve votre banque",
+        "select_method": "Veuillez choisir comment vous souhaitez être payé",
+        "step_up_required": "Pour votre sécurité, modifier un moyen de paiement existant nécessite un code envoyé par e-mail. Terminez cette modification dans les paramètres de paiement avancés.",
+        "step_up_cta": "Ouvrir les paramètres de paiement avancés"
       },
       "save_exit": "Enregistrer et quitter",
       "progress_title": "Configuration des paiements",
@@ -727,7 +733,7 @@
         "secure_title": "Sécurisé",
         "secure_desc": "Un chiffrement de niveau bancaire protège vos données",
         "fast_title": "Rapide",
-        "fast_desc": "Recevez vos fonds dans les 48 heures suivant l’événement",
+        "fast_desc": "Les fonds deviennent disponibles au retrait 72 heures après la fin de votre événement (24 heures une fois que vous avez organisé 3 événements ou vendu 1 000 $).",
         "flexible_title": "Flexible",
         "flexible_desc": "Plusieurs méthodes de paiement disponibles",
         "cta": "Configurer les paiements"
@@ -752,19 +758,23 @@
         "title": "Où se trouve votre banque ?",
         "subtitle": "Cela détermine les méthodes de paiement qui vous sont proposées",
         "method_stripe": "Virements bancaires via Stripe",
-        "method_haiti": "Virement bancaire ou mobile money"
+        "method_haiti": "Virement bancaire ou mobile money",
+        "haiti": "Haïti",
+        "united_states": "États-Unis",
+        "canada": "Canada",
+        "france": "France"
       },
       "method": {
         "title_stripe": "Méthode de paiement",
         "title_haiti": "Comment souhaitez-vous recevoir vos paiements ?",
-        "subtitle_stripe": "Stripe Connect gère les paiements pour les États-Unis et le Canada",
+        "subtitle_stripe": "Stripe Connect gère les versements aux États-Unis, au Canada et en France",
         "subtitle_haiti": "Choisissez la méthode de paiement que vous préférez",
-        "stripe_connect_desc": "Stripe traite les paiements pour les comptes aux États-Unis et au Canada. Vous serez redirigé pour finaliser la configuration.",
+        "stripe_connect_desc": "Stripe gère les versements vers les comptes bancaires américains, canadiens et français. Vous serez redirigé pour terminer la configuration.",
         "stripe_direct_deposits": "Dépôts bancaires directs",
         "bank_transfer": "Virement bancaire",
         "bank_transfer_desc": "Dépôt direct sur votre compte bancaire",
         "mobile_money": "Mobile Money",
-        "mobile_money_desc": "MonCash ou NatCash"
+        "mobile_money_desc": "MonCash"
       },
       "details": {
         "title_stripe": "Prêt pour Stripe",
@@ -802,7 +812,8 @@
         "account_holder": "Titulaire du compte",
         "account_number": "Numéro de compte",
         "provider": "Opérateur",
-        "phone_number": "Numéro de téléphone"
+        "phone_number": "Numéro de téléphone",
+        "identity_note": "Vous pouvez enregistrer ce moyen de paiement dès maintenant. Les retraits s’ouvrent une fois votre identité vérifiée. Notre équipe l’examine généralement sous 1 à 2 jours ouvrables."
       }
     },
     "payments_not_configured": "Les paiements ne sont pas configurés sur ce déploiement.",
@@ -1312,7 +1323,7 @@
     "quick_easy_process": "Processus simple et rapide",
     "start_verification": "Commencer la vérification",
     "to_match_id_photo": "Pour correspondre à la photo de votre pièce d'identité",
-    "reviewed_24_48": "Examiné généralement sous 24 à 48 heures"
+    "reviewed_24_48": "Examiné généralement sous 1 à 2 jours ouvrables"
   },
   "verification_business": {
     "optional_registration": "Facultatif : fournissez les informations d'enregistrement de l'entreprise, le cas échéant",
@@ -1426,7 +1437,7 @@
     "go_to_dashboard": "Aller au tableau de bord",
     "something_went_wrong": "Une erreur est survenue",
     "submission": "Soumission",
-    "reviewed_24_48": "Les soumissions sont généralement examinées sous 24 à 48 heures.",
+    "reviewed_24_48": "Les soumissions sont généralement examinées sous 1 à 2 jours ouvrables.",
     "verification": "Vérification",
     "verify_to_publish": "Vérifiez votre identité pour publier des événements payants et recevoir vos versements.",
     "view_verification_details": "Voir les détails de la vérification",
@@ -1494,5 +1505,17 @@
     "need_help": "Besoin d'aide ?",
     "support_can_help": "Notre équipe d'assistance peut aider à intégrer de grandes équipes et configurer les accès.",
     "back_to_settings": "Retour aux paramètres"
+  },
+  "verify_to_withdraw": {
+    "title": "Vérifiez votre identité pour retirer",
+    "body": "Votre moyen de paiement est enregistré. Les retraits s’ouvrent une fois votre identité vérifiée. Notre équipe l’examine généralement sous 1 à 2 jours ouvrables.",
+    "body_failed": "Nous n’avons pas pu vérifier votre identité. Soumettez-la à nouveau pour commencer à retirer. Notre équipe l’examine généralement sous 1 à 2 jours ouvrables.",
+    "no_method_body": "Ajoutez un moyen de paiement (MonCash ou virement bancaire) et vérifiez votre identité pour retirer. Notre équipe examine l’identité généralement sous 1 à 2 jours ouvrables.",
+    "cta": "Vérifier mon identité",
+    "add_method_cta": "Configurer les paiements"
+  },
+  "payout_timing": {
+    "release_rule": "Les fonds deviennent disponibles au retrait 72 heures après la fin de votre événement (24 heures une fois que vous avez organisé 3 événements ou vendu 1 000 $). Les premiers événements de grande taille peuvent d’abord être examinés par notre équipe.",
+    "nothing_yet": "Rien à retirer pour l’instant. Les fonds deviennent disponibles au retrait 72 heures après la fin de votre événement (24 heures une fois que vous avez organisé 3 événements ou vendu 1 000 $). Les premiers événements de grande taille peuvent d’abord être examinés par notre équipe."
   }
 }

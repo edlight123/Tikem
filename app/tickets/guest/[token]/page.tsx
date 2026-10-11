@@ -15,6 +15,7 @@ import { isLiveTicketStatus } from '@/lib/tickets/status'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import GuestAccountOffer from './GuestAccountOffer'
+import RefundRequestAction from '@/components/tickets/RefundRequestAction'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
 import { intlLocaleFor } from '@/lib/dateLocale'
 
@@ -197,6 +198,16 @@ export default async function GuestTicketsPage({
                     {String(ticket.id).slice(0, 12).toUpperCase()}
                   </p>
                   <p className="text-xs text-white/50 mt-1">{t('guest_tickets.show_code_fallback', "Show this code if the QR won't scan")}</p>
+                  {/* Authorised by this link's token on the server, never by the id alone. */}
+                  <div className="mt-5 w-full">
+                    <RefundRequestAction
+                      ticketId={String(ticket.id)}
+                      refundStatus={ticket.refund_status ? String(ticket.refund_status) : null}
+                      eligible={!ticket.checked_in && !ticket.checked_in_at}
+                      eventStartIso={startIso}
+                      guestToken={decodeURIComponent(token)}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -217,7 +228,7 @@ export default async function GuestTicketsPage({
             : t('guest_tickets.lost_page_email', 'Lost this page? It is in your confirmation email.')}{' '}
           {t(
             'guest_tickets.lost_page_support',
-            'For help with a refund or a change, contact support with the email or phone number you used at checkout.'
+            'For help with a change to your ticket, contact support with the email or phone number you used at checkout.'
           )}
         </p>
       </main>

@@ -142,5 +142,40 @@
       "save_ticket": "Sove biyè ou sou telefòn ou pou ou jwenn li fasil jou evènman an",
       "arrive_early": "Rive bonè epi montre kòd QR ou nan antre a"
     }
+  },
+  "refund_request": {
+    "action": "Mande yon ranbousman",
+    "title": "mande yon ranbousman",
+    "reason_label": "Poukisa w ap mande l?",
+    "reasons": {
+      "cant_attend": "Mwen pa ka vini",
+      "event_changed": "Evènman an chanje oswa yo anile l",
+      "billing_issue": "Yo fè m peye de fwa oswa yon move montan",
+      "other": "Yon lòt rezon"
+    },
+    "details_label": "Di nou sa k pase",
+    "details_placeholder": "Esplike sitiyasyon w pou òganizatè a ka egzaminen l.",
+    "details_hint": "Omwen {{min}} karaktè ({{count}}/{{min}})",
+    "note": "Ranbousman pa otomatik. Òganizatè a ak Tikèm egzaminen chak demann; w ap resevwa desizyon an pa imèl. Yo pa ranbouse frè sèvis yo, sof si yo anile evènman an.",
+    "submit": "Voye demann lan",
+    "submitting": "N ap voye l…",
+    "cancel": "Anile",
+    "sent": "Nou resevwa demann ou an. N ap voye desizyon an ba ou pa imèl.",
+    "status_requested": "Ranbousman mande — n ap egzaminen l",
+    "status_requested_detail": "N ap voye desizyon an ba ou pa imèl.",
+    "status_in_progress": "Ranbousman an ap fèt",
+    "status_denied": "Yo pa t aksepte demann ranbousman an",
+    "errors": {
+      "reason_required": "Chwazi yon rezon.",
+      "details_too_short": "Tanpri esplike nan omwen {{min}} karaktè.",
+      "deadline_passed": "Dat limit lan pase: fòk ou mande ranbousman omwen 24 èdtan anvan evènman an.",
+      "already_requested": "Gen yon demann ranbousman deja pou tikè sa a.",
+      "checked_in": "Yo deja itilize tikè sa a.",
+      "not_live": "Tikè sa a pa aktif ankò.",
+      "event_past": "Evènman sa a gentan pase.",
+      "event_cancelled": "Yo anile evènman sa a. Ranbousman an ap fèt pou ou, kidonk ou pa bezwen mande anyen.",
+      "too_many": "Twòp tantativ. Eseye ankò pita.",
+      "generic": "Nou pa t ka voye demann ou an. Eseye ankò."
+    }
   }
 }

@@ -4,8 +4,9 @@ import { normalizeEventCurrencyForCountry } from '@/lib/currency-policy'
  * An event EDIT payload with the money-defining fields taken from the STORED
  * event (web composer; mobile/lib/api/events.ts mirrors the sold-event rule).
  *
- * - country: always the stored one. The web composer cannot choose a country,
- *   and it used to stamp 'HT' over US/CA events on every save.
+ * - country: always the stored one. The web composer picks a country only
+ *   when CREATING an event (it used to stamp 'HT' over US/CA events on every
+ *   save); an edit never relabels it.
  * - currency: the stored one once the event has sold (tickets_sold, the
  *   server's counter) — firestore.rules refuses a change then, and payouts
  *   value each sale in the currency it was sold in. Before any sale the
