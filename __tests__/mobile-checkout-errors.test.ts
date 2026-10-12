@@ -17,6 +17,16 @@ function backendError(payload: any, status: number) {
 }
 
 describe('mobile checkout error sanitizing', () => {
+  it('maps "no trustworthy FX rate" to localized copy, not the server sentence', () => {
+    const err = backendError({ error: 'whatever the server said', code: 'fx_rate_unavailable' }, 503)
+    expect(classifyCheckoutError(err)).toBe('fx_unavailable')
+    expect(friendlyCheckoutError(err, t, 'paymentModal.errors.moncashFailed')).toBe('paymentModal.errors.fxUnavailable')
+    for (const dict of [en, fr, ht] as any[]) {
+      expect(typeof dict.paymentModal.errors.fxUnavailable).toBe('string')
+      expect(dict.paymentModal.moncashQuote.rateDetail).toMatch(/\{rate\}.*\{spread\}/)
+    }
+  })
+
   it('maps the typed organizer code to localized copy (the build-39 screenshot)', () => {
     const err = backendError(
       { error: "This organizer can't accept card payments yet.", code: 'organizer_payments_unavailable' },

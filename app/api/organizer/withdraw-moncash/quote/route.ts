@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { EARNINGS_CURRENCY_REVIEW_CODE, EARNINGS_CURRENCY_REVIEW_MESSAGE } from '@/lib/earnings'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
-import { fetchUsdToHtgRate } from '@/lib/currency'
+import { getUsdToHtgBaseRate, isFxRateUnavailableError, type UsdToHtgBaseRateResult } from '@/lib/fx/usd-htg'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { PREFUNDING_FEE_PERCENT, computePrefundedPayout } from '@/lib/payouts/moncash-prefunded'
 import {
@@ -77,7 +77,29 @@ export async function GET(request: NextRequest) {
 
     // Same math as the withdrawal itself (lib/payouts/moncash-prefunded.ts), so
     // the fee and net shown here are exactly what the POST charges and sends.
-    const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
+    // The same hardened base rate the POST converts with (no hardcoded fallback).
+    let fxRate: UsdToHtgBaseRateResult | null = null
+    if (currency === 'USD') {
+      try {
+        fxRate = await getUsdToHtgBaseRate()
+      } catch (e) {
+        if (!isFxRateUnavailableError(e)) throw e
+        return NextResponse.json({
+          success: true,
+          quote: {
+            amountCents: availableToWithdraw,
+            currency,
+            instantAvailable: false,
+            canWithdraw: false,
+            code: 'fx_rate_unavailable',
+            message:
+              "We can't get a reliable USD to HTG exchange rate right now, so withdrawals are paused. Please try again later.",
+            usdToHtgRate: null,
+          },
+        })
+      }
+    }
+    const usdToHtgRate = fxRate ? fxRate.baseRate : 1
 
     // The same 1,000 HTG floor, at the same rate, that the POST enforces.
     const minimum = moncashMinimumInfo(currency, usdToHtgRate)
@@ -107,6 +129,7 @@ export async function GET(request: NextRequest) {
         payoutCurrency: 'HTG',
         payoutAmountHtgCents,
         usdToHtgRate: currency === 'USD' ? usdToHtgRate : null,
+        usdToHtgRateSource: fxRate?.source ?? null,
         minimum,
         canWithdraw: refusal === null,
         code: refusal?.code ?? null,

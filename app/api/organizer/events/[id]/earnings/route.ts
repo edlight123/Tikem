@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import { toEarningsRow } from '@/lib/payouts/availability'
-import { fetchUsdToHtgRate } from '@/lib/currency'
+import { getUsdToHtgBaseRate } from '@/lib/fx/usd-htg'
 import { moncashMinimumInfo } from '@/lib/payouts/moncash-withdrawal-minimum'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -55,7 +55,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     let moncashMinimum = null
     try {
       const currency = row.currency === 'USD' ? 'USD' : 'HTG'
-      moncashMinimum = moncashMinimumInfo(currency, currency === 'USD' ? await fetchUsdToHtgRate() : 1)
+      moncashMinimum = moncashMinimumInfo(currency, currency === 'USD' ? (await getUsdToHtgBaseRate()).baseRate : 1)
     } catch (e) {
       console.error('earnings moncash minimum failed', (e as any)?.message)
     }

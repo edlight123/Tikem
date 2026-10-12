@@ -212,6 +212,11 @@ export interface WithdrawalRequest {
   payoutCurrency?: 'HTG'
   payoutAmountHtgCents?: number
   usdToHtgRateUsed?: number
+  /** 'live' | 'snapshot_fallback' — which rule produced usdToHtgRateUsed (lib/fx/usd-htg.ts). */
+  usdToHtgRateSource?: 'live' | 'snapshot_fallback'
+  usdToHtgRateProvider?: string
+  /** The provider's (or snapshot's) own timestamp for the rate. */
+  usdToHtgRateFetchedAt?: string
   prefundingUsed?: boolean
   prefundingFeePercent?: number
   prefundingTransferRaw?: any

@@ -163,6 +163,15 @@ jest.mock('@/lib/payouts/withdrawal-gate', () => ({
   })),
 }))
 jest.mock('@/lib/currency', () => ({ fetchUsdToHtgRate: jest.fn(async () => 130) }))
+jest.mock('@/lib/fx/usd-htg', () => ({
+  ...jest.requireActual('@/lib/fx/usd-htg'),
+  getUsdToHtgBaseRate: jest.fn(async () => ({
+    baseRate: 130,
+    provider: 'test',
+    fetchedAtIso: '2026-10-12T00:00:00.000Z',
+    source: 'live',
+  })),
+}))
 jest.mock('@/lib/admin/platform-settings', () => ({
   getPlatformSettings: jest.fn(async () => jest.requireActual('@/types/platform-settings').DEFAULT_PLATFORM_SETTINGS),
 }))

@@ -24,7 +24,8 @@ import {
   enrollLegacyMobileMoneyFingerprint,
   requireRecentPayoutDetailsChangeVerification,
 } from '@/lib/firestore/payout'
-import { fetchUsdToHtgRate } from '@/lib/currency'
+import { getUsdToHtgBaseRate, isFxRateUnavailableError, type UsdToHtgBaseRateResult } from '@/lib/fx/usd-htg'
+import { scheduleOpsEvent } from '@/lib/ops/ops-events'
 import { gateHaitiWithdrawal } from '@/lib/payouts/withdrawal-gate'
 import {
   PREFUNDING_FEE_PERCENT,
@@ -226,7 +227,33 @@ export async function POST(req: NextRequest) {
 
     // MonCash transfers are executed in HTG. If earnings are in USD, we convert
     // at withdrawal time — and the 1,000 HTG floor is measured on that HTG value.
-    const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
+    // The hardened base rate (lib/fx/usd-htg.ts, no spread): live if it passes the
+    // sanity checks, else the highest snapshot of the last 14 days. With neither,
+    // nothing moves — there is no hardcoded fallback rate any more.
+    let fxRate: UsdToHtgBaseRateResult | null = null
+    if (currency === 'USD') {
+      try {
+        fxRate = await getUsdToHtgBaseRate()
+      } catch (e) {
+        if (!isFxRateUnavailableError(e)) throw e
+        scheduleOpsEvent('fx_rate_unavailable', 'organizer/withdraw-moncash', { eventId: String(eventId) })
+        return NextResponse.json(
+          {
+            error:
+              "We can't get a reliable USD to HTG exchange rate right now, so this withdrawal can't be converted safely. Nothing was withdrawn. Please try again later.",
+            code: 'fx_rate_unavailable',
+          },
+          { status: 503 }
+        )
+      }
+      if (fxRate.source === 'snapshot_fallback') {
+        scheduleOpsEvent('fx_snapshot_fallback', 'organizer/withdraw-moncash', {
+          eventId: String(eventId),
+          baseRate: fxRate.baseRate,
+        })
+      }
+    }
+    const usdToHtgRate = fxRate ? fxRate.baseRate : 1
 
     if (!meetsMoncashWithdrawalMinimum(amount, currency, usdToHtgRate)) {
       const minimum = moncashMinimumInfo(currency, usdToHtgRate)
@@ -377,6 +404,9 @@ export async function POST(req: NextRequest) {
         payoutCurrency: 'HTG',
         payoutAmountHtgCents: payoutAmountHtgCents || undefined,
         usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
+        usdToHtgRateSource: fxRate?.source,
+        usdToHtgRateProvider: fxRate?.provider,
+        usdToHtgRateFetchedAt: fxRate?.fetchedAtIso,
         prefundingUsed: instant || undefined,
         prefundingFeePercent: instant ? PREFUNDING_FEE_PERCENT : undefined,
         prefundingProviderFeeHtgCents: instant ? instantPricing.providerFeeHtgCents : undefined,

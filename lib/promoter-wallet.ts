@@ -14,7 +14,7 @@
  *    older tallies are settled organizer-to-promoter directly).
  *  - Balances accrue per event currency. Withdrawals pay out in HTG over
  *    MonCash: HTG balances directly, USD balances converted at withdrawal time
- *    (same fetchUsdToHtgRate the organizer instant path uses). Other currencies
+ *    (the same hardened lib/fx/usd-htg base rate organizer withdrawals use). Other currencies
  *    are shown but not withdrawable on this rail.
  *  - The promoter pays the 3% prefunding fee, mirroring organizer instant
  *    withdrawals.
@@ -32,7 +32,7 @@ import {
   normalizeMoncashReceiver,
   prefundedBalanceCovers,
 } from '@/lib/payouts/moncash-prefunded'
-import { fetchUsdToHtgRate } from '@/lib/currency'
+import { getUsdToHtgBaseRate, isFxRateUnavailableError, type UsdToHtgBaseRateResult } from '@/lib/fx/usd-htg'
 import {
   INSTANT_MONCASH_DAYS_COLLECTION,
   dailyCapAllows,
@@ -438,6 +438,7 @@ export type PromoterWithdrawalResult =
         | 'destination_on_hold'
         | 'balance_negative'
         | 'payouts_frozen'
+        | 'fx_rate_unavailable'
       error: string
       availableAt?: string
     }
@@ -540,7 +541,22 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     return { ok: false, code: 'nothing_available', error: 'Nothing is available to withdraw yet.' }
   }
 
-  const usdToHtgRate = usdCents > 0 ? await fetchUsdToHtgRate() : 1
+  // No trustworthy USD→HTG rate (live failed its checks and no snapshot in 14
+  // days): nothing moves. There is no hardcoded fallback rate.
+  let fxRate: UsdToHtgBaseRateResult | null = null
+  if (usdCents > 0) {
+    try {
+      fxRate = await getUsdToHtgBaseRate()
+    } catch (e) {
+      if (!isFxRateUnavailableError(e)) throw e
+      return {
+        ok: false,
+        code: 'fx_rate_unavailable',
+        error: "We can't get a reliable USD to HTG exchange rate right now. Nothing was withdrawn. Please try again later.",
+      }
+    }
+  }
+  const usdToHtgRate = fxRate ? fxRate.baseRate : 1
   const grossHtgCents = htgCents + Math.round((usdCents / 100) * usdToHtgRate * 100)
   if (grossHtgCents < PROMOTER_MIN_WITHDRAWAL_HTG_CENTS) {
     return {
@@ -643,6 +659,8 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
         payoutCurrency: 'HTG',
         payoutAmountHtgCents: payoutCents,
         usdToHtgRateUsed: usdCents > 0 ? usdToHtgRate : undefined,
+        usdToHtgRateSource: fxRate?.source,
+        usdToHtgRateFetchedAt: fxRate?.fetchedAtIso,
         prefundingUsed: instant || undefined,
         prefundingFeePercent: instant ? PROMOTER_WITHDRAWAL_FEE_PERCENT : undefined,
         // Digicel's own 3% on the amount sent — Tikèm's cost, kept apart from feeCents.

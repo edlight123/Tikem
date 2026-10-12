@@ -1429,6 +1429,11 @@ export default {
       organizerCardUnavailableTryOther: "This organizer can't accept card payments yet. You can still pay with {method}.",
       cardDeclined: 'Your card was declined. Please try another card.',
       network: "We couldn't reach Tikèm. Check your connection and try again.",
+      fxUnavailable: "We can't get a reliable USD to HTG exchange rate right now, so MonCash payment is paused for this event. Please try again in a few minutes.",
+    },
+    moncashQuote: {
+      approx: '≈ {amount} on MonCash',
+      rateDetail: 'Rate: {rate} HTG/USD + {spread}% spread',
     },
   },
 
