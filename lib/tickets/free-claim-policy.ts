@@ -229,3 +229,22 @@ export async function recordFreeClaimTickets(eventId: string, identity: FreeClai
     .doc(freeClaimLockId(eventId, identity))
     .set({ ticket_ids: ticketIds, updated_at: new Date().toISOString() }, { merge: true })
 }
+
+/**
+ * Give back a claim this order took but never used: the order was refunded
+ * before any ticket was issued (sold out after payment). Only a lock that
+ * belongs to THIS payment and records no tickets is removed, so a claim that
+ * issued tickets, or someone else's, is never touched. Without this the buyer
+ * could never claim the free tier for the event again.
+ */
+export async function releaseUnusedFreeClaimForOrder(eventId: string, identity: FreeClaimant, paymentId: string) {
+  const lockRef = adminDb.collection(FREE_CLAIM_LOCKS_COLLECTION).doc(freeClaimLockId(eventId, identity))
+  await adminDb.runTransaction(async (tx: any) => {
+    const snap = await tx.get(lockRef)
+    const lock = snap?.exists ? snap.data() || {} : null
+    if (!lock || lock.payment_id !== paymentId) return
+    const ids = Array.isArray(lock.ticket_ids) ? lock.ticket_ids.filter(Boolean) : []
+    if (ids.length > 0) return
+    tx.delete(lockRef)
+  })
+}

@@ -62,7 +62,7 @@ import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 import { parseTicketQuantity } from '@/lib/tickets/purchasable'
 import { decodeCardOrderLines, type CardOrderLine } from '@/lib/checkout/card-order-lines'
-import { recordFreeClaimTickets, takeFreeClaimForOrder } from '@/lib/tickets/free-claim-policy'
+import { recordFreeClaimTickets, releaseUnusedFreeClaimForOrder, takeFreeClaimForOrder } from '@/lib/tickets/free-claim-policy'
 
 export const STRIPE_ORDERS_COLLECTION = 'stripe_orders'
 
@@ -244,6 +244,21 @@ async function refundSoldOutOrder(
   const logPrefix = input.logPrefix || '[stripe-fulfillment]'
   const now = new Date().toISOString()
   const pi = input.paymentIntentId
+
+  // Nothing is issued for a refunded order, so a free claim it took goes back.
+  // Best-effort: a failure here must never stand in the way of the refund.
+  const md = input.metadata || {}
+  if (md.eventId) {
+    await releaseUnusedFreeClaimForOrder(
+      String(md.eventId),
+      {
+        isGuest: Boolean(input.guestRecipient) || md.isGuest === 'true',
+        id: input.buyerId,
+        email: input.guestRecipient?.email || md.guestEmail || null,
+      },
+      input.paymentId
+    ).catch((e) => console.error(`${logPrefix} could not release the free claim`, { message: e?.message }))
+  }
 
   // Record the decision FIRST: from here on every retry refunds, never issues.
   await orderRef.set(

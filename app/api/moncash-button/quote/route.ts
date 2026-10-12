@@ -54,11 +54,12 @@ export async function POST(request: Request) {
     }
 
     // A quote answers "does this promo code work?" without any purchase, so
-    // unthrottled it would let anyone enumerate codes. 30 per 10 minutes per
-    // IP is far more than a buyer adjusting a cart ever needs.
+    // unthrottled it would let anyone enumerate codes. Per IP, and generous:
+    // Haitian carriers put many phones behind one shared address (CGNAT), so
+    // the limit has to fit a crowd of real buyers, not one.
     const { limited } = await consumeRateLimit({
       key: `moncash-quote:${clientIp(request)}`,
-      limit: 30,
+      limit: 120,
       windowMs: 10 * 60 * 1000,
     })
     if (limited) {
