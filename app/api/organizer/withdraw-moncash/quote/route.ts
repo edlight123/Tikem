@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     let fxRate: UsdToHtgBaseRateResult | null = null
     if (currency === 'USD') {
       try {
-        fxRate = await getUsdToHtgBaseRate()
+        fxRate = await getUsdToHtgBaseRate({ fallback: 'lowest' })
       } catch (e) {
         if (!isFxRateUnavailableError(e)) throw e
         return NextResponse.json({

@@ -55,7 +55,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     let moncashMinimum = null
     try {
       const currency = row.currency === 'USD' ? 'USD' : 'HTG'
-      moncashMinimum = moncashMinimumInfo(currency, currency === 'USD' ? (await getUsdToHtgBaseRate()).baseRate : 1)
+      moncashMinimum = moncashMinimumInfo(currency, currency === 'USD' ? (await getUsdToHtgBaseRate({ fallback: 'lowest' })).baseRate : 1)
     } catch (e) {
       console.error('earnings moncash minimum failed', (e as any)?.message)
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { identityFromUser } from '@/lib/guest/checkout'
 import { resolvePromoCode, promoBuyerKey, promoCanCoverOrder, type PromoDoc } from '@/lib/promo-codes'
 import { requestLanguage, sumMoney } from '@/lib/fx/usd-htg'
@@ -48,6 +49,18 @@ export async function POST(request: Request) {
     const eventId = String(body?.eventId || '').trim()
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
+    }
+
+    // A quote answers "does this promo code work?" without any purchase, so
+    // unthrottled it would let anyone enumerate codes. 30 per 10 minutes per
+    // IP is far more than a buyer adjusting a cart ever needs.
+    const { limited } = await consumeRateLimit({
+      key: `moncash-quote:${clientIp(request)}`,
+      limit: 30,
+      windowMs: 10 * 60 * 1000,
+    })
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests', code: 'rate_limited' }, { status: 429 })
     }
 
     const lines = parseOrderLines(body?.tiers, body?.quantity ?? 1)
