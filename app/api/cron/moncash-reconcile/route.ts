@@ -4,6 +4,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { retrieveMonCashOrderPayment } from '@/lib/moncash'
 import { isMonCashButtonPaidAmountAcceptable } from '@/lib/moncash-button'
 import { fulfillPaidOrder } from '@/lib/tickets/fulfillment'
+import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { monCashMethod, selectReconcileCandidates } from '@/lib/moncash-reconcile'
 
 export const runtime = 'nodejs'
@@ -102,6 +103,8 @@ export async function GET() {
           })
           .eq('order_id', orderId)
           .eq('status', 'pending')
+        // Its seat hold (long expired by now, usually) is tidied away too.
+        await releaseSeatHold(tx.seat_hold_id, { logPrefix: LOG })
       } else if (kind === 'failed') {
         // Still not paid: count the re-check so the order ages out of the sweep.
         summary.stillNotPaid += 1

@@ -949,6 +949,8 @@
     "payment_successful_message": "Your ticket has been confirmed",
     "unexpected_error": "An unexpected error occurred",
     "initialize_payment_failed": "Failed to initialize payment",
+    "seats_held_for": "Seats held for {{time}}",
+    "seat_hold_expired": "Your seat hold expired. If you still pay, we will confirm your seats if they are still available.",
     "organizer_payments_unavailable": "This organizer can't accept card payments yet. Please contact the organizer, or try again later.",
     "promo_invalid": "Invalid promo code",
     "promo_validate_failed": "Failed to validate promo code",

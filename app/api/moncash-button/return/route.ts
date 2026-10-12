@@ -356,6 +356,11 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
         })
         .eq('order_id', orderId)
         .eq('status', 'pending')
+      // The seat hold is deliberately NOT released here. This URL is buyer-reachable and
+      // replayable, and "not paid" can mean "not paid YET" (the buyer may still be on the
+      // OTP screen): releasing would let the seat sell twice while a payment is in flight,
+      // and MonCash cannot refund automatically. The hold simply expires; the reconcile
+      // cron releases it once the order is stale and Digicel still reports it unpaid.
 
       return NextResponse.redirect(new URL('/purchase/failed?reason=payment_failed', request.url))
     }

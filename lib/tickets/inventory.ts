@@ -1,16 +1,22 @@
 // Shared ticket-inventory helpers used by every payment fulfillment path
-// (MonCash Button, Stripe Checkout, Stripe PaymentIntents, and future providers).
+// (MonCash Button, Stripe Checkout, Stripe PaymentIntents, and future providers),
+// the free-claim route and organizer comps.
 //
-// Keeping the sold-count logic in one place ensures inventory is incremented
-// consistently no matter which gateway settles the payment.
+// The capacity gate itself lives in lib/tickets/inventoryShards.ts (sharded
+// counters + seat holds); this module is the stable facade the callers use.
 
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { randomUUID } from 'node:crypto'
+import {
+  convertHeldSeats,
+  releaseSeats,
+  reserveSeats,
+  type ReserveOutcome,
+  type TierSoldIncrement,
+} from '@/lib/tickets/inventoryShards'
 
-export interface TierSoldIncrement {
-  tierId: string
-  quantity: number
-}
+export type { TierSoldIncrement } from '@/lib/tickets/inventoryShards'
 
 /**
  * Normalize raw tier selections into per-tier sold-quantity increments.
@@ -44,6 +50,11 @@ export function buildTierSoldIncrements(
 }
 
 /**
+ * LEGACY — no live path calls this any more. Sold counts now live in the
+ * inventory shards and `tickets_sold` / `sold_quantity` are a rollup of them
+ * (lib/tickets/inventoryShards.ts), so a direct increment here would be
+ * overwritten by the next rollup.
+ *
  * Atomically increment an event's `tickets_sold` and each selected tier's `sold_quantity`.
  *
  * Uses `FieldValue.increment` so concurrent fulfillments (or webhook redeliveries) can't
@@ -97,207 +108,98 @@ export async function applySoldCountIncrements(params: {
   }
 }
 
-export interface InventoryReservationResult {
-  /** Whether inventory was successfully reserved (and incremented). */
-  ok: boolean
-  /**
-   * Why a reservation was refused (only set when ok === false), or 'error' on a fail-open.
-   *  - invalid_quantity: a fractional / non-integer seat count (never reserved, never issued)
-   *  - tier_mismatch:    a tier that belongs to a DIFFERENT event than the order
-   */
-  reason?: 'event_capacity' | 'tier_capacity' | 'invalid_quantity' | 'tier_mismatch' | 'error'
-  /** The tier that was sold out (only for reason === 'tier_capacity'). */
-  tierId?: string | null
-  /** How many were still available for the blocking resource. */
-  remaining?: number
-  /** How many were requested for the blocking resource. */
-  requested?: number
-}
+export type InventoryReservationResult = ReserveOutcome
 
 /**
- * Atomically reserve inventory for a paid order: within ONE Firestore transaction, re-read the
- * event capacity and each selected tier's capacity, refuse if the order would exceed either, and
- * otherwise increment `events.tickets_sold` and each `ticket_tiers.sold_quantity`.
- *
- * Why this exists: the per-route initiate checks read capacity, then the user pays (seconds to
- * minutes pass at the gateway), then we fulfill. Under load (e.g. 1000 concurrent buyers near
- * sold-out) many requests pass the same stale read and oversell. Doing the check-and-increment
- * inside a transaction makes it the single authoritative gate — Firestore serializes concurrent
- * transactions on the same document, so the (N+1)th seat is refused instead of oversold.
+ * Atomically reserve seats as SOLD right now (free claims, organizer comps): one
+ * transaction on one inventory shard checks the event and every tier capacity
+ * and records the sale, so the (N+1)th seat is refused instead of oversold.
  *
  * Capacity sources (0 / missing ⇒ unlimited):
  *   - event:  max_tickets ?? capacity ?? total_tickets
  *   - tier:   total_quantity ?? quantity
  *
- * MUST be called once per paid order (behind the fulfillment claim) and BEFORE issuing tickets.
- * If it returns ok:false the caller must NOT issue tickets (and should refund/flag the payment).
- *
- * Fails OPEN on a transient Firestore error: an already-paid order is never stranded by an
- * infra hiccup — we fall back to a best-effort non-atomic increment and return ok:true so the
- * ticket is still issued (and log for reconciliation).
+ * Returns `reservationId` on success — pass it to releaseInventoryReservation to
+ * give the seats back. On ok:false nothing was reserved and the caller must NOT
+ * issue tickets. Never fails open: sustained contention returns
+ * `reason: 'busy'` (retryable), never an unchecked increment.
  */
 export async function reserveInventoryAtomic(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
-  /** Set false to skip the event-level capacity check (e.g. capacity enforced only per tier). */
-  enforceEventCapacity?: boolean
+  /** Idempotency key; a fresh one is minted when omitted. */
+  reservationId?: string
   logPrefix?: string
 }): Promise<InventoryReservationResult> {
-  const { eventId, quantity, tierIncrements } = params
-  const enforceEventCapacity = params.enforceEventCapacity !== false
-  const logPrefix = params.logPrefix || '[inventory]'
-
-  const qty = Number(quantity)
-  // Bad input: nothing sensible to reserve. Don't block a paid order.
-  if (!eventId || !Number.isFinite(qty) || qty <= 0) {
-    return { ok: true }
-  }
-
-  const validTierIncrements = (tierIncrements || []).filter((t) => t?.tierId && t.quantity > 0)
-
-  // Seats are whole. A fractional count is how a 0.01-ticket order got a full ticket:
-  // refuse it here too, so no fulfillment path can issue against it.
-  if (!Number.isInteger(qty) || validTierIncrements.some((t) => !Number.isInteger(Number(t.quantity)))) {
-    console.error(`${logPrefix} refusing to reserve a non-integer quantity`, { eventId, quantity: qty })
-    return { ok: false, reason: 'invalid_quantity', requested: qty }
-  }
-
-  try {
-    return await adminDb.runTransaction(async (tx: any) => {
-      const eventRef = adminDb.collection('events').doc(String(eventId))
-      const tierRefs = validTierIncrements.map((inc) => ({
-        inc,
-        ref: adminDb.collection('ticket_tiers').doc(String(inc.tierId)),
-      }))
-
-      // Firestore requires all reads before any writes in a transaction.
-      const eventSnap = await tx.get(eventRef)
-      const tierSnaps = await Promise.all(tierRefs.map((t) => tx.get(t.ref)))
-
-      // Event-level capacity.
-      if (enforceEventCapacity && eventSnap.exists) {
-        const ev = eventSnap.data() || {}
-        const capacity = Number(ev.max_tickets ?? ev.capacity ?? ev.total_tickets ?? 0)
-        if (Number.isFinite(capacity) && capacity > 0) {
-          const sold = Number(ev.tickets_sold || 0)
-          if (sold + qty > capacity) {
-            return {
-              ok: false,
-              reason: 'event_capacity',
-              remaining: Math.max(0, capacity - sold),
-              requested: qty,
-            } as InventoryReservationResult
-          }
-        }
-      }
-
-      // Tier-level capacity.
-      for (let i = 0; i < tierRefs.length; i++) {
-        const snap = tierSnaps[i]
-        const inc = tierRefs[i].inc
-        if (!snap.exists) continue
-        const tier = snap.data() || {}
-        // A tier from ANOTHER event must never be sold (or counted) under this one.
-        const tierEventId = tier.event_id ?? tier.eventId
-        if (tierEventId != null && String(tierEventId) !== String(eventId)) {
-          return {
-            ok: false,
-            reason: 'tier_mismatch',
-            tierId: inc.tierId,
-            requested: inc.quantity,
-          } as InventoryReservationResult
-        }
-        const total = Number(tier.total_quantity ?? tier.quantity ?? 0)
-        if (Number.isFinite(total) && total > 0) {
-          const sold = Number(tier.sold_quantity || 0)
-          if (sold + inc.quantity > total) {
-            return {
-              ok: false,
-              reason: 'tier_capacity',
-              tierId: inc.tierId,
-              remaining: Math.max(0, total - sold),
-              requested: inc.quantity,
-            } as InventoryReservationResult
-          }
-        }
-      }
-
-      // All checks passed — commit the increments inside the same transaction.
-      tx.set(
-        eventRef,
-        { tickets_sold: FieldValue.increment(qty), updated_at: new Date().toISOString() },
-        { merge: true }
-      )
-      for (let i = 0; i < tierRefs.length; i++) {
-        const t = tierRefs[i]
-        // Never conjure a tier doc that does not exist (a merge-set would create one
-        // holding only a sold counter).
-        if (!tierSnaps[i].exists) continue
-        tx.set(
-          t.ref,
-          { sold_quantity: FieldValue.increment(t.inc.quantity), updated_at: new Date().toISOString() },
-          { merge: true }
-        )
-      }
-      return { ok: true } as InventoryReservationResult
-    })
-  } catch (e) {
-    // Fail OPEN: never strand an already-paid order on a transient Firestore error. Move the
-    // counters best-effort (non-atomic) so totals don't drift, and let fulfillment proceed.
-    console.error(`${logPrefix} reserveInventoryAtomic failed; falling back to non-atomic increment`, {
-      eventId,
-      message: (e as any)?.message,
-    })
-    await applySoldCountIncrements({ eventId, quantity: qty, tierIncrements: validTierIncrements, logPrefix })
-    return { ok: true, reason: 'error' }
-  }
+  return reserveSeats({
+    eventId: params.eventId,
+    quantity: params.quantity,
+    tierIncrements: params.tierIncrements,
+    mode: 'sold',
+    reservationId: params.reservationId || `res_${randomUUID().replace(/-/g, '')}`,
+    source: 'direct',
+    logPrefix: params.logPrefix,
+  })
 }
 
 /**
- * Release a previously-reserved inventory increment (best-effort decrement). Used when ticket
- * creation fails AFTER a successful reserveInventoryAtomic, so reserved-but-unissued seats are
- * returned to inventory instead of leaking capacity.
+ * Fulfillment's oversell gate for a PAID order: convert the order's seat hold
+ * into sold seats, or — for an order with no usable hold (it expired, or the
+ * order predates seat holds) — reserve them fresh, atomically.
+ *
+ * Idempotent per `reservationId` (the hold id, or a key derived from the
+ * payment for an order without one), so a webhook redelivery never counts the
+ * order twice. ok:false with an event/tier capacity reason means truly sold
+ * out (refund); `reason: 'busy'` means retry later — never issue on it.
  */
-export async function releaseInventoryReservation(params: {
+export async function convertSeatHold(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
+  reservationId: string
+  logPrefix?: string
+}): Promise<InventoryReservationResult> {
+  return convertHeldSeats({
+    eventId: params.eventId,
+    quantity: params.quantity,
+    tierIncrements: params.tierIncrements,
+    reservationId: params.reservationId,
+    source: 'order',
+    logPrefix: params.logPrefix,
+  })
+}
+
+/**
+ * Give back seats a reservation took (ticket creation failed after the seats
+ * were reserved / converted). Pass the quantities to release only part of it
+ * (tickets that were never issued); omit them to release all of it.
+ * Idempotent and never throws; a failure is logged (it can only undersell).
+ */
+export async function releaseInventoryReservation(params: {
+  reservationId: string | null | undefined
+  eventId?: string
+  quantity?: number
+  tierIncrements?: TierSoldIncrement[]
   logPrefix?: string
 }): Promise<void> {
-  const { eventId, tierIncrements } = params
-  const qty = Number(params.quantity)
-  const logPrefix = params.logPrefix || '[inventory]'
-
-  if (eventId && Number.isFinite(qty) && qty > 0) {
-    try {
-      await adminDb
-        .collection('events')
-        .doc(String(eventId))
-        .set({ tickets_sold: FieldValue.increment(-qty), updated_at: new Date().toISOString() }, { merge: true })
-    } catch (e) {
-      console.warn(`${logPrefix} failed to release event tickets_sold`, {
-        eventId,
-        message: (e as any)?.message,
-      })
-    }
+  if (!params.reservationId) {
+    console.warn(`${params.logPrefix || '[inventory]'} release requested without a reservation id; nothing released`, {
+      eventId: params.eventId,
+    })
+    return
   }
-
-  for (const inc of tierIncrements || []) {
-    if (!inc?.tierId || !(inc.quantity > 0)) continue
-    try {
-      await adminDb
-        .collection('ticket_tiers')
-        .doc(String(inc.tierId))
-        .set(
-          { sold_quantity: FieldValue.increment(-inc.quantity), updated_at: new Date().toISOString() },
-          { merge: true }
-        )
-    } catch (e) {
-      console.warn(`${logPrefix} failed to release tier sold_quantity`, {
-        tierId: inc.tierId,
-        message: (e as any)?.message,
-      })
-    }
+  try {
+    await releaseSeats({
+      reservationId: params.reservationId,
+      quantity: params.quantity,
+      tierIncrements: params.tierIncrements,
+      logPrefix: params.logPrefix,
+    })
+  } catch (e) {
+    console.warn(`${params.logPrefix || '[inventory]'} failed to release inventory reservation`, {
+      reservationId: params.reservationId,
+      message: (e as any)?.message,
+    })
   }
 }

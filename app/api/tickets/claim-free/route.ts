@@ -622,6 +622,15 @@ export async function POST(request: Request) {
       tierIncrements,
       logPrefix: '[claim-free]',
     })
+    if (!reservation.ok && reservation.reason === 'busy') {
+      // Contention outlasted the bounded retries: nothing was reserved. Retryable.
+      await releaseLock()
+      return fail(
+        'So many people are claiming right now that we could not hold your tickets. Please try again in a moment.',
+        'busy_try_again',
+        503
+      )
+    }
     if (!reservation.ok) {
       await releaseLock()
       const remaining = Number(reservation.remaining ?? 0)
@@ -663,6 +672,7 @@ export async function POST(request: Request) {
       if (!redeem.redeemed) {
         await releaseLock()
         await releaseInventoryReservation({
+          reservationId: reservation.reservationId,
           eventId,
           quantity: ticketQuantity,
           tierIncrements,
@@ -739,6 +749,7 @@ export async function POST(request: Request) {
       // can succeed. (A partial issue keeps both — the claimant holds tickets.)
       if (createdTickets.length === 0) {
         await releaseInventoryReservation({
+          reservationId: reservation.reservationId,
           eventId,
           quantity: ticketQuantity,
           tierIncrements,
@@ -765,8 +776,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // NOTE: inventory was already reserved/incremented atomically by reserveInventoryAtomic above,
-    // so we intentionally do NOT increment tickets_sold again here.
+    // NOTE: the seats were already reserved as sold, atomically, by reserveInventoryAtomic above
+    // (tickets_sold is a rollup of the inventory shards), so nothing is incremented here.
 
     // Record the tickets against the guest order so the retrieval link renders them.
     if (identity.isGuest && identity.guestOrderKey) {

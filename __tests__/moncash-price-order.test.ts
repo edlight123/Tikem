@@ -94,6 +94,17 @@ jest.mock('@/lib/moncash', () => ({ prewarmMonCashAccessToken: jest.fn() }))
 const HAITI_FEES = { platformFeePercentage: 0.1, settlementHoldDays: 7 }
 jest.mock('@/lib/admin/platform-settings', () => ({ getPlatformSettings: jest.fn(async () => ({ haiti: HAITI_FEES })) }))
 jest.mock('@/lib/tickets/orderAccess', () => ({ setOrderProofCookies: jest.fn() }))
+// Seat holds have their own suite (seat-holds-inventory.test.ts); here a hold always succeeds.
+jest.mock('@/lib/tickets/seatHolds', () => ({
+  ...jest.requireActual('@/lib/tickets/seatHolds'),
+  createSeatHold: jest.fn(async () => ({
+    ok: true,
+    reservationId: `hold_${'b'.repeat(32)}`,
+    holdId: `hold_${'b'.repeat(32)}`,
+    expiresAt: Date.now() + 480_000,
+  })),
+  releaseSeatHold: jest.fn(async () => true),
+}))
 jest.mock('@/lib/ops/ops-events', () => ({ scheduleOpsEvent: jest.fn(), recordOpsEvent: jest.fn() }))
 jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), after: jest.fn() }))
 

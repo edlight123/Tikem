@@ -63,7 +63,7 @@ jest.mock('@/lib/firebase-db/server', () => ({
 }))
 jest.mock('@/lib/tickets/inventory', () => ({
   buildTierSoldIncrements: (sel: any[]) => sel.map((s) => ({ tierId: s.tierId, quantity: s.quantity })),
-  reserveInventoryAtomic: jest.fn(async () => ({ ok: true })),
+  convertSeatHold: jest.fn(async () => ({ ok: true })),
   releaseInventoryReservation: jest.fn(async () => undefined),
 }))
 jest.mock('@/lib/earnings', () => ({ addTicketToEarnings: jest.fn(async () => undefined) }))
@@ -94,7 +94,7 @@ jest.mock('@/lib/guest/checkout', () => ({
 import { fulfillPaidOrder, isFreeOrderLine } from '@/lib/tickets/fulfillment'
 import { freeClaimLockId } from '@/lib/tickets/free-claim-policy'
 import { addTicketToEarnings } from '@/lib/earnings'
-import { reserveInventoryAtomic } from '@/lib/tickets/inventory'
+import { convertSeatHold } from '@/lib/tickets/inventory'
 
 const EVENT = 'evt1'
 const lockPath = (id = { isGuest: false, id: 'u1' }) => `free_claim_locks/${freeClaimLockId(EVENT, id)}`
@@ -180,7 +180,7 @@ describe('free lines in a paid MonCash/SogePay order', () => {
       expect.objectContaining({ chargedAmountCents: 220000, feeIncidence: 'buyer' })
     )
     // Inventory is reserved only for what is issued.
-    expect(reserveInventoryAtomic).toHaveBeenCalledWith(
+    expect(convertSeatHold).toHaveBeenCalledWith(
       expect.objectContaining({ quantity: 2, tierIncrements: [{ tierId: 'ga', quantity: 2 }] })
     )
   })
@@ -188,7 +188,7 @@ describe('free lines in a paid MonCash/SogePay order', () => {
   it('a retry repeats the stored decision even if the lock has since been freed', async () => {
     mockFake.write(lockPath(), { payment_id: 'pi_other', ticket_ids: [] })
     seedOrder('o3')
-    const { reserveInventoryAtomic: reserve } = jest.requireMock('@/lib/tickets/inventory')
+    const { convertSeatHold: reserve } = jest.requireMock('@/lib/tickets/inventory')
     // The first attempt crashes after the decision was stored; the order is then
     // re-claimed (stale processing claim, simulated by resetting it to pending).
     reserve.mockImplementationOnce(async () => {
@@ -225,7 +225,7 @@ describe('free lines in a paid MonCash/SogePay order', () => {
 
   it('a sold-out refusal hands back the claim the order just took', async () => {
     seedOrder('o6')
-    const { reserveInventoryAtomic: reserve } = jest.requireMock('@/lib/tickets/inventory')
+    const { convertSeatHold: reserve } = jest.requireMock('@/lib/tickets/inventory')
     reserve.mockImplementationOnce(async () => ({ ok: false, reason: 'event_sold_out' }))
     const res = await fulfillPaidOrder({ orderId: 'o6', paymentMethod: 'moncash' })
     expect(res.outcome).toBe('capacity_exceeded')

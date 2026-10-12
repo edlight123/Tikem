@@ -18,7 +18,15 @@ export const ORGANIZER_PAYMENTS_UNAVAILABLE_CODES: ReadonlySet<string> = new Set
   'organizer_payouts_unavailable',
 ]);
 
-export type CheckoutErrorKind = 'organizer_unavailable' | 'card_declined' | 'fx_unavailable' | 'network' | 'other';
+export type CheckoutErrorKind =
+  | 'organizer_unavailable'
+  | 'card_declined'
+  | 'fx_unavailable'
+  | 'sold_out'
+  | 'only_n_left'
+  | 'busy'
+  | 'network'
+  | 'other';
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -49,6 +57,10 @@ export function classifyCheckoutError(err: any): CheckoutErrorKind {
   if (code === 'card_declined') return 'card_declined';
   // No trustworthy USD→HTG rate (lib/fx/usd-htg.ts on the server): MonCash is paused.
   if (code === 'fx_rate_unavailable') return 'fx_unavailable';
+  // Seat holds at checkout start (lib/tickets/seatHolds.ts on the server).
+  if (code === 'sold_out') return 'sold_out';
+  if (code === 'only_n_left') return 'only_n_left';
+  if (code === 'busy_try_again') return 'busy';
   const message = String(err?.message || '').toLowerCase();
   if (message.includes('network request failed') || message.includes('failed to fetch')) return 'network';
   // A server that predates the typed code still says so in words.
@@ -79,6 +91,16 @@ export function friendlyCheckoutError(
       return t('paymentModal.errors.cardDeclined');
     case 'fx_unavailable':
       return t('paymentModal.errors.fxUnavailable');
+    case 'sold_out':
+      return t('paymentModal.errors.soldOut');
+    case 'only_n_left': {
+      const count = Number(err?.payload?.remaining);
+      return Number.isFinite(count) && count > 0
+        ? t('paymentModal.errors.onlyNLeft', { count })
+        : t('paymentModal.errors.soldOut');
+    }
+    case 'busy':
+      return t('paymentModal.errors.busyTryAgain');
     case 'network':
       return t('paymentModal.errors.network');
     default:

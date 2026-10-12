@@ -116,3 +116,22 @@ describe('mobile checkout copy exists in all three languages', () => {
     })
   }
 })
+
+describe('seat-hold refusals at checkout start', () => {
+  it('maps sold_out / only_n_left / busy_try_again to localized copy', () => {
+    expect(friendlyCheckoutError(backendError({ code: 'sold_out', remaining: 0 }, 409), t, 'x')).toBe(
+      'paymentModal.errors.soldOut'
+    )
+    expect(friendlyCheckoutError(backendError({ code: 'only_n_left', remaining: 2 }, 409), t, 'x')).toBe(
+      'paymentModal.errors.onlyNLeft|{"count":2}'
+    )
+    expect(friendlyCheckoutError(backendError({ code: 'busy_try_again' }, 503), t, 'x')).toBe(
+      'paymentModal.errors.busyTryAgain'
+    )
+    for (const dict of [en, fr, ht] as any[]) {
+      expect(typeof dict.paymentModal.errors.soldOut).toBe('string')
+      expect(dict.paymentModal.errors.onlyNLeft).toContain('{count}')
+      expect(typeof dict.paymentModal.errors.busyTryAgain).toBe('string')
+    }
+  })
+})

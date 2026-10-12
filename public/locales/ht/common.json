@@ -949,6 +949,8 @@
     "payment_successful_message": "Tikè ou konfime",
     "unexpected_error": "Gen yon erè ki pa t prevwa ki fèt",
     "initialize_payment_failed": "Nou pa t kapab prepare peman an",
+    "seats_held_for": "Plas yo kenbe pou {{time}}",
+    "seat_hold_expired": "Tan pou kenbe plas ou yo fini. Si ou peye kanmenm, n ap konfime plas ou yo si yo toujou disponib.",
     "organizer_payments_unavailable": "Òganizatè sa a poko ka resevwa peman ak kat. Kontakte òganizatè a, oswa eseye ankò pita.",
     "promo_invalid": "Kòd pwomo pa valab",
     "promo_validate_failed": "Nou pa t kapab verifye kòd pwomo a",

@@ -29,7 +29,7 @@ jest.mock('@/lib/promo-codes', () => ({
 }))
 jest.mock('@/lib/tickets/inventory', () => ({
   buildTierSoldIncrements: jest.fn((lines: any[]) => lines),
-  reserveInventoryAtomic: jest.fn(async () => ({ ok: true })),
+  convertSeatHold: jest.fn(async () => ({ ok: true })),
 }))
 jest.mock('@/lib/refunds', () => ({
   isDestinationCharge: jest.fn(async () => null),
@@ -39,7 +39,7 @@ jest.mock('@/lib/tickets/refundExecution', () => ({ reversePromoterCommission: j
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { addTicketToEarnings } = require('@/lib/earnings')
-const { buildTierSoldIncrements, reserveInventoryAtomic } = require('@/lib/tickets/inventory')
+const { buildTierSoldIncrements, convertSeatHold } = require('@/lib/tickets/inventory')
 const { redeemPromoInTransaction } = require('@/lib/promo-codes')
 const { fulfillStripeOrder, planMultiTierTickets } =
   require('@/lib/tickets/stripe-fulfillment') as typeof import('@/lib/tickets/stripe-fulfillment')
@@ -138,7 +138,7 @@ describe('multi-tier issuance', () => {
       { tierId: 'ga', quantity: 2 },
       { tierId: 'free', quantity: 1 },
     ])
-    expect((reserveInventoryAtomic as jest.Mock).mock.calls[0][0].quantity).toBe(4)
+    expect((convertSeatHold as jest.Mock).mock.calls[0][0].quantity).toBe(4)
   })
 
   it('books earnings on the post-promo face total with PAID tickets only', async () => {
@@ -187,7 +187,7 @@ describe('free lines are the buyer\'s one free claim (shared with /api/tickets/c
   const lockId = () => freeClaimLockId('evt1', { isGuest: false, id: 'u1' })
 
   it('a sold-out refund gives the free claim back, so the buyer can still claim later', async () => {
-    reserveInventoryAtomic.mockResolvedValueOnce({ ok: false, reason: 'sold_out' })
+    convertSeatHold.mockResolvedValueOnce({ ok: false, reason: 'sold_out' })
     const res = await fulfillStripeOrder(multi())
     expect(res.outcome).not.toBe('fulfilled')
     expect(mockFake.get('free_claim_locks', lockId())).toBeFalsy()
@@ -196,7 +196,7 @@ describe('free lines are the buyer\'s one free claim (shared with /api/tickets/c
 
   it("a refund never releases another order's claim", async () => {
     mockFake.seed('free_claim_locks', lockId(), { event_id: 'evt1', kind: 'account', payment_id: 'pi_other', ticket_ids: ['t_other'] })
-    reserveInventoryAtomic.mockResolvedValueOnce({ ok: false, reason: 'sold_out' })
+    convertSeatHold.mockResolvedValueOnce({ ok: false, reason: 'sold_out' })
     await fulfillStripeOrder(multi())
     expect(mockFake.get('free_claim_locks', lockId())!.payment_id).toBe('pi_other')
   })
@@ -222,7 +222,7 @@ describe('free lines are the buyer\'s one free claim (shared with /api/tickets/c
     // Charged amounts still add up: the dropped free ticket cost nothing.
     expect(mine.reduce((s, t) => s + Math.round(t.charged_amount * 100), 0)).toBe(9837)
     // Inventory is not taken for tickets that were not issued.
-    expect((reserveInventoryAtomic as jest.Mock).mock.calls[0][0].quantity).toBe(3)
+    expect((convertSeatHold as jest.Mock).mock.calls[0][0].quantity).toBe(3)
     // The other order's claim is untouched.
     expect(mockFake.get('free_claim_locks', lockId())!.ticket_ids).toEqual(['t_other'])
   })

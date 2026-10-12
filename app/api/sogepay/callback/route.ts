@@ -8,6 +8,7 @@ import {
   isSogepayPaidAmountAcceptable,
 } from '@/lib/sogepay'
 import { fulfillPaidOrder } from '@/lib/tickets/fulfillment'
+import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { getCurrentUser } from '@/lib/auth'
 
 export const runtime = 'nodejs'
@@ -109,6 +110,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, paid: false, ignored: true })
       }
       await supabase.from('pending_transactions').update({ status: 'failed' }).eq('order_id', orderId)
+      // A SIGNED gateway notice that this still-pending order was not paid: its held
+      // seats go back on sale now rather than at expiry (server-to-server only; the
+      // buyer cannot forge this branch).
+      await releaseSeatHold(pendingTx.seat_hold_id, { logPrefix: '[sogepay]' })
       return NextResponse.json({ ok: true, paid: false })
     }
 

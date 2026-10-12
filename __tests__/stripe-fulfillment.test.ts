@@ -24,7 +24,7 @@ jest.mock('@/lib/tracking-links', () => ({ recordAttributedSale: jest.fn(async (
 jest.mock('@/lib/guest/identity', () => ({ attachTicketsToGuestOrder: jest.fn(async () => undefined) }))
 jest.mock('@/lib/tickets/inventory', () => ({
   buildTierSoldIncrements: jest.fn(() => []),
-  reserveInventoryAtomic: jest.fn(async () => (mockInventory.ok ? { ok: true } : { ok: false, reason: 'event_capacity' })),
+  convertSeatHold: jest.fn(async () => (mockInventory.ok ? { ok: true } : { ok: false, reason: 'event_capacity' })),
 }))
 jest.mock('@/lib/refunds', () => ({
   isDestinationCharge: jest.fn(async () => null),
@@ -36,7 +36,7 @@ jest.mock('@/lib/tickets/refundExecution', () => ({ reversePromoterCommission: j
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { addTicketToEarnings } = require('@/lib/earnings')
-const { reserveInventoryAtomic } = require('@/lib/tickets/inventory')
+const { convertSeatHold } = require('@/lib/tickets/inventory')
 const { processStripeRefund } = require('@/lib/refunds')
 const { sendTicketConfirmation } = require('@/lib/tickets/confirmation')
 const {
@@ -117,9 +117,26 @@ describe('issuance', () => {
     const again = await fulfillStripeOrder(order({ source: 'client_confirm' }))
     expect(again).toEqual(expect.objectContaining({ outcome: 'fulfilled', alreadyFulfilled: true }))
     expect(tickets()).toHaveLength(2)
-    expect(reserveInventoryAtomic).toHaveBeenCalledTimes(1)
+    expect(convertSeatHold).toHaveBeenCalledTimes(1)
     expect(addTicketToEarnings).toHaveBeenCalledTimes(1)
     expect(sendTicketConfirmation).toHaveBeenCalledTimes(1)
+  })
+
+  it('converts the seat hold from metadata, else a key derived from the payment', async () => {
+    const holdId = `hold_${'c'.repeat(32)}`
+    await fulfillStripeOrder(order({ metadata: { ...order().metadata, seatHoldId: holdId } }))
+    expect((convertSeatHold as jest.Mock).mock.calls[0][0].reservationId).toBe(holdId)
+  })
+
+  it('inventory contention after payment throws for a Stripe retry; nothing issued, nothing refunded', async () => {
+    ;(convertSeatHold as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'busy' })
+    await expect(fulfillStripeOrder(order())).rejects.toThrow(/inventory_busy/)
+    expect(tickets()).toHaveLength(0)
+    expect(processStripeRefund).not.toHaveBeenCalled()
+    // The retry runs the step again and issues.
+    const retry = await fulfillStripeOrder(order())
+    expect(retry.outcome).toBe('fulfilled')
+    expect(tickets()).toHaveLength(2)
   })
 
   it('a re-run after the ledger lost its status still does not double anything', async () => {
@@ -128,7 +145,7 @@ describe('issuance', () => {
     mockFake.seed('stripe_orders', 'pi_1', { ...ledger, status: 'issued' })
     await fulfillStripeOrder(order())
     expect(tickets()).toHaveLength(2)
-    expect(reserveInventoryAtomic).toHaveBeenCalledTimes(1)
+    expect(convertSeatHold).toHaveBeenCalledTimes(1)
     expect(addTicketToEarnings).toHaveBeenCalledTimes(1)
   })
 
@@ -137,7 +154,7 @@ describe('issuance', () => {
     const res = await fulfillStripeOrder(order())
     expect(res).toEqual(expect.objectContaining({ outcome: 'fulfilled', ticketIds: ['legacyA'] }))
     expect(tickets()).toHaveLength(1)
-    expect(reserveInventoryAtomic).not.toHaveBeenCalled()
+    expect(convertSeatHold).not.toHaveBeenCalled()
   })
 
   it('a failed bookkeeping step reports partial and the retry finishes only that step', async () => {
@@ -149,7 +166,7 @@ describe('issuance', () => {
     const second = await fulfillStripeOrder(order())
     expect(second.outcome).toBe('fulfilled')
     expect(tickets()).toHaveLength(2)
-    expect(reserveInventoryAtomic).toHaveBeenCalledTimes(1)
+    expect(convertSeatHold).toHaveBeenCalledTimes(1)
     expect(addTicketToEarnings).toHaveBeenCalledTimes(2)
     expect(sendTicketConfirmation).toHaveBeenCalledTimes(1)
   })
@@ -215,7 +232,7 @@ describe('metadata quantity is validated, never clamped', () => {
     const res = await fulfillStripeOrder(order({}, { quantity: q }))
     expect(res.outcome).toBe('capacity_refunded')
     expect(tickets()).toHaveLength(0)
-    expect(reserveInventoryAtomic).not.toHaveBeenCalled()
+    expect(convertSeatHold).not.toHaveBeenCalled()
     expect(addTicketToEarnings).not.toHaveBeenCalled()
     expect(processStripeRefund).toHaveBeenCalledTimes(1)
     const ledger = mockFake.get('stripe_orders', 'pi_1')!
@@ -281,7 +298,7 @@ describe('sold out after payment', () => {
     mockRefund.success = true
     const retry = await fulfillStripeOrder(order())
     expect(retry.outcome).toBe('capacity_refunded')
-    expect(reserveInventoryAtomic).toHaveBeenCalledTimes(1)
+    expect(convertSeatHold).toHaveBeenCalledTimes(1)
     expect(tickets()).toHaveLength(0)
     expect(mockFake.get('stripe_orders', 'pi_1')!.needs_refund).toBe(false)
   })

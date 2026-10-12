@@ -949,6 +949,8 @@
     "payment_successful_message": "Votre billet a été confirmé",
     "unexpected_error": "Une erreur inattendue s'est produite",
     "initialize_payment_failed": "Échec de l'initialisation du paiement",
+    "seats_held_for": "Places réservées pendant {{time}}",
+    "seat_hold_expired": "Votre réservation a expiré. Si vous payez quand même, nous confirmerons vos places si elles sont encore disponibles.",
     "organizer_payments_unavailable": "Cet organisateur ne peut pas encore accepter les paiements par carte. Contactez l’organisateur ou réessayez plus tard.",
     "promo_invalid": "Code promo invalide",
     "promo_validate_failed": "Échec de la validation du code promo",

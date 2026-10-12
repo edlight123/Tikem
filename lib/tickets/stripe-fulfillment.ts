@@ -56,7 +56,8 @@ import { recordAttributedSale } from '@/lib/tracking-links'
 import { recordInvitePurchase } from '@/lib/invites/server'
 import { attachTicketsToGuestOrder } from '@/lib/guest/identity'
 import type { GuestOrderRecipient } from '@/lib/guest/checkout'
-import { buildTierSoldIncrements, reserveInventoryAtomic } from '@/lib/tickets/inventory'
+import { buildTierSoldIncrements, convertSeatHold } from '@/lib/tickets/inventory'
+import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
 import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
@@ -131,6 +132,16 @@ type StepName =
 type StepClaim = 'run' | 'done' | 'in_progress' | 'stale'
 
 // ── Ledger helpers ───────────────────────────────────────────────────────────
+
+/**
+ * The inventory reservation an order converts: the seat hold placed at
+ * create-payment-intent, or (an order from before seat holds) one keyed by the
+ * payment, so every path that fulfils this payment converts the same one.
+ */
+export function stripeReservationId(metadata: Record<string, any>, paymentId: string): string {
+  const hold = String(metadata?.seatHoldId || '')
+  return /^hold_[a-f0-9]{32}$/.test(hold) ? hold : `stripe_${stripeOrderDocId(paymentId)}`
+}
 
 export function stripeOrderDocId(paymentId: string): string {
   return String(paymentId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 1400)
@@ -259,6 +270,9 @@ async function refundSoldOutOrder(
       input.paymentId
     ).catch((e) => console.error(`${logPrefix} could not release the free claim`, { message: e?.message }))
   }
+
+  // Its seat hold (if it still has one) goes back on sale. Never a sold seat.
+  if (md.seatHoldId) await releaseSeatHold(md.seatHoldId, { logPrefix })
 
   // Record the decision FIRST: from here on every retry refunds, never issues.
   await orderRef.set(
@@ -536,16 +550,22 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   const tierName = String(m.tierName || 'General Admission')
 
   // ── 1. Inventory: the authoritative oversell gate, reserved exactly once ──
+  // The seats were HELD when the PaymentIntent was created (seatHoldId); the
+  // hold converts into a sale here. An order without a hold (created before
+  // seat holds, or whose hold expired) reserves fresh, still atomically.
+  // Keyed by the hold / payment, so a re-run never counts the order twice.
   if (!initial.steps?.inventory?.done_at) {
     const claim = await claimStep(orderRef, 'inventory', INVENTORY_STALE_MS)
     if (claim === 'in_progress') return { outcome: 'in_progress' }
     if (claim === 'stale') {
-      // A previous runner died between reserving and recording it. Whether the
-      // seats were taken is unknowable here; the buyer has paid, so issue and
-      // let an admin check the counter rather than risk a double increment.
-      await flagReconcile(orderRef, 'inventory', logPrefix, input.paymentId)
-    } else if (claim === 'run') {
-      const reservation = await reserveInventoryAtomic({
+      // A previous runner died mid-step. The conversion is idempotent per
+      // reservation id, so it is simply run again (never an unchecked issue).
+      console.warn(`${logPrefix} inventory step went stale; re-running the idempotent conversion`, {
+        paymentId: input.paymentId,
+      })
+    }
+    if (claim === 'run' || claim === 'stale') {
+      const reservation = await convertSeatHold({
         eventId,
         quantity,
         tierIncrements: buildTierSoldIncrements(
@@ -555,8 +575,15 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
               ? [{ tierId, quantity }]
               : []
         ),
+        reservationId: stripeReservationId(m, input.paymentId),
         logPrefix,
       })
+      if (!reservation.ok && reservation.reason === 'busy') {
+        // Contention, not a sell-out: nothing was reserved. Clear the step and
+        // throw, so the webhook answers 500 and Stripe retries the delivery.
+        await settleStep(orderRef, 'inventory', null)
+        throw new Error('inventory_busy: could not confirm seats for a paid order; retry')
+      }
       if (!reservation.ok) {
         console.error(`${logPrefix} capacity exceeded after payment — auto-refunding`, {
           paymentId: input.paymentId,
@@ -565,7 +592,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         await settleStep(orderRef, 'inventory', null)
         return refundSoldOutOrder(input, orderRef, String(reservation.reason || 'capacity_exceeded'))
       }
-      await settleStep(orderRef, 'inventory', { reserved: quantity })
+      await settleStep(orderRef, 'inventory', { reserved: quantity, reservation_id: reservation.reservationId || null })
     }
   }
 

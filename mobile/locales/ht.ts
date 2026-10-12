@@ -997,6 +997,9 @@ export default {
       cardDeclined: 'Kat ou a refize. Tanpri eseye yon lòt kat.',
       network: 'Nou pa ka jwenn Tikèm. Tcheke koneksyon w epi eseye ankò.',
       fxUnavailable: 'Nou pa ka jwenn yon to chanj USD/HTG ki serye kounye a, kidonk peman MonCash la kanpe pou evènman sa a. Tanpri eseye ankò nan kèk minit.',
+      soldOut: 'Padon, tikè sa yo fini.',
+      onlyNLeft: 'Se {count} tikè sèlman ki rete. Diminye kantite a epi eseye ankò.',
+      busyTryAgain: 'Gen twòp moun k ap achte kounye a, nou pa t ka kenbe plas ou yo. Tanpri eseye ankò nan yon ti moman.',
     },
     moncashQuote: {
       approx: '≈ {amount} sou MonCash',

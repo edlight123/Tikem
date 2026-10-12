@@ -25,8 +25,18 @@ import {
 import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
-import { sumMoney } from '@/lib/fx/usd-htg'
+import { requestLanguage, sumMoney } from '@/lib/fx/usd-htg'
+import { buildTierSoldIncrements } from '@/lib/tickets/inventory'
+import {
+  capacityPrecheckRefusal,
+  createSeatHold,
+  releaseSeatHold,
+  seatHoldForClient,
+  seatHoldOwnerKey,
+  seatHoldRefusal,
+} from '@/lib/tickets/seatHolds'
 import { freeLinesRefusal } from '@/lib/tickets/free-claim-policy'
+import { screenPurchaseAttempt } from '@/lib/tickets/purchase-screens'
 
 export const runtime = 'nodejs'
 
@@ -337,15 +347,13 @@ export async function POST(request: Request) {
     }
 
     // Fast-fail UX gate: reject obviously sold-out events before redirecting to the gateway.
-    // Best-effort only; the atomic reserve at fulfillment is the authoritative oversell guard.
+    // Best-effort only; the seat hold below is the authoritative oversell guard.
     try {
-      const capacity = await checkEventCapacity(String(eventId), totalQuantity)
-      if (!capacity.available) {
-        return NextResponse.json(
-          { error: capacity.isSoldOut ? 'This event is sold out.' : `Only ${capacity.remaining} ticket(s) remaining.` },
-          { status: 400 }
-        )
-      }
+      const refusal = capacityPrecheckRefusal(
+        await checkEventCapacity(String(eventId), totalQuantity),
+        requestLanguage(request)
+      )
+      if (refusal) return NextResponse.json(refusal.body, { status: refusal.status })
     } catch (e) {
       console.warn('[sogepay] capacity pre-check failed (continuing)', { message: (e as any)?.message })
     }
@@ -365,6 +373,36 @@ export async function POST(request: Request) {
       buyerPricing.incidence === 'buyer' && buyerPricing.buyerFee > 0 ? 'buyer' : 'organizer'
     const buyerFee = feeIncidence === 'buyer' ? fromCents(buyerPricing.buyerFee) : 0
     const chargeAmount = sumMoney([originalAmount, buyerFee])
+
+    // HOLD the seats before the buyer is sent to the gateway (lib/tickets/seatHolds.ts):
+    // fulfillment converts the hold into a sale, so nobody pays for a seat that is not
+    // there. Sold out (or not enough left) is a 409 here, with no pending order created.
+    // The card and MonCash rails' abuse screens (blacklist, rate limit, bot check,
+    // per-account ticket limit) run first: a hold costs the buyer nothing, so it is
+    // never handed out unscreened.
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const screen = await screenPurchaseAttempt({
+      userId: identity.isGuest ? null : identity.id,
+      email: String(identity.email || ''),
+      isGuest: identity.isGuest,
+      eventId: String(eventId),
+      ipAddress,
+      quantity: totalQuantity,
+    })
+    if (!screen.ok) return NextResponse.json({ error: screen.error }, { status: screen.status })
+    await screen.log(true)
+    const seatHold = await createSeatHold({
+      eventId: String(eventId),
+      quantity: totalQuantity,
+      tierIncrements: buildTierSoldIncrements(discountedSelections),
+      ownerKey: seatHoldOwnerKey(identity),
+      ipAddress,
+      source: 'sogepay',
+      logPrefix: '[sogepay]',
+    })
+    const holdRefusal = seatHoldRefusal(seatHold, requestLanguage(request))
+    if (holdRefusal) return NextResponse.json(holdRefusal.body, { status: holdRefusal.status })
+    const clientHold = seatHoldForClient(seatHold)
 
     // Store pending transaction so we can reconcile a future Sogepay callback/webhook.
     // Note: we intentionally do NOT invent a Sogepay signature/redirect format here.
@@ -394,6 +432,9 @@ export async function POST(request: Request) {
         original_amount: originalAmount,
         exchange_rate_used: null,
         tier_selections: discountedSelections,
+        // The seat hold fulfillment converts into a sale.
+        seat_hold_id: clientHold ? clientHold.id : null,
+        seat_hold_expires_at: clientHold ? clientHold.expiresAt : null,
         promo_code_id: promoCodeId,
         promo_discount_total: promoDiscountTotal || null,
         promoter_id: promoter?.id || null,
@@ -408,12 +449,14 @@ export async function POST(request: Request) {
       .single()
 
     if (pendingError) {
+      await releaseSeatHold(seatHold.holdId, { logPrefix: '[sogepay]' })
       return NextResponse.json({ error: pendingError.message || 'Failed to create pending transaction' }, { status: 500 })
     }
 
     // For now, require an externally provided hosted checkout URL.
     const checkoutBase = String(process.env.SOGEPAY_CHECKOUT_URL || '').trim()
     if (!checkoutBase) {
+      await releaseSeatHold(seatHold.holdId, { logPrefix: '[sogepay]' })
       return NextResponse.json(
         {
           error:
@@ -441,7 +484,11 @@ export async function POST(request: Request) {
       redirectUrl.searchParams.set(key, callbackUrl)
     }
 
-    return NextResponse.json({ redirectUrl: redirectUrl.toString(), pendingTransactionId: pending?.id })
+    return NextResponse.json({
+      redirectUrl: redirectUrl.toString(),
+      pendingTransactionId: pending?.id,
+      ...(clientHold ? { seatHold: clientHold } : {}),
+    })
   } catch (error: any) {
     console.error('Sogepay initiate error:', error)
     return NextResponse.json({ error: error.message || 'Failed to initiate Sogepay payment' }, { status: 500 })

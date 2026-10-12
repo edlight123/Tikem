@@ -6,6 +6,7 @@ import {
   releaseWebhookEvent,
 } from '@/lib/webhooks/idempotency'
 import { handleStripeDisputeEvent } from '@/lib/disputes'
+import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import {
   applyStripeChargeRefund,
   fulfillStripeOrder,
@@ -66,6 +67,10 @@ const DISPUTE_EVENT_TYPES = new Set([
 const HANDLED_EVENT_TYPES = new Set([
   'checkout.session.completed',
   'payment_intent.succeeded',
+  // An abandoned / canceled PaymentIntent gives its seat hold back early. The
+  // endpoint must be subscribed to this event in the Stripe dashboard for it to
+  // arrive; without it the hold simply expires on its own.
+  'payment_intent.canceled',
   // Refunds made outside Tikèm's refund flow. The endpoint must be subscribed to
   // this event in the Stripe dashboard for it to arrive.
   'charge.refunded',
@@ -352,6 +357,19 @@ export async function POST(request: Request) {
       const claimId = piFulfillId
       piFulfillId = null // finishFulfilment owns the claim from here
       return finishFulfilment(event, result, claimId)
+    }
+
+    // A PaymentIntent that will never be paid: put its held seats back on sale.
+    // releaseSeatHold only ever releases a HOLD, never seats already sold.
+    if (event.type === 'payment_intent.canceled') {
+      const paymentIntent = event.data.object
+      const released = await releaseSeatHold(paymentIntent?.metadata?.seatHoldId, { logPrefix: '[stripe]' })
+      await markWebhookEventCompleted({
+        provider: 'stripe',
+        eventId: event.id,
+        metadata: { type: event.type, paymentIntentId: paymentIntent?.id || null, released },
+      })
+      return NextResponse.json({ received: true, seatHoldReleased: released })
     }
 
     // A refund made outside Tikèm's own refund flow (dashboard, support, Radar):

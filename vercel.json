@@ -18,6 +18,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "path": "/api/cron/inventory-sweep",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/moncash-withdrawal-reconcile",
       "schedule": "*/10 * * * *"
     },

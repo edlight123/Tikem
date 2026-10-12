@@ -88,6 +88,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // oversell a sold-out event.
     const tierIncrements = tierId ? [{ tierId, quantity }] : []
     const reservation = await reserveInventoryAtomic({ eventId, quantity, tierIncrements, logPrefix: '[comps]' })
+    if (!reservation.ok && reservation.reason === 'busy') {
+      return NextResponse.json(
+        { error: 'Ticket sales are very busy right now. Please try again in a moment.', code: 'busy_try_again' },
+        { status: 503 }
+      )
+    }
     if (!reservation.ok) {
       return NextResponse.json(
         {
@@ -145,6 +151,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const unissued = quantity - created.length
       if (unissued > 0) {
         await releaseInventoryReservation({
+          reservationId: reservation.reservationId,
           eventId,
           quantity: unissued,
           tierIncrements: tierId ? [{ tierId, quantity: unissued }] : [],

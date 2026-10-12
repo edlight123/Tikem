@@ -1431,6 +1431,9 @@ export default {
       cardDeclined: 'Your card was declined. Please try another card.',
       network: "We couldn't reach Tikèm. Check your connection and try again.",
       fxUnavailable: "We can't get a reliable USD to HTG exchange rate right now, so MonCash payment is paused for this event. Please try again in a few minutes.",
+      soldOut: 'Sorry, these tickets are sold out.',
+      onlyNLeft: 'Only {count} ticket(s) left. Lower the quantity and try again.',
+      busyTryAgain: 'So many people are buying right now that we could not hold your seats. Please try again in a moment.',
     },
     moncashQuote: {
       approx: '≈ {amount} on MonCash',

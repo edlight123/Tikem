@@ -34,7 +34,7 @@ jest.mock('@/lib/notifications/helpers', () => ({
 }))
 jest.mock('@/lib/tickets/inventory', () => ({
   buildTierSoldIncrements: jest.fn(() => []),
-  reserveInventoryAtomic: jest.fn(async () => ({ ok: true })),
+  convertSeatHold: jest.fn(async () => ({ ok: true })),
   releaseInventoryReservation: jest.fn(async () => undefined),
 }))
 // The shared pi_fulfill_ claim, modelled: a second claim on the same key loses.

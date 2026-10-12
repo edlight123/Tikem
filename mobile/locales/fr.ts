@@ -1028,6 +1028,9 @@ export default {
       cardDeclined: 'Votre carte a été refusée. Veuillez essayer une autre carte.',
       network: 'Impossible de joindre Tikèm. Vérifiez votre connexion et réessayez.',
       fxUnavailable: "Nous ne parvenons pas à obtenir un taux de change USD/HTG fiable pour le moment : le paiement MonCash est suspendu pour cet événement. Veuillez réessayer dans quelques minutes.",
+      soldOut: 'Désolé, ces billets sont épuisés.',
+      onlyNLeft: 'Il ne reste que {count} billet(s). Réduisez la quantité et réessayez.',
+      busyTryAgain: "Il y a tellement d'acheteurs en ce moment que nous n'avons pas pu réserver vos places. Veuillez réessayer dans un instant.",
     },
     moncashQuote: {
       approx: '≈ {amount} sur MonCash',

@@ -14,9 +14,10 @@ import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import {
   buildTierSoldIncrements,
-  reserveInventoryAtomic,
+  convertSeatHold,
   releaseInventoryReservation,
 } from '@/lib/tickets/inventory'
+import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { addTicketToEarnings } from '@/lib/earnings'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
 import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/notifications/helpers'
@@ -162,6 +163,15 @@ interface TierSelection {
 }
 
 /**
+ * The inventory reservation a mobile-money order converts: the seat hold its
+ * initiate placed, or (an order from before seat holds) one keyed by the order.
+ */
+export function orderReservationId(order: { seat_hold_id?: unknown }, orderId: string): string {
+  const hold = String(order?.seat_hold_id || '')
+  return /^hold_[a-f0-9]{32}$/.test(hold) ? hold : `order_${String(orderId).replace(/[^A-Za-z0-9_-]/g, '_')}`
+}
+
+/**
  * Is this stored line a FREE line (list price 0)? Decided on the list price the
  * order recorded at initiate, so a promo that zeroed a paid line is not a free
  * claim. An order written before the list price was stamped is free only when
@@ -292,6 +302,8 @@ export async function fulfillPaidOrder(params: {
       .from('pending_transactions')
       .update({ status: 'failed', failure_reason: 'invalid_quantity', needs_refund: true })
       .eq('order_id', orderId)
+    // Never issued, so its seat hold goes back on sale.
+    await releaseSeatHold(pendingTx.seat_hold_id, { logPrefix })
     return { outcome: 'invalid_order', ticketId: null, reason: 'invalid_quantity' }
   }
 
@@ -407,17 +419,28 @@ export async function fulfillPaidOrder(params: {
     pendingTx.promoter_code || null
   )
 
-  // Authoritative oversell gate: atomically re-check capacity and reserve inventory BEFORE issuing
-  // any tickets. Under load this is what actually prevents overselling (the initiate-time check is
-  // only a fast-fail UX hint). If it refuses, the order is paid but can't be honored — mark it for
-  // refund and do NOT create tickets.
+  // Authoritative oversell gate, BEFORE any ticket is issued. The seats were HELD
+  // at initiate (seat_hold_id) and the hold converts into a sale here; an order
+  // without a usable hold (it expired, or the order predates seat holds) reserves
+  // fresh, atomically. Keyed by the hold / order, so a retry never counts twice.
+  // If it refuses, the order is paid but can't be honored — mark it for refund and
+  // do NOT create tickets.
   const tierIncrements = buildTierSoldIncrements(issuedSelections)
-  const reservation = await reserveInventoryAtomic({
+  const reservationId = orderReservationId(pendingTx, orderId)
+  const reservation = await convertSeatHold({
     eventId: String(pendingTx.event_id),
     quantity: issuedQuantity,
     tierIncrements,
+    reservationId,
     logPrefix,
   })
+  if (!reservation.ok && reservation.reason === 'busy') {
+    // Contention, not a sell-out: nothing was reserved. Hand the claim back so the
+    // callback retry / the reconcile cron fulfils it later — never issue unchecked.
+    console.error(`${logPrefix} could not confirm seats for a paid order (contention); will retry`, { orderId })
+    await releaseOrderClaim(orderId)
+    return { outcome: 'ticket_creation_failed', ticketId: null, reason: 'inventory_busy' }
+  }
   if (!reservation.ok) {
     console.error(`${logPrefix} capacity exceeded after payment — refusing to issue tickets`, {
       orderId,
@@ -514,6 +537,7 @@ export async function fulfillPaidOrder(params: {
         // Return the inventory we reserved (above) and release the claim so a later retry can
         // re-reserve and re-attempt fulfillment for this paid order.
         await releaseInventoryReservation({
+          reservationId,
           eventId: String(pendingTx.event_id),
           quantity: issuedQuantity,
           tierIncrements,
@@ -713,8 +737,8 @@ export async function fulfillPaidOrder(params: {
     })
     .eq('order_id', orderId)
 
-  // NOTE: inventory was already incremented up front by reserveInventoryAtomic (the oversell gate),
-  // so we intentionally do NOT increment again here.
+  // NOTE: the seats were already converted / reserved up front by convertSeatHold (the oversell
+  // gate), so we intentionally do NOT increment again here.
 
   // QR + buyer notifications (best-effort; never fail an already-paid order on notify errors).
   if (ticket?.id) {

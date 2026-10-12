@@ -255,6 +255,8 @@ function PaymentForm({
       const data = await backendJson<{
         clientSecret: string;
         pricing?: { currency?: string };
+        // The seats the server is holding for this checkout (lib/tickets/seatHolds.ts).
+        seatHold?: { id: string; expiresAt: string; releaseToken: string };
       }>(`/api/create-payment-intent`, {
         method: 'POST',
         body: JSON.stringify({
@@ -327,6 +329,14 @@ function PaymentForm({
       const { error: sheetError } = await presentPaymentSheet();
       if (sheetError) {
         if (sheetError.code === 'Canceled') {
+          // Give the held seats back now instead of when the hold expires.
+          // Best-effort: a failure just means the hold runs out on its own.
+          if (data.seatHold) {
+            backendJson(`/api/checkout/release-hold`, {
+              method: 'POST',
+              body: JSON.stringify({ holdId: data.seatHold.id, releaseToken: data.seatHold.releaseToken }),
+            }).catch(() => undefined);
+          }
           setProcessing(false);
           return;
         }

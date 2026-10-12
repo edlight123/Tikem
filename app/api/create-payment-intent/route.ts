@@ -31,6 +31,15 @@ import {
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { locationFeesForCountry } from '@/types/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
+import { requestLanguage } from '@/lib/fx/usd-htg'
+import { buildTierSoldIncrements } from '@/lib/tickets/inventory'
+import {
+  createSeatHold,
+  releaseSeatHold,
+  seatHoldForClient,
+  seatHoldOwnerKey,
+  seatHoldRefusal,
+} from '@/lib/tickets/seatHolds'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import {
   checkDestinationReadiness,
@@ -586,79 +595,104 @@ export async function POST(request: Request) {
       applicationFeeAmount = applicationFeeFor(buyerPricing)
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCents, // Convert to cents
-      currency: stripeCurrency,
-      ...(stripeConnectAccountId
-        ? {
-            transfer_data: {
-              destination: stripeConnectAccountId,
-            },
-            application_fee_amount: applicationFeeAmount || undefined,
-          }
-        : {}),
-      metadata: {
-        eventId,
-        // A `guest_…` id for guest checkout. The webhook writes it to the ticket's
-        // attendee_id exactly as it does a uid — scanning reads the ticket, not a session.
-        userId: identity.id,
-        // Guest contact, captured BEFORE payment and carried on the order. The webhook
-        // resolves the confirmation recipient from these, never from a request body.
-        ...(identity.isGuest
+    // HOLD the seats before any PaymentIntent exists (lib/tickets/seatHolds.ts). Fulfillment
+    // converts the hold into a sale, so a buyer is never charged for a seat that is gone:
+    // sold out (or not enough left) is a 409 here and nothing is created at Stripe.
+    const seatHold = await createSeatHold({
+      eventId: String(eventId),
+      quantity,
+      tierIncrements: buildTierSoldIncrements(pricedLines.map((l) => ({ tierId: l.tierId, quantity: l.quantity }))),
+      ownerKey: seatHoldOwnerKey(identity),
+      ipAddress,
+      source: 'card',
+      logPrefix: '[create-payment-intent]',
+    })
+    const holdRefusal = seatHoldRefusal(seatHold, requestLanguage(request))
+    if (holdRefusal) return refuse(holdRefusal.body, holdRefusal.status)
+    const clientHold = seatHoldForClient(seatHold)
+
+    let paymentIntent: any
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: amountCents, // Convert to cents
+        currency: stripeCurrency,
+        ...(stripeConnectAccountId
           ? {
-              isGuest: 'true',
-              guestName: identity.name,
-              guestEmail: identity.email,
-              guestPhone: identity.phone || '',
-              guestOrderKey: identity.guestOrderKey || '',
+              transfer_data: {
+                destination: stripeConnectAccountId,
+              },
+              application_fee_amount: applicationFeeAmount || undefined,
             }
           : {}),
-        eventTitle: event.title,
-        // Every ticket in the order, free lines included.
-        quantity: quantity.toString(),
-        // A multi-tier order has no single tier: `tierId` is empty and `t` carries
-        // the per-tier breakdown (lib/checkout/card-order-lines) fulfillment issues
-        // from. `tierName` is then a human summary ("1x VIP, 2x GA").
-        tierId: isMultiLine ? '' : singleLine.tierId,
-        tierName,
-        ...(isMultiLine && encodedLines ? { [CARD_ORDER_LINES_KEY]: encodedLines } : {}),
-        promoCodeId: resolvedPromoId,
-        promoterId: promoter?.id || '',
-        promoterCode: promoter?.code || '',
-        // trackingLinkId / utmSource / utmMedium / utmCampaign — read back at
-        // fulfillment, stamped on the tickets and counted on the link once.
-        ...attributionToStripeMetadata(attribution),
-        // Per-ticket face values of a single-tier order (event currency). A
-        // multi-tier order's live per line in `t`, so these are not written for it.
-        ...(isMultiLine
-          ? {}
-          : {
-              originalPrice: singleLine.unitOriginal.toString(),
-              finalPrice: singleLine.unitPrice.toString(),
-              priceInOriginalCurrency: singleLine.unitPrice.toString(),
-            }),
-        // Additive audit trail for fee incidence. `finalPrice` / `originalPrice` /
-        // `priceInOriginalCurrency` keep their existing meaning (the FACE value per
-        // ticket, in the event's currency), so fulfillment still records
-        // `price_paid` as what the organizer sold the ticket for — which under buyer
-        // incidence is also exactly what they receive.
-        feeIncidence: buyerPricing.incidence,
-        faceValueCents: String(faceValueCents),
-        buyerFeeCents: String(buyerPricing.buyerFee),
-        chargeAmountCents: String(amountCents),
-        organizerNetCents: String(buyerPricing.organizerNet),
-        currency: stripeCurrency,
-        originalCurrency: originalCurrency,
-        exchangeRate: exchangeRateUsed?.toString() || '',
-        payoutProvider: provider,
-        stripeConnectAccountId: stripeConnectAccountId || '',
-      },
-      description: isMultiLine ? `${event.title} - ${tierName}` : `${quantity}x ${event.title} - ${tierName}`,
-      receipt_email: identity.email || undefined,
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    })
+        metadata: {
+          eventId,
+          // A `guest_…` id for guest checkout. The webhook writes it to the ticket's
+          // attendee_id exactly as it does a uid — scanning reads the ticket, not a session.
+          userId: identity.id,
+          // Guest contact, captured BEFORE payment and carried on the order. The webhook
+          // resolves the confirmation recipient from these, never from a request body.
+          ...(identity.isGuest
+            ? {
+                isGuest: 'true',
+                guestName: identity.name,
+                guestEmail: identity.email,
+                guestPhone: identity.phone || '',
+                guestOrderKey: identity.guestOrderKey || '',
+              }
+            : {}),
+          eventTitle: event.title,
+          // Every ticket in the order, free lines included.
+          quantity: quantity.toString(),
+          // A multi-tier order has no single tier: `tierId` is empty and `t` carries
+          // the per-tier breakdown (lib/checkout/card-order-lines) fulfillment issues
+          // from. `tierName` is then a human summary ("1x VIP, 2x GA").
+          tierId: isMultiLine ? '' : singleLine.tierId,
+          tierName,
+          ...(isMultiLine && encodedLines ? { [CARD_ORDER_LINES_KEY]: encodedLines } : {}),
+          promoCodeId: resolvedPromoId,
+          promoterId: promoter?.id || '',
+          promoterCode: promoter?.code || '',
+          // trackingLinkId / utmSource / utmMedium / utmCampaign — read back at
+          // fulfillment, stamped on the tickets and counted on the link once.
+          ...attributionToStripeMetadata(attribution),
+          // Per-ticket face values of a single-tier order (event currency). A
+          // multi-tier order's live per line in `t`, so these are not written for it.
+          ...(isMultiLine
+            ? {}
+            : {
+                originalPrice: singleLine.unitOriginal.toString(),
+                finalPrice: singleLine.unitPrice.toString(),
+                priceInOriginalCurrency: singleLine.unitPrice.toString(),
+              }),
+          // Additive audit trail for fee incidence. `finalPrice` / `originalPrice` /
+          // `priceInOriginalCurrency` keep their existing meaning (the FACE value per
+          // ticket, in the event's currency), so fulfillment still records
+          // `price_paid` as what the organizer sold the ticket for — which under buyer
+          // incidence is also exactly what they receive.
+          feeIncidence: buyerPricing.incidence,
+          faceValueCents: String(faceValueCents),
+          buyerFeeCents: String(buyerPricing.buyerFee),
+          chargeAmountCents: String(amountCents),
+          organizerNetCents: String(buyerPricing.organizerNet),
+          currency: stripeCurrency,
+          originalCurrency: originalCurrency,
+          exchangeRate: exchangeRateUsed?.toString() || '',
+          payoutProvider: provider,
+          stripeConnectAccountId: stripeConnectAccountId || '',
+          // The seat hold fulfillment converts into a sale (empty: nothing was held).
+          seatHoldId: clientHold ? clientHold.id : '',
+        },
+        description: isMultiLine ? `${event.title} - ${tierName}` : `${quantity}x ${event.title} - ${tierName}`,
+        receipt_email: identity.email || undefined,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      })
+    } catch (createError) {
+      // No PaymentIntent, so nobody can pay against the hold: give the seats back.
+      await releaseSeatHold(seatHold.holdId, { logPrefix: '[create-payment-intent]' })
+      throw createError
+    }
 
     // Log successful attempt
     await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, true)
@@ -677,6 +711,8 @@ export async function POST(request: Request) {
         total: fromCents(amountCents),
         quantity,
       },
+      // How long the seats are held, and the id that releases them when the sheet closes.
+      ...(clientHold ? { seatHold: clientHold } : {}),
       // Where a guest goes once the card succeeds — they have no /tickets page to
       // land on. Returned only to the browser that just minted this order.
       ...(identity.isGuest && identity.guestToken

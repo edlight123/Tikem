@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useRouter } from 'next/navigation'
@@ -11,6 +11,34 @@ import { priceOrder } from '@/lib/checkout/buyer-pricing'
 import type { Attribution } from '@/lib/attribution'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+/** The seats the server holds for this checkout (lib/tickets/seatHolds.ts). */
+interface SeatHold {
+  id: string
+  expiresAt: string
+  releaseToken: string
+}
+
+/** "Seats held for 7:42", ticking down; the expiry note once the hold runs out. */
+function SeatHoldCountdown({ expiresAt, t }: { expiresAt: string; t: (key: string, opts?: any) => string }) {
+  const end = new Date(expiresAt).getTime()
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  if (!Number.isFinite(end)) return null
+  const left = Math.max(0, Math.floor((end - now) / 1000))
+  if (left <= 0) {
+    return <p className="mb-4 text-center text-xs text-white/60">{t('checkout.seat_hold_expired')}</p>
+  }
+  const time = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
+  return (
+    <p className="mb-4 text-center text-xs text-white/60" aria-live="off">
+      {t('checkout.seats_held_for', { time })}
+    </p>
+  )
+}
 
 /**
  * The breakdown the SERVER computed for this PaymentIntent.
@@ -309,17 +337,35 @@ export default function EmbeddedStripePayment({
   const [guestTicketUrl, setGuestTicketUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [seatHold, setSeatHold] = useState<SeatHold | null>(null)
+  const seatHoldRef = useRef<SeatHold | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Closing the sheet without paying gives the held seats back now instead of at
+  // expiry. Best-effort; a seat already paid for is never released by the server.
+  const closeSheet = useCallback(() => {
+    const hold = seatHoldRef.current
+    seatHoldRef.current = null
+    if (hold) {
+      fetch('/api/checkout/release-hold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdId: hold.id, releaseToken: hold.releaseToken }),
+        keepalive: true,
+      }).catch(() => undefined)
+    }
+    onClose()
+  }, [onClose])
 
   // Modal a11y: close on Escape, focus the first control on mount.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') closeSheet()
     }
     document.addEventListener('keydown', onKeyDown)
     closeButtonRef.current?.focus()
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  }, [closeSheet])
 
   // Map i18next language codes to Stripe locale codes
   const getStripeLocale = () => {
@@ -365,6 +411,10 @@ export default function EmbeddedStripePayment({
         setClientSecret(data.clientSecret)
         setPricing(data.pricing || null)
         setGuestTicketUrl(data.guestTicketUrl || null)
+        if (data.seatHold?.id) {
+          seatHoldRef.current = data.seatHold
+          setSeatHold(data.seatHold)
+        }
       } catch (err: any) {
         setError(
           err.message ||
@@ -408,7 +458,7 @@ export default function EmbeddedStripePayment({
           <h2 className="text-xl font-bold text-white">{t('events.complete_payment')}</h2>
           <button
             ref={closeButtonRef}
-            onClick={onClose}
+            onClick={closeSheet}
             className="p-2 hover:bg-white/[0.04] rounded-lg transition-colors"
             aria-label={t('common.close')}
           >
@@ -426,30 +476,33 @@ export default function EmbeddedStripePayment({
             <div className="rounded-lg bg-error-500/10 p-6 text-center">
               <p className="text-red-300 mb-4">{error}</p>
               <button
-                onClick={onClose}
+                onClick={closeSheet}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 {t('common.close')}
               </button>
             </div>
           ) : clientSecret ? (
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance, locale: getStripeLocale() as any }}>
-              <CheckoutForm
-                eventId={eventId}
-                eventTitle={eventTitle}
-                quantity={quantity}
-                totalAmount={totalAmount}
-                currency={currency}
-                country={country}
-                feeIncidence={feeIncidence}
-                paidQuantity={paidQuantity ?? quantity}
-                pricing={pricing}
-                onClose={onClose}
-                clientSecret={clientSecret}
-                guestTicketUrl={guestTicketUrl}
-                t={t}
-              />
-            </Elements>
+            <>
+              {seatHold && <SeatHoldCountdown expiresAt={seatHold.expiresAt} t={t} />}
+              <Elements stripe={stripePromise} options={{ clientSecret, appearance, locale: getStripeLocale() as any }}>
+                <CheckoutForm
+                  eventId={eventId}
+                  eventTitle={eventTitle}
+                  quantity={quantity}
+                  totalAmount={totalAmount}
+                  currency={currency}
+                  country={country}
+                  feeIncidence={feeIncidence}
+                  paidQuantity={paidQuantity ?? quantity}
+                  pricing={pricing}
+                  onClose={closeSheet}
+                  clientSecret={clientSecret}
+                  guestTicketUrl={guestTicketUrl}
+                  t={t}
+                />
+              </Elements>
+            </>
           ) : null}
         </div>
       </div>

@@ -75,6 +75,21 @@ jest.mock('@/lib/tickets/free-claim-policy', () => ({
   freeClaimAlreadyUsed: jest.fn(async () => mockFreeClaim.used),
 }))
 
+// Seat holds (lib/tickets/seatHolds.ts) are exercised against a real-transaction fake in
+// seat-holds-inventory.test.ts; here the hold's verdict is scripted.
+const MOCK_HOLD_ID = `hold_${'a'.repeat(32)}`
+const mockHold = { outcome: null as any }
+jest.mock('@/lib/tickets/seatHolds', () => {
+  const actual = jest.requireActual('@/lib/tickets/seatHolds')
+  return {
+    ...actual,
+    createSeatHold: jest.fn(async () =>
+      mockHold.outcome || { ok: true, reservationId: MOCK_HOLD_ID, holdId: MOCK_HOLD_ID, expiresAt: Date.now() + 480_000 }
+    ),
+    releaseSeatHold: jest.fn(async () => true),
+  }
+})
+
 process.env.STRIPE_SECRET_KEY = 'sk_test_dummy'
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -116,6 +131,7 @@ beforeEach(() => {
   })
   mockPromo.doc = null
   mockFreeClaim.used = false
+  mockHold.outcome = null
   tier('vip', 50)
   tier('ga', 25)
   tier('free', 0)
@@ -302,5 +318,66 @@ describe('single-tier body (older web builds, the mobile app)', () => {
     expect(pi.amount).toBe(8247)
     expect(pi.metadata.tierId).toBe('ga')
     expect(pi.metadata.t).toBeUndefined()
+  })
+})
+
+describe('seat hold at checkout start', () => {
+  const { createSeatHold, releaseSeatHold } = require('@/lib/tickets/seatHolds')
+
+  it('holds the cart before creating the PaymentIntent and returns the hold', async () => {
+    const { status, data } = await post({ tiers: [{ tierId: 'vip', quantity: 1 }, { tierId: 'ga', quantity: 2 }] })
+    expect(status).toBe(200)
+    expect(createSeatHold).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        eventId: 'evt1',
+        quantity: 3,
+        tierIncrements: [
+          { tierId: 'vip', quantity: 1 },
+          { tierId: 'ga', quantity: 2 },
+        ],
+        ownerKey: 'user:u1',
+      })
+    )
+    expect(lastIntent().metadata.seatHoldId).toBe(MOCK_HOLD_ID)
+    expect(data.seatHold).toEqual(expect.objectContaining({ id: MOCK_HOLD_ID, releaseToken: expect.any(String) }))
+  })
+
+  it('sold out at start: 409 sold_out and no PaymentIntent is created', async () => {
+    mockHold.outcome = { ok: false, reason: 'tier_capacity', tierId: 'vip', remaining: 0, holdId: MOCK_HOLD_ID }
+    const { status, data } = await post({ tiers: [{ tierId: 'vip', quantity: 1 }] })
+    expect(status).toBe(409)
+    expect(data.code).toBe('sold_out')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('fewer left than asked: 409 only_n_left with the count', async () => {
+    mockHold.outcome = { ok: false, reason: 'event_capacity', remaining: 2, holdId: MOCK_HOLD_ID }
+    const { status, data } = await post({ tiers: [{ tierId: 'ga', quantity: 3 }] })
+    expect(status).toBe(409)
+    expect(data).toEqual(expect.objectContaining({ code: 'only_n_left', remaining: 2 }))
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('contention: 503 busy_try_again and no PaymentIntent', async () => {
+    mockHold.outcome = { ok: false, reason: 'busy', holdId: MOCK_HOLD_ID }
+    const { status, data } = await post({ tiers: [{ tierId: 'ga', quantity: 1 }] })
+    expect(status).toBe(503)
+    expect(data.code).toBe('busy_try_again')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('a PaymentIntent that fails to create gives the hold back', async () => {
+    mockCreate.mockRejectedValueOnce(new Error('stripe down'))
+    const { status } = await post({ tiers: [{ tierId: 'ga', quantity: 1 }] })
+    expect(status).toBeGreaterThanOrEqual(400)
+    expect(releaseSeatHold).toHaveBeenCalledWith(MOCK_HOLD_ID, expect.anything())
+  })
+
+  it('an old single-tier client (tierId + quantity) still holds and checks out', async () => {
+    const { status } = await post({ tierId: 'ga', quantity: 2 })
+    expect(status).toBe(200)
+    expect(createSeatHold).toHaveBeenLastCalledWith(
+      expect.objectContaining({ quantity: 2, tierIncrements: [{ tierId: 'ga', quantity: 2 }] })
+    )
   })
 })

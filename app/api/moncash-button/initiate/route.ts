@@ -14,6 +14,15 @@ import { resolveOrderAttribution } from '@/lib/tracking-links'
 import { requestLanguage } from '@/lib/fx/usd-htg'
 import { inferCountryFromEventText } from '@/lib/event-country'
 import { capacityFromEvent } from '@/lib/capacity'
+import { buildTierSoldIncrements } from '@/lib/tickets/inventory'
+import {
+  capacityPrecheckRefusal,
+  createSeatHold,
+  releaseSeatHold,
+  seatHoldForClient,
+  seatHoldOwnerKey,
+  seatHoldRefusal,
+} from '@/lib/tickets/seatHolds'
 import { hasEventAccess } from '@/lib/events/access-guard'
 import { isPaidAllowed, countrySupport } from '@/lib/country-support'
 import {
@@ -300,18 +309,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: freeRefusal.error, code: freeRefusal.code }, { status: freeRefusal.status })
     }
 
-    // Fast-fail UX gate: reject obviously sold-out events before sending the buyer to MonCash.
-    // Best-effort only (never blocks on its own errors); the atomic reserve at fulfillment is the
-    // authoritative oversell guard.
+    // Fast-fail UX gate: reject obviously sold-out events before anything else. Lock-free and
+    // best-effort (never blocks on its own errors); the seat hold below is the authoritative gate.
     try {
       // Computed from the event doc read above — same counters, no second read.
-      const capacity = capacityFromEvent(event, totalQuantity)
-      if (!capacity.available) {
-        return NextResponse.json(
-          { error: capacity.isSoldOut ? 'This event is sold out.' : `Only ${capacity.remaining} ticket(s) remaining.` },
-          { status: 400 }
-        )
-      }
+      const refusal = capacityPrecheckRefusal(capacityFromEvent(event, totalQuantity), requestLanguage(request))
+      if (refusal) return NextResponse.json(refusal.body, { status: refusal.status })
     } catch (e) {
       console.warn('[moncash_button] capacity pre-check failed (continuing)', { message: (e as any)?.message })
     }
@@ -372,6 +375,23 @@ export async function POST(request: Request) {
     const orderId = `${crypto.randomInt(1_000_000, 10_000_000)}${String(crypto.randomInt(0, 100_000_000)).padStart(8, '0')}`
     const internalOrderId = `mcbtn_${eventId}_${identity.id}_${Date.now()}`
 
+    // HOLD the seats before the buyer is sent to MonCash: MonCash cannot refund automatically,
+    // so a buyer must never pay for a seat that is not there. The hold counts against
+    // availability until it expires or the order converts it at fulfillment. Sold out (or not
+    // enough left) is a 409 here, with no pending order created.
+    const seatHold = await createSeatHold({
+      eventId: String(eventId),
+      quantity: totalQuantity,
+      tierIncrements: buildTierSoldIncrements(chargeSelections),
+      ownerKey: seatHoldOwnerKey(identity),
+      ipAddress,
+      source: normalizedProvider,
+      logPrefix: '[moncash_button]',
+    })
+    const holdRefusal = seatHoldRefusal(seatHold, requestLanguage(request))
+    if (holdRefusal) return NextResponse.json(holdRefusal.body, { status: holdRefusal.status })
+    const clientHold = seatHoldForClient(seatHold)
+
     // Store pending transaction first so we can fall back to an HTML form POST flow.
     const { error: pendingInsertError } = await supabase.from('pending_transactions').insert({
       transaction_id: null,
@@ -404,6 +424,9 @@ export async function POST(request: Request) {
       // 'live' | 'snapshot_fallback' — which rule produced the rate.
       exchange_rate_source: exchange?.source ?? null,
       tier_selections: chargeSelections,
+      // The seat hold fulfillment converts into a sale (lib/tickets/seatHolds.ts).
+      seat_hold_id: clientHold ? clientHold.id : null,
+      seat_hold_expires_at: clientHold ? clientHold.expiresAt : null,
       // Store the RESOLVED promo doc id (not the raw input) so the confirm-time redeem targets
       // the exact promo; null when no discount was applied (charge full price, nothing to redeem).
       promo_code_id: promo?.id || null,
@@ -423,6 +446,7 @@ export async function POST(request: Request) {
     })
 
     if (pendingInsertError) {
+      await releaseSeatHold(seatHold.holdId, { logPrefix: '[moncash_button]' })
       console.error('Error creating pending transaction:', pendingInsertError)
       scheduleOpsEvent('moncash_buyer_error', 'moncash-button/initiate', { reason: 'pending_insert_failed' })
       return NextResponse.json({ error: 'Failed to create pending transaction' }, { status: 500 })
@@ -492,7 +516,8 @@ export async function POST(request: Request) {
       after(() => prewarmMonCashAccessToken())
     }
 
-    const response = NextResponse.json({ redirectUrl })
+    // `seatHold` lets the app show how long the seats are held and release them on close.
+    const response = NextResponse.json({ redirectUrl, ...(clientHold ? { seatHold: clientHold } : {}) })
     // Correlate browser redirect back from MonCash to our pending transaction.
     // This prevents false "missing_order" failures when the gateway doesn't include orderId
     // (or includes a token-like transactionId that can't be looked up).
