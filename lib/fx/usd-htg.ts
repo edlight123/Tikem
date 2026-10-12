@@ -30,6 +30,8 @@ type CachedRate = {
   expiresAt: number
   provider: string
   source: UsdHtgRateSource
+  /** Set on a fallback entry: a charge's highest pick must never serve a payout. */
+  fallbackMode?: 'highest' | 'lowest'
 }
 
 let cache: CachedRate | null = null
@@ -208,6 +210,12 @@ export type UsdToHtgRateOptions = {
   loadSnapshots?: UsdHtgSnapshotLoader
   timeoutMs?: number
   now?: () => number
+  /**
+   * Which stored rate a fallback takes. Charges (buyer pays HTG) take the
+   * HIGHEST of the window, so the buyer pays a bit more, never less; payouts
+   * (Tikèm pays HTG out) take the LOWEST, so a fallback can never overpay.
+   */
+  fallback?: 'highest' | 'lowest'
 }
 
 /**
@@ -219,7 +227,13 @@ export async function getUsdToHtgBaseRate(options?: UsdToHtgRateOptions): Promis
   const nowFn = options?.now || Date.now
   const now = nowFn()
 
-  if (cache && cache.expiresAt > now && isPlausibleUsdHtgRate(cache.baseRate)) {
+  const fallbackMode = options?.fallback === 'lowest' ? 'lowest' : 'highest'
+  if (
+    cache &&
+    cache.expiresAt > now &&
+    isPlausibleUsdHtgRate(cache.baseRate) &&
+    (cache.source === 'live' || cache.fallbackMode === fallbackMode)
+  ) {
     return {
       baseRate: cache.baseRate,
       provider: cache.provider,
@@ -266,8 +280,13 @@ export async function getUsdToHtgBaseRate(options?: UsdToHtgRateOptions): Promis
     liveRejection = String((liveOutcome.reason as any)?.name === 'AbortError' ? 'timeout' : (liveOutcome.reason as any)?.message || liveOutcome.reason)
   }
 
-  // Fallback: the HIGHEST stored base rate of the window (buyer pays a bit more, never less).
-  const best = history.reduce<UsdHtgSnapshotPoint | null>((top, p) => (!top || p.baseRate > top.baseRate ? p : top), null)
+  // Fallback: the HIGHEST stored base rate of the window for a charge (buyer
+  // pays a bit more, never less), the LOWEST for a payout (never overpays).
+  const best = history.reduce<UsdHtgSnapshotPoint | null>(
+    (pick, p) =>
+      !pick || (fallbackMode === 'lowest' ? p.baseRate < pick.baseRate : p.baseRate > pick.baseRate) ? p : pick,
+    null
+  )
   console.warn('[fx/usd-htg] live rate not used', { reason: liveRejection, fallback: best ? best.baseRate : null })
   if (!best) {
     throw new FxRateUnavailableError()
@@ -280,6 +299,7 @@ export async function getUsdToHtgBaseRate(options?: UsdToHtgRateOptions): Promis
     expiresAt: now + Math.min(ttlMs, FALLBACK_TTL_MS),
     provider,
     source: 'snapshot_fallback',
+    fallbackMode,
   }
   return { baseRate: best.baseRate, provider, fetchedAtIso: best.fetchedAt, source: 'snapshot_fallback' }
 }

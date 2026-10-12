@@ -75,7 +75,7 @@ export default async function EventEarningsPage({
   let moncashMinimum: MoncashMinimumInfo | null = null
   try {
     const cur = String(earnings?.currency || 'HTG').toUpperCase()
-    moncashMinimum = moncashMinimumInfo(cur, cur === 'USD' ? (await getUsdToHtgBaseRate()).baseRate : 1)
+    moncashMinimum = moncashMinimumInfo(cur, cur === 'USD' ? (await getUsdToHtgBaseRate({ fallback: 'lowest' })).baseRate : 1)
   } catch {
     moncashMinimum = null
   }

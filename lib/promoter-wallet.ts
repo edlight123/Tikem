@@ -546,7 +546,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
   let fxRate: UsdToHtgBaseRateResult | null = null
   if (usdCents > 0) {
     try {
-      fxRate = await getUsdToHtgBaseRate()
+      fxRate = await getUsdToHtgBaseRate({ fallback: 'lowest' })
     } catch (e) {
       if (!isFxRateUnavailableError(e)) throw e
       return {

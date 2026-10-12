@@ -76,6 +76,15 @@ describe('getUsdToHtgBaseRate', () => {
     expect(r.provider).toBe(`fx_snapshots/${daysAgo(6).slice(0, 10)}`)
   })
 
+  it('a payout fallback takes the LOWEST snapshot, so it can never overpay', async () => {
+    const snaps = history([[130.5, 1], [133.9, 6], [131.1, 13]])
+    const charge = await getUsdToHtgBaseRate({ now, timeoutMs: 20, fetchImpl: hangingFetch, loadSnapshots: snaps })
+    expect(charge.baseRate).toBe(133.9)
+    // Same process, cache warm with the charge's pick: the payout must not reuse it.
+    const payout = await getUsdToHtgBaseRate({ now, timeoutMs: 20, fetchImpl: hangingFetch, loadSnapshots: snaps, fallback: 'lowest' })
+    expect(payout).toMatchObject({ baseRate: 130.5, source: 'snapshot_fallback' })
+  })
+
   it('ignores snapshots older than 14 days', async () => {
     await expect(
       getUsdToHtgBaseRate({

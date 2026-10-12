@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
     let fxRate: UsdToHtgBaseRateResult | null = null
     if (currency === 'USD') {
       try {
-        fxRate = await getUsdToHtgBaseRate()
+        fxRate = await getUsdToHtgBaseRate({ fallback: 'lowest' })
       } catch (e) {
         if (!isFxRateUnavailableError(e)) throw e
         scheduleOpsEvent('fx_rate_unavailable', 'organizer/withdraw-moncash', { eventId: String(eventId) })
