@@ -2742,12 +2742,6 @@ export default {
     searchPlaceholder: 'Find an image',
     uploadImage: 'Upload an image',
     empty: 'No images found',
-    notConfigured: 'Image library unavailable. Upload your own',
-    byPhotographer: 'Photo: {name}',
-    artTitle: 'tikèm art',
-    artSubtitle: 'Original Haitian screenprints, free to use',
-    photosTitle: 'photos',
-    artError: "Couldn't load that artwork. Try another, or upload your own.",
   },
   eventDetail: {
     // Lineup rail + song card (hidden entirely when the event has neither).

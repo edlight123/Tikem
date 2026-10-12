@@ -2674,12 +2674,6 @@ export default {
     searchPlaceholder: 'Chèche yon imaj',
     uploadImage: 'Telechaje yon imaj',
     empty: 'Nou pa jwenn okenn imaj',
-    notConfigured: 'Bibliyotèk imaj la pa disponib. Telechaje pa w la',
-    byPhotographer: 'Foto: {name}',
-    artTitle: 'atizay tikèm',
-    artSubtitle: 'Serigrafi ayisyen orijinal, gratis pou w itilize',
-    photosTitle: 'foto',
-    artError: 'Nou pa t ka chaje desen sa a. Eseye yon lòt, oswa mete pa w.',
   },
   eventDetail: {
     // Pwogram + mizik (kache lè evènman an pa genyen yo).

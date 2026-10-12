@@ -11,36 +11,27 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Search, Camera, ImageUp } from 'lucide-react-native';
+import { X, Search, ImageUp } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
-import { artForPicker, searchArt, worldForCategory, worldLabel, type ArtPiece } from '../lib/artLibrary';
-import SectionHeader from './SectionHeader';
 import { radius, spacing } from '../theme/tokens';
 
-/** Shape of one photo as returned by GET /api/flyers/search. */
-interface RemoteFlyer {
+/** One photo as returned by GET /api/flyers/library (web lib/flyerLibrary). */
+interface LibraryFlyer {
   id: string;
+  label: string;
+  tags: string[];
   thumbUrl: string;
   fullUrl: string;
-  width: number;
-  height: number;
-  photographer: string;
-  photographerUrl: string;
-  downloadLocation: string;
 }
 
-interface FlyerSearchResponse {
-  configured?: boolean;
-  results: RemoteFlyer[];
+interface FlyerLibraryResponse {
+  items: LibraryFlyer[];
 }
 
 export interface SelectedFlyer {
   url: string;
-  photographer: string;
-  photographerUrl: string;
-  downloadLocation: string;
 }
 
 interface FlyerLibrarySheetProps {
@@ -48,18 +39,17 @@ interface FlyerLibrarySheetProps {
   onClose: () => void;
   /** Called with the full-size image when the organizer taps a photo tile. */
   onSelect: (flyer: SelectedFlyer) => void;
-  /**
-   * Called when the organizer taps a piece of Tikèm art. The parent turns the
-   * bundled asset into a real file and uploads it on save (see lib/artAsset).
-   */
-  onSelectArt?: (piece: ArtPiece) => void;
   /** Called when the organizer wants to pick their own image instead. */
   onUpload: () => void;
-  /** The event's category, so art from its world leads the grid. */
-  category?: string;
 }
 
-const SEARCH_DEBOUNCE_MS = 400;
+/** Accent-folded, so "fete" finds "fèt": nobody types the grave on a phone. */
+const fold = (v: string) =>
+  (v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
 
 /** Pair items into rows of two for a hand-built grid inside one ScrollView. */
 function pairs<T>(items: T[]): T[][] {
@@ -69,143 +59,73 @@ function pairs<T>(items: T[]): T[][] {
 }
 
 /**
- * "Select a flyer" — a posh-style flyer library.
+ * "Select a flyer": the same curated photo library the web composer offers,
+ * fetched from /api/flyers/library so both devices show one shelf.
  *
- * Two sections in one scroll:
- *  1. tikèm art: our own text-free screenprints (lib/artLibrary), the ones
- *     matching the event's world first. Bundled, so they show offline.
- *  2. photos: portrait Unsplash photos proxied through /api/flyers/search (the
- *     API key stays server-side), photographer credit on every tile. When the
- *     server has no Unsplash key this section quietly says so.
+ * Our own illustrations (lib/artLibrary) are deliberately NOT here: they are
+ * Tikèm's brand art for the app's own screens (login, empty states, worlds),
+ * and as a flyer every organizer who picked one got the same poster.
+ *
+ * Search works like the web picker: matches move to the front and the rest
+ * stay underneath, because nobody browsing artwork wants less of it.
  * The white "Upload an image" pill stays pinned for organizers who brought
  * their own artwork.
  */
-export default function FlyerLibrarySheet({
-  visible,
-  onClose,
-  onSelect,
-  onSelectArt,
-  onUpload,
-  category,
-}: FlyerLibrarySheetProps) {
+export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload }: FlyerLibrarySheetProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
 
   const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [results, setResults] = useState<RemoteFlyer[]>([]);
+  const [library, setLibrary] = useState<LibraryFlyer[]>([]);
   const [loading, setLoading] = useState(false);
-  const [configured, setConfigured] = useState(true);
 
-  const world = worldForCategory(category);
-  const art = useMemo(
-    () => (onSelectArt ? searchArt(artForPicker(category), debouncedQuery) : []),
-    [onSelectArt, category, debouncedQuery]
-  );
-
-  // Debounce keystrokes so we hit the search API at most ~2.5x/second of
-  // typing, not once per character.
+  // The list is static and cached by the server; load it once per session,
+  // retrying on the next open only if the first attempt came back empty.
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(id);
-  }, [query]);
-
-  useEffect(() => {
-    if (!visible) return;
-
+    if (!visible || library.length > 0) return;
     let cancelled = false;
     setLoading(true);
-
-    backendJson<FlyerSearchResponse>(
-      `/api/flyers/search?q=${encodeURIComponent(debouncedQuery)}`
-    )
+    backendJson<FlyerLibraryResponse>('/api/flyers/library')
       .then((data) => {
-        if (cancelled) return;
-        setConfigured(data?.configured !== false);
-        setResults(Array.isArray(data?.results) ? data.results : []);
+        if (!cancelled) setLibrary(Array.isArray(data?.items) ? data.items : []);
       })
       .catch(() => {
-        // A failed search must never block the organizer: show the empty
-        // state, keep the art and the upload pill working.
-        if (cancelled) return;
-        setResults([]);
+        // Never block the organizer: the empty state shows and upload still works.
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
-  }, [visible, debouncedQuery]);
+  }, [visible, library.length]);
 
-  const handleSelect = (flyer: RemoteFlyer) => {
-    // Unsplash's API terms require hitting download_location when a photo is
-    // actually used. Fire-and-forget: attribution bookkeeping must not delay
-    // (or be able to break) the organizer's flow.
-    backendJson('/api/flyers/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ downloadLocation: flyer.downloadLocation }),
-    }).catch(() => {});
+  const items = useMemo(() => {
+    const needle = fold(query);
+    if (!needle) return library;
+    const hits: LibraryFlyer[] = [];
+    const rest: LibraryFlyer[] = [];
+    for (const item of library) {
+      const hay = fold([item.label, item.id, ...item.tags].join(' '));
+      (hay.includes(needle) ? hits : rest).push(item);
+    }
+    return [...hits, ...rest];
+  }, [library, query]);
 
-    onSelect({
-      url: flyer.fullUrl,
-      photographer: flyer.photographer,
-      photographerUrl: flyer.photographerUrl,
-      downloadLocation: flyer.downloadLocation,
-    });
+  const handleSelect = (item: LibraryFlyer) => {
+    onSelect({ url: item.fullUrl });
     onClose();
   };
 
-  const handleSelectArt = (piece: ArtPiece) => {
-    onSelectArt?.(piece);
-    onClose();
-  };
-
-  const renderArtTile = (piece: ArtPiece) => {
-    // The world line reads "mizik" etc.; a piece from the event's own world
-    // carries a dot so the organizer sees why it leads the grid.
-    const label = worldLabel(piece.worlds[0]);
-    const matches = !!world && (piece.worlds as string[]).includes(world);
-    return (
-      <TouchableOpacity
-        key={piece.key}
-        style={styles.tile}
-        activeOpacity={0.85}
-        onPress={() => handleSelectArt(piece)}
-        accessibilityRole="imagebutton"
-        accessibilityLabel={piece.alt}
-      >
-        <Image source={piece.source} style={styles.tileImage} contentFit="cover" cachePolicy="memory" />
-        {!!label && (
-          <>
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.72)']}
-              style={styles.tileScrim}
-              pointerEvents="none"
-            />
-            <View style={styles.credit} pointerEvents="none">
-              {matches && <View style={styles.matchDot} />}
-              <Text style={styles.creditText} numberOfLines={1}>
-                {label}
-              </Text>
-            </View>
-          </>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  const renderPhotoTile = (item: RemoteFlyer) => (
+  const renderTile = (item: LibraryFlyer) => (
     <TouchableOpacity
       key={item.id}
       style={styles.tile}
       activeOpacity={0.85}
       onPress={() => handleSelect(item)}
       accessibilityRole="imagebutton"
-      accessibilityLabel={t('flyerLibrary.byPhotographer').replace('{name}', item.photographer)}
+      accessibilityLabel={item.label}
     >
       <Image
         source={{ uri: item.thumbUrl }}
@@ -219,25 +139,13 @@ export default function FlyerLibrarySheet({
         style={styles.tileScrim}
         pointerEvents="none"
       />
-      {item.photographer ? (
-        <View style={styles.credit} pointerEvents="none">
-          <Camera size={11} color="#FFFFFF" />
-          <Text style={styles.creditText} numberOfLines={1}>
-            {item.photographer}
-          </Text>
-        </View>
-      ) : null}
+      <View style={styles.credit} pointerEvents="none">
+        <Text style={styles.creditText} numberOfLines={1}>
+          {item.label}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
-
-  const grid = <T,>(items: T[], render: (item: T) => React.ReactNode) =>
-    pairs(items).map((row, i) => (
-      <View key={i} style={styles.gridRow}>
-        {row.map(render)}
-        {/* An odd last tile keeps its column width instead of stretching. */}
-        {row.length === 1 && <View style={styles.tileSpacer} />}
-      </View>
-    ));
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -276,31 +184,23 @@ export default function FlyerLibrarySheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {art.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader title={t('flyerLibrary.artTitle')} subtitle={t('flyerLibrary.artSubtitle')} />
-                {grid(art, renderArtTile)}
+            {loading && items.length === 0 ? (
+              <View style={styles.stateWrap}>
+                <ActivityIndicator color={colors.textSecondary} />
               </View>
+            ) : items.length === 0 ? (
+              <View style={styles.stateWrap}>
+                <Text style={styles.stateText}>{t('flyerLibrary.empty')}</Text>
+              </View>
+            ) : (
+              pairs(items).map((row, i) => (
+                <View key={i} style={styles.gridRow}>
+                  {row.map(renderTile)}
+                  {/* An odd last tile keeps its column width instead of stretching. */}
+                  {row.length === 1 && <View style={styles.tileSpacer} />}
+                </View>
+              ))
             )}
-
-            <View style={styles.section}>
-              {onSelectArt && <SectionHeader title={t('flyerLibrary.photosTitle')} />}
-              {loading ? (
-                <View style={styles.stateWrap}>
-                  <ActivityIndicator color={colors.textSecondary} />
-                </View>
-              ) : !configured ? (
-                <View style={styles.stateWrap}>
-                  <Text style={styles.stateText}>{t('flyerLibrary.notConfigured')}</Text>
-                </View>
-              ) : results.length === 0 ? (
-                <View style={styles.stateWrap}>
-                  <Text style={styles.stateText}>{t('flyerLibrary.empty')}</Text>
-                </View>
-              ) : (
-                grid(results, renderPhotoTile)
-              )}
-            </View>
           </ScrollView>
 
           <TouchableOpacity
@@ -375,9 +275,6 @@ const getStyles = (colors: any) =>
     scroll: {
       flex: 1,
     },
-    section: {
-      marginBottom: spacing.xl,
-    },
     gridRow: {
       flexDirection: 'row',
       gap: spacing.sm,
@@ -420,12 +317,6 @@ const getStyles = (colors: any) =>
       fontSize: 11,
       fontWeight: '600',
       color: '#FFFFFF',
-    },
-    matchDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.white,
     },
     stateWrap: {
       minHeight: 120,

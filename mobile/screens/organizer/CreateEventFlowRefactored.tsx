@@ -34,8 +34,6 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import FlyerLibrarySheet, { SelectedFlyer } from '../../components/FlyerLibrarySheet';
-import { resolveArtFileUri } from '../../lib/artAsset';
-import type { ArtPiece } from '../../lib/artLibrary';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -785,21 +783,6 @@ export default function CreateEventFlowRefactored() {
     } catch (e) {
       console.error('Error picking flyer:', e);
       showAlert(t('common.error'), t('verification.common.failedToPickImageFromLibrary'));
-    }
-  };
-
-  // A Tikèm art flyer is a bundled asset, which only exists inside this app.
-  // Resolve it to a local file and treat it exactly like a picked photo: the
-  // draft holds the device URI for the preview, and createEvent/updateEvent
-  // upload it to Storage on save (isDeviceOnlyImageUri), so banner_image_url
-  // is a public https URL that web and every other phone can load.
-  const pickArt = async (piece: ArtPiece) => {
-    try {
-      const uri = await resolveArtFileUri(piece);
-      updateDraft({ banner_image_url: uri });
-    } catch (e) {
-      console.error('Error resolving art flyer:', e);
-      showAlert(t('common.error'), t('flyerLibrary.artError'));
     }
   };
 
@@ -3010,8 +2993,6 @@ export default function CreateEventFlowRefactored() {
         visible={showFlyerLibrary}
         onClose={() => setShowFlyerLibrary(false)}
         onSelect={(f: SelectedFlyer) => updateDraft({ banner_image_url: f.url })}
-        onSelectArt={pickArt}
-        category={eventDraft.category}
         onUpload={() => {
           setShowFlyerLibrary(false);
           // The picker waits for the sheet to finish sliding out or iOS drops it.

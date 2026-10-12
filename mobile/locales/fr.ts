@@ -2706,12 +2706,6 @@ export default {
     searchPlaceholder: 'Rechercher une image',
     uploadImage: 'Importer une image',
     empty: 'Aucune image trouvée',
-    notConfigured: "Bibliothèque d'images indisponible. Importez la vôtre",
-    byPhotographer: 'Photo : {name}',
-    artTitle: 'art tikèm',
-    artSubtitle: 'Sérigraphies haïtiennes originales, libres d’utilisation',
-    photosTitle: 'photos',
-    artError: 'Impossible de charger cette œuvre. Essayez-en une autre ou importez la vôtre.',
   },
   eventDetail: {
     // Affiche + morceau (masqués quand l’événement n’en a pas).
