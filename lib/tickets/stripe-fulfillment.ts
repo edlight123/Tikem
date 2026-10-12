@@ -45,7 +45,6 @@
 
 import { createHmac } from 'node:crypto'
 import { adminDb } from '@/lib/firebase/admin'
-import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { addTicketToEarnings } from '@/lib/earnings'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
 import { notifyOrganizerTicketSale, notifyTicketPurchase } from '@/lib/notifications/helpers'
@@ -63,6 +62,7 @@ import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 import { parseTicketQuantity } from '@/lib/tickets/purchasable'
 import { decodeCardOrderLines, type CardOrderLine } from '@/lib/checkout/card-order-lines'
+import { recordFreeClaimTickets, takeFreeClaimForOrder } from '@/lib/tickets/free-claim-policy'
 
 export const STRIPE_ORDERS_COLLECTION = 'stripe_orders'
 
@@ -371,18 +371,6 @@ export async function planMultiTierTickets(
 
 // ── The pipeline ────────────────────────────────────────────────────────────
 
-/** True when the buyer (account uid, or a guest's email) holds a LIVE free ticket for the event. */
-async function buyerHoldsLiveFreeTicket(eventId: string, buyerId: string, guestEmail: string | null): Promise<boolean> {
-  if (!eventId) return false
-  const snap = guestEmail
-    ? await adminDb.collection('tickets').where('guest_email', '==', guestEmail).get()
-    : await adminDb.collection('tickets').where('attendee_id', '==', buyerId).get()
-  return snap.docs.some((d: any) => {
-    const t = d.data() || {}
-    return t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status)
-  })
-}
-
 export async function fulfillStripeOrder(input: StripeOrderInput): Promise<StripeFulfillmentResult> {
   const logPrefix = input.logPrefix || '[stripe-fulfillment]'
   const m = input.metadata || {}
@@ -437,7 +425,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // A multi-tier order carries its per-tier breakdown in `t`
   // (lib/checkout/card-order-lines). One that cannot be read is never guessed at
   // — issuing N copies of one tier is exactly the bug the breakdown exists to fix.
-  let decodedLines = decodeCardOrderLines(m)
+  const decodedLines = decodeCardOrderLines(m)
   if (decodedLines.present && !decodedLines.ok) {
     console.error(`${logPrefix} refusing to issue tickets for unreadable tier lines — refunding`, {
       paymentId: input.paymentId,
@@ -446,19 +434,41 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   }
   let orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
 
-  // Free tiers in a paid cart: create-payment-intent refuses them for a buyer
-  // who already holds a live free ticket, but two orders started together both
-  // pass that check. So it is asked again here, at issue time: if the buyer now
-  // holds one, the free lines are dropped and only what was paid for is issued.
-  // A free line costs nothing, so the charge and every fee are unaffected.
-  if (orderLines && orderLines.some((l) => l.unitOriginal <= 0) && orderLines.some((l) => l.unitOriginal > 0)) {
-    if (await buyerHoldsLiveFreeTicket(String(m.eventId || ''), input.buyerId, input.guestRecipient?.email || null)) {
-      console.warn(`${logPrefix} buyer already holds a free ticket; issuing the paid lines only`, {
+  // FREE lines (list price 0) are the buyer's one free claim for this event,
+  // under the same lock the free-claim route uses (lib/tickets/free-claim-policy).
+  // Checkout refused a buyer who had already claimed, but two orders paid side by
+  // side would both have passed that check: the lock is taken HERE, atomically,
+  // once per order. A claim that belongs to another order means this order's free
+  // lines are not issued — they cost nothing, so the buyer is owed nothing for
+  // them — and the paid lines are issued as normal. The decision is stored on
+  // the ledger so a retry issues exactly the same set.
+  const freeClaimant = {
+    isGuest: Boolean(input.guestRecipient) || m.isGuest === 'true',
+    id: input.buyerId,
+    email: input.guestRecipient?.email || m.guestEmail || null,
+  }
+  const hasFreeLines = Boolean(orderLines?.some((l) => l.unitOriginal <= 0))
+  let freeClaimDecision: string | null = hasFreeLines ? initial.free_claim_decision || null : null
+  if (orderLines && hasFreeLines && !freeClaimDecision) {
+    const held = await takeFreeClaimForOrder(eventId, freeClaimant, input.paymentId)
+    freeClaimDecision = held ? 'kept' : 'dropped'
+    const dropped = held ? [] : orderLines.filter((l) => l.unitOriginal <= 0)
+    if (!held) {
+      console.warn(`${logPrefix} free lines not issued: the buyer's free claim for this event is already used`, {
         paymentId: input.paymentId,
       })
-      orderLines = orderLines.filter((l) => l.unitOriginal > 0)
-      decodedLines = { present: true, ok: true, lines: orderLines, quantity: orderLines.reduce((n, l) => n + l.quantity, 0) }
     }
+    await orderRef.set(
+      {
+        free_claim_decision: freeClaimDecision,
+        ...(dropped.length ? { free_lines_dropped: dropped, free_lines_dropped_reason: 'already_claimed' } : {}),
+        updated_at: new Date().toISOString(),
+      },
+      { merge: true }
+    )
+  }
+  if (orderLines && freeClaimDecision === 'dropped') {
+    orderLines = orderLines.filter((l) => l.unitOriginal > 0)
   }
 
   // A paid intent whose quantity is not a valid whole number: never issue.
@@ -473,7 +483,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // The lines are the authority for a multi-tier order; `quantity` there is only
   // their sum, written for humans and older tooling.
   const quantity: number = orderLines
-    ? (decodedLines as { quantity: number }).quantity
+    ? orderLines.reduce((sum, l) => sum + l.quantity, 0)
     : (resolvedQuantity as number)
 
   // ── Derived order facts ──
@@ -653,6 +663,22 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
       { merge: true }
     )
   })
+
+  // The free claim records which tickets it issued, so the free-claim route can
+  // later tell whether they were all voided (and only then reopen the claim).
+  // Idempotent; a failure leaves a lock with no ids, which reads as "held" — the
+  // safe side.
+  if (freeClaimDecision === 'kept' && orderLines) {
+    // Free by LIST price (a promo-zeroed paid ticket is not a free claim). The
+    // plan is the lines in order, one entry per ticket.
+    const isFreeTicket = orderLines.flatMap((l) => Array.from({ length: l.quantity }, () => l.unitOriginal <= 0))
+    const freeIds = ticketIds.filter((_, i) => isFreeTicket[i])
+    if (freeIds.length > 0) {
+      await recordFreeClaimTickets(eventId, freeClaimant, freeIds).catch((err: any) =>
+        console.error(`${logPrefix} could not record free-claim tickets`, err?.message || err)
+      )
+    }
+  }
 
   // ── 3. Bookkeeping — each step at most once ──
   const failedSteps: string[] = []

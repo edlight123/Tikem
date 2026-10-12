@@ -14,7 +14,6 @@ import {
   logSuspiciousActivity 
 } from '@/lib/security'
 import { adminDb } from '@/lib/firebase/admin'
-import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
 import { applicationFeeFor, applyPromoToLines, priceTierLinesCents } from '@/lib/checkout/buyer-pricing'
 import {
@@ -24,6 +23,11 @@ import {
 } from '@/lib/checkout/card-order-lines'
 import { friendlyStripeError } from '@/lib/checkout/stripe-errors'
 import { MIN_PAID_PRICE_ERROR_CODE, isBelowMinPaidPrice, minPaidPriceFor } from '@/lib/min-paid-price'
+import {
+  GUEST_ALREADY_CLAIMED_MESSAGE,
+  MAX_FREE_TICKETS_PER_CLAIM,
+  freeClaimAlreadyUsed,
+} from '@/lib/tickets/free-claim-policy'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { locationFeesForCountry } from '@/types/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
@@ -65,9 +69,6 @@ function getStripe() {
   return require('stripe')(process.env.STRIPE_SECRET_KEY)
 }
 
-
-/** Same cap as /api/tickets/claim-free's MAX_FREE_TICKETS_PER_CLAIM. */
-const MAX_FREE_TICKETS_PER_ORDER = 10
 export async function POST(request: Request) {
   try {
     const stripe = getStripe()
@@ -392,6 +393,35 @@ export async function POST(request: Request) {
       }
     }
 
+    // FREE lines in a mixed cart are held to the free-claim route's limits
+    // (lib/tickets/free-claim-policy): at most 10 free tickets, and one free claim
+    // per buyer per event. Without this a buyer could attach free tickets to a
+    // cheap paid one, again and again. Inventory, sales window, active tier and
+    // the access code were already enforced on every line above. Free is decided
+    // on the LIST price, exactly as claim-free decides it. Fulfillment re-takes
+    // the claim lock atomically before issuing.
+    const freeQuantity = orderLines.reduce((sum, l) => sum + (Number(l.price) > 0 ? 0 : l.quantity), 0)
+    if (freeQuantity > 0) {
+      if (freeQuantity > MAX_FREE_TICKETS_PER_CLAIM) {
+        return refuse(
+          { error: `You can add at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets to an order.`, code: 'free_limit_exceeded' },
+          400
+        )
+      }
+      if (await freeClaimAlreadyUsed(String(eventId), identity)) {
+        return refuse(
+          {
+            // A guest's answer stays neutral: the email they typed is unverified.
+            error: identity.isGuest
+              ? GUEST_ALREADY_CLAIMED_MESSAGE
+              : 'You already have a free ticket for this event. Remove the free tier to continue.',
+            code: 'already_claimed',
+          },
+          409
+        )
+      }
+    }
+
     // Apply promo code if provided (Firestore). resolvePromoCode accepts either the
     // Firestore doc id OR the raw code string (the incoming `promoCodeId` field may
     // carry either). We only apply the discount when the promo still has capacity;
@@ -414,35 +444,6 @@ export async function POST(request: Request) {
       }
     }
     const pricedLines = applyPromoToLines(orderLines, appliedPromo)
-
-    // Free tiers riding along in a paid cart get the free-claim route's limits:
-    // at most MAX_FREE_TICKETS_PER_ORDER of them, and none for a buyer who already
-    // holds a live free ticket for this event. Without this, one cheap paid ticket
-    // per order would unlock unlimited free inventory, around the one-claim rule.
-    const freeInCart = pricedLines.reduce((n, l) => n + (Number(l.unitOriginal) <= 0 ? l.quantity : 0), 0)
-    if (freeInCart > 0 && pricedLines.some((l) => Number(l.unitOriginal) > 0)) {
-      if (freeInCart > MAX_FREE_TICKETS_PER_ORDER) {
-        return refuse(
-          { error: `You can add at most ${MAX_FREE_TICKETS_PER_ORDER} free tickets to an order.`, code: 'free_limit_exceeded' },
-          400
-        )
-      }
-      const heldSnap = user
-        ? await adminDb.collection('tickets').where('attendee_id', '==', user.id).get()
-        : buyerEmail
-        ? await adminDb.collection('tickets').where('guest_email', '==', buyerEmail).get()
-        : null
-      const holdsFree = (heldSnap?.docs || []).some((d: any) => {
-        const t = d.data() || {}
-        return t.event_id === String(eventId) && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status)
-      })
-      if (holdsFree) {
-        return refuse(
-          { error: 'You already have a free ticket for this event. Remove the free tier to continue.', code: 'already_claimed' },
-          409
-        )
-      }
-    }
 
     // Resolve the promoter ref, if any. Only the resolved doc id + code ride in
     // metadata; fulfillment writes the attribution ledger exactly once under its

@@ -131,17 +131,6 @@ describe('multi-tier issuance', () => {
     }
   })
 
-  it('drops the free lines when the buyer already holds a live free ticket (race with a free claim)', async () => {
-    mockFake.seed('tickets', 'earlier-free', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'valid' })
-    const res = await fulfillStripeOrder(multi())
-    expect(res.outcome).toBe('fulfilled')
-    const issued = tickets().filter((t) => t.id !== 'earlier-free')
-    expect(issued).toHaveLength(3)
-    expect(issued.some((t) => t.tier_id === 'free')).toBe(false)
-    // The charge is untouched: the paid tickets still account for every cent.
-    expect(issued.reduce((s, t) => s + Math.round(t.charged_amount * 100), 0)).toBe(9837)
-  })
-
   it('reserves inventory per tier', async () => {
     await fulfillStripeOrder(multi())
     expect(buildTierSoldIncrements).toHaveBeenCalledWith([
@@ -189,6 +178,75 @@ describe('multi-tier issuance', () => {
     mockFake.seed('users', 'u1', { email: 'u@x.com' })
     await fulfillStripeOrder(multi())
     expect(tickets().every((t) => t.tier_name === 'Ticket')).toBe(true)
+  })
+})
+
+describe('free lines are the buyer\'s one free claim (shared with /api/tickets/claim-free)', () => {
+  const { freeClaimAlreadyUsed, freeClaimLockId } =
+    require('@/lib/tickets/free-claim-policy') as typeof import('@/lib/tickets/free-claim-policy')
+  const lockId = () => freeClaimLockId('evt1', { isGuest: false, id: 'u1' })
+
+  it('takes the claim lock and records the free tickets on it', async () => {
+    await fulfillStripeOrder(multi())
+    const lock = mockFake.get('free_claim_locks', lockId())!
+    expect(lock.payment_id).toBe('pi_1')
+    const freeTicket = tickets().find((t) => t.tier_id === 'free')!
+    expect(lock.ticket_ids).toEqual([freeTicket.id])
+  })
+
+  it('a claim already held by ANOTHER order: paid lines issue, free lines do not', async () => {
+    mockFake.seed('free_claim_locks', lockId(), { event_id: 'evt1', kind: 'account', ticket_ids: ['t_other'] })
+    mockFake.seed('tickets', 't_other', { event_id: 'evt1', attendee_id: 'u9', price_paid: 0, status: 'valid' })
+    const res = await fulfillStripeOrder(multi())
+    expect(res.outcome).toBe('fulfilled')
+    const mine = tickets().filter((t) => t.payment_id === 'pi_1')
+    expect(mine.map((t) => t.tier_id).sort()).toEqual(['ga', 'ga', 'vip'])
+    const ledger = mockFake.get('stripe_orders', 'pi_1')!
+    expect(ledger.free_claim_decision).toBe('dropped')
+    expect(ledger.free_lines_dropped_reason).toBe('already_claimed')
+    // Charged amounts still add up: the dropped free ticket cost nothing.
+    expect(mine.reduce((s, t) => s + Math.round(t.charged_amount * 100), 0)).toBe(9837)
+    // Inventory is not taken for tickets that were not issued.
+    expect((reserveInventoryAtomic as jest.Mock).mock.calls[0][0].quantity).toBe(3)
+    // The other order's claim is untouched.
+    expect(mockFake.get('free_claim_locks', lockId())!.ticket_ids).toEqual(['t_other'])
+  })
+
+  it('a claim whose tickets were all voided reopens for this order', async () => {
+    mockFake.seed('free_claim_locks', lockId(), { event_id: 'evt1', kind: 'account', ticket_ids: ['t_old'] })
+    mockFake.seed('tickets', 't_old', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'refunded' })
+    await fulfillStripeOrder(multi())
+    expect(tickets().filter((t) => t.payment_id === 'pi_1')).toHaveLength(4)
+  })
+
+  it('a retry keeps the same decision (its own lock is not "someone else\'s")', async () => {
+    await fulfillStripeOrder(multi())
+    const ledger = mockFake.get('stripe_orders', 'pi_1')!
+    mockFake.seed('stripe_orders', 'pi_1', { ...ledger, status: 'issued' })
+    await fulfillStripeOrder(multi())
+    expect(tickets().filter((t) => t.payment_id === 'pi_1')).toHaveLength(4)
+    expect(mockFake.get('stripe_orders', 'pi_1')!.free_claim_decision).toBe('kept')
+  })
+
+  it('freeClaimAlreadyUsed: a live free ticket or a held lock means used; voided ones do not', async () => {
+    const me = { isGuest: false, id: 'u1' }
+    expect(await freeClaimAlreadyUsed('evt1', me)).toBe(false)
+    mockFake.seed('tickets', 'f1', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'refunded' })
+    // A PAID ticket for the event never holds the free claim.
+    mockFake.seed('tickets', 'p1', { event_id: 'evt1', attendee_id: 'u1', price_paid: 25, status: 'valid' })
+    expect(await freeClaimAlreadyUsed('evt1', me)).toBe(false)
+    mockFake.seed('tickets', 'f2', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'valid' })
+    expect(await freeClaimAlreadyUsed('evt1', me)).toBe(true)
+    mockFake.reset()
+    mockFake.seed('free_claim_locks', lockId(), { event_id: 'evt1' })
+    expect(await freeClaimAlreadyUsed('evt1', me)).toBe(true)
+  })
+
+  it('guests are keyed by email, as on the free-claim route', async () => {
+    const guest = { isGuest: true, id: 'guest_new', email: 'g@x.com' }
+    mockFake.seed('tickets', 'g1', { event_id: 'evt1', guest_email: 'g@x.com', price_paid: 0, status: 'valid' })
+    expect(await freeClaimAlreadyUsed('evt1', guest)).toBe(true)
+    expect(await freeClaimAlreadyUsed('evt1', { ...guest, email: 'other@x.com' })).toBe(false)
   })
 })
 

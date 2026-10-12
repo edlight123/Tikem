@@ -17,12 +17,7 @@ const mockPromo = { doc: null as any }
 const mockCreate = jest.fn(async (args: any) => ({ id: 'pi_test', client_secret: 'pi_test_secret', ...args }))
 
 jest.mock('stripe', () => jest.fn(() => ({ paymentIntents: { create: mockCreate } })))
-const mockHeld: any[] = []
-jest.mock('@/lib/firebase/admin', () => ({
-  adminDb: {
-    collection: () => ({ where: () => ({ get: async () => ({ docs: mockHeld.map((t) => ({ data: () => t })) }) }) }),
-  },
-}))
+jest.mock('@/lib/firebase/admin', () => ({ adminDb: {} }))
 // Never a live rate lookup from a test.
 jest.mock('@/lib/currency', () => ({ fetchStripeHTGRate: jest.fn(async () => 0.0076) }))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => ({ id: 'u1', email: 'u@x.com' })) }))
@@ -74,6 +69,11 @@ jest.mock('@/lib/guest/checkout', () => ({
   identityFromUser: (u: any) => ({ isGuest: false, id: u.id, email: u.email, name: '', phone: '' }),
 }))
 jest.mock('@/lib/guest/identity', () => ({ guestTicketUrl: jest.fn(), validateGuestContact: jest.fn() }))
+const mockFreeClaim = { used: false }
+jest.mock('@/lib/tickets/free-claim-policy', () => ({
+  ...jest.requireActual('@/lib/tickets/free-claim-policy'),
+  freeClaimAlreadyUsed: jest.fn(async () => mockFreeClaim.used),
+}))
 
 process.env.STRIPE_SECRET_KEY = 'sk_test_dummy'
 
@@ -115,7 +115,7 @@ beforeEach(() => {
     ticket_price: 25,
   })
   mockPromo.doc = null
-  mockHeld.length = 0
+  mockFreeClaim.used = false
   tier('vip', 50)
   tier('ga', 25)
   tier('free', 0)
@@ -161,27 +161,6 @@ describe('multi-tier card checkout', () => {
       ['free', 2, 0],
       ['ga', 2, 25],
     ])
-  })
-
-  it('free lines in a paid cart are capped like a free claim (10 per order)', async () => {
-    const { status, data } = await post({ tiers: [{ tierId: 'free', quantity: 11 }, { tierId: 'ga', quantity: 1 }] })
-    expect(status).toBe(400)
-    expect(data.code).toBe('free_limit_exceeded')
-    expect(mockCreate).not.toHaveBeenCalled()
-  })
-
-  it('a buyer who already holds a live free ticket cannot add more through a paid cart', async () => {
-    mockHeld.push({ event_id: 'evt1', price_paid: 0, status: 'valid' })
-    const { status, data } = await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })
-    expect(status).toBe(409)
-    expect(data.code).toBe('already_claimed')
-    expect(mockCreate).not.toHaveBeenCalled()
-  })
-
-  it('a refunded free ticket no longer blocks, and a paid ticket never did', async () => {
-    mockHeld.push({ event_id: 'evt1', price_paid: 0, status: 'refunded' }, { event_id: 'evt1', price_paid: 25, status: 'valid' })
-    const { status } = await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })
-    expect(status).toBe(200)
   })
 
   it('an all-free cart never reaches Stripe', async () => {
@@ -233,6 +212,45 @@ describe('multi-tier card checkout', () => {
 
   it('refuses fractional quantities on any line', async () => {
     const res = await post({ tiers: [{ tierId: 'vip', quantity: 1 }, { tierId: 'ga', quantity: 0.5 }] })
+    expect(res.status).toBe(400)
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+})
+
+describe('free lines in a paid cart obey the free-claim limits', () => {
+  const { freeClaimAlreadyUsed } = jest.requireMock('@/lib/tickets/free-claim-policy')
+
+  it('a buyer who already used their free claim cannot get more free tickets by paying for one', async () => {
+    mockFreeClaim.used = true
+    const res = await post({ tiers: [{ tierId: 'free', quantity: 2 }, { tierId: 'ga', quantity: 1 }] })
+    expect(res.status).toBe(409)
+    expect(res.data.code).toBe('already_claimed')
+    expect(freeClaimAlreadyUsed).toHaveBeenCalledWith('evt1', expect.objectContaining({ id: 'u1', isGuest: false }))
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('more than 10 free tickets in one order are refused, as on the free-claim route', async () => {
+    const res = await post({ tiers: [{ tierId: 'free', quantity: 11 }, { tierId: 'ga', quantity: 1 }] })
+    expect(res.status).toBe(400)
+    expect(res.data.code).toBe('free_limit_exceeded')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('free lines are held to inventory and the sales window like any line', async () => {
+    tier('freefew', 0, { total_quantity: 1, sold_quantity: 1 })
+    expect((await post({ tiers: [{ tierId: 'freefew', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })).status).toBe(400)
+    tier('freeclosed', 0, { sales_end: new Date(Date.now() - 864e5).toISOString() })
+    expect((await post({ tiers: [{ tierId: 'freeclosed', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })).status).toBe(400)
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('a cart with no free line never consults the free claim', async () => {
+    mockFreeClaim.used = true
+    expect((await post({ tiers: [{ tierId: 'vip', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })).status).toBe(200)
+  })
+
+  it('the whole order, free lines included, is capped at 50 tickets', async () => {
+    const res = await post({ tiers: [{ tierId: 'free', quantity: 5 }, { tierId: 'ga', quantity: 46 }] })
     expect(res.status).toBe(400)
     expect(mockCreate).not.toHaveBeenCalled()
   })
