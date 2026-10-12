@@ -49,10 +49,14 @@ import {
 import { socialUrlFor, type SocialLinks, type FriendshipState } from '@/types/social'
 
 interface OrganizerProfileClientProps {
+  /**
+   * Public fields only. `name` is the display name (organization_name, else
+   * full_name). Never add `email` here: this object is serialized into the
+   * public page.
+   */
   organizer: {
     id: string
-    full_name: string
-    email: string
+    name: string
     is_verified: boolean
     created_at: string
   }
@@ -188,13 +192,13 @@ export default function OrganizerProfileClient({
                 serif rather than a bold sans. */}
             <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-white/[0.07] text-4xl text-white shadow-lg ring-1 ring-inset ring-white/10 sm:h-24 sm:w-24 sm:text-5xl">
               <span className="font-display leading-none">
-                {organizer.full_name[0].toUpperCase()}
+                {(organizer.name[0] || '?').toUpperCase()}
               </span>
             </div>
 
             <div className="min-w-0 flex-1">
               <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-white !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">
-                {organizer.full_name}
+                {organizer.name}
               </h1>
 
               {/* Verified as a DOT plus a label, not a filled pill (house
@@ -297,7 +301,7 @@ export default function OrganizerProfileClient({
                   <ReportButton kind="organizer" targetId={organizer.id} userId={userId} />
                   <BlockOrganizerButton
                     organizerId={organizer.id}
-                    organizerName={organizer.full_name}
+                    organizerName={organizer.name}
                     userId={userId}
                     initialBlocked={isBlocked}
                   />
@@ -358,7 +362,7 @@ export default function OrganizerProfileClient({
               title={t('organizer_profile.past_events', 'past events')}
               note={t('organizer_profile.past_events_desc', {
                 defaultValue: 'Previous events organized by {{name}}',
-                name: organizer.full_name,
+                name: organizer.name,
               })}
             />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">

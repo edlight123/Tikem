@@ -13,13 +13,24 @@ import type { Metadata } from 'next'
 export const runtime = 'nodejs'
 export const revalidate = 0
 
+/**
+ * The organizer's public display name: the organization/brand name when set,
+ * else the personal full name (as app/events/[id]/page.tsx and the publish
+ * route's organizer_name stamp resolve it).
+ */
+function organizerDisplayName(organizer: { organization_name?: unknown; full_name?: unknown } | null | undefined): string {
+  const org = typeof organizer?.organization_name === 'string' ? organizer.organization_name.trim() : ''
+  const full = typeof organizer?.full_name === 'string' ? organizer.full_name.trim() : ''
+  return org || full || 'Organizer'
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ organizerId: string }> }): Promise<Metadata> {
   const { organizerId } = await params
   
   const supabase = await createClient()
   const { data: organizer } = await supabase
     .from('users')
-    .select('full_name, is_verified')
+    .select('full_name, organization_name, is_verified')
     .eq('id', organizerId)
     .single()
 
@@ -29,9 +40,14 @@ export async function generateMetadata({ params }: { params: Promise<{ organizer
     }
   }
 
+  const name = organizerDisplayName(organizer)
+  const title = `${name} | Tikèm Organizer`
+  const description = `View all events organized by ${name} on Tikèm`
   return {
-    title: `${organizer.full_name} | Tikèm Organizer`,
-    description: `View all events organized by ${organizer.full_name} on Tikèm`,
+    title,
+    description,
+    openGraph: { title, description, type: 'profile' },
+    twitter: { card: 'summary', title, description },
   }
 }
 
@@ -41,15 +57,23 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
   
   const supabase = await createClient()
   
-  // Fetch organizer info
-  const { data: organizer } = await supabase
+  // Fetch organizer info. Public fields only: everything here reaches the
+  // client component and is serialized into the page, so no email/phone.
+  const { data: organizerRow } = await supabase
     .from('users')
-    .select('id, full_name, email, is_verified, created_at')
+    .select('id, full_name, organization_name, is_verified, created_at')
     .eq('id', organizerId)
     .single()
 
-  if (!organizer) {
+  if (!organizerRow) {
     notFound()
+  }
+
+  const organizer = {
+    id: String(organizerRow.id || organizerId),
+    name: organizerDisplayName(organizerRow),
+    is_verified: !!organizerRow.is_verified,
+    created_at: organizerRow.created_at,
   }
 
   // Fetch organizer's events
@@ -84,7 +108,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
   const withOrganizer = (event: any) => ({
     ...event,
     users: {
-      full_name: organizer.full_name,
+      full_name: organizer.name,
       is_verified: organizer.is_verified,
     },
   })

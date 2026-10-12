@@ -20,7 +20,7 @@ import { useActiveLocationCopy } from '../lib/locationCopy';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
-import { artForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
+import { artForWorld, heroArtForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
 import { withAlpha } from '../theme/tokens';
 import { eventMatchesNationalDay, nationalDayName, resolveNationalDays } from '../lib/nationalDays';
 import { nationalDayArt } from '../lib/nationalDaysRemote';
@@ -229,7 +229,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   const heroArt = nationalDayDef
     ? nationalDayArt(nationalDayDef)?.source ?? artForWorld('kilti', 'kilti').source
     : world
-    ? artForWorld(world, world).source
+    ? heroArtForWorld(world).source
     : tileArtForCategory(category)?.source ?? categoryArt(category);
 
   const Hero = isCategoryPage ? (
@@ -494,10 +494,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     heroGridPad: {
       paddingTop: 16,
     },
+    // The list header bleeds to the screen edge for the hero (heroListHeader's
+    // -16), so the chips put the grid's 16 back or they sit flush on the edge.
     filterRow: {
       flexDirection: 'row',
       gap: 8,
       marginBottom: 16,
+      paddingHorizontal: 16,
     },
     filterChip: {
       paddingHorizontal: 14,

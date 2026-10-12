@@ -2304,6 +2304,7 @@ export default {
       endDate: 'Chwazi dat ak lè fen',
       tierName: 'Antre yon non kategori',
       tierPrice: 'Antre yon pri valab',
+      tierMinPrice: 'Yon tikè ki peye dwe koute omwen {amount} {currency}. Mete yon pri ki pi wo, oswa fè tikè a gratis.',
       tierQuantity: 'Antre yon kantite',
       tierQuantityBelowSold: '{sold} deja vann. Kantite a pa ka pi ba pase sa.',
       capacity: 'Antre yon limit envite',

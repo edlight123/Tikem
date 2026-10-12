@@ -77,6 +77,7 @@ import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
+import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
 import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 
@@ -1312,6 +1313,12 @@ export default function CreateEventFlowRefactored() {
    * Validate the whole draft on Save. Sets inline per-field errors (the inline
    * rows show red). No step-jumping — this is a single canvas.
    */
+  /** "A paid ticket must cost at least 2.00 USD…", in the event's market currency. */
+  const minPriceMessage = (): string =>
+    t('organizerCreateEventFlow.validation.tierMinPrice')
+      .replace('{amount}', (minPaidPriceFor(eventDraft.country) ?? 0).toFixed(2))
+      .replace('{currency}', String(eventDraft.currency || '').toUpperCase());
+
   const validateForSubmit = (): boolean => {
     const errs: FieldErrors = {};
     if (!eventDraft.title.trim()) errs.title = t('organizerCreateEventFlow.validation.title');
@@ -1334,6 +1341,9 @@ export default function CreateEventFlowRefactored() {
         // Free tier (price 0) is valid; only reject empty/negative/non-numeric.
         const price = parseFloat(tier.price);
         if (tier.price === '' || !Number.isFinite(price) || price < 0) errs[`tier_${i}_price`] = t('organizerCreateEventFlow.validation.tierPrice');
+        // US/CA: a paid tier costs at least 2.00; FR: at least 1.00 EUR, so an
+        // absorbed fixed fee can never exceed the price (lib/minPaidPrice.ts).
+        else if (isBelowMinPaidPrice(price, eventDraft.country)) errs[`tier_${i}_price`] = minPriceMessage();
         // Unlimited tiers have no cap, so skip the quantity requirement.
         if (!tier.unlimited) {
           const qty = parseInt(tier.quantity || '0', 10);
@@ -2407,6 +2417,14 @@ export default function CreateEventFlowRefactored() {
                           )}
                         </View>
                       </View>
+                      {/* Live: a paid price below the market minimum (US/CA 2.00,
+                          FR 1.00 EUR). Free (0) and Haiti are never flagged. */}
+                      {isBelowMinPaidPrice(tier.price, eventDraft.country) && (
+                        <View style={styles.scheduleError}>
+                          <Ionicons name="alert-circle" size={16} color={colors.error} />
+                          <Text style={styles.scheduleErrorText}>{minPriceMessage()}</Text>
+                        </View>
+                      )}
                       {/* Live, not only on Save: a tier can't drop below what it
                           has already sold. */}
                       {!tier.unlimited &&

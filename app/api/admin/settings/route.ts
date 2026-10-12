@@ -10,9 +10,12 @@ import { getCurrentUser, requireAdmin } from '@/lib/auth'
 import { getPlatformSettings, updatePlatformSettings } from '@/lib/admin/platform-settings'
 import { DEFAULT_PLATFORM_SETTINGS } from '@/types/platform-settings'
 import { logAdminAction } from '@/lib/admin/audit-log'
+import { MAX_HOLD_DAYS, parseMarketsInput } from '@/lib/admin/market-fee-settings'
 
-const ALLOWED_KEYS = new Set(['haiti', 'usCanada', 'minimumPayoutAmount'])
-const MAX_HOLD_DAYS = 365
+// `usCanada` is the legacy catch-all rate: US/CA/FR events are priced from
+// `markets` (types/platform-settings.ts locationFeesForCountry). It stays
+// accepted so an old client cannot 400, but the admin form no longer sends it.
+const ALLOWED_KEYS = new Set(['haiti', 'usCanada', 'markets', 'minimumPayoutAmount'])
 
 type RegionInput = { platformFeePercentage: number; settlementHoldDays: number }
 
@@ -93,7 +96,7 @@ export async function PATCH(request: NextRequest) {
     if (unknownKeys.length) {
       return NextResponse.json({ error: `Unknown field(s): ${unknownKeys.join(', ')}` }, { status: 400 })
     }
-    const { haiti, usCanada, minimumPayoutAmount } = body as Record<string, unknown>
+    const { haiti, usCanada, markets, minimumPayoutAmount } = body as Record<string, unknown>
 
     const updateData: Record<string, unknown> = {}
     if (haiti !== undefined) {
@@ -105,6 +108,11 @@ export async function PATCH(request: NextRequest) {
       const parsed = parseRegion(usCanada, 'US/Canada')
       if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
       updateData.usCanada = parsed.value
+    }
+    if (markets !== undefined) {
+      const parsed = parseMarketsInput(markets)
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+      updateData.markets = parsed.value
     }
     if (minimumPayoutAmount !== undefined) {
       if (typeof minimumPayoutAmount !== 'number' || !Number.isFinite(minimumPayoutAmount) || minimumPayoutAmount < 0) {
@@ -141,6 +149,7 @@ export async function PATCH(request: NextRequest) {
           ? {
               haiti: (before as any).haiti ?? null,
               usCanada: (before as any).usCanada ?? null,
+              markets: (before as any).markets ?? null,
               minimumPayoutAmount: (before as any).minimumPayoutAmount ?? null,
             }
           : null,

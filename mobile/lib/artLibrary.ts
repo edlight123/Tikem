@@ -177,6 +177,21 @@ export function artForWorld(world: string | null | undefined, seed?: string | nu
   return pool[hashSeed(seed ?? world ?? '') % pool.length];
 }
 
+/**
+ * A world's page hero. The hashed pick suits tiles, but the hero is the first
+ * thing a world page shows, so a world can pin the piece that reads as it at a
+ * glance: "lavi lannwit" landed on the kanaval float, which reads as carnival,
+ * not a night out (2026-10-12 feedback: "make it more night life").
+ */
+const WORLD_HERO: Partial<Record<WorldKey, string>> = {
+  'lavi-lannwit': 'banboch',
+};
+
+export function heroArtForWorld(world: string | null | undefined): ArtPiece {
+  const pinned = WORLD_HERO[world as WorldKey];
+  return (pinned && ART.find((a) => a.key === pinned)) || artForWorld(world, world);
+}
+
 /** True when the world has its own art (tiles use a dark neutral otherwise). */
 export function worldHasArt(world: string | null | undefined): boolean {
   return artInWorld(world).length > 0;

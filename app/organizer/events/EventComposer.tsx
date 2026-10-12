@@ -86,6 +86,7 @@ import { withStoredMoneyFields } from '@/lib/events/stored-money-fields'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
+import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 // The sanctioned editorial section heading (font-display, lowercase, italic).
 // Hand-rolled bold sans headings read as off-brand — see EditorialRails.
 import { SectionHeader } from '@/components/ui/EditorialRails'
@@ -1052,6 +1053,13 @@ export default function EventComposer({
   }
   const anyTierPriceUnset = sellMode === 'tickets' && tiers.some(tierPriceUnset)
 
+  // US/CA: a paid tier costs at least 2.00; FR: at least 1.00 EUR — so an
+  // absorbed fixed fee can never exceed the price (lib/min-paid-price.ts).
+  // Free (0) stays allowed; Haiti has no minimum.
+  const minPaidPrice = minPaidPriceFor(country)
+  const anyTierBelowMinPrice =
+    sellMode === 'tickets' && tiers.some((t) => isBelowMinPaidPrice(t.price, country))
+
   // Per-tier entry (validity) window: when BOTH bounds are set, valid_until
   // must be after valid_from.
   const validityWindowInvalid = (t: TicketTier): boolean => {
@@ -1488,6 +1496,20 @@ export default function EventComposer({
       })
       return
     }
+    if (anyTierBelowMinPrice && minPaidPrice != null) {
+      showToast({
+        type: 'error',
+        title: t('composer.toasts.minPriceTitle', { defaultValue: 'Raise the ticket price' }),
+        message: t('composer.toasts.minPriceMsg', {
+          amount: minPaidPrice.toFixed(2),
+          currency,
+          defaultValue:
+            'A paid ticket must cost at least {{amount}} {{currency}}. Set a higher price, or make the ticket free.',
+        }),
+        duration: 5000,
+      })
+      return
+    }
     if (anySaleWindowInvalid) {
       showToast({
         type: 'error',
@@ -1825,6 +1847,16 @@ export default function EventComposer({
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
+          if (data?.code === MIN_PAID_PRICE_ERROR_CODE && Number.isFinite(Number(data?.minimum))) {
+            throw new Error(
+              t('composer.toasts.minPriceMsg', {
+                amount: Number(data.minimum).toFixed(2),
+                currency,
+                defaultValue:
+                  'A paid ticket must cost at least {{amount}} {{currency}}. Set a higher price, or make the ticket free.',
+              })
+            )
+          }
           throw new Error(
             data?.error || t('composer.toasts.publishStatusErr', { defaultValue: 'Could not update publish status' })
           )

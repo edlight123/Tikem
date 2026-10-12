@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 
 /**
  * Create ticket tier for an event
@@ -37,6 +38,20 @@ export async function POST(req: NextRequest) {
 
     // Convert price from cents to dollars for DECIMAL storage
     const priceInDollars = price / 100
+
+    // Minimum paid price (US/CA 2.00, FR 1.00 EUR); free and Haiti pass.
+    const eventCountry = eventDoc.data()?.country
+    if (isBelowMinPaidPrice(priceInDollars, eventCountry)) {
+      const minimum = minPaidPriceFor(eventCountry) as number
+      return NextResponse.json(
+        {
+          error: `A paid ticket must cost at least ${minimum.toFixed(2)}. Raise the price or make the ticket free.`,
+          code: MIN_PAID_PRICE_ERROR_CODE,
+          minimum,
+        },
+        { status: 400 }
+      )
+    }
 
     const tierData = {
       id: tierId,
@@ -182,6 +197,23 @@ export async function PATCH(req: NextRequest) {
 
     // Update tier
     const priceInDollars = price !== undefined ? price / 100 : tier.price
+
+    // Minimum paid price (US/CA 2.00, FR 1.00 EUR); free and Haiti pass.
+    if (price !== undefined && tier.event_id) {
+      const eventSnap = await adminDb.collection('events').doc(String(tier.event_id)).get()
+      const eventCountry = eventSnap.exists ? eventSnap.data()?.country : null
+      if (isBelowMinPaidPrice(priceInDollars, eventCountry)) {
+        const minimum = minPaidPriceFor(eventCountry) as number
+        return NextResponse.json(
+          {
+            error: `A paid ticket must cost at least ${minimum.toFixed(2)}. Raise the price or make the ticket free.`,
+            code: MIN_PAID_PRICE_ERROR_CODE,
+            minimum,
+          },
+          { status: 400 }
+        )
+      }
+    }
     
     const { error: updateError } = await supabase
       .from('ticket_tiers')
