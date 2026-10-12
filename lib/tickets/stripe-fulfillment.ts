@@ -62,6 +62,7 @@ import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 import { parseTicketQuantity } from '@/lib/tickets/purchasable'
 import { decodeCardOrderLines, type CardOrderLine } from '@/lib/checkout/card-order-lines'
+import { recordFreeClaimTickets, takeFreeClaimForOrder } from '@/lib/tickets/free-claim-policy'
 
 export const STRIPE_ORDERS_COLLECTION = 'stripe_orders'
 
@@ -431,7 +432,44 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     })
     return refundSoldOutOrder(input, orderRef, 'invalid_order_lines', 'invalid_order_lines')
   }
-  const orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
+  let orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
+
+  // FREE lines (list price 0) are the buyer's one free claim for this event,
+  // under the same lock the free-claim route uses (lib/tickets/free-claim-policy).
+  // Checkout refused a buyer who had already claimed, but two orders paid side by
+  // side would both have passed that check: the lock is taken HERE, atomically,
+  // once per order. A claim that belongs to another order means this order's free
+  // lines are not issued — they cost nothing, so the buyer is owed nothing for
+  // them — and the paid lines are issued as normal. The decision is stored on
+  // the ledger so a retry issues exactly the same set.
+  const freeClaimant = {
+    isGuest: Boolean(input.guestRecipient) || m.isGuest === 'true',
+    id: input.buyerId,
+    email: input.guestRecipient?.email || m.guestEmail || null,
+  }
+  const hasFreeLines = Boolean(orderLines?.some((l) => l.unitOriginal <= 0))
+  let freeClaimDecision: string | null = hasFreeLines ? initial.free_claim_decision || null : null
+  if (orderLines && hasFreeLines && !freeClaimDecision) {
+    const held = await takeFreeClaimForOrder(eventId, freeClaimant, input.paymentId)
+    freeClaimDecision = held ? 'kept' : 'dropped'
+    const dropped = held ? [] : orderLines.filter((l) => l.unitOriginal <= 0)
+    if (!held) {
+      console.warn(`${logPrefix} free lines not issued: the buyer's free claim for this event is already used`, {
+        paymentId: input.paymentId,
+      })
+    }
+    await orderRef.set(
+      {
+        free_claim_decision: freeClaimDecision,
+        ...(dropped.length ? { free_lines_dropped: dropped, free_lines_dropped_reason: 'already_claimed' } : {}),
+        updated_at: new Date().toISOString(),
+      },
+      { merge: true }
+    )
+  }
+  if (orderLines && freeClaimDecision === 'dropped') {
+    orderLines = orderLines.filter((l) => l.unitOriginal > 0)
+  }
 
   // A paid intent whose quantity is not a valid whole number: never issue.
   // Refunded through the same path as a sell-out, flagged needs_refund.
@@ -445,7 +483,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // The lines are the authority for a multi-tier order; `quantity` there is only
   // their sum, written for humans and older tooling.
   const quantity: number = orderLines
-    ? (decodedLines as { quantity: number }).quantity
+    ? orderLines.reduce((sum, l) => sum + l.quantity, 0)
     : (resolvedQuantity as number)
 
   // ── Derived order facts ──
@@ -625,6 +663,22 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
       { merge: true }
     )
   })
+
+  // The free claim records which tickets it issued, so the free-claim route can
+  // later tell whether they were all voided (and only then reopen the claim).
+  // Idempotent; a failure leaves a lock with no ids, which reads as "held" — the
+  // safe side.
+  if (freeClaimDecision === 'kept' && orderLines) {
+    // Free by LIST price (a promo-zeroed paid ticket is not a free claim). The
+    // plan is the lines in order, one entry per ticket.
+    const isFreeTicket = orderLines.flatMap((l) => Array.from({ length: l.quantity }, () => l.unitOriginal <= 0))
+    const freeIds = ticketIds.filter((_, i) => isFreeTicket[i])
+    if (freeIds.length > 0) {
+      await recordFreeClaimTickets(eventId, freeClaimant, freeIds).catch((err: any) =>
+        console.error(`${logPrefix} could not record free-claim tickets`, err?.message || err)
+      )
+    }
+  }
 
   // ── 3. Bookkeeping — each step at most once ──
   const failedSteps: string[] = []

@@ -36,11 +36,17 @@ import {
   normalizeTierLines,
   parseTicketQuantity,
 } from '@/lib/tickets/purchasable'
-import { isLiveTicketStatus } from '@/lib/tickets/status'
-import crypto from 'crypto'
-
-/** Hard cap on how many free tickets one claim may issue, across all tiers. */
-const MAX_FREE_TICKETS_PER_CLAIM = 10
+// The free-ticket limits are shared with the card route, which can carry free
+// lines in a multi-tier cart (lib/tickets/free-claim-policy).
+import {
+  FREE_CLAIM_LOCK_IN_FLIGHT_MS,
+  GUEST_ALREADY_CLAIMED_MESSAGE,
+  MAX_FREE_TICKETS_PER_CLAIM,
+  freeClaimLockId,
+  isAlreadyExists,
+  isVoidedFreeTicket,
+  liveFreeTicketsFor,
+} from '@/lib/tickets/free-claim-policy'
 
 /**
  * Error responses carry BOTH a human-readable English `error` (unchanged wording,
@@ -61,61 +67,6 @@ interface TierClaim {
   /** The tier's OWN price, straight from Firestore (major units). Never client-supplied. */
   unitPrice: number
 }
-
-/**
- * The once-per-event free-claim lock for this claimant.
- *
- * `create()` on a deterministic doc id is atomic: of two concurrent claims by the
- * same account (or the same guest email) exactly one gets the lock, which closes the
- * check-then-act gap between the "already holds a free ticket?" query and the
- * reservation below. A guest is keyed on a HASH of their email, so the lock doc
- * never stores the address itself.
- */
-function freeClaimLockId(eventId: string, identity: CheckoutIdentity): string {
-  if (identity.isGuest) {
-    const email = String(identity.email || '').trim().toLowerCase()
-    const digest = crypto.createHash('sha256').update(email).digest('hex').slice(0, 40)
-    return `${eventId}__guest_${digest}`
-  }
-  return `${eventId}__${identity.id}`
-}
-
-/**
- * A legacy lock (no recorded ticket_ids) younger than this is a claim in flight:
- * the double tap the lock exists for.
- */
-const FREE_CLAIM_LOCK_IN_FLIGHT_MS = 2 * 60 * 1000
-
-/** The claimant's LIVE free tickets for this event (lib/tickets/status vocabulary). */
-function liveFreeTicketsFor(docs: any[], eventId: string): any[] {
-  return docs
-    .map((d: any) => ({ id: d.id, ...d.data() }))
-    .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status))
-}
-
-/** Statuses that void a free ticket for good. Anything else (transferred, unknown) is not void. */
-const VOIDED_FREE_TICKET_STATUSES = new Set(['refunded', 'cancelled', 'canceled', 'voided', 'void'])
-
-/** True only for a ticket that was refunded / cancelled and never used at the door. */
-function isVoidedFreeTicket(t: any): boolean {
-  if (t?.checked_in === true || t?.checked_in_at) return false
-  const status = String(t?.status ?? '').toLowerCase().trim()
-  if (isLiveTicketStatus(status)) return false
-  return VOIDED_FREE_TICKET_STATUSES.has(status)
-}
-
-function isAlreadyExists(err: any): boolean {
-  return err?.code === 6 || /ALREADY_EXISTS|already exists/i.test(String(err?.message || ''))
-}
-
-/**
- * A guest who has already claimed gets a NEUTRAL answer. The email they typed is
- * unverified, so echoing the earlier order's tickets (QR payloads, phone number)
- * would hand anyone who knows an address that person's tickets. The real owner
- * already has them in their inbox.
- */
-const GUEST_ALREADY_CLAIMED_MESSAGE =
-  'You already claimed a ticket for this event. Check your email for your tickets.'
 
 /**
  * Sale-window / active / sold-out gate for a tier, mirroring the paid initiate
