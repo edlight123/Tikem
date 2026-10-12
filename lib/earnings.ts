@@ -82,7 +82,13 @@ function moncashAbsorbedFeeEventCents(options: {
   return fx ? Math.round(feeChargedCents / fx) : feeChargedCents
 }
 
-function calculateEventCurrencyFees(options: {
+/**
+ * One order's fees in the EVENT currency — the ledger's rule, exported so every
+ * report (the admin financial export included) prices a sale exactly as the
+ * payout ledger does: per-market rate + fixed fee per paid ticket, nothing
+ * deducted when the buyer paid the fee on top.
+ */
+export function calculateEventCurrencyFees(options: {
   grossEventCents: number
   paymentMethod: PaymentMethod
   chargedAmountCents?: number | null
@@ -129,14 +135,17 @@ function calculateEventCurrencyFees(options: {
   // Use dynamic fee percentage if provided, otherwise use default from calculateFees
   // Exactly the rate, as checkout charges it (lib/fees.ts). A re-derived sale
   // from the capped era keeps its capped fee (platformFeeForSale).
-  const platformFee = platformFeeForSale(
+  // Never more than the order itself: an absorbed fixed fee on a very cheap
+  // ticket must not push the organizer's net below zero (min paid prices in
+  // lib/min-paid-price.ts keep this from happening on new events).
+  const platformFee = Math.min(grossEventCents, platformFeeForSale(
     grossEventCents,
     options.platformFeePercentage !== undefined ? options.platformFeePercentage : FEE_PERCENT_DEFAULT,
     {
       ...(options.historical ?? { legacyCapMinorPerTicket: null, quantity: options.quantity ?? 1, purchasedAt: null }),
       fixedFeeMinorPerTicket: options.fixedFeeMinorPerTicket ?? 0,
     }
-  )
+  ))
 
   // Processing fee depends on the payment rail.
   // Stripe fees are in charged/settlement currency, so convert them back to event currency when needed.
@@ -156,7 +165,9 @@ function calculateEventCurrencyFees(options: {
 
   // Card processing is Tikèm's cost, paid out of the platform fee — the same
   // treatment MonCash's cut already gets — so it is never deducted here.
-  const netAmount = grossEventCents - platformFee
+  // Clamped at 0 per order: a negative net would reach netAmount and
+  // availableToWithdraw and silently eat other orders' money.
+  const netAmount = Math.max(0, grossEventCents - platformFee)
   return {
     grossAmount: grossEventCents,
     platformFee,
@@ -265,9 +276,12 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   )
   // The per-ticket cap is retired for every sale (no real organizer sold under it).
   const legacyCapMinorPerTicket: number | null = null
-  const settlementHoldDays = eventLocation === 'haiti'
-    ? platformSettings.haiti.settlementHoldDays
-    : platformSettings.usCanada.settlementHoldDays
+  // The market's own hold (US/CA/FR), else haiti/usCanada by location.
+  const settlementHoldDays = Number.isFinite(Number(marketFees.settlementHoldDays))
+    ? Number(marketFees.settlementHoldDays)
+    : eventLocation === 'haiti'
+      ? platformSettings.haiti.settlementHoldDays
+      : platformSettings.usCanada.settlementHoldDays
   
   // Settlement hold is applied after the event ends.
   const eventEndDate =

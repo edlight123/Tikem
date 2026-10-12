@@ -21,6 +21,8 @@
  * `lib/ticketPricing.ts`. Cents only inside, to keep the arithmetic exact.
  */
 
+import { normalizeSupportedCountry } from './countrySupport';
+
 export type FeeIncidence = 'organizer' | 'buyer';
 
 /** Floor on the platform fee, in minor units. */
@@ -143,13 +145,15 @@ export function resetFeeConfig(): void {
 const BUYER_PAYS_COUNTRIES = new Set(['US', 'CA', 'FR']);
 
 function isHaiti(country: unknown): boolean {
-  const code = String(country || '').toUpperCase().trim();
-  return code === 'HT' || code === 'HAITI';
+  return normalizeSupportedCountry(country) === 'HT';
 }
 
-/** Same resolution as the web's `locationFeesForCountry`. */
+/**
+ * Same resolution as the web's `locationFeesForCountry`, through the same
+ * normalizer: 'USA', 'United States', 'Canada', 'France' find their market.
+ */
 function feesFor(country: unknown): LocationFees {
-  const code = String(country || '').toUpperCase().trim();
+  const code = normalizeSupportedCountry(country);
   if ((FEE_MARKETS as string[]).includes(code)) return FEE_CONFIG.markets[code as FeeMarket];
   return isHaiti(country) ? FEE_CONFIG.haiti : FEE_CONFIG.usCanada;
 }
@@ -158,15 +162,15 @@ function feesFor(country: unknown): LocationFees {
 function currencyFor(event: PricingEventLike | null | undefined): string {
   const explicit = String(event?.currency || '').toUpperCase().trim();
   if (explicit) return explicit;
-  const code = String(event?.country || '').toUpperCase().trim();
+  const code = normalizeSupportedCountry(event?.country);
   if (code === 'CA') return 'CAD';
   if (code === 'FR') return 'EUR';
-  if (code === 'HT' || code === 'HAITI') return 'HTG';
+  if (code === 'HT') return 'HTG';
   return 'USD';
 }
 
 export function feeIncidenceForCountry(country: unknown): FeeIncidence {
-  const code = String(country || '').toUpperCase().trim();
+  const code = normalizeSupportedCountry(country);
   // An unrecognised market is organizer-pays: it can never silently start
   // charging buyers more than the advertised price.
   return BUYER_PAYS_COUNTRIES.has(code) ? 'buyer' : 'organizer';

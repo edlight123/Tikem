@@ -1335,7 +1335,9 @@
       "publishedMsg": "Evènman ou anliy kounye a.",
       "unpublishedMsg": "Evènman ou kache pou patisipan yo.",
       "errUpdateTitle": "Nou pa t ka mete ajou",
-      "priceMsgToggle": "Mete yon pri, oswa limen « Fè tikè sa a gratis ». Yon pri vid pa vle di gratis."
+      "priceMsgToggle": "Mete yon pri, oswa limen « Fè tikè sa a gratis ». Yon pri vid pa vle di gratis.",
+      "minPriceTitle": "Monte pri tikè a",
+      "minPriceMsg": "Yon tikè ki peye dwe koute omwen {{amount}} {{currency}}. Mete yon pri ki pi wo, oswa fè tikè a gratis."
     },
     "spotifySearchPlaceholder": "Chèche yon chante sou Spotify",
     "spotifyResultsLabel": "Rezilta chante yo",

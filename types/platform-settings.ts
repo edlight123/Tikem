@@ -4,6 +4,8 @@
  * Defines configurable platform-wide settings including fees and settlement times
  */
 
+import { normalizeSupportedCountry } from '@/lib/country-support'
+
 /**
  * Location-based fee configuration
  */
@@ -196,7 +198,9 @@ export const DEFAULT_MARKET_FEES: Record<FeeMarket, LocationFeeConfig> = {
 
 /** The market whose fee terms apply to an event in this country, if it has its own. */
 export function feeMarketForCountry(country: unknown): FeeMarket | null {
-  const code = String(country || '').toUpperCase().trim()
+  // 'USA', 'United States', 'France', 'Canada'... resolve like everywhere else
+  // (lib/country-support.ts): a full name must not fall to the catch-all rate.
+  const code = normalizeSupportedCountry(country)
   return (FEE_MARKETS as readonly string[]).includes(code) ? (code as FeeMarket) : null
 }
 
@@ -246,8 +250,8 @@ export type EventLocation = 'haiti' | 'us-canada'
  * Determine event location from country code
  */
 export function getEventLocation(countryCode: string): EventLocation {
-  const normalized = countryCode.toUpperCase().trim()
-  if (normalized === 'HT' || normalized === 'HAITI') {
+  const normalized = String(countryCode || '').toUpperCase().trim()
+  if (normalized === 'HT' || normalized === 'HAITI' || normalizeSupportedCountry(countryCode) === 'HT') {
     return 'haiti'
   }
   return 'us-canada'

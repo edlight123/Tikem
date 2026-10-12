@@ -3,7 +3,11 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
 import { adminError } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
-import { calculateFees } from '@/lib/fees'
+import { calculateEventCurrencyFees } from '@/lib/earnings'
+import { getPlatformSettings } from '@/lib/admin/platform-settings'
+import { fixedFeeMinorFor, locationFeesForCountry } from '@/types/platform-settings'
+import { defaultCurrencyForCountry } from '@/lib/country-support'
+import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
 import { csvRow } from '@/lib/csv'
 
 export const dynamic = 'force-dynamic'
@@ -49,32 +53,6 @@ function majorFromCents(cents: number): string {
   return (Math.round(cents) / 100).toFixed(2)
 }
 
-function calculateEventCurrencyFees(options: {
-  grossEventCents: number
-  paymentMethod: PaymentMethod
-  chargedAmountCents?: number | null
-  fxRate?: number | null
-}): { platformFee: number; processingFee: number; netAmount: number } {
-  const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
-  if (grossEventCents <= 0) return { platformFee: 0, processingFee: 0, netAmount: 0 }
-
-  // Platform fee is always calculated on organizer-facing gross (event currency).
-  const platformFee = calculateFees(grossEventCents).platformFee
-
-  // Processing fee depends on rail.
-  let processingFeeEventCents = 0
-  if (options.paymentMethod === 'stripe' || options.paymentMethod === 'stripe_connect') {
-    const charged = Math.max(0, Math.round(options.chargedAmountCents ?? grossEventCents))
-    const stripeProcessingFeeChargedCents = calculateFees(charged).processingFee
-    const fx = typeof options.fxRate === 'number' && Number.isFinite(options.fxRate) && options.fxRate > 0 ? options.fxRate : null
-    processingFeeEventCents = fx ? Math.round(stripeProcessingFeeChargedCents / fx) : stripeProcessingFeeChargedCents
-  }
-
-  // Processing is reported for the books but is Tikèm's cost, not the organizer's.
-  const netAmount = grossEventCents - platformFee
-  return { platformFee, processingFee: processingFeeEventCents, netAmount }
-}
-
 type TicketRow = {
   id: string
   status: string
@@ -90,6 +68,7 @@ type TicketRow = {
   chargedCurrency: string
   chargedAmountCents: number
   fxRate: number | null
+  feeIncidence: 'buyer' | 'organizer'
 }
 
 async function loadTicketsForEvent(eventId: string) {
@@ -185,6 +164,9 @@ export async function GET(
       chargedCurrency,
       chargedAmountCents,
       fxRate,
+      // The payout engine's rule (lib/payouts/fee-incidence.ts): a buyer who
+      // paid the fee on top leaves the organizer the full face value.
+      feeIncidence: ticketFeeIncidence(data),
     })
   }
 
@@ -197,6 +179,7 @@ export async function GET(
       fxRate: number | null
       grossEventCents: number
       chargedAmountCents: number
+      feeIncidence: 'buyer' | 'organizer'
       tickets: TicketRow[]
     }
   >()
@@ -210,6 +193,7 @@ export async function GET(
         fxRate: ticket.fxRate,
         grossEventCents: ticket.grossEventCents,
         chargedAmountCents: ticket.chargedAmountCents,
+        feeIncidence: ticket.feeIncidence,
         tickets: [ticket],
       })
       continue
@@ -221,12 +205,39 @@ export async function GET(
       fxRate: current.fxRate ?? ticket.fxRate,
       grossEventCents: current.grossEventCents + ticket.grossEventCents,
       chargedAmountCents: current.chargedAmountCents + ticket.chargedAmountCents,
+      // One payment is one charge; should its tickets disagree, take the
+      // fee-bearing reading (same as lib/earnings.ts).
+      feeIncidence: current.feeIncidence === 'buyer' && ticket.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
       tickets: [...current.tickets, ticket],
     })
   }
 
   const eventCurrency = String(event.currency || event.original_currency || 'HTG').toUpperCase() || 'HTG'
   const eventTitle = String(event.title || '')
+
+  // The ledger's per-market fee terms (lib/earnings.ts): HT 10%, US/CA 6% +
+  // 0.99, FR 2.5% + €0.50 per paid ticket, as currently configured.
+  const eventCountry = String(event.country || 'HT')
+  const marketFees = locationFeesForCountry(await getPlatformSettings(), eventCountry)
+  const fixedFeeMinorPerTicket = fixedFeeMinorFor(
+    marketFees,
+    event.currency || defaultCurrencyForCountry(eventCountry)
+  )
+  // processingFee here is the card/MonCash processing Tikèm absorbs: reported
+  // for the books, never deducted from the organizer's net.
+  const feesForGroup = (group: { grossEventCents: number; paymentMethod: PaymentMethod; chargedAmountCents: number; fxRate: number | null; feeIncidence: 'buyer' | 'organizer'; tickets: TicketRow[] }) => {
+    const fees = calculateEventCurrencyFees({
+      grossEventCents: group.grossEventCents,
+      paymentMethod: group.paymentMethod,
+      chargedAmountCents: group.chargedAmountCents,
+      fxRate: group.fxRate,
+      platformFeePercentage: marketFees.platformFeePercentage,
+      fixedFeeMinorPerTicket,
+      quantity: group.tickets.length,
+      feeIncidence: group.feeIncidence,
+    })
+    return { platformFee: fees.platformFee, processingFee: fees.absorbedProcessingFee, netAmount: fees.netAmount }
+  }
 
   if (mode === 'summary') {
     let grossEventTotal = 0
@@ -237,12 +248,7 @@ export async function GET(
     const chargedTotalsByCurrency = new Map<string, number>()
 
     for (const group of Array.from(groups.values())) {
-      const fees = calculateEventCurrencyFees({
-        grossEventCents: group.grossEventCents,
-        paymentMethod: group.paymentMethod,
-        chargedAmountCents: group.chargedAmountCents,
-        fxRate: group.fxRate,
-      })
+      const fees = feesForGroup(group)
       grossEventTotal += group.grossEventCents
       platformFeeTotal += fees.platformFee
       processingFeeTotal += fees.processingFee
@@ -313,12 +319,7 @@ export async function GET(
   const allocationsByTicketId = new Map<string, { platformFee: number; processingFee: number; organizerNet: number }>()
 
   for (const group of Array.from(groups.values())) {
-    const fees = calculateEventCurrencyFees({
-      grossEventCents: group.grossEventCents,
-      paymentMethod: group.paymentMethod,
-      chargedAmountCents: group.chargedAmountCents,
-      fxRate: group.fxRate,
-    })
+    const fees = feesForGroup(group)
 
     const groupTickets = group.tickets
     if (groupTickets.length === 0 || group.grossEventCents <= 0) continue

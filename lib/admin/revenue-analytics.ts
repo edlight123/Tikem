@@ -89,6 +89,80 @@ function normalizePaymentMethod(raw: unknown): 'stripe' | 'moncash' | 'natcash' 
   return 'moncash'
 }
 
+export interface TicketRevenueAmounts {
+  /** USD equivalent of what the ticket earned. */
+  priceUSD: number
+  /** HTG equivalent (0 when a USD sale has no HTG leg or rate recorded). */
+  priceHTG: number
+  /** Implied HTG->USD rate recorded on the ticket, when one exists. */
+  htgToUsdRate: number | null
+}
+
+/** Last-resort HTG->USD rate when a ticket carries no rate at all. */
+const LEGACY_HTG_TO_USD = 0.0076
+
+/**
+ * Per-ticket USD/HTG conversion — the single source for every admin revenue
+ * roll-up in this file.
+ *
+ * `exchange_rate_used` means different things depending on the sale leg:
+ * - card (Stripe) HTG events charged in USD: USD per HTG
+ * - MonCash USD events charged in HTG: HTG per USD (spread included)
+ * - MonCash HTG events: usually absent (no conversion happened)
+ * so it must never be read as one number or defaulted to 1.
+ */
+export function ticketRevenueAmounts(ticket: Record<string, any>): TicketRevenueAmounts {
+  const price = toNumber(ticket.price_paid) ?? 0
+  const currency = normalizeCurrency(ticket.currency)
+  const chargedCurrency = normalizeCurrency(ticket.charged_currency)
+  const fxRate = toNumber(ticket.exchange_rate_used)
+
+  let htgToUsdRate: number | null = null
+  if (currency === 'HTG' && chargedCurrency === 'USD' && fxRate && fxRate > 0) {
+    htgToUsdRate = fxRate
+  } else if (currency === 'USD' && chargedCurrency === 'HTG' && fxRate && fxRate > 0) {
+    htgToUsdRate = 1 / fxRate
+  }
+  if (!(htgToUsdRate && Number.isFinite(htgToUsdRate) && htgToUsdRate > 0)) {
+    htgToUsdRate = null
+  }
+
+  let priceUSD = 0
+  let priceHTG = 0
+
+  if (currency === 'USD') {
+    priceUSD = price
+    if (chargedCurrency === 'HTG') {
+      const chargedAmount = toNumber(ticket.charged_amount)
+      if (chargedAmount && chargedAmount > 0) {
+        priceHTG = chargedAmount
+      } else if (fxRate && fxRate > 0) {
+        priceHTG = price * fxRate
+      }
+    }
+  } else {
+    priceHTG = price
+    if (chargedCurrency === 'USD') {
+      const chargedAmount = toNumber(ticket.charged_amount)
+      if (chargedAmount && chargedAmount > 0) {
+        priceUSD = chargedAmount
+      } else if (fxRate && fxRate > 0) {
+        priceUSD = price * fxRate
+      }
+    }
+    if (priceUSD === 0) {
+      // Legacy fallback for when we truly have no rate recorded.
+      priceUSD = price * LEGACY_HTG_TO_USD
+    }
+  }
+
+  if (priceHTG === 0 && priceUSD > 0 && htgToUsdRate) {
+    priceHTG = priceUSD / htgToUsdRate
+  }
+
+  return { priceUSD, priceHTG, htgToUsdRate }
+}
+
 export interface PlatformMetrics {
   revenue: RevenueBreakdown
   growth: {
@@ -177,51 +251,9 @@ export async function getPlatformRevenueAnalytics(
     const fxSpreadPercent = toNumber(ticket.exchange_rate_spread_percent)
     const paymentMethod = normalizePaymentMethod(ticket.payment_method)
 
-    // Compute implied HTG->USD rate for general stats.
-    // - Stripe HTG events: fxRate = USD per HTG (charged USD, event HTG)
-    // - MonCash USD events: fxRate = HTG per USD (charged HTG, event USD)
-    let htgToUsdRate: number | null = null
-    if (currency === 'HTG' && chargedCurrency === 'USD' && fxRate && fxRate > 0) {
-      htgToUsdRate = fxRate
-    } else if (currency === 'USD' && chargedCurrency === 'HTG' && fxRate && fxRate > 0) {
-      htgToUsdRate = 1 / fxRate
-    }
+    const { priceUSD, priceHTG, htgToUsdRate } = ticketRevenueAmounts(ticket)
     if (htgToUsdRate && Number.isFinite(htgToUsdRate) && htgToUsdRate > 0) {
       exchangeRates.push(htgToUsdRate)
-    }
-
-    // Calculate USD/HTG equivalents with minimal assumptions.
-    let priceUSD = 0
-    let priceHTG = 0
-
-    if (currency === 'USD') {
-      priceUSD = price
-      if (chargedCurrency === 'HTG') {
-        const chargedAmount = toNumber(ticket.charged_amount)
-        if (chargedAmount && chargedAmount > 0) {
-          priceHTG = chargedAmount
-        } else if (fxRate && fxRate > 0) {
-          priceHTG = price * fxRate
-        }
-      }
-    } else {
-      priceHTG = price
-      if (chargedCurrency === 'USD') {
-        const chargedAmount = toNumber(ticket.charged_amount)
-        if (chargedAmount && chargedAmount > 0) {
-          priceUSD = chargedAmount
-        } else if (fxRate && fxRate > 0) {
-          priceUSD = price * fxRate
-        }
-      }
-      if (priceUSD === 0) {
-        // Legacy fallback for when we truly have no rate recorded.
-        priceUSD = price * 0.0076
-      }
-    }
-
-    if (priceHTG === 0 && priceUSD > 0 && htgToUsdRate && htgToUsdRate > 0) {
-      priceHTG = priceUSD / htgToUsdRate
     }
 
     // Spread profit for MonCash USD events charged in HTG.
@@ -302,7 +334,7 @@ export async function getPlatformRevenueAnalytics(
 
   // Convert spread profit HTG -> USD using observed average HTG->USD rate when available.
   // Fallback to a conservative constant only when we have no rate data.
-  const htgToUsd = breakdown.exchangeRates.averageRate > 0 ? breakdown.exchangeRates.averageRate : 0.0076
+  const htgToUsd = breakdown.exchangeRates.averageRate > 0 ? breakdown.exchangeRates.averageRate : LEGACY_HTG_TO_USD
   breakdown.fxSpread.profitUSD = breakdown.fxSpread.profitHTG * htgToUsd
   breakdown.totalRevenueUSDWithFxSpread = breakdown.totalRevenueUSD + breakdown.fxSpread.profitUSD
 
@@ -381,11 +413,7 @@ async function getTopPerformers() {
   const eventRevenue = new Map<string, { title: string; revenue: number; tickets: number }>()
 
   for (const ticket of tickets) {
-    const price = ticket.price_paid || 0
-    const currency = (ticket.currency || 'USD').toUpperCase()
-    const exchangeRate = ticket.exchange_rate_used || 1
-    
-    const priceUSD = currency === 'HTG' ? price * exchangeRate : price
+    const { priceUSD } = ticketRevenueAmounts(ticket)
 
     // Update organizer revenue
     if (ticket.organizer_id) {
@@ -464,12 +492,7 @@ export async function getRevenueByPeriod(
 
   for (const ticket of tickets) {
     const createdAt = ticket.created_at?.toDate?.() || new Date()
-    const price = ticket.price_paid || 0
-    const currency = (ticket.currency || 'USD').toUpperCase()
-    const exchangeRate = ticket.exchange_rate_used || 1
-
-    const priceUSD = currency === 'HTG' ? price * exchangeRate : price
-    const priceHTG = currency === 'USD' ? price / exchangeRate : price
+    const { priceUSD, priceHTG } = ticketRevenueAmounts(ticket)
 
     let dateKey: string
     if (period === 'daily') {

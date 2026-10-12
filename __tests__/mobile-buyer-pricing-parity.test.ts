@@ -79,7 +79,27 @@ const CASES: Case[] = [
   },
   { label: 'US event with no currency on it', face: 30, event: { country: 'US' }, quantity: 2 },
   { label: 'Haiti event priced in USD', face: 40, event: { country: 'HT', currency: 'USD', fee_incidence: 'buyer' }, quantity: 2 },
+  // Stored country values are not always ISO codes: both sides normalize.
+  { label: 'country "USA"', face: 50, event: { country: 'USA', currency: 'USD' }, quantity: 1 },
+  { label: 'country "United States"', face: 50, event: { country: 'United States' }, quantity: 2 },
+  { label: 'country "Canada"', face: 40, event: { country: 'Canada' }, quantity: 1 },
+  { label: 'country "France"', face: 30, event: { country: 'France' }, quantity: 1 },
+  { label: 'country "france" lower-case', face: 30, event: { country: 'france', currency: 'EUR' }, quantity: 2 },
+  { label: 'country "Haiti"', face: 1_000, event: { country: 'Haiti', currency: 'HTG' }, quantity: 1 },
 ]
+
+describe('full country names resolve to their market', () => {
+  it.each([
+    { country: 'USA', currency: 'USD', fee: 3.99 },
+    { country: 'United States', currency: 'USD', fee: 3.99 },
+    { country: 'Canada', currency: 'CAD', fee: 3.99 },
+    { country: 'France', currency: 'EUR', fee: 1.75 },
+  ])('$country uses its market fee on both sides', ({ country, currency, fee }) => {
+    const event = { country, currency }
+    expect(webPriceOrder(50, event, { quantity: 1, currency }).buyerFee).toBeCloseTo(fee, 2)
+    expect(mobilePriceOrder(50, event, { quantity: 1 }).buyerFee).toBeCloseTo(fee, 2)
+  })
+})
 
 describe('mobile and web price an order identically', () => {
   it.each(CASES)('$label', ({ face, event, quantity }) => {
