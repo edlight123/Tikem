@@ -75,6 +75,9 @@ jest.mock('@/lib/promo-codes', () => ({
   ...jest.requireActual('@/lib/promo-codes'),
   resolvePromoCode: jest.fn(async (_e: string, code: string) => (code === 'promo1' || code === 'TEN' ? PROMO : null)),
   promoCanCoverOrder: jest.fn(async () => ({ ok: true })),
+  isPromoValidationLimited: jest.fn(async () => false),
+  recordPromoValidationAttempt: jest.fn(async () => ({ limited: false })),
+  recordFailedPromoValidation: jest.fn(async () => undefined),
 }))
 jest.mock('@/lib/promoters', () => ({ resolvePromoterCode: jest.fn(async () => null) }))
 jest.mock('@/lib/tracking-links', () => ({ resolveOrderAttribution: jest.fn(async () => null) }))

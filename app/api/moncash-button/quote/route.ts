@@ -3,7 +3,16 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { identityFromUser } from '@/lib/guest/checkout'
-import { resolvePromoCode, promoBuyerKey, promoCanCoverOrder, type PromoDoc } from '@/lib/promo-codes'
+import {
+  isPromoValidationLimited,
+  promoBuyerKey,
+  promoCanCoverOrder,
+  promoIpFailureKeys,
+  recordFailedPromoValidation,
+  recordPromoValidationAttempt,
+  resolvePromoCode,
+  type PromoDoc,
+} from '@/lib/promo-codes'
 import { requestLanguage, sumMoney } from '@/lib/fx/usd-htg'
 import { inferCountryFromEventText } from '@/lib/event-country'
 import { isPaidAllowed, countrySupport } from '@/lib/country-support'
@@ -51,15 +60,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
 
-    // A quote answers "does this promo code work?" without any purchase, so
-    // unthrottled it would let anyone enumerate codes. Per IP, and generous:
-    // Haitian carriers put many phones behind one shared address (CGNAT), so
-    // the limit has to fit a crowd of real buyers, not one.
-    const { limited } = await consumeRateLimit({
-      key: `moncash-quote:${clientIp(request)}`,
-      limit: 120,
-      windowMs: 10 * 60 * 1000,
-    })
+    // A plain price quote reveals nothing private, so it is limited generously
+    // per IP: Haitian carriers put many phones behind one shared address
+    // (CGNAT). A quote carrying a promo code is throttled further down by the
+    // SAME policy and counters as /api/promo-codes/validate, so the quote is
+    // never a cheaper way to sweep an event's codes.
+    const ip = clientIp(request)
+    const { limited } = await consumeRateLimit({ key: `moncash-quote:${ip}`, limit: 120, windowMs: 10 * 60 * 1000 })
     if (limited) {
       return NextResponse.json({ error: 'Too many requests', code: 'rate_limited' }, { status: 429 })
     }
@@ -96,11 +103,28 @@ export async function POST(request: Request) {
 
     const tierId = body?.tierId ?? null
     const promoInput = body?.promoCodeId || body?.promoCode || null
+    // Promo throttle, shared with /api/promo-codes/validate: every attempt per
+    // account, only FAILED lookups per IP (and per event+IP) for a guest.
+    const promoIpKeys = promoInput && !user ? promoIpFailureKeys(ip, eventId) : []
+    if (promoInput) {
+      const promoLimited = user
+        ? (await recordPromoValidationAttempt(`promo-validate:uid:${user.id}`)).limited
+        : await isPromoValidationLimited(promoIpKeys)
+      if (promoLimited) {
+        return NextResponse.json(
+          { error: 'Too many promo code attempts. Please try again in a few minutes.', code: 'rate_limited' },
+          { status: 429 }
+        )
+      }
+    }
     const [promo, docs] = await Promise.all([
       (async (): Promise<PromoDoc | null> => {
         if (!promoInput) return null
         const resolved = await resolvePromoCode(eventId, String(promoInput))
-        if (!resolved) return null
+        if (!resolved) {
+          if (promoIpKeys.length) await recordFailedPromoValidation(promoIpKeys)
+          return null
+        }
         const cover = await promoCanCoverOrder(resolved, {
           qty: lines.requestedQuantity,
           buyerKey: user ? promoBuyerKey(identityFromUser(user)) : null,
