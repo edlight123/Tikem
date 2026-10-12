@@ -14,6 +14,7 @@ import {
   logSuspiciousActivity 
 } from '@/lib/security'
 import { adminDb } from '@/lib/firebase/admin'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
 import { applicationFeeFor, applyPromoToLines, priceTierLinesCents } from '@/lib/checkout/buyer-pricing'
 import {
@@ -64,6 +65,9 @@ function getStripe() {
   return require('stripe')(process.env.STRIPE_SECRET_KEY)
 }
 
+
+/** Same cap as /api/tickets/claim-free's MAX_FREE_TICKETS_PER_CLAIM. */
+const MAX_FREE_TICKETS_PER_ORDER = 10
 export async function POST(request: Request) {
   try {
     const stripe = getStripe()
@@ -410,6 +414,35 @@ export async function POST(request: Request) {
       }
     }
     const pricedLines = applyPromoToLines(orderLines, appliedPromo)
+
+    // Free tiers riding along in a paid cart get the free-claim route's limits:
+    // at most MAX_FREE_TICKETS_PER_ORDER of them, and none for a buyer who already
+    // holds a live free ticket for this event. Without this, one cheap paid ticket
+    // per order would unlock unlimited free inventory, around the one-claim rule.
+    const freeInCart = pricedLines.reduce((n, l) => n + (Number(l.unitOriginal) <= 0 ? l.quantity : 0), 0)
+    if (freeInCart > 0 && pricedLines.some((l) => Number(l.unitOriginal) > 0)) {
+      if (freeInCart > MAX_FREE_TICKETS_PER_ORDER) {
+        return refuse(
+          { error: `You can add at most ${MAX_FREE_TICKETS_PER_ORDER} free tickets to an order.`, code: 'free_limit_exceeded' },
+          400
+        )
+      }
+      const heldSnap = user
+        ? await adminDb.collection('tickets').where('attendee_id', '==', user.id).get()
+        : buyerEmail
+        ? await adminDb.collection('tickets').where('guest_email', '==', buyerEmail).get()
+        : null
+      const holdsFree = (heldSnap?.docs || []).some((d: any) => {
+        const t = d.data() || {}
+        return t.event_id === String(eventId) && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status)
+      })
+      if (holdsFree) {
+        return refuse(
+          { error: 'You already have a free ticket for this event. Remove the free tier to continue.', code: 'already_claimed' },
+          409
+        )
+      }
+    }
 
     // Resolve the promoter ref, if any. Only the resolved doc id + code ride in
     // metadata; fulfillment writes the attribution ledger exactly once under its

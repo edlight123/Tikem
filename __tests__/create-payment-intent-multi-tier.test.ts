@@ -17,7 +17,12 @@ const mockPromo = { doc: null as any }
 const mockCreate = jest.fn(async (args: any) => ({ id: 'pi_test', client_secret: 'pi_test_secret', ...args }))
 
 jest.mock('stripe', () => jest.fn(() => ({ paymentIntents: { create: mockCreate } })))
-jest.mock('@/lib/firebase/admin', () => ({ adminDb: {} }))
+const mockHeld: any[] = []
+jest.mock('@/lib/firebase/admin', () => ({
+  adminDb: {
+    collection: () => ({ where: () => ({ get: async () => ({ docs: mockHeld.map((t) => ({ data: () => t })) }) }) }),
+  },
+}))
 // Never a live rate lookup from a test.
 jest.mock('@/lib/currency', () => ({ fetchStripeHTGRate: jest.fn(async () => 0.0076) }))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => ({ id: 'u1', email: 'u@x.com' })) }))
@@ -110,6 +115,7 @@ beforeEach(() => {
     ticket_price: 25,
   })
   mockPromo.doc = null
+  mockHeld.length = 0
   tier('vip', 50)
   tier('ga', 25)
   tier('free', 0)
@@ -155,6 +161,27 @@ describe('multi-tier card checkout', () => {
       ['free', 2, 0],
       ['ga', 2, 25],
     ])
+  })
+
+  it('free lines in a paid cart are capped like a free claim (10 per order)', async () => {
+    const { status, data } = await post({ tiers: [{ tierId: 'free', quantity: 11 }, { tierId: 'ga', quantity: 1 }] })
+    expect(status).toBe(400)
+    expect(data.code).toBe('free_limit_exceeded')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('a buyer who already holds a live free ticket cannot add more through a paid cart', async () => {
+    mockHeld.push({ event_id: 'evt1', price_paid: 0, status: 'valid' })
+    const { status, data } = await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })
+    expect(status).toBe(409)
+    expect(data.code).toBe('already_claimed')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('a refunded free ticket no longer blocks, and a paid ticket never did', async () => {
+    mockHeld.push({ event_id: 'evt1', price_paid: 0, status: 'refunded' }, { event_id: 'evt1', price_paid: 25, status: 'valid' })
+    const { status } = await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })
+    expect(status).toBe(200)
   })
 
   it('an all-free cart never reaches Stripe', async () => {
