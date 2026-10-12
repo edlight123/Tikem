@@ -404,14 +404,17 @@ export async function POST(request: Request) {
     if (freeQuantity > 0) {
       if (freeQuantity > MAX_FREE_TICKETS_PER_CLAIM) {
         return refuse(
-          { error: `You can claim at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets at a time.`, code: 'too_many_tickets' },
+          { error: `You can add at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets to an order.`, code: 'free_limit_exceeded' },
           400
         )
       }
       if (await freeClaimAlreadyUsed(String(eventId), identity)) {
         return refuse(
           {
-            error: identity.isGuest ? GUEST_ALREADY_CLAIMED_MESSAGE : 'You already claimed a ticket for this event.',
+            // A guest's answer stays neutral: the email they typed is unverified.
+            error: identity.isGuest
+              ? GUEST_ALREADY_CLAIMED_MESSAGE
+              : 'You already have a free ticket for this event. Remove the free tier to continue.',
             code: 'already_claimed',
           },
           409

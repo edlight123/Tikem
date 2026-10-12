@@ -232,6 +232,8 @@ describe('free lines are the buyer\'s one free claim (shared with /api/tickets/c
     const me = { isGuest: false, id: 'u1' }
     expect(await freeClaimAlreadyUsed('evt1', me)).toBe(false)
     mockFake.seed('tickets', 'f1', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'refunded' })
+    // A PAID ticket for the event never holds the free claim.
+    mockFake.seed('tickets', 'p1', { event_id: 'evt1', attendee_id: 'u1', price_paid: 25, status: 'valid' })
     expect(await freeClaimAlreadyUsed('evt1', me)).toBe(false)
     mockFake.seed('tickets', 'f2', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'valid' })
     expect(await freeClaimAlreadyUsed('evt1', me)).toBe(true)

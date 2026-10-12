@@ -232,7 +232,7 @@ describe('free lines in a paid cart obey the free-claim limits', () => {
   it('more than 10 free tickets in one order are refused, as on the free-claim route', async () => {
     const res = await post({ tiers: [{ tierId: 'free', quantity: 11 }, { tierId: 'ga', quantity: 1 }] })
     expect(res.status).toBe(400)
-    expect(res.data.code).toBe('too_many_tickets')
+    expect(res.data.code).toBe('free_limit_exceeded')
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
