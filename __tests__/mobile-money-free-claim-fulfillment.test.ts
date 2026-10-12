@@ -12,7 +12,11 @@ import { FakeFirestore } from './helpers/fakeFirestore'
 
 const mockFake = new FakeFirestore()
 
-jest.mock('@/lib/firebase/admin', () => ({ adminDb: mockFake }))
+jest.mock('@/lib/firebase/admin', () => ({
+  get adminDb() {
+    return mockFake
+  },
+}))
 jest.mock('@/lib/firebase-db/server', () => ({
   // A thin supabase-style adapter over the same in-memory Firestore, so the
   // fulfillment claim (adminDb) and the order reads (supabase) see one store.
@@ -185,9 +189,8 @@ describe('free lines in a paid MonCash/SogePay order', () => {
     mockFake.write(lockPath(), { payment_id: 'pi_other', ticket_ids: [] })
     seedOrder('o3')
     const { reserveInventoryAtomic: reserve } = jest.requireMock('@/lib/tickets/inventory')
-    // First attempt dies after the decision (sold out at the gate is not it; make
-    // the ticket insert path unreachable by failing the reservation once is wrong
-    // too — so simulate a crash: decision stored, order released to pending).
+    // The first attempt crashes after the decision was stored; the order is then
+    // re-claimed (stale processing claim, simulated by resetting it to pending).
     reserve.mockImplementationOnce(async () => {
       throw new Error('crash')
     })

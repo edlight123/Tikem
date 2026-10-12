@@ -31,7 +31,7 @@ import { attachTicketsToGuestOrder, isGuestId } from '@/lib/guest/identity'
 import { validateStoredOrderLines } from '@/lib/tickets/purchasable'
 import {
   recordFreeClaimTickets,
-  releaseFreeClaimForOrder,
+  releaseUnusedFreeClaimForOrder,
   takeFreeClaimForOrder,
   type FreeClaimant,
 } from '@/lib/tickets/free-claim-policy'
@@ -432,7 +432,7 @@ export async function fulfillPaidOrder(params: {
     // The order is refunded, never issued: hand back the free claim it took, so
     // the buyer may still claim their free ticket elsewhere.
     if (freeClaimDecision === 'kept') {
-      await releaseFreeClaimForOrder(String(pendingTx.event_id), freeClaimant, orderId).catch((err: any) =>
+      await releaseUnusedFreeClaimForOrder(String(pendingTx.event_id), freeClaimant, orderId).catch((err: any) =>
         console.error(`${logPrefix} could not release the free-claim lock`, err?.message || err)
       )
     }

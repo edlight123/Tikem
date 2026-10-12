@@ -205,23 +205,6 @@ export async function takeFreeClaimForOrder(
   })
 }
 
-/**
- * Give back a claim this order took but never used (the order was refused after
- * the lock, e.g. sold out and refunded). Only a lock that belongs to this payment
- * and recorded no tickets is removed; anything else is left alone.
- */
-export async function releaseFreeClaimForOrder(eventId: string, identity: FreeClaimant, paymentId: string) {
-  const lockRef = adminDb.collection(FREE_CLAIM_LOCKS_COLLECTION).doc(freeClaimLockId(eventId, identity))
-  await adminDb.runTransaction(async (tx: any) => {
-    const snap = await tx.get(lockRef)
-    if (!snap?.exists) return
-    const lock = snap.data() || {}
-    const ids = Array.isArray(lock.ticket_ids) ? lock.ticket_ids.filter(Boolean) : []
-    if (lock.payment_id !== paymentId || ids.length > 0) return
-    tx.delete(lockRef)
-  })
-}
-
 /** Record which tickets an order's free claim issued, so the claim can be shown void later. */
 export async function recordFreeClaimTickets(eventId: string, identity: FreeClaimant, ticketIds: string[]) {
   await adminDb
