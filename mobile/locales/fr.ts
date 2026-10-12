@@ -2335,6 +2335,7 @@ export default {
       endDate: 'Sélectionnez une date et une heure de fin',
       tierName: 'Saisissez un nom de type',
       tierPrice: 'Saisissez un prix valide',
+      tierMinPrice: 'Un billet payant doit coûter au moins {amount} {currency}. Fixez un prix plus élevé, ou rendez le billet gratuit.',
       tierQuantity: 'Saisissez une quantité',
       tierQuantityBelowSold: '{sold} déjà vendus. La quantité ne peut pas être inférieure.',
       capacity: 'Saisissez une limite',

@@ -12,6 +12,7 @@ import { sendEmail, getEventCreatedEmail, emailSubjects } from '@/lib/email'
 import { formatEventWhen } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { appUrl } from '@/lib/email-kit/layout'
+import { MIN_PAID_PRICE_ERROR_CODE, publishPriceBelowMinimum } from '@/lib/min-paid-price'
 
 const TIER_LIMIT = 25
 
@@ -184,6 +185,29 @@ export async function POST(
     let tiers: any[] | null = null
     if (is_published) {
       tiers = await loadTiers(id)
+
+      // Minimum paid price (US/CA 2.00, FR 1.00 EUR): an absorbed fixed fee
+      // must never exceed the ticket price. The composers check this first;
+      // this is the authoritative refusal. Free and Haiti tiers pass.
+      const belowMin = publishPriceBelowMinimum(
+        eventData,
+        tiers,
+        (await resolveEventCountry(eventData)) || eventData?.country
+      )
+      if (belowMin) {
+        const currency = String(eventData?.currency || '').toUpperCase()
+        return NextResponse.json(
+          {
+            error: `A paid ticket must cost at least ${belowMin.minimum.toFixed(2)}${currency ? ` ${currency}` : ''}${
+              belowMin.tierName ? ` ("${belowMin.tierName}" is ${belowMin.price.toFixed(2)})` : ''
+            }. Raise the price or make the ticket free.`,
+            code: MIN_PAID_PRICE_ERROR_CODE,
+            minimum: belowMin.minimum,
+          },
+          { status: 400 }
+        )
+      }
+
       const paid = isPaidEvent(eventData, tiers)
       if (paid) {
         const resolvedCountry = await resolveEventCountry(eventData)

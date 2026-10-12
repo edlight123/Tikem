@@ -708,6 +708,7 @@ export default {
       endDate: 'Select an end date and time',
       tierName: 'Enter a tier name',
       tierPrice: 'Enter a valid price',
+      tierMinPrice: 'A paid ticket must cost at least {amount} {currency}. Set a higher price, or make the ticket free.',
       tierQuantity: 'Enter a quantity',
       tierQuantityBelowSold: '{sold} already sold. The quantity can’t go below that.',
       capacity: 'Enter a guest cap',

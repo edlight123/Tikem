@@ -1335,7 +1335,9 @@
       "publishedMsg": "Your event is now live.",
       "unpublishedMsg": "Your event is hidden from attendees.",
       "errUpdateTitle": "Could not update",
-      "priceMsgToggle": "Type a price, or turn on “Make this a free ticket”. A blank price is not the same as free."
+      "priceMsgToggle": "Type a price, or turn on “Make this a free ticket”. A blank price is not the same as free.",
+      "minPriceTitle": "Raise the ticket price",
+      "minPriceMsg": "A paid ticket must cost at least {{amount}} {{currency}}. Set a higher price, or make the ticket free."
     },
     "spotifySearchPlaceholder": "Search a song on Spotify",
     "spotifyResultsLabel": "Song results",

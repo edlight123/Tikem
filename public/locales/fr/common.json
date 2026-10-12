@@ -1335,7 +1335,9 @@
       "publishedMsg": "Votre événement est maintenant en ligne.",
       "unpublishedMsg": "Votre événement est masqué pour les participants.",
       "errUpdateTitle": "Impossible de mettre à jour",
-      "priceMsgToggle": "Saisissez un prix, ou activez « Faire de ce billet un billet gratuit ». Un prix vide ne veut pas dire gratuit."
+      "priceMsgToggle": "Saisissez un prix, ou activez « Faire de ce billet un billet gratuit ». Un prix vide ne veut pas dire gratuit.",
+      "minPriceTitle": "Augmentez le prix du billet",
+      "minPriceMsg": "Un billet payant doit coûter au moins {{amount}} {{currency}}. Fixez un prix plus élevé, ou rendez le billet gratuit."
     },
     "spotifySearchPlaceholder": "Rechercher une chanson sur Spotify",
     "spotifyResultsLabel": "Résultats de chansons",
