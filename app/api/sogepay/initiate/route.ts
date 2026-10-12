@@ -325,6 +325,17 @@ export async function POST(request: Request) {
     const totalQuantity = discountedSelections.reduce((sum, s) => sum + s.quantity, 0)
     const originalAmount = discountedSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
 
+    // Nothing to charge: every ticket is free, or the promo takes the whole cart
+    // to zero. Same rule as the card rail: free tickets go through
+    // /api/tickets/claim-free and its one-claim-per-buyer limits, never a
+    // zero-amount mobile-money payment.
+    if (!(originalAmount > 0)) {
+      return NextResponse.json(
+        { error: 'These tickets are free. Claim them instead of paying.', code: 'order_is_free' },
+        { status: 400 }
+      )
+    }
+
     // Fast-fail UX gate: reject obviously sold-out events before redirecting to the gateway.
     // Best-effort only; the atomic reserve at fulfillment is the authoritative oversell guard.
     try {

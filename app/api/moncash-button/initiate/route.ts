@@ -279,6 +279,17 @@ export async function POST(request: Request) {
     }
     const { normalizedSelections, totalQuantity, originalCurrency, originalAmount, promoDiscountTotal } = face
 
+    // Nothing to charge: every ticket is free, or the promo takes the whole cart
+    // to zero. Same rule as the card rail: free tickets go through
+    // /api/tickets/claim-free and its one-claim-per-buyer limits, never a
+    // zero-amount mobile-money payment.
+    if (!(originalAmount > 0)) {
+      return NextResponse.json(
+        { error: 'These tickets are free. Claim them instead of paying.', code: 'order_is_free' },
+        { status: 400 }
+      )
+    }
+
     // FREE lines (list price 0) in a paid cart obey the free-claim route's limits,
     // exactly as the card rail does (lib/tickets/free-claim-policy): at most 10
     // free tickets, one free claim per buyer per event. Without this a buyer could

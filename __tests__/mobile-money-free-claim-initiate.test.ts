@@ -177,6 +177,13 @@ describe.each(rails)('$name initiate: free lines in a paid cart', ({ post }) => 
     expect(mockFake.docsIn('free_claim_locks')).toHaveLength(0)
   })
 
+  it('an all-free cart never becomes a mobile-money payment: 400 order_is_free', async () => {
+    const res = await post(req({ eventId: EVENT, tiers: [{ tierId: 'free', quantity: 2 }] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('order_is_free')
+    expect(mockState.inserted).toHaveLength(0)
+  })
+
   it('more than 10 free tickets: 400 free_limit_exceeded, no order', async () => {
     const res = await post(req(cart(11)))
     expect(res.status).toBe(400)
