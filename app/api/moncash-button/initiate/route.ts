@@ -26,7 +26,9 @@ import { checkEventPurchasable } from '@/lib/tickets/purchasable'
 import { screenPurchaseAttempt } from '@/lib/tickets/purchase-screens'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { scheduleOpsEvent } from '@/lib/ops/ops-events'
+import { freeLinesRefusal } from '@/lib/tickets/free-claim-policy'
 import {
+  freeClaimLines,
   loadMonCashPricingDocs,
   parseOrderLines,
   priceFaceSelections,
@@ -276,6 +278,16 @@ export async function POST(request: Request) {
       )
     }
     const { normalizedSelections, totalQuantity, originalCurrency, originalAmount, promoDiscountTotal } = face
+
+    // FREE lines (list price 0) in a paid cart obey the free-claim route's limits,
+    // exactly as the card rail does (lib/tickets/free-claim-policy): at most 10
+    // free tickets, one free claim per buyer per event. Without this a buyer could
+    // attach free tickets to a cheap paid one, again and again. Fulfillment
+    // re-takes the claim lock atomically, keyed by this order, before issuing.
+    const freeRefusal = await freeLinesRefusal(String(eventId), identity, freeClaimLines(normalizedSelections))
+    if (freeRefusal) {
+      return NextResponse.json({ error: freeRefusal.error, code: freeRefusal.code }, { status: freeRefusal.status })
+    }
 
     // Fast-fail UX gate: reject obviously sold-out events before sending the buyer to MonCash.
     // Best-effort only (never blocks on its own errors); the atomic reserve at fulfillment is the

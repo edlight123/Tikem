@@ -26,6 +26,7 @@ import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
 import { sumMoney } from '@/lib/fx/usd-htg'
+import { freeLinesRefusal } from '@/lib/tickets/free-claim-policy'
 
 export const runtime = 'nodejs'
 
@@ -152,7 +153,14 @@ export async function POST(request: Request) {
       return { ok: true }
     }
 
-    let selections: { tierId: string | null; tierName: string; quantity: number; unitPrice: number }[] = []
+    let selections: {
+      tierId: string | null
+      tierName: string
+      quantity: number
+      unitPrice: number
+      /** The LIST price before promo; 0 marks a free line (see fulfillment). */
+      listUnitPrice?: number
+    }[] = []
 
     if (multiTier) {
       // Read each tier by DOCUMENT id (an `in` query on a stored `id` field misses
@@ -264,6 +272,20 @@ export async function POST(request: Request) {
       ]
     }
 
+    // FREE lines (list price 0, decided here before any promo) in a paid cart obey
+    // the free-claim route's limits, exactly as the card rail does
+    // (lib/tickets/free-claim-policy): at most 10 free tickets, one free claim per
+    // buyer per event. Fulfillment (lib/tickets/fulfillment.ts) re-takes the claim
+    // lock atomically, keyed by this order, before issuing.
+    const freeRefusal = await freeLinesRefusal(
+      String(eventId),
+      identity,
+      selections.map((s) => ({ listPrice: s.unitPrice, quantity: s.quantity }))
+    )
+    if (freeRefusal) {
+      return NextResponse.json({ error: freeRefusal.error, code: freeRefusal.code }, { status: freeRefusal.status })
+    }
+
     // Apply promo code to the per-ticket unitPrice (Firestore, consistent with other flows).
     // resolvePromoCode accepts either the Firestore doc id or the raw code. We only apply the
     // discount when the promo still has capacity; the "first N buyers" cap is enforced atomically
@@ -297,7 +319,7 @@ export async function POST(request: Request) {
         unitPrice = discountedPrice
         promoDiscountTotal += discountAmount * s.quantity
       }
-      return { ...s, unitPrice }
+      return { ...s, listUnitPrice: Number(s.unitPrice || 0), unitPrice }
     })
 
     const totalQuantity = discountedSelections.reduce((sum, s) => sum + s.quantity, 0)
