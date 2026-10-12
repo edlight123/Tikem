@@ -996,6 +996,11 @@ export default {
       organizerCardUnavailableTryOther: 'Òganizatè sa a poko ka resevwa peman ak kat. Ou ka toujou peye ak {method}.',
       cardDeclined: 'Kat ou a refize. Tanpri eseye yon lòt kat.',
       network: 'Nou pa ka jwenn Tikèm. Tcheke koneksyon w epi eseye ankò.',
+      fxUnavailable: 'Nou pa ka jwenn yon to chanj USD/HTG ki serye kounye a, kidonk peman MonCash la kanpe pou evènman sa a. Tanpri eseye ankò nan kèk minit.',
+    },
+    moncashQuote: {
+      approx: '≈ {amount} sou MonCash',
+      rateDetail: 'To: {rate} HTG/USD + {spread}% majorasyon',
     },
   },
 

@@ -18,7 +18,7 @@ export const ORGANIZER_PAYMENTS_UNAVAILABLE_CODES: ReadonlySet<string> = new Set
   'organizer_payouts_unavailable',
 ]);
 
-export type CheckoutErrorKind = 'organizer_unavailable' | 'card_declined' | 'network' | 'other';
+export type CheckoutErrorKind = 'organizer_unavailable' | 'card_declined' | 'fx_unavailable' | 'network' | 'other';
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -47,6 +47,8 @@ export function classifyCheckoutError(err: any): CheckoutErrorKind {
   const code = String(err?.code || err?.payload?.code || '');
   if (ORGANIZER_PAYMENTS_UNAVAILABLE_CODES.has(code)) return 'organizer_unavailable';
   if (code === 'card_declined') return 'card_declined';
+  // No trustworthy USD→HTG rate (lib/fx/usd-htg.ts on the server): MonCash is paused.
+  if (code === 'fx_rate_unavailable') return 'fx_unavailable';
   const message = String(err?.message || '').toLowerCase();
   if (message.includes('network request failed') || message.includes('failed to fetch')) return 'network';
   // A server that predates the typed code still says so in words.
@@ -75,6 +77,8 @@ export function friendlyCheckoutError(
         : t('paymentModal.errors.organizerCardUnavailable');
     case 'card_declined':
       return t('paymentModal.errors.cardDeclined');
+    case 'fx_unavailable':
+      return t('paymentModal.errors.fxUnavailable');
     case 'network':
       return t('paymentModal.errors.network');
     default:

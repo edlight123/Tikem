@@ -1027,6 +1027,11 @@ export default {
       organizerCardUnavailableTryOther: 'Cet organisateur ne peut pas encore accepter les paiements par carte. Vous pouvez toujours payer avec {method}.',
       cardDeclined: 'Votre carte a été refusée. Veuillez essayer une autre carte.',
       network: 'Impossible de joindre Tikèm. Vérifiez votre connexion et réessayez.',
+      fxUnavailable: "Nous ne parvenons pas à obtenir un taux de change USD/HTG fiable pour le moment : le paiement MonCash est suspendu pour cet événement. Veuillez réessayer dans quelques minutes.",
+    },
+    moncashQuote: {
+      approx: '≈ {amount} sur MonCash',
+      rateDetail: 'Taux : {rate} HTG/USD + {spread} % de marge',
     },
   },
 

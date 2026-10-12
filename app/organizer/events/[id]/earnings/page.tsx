@@ -9,7 +9,7 @@ import { toEarningsRow } from '@/lib/payouts/availability'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
 import { isAdmin } from '@/lib/admin'
-import { fetchUsdToHtgRate } from '@/lib/currency'
+import { getUsdToHtgBaseRate } from '@/lib/fx/usd-htg'
 import { moncashMinimumInfo, type MoncashMinimumInfo } from '@/lib/payouts/moncash-withdrawal-minimum'
 
 export const revalidate = 30
@@ -75,7 +75,7 @@ export default async function EventEarningsPage({
   let moncashMinimum: MoncashMinimumInfo | null = null
   try {
     const cur = String(earnings?.currency || 'HTG').toUpperCase()
-    moncashMinimum = moncashMinimumInfo(cur, cur === 'USD' ? await fetchUsdToHtgRate() : 1)
+    moncashMinimum = moncashMinimumInfo(cur, cur === 'USD' ? (await getUsdToHtgBaseRate()).baseRate : 1)
   } catch {
     moncashMinimum = null
   }

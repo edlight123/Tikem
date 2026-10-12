@@ -12,6 +12,15 @@ jest.mock('@/lib/payouts/availability-server', () => ({ loadEventAvailability: j
 jest.mock('@/lib/promoters', () => ({ excludeStripeConnectSales: jest.fn(async (rows: any[]) => rows) }))
 jest.mock('@/lib/moncash', () => ({ moncashPrefundedTransfer: jest.fn() }))
 jest.mock('@/lib/currency', () => ({ fetchUsdToHtgRate: jest.fn() }))
+jest.mock('@/lib/fx/usd-htg', () => ({
+  ...jest.requireActual('@/lib/fx/usd-htg'),
+  getUsdToHtgBaseRate: jest.fn(async () => ({
+    baseRate: 130,
+    provider: 'test',
+    fetchedAtIso: '2026-10-12T00:00:00.000Z',
+    source: 'live',
+  })),
+}))
 
 import {
   computeWalletBuckets,

@@ -14,6 +14,7 @@ import {
 } from '@/lib/moncash'
 import { verifyGuestToken } from '@/lib/guest/identity'
 import crypto from 'crypto'
+import { scheduleOpsEvent } from '@/lib/ops/ops-events'
 
 export const runtime = 'nodejs'
 
@@ -217,6 +218,9 @@ export async function GET(request: Request) {
     return response
   } catch (err: any) {
     console.error('MonCash Button checkout error:', err)
+    scheduleOpsEvent('moncash_buyer_error', 'moncash-button/checkout', {
+      message: String(err?.message || err).slice(0, 300),
+    })
     return new NextResponse('Failed to start checkout', { status: 500 })
   }
 }

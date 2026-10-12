@@ -8,10 +8,10 @@ import {
   identityFromUser,
   type CheckoutIdentity,
 } from '@/lib/guest/checkout'
-import { calculateDiscount, resolvePromoCode, promoBuyerKey, promoCanCoverOrder, type PromoDoc } from '@/lib/promo-codes'
+import { resolvePromoCode, promoBuyerKey, promoCanCoverOrder, type PromoDoc } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
 import { resolveOrderAttribution } from '@/lib/tracking-links'
-import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread, sumMoney } from '@/lib/fx/usd-htg'
+import { requestLanguage } from '@/lib/fx/usd-htg'
 import { inferCountryFromEventText } from '@/lib/event-country'
 import { capacityFromEvent } from '@/lib/capacity'
 import { hasEventAccess } from '@/lib/events/access-guard'
@@ -22,18 +22,17 @@ import {
   isMonCashButtonConfigured,
 } from '@/lib/moncash-button'
 import { prewarmMonCashAccessToken } from '@/lib/moncash'
-import {
-  checkEventPurchasable,
-  checkTierForEvent,
-  invalidQuantityRefusal,
-  normalizeTierLines,
-  parseTicketQuantity,
-  pickTierWhenUnspecified,
-} from '@/lib/tickets/purchasable'
+import { checkEventPurchasable } from '@/lib/tickets/purchasable'
 import { screenPurchaseAttempt } from '@/lib/tickets/purchase-screens'
-import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
-import { fromCents } from '@/lib/ticketPricing'
+import { scheduleOpsEvent } from '@/lib/ops/ops-events'
+import {
+  loadMonCashPricingDocs,
+  parseOrderLines,
+  priceFaceSelections,
+  priceMonCashCharge,
+  type TierSelection,
+} from '@/lib/moncash/price-order'
 
 import crypto from 'crypto'
 
@@ -71,29 +70,6 @@ function buildTokenVariants(token: string): string[] {
   ]
 
   return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
-}
-
-type TierSelection = { tierId: string; quantity: number }
-
-function tierIsOnSale(tier: any, now: Date): { ok: true } | { ok: false; reason: string } {
-  if (tier?.is_active === false) return { ok: false, reason: 'This ticket tier is not available.' }
-
-  const salesStart = tier?.sales_start ? new Date(tier.sales_start) : null
-  const salesEnd = tier?.sales_end ? new Date(tier.sales_end) : null
-
-  if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
-    return { ok: false, reason: 'Ticket sales for this tier have not started yet.' }
-  }
-  if (salesEnd && !Number.isNaN(salesEnd.getTime()) && salesEnd < now) {
-    return { ok: false, reason: 'Ticket sales for this tier have ended.' }
-  }
-
-  const sold = Number(tier?.sold_quantity || 0)
-  const total = Number(tier?.total_quantity || 0)
-  const remaining = Math.max(0, total - sold)
-  if (remaining <= 0) return { ok: false, reason: 'This ticket tier is sold out.' }
-
-  return { ok: true }
 }
 
 export async function POST(request: Request) {
@@ -153,32 +129,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
 
-    // Quantities are whole numbers, 1..MAX_TICKETS_PER_ORDER, on every line. A
-    // fractional quantity used to be charged pro rata (0.01 → 1% of a ticket) while
-    // fulfillment's loop still issued a whole ticket, and 1.01 paid for one and got two.
-    const multiTier = Array.isArray(tiers) && tiers.length > 0
-    let validSelections: TierSelection[] = []
-    let quantity = 0
-    if (multiTier) {
-      const lines = normalizeTierLines(tiers)
-      if (!lines.ok) {
-        return NextResponse.json({ error: lines.error, code: lines.code }, { status: lines.status })
-      }
-      validSelections = lines.lines
-      if (validSelections.length === 0) {
-        return NextResponse.json({ error: 'No valid ticket tiers selected' }, { status: 400 })
-      }
-    } else {
-      const parsed = parseTicketQuantity(rawQuantity)
-      if (parsed === null) {
-        const refusal = invalidQuantityRefusal()
-        return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
-      }
-      quantity = parsed
+    // Quantities are whole numbers, 1..MAX_TICKETS_PER_ORDER, on every line
+    // (lib/moncash/price-order.ts parseOrderLines — shared with the quote route).
+    const lines = parseOrderLines(tiers, rawQuantity)
+    if (!lines.ok) {
+      return NextResponse.json(
+        { error: lines.error, ...(lines.code ? { code: lines.code } : {}) },
+        { status: lines.status }
+      )
     }
-    const requestedQuantity = multiTier
-      ? validSelections.reduce((sum, s) => sum + s.quantity, 0)
-      : quantity
+    const { requestedQuantity } = lines
 
     const supabase = await createClient()
 
@@ -278,11 +238,7 @@ export async function POST(request: Request) {
     // Latency: the promo, promoter/attribution and ticket-tier lookups are independent
     // Firestore reads, so they are issued together rather than one after another. The
     // validation below still runs in the original order on their results.
-    const readTier = (id: string) =>
-      Promise.resolve(supabase.from('ticket_tiers').select('*').eq('id', id).single()).then(
-        ({ data }) => data as any
-      )
-    const [promo, { promoter, attribution }, tierDocs, singleTier, eventTiers] = await Promise.all([
+    const [promo, { promoter, attribution }, pricingDocs] = await Promise.all([
       (async (): Promise<PromoDoc | null> => {
         if (!promoCode) return null
         const resolved = await resolvePromoCode(String(eventId), String(promoCode))
@@ -300,124 +256,26 @@ export async function POST(request: Request) {
         const attribution = await resolveOrderAttribution(String(eventId), rawAttribution, promoter?.code || null)
         return { promoter, attribution }
       })(),
-      Promise.all(validSelections.map((sel) => readTier(sel.tierId))),
-      !multiTier && tierId ? readTier(String(tierId)) : Promise.resolve(null),
-      // No tierId on a single-line order: find out whether the event HAS tiers, so
-      // the buyer cannot skip them by paying `event.ticket_price` (the lowest one).
-      !multiTier && !tierId
-        ? Promise.resolve(
-            supabase.from('ticket_tiers').select('*').eq('event_id', String(eventId))
-          ).then(({ data }) => (Array.isArray(data) ? data : []) as any[])
-        : Promise.resolve(null),
+      loadMonCashPricingDocs(supabase, String(eventId), lines, tierId),
     ])
-    // Total discount applied across the order (event currency), recorded on the promo
-    // redemption at confirm time. Accumulated as each selection is priced below.
-    let promoDiscountTotal = 0
-
-    // Normalize tier selections
-    let normalizedSelections: { tierId: string | null; tierName: string; quantity: number; unitPrice: number }[] = []
-    const now = new Date()
-
-    if (multiTier) {
-      // Multi-tier selection
-      for (let i = 0; i < validSelections.length; i++) {
-        const selection = validSelections[i]
-        const tier = tierDocs[i]
-
-        // Must exist, belong to THIS event, and be active — never skipped silently.
-        const tierCheck = checkTierForEvent(tier, String(eventId))
-        if (!tierCheck.ok) {
-          return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
-        }
-
-        const onSale = tierIsOnSale(tier, now)
-        if (!onSale.ok) {
-          return NextResponse.json({ error: onSale.reason }, { status: 400 })
-        }
-
-        const sold = Number(tier.sold_quantity || 0)
-        const total = Number(tier.total_quantity || 0)
-        const remaining = Math.max(0, total - sold)
-        if (selection.quantity > remaining) {
-          return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for ${tier.name || 'this tier'}.` }, { status: 400 })
-        }
-
-        let unitPrice = tier.price
-        if (promo) {
-          const { discountedPrice, discountAmount } = calculateDiscount(unitPrice, promo)
-          unitPrice = discountedPrice
-          promoDiscountTotal += discountAmount * selection.quantity
-        }
-
-        normalizedSelections.push({
-          tierId: selection.tierId,
-          tierName: tier.name || 'Ticket',
-          quantity: selection.quantity,
-          unitPrice,
-        })
-      }
-
-      if (normalizedSelections.length === 0) {
-        return NextResponse.json({ error: 'No valid ticket tiers selected' }, { status: 400 })
-      }
-    } else {
-      // Single-tier (or event base price)
-      let unitPrice = event.ticket_price
-      let tierName = 'General Admission'
-      let resolvedTierId: string | null = null
-
-      let tier: any = null
-      if (tierId) {
-        const tierCheck = checkTierForEvent(singleTier, String(eventId))
-        if (!tierCheck.ok) {
-          return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
-        }
-        tier = singleTier
-      } else {
-        const picked = pickTierWhenUnspecified(eventTiers, String(eventId))
-        if (!picked.ok) {
-          return NextResponse.json({ error: picked.error, code: picked.code }, { status: picked.status })
-        }
-        tier = picked.tier
-      }
-
-      if (tier) {
-        const onSale = tierIsOnSale(tier, now)
-        if (!onSale.ok) {
-          return NextResponse.json({ error: onSale.reason }, { status: 400 })
-        }
-
-        const sold = Number(tier.sold_quantity || 0)
-        const total = Number(tier.total_quantity || 0)
-        const remaining = Math.max(0, total - sold)
-        if (quantity > remaining) {
-          return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
-        }
-
-        unitPrice = tier.price
-        tierName = tier.name
-        resolvedTierId = tier.id
-      }
-
-      if (promo) {
-        const { discountedPrice, discountAmount } = calculateDiscount(unitPrice, promo)
-        unitPrice = discountedPrice
-        promoDiscountTotal += discountAmount * quantity
-      }
-
-      normalizedSelections = [
-        {
-          tierId: resolvedTierId,
-          tierName,
-          quantity,
-          unitPrice,
-        },
-      ]
+    // Tier validation + promo + face total, exactly as the quote route prices it
+    // (lib/moncash/price-order.ts). Discount total is recorded on the promo
+    // redemption at confirm time.
+    const face = priceFaceSelections({
+      eventId: String(eventId),
+      event,
+      lines,
+      tierId,
+      docs: pricingDocs,
+      promo,
+    })
+    if (!face.ok) {
+      return NextResponse.json(
+        { error: face.error, ...(face.code ? { code: face.code } : {}) },
+        { status: face.status }
+      )
     }
-
-    const totalQuantity = normalizedSelections.reduce((sum, s) => sum + s.quantity, 0)
-    const originalCurrency = String(event.currency || 'HTG').toUpperCase()
-    const originalAmount = sumMoney(normalizedSelections.map((s) => s.quantity * s.unitPrice))
+    const { normalizedSelections, totalQuantity, originalCurrency, originalAmount, promoDiscountTotal } = face
 
     // Fast-fail UX gate: reject obviously sold-out events before sending the buyer to MonCash.
     // Best-effort only (never blocks on its own errors); the atomic reserve at fulfillment is the
@@ -435,70 +293,51 @@ export async function POST(request: Request) {
       console.warn('[moncash_button] capacity pre-check failed (continuing)', { message: (e as any)?.message })
     }
 
-    // MonCash settles in HTG. If the event is priced in USD, convert to HTG using a live rate + spread.
-    // We do NOT scrape Google; we use a proper JSON rate endpoint.
-    let chargeCurrency = originalCurrency
-    let chargeSelections = normalizedSelections
-    let chargeAmount = originalAmount
-    let exchangeRateUsed: number | null = null
-    let exchangeRateProvider: string | null = null
-    let exchangeRateFetchedAt: string | null = null
-    let exchangeRateBase: number | null = null
-    let exchangeRateSpreadPercent: number | null = null
-
-    if (originalCurrency === 'USD') {
-      const { baseRate, effectiveRate, spreadPercent, provider, fetchedAtIso } = await getUsdToHtgRateWithSpread({
-        spreadPercent: 0.05,
-      })
-
-      exchangeRateBase = baseRate
-      exchangeRateUsed = effectiveRate
-      exchangeRateSpreadPercent = spreadPercent
-      exchangeRateProvider = provider
-      exchangeRateFetchedAt = fetchedAtIso
-      chargeCurrency = 'HTG'
-
-      chargeSelections = normalizedSelections.map((s) => ({
-        ...s,
-        originalUnitPrice: s.unitPrice,
-        unitPrice: convertUsdToHtgAmount(s.unitPrice, effectiveRate),
-      }))
-      chargeAmount = sumMoney(chargeSelections.map((s) => s.quantity * s.unitPrice))
-    } else if (originalCurrency !== 'HTG') {
-      return NextResponse.json(
-        { error: `MonCash only supports HTG. Event currency ${originalCurrency} is not supported for MonCash.` },
-        { status: 400 }
-      )
-    }
-
+    // MonCash settles in HTG. A USD event is converted with the hardened rate
+    // (lib/fx/usd-htg.ts: live, sanity-checked, else the highest snapshot of the
+    // last 14 days, else refuse) plus the spread.
+    //
     // ── WHO PAYS THE FEE ──────────────────────────────────────────────────────
     // The organizer chooses per event whether to absorb the platform fee or pass it
-    // on. This rail used to ignore that and always charge the face value, while the
-    // app showed the buyer face + fee. The buyer total is now priced exactly the way
-    // create-payment-intent prices it — the same lib/checkout/buyer-pricing call,
-    // the same STORED platform rate (no per-ticket cap) — on the post-promo face
-    // total in the event currency. The incidence
-    // and fee are then stamped on the ORDER, so fulfillment records what the buyer
-    // actually paid, never whatever the event's (editable) setting says later.
-    const faceValueCents = Math.round(originalAmount * 100)
+    // on. The buyer total is priced exactly the way create-payment-intent prices it
+    // — the same lib/checkout/buyer-pricing call, the same STORED platform rate (no
+    // per-ticket cap) — on the post-promo face total in the event currency. The
+    // incidence and fee are then stamped on the ORDER, so fulfillment records what
+    // the buyer actually paid, never whatever the event's (editable) setting says later.
+    //
+    // Both live in lib/moncash/price-order.ts, shared with /api/moncash-button/quote.
     const platformSettings = await getPlatformSettings()
-    const buyerPricing = priceOrderCents(faceValueCents, event, {
-      quantity: totalQuantity,
-      currency: originalCurrency,
-      config: platformSettings.haiti,
+    const charge = await priceMonCashCharge({
+      event,
+      face,
+      feeConfig: platformSettings.haiti,
+      lang: requestLanguage(request),
     })
-    const feeIncidence: 'buyer' | 'organizer' =
-      buyerPricing.incidence === 'buyer' && buyerPricing.buyerFee > 0 ? 'buyer' : 'organizer'
-    const buyerFeeOriginal = feeIncidence === 'buyer' ? fromCents(buyerPricing.buyerFee) : 0
-    let buyerFeeCharged = 0
-    if (buyerFeeOriginal > 0) {
-      buyerFeeCharged =
-        originalCurrency === 'USD' && exchangeRateUsed
-          ? convertUsdToHtgAmount(buyerFeeOriginal, exchangeRateUsed)
-          : buyerFeeOriginal
+    if (!charge.ok) {
+      if (charge.code === 'fx_rate_unavailable') {
+        scheduleOpsEvent('fx_rate_unavailable', 'moncash-button/initiate', { eventId: String(eventId) })
+      }
+      return NextResponse.json(
+        { error: charge.error, ...(charge.code ? { code: charge.code } : {}) },
+        { status: charge.status }
+      )
     }
-    const faceChargeAmount = chargeAmount
-    chargeAmount = sumMoney([faceChargeAmount, buyerFeeCharged])
+    if (charge.exchange?.source === 'snapshot_fallback') {
+      scheduleOpsEvent('fx_snapshot_fallback', 'moncash-button/initiate', {
+        eventId: String(eventId),
+        baseRate: charge.exchange.base,
+      })
+    }
+    const {
+      chargeCurrency,
+      chargeSelections,
+      chargeAmount,
+      faceChargeAmount,
+      feeIncidence,
+      buyerFeeOriginal,
+      buyerFeeCharged,
+      exchange,
+    } = charge
 
     // Create a gateway order ID.
     // Keep it short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
@@ -533,11 +372,14 @@ export async function POST(request: Request) {
       currency: chargeCurrency,
       original_currency: originalCurrency,
       original_amount: originalAmount,
-      exchange_rate_used: exchangeRateUsed,
-      exchange_rate_base: exchangeRateBase,
-      exchange_rate_spread_percent: exchangeRateSpreadPercent,
-      exchange_rate_provider: exchangeRateProvider,
-      exchange_rate_fetched_at: exchangeRateFetchedAt,
+      exchange_rate_used: exchange?.used ?? null,
+      exchange_rate_base: exchange?.base ?? null,
+      exchange_rate_spread_percent: exchange?.spreadPercent ?? null,
+      exchange_rate_provider: exchange?.provider ?? null,
+      // The provider's own timestamp (or the snapshot's), not our fetch time.
+      exchange_rate_fetched_at: exchange?.fetchedAt ?? null,
+      // 'live' | 'snapshot_fallback' — which rule produced the rate.
+      exchange_rate_source: exchange?.source ?? null,
       tier_selections: chargeSelections,
       // Store the RESOLVED promo doc id (not the raw input) so the confirm-time redeem targets
       // the exact promo; null when no discount was applied (charge full price, nothing to redeem).
@@ -559,6 +401,7 @@ export async function POST(request: Request) {
 
     if (pendingInsertError) {
       console.error('Error creating pending transaction:', pendingInsertError)
+      scheduleOpsEvent('moncash_buyer_error', 'moncash-button/initiate', { reason: 'pending_insert_failed' })
       return NextResponse.json({ error: 'Failed to create pending transaction' }, { status: 500 })
     }
 
@@ -655,6 +498,9 @@ export async function POST(request: Request) {
     return response
   } catch (error: any) {
     console.error('MonCash Button initiate error:', error)
+    scheduleOpsEvent('moncash_buyer_error', 'moncash-button/initiate', {
+      message: String(error?.message || error).slice(0, 300),
+    })
     return NextResponse.json(
       { error: error.message || 'Failed to initiate MonCash Button payment' },
       { status: 500 }
