@@ -186,6 +186,21 @@ describe('free lines are the buyer\'s one free claim (shared with /api/tickets/c
     require('@/lib/tickets/free-claim-policy') as typeof import('@/lib/tickets/free-claim-policy')
   const lockId = () => freeClaimLockId('evt1', { isGuest: false, id: 'u1' })
 
+  it('a sold-out refund gives the free claim back, so the buyer can still claim later', async () => {
+    reserveInventoryAtomic.mockResolvedValueOnce({ ok: false, reason: 'sold_out' })
+    const res = await fulfillStripeOrder(multi())
+    expect(res.outcome).not.toBe('fulfilled')
+    expect(mockFake.get('free_claim_locks', lockId())).toBeFalsy()
+    expect(await freeClaimAlreadyUsed('evt1', { isGuest: false, id: 'u1' })).toBe(false)
+  })
+
+  it("a refund never releases another order's claim", async () => {
+    mockFake.seed('free_claim_locks', lockId(), { event_id: 'evt1', kind: 'account', payment_id: 'pi_other', ticket_ids: ['t_other'] })
+    reserveInventoryAtomic.mockResolvedValueOnce({ ok: false, reason: 'sold_out' })
+    await fulfillStripeOrder(multi())
+    expect(mockFake.get('free_claim_locks', lockId())!.payment_id).toBe('pi_other')
+  })
+
   it('takes the claim lock and records the free tickets on it', async () => {
     await fulfillStripeOrder(multi())
     const lock = mockFake.get('free_claim_locks', lockId())!
