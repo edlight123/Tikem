@@ -35,7 +35,7 @@ export async function getPlatformFeeSettings(): Promise<PlatformFeeConfig | null
   inFlight = (async () => {
     try {
       const settings = await getPlatformSettings()
-      const value: PlatformFeeConfig = { haiti: settings.haiti, usCanada: settings.usCanada }
+      const value: PlatformFeeConfig = { haiti: settings.haiti, usCanada: settings.usCanada, markets: settings.markets }
       cached = { at: Date.now(), value }
       return value
     } catch {

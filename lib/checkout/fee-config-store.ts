@@ -22,18 +22,24 @@
  */
 
 import {
+  DEFAULT_MARKET_FEES,
   DEFAULT_PLATFORM_SETTINGS,
+  FEE_MARKETS,
+  type FeeMarket,
   type LocationFeeConfig,
 } from '@/types/platform-settings'
 
 export interface PlatformFeeConfig {
   haiti: LocationFeeConfig
   usCanada: LocationFeeConfig
+  /** Per-country terms (US/CA/FR). Optional on input; always filled once seeded. */
+  markets?: Partial<Record<FeeMarket, LocationFeeConfig>>
 }
 
 const DEFAULTS: PlatformFeeConfig = {
   haiti: DEFAULT_PLATFORM_SETTINGS.haiti,
   usCanada: DEFAULT_PLATFORM_SETTINGS.usCanada,
+  markets: DEFAULT_MARKET_FEES,
 }
 
 let current: PlatformFeeConfig = DEFAULTS
@@ -56,7 +62,36 @@ function sanitize(raw: unknown, fallback: LocationFeeConfig): LocationFeeConfig 
       Number.isFinite(percentage) && percentage >= 0 && percentage < 1
         ? percentage
         : fallback.platformFeePercentage,
+    fixedFeeMinorPerTicket: sanitizeFixed(input.fixedFeeMinorPerTicket, fallback.fixedFeeMinorPerTicket),
   }
+}
+
+/**
+ * Per-currency fixed fees: whole, non-negative minor units only. A stored table
+ * that is not an object keeps the default; a junk entry is dropped (so that
+ * currency adds nothing) rather than priced.
+ */
+function sanitizeFixed(
+  raw: unknown,
+  fallback: Record<string, number> | undefined
+): Record<string, number> | undefined {
+  if (raw === undefined) return fallback
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fallback
+  const out: Record<string, number> = {}
+  for (const [currency, value] of Object.entries(raw as Record<string, unknown>)) {
+    const n = Number(value)
+    if (Number.isFinite(n) && n >= 0 && n < 100_000) out[currency.toUpperCase()] = Math.round(n)
+  }
+  return out
+}
+
+function sanitizeMarkets(raw: unknown): Record<FeeMarket, LocationFeeConfig> {
+  const input = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<FeeMarket, unknown>>
+  const out = {} as Record<FeeMarket, LocationFeeConfig>
+  for (const market of FEE_MARKETS) {
+    out[market] = input[market] ? sanitize(input[market], DEFAULT_MARKET_FEES[market]) : DEFAULT_MARKET_FEES[market]
+  }
+  return out
 }
 
 /** Seed the config in force. Called by FeeConfigProvider; safe to call repeatedly. */
@@ -68,6 +103,7 @@ export function setPlatformFeeConfig(config: Partial<PlatformFeeConfig> | null |
   current = {
     haiti: sanitize(config.haiti, DEFAULTS.haiti),
     usCanada: sanitize(config.usCanada, DEFAULTS.usCanada),
+    markets: sanitizeMarkets(config.markets),
   }
 }
 

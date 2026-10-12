@@ -18,7 +18,7 @@ import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
 import { applicationFeeFor, priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { friendlyStripeError } from '@/lib/checkout/stripe-errors'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
-import { getEventLocation } from '@/types/platform-settings'
+import { locationFeesForCountry } from '@/types/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import {
@@ -382,10 +382,9 @@ export async function POST(request: Request) {
     // is charged.
     const faceValueCents = Math.round(stripeAmount * quantity * 100)
     const platformSettings = await getPlatformSettings()
-    const locationFees =
-      getEventLocation(String(event.country || '')) === 'haiti'
-        ? platformSettings.haiti
-        : platformSettings.usCanada
+    // The event's market terms: rate plus a fixed amount per paid ticket in
+    // US/CA/FR (every ticket in this order is one paid tier).
+    const locationFees = locationFeesForCountry(platformSettings, event.country)
     const buyerPricing = priceOrderCents(faceValueCents, event, {
       quantity,
       currency: stripeCurrency.toUpperCase(),

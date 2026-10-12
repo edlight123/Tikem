@@ -26,17 +26,35 @@ export function calculatePlatformFee(grossAmount: number): number {
  */
 export function calculatePlatformFeeWithPercentage(
   grossAmount: number,
-  feePercentage: number
+  feePercentage: number,
+  fixedFeeTotal: number = 0
 ): number {
-  const feeAmount = Math.round(grossAmount * feePercentage)
+  const feeAmount = Math.round(grossAmount * feePercentage) + Math.max(0, Math.round(fixedFeeTotal || 0))
   return Math.max(feeAmount, FEE_CONFIG.PLATFORM_FEE_MIN)
+}
+
+/**
+ * The fixed part of the fee for an order: the market's per-ticket amount times
+ * the PAID tickets in it. Nothing on a free order, and never less than one ticket
+ * on a paid one (a caller that forgot the quantity under-counts, never zeroes it).
+ */
+export function fixedFeeTotalFor(
+  grossAmount: number,
+  fixedFeeMinorPerTicket: number | null | undefined,
+  paidQuantity: number | null | undefined
+): number {
+  const perTicket = Math.max(0, Math.round(Number(fixedFeeMinorPerTicket) || 0))
+  if (grossAmount <= 0 || perTicket === 0) return 0
+  const quantity = Math.max(1, Math.floor(Number(paidQuantity) || 1))
+  return perTicket * quantity
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NO PER-TICKET CAP (owner decision, 2026-10-05)
 //
-// The platform fee is exactly the configured rate (platform settings, 10% today)
-// of the ticket price, in every currency and country, whoever pays it. There is
+// The platform fee is exactly the configured rate of the ticket price, plus the
+// market's fixed amount per paid ticket (US/CA/FR, since 2026-10-11), whoever
+// pays it. There is
 // no per-ticket ceiling any more: checkout, mobile, the earnings ledger, promoter
 // commissions and payouts all take the plain percentage.
 //
@@ -59,13 +77,20 @@ export function calculatePlatformFeeWithPercentage(
 export function platformFeeForSale(
   grossAmount: number,
   feePercentage: number,
-  _sale?: {
+  sale?: {
     legacyCapMinorPerTicket?: number | null
+    /** Paid tickets in the order — each carries the market's fixed fee. */
     quantity?: number
     purchasedAt?: Date | null
+    /** The market's fixed fee per paid ticket, in the sale's currency (0 = none). */
+    fixedFeeMinorPerTicket?: number | null
   }
 ): number {
-  return calculatePlatformFeeWithPercentage(grossAmount, feePercentage)
+  return calculatePlatformFeeWithPercentage(
+    grossAmount,
+    feePercentage,
+    fixedFeeTotalFor(grossAmount, sale?.fixedFeeMinorPerTicket, sale?.quantity)
+  )
 }
 
 /**
@@ -324,7 +349,9 @@ export type BuyerPricing = {
 export function calculateBuyerPricing(
   faceValue: number,
   incidence: FeeIncidence,
-  feePercentage: number = FEE_CONFIG.PLATFORM_FEE_PERCENTAGE
+  feePercentage: number = FEE_CONFIG.PLATFORM_FEE_PERCENTAGE,
+  /** Fixed part of the fee for the WHOLE order (per-ticket amount × paid tickets). */
+  fixedFeeTotal: number = 0
 ): BuyerPricing {
   if (faceValue <= 0) {
     return {
@@ -339,7 +366,7 @@ export function calculateBuyerPricing(
   }
 
   if (incidence === 'organizer') {
-    const platformFee = calculatePlatformFeeWithPercentage(faceValue, feePercentage)
+    const platformFee = calculatePlatformFeeWithPercentage(faceValue, feePercentage, fixedFeeTotal)
     const processingFee = calculateStripeFee(faceValue)
     return {
       chargeAmount: faceValue,
@@ -355,7 +382,7 @@ export function calculateBuyerPricing(
   // The buyer pays the platform fee and nothing else; Stripe's cut comes out of
   // it. Destination charges debit processing from the platform balance, so the
   // organizer still nets exactly the face value.
-  const platformFee = calculatePlatformFeeWithPercentage(faceValue, feePercentage)
+  const platformFee = calculatePlatformFeeWithPercentage(faceValue, feePercentage, fixedFeeTotal)
   const chargeAmount = faceValue + platformFee
   const processingFee = calculateStripeFee(chargeAmount)
 

@@ -37,10 +37,14 @@ jest.mock('@/lib/firebase/admin', () => ({ adminDb: {}, adminAuth: {} }))
 const RATE = DEFAULT_PLATFORM_SETTINGS.haiti.platformFeePercentage
 
 describe('the configured rate', () => {
-  it('is 10% in every market, and the shipped settings carry no cap', () => {
-    expect(feeConfigForCountry('US').platformFeePercentage).toBe(0.1)
-    expect(feeConfigForCountry('CA').platformFeePercentage).toBe(0.1)
+  it('is per market (2026-10-11), and the shipped settings carry no cap', () => {
+    expect(feeConfigForCountry('US')).toMatchObject({ platformFeePercentage: 0.06, fixedFeeMinorPerTicket: { USD: 99 } })
+    expect(feeConfigForCountry('CA')).toMatchObject({ platformFeePercentage: 0.06, fixedFeeMinorPerTicket: { CAD: 99 } })
+    expect(feeConfigForCountry('FR')).toMatchObject({ platformFeePercentage: 0.025, fixedFeeMinorPerTicket: { EUR: 50 } })
     expect(feeConfigForCountry('HT').platformFeePercentage).toBe(0.1)
+    expect(feeConfigForCountry('HT').fixedFeeMinorPerTicket).toBeUndefined()
+    // A country with no market of its own keeps the catch-all rate.
+    expect(feeConfigForCountry('GB').platformFeePercentage).toBe(0.1)
     expect(DEFAULT_PLATFORM_SETTINGS.haiti.platformFeeCapMinorByCurrency).toBeUndefined()
     expect(DEFAULT_PLATFORM_SETTINGS.usCanada.platformFeeCapMinorByCurrency).toBeUndefined()
   })
@@ -69,23 +73,53 @@ describe('no per-ticket cap on a new sale', () => {
 
   it('applies in every currency and country the old cap table covered', () => {
     const cases = [
-      { event: { country: 'US', currency: 'USD' }, faceCents: 200_00 }, // was capped at $5
-      { event: { country: 'CA', currency: 'CAD' }, faceCents: 200_00 }, // was C$7
-      { event: { country: 'FR', currency: 'EUR' }, faceCents: 200_00 }, // was EUR 4.50
-      { event: { country: 'HT', currency: 'HTG' }, faceCents: 50_000_00 }, // was 750 HTG
-      { event: { country: 'HT', currency: 'USD' }, faceCents: 200_00 }, // was $5
+      { event: { country: 'US', currency: 'USD' }, faceCents: 200_00, fee: 12_99 }, // was capped at $5
+      { event: { country: 'CA', currency: 'CAD' }, faceCents: 200_00, fee: 12_99 }, // was C$7
+      { event: { country: 'FR', currency: 'EUR' }, faceCents: 200_00, fee: 5_50 }, // was EUR 4.50
+      { event: { country: 'HT', currency: 'HTG' }, faceCents: 50_000_00, fee: 5_000_00 }, // was 750 HTG
+      { event: { country: 'HT', currency: 'USD' }, faceCents: 200_00, fee: 20_00 }, // was $5
     ]
-    for (const { event, faceCents } of cases) {
+    for (const { event, faceCents, fee } of cases) {
       for (const fee_incidence of ['buyer', 'organizer']) {
         const p = priceOrderCents(faceCents, { ...event, fee_incidence }, { quantity: 1 })
-        expect(p.platformFee).toBe(faceCents / 10)
+        expect(p.platformFee).toBe(fee)
       }
     }
   })
 
-  it('does not depend on ticket count: four $100 tickets pay 10% of $400', () => {
-    expect(priceOrderCents(400_00, { country: 'US', currency: 'USD' }, { quantity: 4 }).platformFee).toBe(40_00)
-    expect(priceOrderCents(400_00, { country: 'US', currency: 'USD' }, { quantity: 1 }).platformFee).toBe(40_00)
+  it('charges the fixed part once per PAID ticket: four $100 tickets pay 6% of $400 + 4 × $0.99', () => {
+    expect(priceOrderCents(400_00, { country: 'US', currency: 'USD' }, { quantity: 4 }).platformFee).toBe(27_96)
+    expect(priceOrderCents(400_00, { country: 'US', currency: 'USD' }, { quantity: 1 }).platformFee).toBe(24_99)
+    // A caller that forgets the quantity is priced as one ticket, never zero.
+    expect(priceOrderCents(100_00, { country: 'US', currency: 'USD' }).platformFee).toBe(6_99)
+  })
+
+  it('never adds the fixed part to a free order', () => {
+    const p = priceOrderCents(0, { country: 'FR', currency: 'EUR' }, { quantity: 3 })
+    expect(p.platformFee).toBe(0)
+    expect(p.chargeAmount).toBe(0)
+  })
+
+  it('only adds a fixed amount in the currency it is defined in', () => {
+    // A US market amount is USD cents; a price in any other unit gets the rate only.
+    expect(priceOrderCents(100_00, { country: 'US', currency: 'CAD' }, { quantity: 1 }).platformFee).toBe(6_00)
+    // The options currency (what the card is charged in) wins over the event's.
+    expect(
+      priceOrderCents(100_00, { country: 'FR', currency: 'USD' }, { quantity: 2, currency: 'EUR' }).platformFee
+    ).toBe(2_50 + 1_00)
+  })
+
+  it('a stored settings doc without markets still prices US/CA/FR at the market terms', () => {
+    setPlatformFeeConfig({
+      haiti: { platformFeePercentage: 0.1, settlementHoldDays: 0 },
+      usCanada: { platformFeePercentage: 0.1, settlementHoldDays: 7 },
+    })
+    try {
+      expect(priceOrderCents(20_00, { country: 'FR', currency: 'EUR' }, { quantity: 1 }).platformFee).toBe(1_00)
+      expect(priceOrderCents(20_00, { country: 'CA', currency: 'CAD' }, { quantity: 1 }).platformFee).toBe(2_19)
+    } finally {
+      resetPlatformFeeConfig()
+    }
   })
 
   it('ignores a cap table left on a stored settings doc', () => {
@@ -94,33 +128,44 @@ describe('no per-ticket cap on a new sale', () => {
       usCanada: { platformFeePercentage: 0.1, settlementHoldDays: 7, platformFeeCapMinorByCurrency: { USD: 500 } },
     })
     try {
-      expect(priceOrderCents(100_00, 'US').platformFee).toBe(10_00)
+      expect(priceOrderCents(100_00, { country: 'US', currency: 'USD' }).platformFee).toBe(6_99)
       expect(priceOrderCents(10_000_00, 'HT').platformFee).toBe(1_000_00)
       // Even passed straight in as the server's stored config.
       const stored = { platformFeePercentage: 0.1, platformFeeCapMinorByCurrency: { USD: 500 } }
-      expect(priceOrderCents(100_00, { country: 'US', currency: 'USD' }, { config: stored }).platformFee).toBe(10_00)
+      // (The stored rate replaces the market's; its fixed amount still applies.)
+      expect(priceOrderCents(100_00, { country: 'US', currency: 'USD' }, { config: stored }).platformFee).toBe(10_99)
     } finally {
       resetPlatformFeeConfig()
     }
   })
 
-  it('shows the buyer 10% at every price', () => {
+  it('shows the buyer 6% + $0.99 at every price in the US', () => {
     const feeFor = (face: number) =>
       priceOrder(face, { country: 'US', currency: 'USD' }, { quantity: 1, currency: 'USD' }).buyerFee
-    expect(feeFor(20)).toBeCloseTo(2, 2)
-    expect(feeFor(50)).toBeCloseTo(5, 2)
-    expect(feeFor(100)).toBeCloseTo(10, 2)
-    expect(feeFor(200)).toBeCloseTo(20, 2)
+    expect(feeFor(20)).toBeCloseTo(2.19, 2)
+    expect(feeFor(50)).toBeCloseTo(3.99, 2)
+    expect(feeFor(100)).toBeCloseTo(6.99, 2)
+    expect(feeFor(200)).toBeCloseTo(12.99, 2)
+  })
+
+  it('shows the buyer 2.5% + €0.50 per ticket in France', () => {
+    const feeFor = (face: number, quantity = 1) =>
+      priceOrder(face, { country: 'FR', currency: 'EUR' }, { quantity, currency: 'EUR' }).buyerFee
+    expect(feeFor(10)).toBeCloseTo(0.75, 2)
+    expect(feeFor(20)).toBeCloseTo(1.0, 2)
+    expect(feeFor(40, 2)).toBeCloseTo(2.0, 2)
   })
 })
 
-describe('a high-priced ticket pays exactly 10% on every surface, and they agree', () => {
+describe('a high-priced ticket pays exactly its market fee on every surface, and they agree', () => {
   // purchased after the cap was retired, so the payout engine applies the flat rate too
   const AFTER = new Date('2026-10-06T00:01:00.000Z').toISOString()
   const NOW = new Date('2026-11-05T00:00:00.000Z')
 
   const CASES = [
-    { label: '$500 USD', face: 500, currency: 'USD', country: 'US', expectedFeeMinor: 50_00 },
+    { label: '$500 USD', face: 500, currency: 'USD', country: 'US', expectedFeeMinor: 30_99 },
+    { label: 'C$150 CAD', face: 150, currency: 'CAD', country: 'CA', expectedFeeMinor: 9_99 },
+    { label: '€60 EUR', face: 60, currency: 'EUR', country: 'FR', expectedFeeMinor: 2_00 },
     { label: '50,000 HTG', face: 50_000, currency: 'HTG', country: 'HT', expectedFeeMinor: 5_000_00 },
   ] as const
 
@@ -202,6 +247,11 @@ describe('every sale, old or new, pays exactly the rate in payouts', () => {
     expect(platformFeeForSale(10_000_00, RATE, { ...old, purchasedAt: null })).toBe(1_000_00)
     expect(platformFeeForSale(20_000_00, RATE, { ...old, quantity: 2 })).toBe(2_000_00)
     expect(platformFeeForSale(500_00, RATE)).toBe(calculatePlatformFeeWithPercentage(500_00, RATE))
+  })
+
+  it('adds the market fixed fee once per paid ticket in the order', () => {
+    expect(platformFeeForSale(40_00, 0.025, { quantity: 2, fixedFeeMinorPerTicket: 50 })).toBe(1_00 + 1_00)
+    expect(platformFeeForSale(0, 0.025, { quantity: 2, fixedFeeMinorPerTicket: 50 })).toBe(calculatePlatformFeeWithPercentage(0, 0.025))
   })
 })
 

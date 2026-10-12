@@ -7,9 +7,13 @@ import {
   calculateBuyerPricing,
   calculatePlatformFeeWithPercentage,
   formatCurrency,
-  formatFeePercentage,
 } from '@/lib/fees'
-import { DEFAULT_PLATFORM_SETTINGS } from '@/types/platform-settings'
+import {
+  DEFAULT_MARKET_FEES,
+  DEFAULT_PLATFORM_SETTINGS,
+  fixedFeeMinorFor,
+  type LocationFeeConfig,
+} from '@/types/platform-settings'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
 
 export const dynamic = 'force-dynamic'
@@ -25,17 +29,34 @@ export const revalidate = 0
  * US/CA/FR add the fee on top and the organizer keeps the face value; Haiti
  * deducts it, and the buyer pays exactly the advertised price.
  */
-const US_FEES = DEFAULT_PLATFORM_SETTINGS.usCanada
+const US_FEES = DEFAULT_MARKET_FEES.US
 const HT_FEES = DEFAULT_PLATFORM_SETTINGS.haiti
 
-/** The rate per market, from the platform settings (10% in both today). */
-const usPlatformFeePercent = formatFeePercentage(US_FEES.platformFeePercentage)
-const htPlatformFeePercent = formatFeePercentage(HT_FEES.platformFeePercentage)
+/** "6%", "2.5%": no trailing ".0" on a whole rate. */
+function percentLabel(rate: number): string {
+  return `${Number((rate * 100).toFixed(2))}%`
+}
 
-/** A $20 ticket in a buyer-pays market. No per-ticket cap: exactly the rate. */
-const usExample = calculateBuyerPricing(20_00, 'buyer', US_FEES.platformFeePercentage)
+/** One market's terms as a buyer would read them: "6% + $0.99 per ticket". */
+function termsLabel(fees: LocationFeeConfig, currency: 'USD' | 'CAD' | 'EUR' | 'HTG', perTicket: string): string {
+  const fixed = fixedFeeMinorFor(fees, currency)
+  const rate = percentLabel(fees.platformFeePercentage)
+  if (!fixed) return rate
+  const amount =
+    currency === 'EUR' ? `€${(fixed / 100).toFixed(2)}` : currency === 'CAD' ? `C$${(fixed / 100).toFixed(2)}` : `$${(fixed / 100).toFixed(2)}`
+  return `${rate} + ${amount} ${perTicket}`
+}
+
+/** A $20 ticket in a buyer-pays market: the US rate plus its fixed amount. */
+const usExample = calculateBuyerPricing(
+  20_00,
+  'buyer',
+  US_FEES.platformFeePercentage,
+  fixedFeeMinorFor(US_FEES, 'USD')
+)
 /** The platform's cut of a 1,000 HTG ticket in Haiti, where the organizer bears it. */
 const htExamplePlatformFee = calculatePlatformFeeWithPercentage(1000_00, HT_FEES.platformFeePercentage)
+const htPlatformFeePercent = percentLabel(HT_FEES.platformFeePercentage)
 
 export default async function PayoutFeesPage() {
   const payoutPath = '/organizer/settings/payouts/fees'
@@ -165,33 +186,41 @@ export default async function PayoutFeesPage() {
             </h2>
             <div className="space-y-3 text-white/70">
               <p>
-                {t('fees_page.platform_fee_a', 'Tikèm charges a')}{' '}
-                <strong>
-                  {t('fees_page.platform_fee_us_strong', '{{percent}} platform fee').replace(
-                    '{{percent}}',
-                    usPlatformFeePercent
-                  )}
-                </strong>{' '}
-                {t(
-                  'fees_page.platform_fee_b',
-                  'on paid ticket sales in the United States, Canada and France, and'
-                )}{' '}
-                <strong>{htPlatformFeePercent}</strong>{' '}
+                {t('fees_page.rates_intro', 'Tikèm’s fee on paid tickets depends on where your event is:')}
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-2">
+                {(
+                  [
+                    ['fees_page.market_us', 'United States', termsLabel(US_FEES, 'USD', t('fees_page.per_ticket', 'per ticket'))],
+                    ['fees_page.market_ca', 'Canada', termsLabel(DEFAULT_MARKET_FEES.CA, 'CAD', t('fees_page.per_ticket', 'per ticket'))],
+                    ['fees_page.market_fr', 'France', termsLabel(DEFAULT_MARKET_FEES.FR, 'EUR', t('fees_page.per_ticket', 'per ticket'))],
+                    ['fees_page.market_ht', 'Haiti', termsLabel(HT_FEES, 'HTG', t('fees_page.per_ticket', 'per ticket'))],
+                  ] as const
+                ).map(([key, fallback, terms]) => (
+                  <li key={key}>
+                    <strong>{t(key, fallback)}:</strong> {terms}
+                  </li>
+                ))}
+              </ul>
+              <p>
                 {t(
                   'fees_page.platform_fee_c',
-                  'in Haiti. This helps us maintain and improve the platform, provide customer support, and continue developing new features.'
+                  'Card and MonCash processing are included: Tikèm pays them out of this fee. It also funds the platform, customer support and new features.'
                 )}
               </p>
               <p>
                 {t('fees_page.flat_a', 'The fee is')}{' '}
-                <strong>{t('fees_page.flat_strong', 'the same percentage on every ticket')}</strong>
+                <strong>{t('fees_page.flat_strong', 'the same terms on every ticket')}</strong>
                 {t(
                   'fees_page.flat_b',
-                  ', with no cap, however much the ticket costs: a $200 ticket carries {{usExample}} and a 20,000 HTG ticket carries {{htExample}}.'
+                  ', with no cap, however much the ticket costs: a $200 ticket in the United States carries {{usExample}} and a 20,000 HTG ticket in Haiti carries {{htExample}}.'
                 )
                   .replace(
                     '{{usExample}}',
-                    formatCurrency(calculatePlatformFeeWithPercentage(200_00, US_FEES.platformFeePercentage), 'USD')
+                    formatCurrency(
+                      calculatePlatformFeeWithPercentage(200_00, US_FEES.platformFeePercentage, fixedFeeMinorFor(US_FEES, 'USD')),
+                      'USD'
+                    )
                   )
                   .replace(
                     '{{htExample}}',
@@ -287,7 +316,7 @@ export default async function PayoutFeesPage() {
                 <h3 className="text-sm font-semibold text-white mb-2">
                   {t(
                     'fees_page.example_us_title',
-                    'United States, Canada, France: the buyer pays the fee'
+                    'United States: the buyer pays the fee'
                   )}
                 </h3>
                 <div className="rounded-lg bg-white/[0.03] p-4 font-mono text-sm">

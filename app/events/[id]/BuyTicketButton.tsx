@@ -427,10 +427,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const orderPricing = useMemo(
     () =>
       priceOrder(totalAmountDisplay, country, {
-        // Tickets in the cart. The fee is a flat rate of the total, so this no
-        // longer changes it; passed for the pricing seam's order context.
+        // PAID tickets in the cart: each carries the market's fixed fee
+        // (US/CA/FR), so a free tier in a mixed cart must not be counted.
         quantity: selectedTiers.length
-          ? selectedTiers.reduce((sum, t) => sum + t.quantity, 0)
+          ? selectedTiers.reduce((sum, t) => sum + (t.price > 0 ? t.quantity : 0), 0)
           : quantity,
         currency,
       }),

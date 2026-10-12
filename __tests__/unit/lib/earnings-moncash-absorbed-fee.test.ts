@@ -142,7 +142,8 @@ describe('MonCash collection fee is recorded as Tikèm cost', () => {
     })
 
     expect(earnings().absorbedProcessingFees).toBe(20)
-    expect(earnings().netAmount).toBe(900)
+    // US terms: 6% of $10 + $0.99 per ticket.
+    expect(earnings().netAmount).toBe(1_000 - 60 - 99)
   })
 
   it('records nothing for card sales', async () => {

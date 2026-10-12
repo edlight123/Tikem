@@ -27,7 +27,11 @@ const API_URL = String(
 /** A slow network must not delay the first screen; the defaults are fine meanwhile. */
 const FETCH_TIMEOUT_MS = 8_000;
 
-type RemoteFeeConfig = { haiti?: RemoteLocationFees; usCanada?: RemoteLocationFees };
+type RemoteFeeConfig = {
+  haiti?: RemoteLocationFees;
+  usCanada?: RemoteLocationFees;
+  markets?: Partial<Record<'US' | 'CA' | 'FR', RemoteLocationFees>>;
+};
 
 function looksValid(payload: any): payload is RemoteFeeConfig {
   return !!payload && typeof payload === 'object' && (payload.haiti || payload.usCanada);

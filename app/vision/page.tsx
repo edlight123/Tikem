@@ -86,7 +86,7 @@ const DICT: Record<Lng, Copy> = {
       {
         kreyol: 'Lajan an se pou òganizatè a',
         gloss: 'The money belongs to the organizer',
-        body: 'A fee you can read before you publish: one flat 10% of the ticket price, the same on every ticket. You see what you will receive, in your own currency, while you are still setting the price. Nothing about getting paid should be a surprise.',
+        body: 'A fee you can read before you publish: one published rate for your market, the same on every ticket. You see what you will receive, in your own currency, while you are still setting the price. Nothing about getting paid should be a surprise.',
       },
       {
         kreyol: 'Kilti a se pwodwi a',
@@ -136,7 +136,7 @@ const DICT: Record<Lng, Copy> = {
       {
         kreyol: 'Lajan an se pou òganizatè a',
         gloss: 'L’argent appartient à l’organisateur',
-        body: 'Des frais lisibles avant de publier : 10 % du prix du billet, le même taux sur chaque billet. Vous voyez ce que vous recevrez, dans votre monnaie, pendant que vous fixez encore le prix. Rien, dans le fait d’être payé, ne devrait surprendre.',
+        body: 'Des frais lisibles avant de publier : un tarif publié pour votre marché, le même sur chaque billet. Vous voyez ce que vous recevrez, dans votre monnaie, pendant que vous fixez encore le prix. Rien, dans le fait d’être payé, ne devrait surprendre.',
       },
       {
         kreyol: 'Kilti a se pwodwi a',
@@ -186,7 +186,7 @@ const DICT: Record<Lng, Copy> = {
       {
         kreyol: 'Lajan an se pou òganizatè a',
         gloss: 'The money belongs to the organizer',
-        body: 'Yon frè ou ka li anvan w pibliye : 10 % pri tikè a, menm to a sou chak tikè. Ou wè sa w ap resevwa, nan pwòp lajan w, pandan w ap toujou mete pri a. Anyen nan touche lajan w pa ta dwe yon sipriz.',
+        body: 'Yon frè ou ka li anvan w pibliye : yon sèl pri ki pibliye pou mache w, menm bagay la sou chak tikè. Ou wè sa w ap resevwa, nan pwòp lajan w, pandan w ap toujou mete pri a. Anyen nan touche lajan w pa ta dwe yon sipriz.',
       },
       {
         kreyol: 'Kilti a se pwodwi a',

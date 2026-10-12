@@ -28,19 +28,36 @@ const PLATFORM_FEE_MIN_MINOR = 50;
 
 interface LocationFees {
   percentage: number;
+  /** Fixed fee per PAID ticket, minor units, keyed by currency. None = 0. */
+  fixedMinorPerTicket: Record<string, number>;
+}
+
+type FeeMarket = 'US' | 'CA' | 'FR';
+const FEE_MARKETS: FeeMarket[] = ['US', 'CA', 'FR'];
+
+interface FeeConfigShape {
+  haiti: LocationFees;
+  usCanada: LocationFees;
+  markets: Record<FeeMarket, LocationFees>;
 }
 
 /**
- * Per-location rate. Mirrors DEFAULT_PLATFORM_SETTINGS: the values the bundle
- * shipped with, used until the live config arrives. There is no per-ticket cap
- * (owner decision, 2026-10-05): the fee is exactly the rate, in every currency.
+ * Per-location terms. Mirrors DEFAULT_PLATFORM_SETTINGS and DEFAULT_MARKET_FEES:
+ * the values the bundle shipped with, used until the live config arrives. No
+ * per-ticket cap (owner decision, 2026-10-05). Market terms (2026-10-11): US 6% +
+ * $0.99, CA 6% + C$0.99, FR 2.5% + €0.50 per paid ticket.
  */
-const DEFAULT_FEE_CONFIG: { haiti: LocationFees; usCanada: LocationFees } = {
-  haiti: { percentage: 0.1 },
-  usCanada: { percentage: 0.1 },
+const DEFAULT_FEE_CONFIG: FeeConfigShape = {
+  haiti: { percentage: 0.1, fixedMinorPerTicket: {} },
+  usCanada: { percentage: 0.1, fixedMinorPerTicket: {} },
+  markets: {
+    US: { percentage: 0.06, fixedMinorPerTicket: { USD: 99 } },
+    CA: { percentage: 0.06, fixedMinorPerTicket: { CAD: 99 } },
+    FR: { percentage: 0.025, fixedMinorPerTicket: { EUR: 50 } },
+  },
 };
 
-let FEE_CONFIG = DEFAULT_FEE_CONFIG;
+let FEE_CONFIG: FeeConfigShape = DEFAULT_FEE_CONFIG;
 
 /**
  * One location's fee terms, as `/api/platform/fee-config` returns them. A
@@ -48,6 +65,21 @@ let FEE_CONFIG = DEFAULT_FEE_CONFIG;
  */
 export interface RemoteLocationFees {
   platformFeePercentage?: number;
+  fixedFeeMinorPerTicket?: Record<string, number>;
+}
+
+function mergeFixed(
+  remote: Record<string, number> | undefined,
+  fallback: Record<string, number>
+): Record<string, number> {
+  if (remote === undefined) return fallback;
+  if (!remote || typeof remote !== 'object' || Array.isArray(remote)) return fallback;
+  const out: Record<string, number> = {};
+  for (const [currency, value] of Object.entries(remote)) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n >= 0 && n < 100_000) out[currency.toUpperCase()] = Math.round(n);
+  }
+  return out;
 }
 
 function merge(remote: RemoteLocationFees | undefined, fallback: LocationFees): LocationFees {
@@ -59,6 +91,7 @@ function merge(remote: RemoteLocationFees | undefined, fallback: LocationFees): 
       Number.isFinite(percentage) && percentage >= 0 && percentage < 1
         ? percentage
         : fallback.percentage,
+    fixedMinorPerTicket: mergeFixed(remote?.fixedFeeMinorPerTicket, fallback.fixedMinorPerTicket),
   };
 }
 
@@ -68,15 +101,31 @@ function merge(remote: RemoteLocationFees | undefined, fallback: LocationFees): 
  * Called by `refreshFeeConfig`; safe to call repeatedly.
  */
 export function setFeeConfig(
-  remote: { haiti?: RemoteLocationFees; usCanada?: RemoteLocationFees } | null | undefined
+  remote:
+    | {
+        haiti?: RemoteLocationFees;
+        usCanada?: RemoteLocationFees;
+        markets?: Partial<Record<FeeMarket, RemoteLocationFees>>;
+      }
+    | null
+    | undefined
 ): void {
   if (!remote) {
     FEE_CONFIG = DEFAULT_FEE_CONFIG;
     return;
   }
+  const markets = {} as Record<FeeMarket, LocationFees>;
+  for (const m of FEE_MARKETS) {
+    // A server that predates markets sends none: keep the shipped market terms,
+    // never fall back to the catch-all rate.
+    markets[m] = remote.markets?.[m]
+      ? merge(remote.markets[m], DEFAULT_FEE_CONFIG.markets[m])
+      : DEFAULT_FEE_CONFIG.markets[m];
+  }
   FEE_CONFIG = {
     haiti: merge(remote.haiti, DEFAULT_FEE_CONFIG.haiti),
     usCanada: merge(remote.usCanada, DEFAULT_FEE_CONFIG.usCanada),
+    markets,
   };
 }
 
@@ -96,6 +145,24 @@ const BUYER_PAYS_COUNTRIES = new Set(['US', 'CA', 'FR']);
 function isHaiti(country: unknown): boolean {
   const code = String(country || '').toUpperCase().trim();
   return code === 'HT' || code === 'HAITI';
+}
+
+/** Same resolution as the web's `locationFeesForCountry`. */
+function feesFor(country: unknown): LocationFees {
+  const code = String(country || '').toUpperCase().trim();
+  if ((FEE_MARKETS as string[]).includes(code)) return FEE_CONFIG.markets[code as FeeMarket];
+  return isHaiti(country) ? FEE_CONFIG.haiti : FEE_CONFIG.usCanada;
+}
+
+/** Default event currency per country, mirroring the web's defaultCurrencyForCountry. */
+function currencyFor(event: PricingEventLike | null | undefined): string {
+  const explicit = String(event?.currency || '').toUpperCase().trim();
+  if (explicit) return explicit;
+  const code = String(event?.country || '').toUpperCase().trim();
+  if (code === 'CA') return 'CAD';
+  if (code === 'FR') return 'EUR';
+  if (code === 'HT' || code === 'HAITI') return 'HTG';
+  return 'USD';
 }
 
 export function feeIncidenceForCountry(country: unknown): FeeIncidence {
@@ -135,12 +202,20 @@ function fromMinor(minor: number): number {
 }
 
 /**
- * The platform's cut of one order, in minor units: exactly the location's rate,
- * floored by the minimum. No per-ticket cap, in any currency.
+ * The platform's cut of one order, in minor units: the location's rate of the
+ * face total plus its fixed amount per PAID ticket (in the event's currency),
+ * floored by the minimum. No per-ticket cap.
  */
-function platformFeeMinor(faceMinor: number, event: PricingEventLike | null | undefined): number {
-  const config = isHaiti(event?.country) ? FEE_CONFIG.haiti : FEE_CONFIG.usCanada;
-  return Math.max(Math.round(faceMinor * config.percentage), PLATFORM_FEE_MIN_MINOR);
+function platformFeeMinor(
+  faceMinor: number,
+  event: PricingEventLike | null | undefined,
+  paidQuantity: number | undefined
+): number {
+  const config = feesFor(event?.country);
+  const perTicket = Math.max(0, Math.round(Number(config.fixedMinorPerTicket[currencyFor(event)]) || 0));
+  const quantity = Math.max(1, Math.floor(Number(paidQuantity) || 1));
+  const fixed = faceMinor > 0 ? perTicket * quantity : 0;
+  return Math.max(Math.round(faceMinor * config.percentage) + fixed, PLATFORM_FEE_MIN_MINOR);
 }
 
 export interface OrderPricing {
@@ -160,13 +235,13 @@ export interface OrderPricing {
  *
  * `faceTotal` is the post-discount total for every ticket in the order. The fee's
  * fixed component is per TRANSACTION, so pass the whole order rather than grossing
- * up each ticket separately. `quantity` is accepted for call-site compatibility;
- * with no per-ticket cap the fee no longer depends on it.
+ * up each ticket separately. `quantity` = PAID tickets in the order: each carries
+ * the market's fixed fee (US/CA/FR). Defaults to 1.
  */
 export function priceOrder(
   faceTotal: number,
   event: PricingEventLike | null | undefined,
-  _options?: { quantity?: number }
+  options?: { quantity?: number }
 ): OrderPricing {
   const incidence = incidenceForEvent(event);
   const faceMinor = Math.max(0, toMinor(faceTotal));
@@ -184,7 +259,7 @@ export function priceOrder(
   }
 
   // The buyer pays the platform fee only; the platform absorbs Stripe's cut.
-  const platformFee = platformFeeMinor(faceMinor, event);
+  const platformFee = platformFeeMinor(faceMinor, event, options?.quantity);
   const chargeMinor = faceMinor + platformFee;
 
   return {
@@ -208,12 +283,12 @@ export function priceOrder(
 export function organizerNet(
   faceTotal: number,
   event: PricingEventLike | null | undefined,
-  _options?: { quantity?: number }
+  options?: { quantity?: number }
 ): number {
   const faceMinor = Math.max(0, toMinor(faceTotal));
   if (faceMinor <= 0) return 0;
   if (incidenceForEvent(event) === 'buyer') return fromMinor(faceMinor);
-  return fromMinor(Math.max(0, faceMinor - platformFeeMinor(faceMinor, event)));
+  return fromMinor(Math.max(0, faceMinor - platformFeeMinor(faceMinor, event, options?.quantity)));
 }
 
 /** The all-in price of a single ticket — what a listing or a headline advertises. */

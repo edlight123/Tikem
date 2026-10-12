@@ -2,7 +2,7 @@
 
 // The organizer door: one sentence, three facts and one white button.
 // The facts are checked against the code, not the pitch deck:
-//   fee      — 10% everywhere, processing absorbed by Tikèm (lib/checkout/buyer-pricing,
+//   fee      — per market (10% Haiti; US/CA/FR rate + fixed per ticket), processing absorbed by Tikèm (lib/checkout/buyer-pricing,
 //              types/platform-settings DEFAULT_PLATFORM_SETTINGS; owner rule 2026-09-30)
 //   payments — MonCash for Haiti events, cards (Stripe) for diaspora events. NatCash
 //              and Haiti cards (Sogepay) are both feature-flagged off in BuyTicketButton.
@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next'
 export default function OrganizerBand() {
   const { t } = useTranslation('common')
   const facts = [
-    t('home.org.fact_fee', { defaultValue: '10% all-in, processing included' }),
+    t('home.org.fact_fee', { defaultValue: 'Low fees, processing included' }),
     t('home.org.fact_pay', { defaultValue: 'MonCash in Haiti, cards in the diaspora' }),
     t('home.org.fact_payout', { defaultValue: 'Funds available 72 hours after your event ends, 24 hours once you’re established' }),
   ]

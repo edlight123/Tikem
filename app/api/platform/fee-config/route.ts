@@ -19,16 +19,24 @@
 
 import { NextResponse } from 'next/server'
 import { getPlatformFeeSettings } from '@/lib/checkout/fee-config-server'
-import { DEFAULT_PLATFORM_SETTINGS } from '@/types/platform-settings'
+import {
+  DEFAULT_MARKET_FEES,
+  DEFAULT_PLATFORM_SETTINGS,
+  FEE_MARKETS,
+  type LocationFeeConfig,
+} from '@/types/platform-settings'
 
 export const runtime = 'nodejs'
 
 /** Seconds the client (and any CDN) may serve this without asking again. */
 const MAX_AGE_SECONDS = 300
 
-function feeFieldsOnly(config: { platformFeePercentage: number }) {
+function feeFieldsOnly(config: Pick<LocationFeeConfig, 'platformFeePercentage' | 'fixedFeeMinorPerTicket'>) {
   return {
     platformFeePercentage: config.platformFeePercentage,
+    // Per paid ticket, by currency. Builds that predate it ignore the field and
+    // under-quote by the fixed amount until they update; checkout is still right.
+    fixedFeeMinorPerTicket: config.fixedFeeMinorPerTicket ?? {},
     // The per-ticket cap is retired (owner decision, 2026-10-05). Always an EMPTY
     // table, never omitted: mobile builds already in users' hands fall back to
     // their compiled-in caps when the field is missing, but treat an empty table
@@ -49,6 +57,9 @@ export async function GET() {
     {
       haiti: feeFieldsOnly(config.haiti),
       usCanada: feeFieldsOnly(config.usCanada),
+      markets: Object.fromEntries(
+        FEE_MARKETS.map((m) => [m, feeFieldsOnly(config.markets?.[m] ?? DEFAULT_MARKET_FEES[m])])
+      ),
     },
     {
       headers: {

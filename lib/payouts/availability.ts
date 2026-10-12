@@ -303,6 +303,12 @@ export type FeeRule = {
    * none applied. Used only for orders paid before PLATFORM_FEE_CAP_RETIRED_AT.
    */
   legacyCapMinorPerTicket: number | null
+  /**
+   * The market's fixed fee per paid ticket, EVENT-currency minor units (US/CA/FR
+   * since 2026-10-11; 0 or absent = none). Only reaches an organizer's net on
+   * organizer-absorbs orders, like the rate.
+   */
+  fixedFeeMinorPerTicket?: number
 }
 
 /** A legacy batch payout (organizers/{id}/payouts). */
@@ -646,6 +652,7 @@ export function computeEventAvailability(input: EventAvailabilityInput): EventAv
       legacyCapMinorPerTicket: input.fee.legacyCapMinorPerTicket ?? null,
       quantity: count,
       purchasedAt,
+      fixedFeeMinorPerTicket: input.fee.fixedFeeMinorPerTicket ?? 0,
     })
   }
 

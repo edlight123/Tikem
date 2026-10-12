@@ -255,9 +255,10 @@ export default function EventbriteStyleTicketSelector({
   // charged here, before they reach any payment screen.
   // The fee is a flat rate of the order total (no per-ticket cap), so quantity
   // does not change it; it is passed for the pricing seam's order context.
-  const orderQuantity = getSelections().reduce((sum, s) => sum + s.quantity, 0)
+  // PAID tickets only: each carries the market's fixed fee (US/CA/FR).
+  const paidQuantity = getSelections().reduce((sum, s) => sum + (s.price > 0 ? s.quantity : 0), 0)
   const orderPricing = priceOrder(totalPrice, country, {
-    quantity: orderQuantity,
+    quantity: paidQuantity,
     currency,
   })
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0

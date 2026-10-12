@@ -124,11 +124,18 @@ describe('major-unit surface used by the display code', () => {
   })
 
   it('prices the ORDER, not each ticket — the minimum fee is charged once', () => {
-    // Ten $2 tickets priced together pay 10% of $20; priced one by one each
-    // would hit the 50c per-order floor.
-    const together = priceOrderCents(10 * 2_00, 'US').chargeAmount
-    const separately = 10 * priceOrderCents(2_00, 'US').chargeAmount
+    // Ten 2 HTG tickets priced together pay 10% of 20 HTG; priced one by one
+    // each would hit the 50-centime per-order floor.
+    const event = { country: 'HT', currency: 'HTG', fee_incidence: 'buyer' }
+    const together = priceOrderCents(10 * 2_00, event, { quantity: 10 }).chargeAmount
+    const separately = 10 * priceOrderCents(2_00, event, { quantity: 1 }).chargeAmount
     expect(together).toBe(22_00)
     expect(together).toBeLessThan(separately)
+  })
+
+  it('charges the US fixed amount once per paid ticket in the order', () => {
+    // 6% of $20 + 10 × $0.99, the same whether priced together or apart.
+    const together = priceOrderCents(10 * 2_00, 'US', { quantity: 10 }).chargeAmount
+    expect(together).toBe(20_00 + 1_20 + 9_90)
   })
 })

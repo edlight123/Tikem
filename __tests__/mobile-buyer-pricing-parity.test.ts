@@ -69,6 +69,16 @@ const CASES: Case[] = [
   },
   { label: 'unknown country', face: 25, event: { country: 'ZZ', currency: 'USD' }, quantity: 1 },
   { label: 'free order', face: 0, event: { country: 'US', currency: 'USD' }, quantity: 1 },
+  { label: 'France 3 × €15', face: 45, event: { country: 'FR', currency: 'EUR' }, quantity: 3 },
+  { label: 'Canada 2 × C$25', face: 50, event: { country: 'CA', currency: 'CAD' }, quantity: 2 },
+  {
+    label: 'France event the organizer chose to absorb',
+    face: 20,
+    event: { country: 'FR', currency: 'EUR', fee_incidence: 'organizer' },
+    quantity: 1,
+  },
+  { label: 'US event with no currency on it', face: 30, event: { country: 'US' }, quantity: 2 },
+  { label: 'Haiti event priced in USD', face: 40, event: { country: 'HT', currency: 'USD', fee_incidence: 'buyer' }, quantity: 2 },
 ]
 
 describe('mobile and web price an order identically', () => {
@@ -106,12 +116,20 @@ describe('both sides adopt a changed config identically', () => {
     // A cap table a server might still send is ignored by both sides.
     haiti: { platformFeePercentage: 0.08, platformFeeCapMinorByCurrency: { HTG: 50_000 } },
     usCanada: { platformFeePercentage: 0.06, platformFeeCapMinorByCurrency: { USD: 300 } },
+    markets: {
+      US: { platformFeePercentage: 0.05, fixedFeeMinorPerTicket: { USD: 79 } },
+      FR: { platformFeePercentage: 0.03, fixedFeeMinorPerTicket: { EUR: 40 } },
+    },
   }
 
   beforeEach(() => {
     setPlatformFeeConfig({
       haiti: { settlementHoldDays: 0, ...CHANGED.haiti },
       usCanada: { settlementHoldDays: 7, ...CHANGED.usCanada },
+      markets: {
+        US: { settlementHoldDays: 7, ...CHANGED.markets.US },
+        FR: { settlementHoldDays: 7, ...CHANGED.markets.FR },
+      },
     })
     mobileSetFeeConfig(CHANGED)
   })
@@ -125,6 +143,9 @@ describe('both sides adopt a changed config identically', () => {
     { label: 'US $20 at the lowered rate', face: 20, event: { country: 'US', currency: 'USD' }, quantity: 1 },
     { label: 'US $100 at the lowered rate', face: 100, event: { country: 'US', currency: 'USD' }, quantity: 1 },
     { label: 'US 3 × $80', face: 240, event: { country: 'US', currency: 'USD' }, quantity: 3 },
+    { label: 'France 2 × €20 at the changed terms', face: 40, event: { country: 'FR', currency: 'EUR' }, quantity: 2 },
+    { label: 'Canada keeps its shipped terms', face: 40, event: { country: 'CA', currency: 'CAD' }, quantity: 1 },
+    { label: 'unknown country at the changed catch-all', face: 40, event: { country: 'ZZ', currency: 'USD' }, quantity: 1 },
     {
       label: 'Haiti 20,000 HTG passed on',
       face: 20_000,
@@ -149,21 +170,21 @@ describe('both sides adopt a changed config identically', () => {
 
 describe('no per-ticket cap on either side', () => {
   it.each([
-    { face: 500, event: { country: 'US', currency: 'USD' }, fee: 50 },
-    { face: 200, event: { country: 'CA', currency: 'CAD' }, fee: 20 },
-    { face: 200, event: { country: 'FR', currency: 'EUR' }, fee: 20 },
+    { face: 500, event: { country: 'US', currency: 'USD' }, fee: 30.99 },
+    { face: 200, event: { country: 'CA', currency: 'CAD' }, fee: 12.99 },
+    { face: 200, event: { country: 'FR', currency: 'EUR' }, fee: 5.5 },
     { face: 50_000, event: { country: 'HT', currency: 'HTG', fee_incidence: 'buyer' }, fee: 5_000 },
-  ])('$event.currency $face pays exactly 10%', ({ face, event, fee }) => {
+  ])('$event.currency $face pays exactly its market fee', ({ face, event, fee }) => {
     expect(mobilePriceOrder(face, event, { quantity: 1 }).buyerFee).toBeCloseTo(fee, 2)
     expect(webPriceOrder(face, event, { quantity: 1, currency: event.currency }).buyerFee).toBeCloseTo(fee, 2)
   })
 
   it('ignores a cap table sent by the fee-config endpoint', () => {
     mobileSetFeeConfig({
-      usCanada: { platformFeePercentage: 0.1, platformFeeCapMinorByCurrency: { USD: 500 } } as any,
-    })
+      markets: { US: { platformFeePercentage: 0.06, platformFeeCapMinorByCurrency: { USD: 500 } } },
+    } as any)
     try {
-      expect(mobilePriceOrder(100, { country: 'US', currency: 'USD' }).buyerFee).toBeCloseTo(10, 2)
+      expect(mobilePriceOrder(100, { country: 'US', currency: 'USD' }).buyerFee).toBeCloseTo(6.99, 2)
     } finally {
       mobileResetFeeConfig()
     }

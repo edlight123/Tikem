@@ -20,9 +20,10 @@
 
 import crypto from 'crypto'
 import { adminDb } from '@/lib/firebase/admin'
-import { calculatePlatformFeeWithPercentage } from '@/lib/fees'
+import { calculatePlatformFeeWithPercentage, fixedFeeTotalFor } from '@/lib/fees'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
-import { getEventLocation } from '@/types/platform-settings'
+import { fixedFeeMinorFor, locationFeesForCountry } from '@/types/platform-settings'
+import { defaultCurrencyForCountry } from '@/lib/country-support'
 
 export interface PromoterDoc {
   id: string
@@ -203,8 +204,8 @@ export function calculateCommissionCents(
 export async function platformFeeCentsForOrder(
   eventId: string,
   orderGrossCents: number,
-  // Kept for callers; with no per-ticket cap the fee no longer depends on it.
-  _quantity?: number
+  /** Paid tickets in the order: each carries the market's fixed fee (US/CA/FR). */
+  quantity?: number
 ): Promise<number> {
   const gross = Math.max(0, Math.round(Number(orderGrossCents) || 0))
   if (gross <= 0) return 0
@@ -212,10 +213,11 @@ export async function platformFeeCentsForOrder(
     const eventSnap = await adminDb.collection('events').doc(String(eventId)).get()
     const event: any = eventSnap?.exists ? eventSnap.data() || {} : {}
     const settings = await getPlatformSettings()
-    const cfg: any = getEventLocation(String(event?.country || 'HT')) === 'haiti' ? settings?.haiti : settings?.usCanada
+    const cfg: any = locationFeesForCountry(settings, String(event?.country || 'HT'))
     const rateRaw = Number(cfg?.platformFeePercentage)
     const rate = Number.isFinite(rateRaw) && rateRaw >= 0 && rateRaw < 1 ? rateRaw : DEFAULT_PLATFORM_FEE_RATE
-    return calculatePlatformFeeWithPercentage(gross, rate)
+    const fixedPerTicket = fixedFeeMinorFor(cfg, event?.currency || defaultCurrencyForCountry(event?.country))
+    return calculatePlatformFeeWithPercentage(gross, rate, fixedFeeTotalFor(gross, fixedPerTicket, quantity))
   } catch (err: any) {
     console.warn('[promoters] platform-fee lookup failed; assuming the default rate', {
       eventId,

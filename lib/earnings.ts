@@ -8,7 +8,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { calculateFees, calculateSettlementDate, isSettlementReady, platformFeeForSale, calculateSettlementDateWithHoldDays } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
-import { getEventLocation } from '@/types/platform-settings'
+import { fixedFeeMinorFor, getEventLocation, locationFeesForCountry } from '@/types/platform-settings'
+import { defaultCurrencyForCountry } from '@/lib/country-support'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
 import { isLiveTicketStatus, liveTicketStatusesForQuery } from '@/lib/tickets/status'
@@ -96,6 +97,10 @@ function calculateEventCurrencyFees(options: {
    * rate, no cap (owner decision, 2026-10-05).
    */
   historical?: { legacyCapMinorPerTicket: number | null; quantity: number; purchasedAt: Date | null }
+  /** Paid tickets in this order, for the fixed fee. `historical.quantity` wins. */
+  quantity?: number
+  /** The market's fixed fee per paid ticket, event-currency minor units (0 = none). */
+  fixedFeeMinorPerTicket?: number
 }): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number; absorbedProcessingFee: number } {
   const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
   if (grossEventCents <= 0) {
@@ -127,7 +132,10 @@ function calculateEventCurrencyFees(options: {
   const platformFee = platformFeeForSale(
     grossEventCents,
     options.platformFeePercentage !== undefined ? options.platformFeePercentage : FEE_PERCENT_DEFAULT,
-    options.historical ?? { legacyCapMinorPerTicket: null, quantity: 1, purchasedAt: null }
+    {
+      ...(options.historical ?? { legacyCapMinorPerTicket: null, quantity: options.quantity ?? 1, purchasedAt: null }),
+      fixedFeeMinorPerTicket: options.fixedFeeMinorPerTicket ?? 0,
+    }
   )
 
   // Processing fee depends on the payment rail.
@@ -249,9 +257,12 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   
   // Fetch dynamic platform settings
   const platformSettings = await getPlatformSettings()
-  const platformFeePercentage = eventLocation === 'haiti'
-    ? platformSettings.haiti.platformFeePercentage
-    : platformSettings.usCanada.platformFeePercentage
+  const marketFees = locationFeesForCountry(platformSettings, eventCountry)
+  const platformFeePercentage = marketFees.platformFeePercentage
+  const fixedFeeMinorPerTicket = fixedFeeMinorFor(
+    marketFees,
+    event.currency || defaultCurrencyForCountry(eventCountry)
+  )
   // The per-ticket cap is retired for every sale (no real organizer sold under it).
   const legacyCapMinorPerTicket: number | null = null
   const settlementHoldDays = eventLocation === 'haiti'
@@ -382,6 +393,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       chargedAmountCents: group.chargedAmountCents,
       fxRate: group.fxRate,
       platformFeePercentage, // Pass dynamic platform fee
+      fixedFeeMinorPerTicket,
       feeIncidence: group.feeIncidence,
       historical: {
         legacyCapMinorPerTicket,
@@ -833,9 +845,12 @@ export async function addTicketToEarnings(
   
   // Fetch dynamic platform settings
   const platformSettings = await getPlatformSettings()
-  const platformFeePercentage = eventLocation === 'haiti'
-    ? platformSettings.haiti.platformFeePercentage
-    : platformSettings.usCanada.platformFeePercentage
+  const marketFees = locationFeesForCountry(platformSettings, eventCountry)
+  const platformFeePercentage = marketFees.platformFeePercentage
+  const fixedFeeMinorPerTicket = fixedFeeMinorFor(
+    marketFees,
+    options?.currency || event?.currency || defaultCurrencyForCountry(eventCountry)
+  )
 
   const paymentMethod = normalizePaymentMethod(options?.paymentMethod)
   const fxRate = options?.fxRate != null ? Number(options.fxRate) : null
@@ -847,6 +862,8 @@ export async function addTicketToEarnings(
     chargedAmountCents,
     fxRate,
     platformFeePercentage, // Pass dynamic platform fee
+    fixedFeeMinorPerTicket,
+    quantity,
     feeIncidence: options?.feeIncidence === 'buyer' ? 'buyer' : 'organizer',
     // A sale being recorded now: exactly the rate, no per-ticket cap.
   })

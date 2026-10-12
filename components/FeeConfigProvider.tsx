@@ -54,6 +54,7 @@ export function FeeConfigProvider({
         setActive((previous) => ({
           haiti: { ...(previous?.haiti as any), ...payload.haiti },
           usCanada: { ...(previous?.usCanada as any), ...payload.usCanada },
+          markets: { ...(previous?.markets as any), ...(payload.markets || {}) },
         }))
       } catch {
         // Offline or the endpoint is down: the server-seeded values stand.

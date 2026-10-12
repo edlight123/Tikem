@@ -19,6 +19,15 @@ export interface LocationFeeConfig {
   settlementHoldDays: number
 
   /**
+   * Fixed part of the platform fee, charged once per PAID ticket, in minor units
+   * of the currency the ticket is priced in (EUR 50 = €0.50). Keyed by currency
+   * so a fixed amount can never be applied in the wrong unit: a currency with no
+   * entry adds nothing (Haiti, and an HTG/USD Haiti event, has none). Free
+   * tickets never carry it.
+   */
+  fixedFeeMinorPerTicket?: Record<string, number>
+
+  /**
    * RETIRED (owner decision, 2026-10-05): the platform fee is exactly
    * `platformFeePercentage` of the ticket price, with no per-ticket cap.
    *
@@ -132,7 +141,16 @@ export interface PlatformSettings {
    * Fee configuration for US/Canada events
    */
   usCanada: LocationFeeConfig
-  
+
+  /**
+   * Per-country fee terms that take precedence over `usCanada` (owner decision,
+   * 2026-10-11: US 6% + $0.99, CA 6% + C$0.99, FR 2.5% + €0.50 per paid ticket).
+   * Optional so a stored settings doc written before markets existed keeps
+   * working: a missing market falls back to DEFAULT_MARKET_FEES, never to the
+   * old 10% `usCanada` rate.
+   */
+  markets?: Partial<Record<FeeMarket, LocationFeeConfig>>
+
   /**
    * Minimum payout amount in cents
    */
@@ -155,6 +173,53 @@ export interface PlatformSettings {
   updatedBy?: string
 }
 
+/** Countries with their own fee terms. Haiti keeps `haiti`; anything else, `usCanada`. */
+export type FeeMarket = 'US' | 'CA' | 'FR'
+
+export const FEE_MARKETS: readonly FeeMarket[] = ['US', 'CA', 'FR']
+
+/**
+ * Per-market fee terms (owner decision, 2026-10-11), priced against Posh,
+ * Eventbrite and DICE in North America and Bizouk/Shotgun in France. Card
+ * processing is still Tikèm's cost in every market.
+ *
+ * FR is thin: the Stripe platform account is Canadian, so a EUR card sale pays
+ * about 5.95% + €0.20 (2.9% + C$0.30, +0.8% international, +2% conversion,
+ * ~0.25% Connect). 2.5% + €0.50 only covers that once French sales get EU card
+ * pricing (on_behalf_of with French connected accounts, or an EU entity).
+ */
+export const DEFAULT_MARKET_FEES: Record<FeeMarket, LocationFeeConfig> = {
+  US: { platformFeePercentage: 0.06, settlementHoldDays: 7, fixedFeeMinorPerTicket: { USD: 99 } },
+  CA: { platformFeePercentage: 0.06, settlementHoldDays: 7, fixedFeeMinorPerTicket: { CAD: 99 } },
+  FR: { platformFeePercentage: 0.025, settlementHoldDays: 7, fixedFeeMinorPerTicket: { EUR: 50 } },
+}
+
+/** The market whose fee terms apply to an event in this country, if it has its own. */
+export function feeMarketForCountry(country: unknown): FeeMarket | null {
+  const code = String(country || '').toUpperCase().trim()
+  return (FEE_MARKETS as readonly string[]).includes(code) ? (code as FeeMarket) : null
+}
+
+/**
+ * The fee terms for an event in `country`, from a settings object: its market
+ * entry (stored, else the market default), else `haiti`/`usCanada` by location.
+ */
+export function locationFeesForCountry(
+  settings: Pick<PlatformSettings, 'haiti' | 'usCanada' | 'markets'>,
+  country: unknown
+): LocationFeeConfig {
+  const market = feeMarketForCountry(country)
+  if (market) return settings.markets?.[market] ?? DEFAULT_MARKET_FEES[market]
+  return getEventLocation(String(country || '')) === 'haiti' ? settings.haiti : settings.usCanada
+}
+
+/** Fixed fee per paid ticket for a price in `currency`, in its minor units. 0 when none. */
+export function fixedFeeMinorFor(config: Partial<LocationFeeConfig> | null | undefined, currency: unknown): number {
+  const code = String(currency || '').toUpperCase().trim()
+  const value = Number(config?.fixedFeeMinorPerTicket?.[code])
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : 0
+}
+
 /**
  * Default platform settings
  */
@@ -167,6 +232,7 @@ export const DEFAULT_PLATFORM_SETTINGS: Omit<PlatformSettings, 'id' | 'updatedAt
     platformFeePercentage: 0.10,  // 10% for US/Canada events
     settlementHoldDays: 7,         // 7 days hold for US/Canada events
   },
+  markets: DEFAULT_MARKET_FEES,
   minimumPayoutAmount: 5000,      // $50.00 in cents
   payoutRelease: DEFAULT_PAYOUT_RELEASE_CONFIG,
 }

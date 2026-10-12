@@ -10,10 +10,10 @@
  *
  * Two rules it exists to enforce:
  *
- *  1. THE FEE IS PER ORDER, NOT PER TICKET. Stripe's fixed component (and the
- *     platform-fee floor) are charged once per transaction, so grossing up each
- *     ticket separately would over-charge a multi-ticket order. Always pass the
- *     whole order's face total.
+ *  1. PRICE THE WHOLE ORDER, WITH ITS PAID-TICKET COUNT. The rate applies to the
+ *     order's face total and the platform-fee floor once per order; the market's
+ *     fixed amount (US/CA/FR) once per PAID ticket. Pass the whole order's face
+ *     total and `quantity` = paid tickets, never one ticket at a time.
  *  2. THE TOTAL IS SHOWN UP FRONT. US rules on live-event ticket pricing require
  *     the all-in total to be displayed prominently rather than revealed at the
  *     last step, so every pre-payment surface in a buyer-pays market prices the
@@ -30,19 +30,21 @@
 
 import {
   calculateBuyerPricing,
+  fixedFeeTotalFor,
   type BuyerPricing,
   type FeeIncidence,
 } from '@/lib/fees'
-import { feeIncidenceForCountry } from '@/lib/country-support'
+import { defaultCurrencyForCountry, feeIncidenceForCountry } from '@/lib/country-support'
 import { fromCents, toCents } from '@/lib/ticketPricing'
-import { getEventLocation, type LocationFeeConfig } from '@/types/platform-settings'
+import { fixedFeeMinorFor, locationFeesForCountry, type LocationFeeConfig } from '@/types/platform-settings'
 import { getPlatformFeeConfig } from '@/lib/checkout/fee-config-store'
 
 export type { BuyerPricing, FeeIncidence }
 
 /**
- * The rate that applies to an event, by country. There is no per-ticket cap
- * (owner decision, 2026-10-05): the fee is exactly this rate of the face value.
+ * The fee terms that apply to an event, by country: its market's rate and fixed
+ * per-ticket amount (US/CA/FR), else Haiti's or the catch-all rate. There is no
+ * per-ticket cap (owner decision, 2026-10-05).
  *
  * Reads the DEFAULTS, which is what every client surface can see — the stored
  * platform settings live in Firestore and only the server can await them. Server
@@ -54,9 +56,7 @@ export function feeConfigForCountry(
   country: unknown,
   override?: Partial<LocationFeeConfig> | null
 ): LocationFeeConfig {
-  const location = getEventLocation(String(country || ''))
-  const inForce = getPlatformFeeConfig()
-  const base = location === 'haiti' ? inForce.haiti : inForce.usCanada
+  const base = locationFeesForCountry(getPlatformFeeConfig(), country)
   return { ...base, ...(override || {}) }
 }
 
@@ -111,11 +111,15 @@ export type PricingEvent =
 
 export interface OrderPricingOptions {
   /**
-   * Tickets in this order. Accepted for call-site compatibility; with no
-   * per-ticket cap the fee does not depend on it.
+   * PAID tickets in this order. Each carries the market's fixed fee (US/CA/FR),
+   * so a display that under-counts under-quotes. Defaults to 1. Free tickets in
+   * a mixed cart must not be counted.
    */
   quantity?: number
-  /** Event currency, when it is not on the event object. Does not change the fee. */
+  /**
+   * Currency the face total is in (wins over the event's own). Selects the fixed
+   * fee: a market's amount is defined per currency and none applies otherwise.
+   */
   currency?: string | null
   /**
    * Stored platform settings for this location. SERVER ONLY — the client cannot
@@ -158,9 +162,14 @@ export function priceOrderCents(
   const face = Math.max(0, Math.round(Number(faceTotalCents) || 0))
   const subject = asPricingEvent(event)
   const config = feeConfigForCountry(subject.country, options?.config)
-  // Exactly the configured rate of the face total. A stored cap table, if one
-  // is still on the settings doc, is never applied.
-  return calculateBuyerPricing(face, incidenceForEvent(subject), config.platformFeePercentage)
+  // The configured rate of the face total, plus the market's fixed amount per
+  // paid ticket. A stored cap table, if one is still on the settings doc, is
+  // never applied.
+  // A surface that only knows the country prices in that country's currency.
+  const currency = options?.currency || subject.currency || defaultCurrencyForCountry(subject.country)
+  const fixedPerTicket = fixedFeeMinorFor(config, currency)
+  const fixedTotal = fixedFeeTotalFor(face, fixedPerTicket, options?.quantity)
+  return calculateBuyerPricing(face, incidenceForEvent(subject), config.platformFeePercentage, fixedTotal)
 }
 
 /**

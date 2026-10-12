@@ -606,11 +606,16 @@ export default function TieredTicketSelector({
           // What the card is actually charged. In a buyer-pays market the service
           // fee is added on top, so showing the face total here and a bigger number
           // on the payment sheet would be the drip pricing the all-in rule forbids.
-          // The server recomputes this; the cap is per ticket, hence the quantity.
+          // The server recomputes this. The fixed part of the fee (US/CA/FR) is
+          // per PAID ticket, so free tiers in the cart are not counted.
+          const paidQuantity = tiers.reduce(
+            (sum, tier) => sum + (tier.price > 0 ? tierQuantities[tier.id] || 0 : 0),
+            0
+          );
           const orderPricing = priceOrder(
             totalPrice,
             { country, currency: displayCurrency, fee_incidence: feeIncidence },
-            { quantity: totalQuantity }
+            { quantity: paidQuantity }
           );
           const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0;
           return (

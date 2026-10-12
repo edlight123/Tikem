@@ -14,7 +14,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { findEventEarningsDoc, storedEarningsCurrencyMismatch } from '@/lib/earnings'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { getFundedCommissionForEvent } from '@/lib/promoters'
-import { getEventLocation, type PlatformSettings } from '@/types/platform-settings'
+import { fixedFeeMinorFor, locationFeesForCountry, type PlatformSettings } from '@/types/platform-settings'
 import { loadOrganizerReleaseContext, type OrganizerReleaseContext } from '@/lib/payouts/withdrawal-gate'
 import { resolveConfig, type OrganizerHistory } from '@/lib/payouts/release-rules'
 import {
@@ -34,9 +34,11 @@ import {
  * is ignored; the retired cap comes from lib/fees.ts and only prices orders paid
  * before it was retired.
  */
-export function feeRuleForEvent(event: any, settings: Pick<PlatformSettings, 'haiti' | 'usCanada'>): FeeRule {
-  const location = getEventLocation(String(event?.country || 'HT'))
-  const cfg = location === 'haiti' ? settings.haiti : settings.usCanada
+export function feeRuleForEvent(
+  event: any,
+  settings: Pick<PlatformSettings, 'haiti' | 'usCanada' | 'markets'>
+): FeeRule {
+  const cfg = locationFeesForCountry(settings, String(event?.country || 'HT'))
   const currency = normalizeCurrencyCode(event?.currency)
   const rate = Number(cfg?.platformFeePercentage)
   return {
@@ -44,6 +46,8 @@ export function feeRuleForEvent(event: any, settings: Pick<PlatformSettings, 'ha
     platformFeePercentage: Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : 0.1,
     // Retired for every sale; kept on the rule so availability needn't change.
     legacyCapMinorPerTicket: null,
+    // In the event's currency, as checkout charged it.
+    fixedFeeMinorPerTicket: fixedFeeMinorFor(cfg, currency),
   }
 }
 
