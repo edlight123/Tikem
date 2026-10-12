@@ -45,6 +45,7 @@
 
 import { createHmac } from 'node:crypto'
 import { adminDb } from '@/lib/firebase/admin'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 import { addTicketToEarnings } from '@/lib/earnings'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
 import { notifyOrganizerTicketSale, notifyTicketPurchase } from '@/lib/notifications/helpers'
@@ -370,6 +371,18 @@ export async function planMultiTierTickets(
 
 // ── The pipeline ────────────────────────────────────────────────────────────
 
+/** True when the buyer (account uid, or a guest's email) holds a LIVE free ticket for the event. */
+async function buyerHoldsLiveFreeTicket(eventId: string, buyerId: string, guestEmail: string | null): Promise<boolean> {
+  if (!eventId) return false
+  const snap = guestEmail
+    ? await adminDb.collection('tickets').where('guest_email', '==', guestEmail).get()
+    : await adminDb.collection('tickets').where('attendee_id', '==', buyerId).get()
+  return snap.docs.some((d: any) => {
+    const t = d.data() || {}
+    return t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status)
+  })
+}
+
 export async function fulfillStripeOrder(input: StripeOrderInput): Promise<StripeFulfillmentResult> {
   const logPrefix = input.logPrefix || '[stripe-fulfillment]'
   const m = input.metadata || {}
@@ -424,14 +437,29 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   // A multi-tier order carries its per-tier breakdown in `t`
   // (lib/checkout/card-order-lines). One that cannot be read is never guessed at
   // — issuing N copies of one tier is exactly the bug the breakdown exists to fix.
-  const decodedLines = decodeCardOrderLines(m)
+  let decodedLines = decodeCardOrderLines(m)
   if (decodedLines.present && !decodedLines.ok) {
     console.error(`${logPrefix} refusing to issue tickets for unreadable tier lines — refunding`, {
       paymentId: input.paymentId,
     })
     return refundSoldOutOrder(input, orderRef, 'invalid_order_lines', 'invalid_order_lines')
   }
-  const orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
+  let orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
+
+  // Free tiers in a paid cart: create-payment-intent refuses them for a buyer
+  // who already holds a live free ticket, but two orders started together both
+  // pass that check. So it is asked again here, at issue time: if the buyer now
+  // holds one, the free lines are dropped and only what was paid for is issued.
+  // A free line costs nothing, so the charge and every fee are unaffected.
+  if (orderLines && orderLines.some((l) => l.unitOriginal <= 0) && orderLines.some((l) => l.unitOriginal > 0)) {
+    if (await buyerHoldsLiveFreeTicket(String(m.eventId || ''), input.buyerId, input.guestRecipient?.email || null)) {
+      console.warn(`${logPrefix} buyer already holds a free ticket; issuing the paid lines only`, {
+        paymentId: input.paymentId,
+      })
+      orderLines = orderLines.filter((l) => l.unitOriginal > 0)
+      decodedLines = { present: true, ok: true, lines: orderLines, quantity: orderLines.reduce((n, l) => n + l.quantity, 0) }
+    }
+  }
 
   // A paid intent whose quantity is not a valid whole number: never issue.
   // Refunded through the same path as a sell-out, flagged needs_refund.

@@ -131,6 +131,17 @@ describe('multi-tier issuance', () => {
     }
   })
 
+  it('drops the free lines when the buyer already holds a live free ticket (race with a free claim)', async () => {
+    mockFake.seed('tickets', 'earlier-free', { event_id: 'evt1', attendee_id: 'u1', price_paid: 0, status: 'valid' })
+    const res = await fulfillStripeOrder(multi())
+    expect(res.outcome).toBe('fulfilled')
+    const issued = tickets().filter((t) => t.id !== 'earlier-free')
+    expect(issued).toHaveLength(3)
+    expect(issued.some((t) => t.tier_id === 'free')).toBe(false)
+    // The charge is untouched: the paid tickets still account for every cent.
+    expect(issued.reduce((s, t) => s + Math.round(t.charged_amount * 100), 0)).toBe(9837)
+  })
+
   it('reserves inventory per tier', async () => {
     await fulfillStripeOrder(multi())
     expect(buildTierSoldIncrements).toHaveBeenCalledWith([
