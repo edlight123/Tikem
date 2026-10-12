@@ -22,6 +22,7 @@ import {
   encodeCardOrderLines,
 } from '@/lib/checkout/card-order-lines'
 import { friendlyStripeError } from '@/lib/checkout/stripe-errors'
+import { MIN_PAID_PRICE_ERROR_CODE, isBelowMinPaidPrice, minPaidPriceFor } from '@/lib/min-paid-price'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { locationFeesForCountry } from '@/types/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
@@ -49,6 +50,11 @@ import {
   pickTierWhenUnspecified,
   type TierLine,
 } from '@/lib/tickets/purchasable'
+
+/** The event's own currency, or its country's default. */
+function eventCurrencyFor(event: any): string {
+  return String(event?.currency || defaultCurrencyForCountry(event?.country)).toUpperCase()
+}
 
 // Lazy load Stripe
 function getStripe() {
@@ -364,6 +370,22 @@ export async function POST(request: Request) {
         quantity,
         price: tier ? tier.price : event.ticket_price,
       })
+    }
+
+    // Minimum paid price (US/CA 2.00, FR 1.00 EUR; free and Haiti exempt), on the
+    // stored LIST price, before any promo. Publish enforces it too, but a tier can
+    // be written straight to Firestore after publish, so checkout re-checks it.
+    for (const line of orderLines) {
+      if (isBelowMinPaidPrice(line.price, event.country)) {
+        const minimum = minPaidPriceFor(event.country)
+        return refuse(
+          {
+            error: `"${line.tierName}" is priced below the minimum of ${minimum?.toFixed(2)} ${eventCurrencyFor(event)} for a paid ticket, so it cannot be sold. Please contact the organizer.`,
+            code: MIN_PAID_PRICE_ERROR_CODE,
+          },
+          400
+        )
+      }
     }
 
     // Apply promo code if provided (Firestore). resolvePromoCode accepts either the

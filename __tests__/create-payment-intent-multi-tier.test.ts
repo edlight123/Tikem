@@ -18,6 +18,8 @@ const mockCreate = jest.fn(async (args: any) => ({ id: 'pi_test', client_secret:
 
 jest.mock('stripe', () => jest.fn(() => ({ paymentIntents: { create: mockCreate } })))
 jest.mock('@/lib/firebase/admin', () => ({ adminDb: {} }))
+// Never a live rate lookup from a test.
+jest.mock('@/lib/currency', () => ({ fetchStripeHTGRate: jest.fn(async () => 0.0076) }))
 jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => ({ id: 'u1', email: 'u@x.com' })) }))
 jest.mock('@/lib/security', () => ({
   isBlacklisted: jest.fn(async () => ({ blacklisted: false })),
@@ -206,6 +208,33 @@ describe('multi-tier card checkout', () => {
     const res = await post({ tiers: [{ tierId: 'vip', quantity: 1 }, { tierId: 'ga', quantity: 0.5 }] })
     expect(res.status).toBe(400)
     expect(mockCreate).not.toHaveBeenCalled()
+  })
+})
+
+describe('minimum paid price at checkout', () => {
+  it('refuses a paid line whose stored list price is below the US minimum', async () => {
+    tier('cheap', 1.5)
+    const res = await post({ tiers: [{ tierId: 'vip', quantity: 1 }, { tierId: 'cheap', quantity: 1 }] })
+    expect(res.status).toBe(400)
+    expect(res.data.code).toBe('tier_price_below_minimum')
+    expect(res.data.error).toContain('2.00 USD')
+    expect((await post({ tierId: 'cheap', quantity: 1 })).data.code).toBe('tier_price_below_minimum')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('checks the list price BEFORE the promo, so a discount below the minimum still sells', async () => {
+    mockPromo.doc = { id: 'p', discount_type: 'fixed_amount', discount_value: 24 }
+    const res = await post({ tiers: [{ tierId: 'ga', quantity: 1 }, { tierId: 'vip', quantity: 1 }], promoCodeId: 'X' })
+    expect(res.status).toBe(200)
+  })
+
+  it('free tiers and Haiti have no minimum', async () => {
+    expect((await post({ tiers: [{ tierId: 'free', quantity: 1 }, { tierId: 'ga', quantity: 1 }] })).status).toBe(200)
+    Object.assign(mockEvent, { country: 'HT', currency: 'HTG' })
+    tier('htcheap', 1)
+    jest.requireMock('@/lib/payment-provider').getPaymentProviderForEventCountry.mockReturnValueOnce('stripe')
+    const res = await post({ tierId: 'htcheap', quantity: 1 })
+    expect(res.data.code).not.toBe('tier_price_below_minimum')
   })
 })
 
