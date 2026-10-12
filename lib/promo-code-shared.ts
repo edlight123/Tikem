@@ -75,3 +75,39 @@ export function promoDiscountFields(promo: AnyRecord): {
     discount_amount: discountValue,
   }
 }
+
+export interface DiscountInput {
+  discount_type: 'percentage' | 'fixed_amount' | 'fixed' | string
+  discount_value: number
+}
+
+/**
+ * A promo's discount on ONE ticket's price. Applied per ticket by every paid
+ * initiator (card, MonCash, Sogepay) and the free-claim route, so a fixed-amount
+ * code takes its amount off each ticket, never once off the order. Pure — the
+ * web checkout calls it too, so the total it shows is the total charged.
+ */
+export function calculateDiscount(
+  originalPrice: number,
+  promoCode: DiscountInput
+): { discountedPrice: number; discountAmount: number } {
+  let discountAmount = 0
+
+  if (promoCode.discount_type === 'percentage') {
+    discountAmount = (originalPrice * promoCode.discount_value) / 100
+  } else {
+    // 'fixed_amount' | 'fixed' | anything else → flat amount off
+    discountAmount = promoCode.discount_value
+  }
+
+  // Guard rail: discount can never exceed the price (integer-cents-safe callers
+  // compute cents downstream; here we keep the same rounding the app already used).
+  discountAmount = Math.min(Math.max(0, discountAmount), originalPrice)
+
+  const discountedPrice = Math.max(0, originalPrice - discountAmount)
+
+  return {
+    discountedPrice: Math.round(discountedPrice * 100) / 100, // Round to 2 decimals
+    discountAmount: Math.round(discountAmount * 100) / 100,
+  }
+}

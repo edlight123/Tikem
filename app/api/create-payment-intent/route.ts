@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import { calculateDiscount, resolvePromoCode, promoBuyerKey, promoCanCoverOrder } from '@/lib/promo-codes'
+import { resolvePromoCode, promoBuyerKey, promoCanCoverOrder } from '@/lib/promo-codes'
 import { resolvePromoterCode } from '@/lib/promoters'
 import { attributionToStripeMetadata } from '@/lib/attribution'
 import { resolveOrderAttribution } from '@/lib/tracking-links'
@@ -15,7 +15,12 @@ import {
 } from '@/lib/security'
 import { adminDb } from '@/lib/firebase/admin'
 import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
-import { applicationFeeFor, priceOrderCents } from '@/lib/checkout/buyer-pricing'
+import { applicationFeeFor, applyPromoToLines, priceTierLinesCents } from '@/lib/checkout/buyer-pricing'
+import {
+  CARD_ORDER_LINES_KEY,
+  STRIPE_METADATA_VALUE_MAX,
+  encodeCardOrderLines,
+} from '@/lib/checkout/card-order-lines'
 import { friendlyStripeError } from '@/lib/checkout/stripe-errors'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { locationFeesForCountry } from '@/types/platform-settings'
@@ -39,8 +44,10 @@ import {
   checkEventPurchasable,
   checkTierForEvent,
   invalidQuantityRefusal,
+  normalizeTierLines,
   parseTicketQuantity,
   pickTierWhenUnspecified,
+  type TierLine,
 } from '@/lib/tickets/purchasable'
 
 // Lazy load Stripe
@@ -60,6 +67,10 @@ export async function POST(request: Request) {
       eventId,
       quantity: rawQuantity = 1,
       tierId,
+      // A multi-tier cart: `[{ tierId, quantity }]`, the same shape MonCash and
+      // Sogepay take. When present it wins over `tierId` + `quantity`, which stay
+      // supported for single-tier clients (older web builds and the mobile app).
+      tiers: rawTiers,
       promoCodeId,
       // Promoter attribution: the raw `?ref=` the buyer arrived with. Resolved
       // below; junk is silently dropped and never blocks the sale.
@@ -78,10 +89,28 @@ export async function POST(request: Request) {
     // A whole number of tickets, 1..MAX_TICKETS_PER_ORDER. A fractional quantity used
     // to be charged pro rata (0.01 → 1% of a ticket) while fulfillment still issued a
     // whole ticket; refuse anything that is not a plain integer instead of rounding.
-    const quantity = parseTicketQuantity(rawQuantity)
-    if (quantity === null) {
-      const refusal = invalidQuantityRefusal()
-      return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
+    // Every line of a multi-tier cart is held to the same rule, and so is the cart
+    // as a whole (normalizeTierLines merges a tier listed twice).
+    const multiTier = Array.isArray(rawTiers) && rawTiers.length > 0
+    let requestedLines: TierLine[] = []
+    let quantity: number
+    if (multiTier) {
+      const lines = normalizeTierLines(rawTiers)
+      if (!lines.ok) {
+        return NextResponse.json({ error: lines.error, code: lines.code }, { status: lines.status })
+      }
+      if (lines.lines.length === 0) {
+        return NextResponse.json({ error: 'No valid ticket tiers selected' }, { status: 400 })
+      }
+      requestedLines = lines.lines
+      quantity = requestedLines.reduce((sum, l) => sum + l.quantity, 0)
+    } else {
+      const parsed = parseTicketQuantity(rawQuantity)
+      if (parsed === null) {
+        const refusal = invalidQuantityRefusal()
+        return NextResponse.json({ error: refusal.error, code: refusal.code }, { status: refusal.status })
+      }
+      quantity = parsed
     }
 
     // A missing session is not fatal: a guest may buy by supplying
@@ -248,75 +277,93 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get tier price if specified
-    let finalPrice = event.ticket_price
-    let tierName = 'General Admission'
-    // Track the pre-discount price so metadata/originalPrice is accurate.
-    let basePriceBeforePromo = finalPrice
-
+    // ── WHAT IS BEING BOUGHT ────────────────────────────────────────────────────
+    // Every line is priced from its tier's STORED price. The client sends tiers
+    // and quantities, never prices.
+    //
     // The tier must belong to THIS event and be active. It used to be read by id
     // alone, so another event's cheaper tier could price this one, and an unknown id
     // silently fell back to `event.ticket_price` (the event's LOWEST tier price).
-    let tier: any = null
-    if (tierId) {
-      const { data } = await supabase
-        .from('ticket_tiers')
-        .select('*')
-        .eq('id', String(tierId))
-        .single()
-      const tierCheck = checkTierForEvent(data, String(eventId))
-      if (!tierCheck.ok) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: tierCheck.error, code: tierCheck.code }, { status: tierCheck.status })
-      }
-      tier = data
-    } else {
-      const { data: eventTiers } = await supabase
-        .from('ticket_tiers')
-        .select('*')
-        .eq('event_id', String(eventId))
-      const picked = pickTierWhenUnspecified(eventTiers as any[], String(eventId))
-      if (!picked.ok) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: picked.error, code: picked.code }, { status: picked.status })
-      }
-      tier = picked.tier
+    const refuse = async (body: Record<string, any>, status: number) => {
+      await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
+      return NextResponse.json(body, { status })
     }
-    const resolvedTierId: string = tier ? String(tier.id) : ''
-
-    if (tier) {
-      const now = new Date()
+    const now = new Date()
+    /** The same on-sale + inventory rules for every line, single-tier or not. */
+    const tierSaleRefusal = (tier: any, lineQuantity: number, named: boolean): string | null => {
       const salesStart = tier.sales_start ? new Date(tier.sales_start) : null
       const salesEnd = tier.sales_end ? new Date(tier.sales_end) : null
-
-      if (tier.is_active === false) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: 'This ticket tier is not available.' }, { status: 400 })
-      }
+      if (tier.is_active === false) return 'This ticket tier is not available.'
       if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: 'Ticket sales for this tier have not started yet.' }, { status: 400 })
+        return 'Ticket sales for this tier have not started yet.'
       }
       if (salesEnd && !Number.isNaN(salesEnd.getTime()) && salesEnd < now) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: 'Ticket sales for this tier have ended.' }, { status: 400 })
+        return 'Ticket sales for this tier have ended.'
       }
-
       const sold = Number(tier.sold_quantity || 0)
       const total = Number(tier.total_quantity || 0)
       const remaining = Math.max(0, total - sold)
-      if (remaining <= 0) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: 'This ticket tier is sold out.' }, { status: 400 })
+      if (remaining <= 0) return 'This ticket tier is sold out.'
+      if (lineQuantity > remaining) {
+        return `Only ${remaining} ticket(s) remaining for ${named ? tier.name || 'this tier' : 'this tier'}.`
       }
-      if (quantity > remaining) {
-        await logPurchaseAttempt({ userId: attemptUserId, eventId, ipAddress, quantity, fingerprint }, false)
-        return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
-      }
+      return null
+    }
 
-      finalPrice = tier.price
-      basePriceBeforePromo = finalPrice
-      tierName = tier.name
+    const orderLines: { tierId: string; tierName: string; quantity: number; price: number }[] = []
+    if (multiTier) {
+      const tierDocs = await Promise.all(
+        requestedLines.map((line) =>
+          Promise.resolve(supabase.from('ticket_tiers').select('*').eq('id', line.tierId).single()).then(
+            ({ data }: any) => data
+          )
+        )
+      )
+      for (let i = 0; i < requestedLines.length; i++) {
+        const line = requestedLines[i]
+        const tier = tierDocs[i]
+        const tierCheck = checkTierForEvent(tier, String(eventId))
+        if (!tierCheck.ok) return refuse({ error: tierCheck.error, code: tierCheck.code }, tierCheck.status)
+        const saleRefusal = tierSaleRefusal(tier, line.quantity, true)
+        if (saleRefusal) return refuse({ error: saleRefusal }, 400)
+        orderLines.push({
+          tierId: String(tier.id ?? line.tierId),
+          tierName: String(tier.name || 'Ticket'),
+          quantity: line.quantity,
+          price: Number(tier.price) || 0,
+        })
+      }
+    } else {
+      let tier: any = null
+      if (tierId) {
+        const { data } = await supabase
+          .from('ticket_tiers')
+          .select('*')
+          .eq('id', String(tierId))
+          .single()
+        const tierCheck = checkTierForEvent(data, String(eventId))
+        if (!tierCheck.ok) return refuse({ error: tierCheck.error, code: tierCheck.code }, tierCheck.status)
+        tier = data
+      } else {
+        const { data: eventTiers } = await supabase
+          .from('ticket_tiers')
+          .select('*')
+          .eq('event_id', String(eventId))
+        const picked = pickTierWhenUnspecified(eventTiers as any[], String(eventId))
+        if (!picked.ok) return refuse({ error: picked.error, code: picked.code }, picked.status)
+        tier = picked.tier
+      }
+      if (tier) {
+        const saleRefusal = tierSaleRefusal(tier, quantity, false)
+        if (saleRefusal) return refuse({ error: saleRefusal }, 400)
+      }
+      // No tier docs at all (legacy single-price event): the event's own price.
+      orderLines.push({
+        tierId: tier ? String(tier.id) : '',
+        tierName: tier ? tier.name : 'General Admission',
+        quantity,
+        price: tier ? tier.price : event.ticket_price,
+      })
     }
 
     // Apply promo code if provided (Firestore). resolvePromoCode accepts either the
@@ -326,17 +373,21 @@ export async function POST(request: Request) {
     // promo that fills up before payment simply charges full price (never blocks the
     // sale). `resolvedPromoId` is stamped into metadata so the webhook redeems the
     // exact promo doc — and only when a discount was actually applied here.
+    //
+    // The discount is per ticket on every line (calculateDiscount, the function
+    // MonCash, Sogepay and the free-claim route use), never once off the order.
     let resolvedPromoId = ''
+    let appliedPromo: { discount_type: string; discount_value: number } | null = null
     if (promoCodeId) {
       const promo = await resolvePromoCode(String(eventId), String(promoCodeId))
       // Discount only when confirm-time redemption can honour it for THIS order's
       // quantity and buyer (same key the fulfillment redeem uses).
       if (promo && (await promoCanCoverOrder(promo, { qty: quantity, buyerKey: promoBuyerKey(identity) })).ok) {
         resolvedPromoId = promo.id
-        const { discountedPrice } = calculateDiscount(finalPrice, promo)
-        finalPrice = discountedPrice
+        appliedPromo = promo
       }
     }
+    const pricedLines = applyPromoToLines(orderLines, appliedPromo)
 
     // Resolve the promoter ref, if any. Only the resolved doc id + code ride in
     // metadata; fulfillment writes the attribution ledger exactly once under its
@@ -349,25 +400,24 @@ export async function POST(request: Request) {
     // to the country default (USD/CAD/EUR/HTG) — never hardcode USD, so FR (EUR)
     // settles in EUR.
     const eventCurrency = (event.currency?.toUpperCase() || defaultCurrencyForCountry(event.country).toUpperCase()) as string
-    let stripeAmount = finalPrice
     let stripeCurrency = eventCurrency.toLowerCase()
     let exchangeRateUsed: number | null = null
     let originalCurrency = eventCurrency
-    
+
     // Convert HTG to USD for Stripe if needed (Stripe doesn't support HTG directly)
     if (eventCurrency === 'HTG') {
       const { fetchStripeHTGRate } = await import('@/lib/currency')
       // Fetch live exchange rate from Stripe
       exchangeRateUsed = await fetchStripeHTGRate()
-      stripeAmount = finalPrice * exchangeRateUsed
       stripeCurrency = 'usd'
-      console.log(`💱 Converting ${finalPrice} HTG to ${stripeAmount.toFixed(2)} USD (Stripe rate: ${exchangeRateUsed})`)
+      console.log(`💱 Converting HTG to USD for Stripe (Stripe rate: ${exchangeRateUsed})`)
     }
 
     // ── WHO PAYS THE FEE ────────────────────────────────────────────────────────
     // The face value is what the organizer advertised. Whether the buyer is charged
-    // that exact amount or that amount PLUS the fee is a property of the event's
-    // country (lib/country-support.ts), and the arithmetic belongs to lib/fees.ts. Both are called, never reimplemented.
+    // that exact amount or that amount PLUS the fee is the organizer's choice for
+    // this event (country default otherwise), and the arithmetic belongs to
+    // lib/fees.ts via lib/checkout/buyer-pricing. Both are called, never reimplemented.
     //
     // Recomputed here from the event's / tier's own stored price every time: the
     // client sends a quantity and a tier, never a total.
@@ -379,17 +429,53 @@ export async function POST(request: Request) {
     // The rate comes from the STORED platform settings, so an admin can retune it
     // without a deploy. The fee is exactly that rate of the face total, with no
     // per-ticket cap (owner decision, 2026-10-05), in whatever currency the card
-    // is charged.
-    const faceValueCents = Math.round(stripeAmount * quantity * 100)
+    // is charged, plus the market's fixed amount (US/CA/FR) per PAID ticket only —
+    // a free tier in a mixed cart carries no fee.
     const platformSettings = await getPlatformSettings()
-    // The event's market terms: rate plus a fixed amount per paid ticket in
-    // US/CA/FR (every ticket in this order is one paid tier).
     const locationFees = locationFeesForCountry(platformSettings, event.country)
-    const buyerPricing = priceOrderCents(faceValueCents, event, {
-      quantity,
+    const pricedOrder = priceTierLinesCents(pricedLines, event, {
       currency: stripeCurrency.toUpperCase(),
       config: locationFees,
+      exchangeRate: exchangeRateUsed,
     })
+    const faceValueCents = pricedOrder.faceValueCents
+    const buyerPricing = pricedOrder.pricing
+
+    // Nothing to charge: every ticket is free, or the promo takes the whole cart
+    // to zero. Stripe refuses a 0 PaymentIntent, and free tickets are issued by
+    // /api/tickets/claim-free, which re-checks that the order really is free.
+    if (faceValueCents <= 0) {
+      return refuse(
+        { error: 'These tickets are free. Claim them instead of paying.', code: 'order_is_free' },
+        400
+      )
+    }
+
+    // The per-tier breakdown fulfillment issues from. A single line keeps the
+    // original single-tier fields only, so it fulfils exactly as before.
+    const isMultiLine = pricedLines.length > 1
+    const singleLine = pricedLines[0]
+    let encodedLines: string | null = null
+    if (isMultiLine) {
+      encodedLines = encodeCardOrderLines(
+        pricedLines.map((l) => ({
+          tierId: l.tierId,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          unitOriginal: l.unitOriginal,
+        }))
+      )
+      if (!encodedLines) {
+        return refuse(
+          { error: 'Too many ticket types in one order. Please split it into two orders.', code: 'too_many_tiers' },
+          400
+        )
+      }
+    }
+    const tierName = isMultiLine
+      ? pricedLines.map((l) => `${l.quantity}x ${l.tierName}`).join(', ').slice(0, STRIPE_METADATA_VALUE_MAX)
+      : singleLine.tierName
+
     const amountCents = buyerPricing.chargeAmount
     let stripeConnectAccountId: string | null = null
     let applicationFeeAmount: number | null = null
@@ -472,17 +558,29 @@ export async function POST(request: Request) {
             }
           : {}),
         eventTitle: event.title,
+        // Every ticket in the order, free lines included.
         quantity: quantity.toString(),
-        tierId: resolvedTierId,
+        // A multi-tier order has no single tier: `tierId` is empty and `t` carries
+        // the per-tier breakdown (lib/checkout/card-order-lines) fulfillment issues
+        // from. `tierName` is then a human summary ("1x VIP, 2x GA").
+        tierId: isMultiLine ? '' : singleLine.tierId,
         tierName,
+        ...(isMultiLine && encodedLines ? { [CARD_ORDER_LINES_KEY]: encodedLines } : {}),
         promoCodeId: resolvedPromoId,
         promoterId: promoter?.id || '',
         promoterCode: promoter?.code || '',
         // trackingLinkId / utmSource / utmMedium / utmCampaign — read back at
         // fulfillment, stamped on the tickets and counted on the link once.
         ...attributionToStripeMetadata(attribution),
-        originalPrice: basePriceBeforePromo.toString(),
-        finalPrice: finalPrice.toString(),
+        // Per-ticket face values of a single-tier order (event currency). A
+        // multi-tier order's live per line in `t`, so these are not written for it.
+        ...(isMultiLine
+          ? {}
+          : {
+              originalPrice: singleLine.unitOriginal.toString(),
+              finalPrice: singleLine.unitPrice.toString(),
+              priceInOriginalCurrency: singleLine.unitPrice.toString(),
+            }),
         // Additive audit trail for fee incidence. `finalPrice` / `originalPrice` /
         // `priceInOriginalCurrency` keep their existing meaning (the FACE value per
         // ticket, in the event's currency), so fulfillment still records
@@ -496,11 +594,10 @@ export async function POST(request: Request) {
         currency: stripeCurrency,
         originalCurrency: originalCurrency,
         exchangeRate: exchangeRateUsed?.toString() || '',
-        priceInOriginalCurrency: finalPrice.toString(),
         payoutProvider: provider,
         stripeConnectAccountId: stripeConnectAccountId || '',
       },
-      description: `${quantity}x ${event.title} - ${tierName}`,
+      description: isMultiLine ? `${event.title} - ${tierName}` : `${quantity}x ${event.title} - ${tierName}`,
       receipt_email: identity.email || undefined,
       automatic_payment_methods: {
         enabled: true,

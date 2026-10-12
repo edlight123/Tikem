@@ -7,7 +7,7 @@ import { isDemoMode } from '@/lib/demo'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import EventbriteStyleTicketSelector from '@/components/EventbriteStyleTicketSelector'
 import { allSelectionsFree, computeSelectionTotal } from '@/lib/ticketPricing'
-import { priceOrder } from '@/lib/checkout/buyer-pricing'
+import { priceCart } from '@/lib/checkout/buyer-pricing'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
 import GuestCheckoutForm, { type GuestContactInput } from './GuestCheckoutForm'
@@ -67,10 +67,16 @@ interface BuyTicketButtonProps {
   eventStartsAt?: string | null
   currency?: string
   country?: string
+  /**
+   * The organizer's absorb/pass-on choice for this event (`fee_incidence`), when
+   * they made one. It outranks the country default, so every total below is
+   * priced against the event exactly as the server prices it.
+   */
+  feeIncidence?: string | null
   isPasswordProtected?: boolean
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, eventStartsAt, isPasswordProtected = false }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -81,13 +87,15 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [loading, setLoading] = useState(false)
   const [pendingMethod, setPendingMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay' | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay'>('stripe')
   const [quantity, setQuantity] = useState(1)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
   const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
   // Stores the promo code ID (promo_codes.id) once validated.
   const [promoCode, setPromoCode] = useState<string | undefined>()
+  // The validated code's terms, so the summary applies the same per-ticket
+  // discount the payment routes apply (the server still re-resolves the code).
+  const [promoTerms, setPromoTerms] = useState<{ discount_type: string; discount_value: number } | null>(null)
   // ── Promoter attribution ────────────────────────────────────────────────────
   // `?ref=CODE` on the event URL names the promoter who sent this buyer. Read once
   // on mount (window.location, not useSearchParams — the page stays statically
@@ -392,49 +400,56 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     }
   }
 
+  /**
+   * What MonCash will charge, in HTG, for a USD-priced Haiti event — from
+   * POST /api/moncash-button/quote, which prices the cart exactly as the MonCash
+   * initiate route does (stored tier prices, promo, pass-on fee, live rate +
+   * spread). Never computed here: converting the bare face total client-side is
+   * how the estimate used to leave out the fee and the promo.
+   */
   const [usdHtgQuote, setUsdHtgQuote] = useState<null | {
-    baseRate: number
-    effectiveRate: number
-    spreadPercent: number
-    provider: string
-    fetchedAtIso: string
-    amountUsd: number
     amountHtg: number
-    chargeCurrency: string
+    amountOriginal: number
+    originalCurrency: string
+    baseRate: number | null
+    effectiveRate: number | null
+    spreadPercent: number | null
+    buyerFeeOriginal: number
   }>(null)
   const [usdHtgQuoteError, setUsdHtgQuoteError] = useState<string | null>(null)
   const [usdHtgQuoteLoading, setUsdHtgQuoteLoading] = useState(false)
 
-  /** Face total for the current selection — what the organizer priced. */
-  const totalAmountDisplay = useMemo(() => {
-    return selectedTiers.length > 0
-      ? selectedTiers.reduce((sum, t) => sum + t.price * t.quantity, 0)
-      : (selectedTierPrice || ticketPrice) * quantity
-  }, [quantity, selectedTierPrice, selectedTiers, ticketPrice])
+  /** The cart as priced lines: every selected tier, or the single-price order. */
+  const cartLines = useMemo(
+    () =>
+      selectedTiers.length > 0
+        ? selectedTiers.map((t) => ({ price: t.price, quantity: t.quantity }))
+        : [{ price: selectedTierPrice || ticketPrice, quantity }],
+    [quantity, selectedTierPrice, selectedTiers, ticketPrice]
+  )
+
+  /** Face total for the current selection BEFORE any promo — what the organizer priced. */
+  const totalAmountDisplay = useMemo(() => computeSelectionTotal(cartLines), [cartLines])
 
   /**
    * The ALL-IN total for the current selection.
    *
-   * In a buyer-pays market (US/CA/FR) the fee is added on top, so this is above the
-   * face total and is the only number allowed to be presented as "total" — US rules
-   * on live-event ticket pricing require it up front rather than at the last step.
-   * In Haiti the fee comes out of the organizer's proceeds, so `buyerFee` is 0 and
-   * this equals the face total exactly as before.
+   * Priced against the EVENT — its country, currency and the organizer's own
+   * absorb/pass-on choice — exactly as create-payment-intent and the MonCash
+   * initiate route price it: the promo per ticket, then the fee once on the
+   * post-promo face total, with the market's fixed fee (US/CA/FR) on PAID tickets
+   * only. When the fee is passed on it is added on top and this is the only number
+   * allowed to be presented as "total" (US rules on live-event ticket pricing
+   * require it up front). When it is absorbed `buyerFee` is 0 and this is the
+   * post-promo face total.
    *
    * A pre-payment estimate: the server recomputes it from the tier's stored price
    * and the PaymentIntent's own breakdown is what the payment sheet finally shows.
    */
   const orderPricing = useMemo(
     () =>
-      priceOrder(totalAmountDisplay, country, {
-        // PAID tickets in the cart: each carries the market's fixed fee
-        // (US/CA/FR), so a free tier in a mixed cart must not be counted.
-        quantity: selectedTiers.length
-          ? selectedTiers.reduce((sum, t) => sum + (t.price > 0 ? t.quantity : 0), 0)
-          : quantity,
-        currency,
-      }),
-    [totalAmountDisplay, country, currency, quantity, selectedTiers]
+      priceCart(cartLines, { country, currency, fee_incidence: feeIncidence }, { promo: promoTerms, currency }),
+    [cartLines, country, currency, feeIncidence, promoTerms]
   )
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0
   const formatAmount = (amount: number) => `${amount.toLocaleString()} ${currency}`
@@ -445,42 +460,53 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
    */
   const hasConcreteSelection = selectedTiers.length > 0 || selectedTierPrice > 0
 
+  /** Stable key for the quote effect (an array would re-fire it every render). */
+  const quoteCartKey = JSON.stringify(
+    selectedTiers.length > 0
+      ? { tiers: selectedTiers.map((t) => ({ tierId: t.tierId, quantity: t.quantity })) }
+      : selectedTierId
+        ? { tiers: [{ tierId: selectedTierId, quantity }] }
+        : { quantity }
+  )
+
   useEffect(() => {
+    const clear = () => {
+      setUsdHtgQuote(null)
+      setUsdHtgQuoteError(null)
+      setUsdHtgQuoteLoading(false)
+    }
     if (!showModal) return
-    if (!isHaitiEvent) {
-      setUsdHtgQuote(null)
-      setUsdHtgQuoteError(null)
-      setUsdHtgQuoteLoading(false)
+    // Only Haiti events settle USD-priced tickets in HTG via local mobile money.
+    // An HTG event's MonCash charge is the total above, already in HTG.
+    if (!isHaitiEvent || String(currency || 'HTG').toUpperCase() !== 'USD') {
+      clear()
       return
     }
-    if (String(currency || 'HTG').toUpperCase() !== 'USD') {
-      setUsdHtgQuote(null)
-      setUsdHtgQuoteError(null)
-      setUsdHtgQuoteLoading(false)
-      return
-    }
-
-    // Only Haiti events can settle USD-priced tickets in HTG via local mobile money.
-    // If the user is paying by card, we charge in the event currency.
-    if (paymentMethod === 'stripe') {
-      setUsdHtgQuote(null)
-      setUsdHtgQuoteError(null)
-      setUsdHtgQuoteLoading(false)
-      return
-    }
-
-    const amountUsd = Number(totalAmountDisplay)
-    if (!Number.isFinite(amountUsd) || amountUsd <= 0) return
+    if (!(totalAmountDisplay > 0)) return
 
     const controller = new AbortController()
-    const run = async () => {
+    // Debounced: the quantity stepper fires one change per tap.
+    const timer = window.setTimeout(async () => {
       setUsdHtgQuoteLoading(true)
       setUsdHtgQuoteError(null)
       try {
-        const url = `/api/fx/usd-htg-quote?amount=${encodeURIComponent(String(amountUsd))}`
-        const res = await fetch(url, { signal: controller.signal })
-        const data = await res.json()
-        if (!res.ok) {
+        const res = await fetch('/api/moncash-button/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            ...JSON.parse(quoteCartKey),
+            ...(promoCode ? { promoCodeId: promoCode } : {}),
+          }),
+          signal: controller.signal,
+        })
+        // Not deployed (yet): show no estimate rather than a wrong one.
+        if (res.status === 404) {
+          setUsdHtgQuote(null)
+          return
+        }
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !Number.isFinite(Number(data?.amountHtg))) {
           throw new Error(data?.error || 'Failed to fetch exchange rate')
         }
         setUsdHtgQuote(data)
@@ -489,13 +515,15 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         setUsdHtgQuote(null)
         setUsdHtgQuoteError(err?.message || 'Failed to fetch exchange rate')
       } finally {
-        setUsdHtgQuoteLoading(false)
+        if (!controller.signal.aborted) setUsdHtgQuoteLoading(false)
       }
-    }
+    }, 250)
 
-    run()
-    return () => controller.abort()
-  }, [currency, isHaitiEvent, paymentMethod, showModal, totalAmountDisplay])
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [currency, eventId, isHaitiEvent, promoCode, quoteCartKey, showModal, totalAmountDisplay])
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -960,7 +988,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const handleTieredPurchase = (
     selections: { tierId: string; quantity: number; price: number; tierName?: string }[],
     promoCodeId?: string,
-    discountedTotal?: number
+    discountedTotal?: number,
+    promo?: { discount_type: string; discount_value: number }
   ) => {
     if (!selections || selections.length === 0) return
 
@@ -983,8 +1012,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     // Store all selections for multi-tier support
     setSelectedTiers(selections)
 
-    // Persist promo code (id) so payment APIs can apply the discount.
+    // Persist promo code (id) so payment APIs can apply the discount, and its
+    // terms so the summary shows the discounted total.
     setPromoCode(promoCodeId)
+    setPromoTerms(promoCodeId && promo ? promo : null)
 
     // For backward compatibility, also set the first tier
     const firstSelection = selections[0]
@@ -1201,6 +1232,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 userId={userId}
                 currency={currency}
                 country={country}
+                feeIncidence={feeIncidence}
                 eventStartsAt={eventStartsAt}
                 allowGuest={isGuestCheckout}
                 onPurchase={handleTieredPurchase}
@@ -1271,6 +1303,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                       </span>
                     </div>
                   ))}
+                  {orderPricing.discount > 0 && (
+                    <div className="flex justify-between items-center text-sm text-green-400">
+                      <span>{t('events.promo_discount')}</span>
+                      <span className="font-medium">-{formatAmount(orderPricing.discount)}</span>
+                    </div>
+                  )}
                   {showFeeLine && (
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-white/65">
@@ -1342,13 +1380,15 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                         {t('checkout.estimated_moncash_charge', { defaultValue: 'Estimated MonCash charge:' })}{' '}
                         <span className="font-semibold text-white">{usdHtgQuote.amountHtg.toLocaleString()} HTG</span>
                       </div>
-                      <div className="text-xs text-white/70">
-                        {t('checkout.moncash_rate_detail', {
-                          rate: usdHtgQuote.baseRate.toFixed(2),
-                          spread: (usdHtgQuote.spreadPercent * 100).toFixed(0),
-                          defaultValue: 'Rate: {{rate}} HTG/USD + {{spread}}% spread',
-                        })}
-                      </div>
+                      {usdHtgQuote.baseRate != null && usdHtgQuote.spreadPercent != null && (
+                        <div className="text-xs text-white/70">
+                          {t('checkout.moncash_rate_detail', {
+                            rate: usdHtgQuote.baseRate.toFixed(2),
+                            spread: (usdHtgQuote.spreadPercent * 100).toFixed(0),
+                            defaultValue: 'Rate: {{rate}} HTG/USD + {{spread}}% spread',
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                   {!usdHtgQuoteLoading && usdHtgQuoteError && (
@@ -1490,12 +1530,21 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           userId={userId}
           guest={guestContact}
           quantity={quantity}
-          // The FACE total. The payment sheet adds the fee for a buyer-pays market and
-          // then replaces both with the PaymentIntent's own server-computed breakdown.
-          totalAmount={totalAmountDisplay}
+          paidQuantity={orderPricing.paidQuantity}
+          // The post-promo FACE total. The payment sheet adds the fee when it is passed
+          // on and then replaces both with the PaymentIntent's own server breakdown.
+          totalAmount={orderPricing.faceValue}
           currency={currency}
           country={country}
+          feeIncidence={feeIncidence}
           tierId={selectedTierId || undefined}
+          // Every tier in the cart. Sending only the first tier with the cart's total
+          // quantity charged (and issued) N copies of that tier.
+          tiers={
+            selectedTiers.length > 0
+              ? selectedTiers.map((t) => ({ tierId: t.tierId, quantity: t.quantity }))
+              : undefined
+          }
           promoCodeId={promoCode}
           refCode={refCode}
           attribution={attribution}
@@ -1508,6 +1557,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             setSelectedTierPrice(0)
             setSelectedTiers([])
             setPromoCode(undefined)
+            setPromoTerms(null)
           }}
         />
       )}

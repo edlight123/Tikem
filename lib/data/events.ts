@@ -236,6 +236,12 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         image_url: data?.banner_image_url || data?.image_url,
         banner_image_url: data?.banner_image_url || data?.image_url,
         currency: data?.currency || 'HTG',
+        // The organizer's absorb/pass-on choice. Every price the event page quotes
+        // (headline, cart, payment sheet) is priced with it, exactly as checkout
+        // prices it; absent here, the page fell back to the country default and a
+        // US organizer who absorbs the fee had buyers quoted a fee they never paid.
+        fee_incidence:
+          data?.fee_incidence === 'buyer' || data?.fee_incidence === 'organizer' ? data.fee_incidence : undefined,
         total_tickets: data?.total_tickets || data?.capacity || 0,
         tickets_sold: data?.tickets_sold || 0,
         tickets_available: data?.tickets_available,

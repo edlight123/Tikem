@@ -61,6 +61,7 @@ import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
 import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
 import { parseTicketQuantity } from '@/lib/tickets/purchasable'
+import { decodeCardOrderLines, type CardOrderLine } from '@/lib/checkout/card-order-lines'
 
 export const STRIPE_ORDERS_COLLECTION = 'stripe_orders'
 
@@ -309,6 +310,64 @@ async function refundSoldOutOrder(
   return { outcome: 'capacity_refunded', refundId: res.refundId || null }
 }
 
+// ── Multi-tier orders ───────────────────────────────────────────────────────
+
+/**
+ * One plan entry per ticket of a multi-tier order, in line order: N tickets of
+ * each tier, each at its own post-promo face value.
+ *
+ * The buyer fee (buyer-pays markets) is spread over the PAID tickets in
+ * proportion to their face value, to the cent, with the rounding remainder on
+ * the last one — so a refund returns each ticket's own face value and a free
+ * ticket in the cart never carries part of the fee.
+ */
+export async function planMultiTierTickets(
+  lines: CardOrderLine[],
+  opts: { chargeRate: number; buyerFeeCentsTotal: number }
+): Promise<Array<{ tierId: string; tierName: string; unitFace: number; charged: number; buyerFee: number }>> {
+  // Tier names for the ticket; the breakdown carries ids only (metadata is
+  // capped at 500 characters). A tier deleted since checkout reads as "Ticket".
+  const names = await Promise.all(
+    lines.map(async (l) => {
+      try {
+        const snap = await adminDb.collection('ticket_tiers').doc(l.tierId).get()
+        return snap.exists ? String(snap.data()?.name || 'Ticket') : 'Ticket'
+      } catch {
+        return 'Ticket'
+      }
+    })
+  )
+
+  const rate = opts.chargeRate > 0 ? opts.chargeRate : 1
+  const units = lines.flatMap((l, i) =>
+    Array.from({ length: l.quantity }, () => ({
+      tierId: l.tierId,
+      tierName: names[i],
+      unitFace: l.unitPrice,
+      faceChargedCents: Math.round(l.unitPrice * rate * 100),
+    }))
+  )
+
+  const feeTotal = Math.max(0, Math.round(opts.buyerFeeCentsTotal || 0))
+  const paidFaceCents = units.reduce((sum, u) => sum + u.faceChargedCents, 0)
+  const lastPaid = units.map((u) => u.faceChargedCents > 0).lastIndexOf(true)
+  let feeAllocated = 0
+  return units.map((u, i) => {
+    let feeCents = 0
+    if (feeTotal > 0 && paidFaceCents > 0 && u.faceChargedCents > 0) {
+      feeCents = i === lastPaid ? feeTotal - feeAllocated : Math.floor((feeTotal * u.faceChargedCents) / paidFaceCents)
+      feeAllocated += feeCents
+    }
+    return {
+      tierId: u.tierId,
+      tierName: u.tierName,
+      unitFace: u.unitFace,
+      charged: (u.faceChargedCents + feeCents) / 100,
+      buyerFee: feeCents / 100,
+    }
+  })
+}
+
 // ── The pipeline ────────────────────────────────────────────────────────────
 
 export async function fulfillStripeOrder(input: StripeOrderInput): Promise<StripeFulfillmentResult> {
@@ -362,16 +421,32 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     }
   }
 
+  // A multi-tier order carries its per-tier breakdown in `t`
+  // (lib/checkout/card-order-lines). One that cannot be read is never guessed at
+  // — issuing N copies of one tier is exactly the bug the breakdown exists to fix.
+  const decodedLines = decodeCardOrderLines(m)
+  if (decodedLines.present && !decodedLines.ok) {
+    console.error(`${logPrefix} refusing to issue tickets for unreadable tier lines — refunding`, {
+      paymentId: input.paymentId,
+    })
+    return refundSoldOutOrder(input, orderRef, 'invalid_order_lines', 'invalid_order_lines')
+  }
+  const orderLines: CardOrderLine[] | null = decodedLines.present && decodedLines.ok ? decodedLines.lines : null
+
   // A paid intent whose quantity is not a valid whole number: never issue.
   // Refunded through the same path as a sell-out, flagged needs_refund.
-  if (resolvedQuantity === null) {
+  if (!orderLines && resolvedQuantity === null) {
     console.error(`${logPrefix} refusing to issue tickets for an invalid metadata quantity — refunding`, {
       paymentId: input.paymentId,
       quantity: rawQuantity,
     })
     return refundSoldOutOrder(input, orderRef, 'invalid_quantity', 'invalid_quantity')
   }
-  const quantity: number = resolvedQuantity
+  // The lines are the authority for a multi-tier order; `quantity` there is only
+  // their sum, written for humans and older tooling.
+  const quantity: number = orderLines
+    ? (decodedLines as { quantity: number }).quantity
+    : (resolvedQuantity as number)
 
   // ── Derived order facts ──
   const eventCurrency = normalizeEventCurrency(m.originalCurrency)
@@ -384,8 +459,20 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     Number.isFinite(buyerFeeCentsTotal) && buyerFeeCentsTotal > 0
       ? Math.round(buyerFeeCentsTotal / quantity) / 100
       : 0
-  const orderGrossCents = Math.round(unitFace * quantity * 100)
   const exchangeRateUsed = m.exchangeRate ? parseFloat(String(m.exchangeRate)) : null
+  // Event currency → charged currency, for an HTG event charged in USD.
+  const chargeRate =
+    exchangeRateUsed && Number.isFinite(exchangeRateUsed) && exchangeRateUsed > 0 && eventCurrency !== chargedCurrency
+      ? exchangeRateUsed
+      : 1
+  const orderGrossCents = orderLines
+    ? orderLines.reduce((sum, l) => sum + Math.round(l.unitPrice * 100) * l.quantity, 0)
+    : Math.round(unitFace * quantity * 100)
+  // Tickets that cost something: the market's fixed fee (US/CA/FR) is per PAID
+  // ticket, so the earnings ledger must not count a free line of a mixed cart.
+  const paidQuantity = orderLines
+    ? orderLines.reduce((sum, l) => sum + (l.unitPrice > 0 ? l.quantity : 0), 0)
+    : quantity
   const isConnect =
     String(m.payoutProvider || '').toLowerCase() === 'stripe_connect' || input.destinationCharge === true
   const paymentMethod = isConnect ? 'stripe_connect' : 'stripe'
@@ -408,7 +495,13 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
       const reservation = await reserveInventoryAtomic({
         eventId,
         quantity,
-        tierIncrements: buildTierSoldIncrements(tierId ? [{ tierId, quantity }] : []),
+        tierIncrements: buildTierSoldIncrements(
+          orderLines
+            ? orderLines.map((l) => ({ tierId: l.tierId, quantity: l.quantity }))
+            : tierId
+              ? [{ tierId, quantity }]
+              : []
+        ),
         logPrefix,
       })
       if (!reservation.ok) {
@@ -435,11 +528,30 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         return snap.exists ? { id: snap.id, ...(snap.data() as any) } : null
       })()
 
+  // What each ticket is: its tier, face value, and share of what the card paid.
+  // A single-tier order is N identical tickets, exactly as before.
+  type TicketPlan = { tierId: string; tierName: string; unitFace: number; charged: number; buyerFee: number }
+  let ticketPlan: TicketPlan[]
+  if (orderLines) {
+    ticketPlan = await planMultiTierTickets(orderLines, {
+      chargeRate,
+      buyerFeeCentsTotal: Number.isFinite(buyerFeeCentsTotal) ? buyerFeeCentsTotal : 0,
+    })
+  } else {
+    ticketPlan = Array.from({ length: quantity }, () => ({
+      tierId,
+      tierName,
+      unitFace,
+      charged: pricePerTicketCharged,
+      buyerFee: perTicketBuyerFeeCharged,
+    }))
+  }
+
   const ticketIds = Array.from({ length: quantity }, (_, i) => deterministicTicketId(input.paymentId, i))
   const ticketsRef = adminDb.collection('tickets')
   const nowIso = new Date().toISOString()
 
-  const buildTicket = (id: string) => ({
+  const buildTicket = (id: string, plan: TicketPlan) => ({
     id,
     event_id: eventId,
     attendee_id: input.buyerId,
@@ -447,16 +559,16 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     attendee_name: attendee?.full_name || attendee?.email || 'Guest',
     ...(guest ? { is_guest: true, guest_email: guest.email, guest_phone: guest.phone || null } : {}),
     // Organizer-facing, event-currency face value.
-    price_paid: unitFace,
+    price_paid: plan.unitFace,
     currency: eventCurrency,
     original_currency: eventCurrency,
     exchange_rate_used: exchangeRateUsed,
-    charged_amount: pricePerTicketCharged,
+    charged_amount: plan.charged,
     charged_currency: chargedCurrency,
     // The buyer service fee inside charged_amount (charged currency, major
     // units), so a refund can return the face value without it
     // (lib/tickets/refundPlan.ts: the service fee is non-refundable).
-    buyer_fee_charged_amount: perTicketBuyerFeeCharged,
+    buyer_fee_charged_amount: plan.buyerFee,
     // Who paid the fee, from the payment that took the money (never the event's
     // editable setting). The earnings ledger and payout availability read it.
     fee_incidence: feeIncidence,
@@ -470,9 +582,9 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     status: 'valid',
     // The scanner looks a ticket up by its document id; the QR carries it.
     qr_code_data: id,
-    ticket_type: tierName,
-    tier_id: tierId,
-    tier_name: tierName,
+    ticket_type: plan.tierName,
+    tier_id: plan.tierId,
+    tier_name: plan.tierName,
     start_datetime: eventDetails?.start_datetime || null,
     end_datetime: eventDetails?.end_datetime || null,
     event_date: eventDetails?.start_datetime || null,
@@ -489,7 +601,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     const refs = ticketIds.map((id) => ticketsRef.doc(id))
     const snaps = await Promise.all(refs.map((r) => tx.get(r)))
     refs.forEach((ref, i) => {
-      if (!snaps[i].exists) tx.set(ref, buildTicket(ticketIds[i]))
+      if (!snaps[i].exists) tx.set(ref, buildTicket(ticketIds[i], ticketPlan[i]))
     })
     tx.set(
       orderRef,
@@ -501,6 +613,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
         event_id: eventId,
         buyer_id: input.buyerId,
         quantity,
+        ...(orderLines ? { tier_lines: orderLines } : {}),
         payment_method: paymentMethod,
         ticket_ids: ticketIds,
         tickets_issued_at: nowIso,
@@ -560,6 +673,13 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
       const finalPrice = parseFloat(String(m.finalPrice || '0'))
       const perTicketDiscount =
         Number.isFinite(originalPrice) && Number.isFinite(finalPrice) ? Math.max(0, originalPrice - finalPrice) : 0
+      // A multi-tier order's discount differs per line (a percentage code takes
+      // more off VIP than GA), so it is summed from the lines.
+      const discountApplied = orderLines
+        ? Math.round(
+            orderLines.reduce((sum, l) => sum + Math.max(0, l.unitOriginal - l.unitPrice) * l.quantity, 0) * 100
+          ) / 100
+        : perTicketDiscount * quantity
       const redeem = await redeemPromoInTransaction({
         promoId: String(m.promoCodeId),
         qty: quantity,
@@ -571,7 +691,7 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
           phone: guest?.phone || m.guestPhone || null,
         }),
         eventId,
-        discountApplied: perTicketDiscount * quantity,
+        discountApplied,
       })
       if (redeem.capReached) {
         console.warn(`${logPrefix} promo cap reached at confirm; tickets kept, discount not counted`, {
@@ -667,7 +787,9 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     // Nothing to do: the promoter step is retried first on the next run.
   } else if (!(m.promoterId && pendingElsewhere)) {
     await runStep('earnings', { idempotent: false }, async () => {
-      await addTicketToEarnings(eventId, orderGrossCents, quantity, {
+      // PAID tickets: the ledger charges the market's fixed fee per ticket it is
+      // told about, and a free line of a mixed cart carries none.
+      await addTicketToEarnings(eventId, orderGrossCents, paidQuantity, {
         currency: eventCurrency,
         paymentMethod,
         chargedAmountCents: Number(input.amountTotalCents) || 0,

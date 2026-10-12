@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Minus, Plus } from 'lucide-react'
 import { allSelectionsFree, computeSelectionTotal, isFreeTier } from '@/lib/ticketPricing'
-import { priceOrder } from '@/lib/checkout/buyer-pricing'
+import { priceCart } from '@/lib/checkout/buyer-pricing'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 
 interface TicketTier {
@@ -46,6 +46,11 @@ interface EventbriteStyleTicketSelectorProps {
    * face value, exactly as before.
    */
   country?: string
+  /**
+   * The organizer's own absorb/pass-on choice for this event. Outranks the
+   * country default: a US organizer who absorbs the fee shows face value only.
+   */
+  feeIncidence?: string | null
   /** Event start, for the "selling fast" pace rule. Omit and it never fires. */
   eventStartsAt?: string | null
   /**
@@ -61,12 +66,14 @@ interface EventbriteStyleTicketSelectorProps {
   /**
    * `discountedTotal` is what THIS component computed after applying the promo —
    * a routing hint only (it decides whether to try the free-claim endpoint). The
-   * server re-prices the order from Firestore and has the final say.
+   * server re-prices the order from Firestore and has the final say. `promo` is
+   * the applied code's terms, so the checkout summary can show the same discount.
    */
   onPurchase: (
     selections: { tierId: string; quantity: number; price: number; tierName?: string }[],
     promoCodeId?: string,
-    discountedTotal?: number
+    discountedTotal?: number,
+    promo?: { discount_type: string; discount_value: number }
   ) => void
 }
 
@@ -75,6 +82,7 @@ export default function EventbriteStyleTicketSelector({
   userId,
   currency = 'HTG',
   country,
+  feeIncidence,
   eventStartsAt,
   allowGuest = false,
   onPurchase
@@ -177,17 +185,27 @@ export default function EventbriteStyleTicketSelector({
         tierName: tier.name,
       }))
 
-  // Money math runs on integer cents inside computeSelectionTotal, so 3 × 10.10 is
-  // exactly 30.30 and a percentage promo can't leave binary-float dust behind.
-  const getTotalPrice = (): number => {
-    const discount = promoValidation?.valid && promoValidation.promoCode
-      ? promoValidation.promoCode.discountType === 'percentage'
-        ? { percentage: promoValidation.promoCode.discountValue }
-        : { amount: promoValidation.promoCode.discountValue }
+  /**
+   * The applied promo in the shape the payment routes apply it: per TICKET
+   * (calculateDiscount), so a fixed-amount code comes off every ticket and the
+   * total here is the total the server charges. It used to come off the order
+   * once, which under-quoted the discount on any multi-ticket cart.
+   */
+  const appliedPromo =
+    promoValidation?.valid && promoValidation.promoCode
+      ? {
+          discount_type: promoValidation.promoCode.discountType,
+          discount_value: Number(promoValidation.promoCode.discountValue) || 0,
+        }
       : null
 
-    return computeSelectionTotal(getSelections(), discount)
-  }
+  // The whole cart, priced once: promo per ticket, then the fee on the post-promo
+  // face total, honouring the organizer's absorb/pass-on choice for this event.
+  const getCartPricing = () =>
+    priceCart(getSelections(), { country, currency, fee_incidence: feeIncidence }, { promo: appliedPromo, currency })
+
+  /** Post-promo face total. */
+  const getTotalPrice = (): number => getCartPricing().faceValue
 
   /** Format a unit/line amount, showing a genuine zero as "Free" rather than "0.00 HTG". */
   const formatMoney = (amount: number): string =>
@@ -229,7 +247,7 @@ export default function EventbriteStyleTicketSelector({
 
     if (selections.length === 0) return
 
-    onPurchase(selections, promoValidation?.promoCode?.id, getTotalPrice())
+    onPurchase(selections, promoValidation?.promoCode?.id, getTotalPrice(), appliedPromo || undefined)
   }
 
   if (loading) {
@@ -246,21 +264,13 @@ export default function EventbriteStyleTicketSelector({
   }
 
   const totalTickets = getTotalTickets()
-  /** Face total: what the organizer priced, after any promo. */
-  const totalPrice = getTotalPrice()
-  // ALL-IN TOTAL, computed once for the whole order (the fee's fixed component is
-  // per transaction, so it must not be grossed up per ticket). In Haiti this is the
-  // face total and `buyerFee` is 0, so the rows below collapse to what they always
-  // showed. In a buyer-pays market the buyer sees the number their card will be
-  // charged here, before they reach any payment screen.
-  // The fee is a flat rate of the order total (no per-ticket cap), so quantity
-  // does not change it; it is passed for the pricing seam's order context.
-  // PAID tickets only: each carries the market's fixed fee (US/CA/FR).
-  const paidQuantity = getSelections().reduce((sum, s) => sum + (s.price > 0 ? s.quantity : 0), 0)
-  const orderPricing = priceOrder(totalPrice, country, {
-    quantity: paidQuantity,
-    currency,
-  })
+  // ALL-IN TOTAL, computed once for the whole order. Under organizer incidence
+  // (Haiti's default, or any organizer who absorbs) this is the face total and
+  // `buyerFee` is 0, so the rows below collapse to the face value. When the fee
+  // is passed on, the buyer sees the number their card will be charged here,
+  // before they reach any payment screen. The market's fixed fee (US/CA/FR) is
+  // counted per PAID ticket only — priceCart leaves free lines out.
+  const orderPricing = getCartPricing()
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0
   // Free ISSUANCE is decided by each selected tier's OWN price, not by the total.
   // A cart zeroed by a 100%-off promo still has to go through checkout — the
@@ -459,11 +469,9 @@ export default function EventbriteStyleTicketSelector({
                 <span>
                   {t('events.promo_discount')} ({promoValidation.promoCode.code})
                 </span>
-                <span>
-                  -{promoValidation.promoCode.discountType === 'percentage' 
-                    ? `${promoValidation.promoCode.discountValue}%` 
-                    : `${promoValidation.promoCode.discountValue.toFixed(2)} ${currency}`}
-                </span>
+                {/* The amount actually taken off this cart, computed per ticket the
+                    way the server applies it — not the code's headline value. */}
+                <span>-{orderPricing.discount.toFixed(2)} {currency}</span>
               </div>
             )}
             {showFeeLine && (

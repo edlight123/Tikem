@@ -36,6 +36,10 @@ interface CheckoutFormProps {
   totalAmount: number
   currency: string
   country?: string
+  /** The organizer's absorb/pass-on choice for this event, when they made one. */
+  feeIncidence?: string | null
+  /** PAID tickets in the order (the market's fixed fee is per paid ticket). */
+  paidQuantity: number
   pricing: ServerPricing | null
   onClose: () => void
   clientSecret: string
@@ -47,10 +51,15 @@ interface CheckoutFormProps {
   t: any
 }
 
-function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, country, pricing, onClose, clientSecret, guestTicketUrl, t }: CheckoutFormProps) {
+function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, country, feeIncidence, paidQuantity, pricing, onClose, clientSecret, guestTicketUrl, t }: CheckoutFormProps) {
   // Server breakdown when we have it; the same shared calculation as a fallback so a
-  // buyer-pays market never renders a bare face value as the total.
-  const local = priceOrder(totalAmount, country, { quantity, currency })
+  // buyer-pays market never renders a bare face value as the total. Priced against
+  // the EVENT, so an organizer who absorbs the fee is not shown one.
+  const local = priceOrder(
+    totalAmount,
+    { country, currency, fee_incidence: feeIncidence },
+    { quantity: paidQuantity, currency }
+  )
   const faceValue = pricing ? pricing.faceValue : local.faceValue
   const buyerFee = pricing ? pricing.buyerFee : local.buyerFee
   const chargeTotal = pricing ? pricing.total : local.total
@@ -232,12 +241,25 @@ interface EmbeddedStripePaymentProps {
   eventTitle: string
   userId: string | null
   quantity: number
-  /** FACE total. The fee (buyer-pays markets) is added on top by the server. */
+  /**
+   * PAID tickets in the order, for the pre-server fallback total. Defaults to
+   * `quantity`; a mixed cart's free tickets must not be counted.
+   */
+  paidQuantity?: number
+  /** FACE total, after any promo. The fee (buyer-pays) is added on top by the server. */
   totalAmount: number
   currency: string
-  /** Event country — decides whether the fee is added on top or absorbed. */
+  /** Event country — the default for who pays the fee. */
   country?: string
+  /** The organizer's own absorb/pass-on choice, which outranks the country default. */
+  feeIncidence?: string | null
   tierId?: string
+  /**
+   * The whole cart, one entry per tier. Sent as `tiers` so a mixed cart (VIP ×1 +
+   * GA ×2) is priced and issued per tier; `tierId` + `quantity` remain for a
+   * single-tier purchase.
+   */
+  tiers?: { tierId: string; quantity: number }[]
   promoCodeId?: string
   /** Promoter ref code captured from `?ref=` — resolved and attributed server-side. */
   refCode?: string
@@ -264,10 +286,13 @@ export default function EmbeddedStripePayment({
   eventTitle,
   userId,
   quantity,
+  paidQuantity,
   totalAmount,
   currency,
   country,
+  feeIncidence,
   tierId,
+  tiers,
   promoCodeId,
   refCode,
   attribution,
@@ -277,6 +302,7 @@ export default function EmbeddedStripePayment({
 }: EmbeddedStripePaymentProps) {
   // Stable dependency for the PaymentIntent effect (an object would re-fire it).
   const attributionKey = attribution ? JSON.stringify(attribution) : ''
+  const tiersKey = tiers && tiers.length > 0 ? JSON.stringify(tiers.map((l) => ({ tierId: l.tierId, quantity: l.quantity }))) : ''
   const { t, i18n } = useTranslation('common')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [pricing, setPricing] = useState<ServerPricing | null>(null)
@@ -313,7 +339,8 @@ export default function EmbeddedStripePayment({
           body: JSON.stringify({
             eventId,
             quantity,
-            tierId,
+            // The cart, per tier, when there is one; the server prices every line.
+            ...(tiersKey ? { tiers: JSON.parse(tiersKey) } : { tierId }),
             promoCodeId,
             ...(refCode ? { refCode } : {}),
             ...(attributionKey ? { attribution: JSON.parse(attributionKey) } : {}),
@@ -353,7 +380,7 @@ export default function EmbeddedStripePayment({
     // checkout doesn't re-mint a PaymentIntent (and a second guest order) on every
     // parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, quantity, tierId, promoCodeId, refCode, attributionKey, accessCode, guest?.name, guest?.email, guest?.phone])
+  }, [eventId, quantity, tierId, tiersKey, promoCodeId, refCode, attributionKey, accessCode, guest?.name, guest?.email, guest?.phone])
 
   const appearance = {
     theme: 'night' as const,
@@ -414,6 +441,8 @@ export default function EmbeddedStripePayment({
                 totalAmount={totalAmount}
                 currency={currency}
                 country={country}
+                feeIncidence={feeIncidence}
+                paidQuantity={paidQuantity ?? quantity}
                 pricing={pricing}
                 onClose={onClose}
                 clientSecret={clientSecret}

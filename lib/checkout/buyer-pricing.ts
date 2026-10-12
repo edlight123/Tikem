@@ -38,6 +38,7 @@ import { defaultCurrencyForCountry, feeIncidenceForCountry } from '@/lib/country
 import { fromCents, toCents } from '@/lib/ticketPricing'
 import { fixedFeeMinorFor, locationFeesForCountry, type LocationFeeConfig } from '@/types/platform-settings'
 import { getPlatformFeeConfig } from '@/lib/checkout/fee-config-store'
+import { calculateDiscount, type DiscountInput } from '@/lib/promo-code-shared'
 
 export type { BuyerPricing, FeeIncidence }
 
@@ -205,4 +206,124 @@ export function priceOrder(
  */
 export function applicationFeeFor(pricing: BuyerPricing): number {
   return Math.max(0, Math.min(pricing.chargeAmount, pricing.chargeAmount - pricing.organizerNet))
+}
+
+// ── Multi-tier carts ─────────────────────────────────────────────────────────
+//
+// A cart can mix tiers (VIP ×1 + GA ×2) and free tiers with paid ones. Every
+// surface — the card route, the web summary, the payment sheet — prices it
+// through the functions below, so they agree to the cent:
+//
+//  - the promo is applied PER TICKET with the same calculateDiscount the
+//    payment routes use (a fixed-amount code comes off each ticket, never once
+//    off the order);
+//  - the fee is priced ONCE on the whole post-promo face total;
+//  - the market's fixed per-ticket fee counts only tickets that still cost
+//    something after the promo. A free tier in a mixed cart carries no fee.
+
+export interface CartLineInput {
+  /** Face price of ONE ticket of this tier, before any promo (major units). */
+  price: number
+  quantity: number
+}
+
+export interface PricedCartLine {
+  /** Face price of one ticket before the promo (major units, event currency). */
+  unitOriginal: number
+  /** Face price of one ticket after the promo — what the line is charged at. */
+  unitPrice: number
+  quantity: number
+}
+
+/** Apply a promo to each line, per ticket. No promo leaves prices unchanged. */
+export function applyPromoToLines<T extends CartLineInput>(
+  lines: T[],
+  promo: DiscountInput | null | undefined
+): Array<T & PricedCartLine> {
+  return lines.map((line) => {
+    const unitOriginal = Math.max(0, Number(line.price) || 0)
+    const unitPrice = promo ? calculateDiscount(unitOriginal, promo).discountedPrice : unitOriginal
+    return { ...line, unitOriginal, unitPrice, quantity: Math.max(0, Math.trunc(Number(line.quantity) || 0)) }
+  })
+}
+
+export interface PricedLinesCents {
+  /** Post-promo face total in the CHARGE currency's minor units. */
+  faceValueCents: number
+  /** Tickets that still cost something after the promo — the fixed-fee count. */
+  paidQuantity: number
+  /** Every ticket in the cart, free ones included. */
+  totalQuantity: number
+  pricing: BuyerPricing
+}
+
+/**
+ * Price post-promo lines in integer cents.
+ *
+ * `exchangeRate` converts the event currency into the charge currency (an HTG
+ * event charged in USD); omit it when they are the same. Each line is rounded
+ * once, as `round(unitPrice × rate × quantity × 100)`, which is exactly the
+ * figure the single-tier card route has always charged for one line.
+ */
+export function priceTierLinesCents(
+  lines: PricedCartLine[],
+  event: PricingEvent,
+  options?: OrderPricingOptions & { exchangeRate?: number | null }
+): PricedLinesCents {
+  const rate = Number(options?.exchangeRate) > 0 ? Number(options!.exchangeRate) : 1
+  let faceValueCents = 0
+  let paidQuantity = 0
+  let totalQuantity = 0
+  for (const line of lines) {
+    const qty = Math.max(0, Math.trunc(Number(line.quantity) || 0))
+    const unit = Math.max(0, Number(line.unitPrice) || 0)
+    totalQuantity += qty
+    if (qty === 0 || unit === 0) continue
+    faceValueCents += Math.round(unit * rate * qty * 100)
+    paidQuantity += qty
+  }
+  const pricing = priceOrderCents(faceValueCents, event, {
+    currency: options?.currency,
+    config: options?.config,
+    quantity: paidQuantity,
+  })
+  return { faceValueCents, paidQuantity, totalQuantity, pricing }
+}
+
+export interface CartPricing extends OrderPricing {
+  /** Face total before the promo (major units). */
+  subtotalBeforePromo: number
+  /** What the promo took off the face total (major units, >= 0). */
+  discount: number
+  /** Tickets that still cost something after the promo. */
+  paidQuantity: number
+}
+
+/**
+ * The buyer-facing price of a whole cart: promo per ticket, then the fee once.
+ * Display surfaces call this with the EVENT (country, currency, fee_incidence)
+ * so the organizer's absorb/pass-on choice is honoured.
+ */
+export function priceCart(
+  lines: CartLineInput[],
+  event: PricingEvent,
+  options?: { promo?: DiscountInput | null; currency?: string | null; config?: Partial<LocationFeeConfig> | null }
+): CartPricing {
+  const priced = applyPromoToLines(lines, options?.promo)
+  const { pricing, paidQuantity } = priceTierLinesCents(priced, event, {
+    currency: options?.currency,
+    config: options?.config,
+  })
+  const beforeCents = priced.reduce((sum, l) => sum + toCents(l.unitOriginal) * l.quantity, 0)
+  return {
+    incidence: pricing.incidence,
+    feeOnTop: pricing.incidence === 'buyer',
+    faceValue: fromCents(pricing.faceValue),
+    buyerFee: fromCents(pricing.buyerFee),
+    total: fromCents(pricing.chargeAmount),
+    cents: pricing,
+    subtotalBeforePromo: fromCents(beforeCents),
+    discount: fromCents(Math.max(0, beforeCents - pricing.faceValue)),
+    paidQuantity,
+  }
 }

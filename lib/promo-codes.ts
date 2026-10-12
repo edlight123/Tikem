@@ -11,7 +11,7 @@
 
 import { createHash } from 'node:crypto'
 import { adminDb } from '@/lib/firebase/admin'
-import { getPromoExpiresAt, getPromoUsesCount, isPromoActive } from '@/lib/promo-code-shared'
+import { getPromoExpiresAt, getPromoUsesCount, isPromoActive, type DiscountInput } from '@/lib/promo-code-shared'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WHO REDEEMED IT
@@ -192,35 +192,9 @@ export interface PromoDoc {
   [key: string]: any
 }
 
-interface DiscountInput {
-  discount_type: 'percentage' | 'fixed_amount' | 'fixed' | string
-  discount_value: number
-}
-
-export function calculateDiscount(
-  originalPrice: number,
-  promoCode: DiscountInput
-): { discountedPrice: number; discountAmount: number } {
-  let discountAmount = 0
-
-  if (promoCode.discount_type === 'percentage') {
-    discountAmount = (originalPrice * promoCode.discount_value) / 100
-  } else {
-    // 'fixed_amount' | 'fixed' | anything else → flat amount off
-    discountAmount = promoCode.discount_value
-  }
-
-  // Guard rail: discount can never exceed the price (integer-cents-safe callers
-  // compute cents downstream; here we keep the same rounding the app already used).
-  discountAmount = Math.min(Math.max(0, discountAmount), originalPrice)
-
-  const discountedPrice = Math.max(0, originalPrice - discountAmount)
-
-  return {
-    discountedPrice: Math.round(discountedPrice * 100) / 100, // Round to 2 decimals
-    discountAmount: Math.round(discountAmount * 100) / 100,
-  }
-}
+// The discount arithmetic is pure and lives in promo-code-shared so the web
+// checkout can show exactly the discount the payment routes apply.
+export { calculateDiscount } from '@/lib/promo-code-shared'
 
 export function formatDiscount(promoCode: DiscountInput): string {
   if (promoCode.discount_type === 'percentage') {

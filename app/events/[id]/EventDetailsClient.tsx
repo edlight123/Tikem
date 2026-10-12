@@ -318,6 +318,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 eventTitle={event.title}
                 currency={event.currency || 'HTG'}
                 country={event.country}
+                feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
                 eventStartsAt={event.start_datetime}
                 isPasswordProtected={!!event.is_password_protected}
               />
@@ -627,6 +628,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     eventTitle={event.title}
                     currency={event.currency || 'HTG'}
                     country={event.country}
+                    feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
                     eventStartsAt={event.start_datetime}
                 isPasswordProtected={!!event.is_password_protected}
                   />
