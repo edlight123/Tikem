@@ -20,6 +20,8 @@ import { COUNTRY_COOKIE, resolveCountry } from '@/lib/home/country'
 import NationalDayBanner from '@/components/home/NationalDayBanner'
 import { getActiveNationalDay, nationalDayPreviewKey } from '@/lib/nationalDaysServer'
 import { eventMatchesNationalDay } from '@/lib/nationalDays'
+import { buildSiteJsonLd } from '@/lib/seo/siteJsonLd'
+import { serializeJsonLd } from '@/app/events/[id]/eventJsonLd'
 import {
   type HomeEvent,
   DEFAULT_ZONE,
@@ -40,10 +42,18 @@ import {
 // This page reads auth cookies for personalization.
 export const dynamic = 'force-dynamic'
 
+// The brand leads the title, with the unaccented spelling people type: a new
+// name this close to "TikTok" needs both for a brand search to land here.
+const HOME_TITLE = 'Tikèm (Tikem) | Event tickets in Haiti and the diaspora'
+const HOME_DESCRIPTION =
+  'Tikèm (tikem.co) is the ticketing platform for Haiti and the diaspora. Concerts, parties, festivals and culture: discover what is on and pay with MonCash or card.'
+
 export const metadata: Metadata = {
-  title: 'Event tickets in Haiti and the diaspora | Tikèm',
-  description: 'Concerts, parties, festivals and culture in Haiti and across the diaspora. Discover what is on and get your tickets on Tikèm.',
+  title: { absolute: HOME_TITLE },
+  description: HOME_DESCRIPTION,
   alternates: { canonical: '/' },
+  openGraph: { title: HOME_TITLE, description: HOME_DESCRIPTION },
+  twitter: { title: HOME_TITLE, description: HOME_DESCRIPTION },
 }
 
 /** Events in the "back home" / abroad rail. */
@@ -225,6 +235,11 @@ export default async function HomePage({
           </p>
         </div>
       )}
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildSiteJsonLd()) }}
+      />
 
       <HomePageContent
         now={now}

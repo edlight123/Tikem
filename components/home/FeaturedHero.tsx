@@ -114,9 +114,9 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
               />
               {label}
             </p>
-            <h1 className="mt-4 break-words font-grotesk font-bold text-white text-balance !text-[clamp(44px,7.4vw,112px)] !leading-[0.93] tracking-[-0.035em]">
+            <h2 className="mt-4 break-words font-grotesk font-bold text-white text-balance !text-[clamp(44px,7.4vw,112px)] !leading-[0.93] tracking-[-0.035em]">
               {ev.title}
-            </h1>
+            </h2>
             {subtitle && (
               <p className="mt-5 line-clamp-2 max-w-xl font-display italic text-white/75 !text-[clamp(20px,2.2vw,28px)] !leading-[1.15]">
                 {subtitle}
