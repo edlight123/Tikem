@@ -49,6 +49,15 @@ jest.mock('@/lib/promoters', () => ({
 jest.mock('@/lib/notifications/withdrawal-outcome', () => ({ notifyWithdrawalOutcome: async () => undefined }))
 jest.mock('@/lib/moncash', () => ({}))
 jest.mock('@/lib/currency', () => ({ fetchUsdToHtgRate: async () => 130 }))
+jest.mock('@/lib/fx/usd-htg', () => ({
+  ...jest.requireActual('@/lib/fx/usd-htg'),
+  getUsdToHtgBaseRate: jest.fn(async () => ({
+    baseRate: 130,
+    provider: 'test',
+    fetchedAtIso: '2026-10-12T00:00:00.000Z',
+    source: 'live',
+  })),
+}))
 
 import { POST as claim } from '@/app/api/promoter/claim/route'
 import { executePromoterWithdrawal } from '@/lib/promoter-wallet'

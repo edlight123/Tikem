@@ -276,6 +276,8 @@ export async function fulfillPaidOrder(params: {
     pendingTx.exchange_rate_spread_percent != null ? Number(pendingTx.exchange_rate_spread_percent) : null
   const fxProvider = pendingTx.exchange_rate_provider != null ? String(pendingTx.exchange_rate_provider) : null
   const fxFetchedAt = pendingTx.exchange_rate_fetched_at != null ? String(pendingTx.exchange_rate_fetched_at) : null
+  // 'live' | 'snapshot_fallback' (lib/fx/usd-htg.ts) — which rule produced the rate.
+  const fxSource = pendingTx.exchange_rate_source != null ? String(pendingTx.exchange_rate_source) : null
 
   // WHO paid the platform fee — read from the ORDER, which recorded it when the
   // buyer was charged (moncash-button/initiate and sogepay/initiate price pass-on
@@ -460,6 +462,7 @@ export async function fulfillPaidOrder(params: {
               exchange_rate_spread_percent: fxSpreadPercent,
               exchange_rate_provider: fxProvider,
               exchange_rate_fetched_at: fxFetchedAt,
+              exchange_rate_source: fxSource,
               charged_amount: Math.round((Number(selection.unitPrice) + perTicketBuyerFee) * 100) / 100,
               charged_currency: chargedCurrency,
               buyer_fee_charged_amount: perTicketBuyerFee,

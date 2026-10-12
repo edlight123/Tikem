@@ -105,6 +105,18 @@ interface PaymentModalProps {
   onSuccess: (paymentMethod: string, transactionId: string) => void;
 }
 
+/** /api/moncash-button/quote — the same pricing initiate charges. */
+type MonCashQuote = {
+  amountHtg: number;
+  amountOriginal: number;
+  originalCurrency: string;
+  baseRate: number | null;
+  effectiveRate: number | null;
+  spreadPercent: number | null;
+  buyerFeeOriginal: number;
+  rateSource: 'live' | 'snapshot_fallback' | null;
+};
+
 function PaymentForm({
   eventId,
   eventTitle,
@@ -150,6 +162,41 @@ function PaymentForm({
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay'>(
     isHaitiEvent ? 'moncash' : 'stripe'
   );
+
+  // MonCash settles in HTG. For a USD-priced event the server converts at
+  // checkout, so the buyer is shown the HTG figure first — from the SAME pricing
+  // the charge uses (/api/moncash-button/quote). If the quote fails we show
+  // nothing extra rather than a number that might be wrong.
+  const isMobileMoney = paymentMethod === 'moncash' || paymentMethod === 'natcash';
+  const needsHtgQuote = isHaitiEvent && isMobileMoney && String(currency || '').toUpperCase() === 'USD';
+  const [htgQuote, setHtgQuote] = useState<MonCashQuote | null>(null);
+  useEffect(() => {
+    if (!needsHtgQuote) {
+      setHtgQuote(null);
+      return;
+    }
+    let cancelled = false;
+    setHtgQuote(null);
+    backendJson<MonCashQuote>(`/api/moncash-button/quote`, {
+      method: 'POST',
+      body: JSON.stringify({ eventId, quantity, tierId, promoCodeId }),
+    })
+      .then((q) => {
+        if (cancelled) return;
+        const valid =
+          Number.isFinite(Number(q?.amountHtg)) &&
+          Number(q.amountHtg) > 0 &&
+          Number.isFinite(Number(q?.baseRate)) &&
+          String(q?.originalCurrency || '').toUpperCase() === 'USD';
+        setHtgQuote(valid ? q : null);
+      })
+      .catch(() => {
+        if (!cancelled) setHtgQuote(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsHtgQuote, eventId, quantity, tierId, promoCodeId]);
 
   // Whether to name Apple Pay on the card row.
   //
@@ -672,6 +719,23 @@ function PaymentForm({
             {formatCurrency(orderPricing.total, currency)}
           </Text>
         </View>
+        {/* USD event paid over MonCash: what MonCash will actually take, in HTG,
+            with the rate and Tikèm's spread disclosed. */}
+        {needsHtgQuote && htgQuote && (
+          <View style={styles.htgQuote}>
+            <Text style={styles.htgQuoteAmount}>
+              {t('paymentModal.moncashQuote.approx', {
+                amount: formatCurrency(Number(htgQuote.amountHtg), 'HTG'),
+              })}
+            </Text>
+            <Text style={styles.htgQuoteDetail}>
+              {t('paymentModal.moncashQuote.rateDetail', {
+                rate: Number(htgQuote.baseRate).toFixed(2),
+                spread: Math.round(Number(htgQuote.spreadPercent || 0) * 100),
+              })}
+            </Text>
+          </View>
+        )}
 
         {/* Security Badge */}
         <View style={styles.securityBadge}>
@@ -923,6 +987,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginTop: 10,
     paddingTop: 0,
     borderTopWidth: 0,
+  },
+  htgQuote: {
+    marginTop: 8,
+    alignItems: 'flex-end',
+  },
+  htgQuoteAmount: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  htgQuoteDetail: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
   },
   totalLabel: {
     fontSize: 16,
