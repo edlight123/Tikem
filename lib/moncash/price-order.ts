@@ -124,7 +124,20 @@ export function loadMonCashPricingDocs(
   ]).then(([tierDocs, singleTier, eventTiers]) => ({ tierDocs, singleTier, eventTiers }))
 }
 
-export type FaceLine = { tierId: string | null; tierName: string; quantity: number; unitPrice: number }
+export type FaceLine = {
+  tierId: string | null
+  tierName: string
+  quantity: number
+  /** Post-promo unit price, event currency. */
+  unitPrice: number
+  /**
+   * The tier's LIST price, event currency, before any promo. A line listed at 0
+   * is a FREE line: it counts toward the buyer's one free claim for the event
+   * (lib/tickets/free-claim-policy). A promo that zeroes a paid line does not
+   * make it free. Stored on the order so fulfillment decides on the same figure.
+   */
+  listUnitPrice: number
+}
 
 export type FacePricing = {
   ok: true
@@ -171,6 +184,7 @@ export function priceFaceSelections(input: {
         return { ok: false, status: 400, error: `Only ${remaining} ticket(s) remaining for ${tier.name || 'this tier'}.` }
       }
 
+      const listUnitPrice = Number(tier.price) || 0
       let unitPrice = tier.price
       if (promo) {
         const { discountedPrice, discountAmount } = calculateDiscount(unitPrice, promo)
@@ -183,6 +197,7 @@ export function priceFaceSelections(input: {
         tierName: tier.name || 'Ticket',
         quantity: selection.quantity,
         unitPrice,
+        listUnitPrice,
       })
     }
 
@@ -223,13 +238,14 @@ export function priceFaceSelections(input: {
       resolvedTierId = tier.id
     }
 
+    const listUnitPrice = Number(unitPrice) || 0
     if (promo) {
       const { discountedPrice, discountAmount } = calculateDiscount(unitPrice, promo)
       unitPrice = discountedPrice
       promoDiscountTotal += discountAmount * quantity
     }
 
-    normalizedSelections = [{ tierId: resolvedTierId, tierName, quantity, unitPrice }]
+    normalizedSelections = [{ tierId: resolvedTierId, tierName, quantity, unitPrice, listUnitPrice }]
   }
 
   return {
@@ -243,6 +259,11 @@ export function priceFaceSelections(input: {
 }
 
 export type ChargeLine = FaceLine & { originalUnitPrice?: number }
+
+/** Free/list view of priced lines, for lib/tickets/free-claim-policy. */
+export function freeClaimLines(lines: FaceLine[]): Array<{ listPrice: number; quantity: number }> {
+  return lines.map((l) => ({ listPrice: l.listUnitPrice, quantity: l.quantity }))
+}
 
 export type ExchangeRateRecord = {
   used: number

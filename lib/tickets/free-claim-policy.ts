@@ -116,6 +116,57 @@ export async function freeClaimAlreadyUsed(eventId: string, identity: FreeClaima
   return !snaps.every((s: any) => isVoidedFreeTicket(s.data() || {}))
 }
 
+export type FreeLinesRefusal = {
+  status: 400 | 409
+  error: string
+  code: 'free_limit_exceeded' | 'already_claimed'
+}
+
+/** Free tickets in an order: lines whose LIST price (before any promo) is 0. */
+export function freeQuantityOf(lines: Array<{ listPrice: number; quantity: number }>): number {
+  return lines.reduce((sum, l) => sum + (Number(l.listPrice) > 0 ? 0 : Number(l.quantity) || 0), 0)
+}
+
+/** The pure half of the order-time check: more than MAX_FREE_TICKETS_PER_CLAIM free tickets. */
+export function freeLimitRefusal(freeQuantity: number): FreeLinesRefusal | null {
+  if (freeQuantity <= MAX_FREE_TICKETS_PER_CLAIM) return null
+  return {
+    status: 400,
+    error: `You can add at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets to an order.`,
+    code: 'free_limit_exceeded',
+  }
+}
+
+/**
+ * The order-time check every paid rail (card, MonCash, SogePay) runs on the free
+ * lines of a cart, before any money moves. READ-ONLY: refuses more than
+ * MAX_FREE_TICKETS_PER_CLAIM free tickets (400 free_limit_exceeded) and a buyer
+ * whose free claim for the event is already used (409 already_claimed; a guest
+ * gets the neutral GUEST_ALREADY_CLAIMED_MESSAGE). Null when the order may proceed.
+ * Fulfillment re-takes the claim lock atomically before issuing.
+ */
+export async function freeLinesRefusal(
+  eventId: string,
+  identity: FreeClaimant,
+  lines: Array<{ listPrice: number; quantity: number }>
+): Promise<FreeLinesRefusal | null> {
+  const freeQuantity = freeQuantityOf(lines)
+  if (freeQuantity <= 0) return null
+  const overLimit = freeLimitRefusal(freeQuantity)
+  if (overLimit) return overLimit
+  if (await freeClaimAlreadyUsed(String(eventId), identity)) {
+    return {
+      status: 409,
+      // A guest's answer stays neutral: the email they typed is unverified.
+      error: identity.isGuest
+        ? GUEST_ALREADY_CLAIMED_MESSAGE
+        : 'You already have a free ticket for this event. Remove the free tier to continue.',
+      code: 'already_claimed',
+    }
+  }
+  return null
+}
+
 /**
  * Take (or confirm) the claimant's free-claim lock for a PAID card order, inside a
  * transaction. Returns true when this order holds the claim: the lock was free,
@@ -126,7 +177,9 @@ export async function freeClaimAlreadyUsed(eventId: string, identity: FreeClaima
 export async function takeFreeClaimForOrder(
   eventId: string,
   identity: FreeClaimant,
-  paymentId: string
+  paymentId: string,
+  /** Which rail's order holds the claim, for support ('card_order', 'moncash_order', …). */
+  source: string = 'card_order'
 ): Promise<boolean> {
   const lockRef = adminDb.collection(FREE_CLAIM_LOCKS_COLLECTION).doc(freeClaimLockId(eventId, identity))
   return adminDb.runTransaction(async (tx: any) => {
@@ -143,12 +196,29 @@ export async function takeFreeClaimForOrder(
       tx.set(lockRef, {
         event_id: String(eventId),
         kind: identity.isGuest ? 'guest' : 'account',
-        source: 'card_order',
+        source,
         payment_id: paymentId,
         created_at: new Date().toISOString(),
       })
     }
     return true
+  })
+}
+
+/**
+ * Give back a claim this order took but never used (the order was refused after
+ * the lock, e.g. sold out and refunded). Only a lock that belongs to this payment
+ * and recorded no tickets is removed; anything else is left alone.
+ */
+export async function releaseFreeClaimForOrder(eventId: string, identity: FreeClaimant, paymentId: string) {
+  const lockRef = adminDb.collection(FREE_CLAIM_LOCKS_COLLECTION).doc(freeClaimLockId(eventId, identity))
+  await adminDb.runTransaction(async (tx: any) => {
+    const snap = await tx.get(lockRef)
+    if (!snap?.exists) return
+    const lock = snap.data() || {}
+    const ids = Array.isArray(lock.ticket_ids) ? lock.ticket_ids.filter(Boolean) : []
+    if (lock.payment_id !== paymentId || ids.length > 0) return
+    tx.delete(lockRef)
   })
 }
 

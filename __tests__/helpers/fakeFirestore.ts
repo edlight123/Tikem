@@ -93,9 +93,13 @@ export class FakeFirestore {
       get: async (ref: any) => (ref?._path ? this.snap(ref._path) : ref.get()),
       set: (ref: any, data: Doc, opts?: any) => writes.push([ref._path, data, opts]),
       update: (ref: any, data: Doc) => writes.push([ref._path, data, { merge: true }]),
+      delete: (ref: any) => writes.push([ref._path, {}, { delete: true }]),
     }
     const result = await fn(tx)
-    for (const [p, d, o] of writes) this.write(p, d, o)
+    for (const [p, d, o] of writes) {
+      if (o?.delete) this.store.delete(p)
+      else this.write(p, d, o)
+    }
     return result
   }
 

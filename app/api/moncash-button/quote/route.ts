@@ -10,7 +10,9 @@ import { isPaidAllowed, countrySupport } from '@/lib/country-support'
 import { checkEventPurchasable } from '@/lib/tickets/purchasable'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { scheduleOpsEvent } from '@/lib/ops/ops-events'
+import { freeLimitRefusal, freeQuantityOf } from '@/lib/tickets/free-claim-policy'
 import {
+  freeClaimLines,
   loadMonCashPricingDocs,
   parseOrderLines,
   priceFaceSelections,
@@ -115,6 +117,15 @@ export async function POST(request: Request) {
         { error: face.error, ...(face.code ? { code: face.code } : {}) },
         { status: face.status }
       )
+    }
+
+    // The free-ticket cap initiate enforces, so the buyer hears it before paying.
+    // Only the pure check: whether the buyer's free claim is already used is
+    // decided by initiate (which knows the guest's email) and the claim lock is
+    // taken only at fulfillment. A quote takes no lock and writes nothing.
+    const overFreeLimit = freeLimitRefusal(freeQuantityOf(freeClaimLines(face.normalizedSelections)))
+    if (overFreeLimit) {
+      return NextResponse.json({ error: overFreeLimit.error, code: overFreeLimit.code }, { status: overFreeLimit.status })
     }
 
     const platformSettings = await getPlatformSettings()

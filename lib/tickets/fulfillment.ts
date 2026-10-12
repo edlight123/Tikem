@@ -29,6 +29,12 @@ import { recordInvitePurchase } from '@/lib/invites/server'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder, isGuestId } from '@/lib/guest/identity'
 import { validateStoredOrderLines } from '@/lib/tickets/purchasable'
+import {
+  recordFreeClaimTickets,
+  releaseFreeClaimForOrder,
+  takeFreeClaimForOrder,
+  type FreeClaimant,
+} from '@/lib/tickets/free-claim-policy'
 
 // Window after which a stuck "processing" claim is considered stale and may be re-claimed
 // (e.g. if a previous fulfillment attempt crashed mid-way).
@@ -151,6 +157,28 @@ interface TierSelection {
   quantity: number
   unitPrice: number
   originalUnitPrice?: number
+  /** LIST price before promo, event currency (stamped by initiate since the free-claim rules). */
+  listUnitPrice?: number
+}
+
+/**
+ * Is this stored line a FREE line (list price 0)? Decided on the list price the
+ * order recorded at initiate, so a promo that zeroed a paid line is not a free
+ * claim. An order written before the list price was stamped is free only when
+ * the line cost nothing and no promo was applied to the order.
+ */
+export function isFreeOrderLine(selection: TierSelection, order: { promo_code_id?: unknown }): boolean {
+  const list = selection?.listUnitPrice
+  if (typeof list === 'number' && Number.isFinite(list)) return list <= 0
+  return Number(selection?.unitPrice || 0) <= 0 && !order?.promo_code_id
+}
+
+/** The claim-lock `source` for a rail's order (lib/tickets/free-claim-policy). */
+function freeClaimSourceFor(paymentMethod: string): string {
+  const m = String(paymentMethod || '').toLowerCase()
+  if (m === 'sogepay') return 'sogepay_order'
+  if (m === 'moncash') return 'moncash_order'
+  return `${m || 'mobile_money'}_order`
 }
 
 /**
@@ -267,6 +295,68 @@ export async function fulfillPaidOrder(params: {
     return { outcome: 'invalid_order', ticketId: null, reason: 'invalid_quantity' }
   }
 
+  // FREE lines (list price 0) are the buyer's one free claim for this event,
+  // under the same lock the free-claim route and the card rail use
+  // (lib/tickets/free-claim-policy). Initiate refused a buyer who had already
+  // claimed, but two orders paid side by side would both have passed that check:
+  // the lock is taken HERE, atomically, keyed by this order. A claim held by
+  // another order means this order's free lines are not issued — they cost
+  // nothing, so neither the amount, the fee nor the earnings change, and the
+  // buyer is owed nothing for them — and the paid lines are issued as normal.
+  // The decision is stored on the order so a retry issues exactly the same set.
+  const freeClaimant: FreeClaimant = {
+    isGuest: isGuestOrder || pendingTx.is_guest === true,
+    id: String(pendingTx.user_id || ''),
+    email: guestRecipient?.email || pendingTx.guest_email || null,
+  }
+  const isFreeSelection = (sel: TierSelection) => isFreeOrderLine(sel, pendingTx)
+  const hasFreeLines = tierSelections.some(isFreeSelection)
+  let freeClaimDecision: string | null = hasFreeLines ? pendingTx.free_claim_decision || null : null
+  if (hasFreeLines && !freeClaimDecision) {
+    let held: boolean
+    try {
+      held = await takeFreeClaimForOrder(
+        String(pendingTx.event_id),
+        freeClaimant,
+        orderId,
+        freeClaimSourceFor(paymentMethod)
+      )
+    } catch (err: any) {
+      console.error(`${logPrefix} could not take the free-claim lock; releasing for retry`, {
+        orderId,
+        message: err?.message || String(err),
+      })
+      await releaseOrderClaim(orderId)
+      return { outcome: 'ticket_creation_failed', ticketId: null }
+    }
+    freeClaimDecision = held ? 'kept' : 'dropped'
+    const dropped = held ? [] : tierSelections.filter(isFreeSelection)
+    if (!held) {
+      console.warn(`${logPrefix} free lines not issued: the buyer's free claim for this event is already used`, {
+        orderId,
+      })
+    }
+    await supabase
+      .from('pending_transactions')
+      .update({
+        free_claim_decision: freeClaimDecision,
+        ...(dropped.length ? { free_lines_dropped: dropped, free_lines_dropped_reason: 'already_claimed' } : {}),
+      })
+      .eq('order_id', orderId)
+  }
+  /** The lines actually issued: every line, or only the paid ones when the free claim is held elsewhere. */
+  const issuedSelections: TierSelection[] =
+    freeClaimDecision === 'dropped' ? tierSelections.filter((sel) => !isFreeSelection(sel)) : tierSelections
+  /**
+   * Tickets this order issues. Equal to the order's quantity unless free lines
+   * were dropped; every per-ticket split (the buyer fee share) and every count
+   * (inventory, earnings, promo, confirmation) uses it, so the issued tickets'
+   * charged_amount still adds up to what the buyer paid.
+   */
+  const issuedQuantity = hasFreeLines
+    ? issuedSelections.reduce((sum, sel) => sum + (Number(sel.quantity) || 0), 0)
+    : Number(pendingTx.quantity || 1)
+
   const eventCurrency =
     String(pendingTx.original_currency || pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
   const chargedCurrency = String(pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
@@ -288,7 +378,7 @@ export async function fulfillPaidOrder(params: {
   const orderBuyerFee = Number(pendingTx.buyer_fee || 0)
   const orderChargedBuyerFee =
     pendingTx.fee_incidence === 'buyer' && Number.isFinite(orderBuyerFee) && orderBuyerFee > 0 ? orderBuyerFee : 0
-  const orderQuantityForFee = Math.max(1, Number(pendingTx.quantity || 1))
+  const orderQuantityForFee = Math.max(1, issuedQuantity)
   /** The buyer fee carried by ONE ticket, in the charged currency. */
   const perTicketBuyerFee =
     orderChargedBuyerFee > 0 ? Math.round((orderChargedBuyerFee / orderQuantityForFee) * 100) / 100 : 0
@@ -321,10 +411,10 @@ export async function fulfillPaidOrder(params: {
   // any tickets. Under load this is what actually prevents overselling (the initiate-time check is
   // only a fast-fail UX hint). If it refuses, the order is paid but can't be honored — mark it for
   // refund and do NOT create tickets.
-  const tierIncrements = buildTierSoldIncrements(tierSelections)
+  const tierIncrements = buildTierSoldIncrements(issuedSelections)
   const reservation = await reserveInventoryAtomic({
     eventId: String(pendingTx.event_id),
-    quantity: Number(pendingTx.quantity || 1),
+    quantity: issuedQuantity,
     tierIncrements,
     logPrefix,
   })
@@ -339,6 +429,13 @@ export async function fulfillPaidOrder(params: {
       .from('pending_transactions')
       .update({ status: 'failed', failure_reason: 'capacity_exceeded', needs_refund: true })
       .eq('order_id', orderId)
+    // The order is refunded, never issued: hand back the free claim it took, so
+    // the buyer may still claim their free ticket elsewhere.
+    if (freeClaimDecision === 'kept') {
+      await releaseFreeClaimForOrder(String(pendingTx.event_id), freeClaimant, orderId).catch((err: any) =>
+        console.error(`${logPrefix} could not release the free-claim lock`, err?.message || err)
+      )
+    }
     return {
       outcome: 'capacity_exceeded',
       ticketId: null,
@@ -347,15 +444,18 @@ export async function fulfillPaidOrder(params: {
   }
 
   const createdTickets: any[] = []
+  const createdFreeTicketIds: string[] = []
 
-  for (const selection of tierSelections) {
+  for (const selection of issuedSelections) {
     const selectionQty = selection.quantity || 0
     for (let i = 0; i < selectionQty; i++) {
       const organizerUnitPrice = (() => {
         if (eventCurrency === 'USD') {
           const raw = selection.originalUnitPrice
-          if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw
-          const fallback = Number(pendingTx.original_amount || 0) / Math.max(1, pendingTx.quantity || 1)
+          // A free (or promo-zeroed) line converts to 0 and is recorded as 0 — not
+          // as the order's average, which would make a free ticket look paid.
+          if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) return raw
+          const fallback = Number(pendingTx.original_amount || 0) / Math.max(1, issuedQuantity || 1)
           return Number.isFinite(fallback) && fallback > 0 ? fallback : 0
         }
         return selection.unitPrice
@@ -415,7 +515,7 @@ export async function fulfillPaidOrder(params: {
         // re-reserve and re-attempt fulfillment for this paid order.
         await releaseInventoryReservation({
           eventId: String(pendingTx.event_id),
-          quantity: Number(pendingTx.quantity || 1),
+          quantity: issuedQuantity,
           tierIncrements,
           logPrefix,
         })
@@ -428,6 +528,7 @@ export async function fulfillPaidOrder(params: {
         await supabase.from('tickets').update({ qr_code_data: createdTicket.id }).eq('id', createdTicket.id)
         createdTicket.qr_code_data = createdTicket.id
         createdTickets.push(createdTicket)
+        if (isFreeSelection(selection)) createdFreeTicketIds.push(String(createdTicket.id))
 
         // Mirror into Firestore for organizer earnings and admin analytics.
         try {
@@ -487,6 +588,14 @@ export async function fulfillPaidOrder(params: {
     }
   }
 
+  // Record which tickets the free claim issued, so the claim can be shown void later
+  // (a refunded free ticket frees the buyer's claim again).
+  if (freeClaimDecision === 'kept' && createdFreeTicketIds.length > 0) {
+    await recordFreeClaimTickets(String(pendingTx.event_id), freeClaimant, createdFreeTicketIds).catch((err: any) =>
+      console.error(`${logPrefix} could not record free-claim tickets`, err?.message || err)
+    )
+  }
+
   // Redeem the promo code atomically (Firestore) — the SINGLE redemption point for any order
   // fulfilled through this shared pipeline (currently Sogepay). We hold the exclusive fulfillment
   // claim (claimOrderForFulfillment) from here on, so this runs exactly once per paid order.
@@ -497,7 +606,7 @@ export async function fulfillPaidOrder(params: {
     try {
       const redeem = await redeemPromoInTransaction({
         promoId: String(pendingTx.promo_code_id),
-        qty: Number(pendingTx.quantity || createdTickets.length || 1),
+        qty: issuedQuantity || createdTickets.length || 1,
         userId: pendingTx.user_id ? String(pendingTx.user_id) : null,
         // A guest's user_id on the order is minted per order, so it can't carry a
         // per-buyer cap; the email captured on the order can.
@@ -531,7 +640,7 @@ export async function fulfillPaidOrder(params: {
       promoterId: String(pendingTx.promoter_id),
       eventId: String(pendingTx.event_id),
       ticketIds: createdTickets.map((t: any) => String(t.id)),
-      quantity: Number(pendingTx.quantity || createdTickets.length || 1),
+      quantity: issuedQuantity || createdTickets.length || 1,
       // Organizer-facing gross in event currency — same base as the earnings write.
       orderGrossCents: Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100),
       currency: eventCurrency,
@@ -549,7 +658,7 @@ export async function fulfillPaidOrder(params: {
     await recordAttributedSale(attribution, {
       eventId: String(pendingTx.event_id),
       orderKey: orderId,
-      quantity: Number(pendingTx.quantity || createdTickets.length || 1),
+      quantity: issuedQuantity || createdTickets.length || 1,
       revenueCents: Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100),
       currency: eventCurrency,
       paymentMethod,
@@ -574,7 +683,7 @@ export async function fulfillPaidOrder(params: {
   // Update Firestore earnings in event currency.
   try {
     const grossEventCents = Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100)
-    await addTicketToEarnings(pendingTx.event_id, grossEventCents, Number(pendingTx.quantity || 1), {
+    await addTicketToEarnings(pendingTx.event_id, grossEventCents, issuedQuantity || 1, {
       currency: eventCurrency,
       paymentMethod,
       chargedAmountCents: Math.round(Number(pendingTx.amount || 0) * 100),
@@ -660,7 +769,7 @@ export async function fulfillPaidOrder(params: {
             phone: ticket.attendee.phone,
             isGuest: isGuestOrder,
           },
-          quantity: pendingTx.quantity || 1,
+          quantity: issuedQuantity || 1,
           guestToken: guestRecipient?.guestToken || null,
           logPrefix,
         })
