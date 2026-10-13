@@ -15,6 +15,9 @@ export default function PurchaseProcessingPage() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId') || ''
   const provider = searchParams.get('provider') || 'sogepay'
+  // A signed, short-lived status token (MonCash): lets a WebView without the
+  // order cookie poll this one order.
+  const statusToken = searchParams.get('st') || ''
 
   const [timedOut, setTimedOut] = useState(false)
   const startedAtRef = useRef<number>(Date.now())
@@ -32,7 +35,7 @@ export default function PurchaseProcessingPage() {
       if (cancelled) return
       try {
         const res = await fetch(
-          `/api/${provider}/status?orderId=${encodeURIComponent(orderId)}`,
+          `/api/${provider}/status?orderId=${encodeURIComponent(orderId)}${statusToken ? `&st=${encodeURIComponent(statusToken)}` : ''}`,
           { credentials: 'include', cache: 'no-store' }
         )
 
@@ -65,7 +68,7 @@ export default function PurchaseProcessingPage() {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [orderId, provider, router])
+  }, [orderId, provider, statusToken, router])
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">

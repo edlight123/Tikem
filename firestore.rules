@@ -262,6 +262,10 @@ service cloud.firestore {
         // A new event has sold nothing. tickets_sold is the server's sales
         // counter (lib/tickets/inventory.ts); a client may only start it at 0.
         && request.resource.data.get('tickets_sold', 0) == 0
+        // The seat-inventory shard count (lib/tickets/inventoryShards.ts) is set
+        // by the Admin SDK only: a lower count would hide shards from the
+        // capacity check.
+        && request.resource.data.get('inventory_shards_n', null) == null
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -297,6 +301,10 @@ service cloud.firestore {
           // currency/country lock below read it, so a client may never change it
           // (writing 0 would unlock the currency and re-open sold-out capacity).
           request.resource.data.get('tickets_sold', 0) == resource.data.get('tickets_sold', 0) &&
+          // inventory_shards_n is the seat-inventory shard count, fixed by the
+          // Admin SDK when the event's shards are created. Lowering it would hide
+          // shards (and the seats they hold or sold) from the capacity check.
+          request.resource.data.get('inventory_shards_n', null) == resource.data.get('inventory_shards_n', null) &&
           // Payout safety (lib/payouts/availability.ts): a cancellation and its
           // payout freeze are set by lib/events/cancel.ts on the Admin SDK and
           // must not be undone from a client — un-cancelling would re-open money

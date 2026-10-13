@@ -391,6 +391,63 @@ describe('abuse caps under concurrency, keyed on what the caller controls', () =
   })
 })
 
+describe('per-network seat cap and shard-count tampering', () => {
+  it('parallel big guest holds from one IP stop at the seat cap', async () => {
+    seedEvent({ max_tickets: 5000 })
+    const env = process.env.SEAT_HOLD_MAX_SEATS_PER_IP
+    process.env.SEAT_HOLD_MAX_SEATS_PER_IP = '120'
+    try {
+      let pending = Array.from({ length: 10 }, (_, i) => i)
+      let ok = 0
+      for (let round = 0; round < 30 && pending.length; round++) {
+        const out = await Promise.all(
+          pending.map((i) =>
+            holds.createSeatHold({ eventId: EVT, quantity: 50, tierIncrements: [], source: 'card', ownerKey: `guest:g${i}@x`, ipAddress: '3.3.3.3' })
+          )
+        )
+        const next: number[] = []
+        out.forEach((o: any, j: number) => {
+          if (o.ok) ok += 1
+          else if (o.reason === 'busy') next.push(pending[j])
+          else expect(o.reason).toBe('too_many_holds')
+        })
+        pending = next
+      }
+      expect(ok).toBe(2) // 2 x 50 = 100 <= 120; a third would be 150
+      expect(await used()).toBe(100)
+      // Another network is unaffected.
+      expect((await holds.createSeatHold({ eventId: EVT, quantity: 50, tierIncrements: [], source: 'card', ipAddress: '4.4.4.4' })).ok).toBe(true)
+    } finally {
+      process.env.SEAT_HOLD_MAX_SEATS_PER_IP = env
+    }
+  }, 30_000)
+
+  it('a lowered stored shard count cannot hide shards from the capacity check', async () => {
+    seedEvent({ max_tickets: 40 })
+    expect((await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 30, tierIncrements: [] })).ok).toBe(true)
+    // Tamper: claim only 1 shard exists, and edit the capacity to force the global path.
+    mockFs.seed(`events/${EVT}`, { ...mockFs.get(`events/${EVT}`), inventory_shards_n: 1, max_tickets: 41 })
+    const r = await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 12, tierIncrements: [] })
+    expect(r).toEqual(expect.objectContaining({ ok: false, reason: 'event_capacity', remaining: 11 }))
+    expect((await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 11, tierIncrements: [] })).ok).toBe(true)
+    // The next global pass restores the real count.
+    expect(mockFs.get(`events/${EVT}`)?.inventory_shards_n).toBe(20)
+    expect((await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).used).toBe(41)
+  })
+})
+
+describe('order status token', () => {
+  it('verifies for its own order only, and expires', () => {
+    const now = Date.now()
+    const tok = holds.orderStatusToken('123', now + 1000)
+    expect(holds.isValidOrderStatusToken('123', tok, now)).toBe(true)
+    expect(holds.isValidOrderStatusToken('124', tok, now)).toBe(false)
+    expect(holds.isValidOrderStatusToken('123', tok, now + 2000)).toBe(false)
+    expect(holds.isValidOrderStatusToken('123', `${now + 1000}.${'0'.repeat(40)}`, now)).toBe(false)
+    expect(holds.isValidOrderStatusToken('123', 'junk', now)).toBe(false)
+  })
+})
+
 describe('invariant under interleaved steals, rebalances and capacity edits', () => {
   it('total never exceeds the capacity in force, and the shares always add up to it', async () => {
     seedEvent({ max_tickets: 60 })

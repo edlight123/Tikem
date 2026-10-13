@@ -530,67 +530,92 @@ type GlobalResult =
   | { kind: 'done'; prior: Record<string, any> }
   | { kind: 'refused'; outcome: ReserveOutcome }
 
-/** GLOBAL: all shards, one transaction: initialize, resync, last seats, or refuse exactly. */
+/** Highest existing shard index + 1 (0 when none), lock-free. */
+async function existingShardSpan(eventId: string): Promise<number> {
+  const snap = await shardsCol(eventId).get()
+  let span = 0
+  for (const d of snap.docs || []) {
+    const i = Number(d.id)
+    if (Number.isInteger(i) && i >= 0) span = Math.max(span, i + 1)
+  }
+  return span
+}
+
+/**
+ * GLOBAL: all shards, one transaction: initialize, resync, last seats, or refuse exactly.
+ *
+ * Everything it decides on is read INSIDE the transaction: the event and tier
+ * docs (so a capacity edit landing concurrently is never re-levelled back to a
+ * stale value, and first-time init counts from the current counters) and every
+ * shard. The shard set is the widest of: the event's stored count, the count
+ * this request was sized for, and every shard that exists, so no shard (and no
+ * seat it holds or sold) can be left out of the total.
+ */
 async function globalPathTx(p: Placement): Promise<GlobalResult> {
   const { req, reservationId } = p
-  const sRefs = Array.from({ length: req.n }, (_, i) => shardRef(req.eventId, i))
   const rRef = reservationRef(reservationId)
+  const eventRef = adminDb.collection('events').doc(req.eventId)
+  const tierKeys = Object.keys(req.q).filter((k) => k !== EVENT_BUCKET)
+  const span = Math.max(req.n, await existingShardSpan(req.eventId))
   return adminDb.runTransaction(async (tx: any) => {
     const rSnap = await tx.get(rRef)
+    const eventSnap = await tx.get(eventRef)
+    const tierSnaps: any[] = []
+    for (const key of tierKeys) tierSnaps.push(await tx.get(adminDb.collection('ticket_tiers').doc(key.slice(2))))
+    const event = eventSnap.exists ? eventSnap.data() || {} : null
+    const n = Math.max(span, storedShardCount(event) ?? 0)
+    const sRefs = Array.from({ length: n }, (_, i) => shardRef(req.eventId, i))
     // Sequential, in index order: every global transaction locks the shards in
     // the same order, so two of them can never deadlock each other.
     const sSnaps: any[] = []
     for (const ref of sRefs) sSnaps.push(await tx.get(ref))
     const prior = rSnap.exists ? rSnap.data() || {} : null
     if (prior && prior.state === targetState(p.mode)) return { kind: 'done', prior } as GlobalResult
+
+    // Capacities as of THIS transaction.
+    const caps: Record<string, number | null> = { [EVENT_BUCKET]: eventCapacityOf(event) }
+    tierKeys.forEach((key, i) => {
+      caps[key] = tierSnaps[i]?.exists ? tierCapacityOf(tierSnaps[i].data()) : null
+    })
+
     const shards = sSnaps.map(readShard)
     const keys = Object.keys(req.q)
-    const creating = sSnaps.some((s) => !s.exists)
+    const creating = sSnaps.some((snap) => !snap.exists)
 
-    // Buckets no shard has seen yet start from the legacy counters, read IN this
-    // transaction so an increment landing concurrently is never lost.
-    const missing = keys.filter((key) => !shards.some((s) => s.b[key]))
-    const eventRef = adminDb.collection('events').doc(req.eventId)
-    let eventExists = false
-    if (missing.length > 0 || creating) {
-      const legacyKeys = missing.includes(EVENT_BUCKET) ? missing : [EVENT_BUCKET, ...missing]
-      const legacySnaps: any[] = []
-      for (const key of legacyKeys) {
-        legacySnaps.push(
-          await tx.get(key === EVENT_BUCKET ? eventRef : adminDb.collection('ticket_tiers').doc(key.slice(2)))
-        )
-      }
-      eventExists = Boolean(legacySnaps[0]?.exists)
-      legacyKeys.forEach((key, i) => {
-        if (!missing.includes(key)) return
-        const data = legacySnaps[i]?.exists ? legacySnaps[i].data() || {} : {}
-        const sold = nonNegInt(key === EVENT_BUCKET ? data.tickets_sold : data.sold_quantity)
-        shards.forEach((s, k) => {
-          s.b[key] = { cap: null, alloc: null, sold: k === 0 ? sold : 0 }
-        })
+    // Buckets no shard has seen yet start from the legacy counters, read in
+    // this transaction above, so an increment landing concurrently is never lost.
+    for (const key of keys) {
+      if (shards.some((sh) => sh.b[key])) continue
+      const snap = key === EVENT_BUCKET ? eventSnap : tierSnaps[tierKeys.indexOf(key)]
+      const data = snap?.exists ? snap.data() || {} : {}
+      const sold = nonNegInt(key === EVENT_BUCKET ? data.tickets_sold : data.sold_quantity)
+      shards.forEach((sh, k) => {
+        sh.b[key] = { cap: null, alloc: null, sold: k === 0 ? sold : 0 }
       })
     }
 
     const now = Date.now()
-    for (const s of shards) {
-      pruneExpired(s, now)
-      delete s.h[reservationId]
+    for (const sh of shards) {
+      pruneExpired(sh, now)
+      delete sh.h[reservationId]
     }
     for (const key of keys) {
-      const cap = req.caps[key] ?? null
+      const cap = caps[key] ?? null
       if (cap == null) continue
-      const total = shards.reduce((sum, s) => sum + shardUsed(s, key, now), 0)
+      const total = shards.reduce((sum, sh) => sum + shardUsed(sh, key, now), 0)
       if (total + req.q[key] > cap) {
         return { kind: 'refused', outcome: refusalFor(key, cap - total, req.q[key]) } as GlobalResult
       }
     }
     const target = Math.floor(Math.random() * shards.length)
     applyReservation(shards[target], reservationId, req.q, p.mode, p.expiresAt)
-    rebalanceShards(shards, req.caps, keys, now)
-    shards.forEach((s, i) => tx.set(sRefs[i], shardDoc(s)))
+    rebalanceShards(shards, caps, keys, now)
+    shards.forEach((sh, i) => tx.set(sRefs[i], shardDoc(sh)))
     tx.set(rRef, reservationDoc(p, target, prior))
-    // Fix the event's shard count the first time its shards are created.
-    if (creating && eventExists) tx.set(eventRef, { inventory_shards_n: req.n }, { merge: true })
+    // Fix the event's shard count when its shards are first created (or widened).
+    if (event && (creating || storedShardCount(event) !== n)) {
+      tx.set(eventRef, { inventory_shards_n: n }, { merge: true })
+    }
     return { kind: 'ok', shard: target } as GlobalResult
   })
 }

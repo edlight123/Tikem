@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
 import { retrieveMonCashOrderPayment } from '@/lib/moncash'
+import { getMonCashButtonPaymentByOrderId } from '@/lib/moncash-button'
 import { isMonCashButtonPaidAmountAcceptable } from '@/lib/moncash-button'
 import { fulfillPaidOrder } from '@/lib/tickets/fulfillment'
 import { releaseSeatHold } from '@/lib/tickets/seatHolds'
-import { monCashMethod, selectReconcileCandidates } from '@/lib/moncash-reconcile'
+import { reconcileMethod, selectReconcileCandidates } from '@/lib/moncash-reconcile'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,23 @@ export const maxDuration = 300
 const MAX_ORDERS_PER_RUN = 40
 
 const LOG = '[moncash_reconcile]'
+
+/**
+ * NatCash settles through the button middleware (the return handler verifies it
+ * the same way). Shaped like the MonCash REST answer so one loop handles both.
+ */
+async function retrieveNatCashOrderPayment(orderId: string) {
+  const p: any = await getMonCashButtonPaymentByOrderId(orderId)
+  return {
+    success: Boolean(p?.success && p?.payment_status),
+    payment_status: String(p?.message || (p?.payment_status ? 'successful' : 'not_paid')),
+    cost: p?.cost != null ? Number(p.cost) : undefined,
+    reference: String(p?.reference || orderId),
+    transactionId: String(p?.transNumber || ''),
+    payer: p?.payer,
+    raw: p,
+  }
+}
 
 export async function GET() {
   const cronSecret = process.env.CRON_SECRET
@@ -75,7 +93,7 @@ export async function GET() {
 
     let payment
     try {
-      payment = await retrieveMonCashOrderPayment(orderId)
+      payment = reconcileMethod(tx) === 'natcash' ? await retrieveNatCashOrderPayment(orderId) : await retrieveMonCashOrderPayment(orderId)
     } catch (err: any) {
       // No answer from Digicel (401/5xx/network). Leave the order pending and
       // retry next run — an outage must never be recorded as a failed payment.
@@ -172,7 +190,7 @@ export async function GET() {
 
     const result = await fulfillPaidOrder({
       orderId,
-      paymentMethod: monCashMethod(tx) || 'moncash',
+      paymentMethod: reconcileMethod(tx) || 'moncash',
       transactionId: payment.transactionId || null,
       payer: payment.payer || null,
       logPrefix: LOG,

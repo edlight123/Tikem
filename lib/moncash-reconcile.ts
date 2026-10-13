@@ -53,10 +53,14 @@ function msFrom(raw: unknown): number {
  *  - processing: a fulfilment claim abandoned long ago
  * An order flagged `needs_refund` is never a candidate.
  */
-export function selectReconcileCandidates(rows: Array<Record<string, any>>, now: number): ReconcileCandidate[] {
+export function selectReconcileCandidates(
+  rows: Array<Record<string, any>>,
+  now: number,
+  env: Record<string, string | undefined> = process.env
+): ReconcileCandidate[] {
   const out: ReconcileCandidate[] = []
   for (const tx of rows || []) {
-    if (!tx?.order_id || !monCashMethod(tx)) continue
+    if (!tx?.order_id || !reconcileMethod(tx, env)) continue
     if (tx.needs_refund === true || tx.needs_review === true) continue
     const age = now - createdAtMs(tx)
     const status = String(tx.status || '').toLowerCase()
@@ -102,4 +106,23 @@ export function createdAtMs(tx: Record<string, any>): number {
   if (raw && typeof raw.toDate === 'function') return raw.toDate().getTime()
   if (typeof raw === 'number') return raw
   return 0
+}
+
+/** Is the NatCash rail switched on (server flag, the same one initiate enforces)? */
+export function natCashEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return String(env.NATCASH_ENABLED || '').toLowerCase() === 'true'
+}
+
+/**
+ * Which rail the reconcile cron re-asks for this order: the MonCash REST rail,
+ * or NatCash (through the button middleware) while NatCash is enabled, so a
+ * paid NatCash order whose fulfilment was deferred (`confirming`: seats not
+ * yet confirmed) is finished here too.
+ */
+export function reconcileMethod(
+  tx: Record<string, any>,
+  env: Record<string, string | undefined> = process.env
+): 'moncash' | 'moncash_button' | 'natcash' | null {
+  if (String(tx?.mobile_money_provider || '').toLowerCase() === 'natcash') return natCashEnabled(env) ? 'natcash' : null
+  return monCashMethod(tx)
 }

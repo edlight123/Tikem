@@ -9,10 +9,12 @@ Code: `lib/tickets/inventoryShards.ts` (capacity gate), `lib/tickets/seatHolds.t
    and Preview. It signs the token that lets a client release its own hold.
    Without it the code falls back to other secrets, which works but couples
    them. Optional: `SEAT_HOLD_MINUTES` (default 8), `SEAT_HOLD_MAX_PER_BUYER`
-   (default 3), `SEAT_HOLD_MAX_PER_IP` (guests only, default 100).
+   (default 3), `SEAT_HOLD_MAX_PER_IP` (guests only, default 100 holds) and
+   `SEAT_HOLD_MAX_SEATS_PER_IP` (guests only, default 200 seats).
 2. **Stripe webhook:** subscribe the endpoint to `payment_intent.canceled`.
    Without it a canceled PaymentIntent's hold simply expires after 8 minutes.
-3. **Firestore indexes:** `firebase deploy --only firestore:indexes` applies the
+3. **Firestore rules + indexes:** `firebase deploy --only firestore:rules,firestore:indexes`.
+   The rules make `events.inventory_shards_n` client-immutable; the indexes apply the
    `inventory_shards` field exemptions (`h`, `b` are never queried; indexing
    their per-hold map entries only costs index entries and write latency).
 4. Check the cron `/api/cron/inventory-sweep` (every 2 min) appears in Vercel.

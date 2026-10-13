@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
 import { checkPaymentStatus } from '@/lib/moncash'
 import { isMonCashButtonPaidAmountAcceptable } from '@/lib/moncash-button'
+import { orderStatusToken } from '@/lib/tickets/seatHolds'
 import { fulfillPaidOrder } from '@/lib/tickets/fulfillment'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { guestTicketUrl } from '@/lib/guest/identity'
@@ -134,7 +135,10 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL('/purchase/failed?reason=sold_out', request.url))
       case 'confirming':
         return NextResponse.redirect(
-          new URL(`/purchase/processing?provider=moncash-button&orderId=${encodeURIComponent(String(pendingTx.order_id))}`, request.url)
+          new URL(
+            `/purchase/processing?provider=moncash-button&orderId=${encodeURIComponent(String(pendingTx.order_id))}&st=${encodeURIComponent(orderStatusToken(String(pendingTx.order_id)))}`,
+            request.url
+          )
         )
       case 'fulfilled':
         break

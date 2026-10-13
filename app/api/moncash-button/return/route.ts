@@ -14,6 +14,7 @@ import {
 } from '@/lib/moncash'
 import { guestRecipientFromOrder } from '@/lib/guest/checkout'
 import { guestTicketUrl } from '@/lib/guest/identity'
+import { orderStatusToken } from '@/lib/tickets/seatHolds'
 import { fulfillPaidOrder, fulfillmentBlockedReason } from '@/lib/tickets/fulfillment'
 import { getCurrentUser } from '@/lib/auth'
 import { callerHoldsOrder, orderIdsFromCookies } from '@/lib/tickets/orderAccess'
@@ -432,7 +433,10 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
         // Paid; the seats are being confirmed (inventory contention). The reconcile cron
         // finishes it, so the buyer waits on a page that polls — never "failed".
         return NextResponse.redirect(
-          new URL(`/purchase/processing?provider=moncash-button&orderId=${encodeURIComponent(orderId)}`, request.url)
+          new URL(
+            `/purchase/processing?provider=moncash-button&orderId=${encodeURIComponent(orderId)}&st=${encodeURIComponent(orderStatusToken(orderId))}`,
+            request.url
+          )
         )
       case 'ticket_creation_failed':
         // Inventory and the claim were released, so a retry can complete it.

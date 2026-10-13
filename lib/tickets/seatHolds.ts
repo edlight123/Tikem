@@ -33,8 +33,9 @@
  *    The key is the uid, which needs that account's session. The routes also
  *    check each order against the per-account ticket limit;
  *  - a guest, per network per event: at most SEAT_HOLD_MAX_PER_IP live holds
- *    (default 100, sized for Haitian carrier-grade NAT). Never keyed on a guest
- *    email: anyone can type someone else's;
+ *    (default 100, sized for Haitian carrier-grade NAT) adding up to at most
+ *    SEAT_HOLD_MAX_SEATS_PER_IP seats (default 200), so one IP cannot lock
+ *    100 x 50 seats. Never keyed on a guest email: anyone can type someone else's;
  *  - the routes' purchase-attempt rate limits (lib/security shouldRateLimit) run
  *    before any hold is placed, and every hold counts as an attempt.
  * Each cap is claimed ATOMICALLY in a transaction on its own small doc
@@ -100,12 +101,42 @@ export function isValidSeatHoldReleaseToken(holdId: unknown, token: unknown): ho
   return timingSafeEqual(Buffer.from(token), Buffer.from(seatHoldReleaseToken(holdId)))
 }
 
+/** How long an order-status token (orderStatusToken) stays valid. */
+export const ORDER_STATUS_TOKEN_MS = 2 * 60 * 60 * 1000
+
+/**
+ * A short-lived token that lets a page poll ONE order's status without the
+ * order cookie or a session, e.g. the app's WebView, whose cookie jar never saw
+ * the native initiate call. `{expiryMs}.{hmac(orderId, expiry)}`.
+ */
+export function orderStatusToken(orderId: string, expiresAt: number = Date.now() + ORDER_STATUS_TOKEN_MS): string {
+  const exp = Math.floor(expiresAt)
+  const mac = createHmac('sha256', releaseSecret()).update(`order-status:${orderId}:${exp}`).digest('hex').slice(0, 40)
+  return `${exp}.${mac}`
+}
+
+export function isValidOrderStatusToken(orderId: string, token: unknown, now: number = Date.now()): boolean {
+  if (!orderId || typeof token !== 'string') return false
+  const [expRaw, mac] = token.split('.')
+  const exp = Number(expRaw)
+  if (!Number.isInteger(exp) || exp < now || typeof mac !== 'string' || mac.length !== 40) return false
+  const expected = orderStatusToken(orderId, exp).split('.')[1]
+  return timingSafeEqual(Buffer.from(mac), Buffer.from(expected))
+}
+
 export const DEFAULT_MAX_HOLDS_PER_IP = 100
+export const DEFAULT_MAX_SEATS_PER_IP = 200
 
 /** Live guest holds one network may have per event: SEAT_HOLD_MAX_PER_IP (1–1000), else 100. */
 export function maxHoldsPerIp(env: Record<string, string | undefined> = process.env): number {
   const n = Number(env.SEAT_HOLD_MAX_PER_IP)
   return Number.isInteger(n) && n >= 1 && n <= 1000 ? n : DEFAULT_MAX_HOLDS_PER_IP
+}
+
+/** Seats one network's live guest holds may add up to per event: SEAT_HOLD_MAX_SEATS_PER_IP (1–5000), else 200. */
+export function maxSeatsPerIp(env: Record<string, string | undefined> = process.env): number {
+  const n = Number(env.SEAT_HOLD_MAX_SEATS_PER_IP)
+  return Number.isInteger(n) && n >= 1 && n <= 5000 ? n : DEFAULT_MAX_SEATS_PER_IP
 }
 
 /** The client IP from a forwarded-for chain (first hop), or null when unknown. */
@@ -185,7 +216,7 @@ export async function createSeatHold(params: {
     checks.push({ limitId: limitParentId(params.eventId, owner), scope: 'account', maxHolds: maxHoldsPerBuyer(), maxSeats: MAX_TICKETS_PER_ORDER })
   } else {
     const ip = clientIpOf(params.ipAddress)
-    if (ip) checks.push({ limitId: limitParentId(params.eventId, `ip:${ip}`), scope: 'network', maxHolds: maxHoldsPerIp(), maxSeats: null })
+    if (ip) checks.push({ limitId: limitParentId(params.eventId, `ip:${ip}`), scope: 'network', maxHolds: maxHoldsPerIp(), maxSeats: maxSeatsPerIp() })
   }
 
   // Each cap is claimed atomically on its own small doc (claimHoldLimit), never
