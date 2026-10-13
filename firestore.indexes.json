@@ -933,6 +933,18 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "inventory_shards",
+      "fieldPath": "h",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "inventory_shards",
+      "fieldPath": "b",
+      "ttl": false,
+      "indexes": []
+    },
+    {
       "collectionGroup": "payouts",
       "fieldPath": "status",
       "ttl": false,

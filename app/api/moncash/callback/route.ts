@@ -132,6 +132,10 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL('/purchase/success', request.url))
       case 'capacity_exceeded':
         return NextResponse.redirect(new URL('/purchase/failed?reason=sold_out', request.url))
+      case 'confirming':
+        return NextResponse.redirect(
+          new URL(`/purchase/processing?provider=moncash-button&orderId=${encodeURIComponent(String(pendingTx.order_id))}`, request.url)
+        )
       case 'fulfilled':
         break
       default:

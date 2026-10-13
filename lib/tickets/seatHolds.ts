@@ -9,8 +9,10 @@
  * against availability for everyone else. Fulfillment converts it into a sale
  * (convertSeatHold in lib/tickets/inventory.ts). It is released early when the
  * buyer closes the payment sheet (/api/checkout/release-hold), Stripe cancels
- * the PaymentIntent, the reconcile cron finds a stale order unpaid, or the same
- * buyer starts another checkout for the event.
+ * the PaymentIntent, or a verified gateway answer / the reconcile cron finds
+ * the order unpaid. A buyer starting a SECOND checkout never drops the first
+ * hold: that earlier payment may still be in flight (a MonCash OTP screen, a
+ * PaymentIntent processing), and dropping it would let the seat sell twice.
  *
  * WHO MAY RELEASE / CONVERT
  * -------------------------
@@ -25,25 +27,38 @@
  *
  * ABUSE LIMITS (holding seats costs nothing, so a bot could try to lock an event)
  * ------------
- *  - one live hold per buyer per event: a new checkout replaces the buyer's
- *    previous hold (account uid, or a guest's email), so a buyer's held seats
- *    never exceed their current order, which the routes already check against
- *    the order cap (MAX_TICKETS_PER_ORDER, re-checked here) and the per-account
- *    ticket limit (max tickets per user);
- *  - at most SEAT_HOLD_MAX_PER_IP (default 20, generous for carrier-grade NAT)
- *    live holds per network per event;
+ * Keyed only on what the caller controls, so nobody can lock out someone else:
+ *  - a signed-in buyer, per event: at most SEAT_HOLD_MAX_PER_BUYER live holds
+ *    (default 3) and one order's worth of held seats (MAX_TICKETS_PER_ORDER).
+ *    The key is the uid, which needs that account's session. The routes also
+ *    check each order against the per-account ticket limit;
+ *  - a guest, per network per event: at most SEAT_HOLD_MAX_PER_IP live holds
+ *    (default 100, sized for Haitian carrier-grade NAT). Never keyed on a guest
+ *    email: anyone can type someone else's;
  *  - the routes' purchase-attempt rate limits (lib/security shouldRateLimit) run
  *    before any hold is placed, and every hold counts as an attempt.
- * Residual risk: an attacker rotating many IPs AND many guest emails can still
- * hold up to 20 orders per IP for 8 minutes at a time, bounded by the per-IP
- * attempt rate limit. A captcha (or a payment method before the hold) is the
- * next step if that is ever seen.
+ * Each cap is claimed ATOMICALLY in a transaction on its own small doc
+ * (inventory_hold_limits/{event+key}, claimHoldLimit), separate from the shard
+ * transaction, so 50 parallel checkouts from one account cannot all pass. A
+ * hold that is refused gives its slots back; a released, converted or expired
+ * hold frees them; an orphaned slot stops counting at its expiry.
+ * Residual risk: an attacker with many accounts or many IPs can still hold
+ * seats 8 minutes at a time, bounded by the attempt rate limits; guests behind
+ * the same NAT as an attacker share that NAT's 100 slots. A captcha, or a
+ * payment method before the hold, is the next step if that is ever seen.
  */
 
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { adminDb } from '@/lib/firebase/admin'
 import { MAX_TICKETS_PER_ORDER } from '@/lib/tickets/purchasable'
-import { releaseSeats, reserveSeats, type ReserveOutcome, type TierSoldIncrement } from '@/lib/tickets/inventoryShards'
+import {
+  claimHoldLimit,
+  releaseHoldLimit,
+  releaseSeats,
+  reserveSeats,
+  type ReserveOutcome,
+  type TierSoldIncrement,
+} from '@/lib/tickets/inventoryShards'
 
 export const DEFAULT_SEAT_HOLD_MINUTES = 8
 
@@ -85,9 +100,9 @@ export function isValidSeatHoldReleaseToken(holdId: unknown, token: unknown): ho
   return timingSafeEqual(Buffer.from(token), Buffer.from(seatHoldReleaseToken(holdId)))
 }
 
-export const DEFAULT_MAX_HOLDS_PER_IP = 20
+export const DEFAULT_MAX_HOLDS_PER_IP = 100
 
-/** Live holds one network may have per event: SEAT_HOLD_MAX_PER_IP (1–1000), else 20. */
+/** Live guest holds one network may have per event: SEAT_HOLD_MAX_PER_IP (1–1000), else 100. */
 export function maxHoldsPerIp(env: Record<string, string | undefined> = process.env): number {
   const n = Number(env.SEAT_HOLD_MAX_PER_IP)
   return Number.isInteger(n) && n >= 1 && n <= 1000 ? n : DEFAULT_MAX_HOLDS_PER_IP
@@ -99,7 +114,7 @@ export function clientIpOf(raw: string | null | undefined): string | null {
   return ip && ip !== 'unknown' ? ip : null
 }
 
-/** One live hold per buyer per event: account uid, or a guest's email. */
+/** The key a buyer's hold caps count under: account uid, or a guest's email. */
 export function seatHoldOwnerKey(identity: { isGuest?: boolean; id?: string | null; email?: string | null }): string | null {
   if (identity?.isGuest) {
     const email = String(identity.email || '').trim().toLowerCase()
@@ -108,59 +123,24 @@ export function seatHoldOwnerKey(identity: { isGuest?: boolean; id?: string | nu
   return identity?.id ? `user:${identity.id}` : null
 }
 
-const OWNERS_COLLECTION = 'inventory_hold_owners'
-const IPS_COLLECTION = 'inventory_hold_ips'
 const sha = (v: string) => createHash('sha256').update(v).digest('hex').slice(0, 32)
 const safeEventId = (eventId: string) => String(eventId).replace(/[^A-Za-z0-9_-]/g, '_')
-const ownerRef = (eventId: string, ownerKey: string) =>
-  adminDb.collection(OWNERS_COLLECTION).doc(`${safeEventId(eventId)}__${sha(ownerKey)}`)
-const ipRef = (eventId: string, ip: string) => adminDb.collection(IPS_COLLECTION).doc(`${safeEventId(eventId)}__${sha(ip)}`)
+const limitParentId = (eventId: string, key: string) => `${safeEventId(eventId)}__${sha(key)}`
 
-/**
- * Take one of this network's live-hold slots for the event (expired entries and
- * the hold this one replaces do not count). False when the network is at its
- * cap. An infra error lets the hold through: this is an abuse brake, not the
- * capacity gate, and failing closed would lock out a whole carrier NAT.
- */
-async function takeIpSlot(
-  eventId: string,
-  ip: string,
-  holdId: string,
-  expiresAt: number,
-  replaces: string | null,
-  logPrefix: string
-): Promise<boolean> {
-  try {
-    return await adminDb.runTransaction(async (tx: any) => {
-      const ref = ipRef(eventId, ip)
-      const snap = await tx.get(ref)
-      const now = Date.now()
-      const live: Record<string, number> = {}
-      for (const [id, exp] of Object.entries((snap.exists ? snap.data()?.h : null) || {})) {
-        if (Number(exp) > now && id !== replaces) live[id] = Number(exp)
-      }
-      if (Object.keys(live).length >= maxHoldsPerIp()) return false
-      live[holdId] = expiresAt
-      tx.set(ref, { h: live, event_id: String(eventId), updated_at: new Date().toISOString() })
-      return true
-    })
-  } catch (err: any) {
-    console.warn(`${logPrefix} per-network hold cap unavailable; allowing`, { message: err?.message })
-    return true
-  }
+export const DEFAULT_MAX_HOLDS_PER_BUYER = 3
+
+/** Live holds one account may have per event: SEAT_HOLD_MAX_PER_BUYER (1–20), else 3. */
+export function maxHoldsPerBuyer(env: Record<string, string | undefined> = process.env): number {
+  const n = Number(env.SEAT_HOLD_MAX_PER_BUYER)
+  return Number.isInteger(n) && n >= 1 && n <= 20 ? n : DEFAULT_MAX_HOLDS_PER_BUYER
 }
 
-async function dropIpSlot(eventId: string, ip: string, holdId: string): Promise<void> {
-  await adminDb
-    .runTransaction(async (tx: any) => {
-      const ref = ipRef(eventId, ip)
-      const snap = await tx.get(ref)
-      const h = { ...((snap.exists ? snap.data()?.h : null) || {}) }
-      if (!(holdId in h)) return
-      delete h[holdId]
-      tx.set(ref, { ...(snap.data() || {}), h, updated_at: new Date().toISOString() })
-    })
-    .catch(() => undefined)
+interface LimitCheck {
+  limitId: string
+  scope: 'account' | 'network'
+  maxHolds: number
+  /** Cap on the seats held under this key (null = only the hold count is capped). */
+  maxSeats: number | null
 }
 
 export interface SeatHoldResult extends ReserveOutcome {
@@ -168,18 +148,18 @@ export interface SeatHoldResult extends ReserveOutcome {
 }
 
 /**
- * Hold seats for a checkout that is about to start. The buyer's previous hold
- * for this event (a reopened payment sheet, a second tab) is released first, so
- * their own hold can never be what makes the event look sold out to them, and
- * one buyer never holds more than one order's worth of seats.
+ * Hold seats for a checkout that is about to start. The buyer's other live
+ * holds for this event are left alone (one may belong to a payment in flight);
+ * the per-buyer and per-network caps bound how much one party can hold.
  */
 export async function createSeatHold(params: {
   eventId: string
   quantity: number
   tierIncrements: TierSoldIncrement[]
   holdId?: string
+  /** seatHoldOwnerKey(identity): `user:{uid}` or `guest:{email}`. */
   ownerKey?: string | null
-  /** The buyer's IP (x-forwarded-for), for the per-network live-hold cap. */
+  /** The buyer's IP (x-forwarded-for), for the guests' per-network cap. */
   ipAddress?: string | null
   source: string
   holdMs?: number
@@ -195,24 +175,38 @@ export async function createSeatHold(params: {
     return { ok: false, reason: 'invalid_quantity', requested: qty, holdId }
   }
 
-  let previous: string | null = null
-  if (params.ownerKey) {
-    try {
-      const snap = await ownerRef(params.eventId, params.ownerKey).get()
-      const prev = snap.exists ? snap.data()?.hold_id : null
-      if (isSeatHoldId(prev) && prev !== holdId) {
-        previous = prev
-        await releaseSeats({ reservationId: prev, onlyHeld: true, logPrefix })
-      }
-    } catch (err: any) {
-      console.warn(`${logPrefix} could not release the buyer's previous hold`, { message: err?.message })
-    }
+  // Caps are keyed only on what the CALLER controls: their own signed-in
+  // account (a uid needs that account's session) or, for a guest, the network
+  // they are calling from. Never on a guest email: anyone can type someone
+  // else's, and an email-keyed cap would let them lock that person out.
+  const checks: LimitCheck[] = []
+  const owner = String(params.ownerKey || '')
+  if (owner.startsWith('user:')) {
+    checks.push({ limitId: limitParentId(params.eventId, owner), scope: 'account', maxHolds: maxHoldsPerBuyer(), maxSeats: MAX_TICKETS_PER_ORDER })
+  } else {
+    const ip = clientIpOf(params.ipAddress)
+    if (ip) checks.push({ limitId: limitParentId(params.eventId, `ip:${ip}`), scope: 'network', maxHolds: maxHoldsPerIp(), maxSeats: null })
   }
 
-  const ip = clientIpOf(params.ipAddress)
-  if (ip && !(await takeIpSlot(params.eventId, ip, holdId, expiresAt, previous, logPrefix))) {
-    console.warn(`${logPrefix} live-hold cap reached for a network`, { eventId: params.eventId })
-    return { ok: false, reason: 'too_many_holds', holdId }
+  // Each cap is claimed atomically on its own small doc (claimHoldLimit), never
+  // inside the shard transaction; a hold that is then refused gives its slots back.
+  const claimed: LimitCheck[] = []
+  const giveBack = () => Promise.all(claimed.map((c) => releaseHoldLimit(c.limitId, holdId)))
+  for (const check of checks) {
+    const verdict = await claimHoldLimit({
+      limitId: check.limitId,
+      reservationId: holdId,
+      seats: qty,
+      expiresAt,
+      maxHolds: check.maxHolds,
+      maxSeats: check.maxSeats,
+    })
+    if (verdict !== 'ok') {
+      await giveBack()
+      if (verdict === 'capped') console.warn(`${logPrefix} live-hold cap reached`, { eventId: params.eventId, scope: check.scope })
+      return { ok: false, reason: verdict === 'capped' ? 'too_many_holds' : 'busy', holdId }
+    }
+    claimed.push(check)
   }
 
   const outcome = await reserveSeats({
@@ -224,15 +218,10 @@ export async function createSeatHold(params: {
     expiresAt,
     source: params.source,
     owner: params.ownerKey || null,
+    limitSlots: claimed.map((c) => c.limitId),
     logPrefix,
   })
-
-  if (!outcome.ok && ip) await dropIpSlot(params.eventId, ip, holdId)
-  if (outcome.ok && outcome.reservationId && params.ownerKey) {
-    await ownerRef(params.eventId, params.ownerKey)
-      .set({ hold_id: holdId, event_id: String(params.eventId), updated_at: new Date().toISOString() })
-      .catch((err: any) => console.warn(`${logPrefix} could not record the hold owner`, { message: err?.message }))
-  }
+  if (!outcome.ok || !outcome.reservationId) await giveBack()
   return { ...outcome, holdId }
 }
 
@@ -274,9 +263,9 @@ export const SEAT_HOLD_MESSAGES = {
     ht: 'Gen twòp moun k ap achte kounye a, nou pa t ka kenbe plas ou yo. Tanpri eseye ankò nan yon ti moman.',
   },
   too_many_holds: {
-    en: 'Too many checkouts are in progress from your network. Please try again in a few minutes.',
-    fr: 'Trop de paiements sont en cours depuis votre réseau. Veuillez réessayer dans quelques minutes.',
-    ht: 'Gen twòp peman k ap fèt sou rezo ou a. Tanpri eseye ankò nan kèk minit.',
+    en: 'Too many checkouts are already in progress for this event. Finish or close one, or try again in a few minutes.',
+    fr: 'Trop de paiements sont déjà en cours pour cet événement. Terminez-en ou fermez-en un, ou réessayez dans quelques minutes.',
+    ht: 'Gen twòp peman ki deja ap fèt pou evènman sa a. Fini oswa fèmen youn, oswa eseye ankò nan kèk minit.',
   },
 } as const
 
@@ -290,7 +279,7 @@ export interface SeatHoldRefusal {
  *  - 409 sold_out       holds + sales fill the event or the tier
  *  - 409 only_n_left    fewer seats left than requested (`remaining` carries how many)
  *  - 503 busy_try_again contention outlasted the retries; nothing was reserved
- *  - 429 too_many_holds this network has too many checkouts in progress
+ *  - 429 too_many_holds this buyer (or a guest's network) already holds its cap
  */
 export function seatHoldRefusal(outcome: ReserveOutcome, lang: Lang = 'en'): SeatHoldRefusal | null {
   if (outcome.ok) return null

@@ -7,6 +7,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireDevTools } from '@/lib/auth'
 import { adminError } from '@/lib/api/admin-response'
+import { eventHasInventoryShards } from '@/lib/tickets/inventoryShards'
+
+// Events whose seats live in inventory shards are never rewritten here: their
+// tickets_sold is a rollup of the shards and would be overwritten by the next
+// sale. scripts/reseed-inventory-shards.ts repairs those (docs/runbooks/seat-holds.md).
+const SHARDED = { fixed: false, skipped: 'sharded_inventory', message: 'Use scripts/reseed-inventory-shards.ts' }
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,6 +35,9 @@ export async function POST(request: NextRequest) {
       }
       
       const event = eventDoc.data()
+      if (await eventHasInventoryShards(eventId)) {
+        return NextResponse.json({ success: true, results: [{ eventId, title: event?.title, ...SHARDED }] })
+      }
       const ticketsSnapshot = await adminDb
         .collection('tickets')
         .where('event_id', '==', eventId)
@@ -67,6 +76,10 @@ export async function POST(request: NextRequest) {
         const event = eventDoc.data()
         
         try {
+          if (await eventHasInventoryShards(eventId)) {
+            results.push({ eventId, title: event.title, ...SHARDED })
+            continue
+          }
           const ticketsSnapshot = await adminDb
             .collection('tickets')
             .where('event_id', '==', eventId)

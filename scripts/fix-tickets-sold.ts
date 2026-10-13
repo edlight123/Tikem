@@ -3,11 +3,16 @@
  * Counts actual tickets in Firestore and updates event.tickets_sold field
  * 
  * Run with: npx tsx scripts/fix-tickets-sold.ts
+ *
+ * Events whose seats live in inventory shards are SKIPPED: their tickets_sold is
+ * a rollup of the shards and would be overwritten on the next sale. Repair those
+ * with scripts/reseed-inventory-shards.ts (docs/runbooks/seat-holds.md).
  */
 
 // Load environment variables
 import 'dotenv/config'
 import { adminDb } from '../lib/firebase/admin'
+import { eventHasInventoryShards } from '../lib/tickets/inventoryShards'
 
 async function fixTicketsSold() {
   console.log('🔄 Starting tickets_sold count fix...')
@@ -25,6 +30,10 @@ async function fixTicketsSold() {
       const event = eventDoc.data()
       
       try {
+        if (await eventHasInventoryShards(eventId)) {
+          console.log(`↷ Skipped event ${eventId}: sharded inventory — use scripts/reseed-inventory-shards.ts ${eventId}`)
+          continue
+        }
         // Count tickets for this event
         const ticketsSnapshot = await adminDb
           .collection('tickets')

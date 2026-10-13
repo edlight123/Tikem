@@ -73,8 +73,9 @@ describe('seat hold lifecycle', () => {
     expect(first).toEqual(expect.objectContaining({ ok: true }))
     const again = await inventory.convertSeatHold(params)
     expect(again).toEqual(expect.objectContaining({ ok: true, alreadyDone: true }))
-    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual({ used: 3, sold: 3, held: 0 })
+    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual(expect.objectContaining({ used: 3, sold: 3, held: 0 }))
     expect(mockFs.get(`inventory_reservations/${hold.holdId}`)?.state).toBe('sold')
+    await shards.rollupInventoryCounters(EVT)
     expect(mockFs.get(`events/${EVT}`)?.tickets_sold).toBe(3)
     expect(mockFs.get('ticket_tiers/vip')?.sold_quantity).toBe(3)
   })
@@ -104,12 +105,23 @@ describe('seat hold lifecycle', () => {
     expect(mockFs.get(`inventory_reservations/${stale.holdId}`)?.state).toBe('expired')
   })
 
-  it('a new checkout by the same buyer releases their previous hold', async () => {
-    seedEvent({ max_tickets: 2 })
-    const first = await holds.createSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], source: 'card', ownerKey: 'user:u1' })
+  it('a second checkout by the same buyer never drops the first hold (its payment may be in flight)', async () => {
+    seedEvent({ max_tickets: 3 })
+    const first = await holds.createSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], source: 'moncash', ownerKey: 'user:u1' })
     const second = await holds.createSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], source: 'card', ownerKey: 'user:u1' })
-    expect(second.ok).toBe(true)
-    expect(mockFs.get(`inventory_reservations/${first.holdId}`)?.state).toBe('released')
+    // Refused for capacity: the first hold survives and its payment still converts.
+    expect(second).toEqual(expect.objectContaining({ ok: false, reason: 'event_capacity' }))
+    expect(mockFs.get(`inventory_reservations/${first.holdId}`)?.state).toBe('held')
+    const paid = await inventory.convertSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], reservationId: first.holdId })
+    expect(paid.ok).toBe(true)
+  })
+
+  it('a guest email cannot be used to drop someone else’s hold', async () => {
+    seedEvent({ max_tickets: 4 })
+    const victim = await holds.createSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], source: 'card', ownerKey: 'guest:v@x.com' })
+    const attacker = await holds.createSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], source: 'card', ownerKey: 'guest:v@x.com' })
+    expect(attacker.ok).toBe(true)
+    expect(mockFs.get(`inventory_reservations/${victim.holdId}`)?.state).toBe('held')
   })
 
   it('expired hold + successful payment: converts anyway when capacity allows', async () => {
@@ -118,7 +130,7 @@ describe('seat hold lifecycle', () => {
     await new Promise((r) => setTimeout(r, 5))
     const r = await inventory.convertSeatHold({ eventId: EVT, quantity: 2, tierIncrements: [], reservationId: hold.holdId })
     expect(r.ok).toBe(true)
-    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual({ used: 2, sold: 2, held: 0 })
+    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual(expect.objectContaining({ used: 2, sold: 2, held: 0 }))
   })
 
   it('expired hold + successful payment on a now sold-out event: refuses (caller refunds)', async () => {
@@ -151,6 +163,7 @@ describe('seat hold lifecycle', () => {
     expect(again.alreadyDone).toBe(true)
     const full = await inventory.convertSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], reservationId: 'order_456' })
     expect(full).toEqual(expect.objectContaining({ ok: false, reason: 'event_capacity', remaining: 0 }))
+    await shards.rollupInventoryCounters(EVT)
     expect(mockFs.get(`events/${EVT}`)?.tickets_sold).toBe(10)
     expect(mockFs.get('ticket_tiers/ga')?.sold_quantity).toBe(10)
   })
@@ -259,31 +272,49 @@ describe('shard allocation never oversells under concurrency', () => {
       )
     )
     expect(runs.every((r) => r.ok)).toBe(true)
-    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual({ used: 2, sold: 2, held: 0 })
+    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual(expect.objectContaining({ used: 2, sold: 2, held: 0 }))
   }, 30_000)
 })
 
 describe('hold abuse limits and release authorization', () => {
-  it('caps live holds per network per event, and a replaced hold frees its slot', async () => {
+  it('caps guest holds per network per event; a released hold frees its slot; accounts are not IP-capped', async () => {
     seedEvent({ max_tickets: 1000 })
     const env = process.env.SEAT_HOLD_MAX_PER_IP
     process.env.SEAT_HOLD_MAX_PER_IP = '3'
     try {
-      const make = (owner: string) =>
-        holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: owner, ipAddress: '1.2.3.4, 10.0.0.1' })
-      for (const o of ['user:a', 'user:b', 'user:c']) expect((await make(o)).ok).toBe(true)
-      const fourth = await make('user:d')
+      const guest = (email: string) =>
+        holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: `guest:${email}`, ipAddress: '1.2.3.4, 10.0.0.1' })
+      const made = []
+      for (const e of ['a@x', 'b@x', 'c@x']) {
+        const h = await guest(e)
+        expect(h.ok).toBe(true)
+        made.push(h)
+      }
+      const fourth = await guest('d@x')
       expect(fourth).toEqual(expect.objectContaining({ ok: false, reason: 'too_many_holds' }))
       expect(holds.seatHoldRefusal(fourth)).toEqual({ status: 429, body: expect.objectContaining({ code: 'too_many_holds' }) })
-      // The same buyer reopening checkout replaces their own hold: still within the cap.
-      expect((await make('user:a')).ok).toBe(true)
-      // Another network is unaffected.
-      const other = await holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ipAddress: '5.6.7.8' })
-      expect(other.ok).toBe(true)
-      expect(await used()).toBe(4)
+      // A signed-in buyer on the same NAT is capped by their account, not the IP.
+      const account = await holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: 'user:z', ipAddress: '1.2.3.4' })
+      expect(account.ok).toBe(true)
+      // Releasing a hold frees its slot at once (not at expiry).
+      expect(await holds.releaseSeatHold(made[0].holdId)).toBe(true)
+      expect((await guest('d@x')).ok).toBe(true)
+      // Converting does too.
+      await inventory.convertSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], reservationId: made[1].holdId })
+      expect((await guest('e@x')).ok).toBe(true)
     } finally {
       process.env.SEAT_HOLD_MAX_PER_IP = env
     }
+  })
+
+  it('caps one buyer at 3 live holds and one order of held seats', async () => {
+    seedEvent({ max_tickets: 1000 })
+    const mk = (q: number) => holds.createSeatHold({ eventId: EVT, quantity: q, tierIncrements: [], source: 'card', ownerKey: 'user:u9' })
+    expect((await mk(20)).ok).toBe(true)
+    expect((await mk(20)).ok).toBe(true)
+    expect(await mk(20)).toEqual(expect.objectContaining({ ok: false, reason: 'too_many_holds' }))
+    expect((await mk(10)).ok).toBe(true)
+    expect(await mk(1)).toEqual(expect.objectContaining({ ok: false, reason: 'too_many_holds' }))
   })
 
   it('never holds more than one order may buy', async () => {
@@ -322,6 +353,128 @@ describe('hold abuse limits and release authorization', () => {
     const res = await releaseCall({ holdId: client.id, releaseToken: client.releaseToken })
     expect(await res.json()).toEqual({ released: false })
     expect(await used()).toBe(2)
+  })
+})
+
+describe('abuse caps under concurrency, keyed on what the caller controls', () => {
+  it('50 parallel checkouts from one account: exactly the cap (3) succeed', async () => {
+    seedEvent({ max_tickets: 1000 })
+    let pending = Array.from({ length: 50 }, (_, i) => i)
+    const ok: string[] = []
+    let capped = 0
+    for (let round = 0; round < 30 && pending.length; round++) {
+      const out = await Promise.all(
+        pending.map(() => holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: 'user:bot' }))
+      )
+      const next: number[] = []
+      out.forEach((o: any, i: number) => {
+        if (o.ok) ok.push(o.holdId)
+        else if (o.reason === 'busy') next.push(pending[i])
+        else if (o.reason === 'too_many_holds') capped += 1
+      })
+      pending = next
+    }
+    expect(ok).toHaveLength(3)
+    expect(capped).toBe(47)
+    expect(await used()).toBe(3)
+  }, 30_000)
+
+  it('a guest email is never a cap key: typing a victim’s email blocks nobody', async () => {
+    seedEvent({ max_tickets: 1000 })
+    for (let i = 0; i < 6; i++) {
+      const r = await holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: 'guest:victim@x.com', ipAddress: `9.9.9.${i}` })
+      expect(r.ok).toBe(true)
+    }
+    // The real owner, signed in or as a guest from their own network, still checks out.
+    expect((await holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: 'user:victim' })).ok).toBe(true)
+    expect((await holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [], source: 'card', ownerKey: 'guest:victim@x.com', ipAddress: '7.7.7.7' })).ok).toBe(true)
+  })
+})
+
+describe('invariant under interleaved steals, rebalances and capacity edits', () => {
+  it('total never exceeds the capacity in force, and the shares always add up to it', async () => {
+    seedEvent({ max_tickets: 60 })
+    seedTier('a', { total_quantity: 40 })
+    seedTier('b', { total_quantity: 40 })
+    const results: any[] = []
+    const ops: Array<() => Promise<any>> = []
+    for (let i = 0; i < 240; i++) {
+      const tierId = i % 2 ? 'a' : 'b'
+      const q = (i % 3) + 1
+      // Holds, sales, conversions and releases all at once.
+      ops.push(async () => {
+        if (i % 4 === 0) return inventory.reserveInventoryAtomic({ eventId: EVT, quantity: q, tierIncrements: [{ tierId, quantity: q }] })
+        const h = await holds.createSeatHold({ eventId: EVT, quantity: q, tierIncrements: [{ tierId, quantity: q }], source: 'card' })
+        if (h.ok && i % 5 === 0) await holds.releaseSeatHold(h.holdId)
+        if (h.ok && i % 5 === 1) await inventory.convertSeatHold({ eventId: EVT, quantity: q, tierIncrements: [{ tierId, quantity: q }], reservationId: h.holdId })
+        return h
+      })
+      // Capacity edits mid-rush force global resyncs (the cap snapshot no longer matches).
+      if (i === 60) ops.push(async () => mockFs.seed(`events/${EVT}`, { ...mockFs.get(`events/${EVT}`), max_tickets: 80 }))
+      if (i === 150) ops.push(async () => mockFs.seed('ticket_tiers/a', { ...mockFs.get('ticket_tiers/a'), total_quantity: 30 }))
+    }
+    // Interleave: everything in flight together.
+    const out = await Promise.all(ops.map((op) => op().catch((e: any) => ({ ok: false, reason: 'threw', e }))))
+    results.push(...out)
+    expect(results.some((r: any) => r?.reason === 'threw')).toBe(false)
+
+    const ev = await shards.availabilityOf(EVT, shards.EVENT_BUCKET)
+    const a = await shards.availabilityOf(EVT, shards.tierBucket('a'))
+    const b = await shards.availabilityOf(EVT, shards.tierBucket('b'))
+    expect(ev.used).toBeLessThanOrEqual(80)
+    expect(b.used).toBeLessThanOrEqual(40)
+    // Tier a: whatever was placed under the old 40 stays honoured; nothing past it.
+    expect(a.used).toBeLessThanOrEqual(40)
+    expect(ev.used).toBe(a.used + b.used)
+
+    // Settle: one more request per bucket resyncs every snapshot; then the shares
+    // must add up to exactly the capacity in force (or the bucket is still stale
+    // because it is over a lowered cap, where nothing sells).
+    await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 1, tierIncrements: [{ tierId: 'b', quantity: 1 }] })
+    const evAfter = await shards.availabilityOf(EVT, shards.EVENT_BUCKET)
+    expect(evAfter.used).toBeLessThanOrEqual(80)
+    if (evAfter.used < 80) expect(evAfter.alloc).toBe(80)
+    const bAfter = await shards.availabilityOf(EVT, shards.tierBucket('b'))
+    expect(bAfter.used).toBeLessThanOrEqual(40)
+  }, 60_000)
+})
+
+describe('shard sizing and repair', () => {
+  it('sizes shards from capacity (20..100) and fixes the count on the event', async () => {
+    expect(shards.shardCountForCapacity(null)).toBe(20)
+    expect(shards.shardCountForCapacity(500)).toBe(20)
+    expect(shards.shardCountForCapacity(2000)).toBe(80)
+    expect(shards.shardCountForCapacity(100_000)).toBe(100)
+    seedEvent({ max_tickets: 2000 })
+    expect(await shards.eventHasInventoryShards(EVT)).toBe(false)
+    expect((await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 1, tierIncrements: [] })).ok).toBe(true)
+    expect(mockFs.get(`events/${EVT}`)?.inventory_shards_n).toBe(80)
+    expect((await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).shards).toBe(80)
+    expect((await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).alloc).toBe(2000)
+    expect(await shards.eventHasInventoryShards(EVT)).toBe(true)
+  })
+
+  it('reseed: dry run writes nothing; apply sets sold from live tickets and keeps holds', async () => {
+    seedEvent({ max_tickets: 10 })
+    seedTier('ga', { total_quantity: 10 })
+    await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 2, tierIncrements: [{ tierId: 'ga', quantity: 2 }] })
+    const hold = await holds.createSeatHold({ eventId: EVT, quantity: 1, tierIncrements: [{ tierId: 'ga', quantity: 1 }], source: 'card' })
+    const dry = await shards.reseedInventoryShards(EVT, { event: 5, tiers: { ga: 5 } })
+    expect(dry.written).toBe(false)
+    expect((await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).sold).toBe(2)
+    await shards.reseedInventoryShards(EVT, { event: 5, tiers: { ga: 5 } }, { dryRun: false })
+    expect(await shards.availabilityOf(EVT, shards.EVENT_BUCKET)).toEqual(expect.objectContaining({ sold: 5, held: 1, alloc: 10 }))
+    expect(mockFs.get(`inventory_reservations/${hold.holdId}`)?.state).toBe('held')
+    // 4 left: 5 sold + 1 held of 10.
+    const r = await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 5, tierIncrements: [{ tierId: 'ga', quantity: 5 }] })
+    expect(r).toEqual(expect.objectContaining({ ok: false, remaining: 4 }))
+  })
+
+  it('reseed above capacity: nothing more sells until the total is back under', async () => {
+    seedEvent({ max_tickets: 4 })
+    await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 1, tierIncrements: [] })
+    await shards.reseedInventoryShards(EVT, { event: 6, tiers: {} }, { dryRun: false })
+    expect((await inventory.reserveInventoryAtomic({ eventId: EVT, quantity: 1, tierIncrements: [] })).ok).toBe(false)
   })
 })
 

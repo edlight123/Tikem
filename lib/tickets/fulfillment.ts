@@ -140,6 +140,12 @@ export interface FulfillPaidOrderResult {
     | 'in_progress'
     | 'not_found'
     | 'ticket_creation_failed'
+    /**
+     * Paid, but the seats could not be confirmed yet (inventory contention). The claim was
+     * handed back and a retry (callback, reconcile cron) finishes it: show the buyer a
+     * "confirming" page, never "failed".
+     */
+    | 'confirming'
     | 'capacity_exceeded'
     /** The order is flagged for refund (or refunded/cancelled): never issue tickets. */
     | 'refused'
@@ -439,7 +445,7 @@ export async function fulfillPaidOrder(params: {
     // callback retry / the reconcile cron fulfils it later — never issue unchecked.
     console.error(`${logPrefix} could not confirm seats for a paid order (contention); will retry`, { orderId })
     await releaseOrderClaim(orderId)
-    return { outcome: 'ticket_creation_failed', ticketId: null, reason: 'inventory_busy' }
+    return { outcome: 'confirming', ticketId: null, reason: 'inventory_busy' }
   }
   if (!reservation.ok) {
     console.error(`${logPrefix} capacity exceeded after payment — refusing to issue tickets`, {

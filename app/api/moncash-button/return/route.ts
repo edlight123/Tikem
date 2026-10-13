@@ -428,6 +428,12 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
       case 'capacity_exceeded':
         // Paid, but sold out: fulfillment flagged the order for refund, issued nothing.
         return NextResponse.redirect(new URL('/purchase/failed?reason=sold_out', request.url))
+      case 'confirming':
+        // Paid; the seats are being confirmed (inventory contention). The reconcile cron
+        // finishes it, so the buyer waits on a page that polls — never "failed".
+        return NextResponse.redirect(
+          new URL(`/purchase/processing?provider=moncash-button&orderId=${encodeURIComponent(orderId)}`, request.url)
+        )
       case 'ticket_creation_failed':
         // Inventory and the claim were released, so a retry can complete it.
         return NextResponse.redirect(new URL('/purchase/failed?reason=ticket_creation_failed', request.url))

@@ -76,10 +76,15 @@ interface CheckoutFormProps {
    * holders have /tickets and this stays null for them.
    */
   guestTicketUrl: string | null
+  /**
+   * Tells the sheet when a payment is being confirmed or has gone through, so
+   * closing it then never releases the seat hold the payment is about to convert.
+   */
+  onPaymentStateChange: (state: 'idle' | 'confirming' | 'paid') => void
   t: any
 }
 
-function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, country, feeIncidence, paidQuantity, pricing, onClose, clientSecret, guestTicketUrl, t }: CheckoutFormProps) {
+function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, country, feeIncidence, paidQuantity, pricing, onClose, clientSecret, guestTicketUrl, onPaymentStateChange, t }: CheckoutFormProps) {
   // Server breakdown when we have it; the same shared calculation as a fallback so a
   // buyer-pays market never renders a bare face value as the total. Priced against
   // the EVENT, so an organizer who absorbs the fee is not shown one.
@@ -111,6 +116,7 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
 
     setProcessing(true)
     setError(null)
+    onPaymentStateChange('confirming')
 
     try {
       const { error: submitError } = await stripe.confirmPayment({
@@ -126,7 +132,10 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           submitError.message || t('checkout.payment_failed', { defaultValue: 'Payment failed' })
         )
         setProcessing(false)
+        onPaymentStateChange('idle')
       } else {
+        // From here the card has been charged: the hold must convert, never be released.
+        onPaymentStateChange('paid')
         // Payment succeeded - create tickets immediately
         try {
           // Get the payment intent ID from the elements
@@ -180,6 +189,9 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
         err.message || t('checkout.unexpected_error', { defaultValue: 'An unexpected error occurred' })
       )
       setProcessing(false)
+      // The outcome is unknown (the charge may have gone through): keep the hold
+      // rather than release a seat that may be paid for. It expires on its own.
+      onPaymentStateChange('confirming')
     }
   }
 
@@ -339,14 +351,22 @@ export default function EmbeddedStripePayment({
   const [error, setError] = useState<string | null>(null)
   const [seatHold, setSeatHold] = useState<SeatHold | null>(null)
   const seatHoldRef = useRef<SeatHold | null>(null)
+  // 'confirming' / 'paid': a payment is in flight or done, so the hold is the
+  // buyer's seat and must never be released by closing the sheet.
+  const paymentStateRef = useRef<'idle' | 'confirming' | 'paid'>('idle')
+  const onPaymentStateChange = useCallback((state: 'idle' | 'confirming' | 'paid') => {
+    // Once paid, always paid.
+    if (paymentStateRef.current !== 'paid') paymentStateRef.current = state
+  }, [])
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   // Closing the sheet without paying gives the held seats back now instead of at
-  // expiry. Best-effort; a seat already paid for is never released by the server.
+  // expiry. Never while a payment is confirming or after it succeeded: the order
+  // (create-from-payment / the webhook) is about to convert that very hold.
   const closeSheet = useCallback(() => {
     const hold = seatHoldRef.current
     seatHoldRef.current = null
-    if (hold) {
+    if (hold && paymentStateRef.current === 'idle') {
       fetch('/api/checkout/release-hold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -499,6 +519,7 @@ export default function EmbeddedStripePayment({
                   onClose={closeSheet}
                   clientSecret={clientSecret}
                   guestTicketUrl={guestTicketUrl}
+                  onPaymentStateChange={onPaymentStateChange}
                   t={t}
                 />
               </Elements>

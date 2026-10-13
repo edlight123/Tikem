@@ -172,7 +172,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: result.outcome, needsRefund: true })
     }
 
-    if (result.outcome === 'ticket_creation_failed') {
+    if (result.outcome === 'ticket_creation_failed' || result.outcome === 'confirming') {
       // Return 500 so Sogepay retries the (paid) notification and we can re-attempt fulfillment.
       return NextResponse.json({ ok: false, error: 'ticket_creation_failed' }, { status: 500 })
     }
