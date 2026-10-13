@@ -73,6 +73,14 @@ describe('/api/moncash-button/status', () => {
     expect((await poll('orderId=111')).status).toBe(200)
   })
 
+  it('a status token alone never reveals the ticket id; the owner sees it', async () => {
+    mockOrders['111'] = { ...mockOrders['111'], status: 'completed', ticket_id: 'tkt_9' }
+    const byToken = await poll(`orderId=111&st=${encodeURIComponent(orderStatusToken('111'))}`)
+    expect(byToken.body).toEqual({ status: 'completed', ticketId: null, failureReason: null })
+    mockUser.id = 'u1'
+    expect((await poll('orderId=111')).body.ticketId).toBe('tkt_9')
+  })
+
   it('unknown and not-yours both answer 404 (no id probing)', async () => {
     expect((await poll('orderId=999')).status).toBe(404)
     expect((await poll('orderId=111')).status).toBe(404)

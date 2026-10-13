@@ -48,21 +48,24 @@ export async function GET(request: Request) {
       .single()
     if (!pendingTx) return notFound()
 
-    const byToken = isValidOrderStatusToken(orderId, url.searchParams.get('st'))
-    const owns =
-      byToken ||
-      callerHoldsOrder({
-        orderId,
-        order: pendingTx,
-        cookieOrderIds: orderIdsFromCookies(await cookies()),
-        sessionUid: (await getCurrentUser().catch(() => null))?.id || null,
-      })
-    if (!owns) return notFound()
+    // Two levels of access. The order cookie or the signed-in buyer OWNS the
+    // order and may see its ticket id, exactly as on the return route. The
+    // signed status token (`st`) rides in a redirect URL, so it is handed to
+    // whoever followed that link (the app's MonCash WebView has no cookie): it
+    // proves no more than the order id itself did, and so it reads the STATUS
+    // only, never the ticket id.
+    const ownsOrder = callerHoldsOrder({
+      orderId,
+      order: pendingTx,
+      cookieOrderIds: orderIdsFromCookies(await cookies()),
+      sessionUid: (await getCurrentUser().catch(() => null))?.id || null,
+    })
+    if (!ownsOrder && !isValidOrderStatusToken(orderId, url.searchParams.get('st'))) return notFound()
 
     return NextResponse.json({
       // A paid order handed back for a retry reads 'pending' / 'processing' until it completes.
       status: String(pendingTx.status || 'pending'),
-      ticketId: pendingTx.ticket_id || null,
+      ticketId: ownsOrder ? pendingTx.ticket_id || null : null,
       failureReason: pendingTx.failure_reason || null,
     })
   } catch (error: any) {

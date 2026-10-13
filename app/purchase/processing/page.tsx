@@ -42,7 +42,7 @@ export default function PurchaseProcessingPage() {
         if (res.ok) {
           const data = await res.json()
           if (data.status === 'completed') {
-            router.replace(`/purchase/success?ticketId=${data.ticketId || ''}`)
+            router.replace(data.ticketId ? `/purchase/success?ticketId=${encodeURIComponent(data.ticketId)}` : '/purchase/success')
             return
           }
           if (data.status === 'failed') {
