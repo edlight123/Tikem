@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -134,10 +133,11 @@ export default function ContactOrganizerModal({
                 </TouchableOpacity>
               </View>
             ) : (
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
+              // A plain View, not a ScrollView: the form is short, and inside this
+              // auto-height sheet the ScrollView collapsed. Its content drew past
+              // its bounds, so the topic chips ignored taps and the Send button
+              // was clipped off entirely (seen in the simulator).
+              <View>
                 <Text style={styles.fieldLabel}>{t('contactOrganizer.topicLabel')}</Text>
                 <View style={styles.segment} accessibilityRole="radiogroup">
                   {TOPICS.map((key) => {
@@ -194,7 +194,7 @@ export default function ContactOrganizerModal({
                     </Text>
                   )}
                 </TouchableOpacity>
-              </ScrollView>
+              </View>
             )}
           </View>
         </KeyboardAvoidingView>

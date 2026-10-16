@@ -2633,7 +2633,7 @@ export default {
     topics: {
       event: 'Evènman an',
       ticket: 'Tikè mwen',
-      other: 'Lòt bagay',
+      other: 'Lòt',
     },
     messagePlaceholder: 'Mesaj',
     send: 'Voye mesaj la',

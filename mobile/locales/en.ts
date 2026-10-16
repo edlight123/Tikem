@@ -2700,7 +2700,7 @@ export default {
     topics: {
       event: 'The event',
       ticket: 'My ticket',
-      other: 'Something else',
+      other: 'Other',
     },
     messagePlaceholder: 'Message',
     send: 'Send message',

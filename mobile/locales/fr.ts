@@ -2664,7 +2664,7 @@ export default {
     topics: {
       event: "L'événement",
       ticket: 'Mon billet',
-      other: 'Autre chose',
+      other: 'Autre',
     },
     messagePlaceholder: 'Message',
     send: 'Envoyer le message',
