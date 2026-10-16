@@ -105,6 +105,7 @@ export default {
     friendsGoingSuffix: 'friends going',
   },
   whosGoing: {
+    privateSub: "Guests here keep their attendance private.",
     title: 'Who\'s going',
     personOne: '{count} person',
     personOther: '{count} people',
@@ -2693,11 +2694,13 @@ export default {
   },
 
   contactOrganizer: {
-    title: 'Contact the organizer about',
+    title: 'Message the organizer',
+    aboutEvent: 'About {event}',
+    topicLabel: 'What is it about?',
     topics: {
-      event: 'the event',
-      ticket: 'my ticket',
-      other: 'something else',
+      event: 'The event',
+      ticket: 'My ticket',
+      other: 'Something else',
     },
     messagePlaceholder: 'Message',
     send: 'Send message',
@@ -2705,7 +2708,7 @@ export default {
     sentBody: 'The organizer has been notified and can reply to you in the app.',
     sentBodyNamed: 'The organizer of {event} has been notified and can reply to you in the app.',
     errorGeneric: "Couldn't send your message. Try again.",
-    open: 'Contact organizer',
+    open: 'Message the organizer',
   },
 
   // The other half of contactOrganizer: the organizer reading those questions
@@ -2859,6 +2862,7 @@ export default {
     loadFailedHint: 'Check your connection and try again.',
     retry: 'Retry',
     oneTypePerOrder: 'One ticket type per order',
+    mixedFreeBody: 'This code makes the order free, and a free order holds one ticket type. Remove the other ticket type to continue.',
     ticketsAvailable: 'tickets available',
     soldOut: 'Sold Out',
     onSaleFrom: 'On sale {date}',
@@ -3418,7 +3422,8 @@ export default {
     inviteFriends: "Invite friends",
     inviteFriendsSub: "Send this event to your Tikèm friends",
     pickerTitle: "Invite friends",
-    pickerSubtitle: "Only your Tikèm friends. They get a notification from you.",
+    pickerSubtitle: "They'll get a notification from you.",
+    selectFriends: "Select friends",
     search: "Search your friends",
     sendCount: "Invite {count}",
     sentTitle: "Invites sent",

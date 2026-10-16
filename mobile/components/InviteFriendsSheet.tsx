@@ -19,6 +19,7 @@ import { useSocialFlags } from '../lib/socialFlags';
 import { radius, spacing } from '../theme/tokens';
 import { fetchInvitePicker, sendInvites, type InvitePickerFriend } from '../lib/api/invites';
 import PersonAvatar from './PersonAvatar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from './AppAlert';
 
 const MAX_SELECTED = 20;
@@ -42,6 +43,7 @@ export function InviteFriendsSheet({
   const { t } = useI18n();
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
+  const insets = useSafeAreaInsets();
   const [friends, setFriends] = useState<InvitePickerFriend[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
@@ -103,17 +105,21 @@ export function InviteFriendsSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+            {/* Paints below the sheet's edge: on device the sheet stopped short
+                of the screen bottom and the page showed through the gap. */}
+            <View pointerEvents="none" style={styles.bottomFill} />
             <View style={styles.grabber} />
             <View style={styles.header}>
-              <Text style={styles.title}>{t('invites.pickerTitle')}</Text>
+              <Text style={styles.title}>{t('invites.pickerTitle').toLowerCase()}</Text>
               <TouchableOpacity
                 onPress={onClose}
                 hitSlop={12}
+                style={styles.close}
                 accessibilityRole="button"
                 accessibilityLabel={t('invites.close')}
               >
-                <X size={22} color={colors.textSecondary} />
+                <X size={18} color={colors.text} />
               </TouchableOpacity>
             </View>
             <Text style={styles.subtitle}>{t('invites.pickerSubtitle')}</Text>
@@ -132,7 +138,12 @@ export function InviteFriendsSheet({
               />
             </View>
 
-            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+            {/* minHeight: the sheet sizes to content, and the scroll view used to
+                shrink to a sliver (one half-visible row behind the button). */}
+            <ScrollView
+              style={[styles.list, { minHeight: Math.min(Math.max(filtered.length, 1) * 64 + 8, 320) }]}
+              keyboardShouldPersistTaps="handled"
+            >
               {friends === null ? (
                 <ActivityIndicator style={{ marginTop: 24 }} color={colors.textSecondary} />
               ) : failed ? (
@@ -142,27 +153,27 @@ export function InviteFriendsSheet({
               ) : filtered.length === 0 ? (
                 <Text style={styles.empty}>{t('invites.noMatch')}</Text>
               ) : (
-                <View style={styles.card}>
-                  {filtered.map((f, i) => {
+                <View>
+                  {filtered.map((f) => {
                     const selectable = f.state === 'available';
                     const on = selected.has(f.uid);
                     return (
                       <TouchableOpacity
                         key={f.uid}
-                        style={[styles.row, i > 0 && styles.divider]}
+                        style={[styles.row, on && styles.rowOn]}
                         onPress={() => selectable && toggle(f.uid)}
                         disabled={!selectable}
                         activeOpacity={0.7}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: on, disabled: !selectable }}
                       >
-                        <PersonAvatar user={f} size={40} />
+                        <PersonAvatar user={f} size={44} />
                         <Text style={[styles.name, !selectable && styles.nameMuted]} numberOfLines={1}>
                           {f.displayName}
                         </Text>
                         {selectable ? (
                           <View style={[styles.check, on && styles.checkOn]}>
-                            {on ? <Check size={14} color="#000000" /> : null}
+                            {on ? <Check size={15} color={colors.background} strokeWidth={3} /> : null}
                           </View>
                         ) : (
                           // Dot + label, never a filled status pill.
@@ -192,7 +203,11 @@ export function InviteFriendsSheet({
               {sending ? (
                 <ActivityIndicator color="#000000" />
               ) : (
-                <Text style={styles.submitText}>{t('invites.sendCount', { count: selected.size })}</Text>
+                <Text style={[styles.submitText, selected.size === 0 && styles.submitTextDisabled]}>
+                  {selected.size === 0
+                    ? t('invites.selectFriends')
+                    : t('invites.sendCount', { count: selected.size })}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -244,63 +259,90 @@ const getStyles = (colors: any) =>
     sheetWrap: { width: '100%' },
     sheet: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: radius.xl,
-      borderTopRightRadius: radius.xl,
-      paddingHorizontal: spacing.xl,
-      paddingBottom: spacing.xxl,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 20,
       maxHeight: '88%',
+    },
+    bottomFill: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '100%',
+      height: 400,
+      backgroundColor: colors.surface,
     },
     grabber: {
       alignSelf: 'center',
-      width: 40,
+      width: 36,
       height: 4,
       borderRadius: 2,
       backgroundColor: colors.surfaceRaised,
       marginTop: 10,
-      marginBottom: 12,
+      marginBottom: 14,
     },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    title: { fontSize: 20, fontWeight: '700', color: colors.text },
-    subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 4, lineHeight: 18 },
+    // Editorial sheet title, lowercased at the call site (house voice).
+    title: { fontFamily: 'InstrumentSerif_400Regular', fontSize: 30, lineHeight: 34, color: colors.text },
+    close: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 4, lineHeight: 19 },
     searchBox: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
       backgroundColor: colors.surfaceRaised,
       borderRadius: radius.md,
-      paddingHorizontal: 12,
-      paddingVertical: Platform.OS === 'ios' ? 10 : 2,
-      marginTop: 14,
+      paddingHorizontal: 14,
+      paddingVertical: Platform.OS === 'ios' ? 12 : 4,
+      marginTop: 18,
     },
     searchInput: { flex: 1, fontSize: 16, color: colors.text },
-    list: { marginTop: 12, maxHeight: 420 },
-    empty: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginVertical: 24 },
-    card: { backgroundColor: colors.surfaceRaised, borderRadius: radius.lg, paddingHorizontal: 12 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-    divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-    name: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+    list: { marginTop: 10, maxHeight: 420 },
+    empty: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginVertical: 28, lineHeight: 20 },
+    // Borderless rows; a selected friend lifts one fill step instead of
+    // getting a divider-boxed card.
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      marginHorizontal: -10,
+      borderRadius: radius.md,
+    },
+    rowOn: { backgroundColor: colors.surfaceRaised },
+    name: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
     nameMuted: { color: colors.textTertiary || colors.textSecondary },
     check: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    checkOn: { backgroundColor: colors.white },
+    checkOn: { backgroundColor: colors.primary },
     stateWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     dot: { width: 6, height: 6, borderRadius: 3 },
     stateText: { fontSize: 12, color: colors.textSecondary },
     submit: {
       marginTop: 16,
       backgroundColor: colors.white,
-      borderRadius: radius.pill,
-      paddingVertical: 14,
+      borderRadius: radius.button,
+      height: 54,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    submitDisabled: { opacity: 0.4 },
-    submitText: { color: '#000000', fontSize: 15, fontWeight: '700' },
+    submitDisabled: { backgroundColor: colors.surfaceRaised },
+    submitText: { color: '#000000', fontSize: 16, fontWeight: '700' },
+    submitTextDisabled: { color: colors.textTertiary || colors.textSecondary },
     entry: {
       flexDirection: 'row',
       alignItems: 'center',

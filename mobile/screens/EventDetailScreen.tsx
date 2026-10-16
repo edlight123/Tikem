@@ -20,6 +20,7 @@ import {
   Heart, 
         ExternalLink,
   ChevronRight,
+  MessageCircle,
   ChevronLeft,
   PlayCircle,
   MoreHorizontal,
@@ -142,6 +143,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
   // is refused by the server and the buyer continues to normal checkout — showing
   // the discounted 0 there would promise a price we can't honor.
   const [selectedTierGrossPrice, setSelectedTierGrossPrice] = useState<number>(0);
+  // The whole cart when it mixes ticket types; sent to checkout as `tiers[]`.
+  const [selectedLines, setSelectedLines] = useState<{ tierId: string; quantity: number }[]>([]);
+  const [selectedPaidQuantity, setSelectedPaidQuantity] = useState<number | undefined>(undefined);
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [promoCode, setPromoCode] = useState<string | undefined>();
   // Password-gate state. accessGranted: null = unknown/not-yet-checked, true =
@@ -577,6 +581,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
     setTicketQuantity(quantity);
     setPromoCode(promo);
     setSelectedTierName(meta?.tierName || '');
+    setSelectedLines(meta?.lines || []);
+    setSelectedPaidQuantity(meta?.paidQuantity);
 
     setShowTierSelector(false);
 
@@ -905,7 +911,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('eventDetail.sections.about')}</Text>
+            <Text style={styles.sectionTitle}>{t('eventDetail.sections.about').toLowerCase()}</Text>
             <Text style={styles.description}>{event.description}</Text>
           </View>
 
@@ -951,7 +957,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
               byline-above-title experiment (tester ask): read the event first,
               then who is throwing it, with Follow and Contact right here. */}
           <View style={styles.hostByline}>
-            <Text style={styles.sectionTitle}>{t('eventDetail.sections.hostedBy')}</Text>
+            <Text style={styles.sectionTitle}>{t('eventDetail.sections.hostedBy').toLowerCase()}</Text>
             <View style={styles.hostedByCard}>
               <TouchableOpacity 
                 style={styles.hostedByMain}
@@ -1010,6 +1016,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 activeOpacity={0.7}
                 accessibilityRole="button"
               >
+                <View style={styles.contactOrganizerIcon}>
+                  <MessageCircle size={17} color={colors.text} />
+                </View>
                 <Text style={styles.contactOrganizerText}>{t('contactOrganizer.open')}</Text>
                 <ChevronRight size={16} color={colors.textSecondary} />
               </TouchableOpacity>
@@ -1220,6 +1229,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
         // with what the server charges (it reads the same field).
         feeIncidence={(event as any)?.fee_incidence ?? (event as any)?.feeIncidence}
         tierId={selectedTierId || undefined}
+        tiers={selectedLines.length > 1 ? selectedLines : undefined}
+        feeQuantity={selectedPaidQuantity}
         promoCodeId={promoCode}
         refCode={refCode}
         attribution={attribution}
@@ -1358,7 +1369,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Section spacing now that the organizer lives at the foot of the page,
   // not tucked under the poster as a byline.
   hostByline: {
-    marginTop: 24,
+    marginTop: 32,
     marginBottom: 8,
   },
   factList: {
@@ -1417,10 +1428,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderLight,
   },
+  // Editorial section heading (Instrument Serif, lowercased at the call
+  // site), the same voice as SectionHeader. The old 18pt bold sans read as a
+  // generic template heading against the serif event title.
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'InstrumentSerif_400Regular',
+    fontSize: 26,
+    lineHeight: 30,
     color: colors.text,
+    marginBottom: 10,
   },
   description: {
     fontSize: 15,
@@ -1455,34 +1471,35 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // rather than a profile card. At 48 with a solid teal fill it was the
   // loudest thing on a poster-led page and competed with the title beneath it.
   hostedByAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceRaised,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    overflow: 'hidden',
   },
   hostedByAvatarText: {
     // Scaled for the 28pt mark, and on the canvas token rather than a literal
     // white — the fill behind it is no longer teal.
     color: colors.text,
-    fontSize: 13,
+    fontSize: 17,
     fontWeight: '700',
   },
   hostedByAvatarImage: {
     width: '100%',
     height: '100%',
-    // Matches the container's new squarer corner, not the old 24 circle.
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
   },
   hostedByInfo: {
     flex: 1,
   },
   hostedByName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
+    marginBottom: 2,
   },
   verifiedBadgeInline: {
     flexDirection: 'row',
@@ -1517,20 +1534,28 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
 
 
 
-  // Quiet outlined row under the host card — an outline, not a filled pill, so
-  // it never competes with the white Get Tickets CTA for primary-action weight.
+  // A filled row, not an outline: depth by fill (POSH ladder), never a
+  // hairline box. Still quieter than the white Get Tickets pill.
   contactOrganizerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 12,
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.button,
+    backgroundColor: colors.surface,
+  },
+  contactOrganizerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   contactOrganizerText: {
+    flex: 1,
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,

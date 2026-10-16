@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
-import { Users, Lock } from 'lucide-react-native';
+import { Lock } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
 import { fetchEventSocial } from '../lib/api/social';
-import { radius } from '../theme/tokens';
+import { colors as T, radius } from '../theme/tokens';
 import { useI18n } from '../contexts/I18nContext';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
@@ -23,13 +22,16 @@ interface WhosGoingProps {
   visibility?: GuestlistVisibility;
 }
 
-function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number }) {
+/** Faces sit in a ring of the canvas colour, so the pile reads as cut-outs
+ *  on the page rather than white-outlined stickers. */
+function Avatar({ user, size = 44, ring }: { user: PublicUserSummary; size?: number; ring: string }) {
   const initial = (user.displayName || 'U').charAt(0).toUpperCase();
+  const frame = { width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: ring };
   if (user.photoURL) {
     return (
       <Image
         source={{ uri: user.photoURL }}
-        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: '#FFFFFF' }}
+        style={frame}
         contentFit="cover"
         cachePolicy="memory-disk"
         transition={150}
@@ -38,19 +40,8 @@ function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number })
     );
   }
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: '#14B8A6',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#FFFFFF',
-      }}
-    >
-      <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: size * 0.4 }}>{initial}</Text>
+    <View style={[frame, { backgroundColor: T.surfaceRaised, alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ color: T.textPrimary, fontWeight: '700', fontSize: size * 0.38 }}>{initial}</Text>
     </View>
   );
 }
@@ -60,7 +51,6 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
   const { t } = useI18n();
   const styles = getStyles(colors);
   const navigation: any = useNavigation();
-  const { user } = useAuth();
   const [data, setData] = useState<EventSocialAttendance | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -87,14 +77,14 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
 
   if (visibility === 'hidden') return null;
 
+  // Editorial heading, same voice as "about" and "hosted by" above it.
+  const heading = <Text style={styles.heading}>{t('whosGoing.title').toLowerCase()}</Text>;
+
   if (loading) {
     return (
       <View style={styles.section}>
-        <View style={styles.header}>
-          <Users size={20} color={colors.primary} />
-          <Text style={styles.title}>{t('whosGoing.title')}</Text>
-        </View>
-        <ActivityIndicator size="small" color={colors.primary} />
+        {heading}
+        <ActivityIndicator size="small" color={colors.textSecondary} style={{ alignSelf: 'flex-start' }} />
       </View>
     );
   }
@@ -103,103 +93,104 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
 
   const { totalGoing, viewerIsGoing, friendsGoing, publicGoing } = data;
 
-  // 'count': the number and nothing that identifies anyone. No faces, no
-  // names, no friend row; those are exactly what this mode withholds.
+  // The headline number, set large in the serif: the count IS the social proof.
+  const headline = (
+    <Text style={styles.headline}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>
+  );
+
+  // 'count': the number and nothing that identifies anyone.
   if (visibility === 'count') {
     return (
       <View style={styles.section}>
-        <View style={styles.header}>
-          <Users size={20} color={colors.primary} />
-          <Text style={styles.title}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>
-        </View>
-        {viewerIsGoing && <Text style={styles.countSub}>{t('whosGoing.youreGoing')}</Text>}
+        {heading}
+        {headline}
+        {viewerIsGoing && <Text style={styles.sub}>{t('whosGoing.youreGoing')}</Text>}
       </View>
     );
   }
 
-  // "Mika and 24 others going", as on the web: naming the first face makes
-  // the pile a sentence rather than a number beside strangers.
-  const lead = (friendsGoing[0]?.displayName || publicGoing[0]?.displayName || '').split(' ')[0];
-  const pileLabel = viewerIsGoing
-    ? t('whosGoing.youreGoing')
-    : lead && totalGoing > 1
-      ? t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 })
-      : t('whosGoing.goingCount', { count: totalGoing });
-
-  const pile = publicGoing.slice(0, 6);
+  const pile = publicGoing.slice(0, 5);
   const named = friendsGoing.length + pile.length + (viewerIsGoing ? 1 : 0);
   const remaining = Math.max(0, totalGoing - named);
 
+  // Nobody shows a face: a private list. One quiet filled row, not a box with
+  // a lonely "You" bubble in it.
+  if (friendsGoing.length === 0 && pile.length === 0) {
+    return (
+      <View style={styles.section}>
+        {heading}
+        <View style={styles.privateRow}>
+          <View style={styles.privateIcon}>
+            <Lock size={16} color={colors.text} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.privateTitle}>
+              {viewerIsGoing
+                ? `${t('whosGoing.youreGoing')} · ${t('whosGoing.goingCount', { count: totalGoing })}`
+                : t('whosGoing.goingCount', { count: totalGoing })}
+            </Text>
+            <Text style={styles.privateSub}>{t('whosGoing.privateSub')}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // "Mika, Jean and 3 friends": naming faces makes the pile a sentence.
+  const lead = (friendsGoing[0]?.displayName || publicGoing[0]?.displayName || '').split(' ')[0];
+  const subLine = viewerIsGoing
+    ? t('whosGoing.youreGoing')
+    : friendsGoing.length > 0
+      ? t(friendsGoing.length === 1 ? 'whosGoing.friendGoingOne' : 'whosGoing.friendGoingOther', {
+          count: friendsGoing.length,
+        })
+      : lead && totalGoing > 1
+        ? t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 })
+        : null;
+
+  const faces = [...friendsGoing, ...pile].slice(0, 5);
+
   return (
     <View style={styles.section}>
-      <View style={styles.headerRow}>
-        <View style={styles.header}>
-          <Users size={20} color={colors.primary} />
-          <Text style={styles.title}>{t('whosGoing.title')}</Text>
-        </View>
-        <Text style={styles.count}>
-          {t(totalGoing === 1 ? 'whosGoing.personOne' : 'whosGoing.personOther', { count: totalGoing })}
-        </Text>
+      {heading}
+
+      <View style={styles.pile}>
+        {faces.map((u, i) => (
+          <TouchableOpacity
+            key={u.uid}
+            onPress={() => goToProfile(u.uid)}
+            style={{ marginLeft: i === 0 ? 0 : -12, zIndex: faces.length - i }}
+            activeOpacity={0.8}
+          >
+            <Avatar user={u} size={48} ring={colors.background} />
+          </TouchableOpacity>
+        ))}
+        {remaining > 0 && (
+          <View style={[styles.moreBubble, { marginLeft: faces.length ? -12 : 0 }]}>
+            <Text style={styles.moreText}>+{remaining}</Text>
+          </View>
+        )}
       </View>
 
-      {/* Friends going */}
+      {headline}
+      {!!subLine && <Text style={styles.sub}>{subLine}</Text>}
+
       {friendsGoing.length > 0 && (
-        <View style={styles.friendsBlock}>
-          <Text style={styles.friendsLabel}>
-            {t(friendsGoing.length === 1 ? 'whosGoing.friendGoingOne' : 'whosGoing.friendGoingOther', {
-              count: friendsGoing.length,
-            })}
-          </Text>
-          <View style={styles.friendsWrap}>
-            {friendsGoing.map((f) => (
-              <TouchableOpacity key={f.uid} style={styles.friendChip} onPress={() => goToProfile(f.uid)} activeOpacity={0.8}>
-                <Avatar user={f} size={26} />
-                <Text style={styles.friendName} numberOfLines={1}>
-                  {f.displayName}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Public face pile */}
-      {(pile.length > 0 || viewerIsGoing) && (
-        <View style={styles.pileRow}>
-          <View style={styles.pile}>
-            {viewerIsGoing && (
-              <View style={[styles.youBubble]}>
-                <Text style={styles.youText}>{t('whosGoing.youBadge')}</Text>
-              </View>
-            )}
-            {pile.map((u, i) => (
-              <TouchableOpacity
-                key={u.uid}
-                onPress={() => goToProfile(u.uid)}
-                style={{ marginLeft: i === 0 && !viewerIsGoing ? 0 : -10 }}
-                activeOpacity={0.8}
-              >
-                <Avatar user={u} size={40} />
-              </TouchableOpacity>
-            ))}
-            {remaining > 0 && (
-              <View style={[styles.moreBubble, { marginLeft: -10 }]}>
-                <Text style={styles.moreText}>+{remaining}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.pileLabel}>{pileLabel}</Text>
-        </View>
-      )}
-
-      {/* Privacy fallback */}
-      {friendsGoing.length === 0 && pile.length === 0 && (
-        <View style={styles.privacyRow}>
-          <Lock size={16} color={colors.textSecondary} />
-          <Text style={styles.privacyText}>
-            {t(totalGoing === 1 ? 'whosGoing.privacyNoteOne' : 'whosGoing.privacyNoteOther', { count: totalGoing })}
-          </Text>
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chips}
+          style={styles.chipsScroll}
+        >
+          {friendsGoing.map((f) => (
+            <TouchableOpacity key={f.uid} style={styles.chip} onPress={() => goToProfile(f.uid)} activeOpacity={0.8}>
+              <Avatar user={f} size={24} ring={T.surface} />
+              <Text style={styles.chipName} numberOfLines={1}>
+                {(f.displayName || '').split(' ')[0]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       )}
     </View>
   );
@@ -207,126 +198,98 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
 
 const getStyles = (colors: any) =>
   StyleSheet.create({
+    // On the page gutter, no card: the old bordered box sat 16pt inside the
+    // content padding, so it was indented from every other section.
     section: {
-      backgroundColor: colors.surface,
-      marginHorizontal: 16,
-      marginTop: 12,
-      padding: 16,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
+      marginTop: 32,
     },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 14,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    title: {
-      fontSize: 17,
-      fontWeight: '700',
+    heading: {
+      fontFamily: 'InstrumentSerif_400Regular',
+      fontSize: 26,
       color: colors.text,
-    },
-    countSub: {
-      marginTop: 4,
-      fontSize: 13,
-      color: colors.textSecondary,
-    },
-    count: {
-      fontSize: 12,
-      letterSpacing: 0.4,
-      color: colors.textSecondary,
-    },
-    friendsBlock: {
-      marginBottom: 14,
-    },
-    friendsLabel: {
-      fontSize: 11,
-      color: colors.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.8,
-      marginBottom: 8,
-    },
-    friendsWrap: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    friendChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: colors.primary + '14',
-      borderRadius: radius.chip,
-      paddingLeft: 4,
-      paddingRight: 12,
-      paddingVertical: 4,
-      maxWidth: 180,
-    },
-    friendName: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-      flexShrink: 1,
-    },
-    pileRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
+      marginBottom: 16,
     },
     pile: {
       flexDirection: 'row',
       alignItems: 'center',
     },
-    youBubble: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.xl,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: '#FFFFFF',
-    },
-    youText: {
-      color: '#FFFFFF',
-      fontWeight: '700',
-      fontSize: 11,
-    },
     moreBubble: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.xl,
-      backgroundColor: colors.surfaceRaised,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: T.surfaceRaised,
+      borderWidth: 2,
+      borderColor: colors.background,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: '#FFFFFF',
     },
     moreText: {
-      color: colors.textSecondary,
-      fontSize: 12,
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '700',
     },
-    pileLabel: {
-      fontSize: 12,
-      letterSpacing: 0.4,
+    headline: {
+      fontFamily: 'InstrumentSerif_400Regular',
+      fontSize: 38,
+      lineHeight: 44,
+      color: colors.text,
+      marginTop: 14,
+    },
+    sub: {
+      fontSize: 14,
       color: colors.textSecondary,
+      marginTop: 2,
+    },
+    chipsScroll: {
+      marginTop: 16,
+      marginHorizontal: -18,
+    },
+    chips: {
+      gap: 8,
+      paddingHorizontal: 18,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: T.surface,
+      borderRadius: radius.xl,
+      paddingLeft: 6,
+      paddingRight: 14,
+      paddingVertical: 6,
+      maxWidth: 180,
+    },
+    chipName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
       flexShrink: 1,
     },
-    privacyRow: {
+    privateRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 8,
+      alignItems: 'center',
+      gap: 14,
+      backgroundColor: T.surface,
+      borderRadius: radius.lg,
+      padding: 16,
     },
-    privacyText: {
+    privateIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: T.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    privateTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    privateSub: {
       fontSize: 13,
-      color: colors.textSecondary,
-      flex: 1,
       lineHeight: 18,
+      color: colors.textSecondary,
+      marginTop: 2,
     },
   });

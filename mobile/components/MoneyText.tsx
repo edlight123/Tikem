@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, StyleSheet, TextStyle, StyleProp } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocaleFormat, type FormatMoneyOptions } from '../lib/format';
+import { splitFormattedMoney } from '../lib/currency';
 
 interface MoneyTextProps {
   /** Amount in MINOR units (cents). Takes precedence over `amount` when set. */
@@ -10,9 +11,14 @@ interface MoneyTextProps {
   amount?: number;
   /** Currency code — defaults to HTG. Controls symbol/placement (never `$`). */
   currency?: 'HTG' | 'USD' | 'CAD' | 'EUR';
-  /** Fixed fraction digits (defaults to 2). */
+  /** Fixed fraction digits (defaults to 2; a whole HTG amount shows none). */
   decimals?: number;
   style?: StyleProp<TextStyle>;
+  /**
+   * Set the currency mark ("HTG", "$", "CA$") at ~60% of the number's size.
+   * For big totals, where "12,000 HTG" in one bold run reads oversized.
+   */
+  splitCode?: boolean;
 }
 
 /**
@@ -20,7 +26,7 @@ interface MoneyTextProps {
  * white by default. The sans face is deliberate: monospace is reserved for true
  * identifiers now, so only the digit alignment is kept, not the mono voice.
  * Placement is HTG/USD aware via the shared formatter, so a
- * `$` is never hardcoded: HTG → `1,234.56 HTG`, USD → `$1,234.56`.
+ * `$` is never hardcoded: HTG → `1,234 HTG`, USD → `$1,234.56`.
  */
 export default function MoneyText({
   cents,
@@ -28,6 +34,7 @@ export default function MoneyText({
   currency = 'HTG',
   decimals,
   style,
+  splitCode = false,
 }: MoneyTextProps) {
   const { colors } = useTheme();
   const { formatMoney } = useLocaleFormat();
@@ -45,8 +52,21 @@ export default function MoneyText({
       numberOfLines={1}
       accessibilityLabel={text}
     >
-      {text}
+      {splitCode ? renderSplit(text, style) : text}
     </Text>
+  );
+}
+
+function renderSplit(text: string, style: StyleProp<TextStyle>) {
+  const { prefix, amount, suffix } = splitFormattedMoney(text);
+  const size = StyleSheet.flatten([styles.text, style])?.fontSize ?? 15;
+  const code: TextStyle = { fontSize: Math.round(size * 0.6), fontWeight: '600', opacity: 0.75 };
+  return (
+    <>
+      {!!prefix && <Text style={code}>{prefix}</Text>}
+      {amount}
+      {!!suffix && <Text style={code}>{suffix}</Text>}
+    </>
   );
 }
 

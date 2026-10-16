@@ -132,6 +132,7 @@ export default {
     friendsGoingSuffix: 'amis y vont',
   },
   whosGoing: {
+    privateSub: "Les invités gardent leur présence privée.",
     title: 'Qui y va',
     personOne: '{count} personne',
     personOther: '{count} personnes',
@@ -2657,11 +2658,13 @@ export default {
   },
 
   contactOrganizer: {
-    title: "Contacter l'organisateur au sujet de",
+    title: "Écrire à l'organisateur",
+    aboutEvent: 'À propos de {event}',
+    topicLabel: 'C’est à quel sujet ?',
     topics: {
-      event: "l'événement",
-      ticket: 'mon billet',
-      other: 'autre chose',
+      event: "L'événement",
+      ticket: 'Mon billet',
+      other: 'Autre chose',
     },
     messagePlaceholder: 'Message',
     send: 'Envoyer le message',
@@ -2669,7 +2672,7 @@ export default {
     sentBody: "L'organisateur a été prévenu et peut vous répondre dans l'application.",
     sentBodyNamed: "L'organisateur de {event} a été prévenu et peut vous répondre dans l'application.",
     errorGeneric: "Impossible d'envoyer votre message. Réessayez.",
-    open: "Contacter l'organisateur",
+    open: "Écrire à l'organisateur",
   },
 
   // L'autre moitié de contactOrganizer : l'organisateur lit ces questions et y
@@ -2823,6 +2826,7 @@ export default {
     loadFailedHint: 'Vérifiez votre connexion et réessayez.',
     retry: 'Réessayer',
     oneTypePerOrder: 'Un seul type de billet par commande',
+    mixedFreeBody: 'Ce code rend la commande gratuite, et une commande gratuite ne contient qu’un type de billet. Retirez l’autre type de billet pour continuer.',
     ticketsAvailable: 'billets disponibles',
     soldOut: 'Complet',
     onSaleFrom: 'En vente le {date}',
@@ -3437,7 +3441,8 @@ export default {
     inviteFriends: "Inviter des amis",
     inviteFriendsSub: "Envoie cet événement à tes amis Tikèm",
     pickerTitle: "Inviter des amis",
-    pickerSubtitle: "Seulement tes amis Tikèm. Ils reçoivent une notification de ta part.",
+    pickerSubtitle: "Ils recevront une notification de ta part.",
+    selectFriends: "Choisis des amis",
     search: "Rechercher tes amis",
     sendCount: "Inviter {count}",
     sentTitle: "Invitations envoyées",

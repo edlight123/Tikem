@@ -104,6 +104,7 @@ export default {
     friendsGoingSuffix: 'zanmi ap ale',
   },
   whosGoing: {
+    privateSub: 'Envite yo kenbe patisipasyon yo prive.',
     title: 'Ki moun k ap ale',
     personOne: '{count} moun',
     personOther: '{count} moun',
@@ -2626,11 +2627,13 @@ export default {
   },
 
   contactOrganizer: {
-    title: 'Kontakte òganizatè a sou',
+    title: 'Ekri òganizatè a',
+    aboutEvent: 'Konsènan {event}',
+    topicLabel: 'Se sou ki sa?',
     topics: {
-      event: 'evènman an',
-      ticket: 'tikè mwen an',
-      other: 'yon lòt bagay',
+      event: 'Evènman an',
+      ticket: 'Tikè mwen',
+      other: 'Lòt bagay',
     },
     messagePlaceholder: 'Mesaj',
     send: 'Voye mesaj la',
@@ -2638,7 +2641,7 @@ export default {
     sentBody: 'Òganizatè a resevwa avi a epi li ka reponn ou nan aplikasyon an.',
     sentBodyNamed: 'Òganizatè {event} resevwa avi a epi li ka reponn ou nan aplikasyon an.',
     errorGeneric: 'Nou pa t ka voye mesaj ou a. Eseye ankò.',
-    open: 'Kontakte òganizatè a',
+    open: 'Ekri òganizatè a',
   },
 
   // Lòt bò contactOrganizer: òganizatè a li kesyon yo epi li reponn.
@@ -2791,6 +2794,7 @@ export default {
     loadFailedHint: 'Tcheke koneksyon w epi eseye ankò.',
     retry: 'Eseye ankò',
     oneTypePerOrder: 'Yon sèl kalite biyè pou chak kòmand',
+    mixedFreeBody: 'Kòd sa a fè kòmand lan gratis, epi yon kòmand gratis gen yon sèl kalite biyè. Retire lòt kalite biyè a pou w kontinye.',
     ticketsAvailable: 'biyè disponib',
     soldOut: 'Fini',
     onSaleFrom: 'An vant {date}',
@@ -3405,7 +3409,8 @@ export default {
     inviteFriends: "Envite zanmi",
     inviteFriendsSub: "Voye evènman sa a bay zanmi ou sou Tikèm",
     pickerTitle: "Envite zanmi",
-    pickerSubtitle: "Sèlman zanmi ou sou Tikèm. Yo resevwa yon notifikasyon nan men ou.",
+    pickerSubtitle: "Y ap resevwa yon notifikasyon nan men ou.",
+    selectFriends: "Chwazi zanmi",
     search: "Chèche zanmi ou",
     sendCount: "Envite {count}",
     sentTitle: "Envitasyon yo ale",

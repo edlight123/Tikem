@@ -11,7 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { X, Check } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
@@ -45,6 +46,7 @@ export default function ContactOrganizerModal({
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  const insets = useSafeAreaInsets();
 
   const [topic, setTopic] = useState<Topic>('event');
   const [message, setMessage] = useState('');
@@ -91,20 +93,32 @@ export default function ContactOrganizerModal({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheetWrap}
         >
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+            {/* Paints below the sheet's edge. On device the sheet stopped short
+                of the screen bottom and the page's "Event Ended" bar showed
+                through the gap; whatever opens that gap, the fill covers it. */}
+            <View pointerEvents="none" style={styles.bottomFill} />
             <View style={styles.grabber} />
 
             <View style={styles.header}>
-              <Text style={styles.title} numberOfLines={2}>
-                {sent ? t('contactOrganizer.sentTitle') : t('contactOrganizer.title')}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title} numberOfLines={2}>
+                  {(sent ? t('contactOrganizer.sentTitle') : t('contactOrganizer.title')).toLowerCase()}
+                </Text>
+                {!sent && !!eventTitle && (
+                  <Text style={styles.subtitle} numberOfLines={1}>
+                    {t('contactOrganizer.aboutEvent').replace('{event}', eventTitle)}
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
                 onPress={onClose}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.close}
                 accessibilityRole="button"
                 accessibilityLabel={t('common.close')}
               >
-                <X size={22} color={colors.textSecondary} />
+                <X size={18} color={colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -124,25 +138,29 @@ export default function ContactOrganizerModal({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                {TOPICS.map((key) => {
-                  const selected = topic === key;
-                  return (
-                    <TouchableOpacity
-                      key={key}
-                      style={styles.topicRow}
-                      onPress={() => setTopic(key)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                    >
-                      <Text style={styles.topicLabel}>
-                        {t(`contactOrganizer.topics.${key}`)}
-                      </Text>
-                      <View style={[styles.radio, selected && styles.radioOn]}>
-                        {selected ? <Check size={13} color={colors.background} /> : null}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                <Text style={styles.fieldLabel}>{t('contactOrganizer.topicLabel')}</Text>
+                <View style={styles.segment} accessibilityRole="radiogroup">
+                  {TOPICS.map((key) => {
+                    const selected = topic === key;
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={[styles.segmentItem, selected && styles.segmentItemOn]}
+                        onPress={() => setTopic(key)}
+                        activeOpacity={0.8}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text
+                          style={[styles.segmentText, selected && styles.segmentTextOn]}
+                          numberOfLines={1}
+                        >
+                          {t(`contactOrganizer.topics.${key}`)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 <TextInput
                   style={styles.input}
@@ -150,6 +168,7 @@ export default function ContactOrganizerModal({
                   onChangeText={(v) => setMessage(v.slice(0, MAX_MESSAGE_LENGTH))}
                   placeholder={t('contactOrganizer.messagePlaceholder')}
                   placeholderTextColor={colors.textTertiary || colors.textSecondary}
+                  selectionColor={colors.primary}
                   multiline
                   textAlignVertical="top"
                   maxLength={MAX_MESSAGE_LENGTH}
@@ -168,9 +187,11 @@ export default function ContactOrganizerModal({
                   accessibilityRole="button"
                 >
                   {loading ? (
-                    <ActivityIndicator color={colors.background} />
+                    <ActivityIndicator color="#000000" />
                   ) : (
-                    <Text style={styles.submitText}>{t('contactOrganizer.send')}</Text>
+                    <Text style={[styles.submitText, !canSend && styles.submitTextDisabled]}>
+                      {t('contactOrganizer.send')}
+                    </Text>
                   )}
                 </TouchableOpacity>
               </ScrollView>
@@ -194,73 +215,104 @@ const getStyles = (colors: any) =>
     },
     sheet: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: radius.xl,
-      borderTopRightRadius: radius.xl,
-      paddingHorizontal: spacing.xl,
-      paddingBottom: spacing.xxl,
-      maxHeight: '86%',
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 20,
+      maxHeight: '88%',
+    },
+    bottomFill: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '100%',
+      height: 400,
+      backgroundColor: colors.surface,
     },
     grabber: {
       alignSelf: 'center',
-      width: 40,
+      width: 36,
       height: 4,
       borderRadius: 2,
-      backgroundColor: colors.border,
-      marginTop: spacing.md,
-      marginBottom: spacing.lg,
+      backgroundColor: colors.surfaceRaised,
+      marginTop: 10,
+      marginBottom: 14,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: spacing.lg,
-      marginBottom: spacing.lg,
+      marginBottom: 22,
     },
+    // Editorial sheet title, lowercased at the call site (house voice).
     title: {
-      flex: 1,
-      fontSize: 22,
-      fontWeight: '700',
+      fontFamily: 'InstrumentSerif_400Regular',
+      fontSize: 30,
+      lineHeight: 34,
       color: colors.text,
     },
-    topicRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 14,
+    subtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 4,
     },
-    topicLabel: {
-      fontSize: 16,
-      color: colors.text,
-    },
-    radio: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      borderWidth: 1.5,
-      borderColor: colors.border,
+    close: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
+      marginTop: 2,
     },
-    radioOn: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
+    fieldLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 10,
+    },
+    // Three filled chips; the chosen one inverts to white (same language as
+    // the white primary pill), no radio circles, no outlines.
+    segment: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    segmentItem: {
+      flex: 1,
+      height: 40,
+      borderRadius: radius.chip,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+    },
+    segmentItemOn: {
+      backgroundColor: colors.white,
+    },
+    segmentText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    segmentTextOn: {
+      color: '#000000',
     },
     input: {
-      marginTop: spacing.md,
-      minHeight: 120,
+      marginTop: 18,
+      minHeight: 132,
       borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
       backgroundColor: colors.surfaceRaised,
       padding: spacing.lg,
-      fontSize: 15,
+      paddingTop: spacing.lg,
+      fontSize: 16,
+      lineHeight: 22,
       color: colors.text,
     },
     counter: {
       alignSelf: 'flex-end',
-      marginTop: spacing.xs,
+      marginTop: 6,
       fontSize: 12,
-      color: colors.textSecondary,
+      color: colors.textTertiary || colors.textSecondary,
     },
     error: {
       marginTop: spacing.md,
@@ -268,20 +320,23 @@ const getStyles = (colors: any) =>
       color: colors.error,
     },
     submit: {
-      marginTop: spacing.xl,
-      height: 56,
+      marginTop: 20,
+      height: 54,
       borderRadius: radius.button,
-      backgroundColor: colors.text,
+      backgroundColor: colors.white,
       alignItems: 'center',
       justifyContent: 'center',
     },
     submitDisabled: {
-      opacity: 0.4,
+      backgroundColor: colors.surfaceRaised,
     },
     submitText: {
       fontSize: 16,
       fontWeight: '700',
-      color: colors.background,
+      color: '#000000',
+    },
+    submitTextDisabled: {
+      color: colors.textTertiary || colors.textSecondary,
     },
     sentBody: {
       paddingBottom: spacing.md,

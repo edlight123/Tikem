@@ -19,6 +19,7 @@ import { formatCurrency } from '../lib/currency';
 import { computeSelectionTotal, isFreeTier } from '../lib/ticketPricing';
 import { priceOrder } from '../lib/buyerPricing';
 import WhitePillCTA from './WhitePillCTA';
+import MoneyText from './MoneyText';
 import { radius } from '../theme/tokens';
 
 interface TicketTier {
@@ -67,6 +68,10 @@ export interface PurchaseSelectionMeta {
    * promo and has the final say on whether anything is issued for free.
    */
   promoZeroed: boolean;
+  /** Every ticket type in the cart, in display order. One entry for a single-tier order. */
+  lines: { tierId: string; quantity: number }[];
+  /** Tickets the per-ticket service fee applies to (free tiers excluded). */
+  paidQuantity: number;
 }
 
 interface TieredTicketSelectorProps {
@@ -133,6 +138,8 @@ export default function TieredTicketSelector({
   // OR failed) forces it open so an applied code can never hide behind a tap.
   const [promoOpen, setPromoOpen] = useState(false);
   const promoExpanded = promoOpen || !!promoValidation;
+  // Shown above the CTA when the cart can't go through as selected.
+  const [cartNotice, setCartNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -288,37 +295,61 @@ export default function TieredTicketSelector({
     const available = getAvailableQuantity(tier);
     const newQty = Math.max(0, Math.min(currentQty + delta, available, 10));
 
-    // Single-tier enforcement: only ONE ticket type may have a quantity at a
-    // time. The purchase contract issues `firstTierWithQty` but charges the
-    // combined `getTotalPrice()`; across mixed tiers that overcharges and
-    // mis-issues. Keeping exactly one tier active makes the two consistent.
-    // Raising a different tier resets the others to 0; decrementing keeps the
-    // (already single) active tier.
+    // Buyers can mix paid ticket types (2 VIP + 1 General Admission): every
+    // checkout rail takes the whole cart as `tiers[]`. This used to wipe the
+    // other tiers on every "+", so tapping VIP reset GA and back, which a tester
+    // reported as the two rows swapping. Free tiers stay exclusive, because a
+    // free claim issues one tier, once per buyer: picking a free tier clears the
+    // rest of the cart, and picking a paid tier clears any free one.
+    const tierIsFree = isFreeTier(tier);
+    setCartNotice(null);
     setTierQuantities(prev => {
-      const next: TierQuantity = delta > 0 ? {} : { ...prev };
+      const next: TierQuantity = { ...prev };
+      if (delta > 0) {
+        for (const other of tiers) {
+          if (other.id === tierId) continue;
+          if (tierIsFree || isFreeTier(other)) delete next[other.id];
+        }
+      }
       next[tierId] = newQty;
       return next;
     });
   };
 
   const handlePurchase = () => {
-    // For now, purchase the first tier with quantity
-    // In future, we can support multi-tier purchases
-    const firstTierWithQty = tiers.find(t => (tierQuantities[t.id] || 0) > 0);
-    if (!firstTierWithQty) return;
-    
-    const quantity = tierQuantities[firstTierWithQty.id] || 0;
+    const lines = tiers
+      .filter(t => (tierQuantities[t.id] || 0) > 0)
+      .map(t => ({ tier: t, quantity: tierQuantities[t.id] || 0 }));
+    if (lines.length === 0) return;
+    const first = lines[0].tier;
+
+    const quantity = lines.reduce((sum, l) => sum + l.quantity, 0);
     const finalPrice = getTotalPrice();
     // Undiscounted total, on integer cents like every other amount here.
-    const grossPrice = computeSelectionTotal([{ price: firstTierWithQty.price, quantity }]);
+    const grossPrice = computeSelectionTotal(
+      lines.map(l => ({ price: l.tier.price, quantity: l.quantity }))
+    );
+    // The fixed part of the service fee is per PAID ticket.
+    const paidQuantity = lines.reduce((sum, l) => sum + (l.tier.price > 0 ? l.quantity : 0), 0);
+
+    // A free claim issues a single tier, so a mixed cart that a 100%-off code
+    // takes to zero can't go down that path. Free tiers are already exclusive
+    // (see updateTierQuantity); this only catches the promo case.
+    if (finalPrice <= 0 && lines.length > 1) {
+      setCartNotice(t('ticketSelector.mixedFreeBody'));
+      return;
+    }
+    setCartNotice(null);
 
     // Only a code that validated is sent on. A rejected or never-applied code
     // would otherwise travel to checkout, where the server might still discount
     // it (or redeem it) while the buyer was shown the full price.
     const appliedPromo = promoValidation?.valid ? promoCode.trim() || undefined : undefined;
 
-    onPurchase(firstTierWithQty.id, finalPrice, quantity, appliedPromo, {
-      tierName: firstTierWithQty.name,
+    onPurchase(first.id, finalPrice, quantity, appliedPromo, {
+      tierName: lines.map(l => (lines.length > 1 ? `${l.quantity}× ${l.tier.name}` : l.tier.name)).join(', '),
+      lines: lines.map(l => ({ tierId: l.tier.id, quantity: l.quantity })),
+      paidQuantity,
       // A 0 total (a free tier, or a 100%-off promo on a paid one) must not reach
       // a gateway — the caller uses this to pick the free-claim path.
       isFree: finalPrice <= 0,
@@ -359,11 +390,6 @@ export default function TieredTicketSelector({
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionLabel}>{t('ticketSelector.chooseTickets')}</Text>
-                {tiers.length > 1 && (
-                  <Text style={styles.sectionHint} numberOfLines={1}>
-                    {t('ticketSelector.oneTypePerOrder')}
-                  </Text>
-                )}
               </View>
 
               {/* A failed fetch and an event with no tiers used to look
@@ -632,11 +658,11 @@ export default function TieredTicketSelector({
                 )}
               </View>
               <View style={styles.priceContainer}>
-                <Text style={styles.totalPrice}>
-                  {isFreeOrder
-                    ? t('common.free')
-                    : formatCurrency(orderPricing.total, displayCurrency)}
-                </Text>
+                {isFreeOrder ? (
+                  <Text style={styles.totalPrice}>{t('common.free')}</Text>
+                ) : (
+                  <MoneyText amount={orderPricing.total} currency={displayCurrency as any} style={styles.totalPrice} splitCode />
+                )}
                 {showFeeLine && (
                   <Text style={styles.feeLine}>
                     {t('ticketSelector.includesFee', {
@@ -646,6 +672,7 @@ export default function TieredTicketSelector({
                 )}
               </View>
             </View>
+            {cartNotice && <Text style={styles.cartNotice}>{cartNotice}</Text>}
             {/* No subLabel: the amount lives once, in the total above. */}
             <WhitePillCTA
               variant={isFreeOrder ? 'rsvp' : 'paid'}
@@ -717,11 +744,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
-  },
-  sectionHint: {
-    flexShrink: 1,
-    fontSize: 11,
-    color: colors.textTertiary,
   },
   // Quiet row on the black canvas, separated by a hairline — no card, no fill.
   tierRow: {
@@ -903,6 +925,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   // The fee that makes up the difference between the tier prices above and the
   // total — quiet, but present before the buyer commits.
+  cartNotice: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.error,
+    marginBottom: 12,
+  },
   feeLine: {
     marginTop: 2,
     fontSize: 11,

@@ -17,6 +17,7 @@ import { backendJson } from '../lib/api/backend';
 import { useI18n } from '../contexts/I18nContext';
 import WhitePillCTA from './WhitePillCTA';
 import { formatCurrency } from '../lib/currency';
+import MoneyText from './MoneyText';
 import { priceOrder } from '../lib/buyerPricing';
 import { radius } from '../theme/tokens';
 import { classifyCheckoutError, friendlyCheckoutError } from '../lib/checkoutErrors';
@@ -97,6 +98,14 @@ interface PaymentModalProps {
   /** The organizer's own absorb/pass-on choice, when they made one. */
   feeIncidence?: string | null;
   tierId?: string;
+  /**
+   * A cart that mixes ticket types (VIP + General Admission). Every rail takes
+   * `tiers` and it wins over `tierId` + `quantity` server-side, so a mixed cart is
+   * priced and issued line by line instead of as N of the first tier.
+   */
+  tiers?: { tierId: string; quantity: number }[];
+  /** Tickets the per-ticket service fee applies to (free tiers are excluded). */
+  feeQuantity?: number;
   promoCodeId?: string;
   /** Promoter ref (`?ref=` on the event link) — resolved and attributed server-side. */
   refCode?: string;
@@ -127,6 +136,8 @@ function PaymentForm({
   country,
   feeIncidence,
   tierId,
+  tiers,
+  feeQuantity,
   promoCodeId,
   refCode,
   attribution,
@@ -143,6 +154,11 @@ function PaymentForm({
     : { initPaymentSheet: null, presentPaymentSheet: null, retrievePaymentIntent: null };
   const { initPaymentSheet, presentPaymentSheet, retrievePaymentIntent } = stripeHooks;
 
+  // Sent with every checkout call. Only a real cart is sent, so single-tier
+  // orders keep the exact body they always had.
+  const orderLines = tiers && tiers.length > 1 ? { tiers } : {};
+  const tiersKey = tiers && tiers.length > 1 ? JSON.stringify(tiers) : '';
+
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,7 +171,7 @@ function PaymentForm({
   const orderPricing = priceOrder(
     totalAmount,
     { country, currency, fee_incidence: feeIncidence },
-    { quantity }
+    { quantity: feeQuantity ?? quantity }
   );
   const showFeeLine = orderPricing.feeOnTop && orderPricing.buyerFee > 0;
   // Default to MonCash if Stripe not available (Expo Go)
@@ -179,7 +195,7 @@ function PaymentForm({
     setHtgQuote(null);
     backendJson<MonCashQuote>(`/api/moncash-button/quote`, {
       method: 'POST',
-      body: JSON.stringify({ eventId, quantity, tierId, promoCodeId }),
+      body: JSON.stringify({ eventId, quantity, tierId, ...orderLines, promoCodeId }),
     })
       .then((q) => {
         if (cancelled) return;
@@ -196,7 +212,7 @@ function PaymentForm({
     return () => {
       cancelled = true;
     };
-  }, [needsHtgQuote, eventId, quantity, tierId, promoCodeId]);
+  }, [needsHtgQuote, eventId, quantity, tierId, tiersKey, promoCodeId]);
 
   // Whether to name Apple Pay on the card row.
   //
@@ -263,6 +279,7 @@ function PaymentForm({
           eventId,
           quantity,
           tierId,
+          ...orderLines,
           promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -393,6 +410,7 @@ function PaymentForm({
           eventId,
           quantity,
           tierId,
+          ...orderLines,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -427,6 +445,7 @@ function PaymentForm({
           eventId,
           quantity,
           tierId,
+          ...orderLines,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -465,6 +484,7 @@ function PaymentForm({
           eventId,
           quantity,
           tierId,
+          ...orderLines,
           promoCode: promoCodeId,
           ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
@@ -725,9 +745,7 @@ function PaymentForm({
         )}
         <View style={[styles.totalContainer, showFeeLine && styles.totalContainerAttached]}>
           <Text style={styles.totalLabel}>{t('paymentModal.totalAmount')}</Text>
-          <Text style={styles.totalAmount}>
-            {formatCurrency(orderPricing.total, currency)}
-          </Text>
+          <MoneyText amount={orderPricing.total} currency={currency as any} style={styles.totalAmount} splitCode />
         </View>
         {/* USD event paid over MonCash: what MonCash will actually take, in HTG,
             with the rate and Tikèm's spread disclosed. */}
