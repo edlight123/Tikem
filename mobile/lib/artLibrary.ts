@@ -181,7 +181,8 @@ export function artForWorld(world: string | null | undefined, seed?: string | nu
  * A world's page hero. The hashed pick suits tiles, but the hero is the first
  * thing a world page shows, so a world can pin the piece that reads as it at a
  * glance: "lavi lannwit" landed on the kanaval float, which reads as carnival,
- * not a night out (2026-10-12 feedback: "make it more night life").
+ * not a night out (2026-10-12 feedback: "make it more night life"). The home
+ * world rail uses this too, so the card and the page always match.
  */
 const WORLD_HERO: Partial<Record<WorldKey, string>> = {
   'lavi-lannwit': 'banboch',

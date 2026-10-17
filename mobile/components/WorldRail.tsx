@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useI18n } from '../contexts/I18nContext';
 import SectionHeader from './SectionHeader';
-import { WORLDS, artForWorld, type WorldKey } from '../lib/artLibrary';
+import { WORLDS, heroArtForWorld, type WorldKey } from '../lib/artLibrary';
 import { radius, spacing } from '../theme/tokens';
 
 /**
@@ -67,7 +67,9 @@ function WorldTile({
   const scale = useRef(new Animated.Value(1)).current;
   const press = (to: number) =>
     Animated.spring(scale, { toValue: to, useNativeDriver: true, speed: 40, bounciness: 0 }).start();
-  const art = artForWorld(world, world);
+  // Same piece as the world page's hero, so a pinned world (lavi lannwit) shows
+  // its pinned art on the card too, not the hashed pick (the kanaval float).
+  const art = heroArtForWorld(world);
 
   return (
     <Pressable
