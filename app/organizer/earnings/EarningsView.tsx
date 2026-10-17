@@ -254,7 +254,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
             {tx('earnings.how_fees_calculated')}
           </span>
           <span className="flex items-center gap-3 text-sm text-white/50">
-            <span className="hidden sm:inline">{tx('earnings.total_fees')}<span className="font-mono tabular-nums">{totalFeesLabel}</span></span>
+            <span className="hidden sm:inline">{tx('earnings.total_fees')}<span className="ml-1.5 font-mono tabular-nums">{totalFeesLabel}</span></span>
             <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
           </span>
         </summary>

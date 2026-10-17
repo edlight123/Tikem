@@ -181,7 +181,9 @@ export function OrgDataTable<T>({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="p-8">
+        // The table card is already the fill: an empty state's own fill here
+        // drew a box inside a box.
+        <div className="p-8 [&>*]:bg-transparent">
           {empty ?? (
             <p className="text-center text-sm text-white/40">{t('actions.no_results_found')}</p>
           )}

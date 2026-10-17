@@ -159,7 +159,6 @@ export default function OrganizerDashboardClient({
       {/* Events Grid */}
       <div>
         <SectionHeader
-          eyebrow="Your events"
           title={t('organizer.your_events')}
           className="mb-5"
           actions={

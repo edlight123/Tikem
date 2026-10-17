@@ -157,7 +157,7 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
           <p className="label-mono uppercase text-[11px] text-white/40">{t('event_card_detail.ticket_sales')}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold text-brand-300 font-mono tabular-nums">{revenueText}</p>
+          <p className="text-sm font-semibold text-white font-mono tabular-nums">{revenueText}</p>
           <p className="label-mono uppercase text-[11px] text-white/40">{t('event_card_detail.revenue')}</p>
         </div>
       </div>
