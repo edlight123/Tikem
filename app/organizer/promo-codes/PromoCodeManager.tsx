@@ -14,6 +14,7 @@ import {
 import type { OrgColumn } from '@/components/organizer/ui'
 import { Ticket, Plus, Trash2 } from 'lucide-react'
 import { EMPTY_VALUE } from '@/lib/format'
+import { useToast } from '@/components/ui/Toast'
 
 type Event = {
   id: string
@@ -45,6 +46,7 @@ export default function PromoCodeManager({
   organizerId: string
 }) {
   const { t } = useTranslation('organizer')
+  const { showToast } = useToast()
   const [promoCodes, setPromoCodes] = useState(initialPromoCodes)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -109,7 +111,7 @@ export default function PromoCodeManager({
       setExpiresAt('')
       setShowForm(false)
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : 'Failed to create promo code')
+      showToast({ type: 'error', title: 'Failed to create promo code', message: error instanceof Error ? error.message : undefined })
     } finally {
       setLoading(false)
     }
@@ -129,7 +131,7 @@ export default function PromoCodeManager({
         p.id === promoId ? { ...p, is_active: !isActive } : p
       ))
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : 'Failed to update promo code')
+      showToast({ type: 'error', title: 'Failed to update promo code', message: error instanceof Error ? error.message : undefined })
     }
   }
 
@@ -144,7 +146,7 @@ export default function PromoCodeManager({
       if (!res.ok) throw new Error(json?.error || 'Failed to delete promo code')
       setPromoCodes(promoCodes.filter((p) => p.id !== deleteTarget))
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : 'Failed to delete promo code')
+      showToast({ type: 'error', title: 'Failed to delete promo code', message: error instanceof Error ? error.message : undefined })
     } finally {
       setDeleteLoading(false)
       setDeleteTarget(null)
@@ -162,10 +164,10 @@ export default function PromoCodeManager({
     <div className="flex items-center justify-end gap-2">
       <button
         onClick={() => toggleActive(promo.id, promo.is_active)}
-        className={`px-3 py-1.5 rounded-lg font-medium text-xs md:text-sm transition ${
+        className={`px-3 py-1.5 rounded-full font-medium text-xs md:text-sm transition ${
           promo.is_active
-            ? 'text-brand-300 hover:bg-brand-500/15'
-            : 'bg-white/[0.03] text-white/70 hover:bg-white/[0.04]'
+            ? 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12]'
+            : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12]'
         }`}
       >
         {promo.is_active ? 'Deactivate' : 'Activate'}
@@ -270,10 +272,10 @@ export default function PromoCodeManager({
     <div className="space-y-5 pb-24 relative">
       {/* Header row */}
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-xl text-white">{t('promo_codes.your_promo_codes')}</h2>
+        <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('promo_codes.your_promo_codes')}</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-700 text-white font-semibold text-sm hover:bg-brand-800 transition"
+          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition"
         >
           <Plus className="w-4 h-4" />
           {t('promo_codes.create_promo_code')}
@@ -284,7 +286,7 @@ export default function PromoCodeManager({
       <div className="fixed bottom-24 right-4 z-40 md:hidden">
         <button
           onClick={() => setShowForm(true)}
-          className="shadow-lg inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-700 text-white font-semibold text-sm hover:bg-brand-800 active:scale-95 transition"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition"
         >
           <Plus className="w-4 h-4" />
           {t('actions.create')}
@@ -320,7 +322,7 @@ export default function PromoCodeManager({
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-transparent px-4 py-2.5 uppercase text-white placeholder:text-white/30 focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 uppercase text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 placeholder="SUMMER2024"
               />
             </div>
@@ -333,7 +335,7 @@ export default function PromoCodeManager({
                 required
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2.5 text-white focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/25"
               >
                 <option value="">{t('promo_codes.select_event')}</option>
                 {events.map((event) => (
@@ -349,7 +351,7 @@ export default function PromoCodeManager({
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2.5 text-white focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/25"
               >
                 <option value="percentage">{t('promo_codes.percentage')}</option>
                 <option value="fixed">{t('promo_codes.fixed_amount')}</option>
@@ -367,7 +369,7 @@ export default function PromoCodeManager({
                 step="0.01"
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-transparent px-4 py-2.5 text-white placeholder:text-white/30 focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 placeholder={discountType === 'percentage' ? '10' : '5.00'}
               />
             </div>
@@ -381,7 +383,7 @@ export default function PromoCodeManager({
                 min="1"
                 value={maxUses}
                 onChange={(e) => setMaxUses(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-transparent px-4 py-2.5 text-white placeholder:text-white/30 focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 placeholder={t('promo_codes.unlimited')}
               />
               {/* The cap counts TICKETS, not orders: fulfillment increments
@@ -400,7 +402,7 @@ export default function PromoCodeManager({
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2.5 text-white focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/25"
               />
             </div>
           </div>
@@ -409,14 +411,14 @@ export default function PromoCodeManager({
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.04] transition"
+              className="rounded-full bg-white/[0.07] px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.12] transition"
             >
               {t('actions.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 transition disabled:opacity-50"
+              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90 transition disabled:opacity-50"
             >
               {loading ? 'Creating…' : 'Create Code'}
             </button>

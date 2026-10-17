@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 
-import Badge from '@/components/ui/Badge'
+import { StatusChip } from '@/components/ui/kit'
 import { Eye, Save, Rocket, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -34,7 +34,7 @@ export function EditEventHeader({
   const { t } = useTranslation('organizer')
 
   return (
-    <div className="sticky top-0 z-50 bg-[#0a0a0a] border-b border-white/10 shadow-sm">
+    <div className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* Left: Title & Status */}
@@ -44,12 +44,12 @@ export function EditEventHeader({
                 <h1 className="text-xl md:text-2xl font-bold text-white truncate">
                   {title || 'Untitled Event'}
                 </h1>
-                <Badge variant={isPublished ? 'success' : 'neutral'} size="md">
+                <StatusChip tone={isPublished ? 'success' : 'neutral'} className="text-sm">
                   {isPublished ? 'Published' : 'Draft'}
-                </Badge>
+                </StatusChip>
                 {hasUnsavedChanges && (
                   <span className="text-sm text-amber-300 font-medium flex items-center gap-1">
-                    <span className="w-2 h-2 bg-amber-600 rounded-full animate-pulse"></span>
+                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
                     {t('edit_event_header.unsaved')}
                   </span>
                 )}
@@ -68,13 +68,13 @@ export function EditEventHeader({
                       </span>
                     )}
                   </div>
-                  <div className="w-full bg-white/[0.03] rounded-full h-2">
+                  <div className="w-full bg-white/[0.07] rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-500 ${
                         completionPercentage === 100
-                          ? 'bg-green-600'
+                          ? 'bg-emerald-400'
                           : completionPercentage >= 60
-                          ? 'bg-brand-600'
+                          ? 'bg-white'
                           : 'bg-amber-500'
                       }`}
                       style={{ width: `${completionPercentage}%` }}
@@ -104,10 +104,10 @@ export function EditEventHeader({
               type="button"
               onClick={onSave}
               disabled={isSaving || !hasUnsavedChanges}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold transition-all ${
                 hasUnsavedChanges
-                  ? 'bg-white/[0.03] text-white hover:bg-white/[0.04] border-2 border-white/15'
-                  : 'bg-white/[0.03] text-white/40 border-2 border-white/10 cursor-not-allowed'
+                  ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+                  : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
               }`}
             >
               <Save className="w-4 h-4" />
@@ -121,7 +121,7 @@ export function EditEventHeader({
               <Link
                 href={`/events/${eventId}`}
                 target="_blank"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold bg-white/[0.03] text-white/70 hover:bg-white/[0.04] border-2 border-white/15 transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold bg-white/[0.07] text-white/70 hover:bg-white/[0.12] transition-all"
               >
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">{t('actions.preview')}</span>
@@ -133,12 +133,12 @@ export function EditEventHeader({
               type="button"
               onClick={onPublish}
               disabled={!canPublish || isSaving}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all ${
                 canPublish && !isSaving
                   ? isPublished
-                    ? 'bg-gray-600 text-white hover:bg-gray-700 shadow-md hover:shadow-lg'
-                    : 'bg-brand-700 text-white hover:bg-brand-800 shadow-md hover:shadow-lg'
-                  : 'bg-white/[0.03] text-white/40 cursor-not-allowed'
+                    ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+                    : 'bg-white text-black hover:bg-white/90'
+                  : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
               }`}
               title={!canPublish ? `Complete ${missingItemsCount} required item${missingItemsCount !== 1 ? 's' : ''} to publish` : ''}
             >

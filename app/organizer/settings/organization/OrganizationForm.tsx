@@ -142,7 +142,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
       {/* Organization Logo */}
       <div className="flex items-start gap-6">
         <div className="relative">
-          <div className="w-24 h-24 rounded-lg overflow-hidden bg-white/[0.03] border-2 border-white/10">
+          <div className="w-24 h-24 rounded-lg overflow-hidden bg-white/[0.055]">
             {formData.organization_logo ? (
               <Image
                 src={formData.organization_logo}
@@ -166,7 +166,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
         <div className="flex-1">
           <label
             htmlFor="logo-upload"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] text-white/70 rounded-lg cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white/80 rounded-full cursor-pointer transition-colors"
           >
             <Upload className="w-4 h-4" />
             {t('organization.upload_logo')}

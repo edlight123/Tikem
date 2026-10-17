@@ -322,9 +322,9 @@ export default function VerificationWizard({
           </button>
           
           {/* Progress Bar */}
-          <div className="bg-white/[0.03] rounded-xl p-4 md:p-5">
+          <div className="bg-white/[0.055] rounded-2xl p-4 md:p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">
                 {t('onboarding.verification.step_of', {
                   defaultValue: 'Step {{current}} of {{total}}',
                   current: currentStepIndex + 1,
@@ -357,9 +357,9 @@ export default function VerificationWizard({
                       className={`
                         w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all
                         ${isComplete
-                          ? 'bg-green-500 text-white'
+                          ? 'bg-emerald-500 text-white'
                           : isCurrent
-                            ? 'bg-brand-600 text-white ring-4 ring-brand-500/20'
+                            ? 'bg-white text-black ring-4 ring-white/10'
                             : isPast
                               ? 'bg-white/[0.12] text-white/70'
                               : 'bg-white/[0.055] text-white/45'
@@ -371,7 +371,7 @@ export default function VerificationWizard({
                     {index < STEPS.length - 1 && (
                       <div
                         className={`flex-1 h-1 mx-2 rounded-full transition-colors ${
-                          isComplete || isPast ? 'bg-green-500' : 'bg-white/[0.08]'
+                          isComplete || isPast ? 'bg-emerald-500' : 'bg-white/[0.08]'
                         }`}
                       />
                     )}
@@ -385,13 +385,13 @@ export default function VerificationWizard({
         {/* Current Step Info */}
         <div className="mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/[0.07] flex items-center justify-center">
               <currentStep.icon className="w-6 h-6 text-white" />
             </div>
             <div>
               {/* `!` on the size: `.mobile-typography h1` (0,1,1) beats a bare
                   arbitrary size (0,1,0) under 640px, leading included. */}
-              <h1 className="font-display !text-[24px] !leading-[1.06] text-white md:!text-[28px]">
+              <h1 className="font-display lowercase italic !text-[24px] !leading-[1.06] text-white md:!text-[28px]">
                 {t(`onboarding.verification.steps.${currentStep.id}.title`, { defaultValue: currentStep.title })}
               </h1>
               <p className="text-white/60">
@@ -408,12 +408,12 @@ export default function VerificationWizard({
 
         {/* What you'll need — shown on the first step so organizers don't bail mid-flow */}
         {currentStepIndex === 0 && (
-          <div className="mb-6 bg-brand-500/10 rounded-xl p-4">
-            <h4 className="text-sm font-semibold text-brand-300 mb-1.5">{t('onboarding.verification.before_you_start', { defaultValue: 'Before you start' })}</h4>
-            <p className="text-sm text-brand-300/90 mb-2">
+          <div className="mb-6 bg-white/[0.055] rounded-xl p-4">
+            <h4 className="text-sm font-semibold text-white mb-1.5">{t('onboarding.verification.before_you_start', { defaultValue: 'Before you start' })}</h4>
+            <p className="text-sm text-white/65 mb-2">
               {t('onboarding.verification.before_you_start_intro', { defaultValue: 'Have these ready. It takes about 5 minutes, and your progress saves as you go:' })}
             </p>
-            <ul className="text-sm text-brand-300/90 space-y-1 ml-5 list-disc">
+            <ul className="text-sm text-white/65 space-y-1 ml-5 list-disc">
               <li>{t('onboarding.verification.checklist_id', { defaultValue: 'A government-issued ID (front & back)' })}</li>
               <li>{t('onboarding.verification.checklist_selfie', { defaultValue: 'Your phone or webcam for a quick selfie holding your ID' })}</li>
               <li>{t('onboarding.verification.checklist_org', { defaultValue: 'Your organization name and contact details' })}</li>
@@ -424,16 +424,16 @@ export default function VerificationWizard({
         {/* Error Message */}
         {error && (
           <div className="mb-6 bg-red-500/10 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-300">{t('onboarding.verification.error_label', { defaultValue: 'Error' })}</p>
-              <p className="text-sm text-red-300">{error}</p>
+              <p className="text-sm font-medium text-red-200">{t('onboarding.verification.error_label', { defaultValue: 'Error' })}</p>
+              <p className="text-sm text-red-200/80">{error}</p>
             </div>
           </div>
         )}
 
         {/* Step Content */}
-        <div className="bg-white/[0.03] rounded-xl overflow-hidden">
+        <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
           {currentStep.id === 'organizerInfo' && (
             <div className="p-5 md:p-6 space-y-5">
               {/* Full Name */}
@@ -584,11 +584,11 @@ export default function VerificationWizard({
           {currentStep.id === 'governmentId' && (
             <div className="p-5 md:p-6 space-y-5">
               {/* Tips */}
-              <div className="bg-brand-500/10 rounded-xl p-4">
-                <h4 className="font-semibold text-brand-300 text-sm mb-2 flex items-center gap-2">
+              <div className="bg-white/[0.07] rounded-xl p-4">
+                <h4 className="font-semibold text-white text-sm mb-2 flex items-center gap-2">
                   <Sparkles className="w-4 h-4" /> {t('onboarding.verification.photo_tips', { defaultValue: 'Photo Tips' })}
                 </h4>
-                <ul className="text-sm text-brand-300 space-y-1 ml-6 list-disc">
+                <ul className="text-sm text-white/65 space-y-1 ml-6 list-disc">
                   <li>{t('onboarding.verification.tip_readable', { defaultValue: 'Ensure all text is clearly readable' })}</li>
                   <li>{t('onboarding.verification.tip_lighting', { defaultValue: 'Use good lighting (avoid glare)' })}</li>
                   <li>{t('onboarding.verification.tip_background', { defaultValue: 'Place ID on a contrasting background' })}</li>
@@ -620,9 +620,9 @@ export default function VerificationWizard({
           {currentStep.id === 'selfie' && (
             <div className="p-5 md:p-6 space-y-5">
               {/* Instructions */}
-              <div className="bg-brand-500/10 rounded-xl p-4">
-                <h4 className="font-semibold text-brand-300 text-sm mb-2">{t('onboarding.verification.selfie_how', { defaultValue: 'How to take a good selfie:' })}</h4>
-                <ul className="text-sm text-brand-300 space-y-1 ml-6 list-disc">
+              <div className="bg-white/[0.07] rounded-xl p-4">
+                <h4 className="font-semibold text-white text-sm mb-2">{t('onboarding.verification.selfie_how', { defaultValue: 'How to take a good selfie:' })}</h4>
+                <ul className="text-sm text-white/65 space-y-1 ml-6 list-disc">
                   <li>{t('onboarding.verification.selfie_tip_hold', { defaultValue: 'Hold your ID next to your face' })}</li>
                   <li>{t('onboarding.verification.selfie_tip_face', { defaultValue: 'Make sure your face is clearly visible' })}</li>
                   <li>{t('onboarding.verification.selfie_tip_text', { defaultValue: 'Ensure the ID text is readable in the photo' })}</li>
@@ -723,9 +723,9 @@ export default function VerificationWizard({
               </p>
 
               {/* Personal information */}
-              <div className="bg-white/[0.06] rounded-xl p-4">
+              <div className="bg-white/[0.07] rounded-xl p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-display !text-lg text-white">{t('onboarding.verification.review.personal_information', { defaultValue: 'Personal information' })}</h3>
+                  <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('onboarding.verification.review.personal_information', { defaultValue: 'Personal information' })}</h3>
                   <button type="button" onClick={() => setCurrentStepIndex(0)} className="text-sm font-medium text-brand-300 hover:text-brand-300">{t('onboarding.verification.review.edit', { defaultValue: 'Edit' })}</button>
                 </div>
                 <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -739,9 +739,9 @@ export default function VerificationWizard({
               </div>
 
               {/* Documents */}
-              <div className="bg-white/[0.06] rounded-xl p-4">
+              <div className="bg-white/[0.07] rounded-xl p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-display !text-lg text-white">{t('onboarding.verification.review.identity_documents', { defaultValue: 'Identity documents' })}</h3>
+                  <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('onboarding.verification.review.identity_documents', { defaultValue: 'Identity documents' })}</h3>
                   <button type="button" onClick={() => setCurrentStepIndex(1)} className="text-sm font-medium text-brand-300 hover:text-brand-300">{t('onboarding.verification.review.edit', { defaultValue: 'Edit' })}</button>
                 </div>
                 <ul className="space-y-2 text-sm">
@@ -753,9 +753,9 @@ export default function VerificationWizard({
 
               {/* Business (only if provided) */}
               {(businessForm.business_registration_number || businessForm.tax_id || businessForm.business_type) && (
-                <div className="bg-white/[0.06] rounded-xl p-4">
+                <div className="bg-white/[0.07] rounded-xl p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="font-display !text-lg text-white">{t('onboarding.verification.review.business_details', { defaultValue: 'Business details' })}</h3>
+                    <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('onboarding.verification.review.business_details', { defaultValue: 'Business details' })}</h3>
                     <button type="button" onClick={() => setCurrentStepIndex(3)} className="text-sm font-medium text-brand-300 hover:text-brand-300">{t('onboarding.verification.review.edit', { defaultValue: 'Edit' })}</button>
                   </div>
                   <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -766,7 +766,7 @@ export default function VerificationWizard({
                 </div>
               )}
 
-              <div className="rounded-xl bg-brand-500/10 p-4 text-sm text-brand-300">
+              <div className="rounded-xl bg-white/[0.07] p-4 text-sm text-white/65">
                 {t('onboarding.verification.review.submit_disclaimer', { defaultValue: 'By submitting, you confirm this information is accurate. Our team reviews it usually within 1–2 business days, and you’ll be notified once approved, which unlocks withdrawals.' })}
               </div>
             </div>
@@ -779,10 +779,10 @@ export default function VerificationWizard({
             onClick={handlePrevious}
             disabled={currentStepIndex === 0 || saving}
             className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all
+              flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all
               ${currentStepIndex === 0
                 ? 'text-white/40 cursor-not-allowed'
-                : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
+                : 'text-white/70 hover:bg-white/[0.07] hover:text-white'
               }
             `}
           >
@@ -795,7 +795,7 @@ export default function VerificationWizard({
               <button
                 onClick={handleSkipStep}
                 disabled={saving}
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/[0.12] hover:text-white transition-colors"
+                className="px-4 py-2.5 rounded-full text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors"
               >
                 {t('onboarding.verification.nav.skip_for_now', { defaultValue: 'Skip for now' })}
               </button>
@@ -805,7 +805,7 @@ export default function VerificationWizard({
               <button
                 onClick={onComplete}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold bg-brand-700 text-white hover:bg-brand-800 transition-all shadow-sm"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -820,7 +820,7 @@ export default function VerificationWizard({
               <button
                 onClick={handleSaveCurrentStep}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-brand-700 text-white hover:bg-brand-800 transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

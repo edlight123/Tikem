@@ -284,7 +284,7 @@ export default function OrganizerEventsPage() {
           actions={
             <Link
               href="/organizer/events/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-5 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-brand-800"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90"
             >
               <Plus className="h-5 w-5" />
               <span className="hidden sm:inline">{t('events_page.create_event', 'Create Event')}</span>
@@ -347,7 +347,7 @@ export default function OrganizerEventsPage() {
               <SlidersHorizontal className="h-4 w-4" />
               <span>{t('events_page.filters', 'Filters')}</span>
               {activeFiltersCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-700 text-xs font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-black">
                   {activeFiltersCount}
                 </span>
               )}
@@ -403,7 +403,7 @@ export default function OrganizerEventsPage() {
                         type="button"
                         onClick={handleLoadMore}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-60"
                       >
                         {loadingMore ? t('events_page.loading', 'Loading…') : t('events_page.load_more', 'Load more events')}
                       </button>
@@ -419,7 +419,7 @@ export default function OrganizerEventsPage() {
                 ) : (
                   <Link
                     href="/organizer/events/new"
-                    className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-800"
+                    className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
                   >
                     <Plus className="h-5 w-5" />
                     {t('events_page.create_event', 'Create Event')}

@@ -10,7 +10,7 @@
   "action_center": {
     "title": "Nécessite une attention",
     "action_items": "élément d'action",
-    "all_caught_up": "Tout est à jour! 🎉",
+    "all_caught_up": "Tout est à jour!",
     "no_action_items": "Aucun élément d'action ne nécessite votre attention pour le moment.",
     "draft_events": "Événement brouillon",
     "draft_description": "Publiez vos événements pour commencer à vendre des billets",

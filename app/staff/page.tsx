@@ -94,7 +94,7 @@ export default async function StaffHomePage() {
         <p className="mt-1 text-sm text-white/65">Your assigned events</p>
 
         {checkInEvents.length === 0 ? (
-          <div className="mt-6 bg-white/[0.03] border border-white/10 rounded-xl p-5">
+          <div className="mt-6 bg-white/[0.055] rounded-2xl p-5">
             <p className="text-sm text-white/70">No staff events assigned yet.</p>
           </div>
         ) : (
@@ -103,7 +103,7 @@ export default async function StaffHomePage() {
               <a
                 key={e.eventId}
                 href={`/organizer/scan/${encodeURIComponent(e.eventId)}`}
-                className="block bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:border-white/10 transition-colors"
+                className="block bg-white/[0.055] rounded-2xl p-4 hover:bg-white/[0.1] transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -114,7 +114,7 @@ export default async function StaffHomePage() {
                       {e.city ? ` • ${e.city}` : ''}
                     </div>
                   </div>
-                  <div className="text-xs font-medium text-emerald-300 border border-green-200 rounded-full px-2.5 py-1">
+                  <div className="shrink-0 text-xs font-semibold text-white bg-white/[0.07] rounded-full px-3 py-1.5">
                     Scan
                   </div>
                 </div>

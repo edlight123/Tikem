@@ -10,7 +10,7 @@ import { formatCurrency } from '@/lib/fees'
 import type { EventEarnings } from '@/types/earnings'
 import type { EventTierSalesBreakdownRow } from '@/lib/earnings'
 import { MetricCard, StatusChip, type ChipTone } from '@/components/organizer/ui'
-import { DollarSign, TrendingUp, Wallet } from 'lucide-react'
+import { Building2, CalendarDays, DollarSign, Info, Smartphone, TrendingUp, Wallet } from 'lucide-react'
 import {
   MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
   type MoncashMinimumInfo,
@@ -252,15 +252,15 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           ← Back to All Earnings
         </Link>
         
-        <div className="rounded-xl bg-white/[0.03] p-8 text-center">
-          <span className="text-6xl mb-4 block">💰</span>
-          <h2 className="font-display text-2xl text-white mb-2">{t('event_earnings.no_earnings_yet')}</h2>
+        <div className="rounded-2xl bg-white/[0.055] p-8 text-center">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.07]"><Wallet className="h-7 w-7 text-white/70" aria-hidden="true" /></div>
+          <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">{t('event_earnings.no_earnings_yet')}</h2>
           <p className="text-white/60 mb-6">
             This event hasn&apos;t generated any earnings yet. Earnings are recorded when attendees purchase tickets.
           </p>
           <Link 
             href={`/events/${event.id}`}
-            className="inline-block px-6 py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition-colors"
+            className="inline-block px-6 py-3 bg-white text-black rounded-full hover:bg-white/90 transition-colors font-semibold"
           >
             {t('event_earnings.view_event_page')}
           </Link>
@@ -285,7 +285,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
   const getStatusBadge = (status: string) => {
     if (!settlementTone[status]) return null
-    const label = status === 'ready' ? '✓ Ready' : status === 'pending' ? '⏳ Pending' : '🔒 Locked'
+    const label = status === 'ready' ? 'Ready' : status === 'pending' ? 'Pending' : 'Locked'
     return <StatusChip tone={settlementTone[status]}>{label}</StatusChip>
   }
 
@@ -467,19 +467,19 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       </Link>
 
       <div className="mb-6">
-        <h1 className="font-display italic text-[clamp(28px,4vw,40px)] leading-[1.04] text-white mb-2">{event.title || 'Event'}</h1>
+        <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-white mb-2">{event.title || 'Event'}</h1>
         <div className="flex items-center gap-2 text-white/60">
-          <span className="font-mono tabular-nums">📅 {eventDate ? eventDate.toLocaleDateString('en-US', {
+          <span className="inline-flex items-center gap-1.5 font-mono tabular-nums"><CalendarDays className="h-4 w-4" aria-hidden="true" />{eventDate ? eventDate.toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
             year: 'numeric'
           }) : 'Date TBD'}</span>
-          <span className="mx-2">•</span>
+          <span className="mx-2">·</span>
           {getStatusBadge(earnings.settlementStatus)}
         </div>
         <div className="mt-1 text-xs text-white/70">
           Revenue source: {earnings.dataSource === 'availability' ? 'Ticket sales (platform fee and refunds excluded)' : earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
-          {earnings.lastCalculatedAt ? ` • Last calculated: ${new Date(earnings.lastCalculatedAt).toLocaleString('en-US')}` : ''}
+          {earnings.lastCalculatedAt ? ` · Last calculated: ${new Date(earnings.lastCalculatedAt).toLocaleString('en-US')}` : ''}
         </div>
       </div>
 
@@ -506,10 +506,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       </div>
 
       {/* Ticket Tier Breakdown */}
-      <div className="rounded-xl bg-white/[0.03] p-6 mb-6">
+      <div className="rounded-2xl bg-white/[0.055] p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display text-xl text-white">🎟️ Ticket Tier Breakdown</h2>
+            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">Ticket Tier Breakdown</h2>
             <p className="text-sm text-white/60">{t('event_earnings.totals_note')}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -528,7 +528,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-white/70 border-b">
+                <tr className="text-left text-white/70 border-b border-white/[0.08]">
                   <th className="py-2 pr-4 font-medium">Tier</th>
                   <th className="py-2 pr-4 font-medium">{t('event_earnings.listed_unit_price')}</th>
                   <th className="py-2 pr-4 font-medium">{t('event_earnings.tickets_sold')}</th>
@@ -539,7 +539,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 {tierBreakdown.map((row) => (
                   <tr
                     key={`${String(row.tierId || row.tierName)}::${row.listedUnitPriceCents}::${row.listedCurrency}`}
-                    className="border-b last:border-b-0"
+                    className="border-b border-white/[0.06] last:border-b-0"
                   >
                     <td className="py-3 pr-4 font-medium text-white">{row.tierName}</td>
                     <td className="py-3 pr-4 font-mono tabular-nums text-white/70">{formatCurrency(row.listedUnitPriceCents, row.listedCurrency)}</td>
@@ -555,21 +555,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Settlement Status */}
       {earnings.settlementStatus !== 'ready' && (
-        <div className="border border-amber-500/30 rounded-xl p-6 mb-6">
+        <div className="rounded-2xl bg-amber-500/10 p-6 mb-6">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">ℹ️</span>
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
             <div>
-              <h3 className="font-bold text-amber-300 mb-1">
+              <h3 className="font-semibold text-amber-200 mb-1">
                 {earnings.settlementStatus === 'pending' ? 'Settlement Pending' : 'Funds Locked'}
               </h3>
-              <p className="text-amber-300 text-sm mb-2">
+              <p className="text-amber-200/80 text-sm mb-2">
                 {t('payout_timing.release_rule', {
                   defaultValue:
                     'Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000). Larger first events may be reviewed by our team first.',
                 })}
               </p>
               {settlementDate && (
-                <p className="text-amber-300 text-sm font-medium">
+                <p className="text-amber-200 text-sm font-medium">
                   {t('event_earnings.available_for_withdrawal')}<span className="font-mono tabular-nums">{settlementDate.toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
@@ -602,14 +602,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           <div className="mt-3 flex flex-wrap gap-3">
             <Link
               href="/organizer/verify"
-              className="inline-flex items-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+              className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
             >
               {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
             </Link>
             {needsPayoutMethodToWithdraw && (
               <Link
                 href="/organizer/settings/payouts"
-                className="inline-flex items-center rounded-lg bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.1]"
+                className="inline-flex items-center rounded-full bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
               >
                 {t('verify_to_withdraw.add_method_cta', { defaultValue: 'Set up payouts' })}
               </Link>
@@ -619,10 +619,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       )}
 
       {!withdrawalBlocked && !needsIdentityToWithdraw && !needsPayoutMethodToWithdraw && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
-        <div className="rounded-xl bg-white/[0.03] p-6 mb-6">
+        <div className="rounded-2xl bg-white/[0.055] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-display text-xl text-white">💸 Request Withdrawal</h2>
+              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">Request Withdrawal</h2>
               <p className="text-white/60 text-sm">{t('event_earnings.available_label')}<span className="font-mono tabular-nums">{formatCurrency(availableToWithdraw, earnings.currency)}</span></p>
             </div>
           </div>
@@ -633,11 +633,11 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 onClick={() => handleWithdraw('moncash')}
                 disabled={!moncashMeetsMinimum}
                 aria-disabled={!moncashMeetsMinimum}
-                className="w-full border-2 border-brand-500/30 rounded-xl p-4 hover:border-brand-400 hover:shadow-md transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-brand-500/30"
+                className="w-full rounded-2xl bg-white/[0.07] p-4 hover:bg-white/[0.11] transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-brand-200 transition-colors">
-                    <span className="text-2xl">📱</span>
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.07] flex items-center justify-center">
+                    <Smartphone className="h-6 w-6 text-white/80" aria-hidden="true" />
                   </div>
                   <div>
                     <div className="font-bold text-white">{t('event_earnings.moncash')}</div>
@@ -647,7 +647,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 <div className="text-xs text-white/70">{t('event_earnings.processed_24h')}</div>
               </button>
               {!moncashMeetsMinimum && (
-                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <p className="mt-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                   {t('event_earnings.moncash_below_minimum', {
                     min: moncashMinLabel,
                     balance: formatCurrency(availableToWithdraw, earnings.currency),
@@ -661,11 +661,11 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 onClick={() => handleWithdraw('bank')}
                 disabled={!bankMeetsMinimum}
                 aria-disabled={!bankMeetsMinimum}
-                className="w-full border-2 border-brand-500/30 rounded-xl p-4 hover:border-brand-400 hover:shadow-md transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-brand-500/30"
+                className="w-full rounded-2xl bg-white/[0.07] p-4 hover:bg-white/[0.11] transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-brand-500/15 transition-colors">
-                    <span className="text-2xl">🏦</span>
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.07] flex items-center justify-center">
+                    <Building2 className="h-6 w-6 text-white/80" aria-hidden="true" />
                   </div>
                   <div>
                     <div className="font-bold text-white">{t('event_earnings.bank_transfer')}</div>
@@ -675,7 +675,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 <div className="text-xs text-white/70">{t('event_earnings.processed_3_5_days')}</div>
               </button>
               {!bankMeetsMinimum && (
-                <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <p className="mt-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                   {t('event_earnings.bank_below_minimum', {
                     min: formatCurrency(BANK_MIN_WITHDRAWAL_MINOR, earnings.currency),
                   })}
@@ -688,10 +688,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Withdrawal History */}
       {earnings.withdrawnAmount > 0 && (
-        <div className="rounded-xl bg-white/[0.03] p-6">
-          <h2 className="font-display text-xl text-white mb-4">📋 Withdrawal History</h2>
+        <div className="rounded-2xl bg-white/[0.055] p-6">
+          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-4">Withdrawal History</h2>
           <div className="space-y-3">
-            <div className="flex justify-between items-center py-3 border-b border-white/10">
+            <div className="flex justify-between items-center py-3 border-b border-white/[0.06]">
               <div>
                 <div className="font-medium text-white">{t('event_earnings.total_withdrawn')}</div>
                 <div className="text-sm text-white/70">{t('event_earnings.from_this_event')}</div>
@@ -704,7 +704,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   <div className="font-medium text-white">{t('event_earnings.remaining_balance')}</div>
                   <div className="text-sm text-white/70">Available {earnings.settlementStatus === 'ready' ? 'now' : 'after settlement'}</div>
                 </div>
-                <span className="font-mono tabular-nums font-bold text-brand-300">{formatCurrency(earnings.netAmount - earnings.withdrawnAmount, earnings.currency)}</span>
+                <span className="font-mono tabular-nums font-bold text-white">{formatCurrency(earnings.netAmount - earnings.withdrawnAmount, earnings.currency)}</span>
               </div>
             )}
           </div>
@@ -713,14 +713,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
       {/* Withdrawal Modal */}
       {showWithdrawModal && withdrawMethod && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="rounded-xl bg-[#171717] max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="font-display text-xl text-white mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="rounded-2xl bg-[#1c1c1c] max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-4">
               Request {withdrawMethod === 'moncash' ? 'MonCash' : 'Bank'} Withdrawal
             </h3>
             
             <div className="mb-6">
-              <div className="rounded-lg bg-white/[0.06] p-4 mb-4">
+              <div className="rounded-xl bg-white/[0.06] p-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="text-white/60">{t('event_earnings.amount_label')}</span>
                   <span className="font-mono tabular-nums font-bold text-white">{formatCurrency(availableToWithdraw, earnings.currency)}</span>
@@ -728,7 +728,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                 <div className="flex justify-between">
                   <span className="text-white/60">{t('event_earnings.method_label')}</span>
                   <span className="font-medium text-white">
-                    {withdrawMethod === 'moncash' ? '📱 MonCash' : '🏦 Bank Transfer'}
+                    {withdrawMethod === 'moncash' ? 'MonCash' : 'Bank Transfer'}
                   </span>
                 </div>
               </div>
@@ -753,14 +753,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     <div
                       className={
                         moncashQuote.instantAvailable
-                          ? 'rounded-lg bg-white/[0.08] p-3 ring-1 ring-inset ring-brand-400/50'
-                          : 'rounded-lg bg-white/[0.06] p-3'
+                          ? 'rounded-xl bg-white/[0.08] p-3 ring-1 ring-inset ring-brand-400/50'
+                          : 'rounded-xl bg-white/[0.06] p-3'
                       }
                     >
                       <p
                         className={
                           moncashQuote.instantAvailable
-                            ? 'text-sm font-medium text-brand-300'
+                            ? 'text-sm font-medium text-white'
                             : 'text-sm font-medium text-white'
                         }
                       >
@@ -769,7 +769,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       <p
                         className={
                           moncashQuote.instantAvailable
-                            ? 'text-xs text-brand-300 mt-1'
+                            ? 'text-xs text-white/60 mt-1'
                             : 'text-xs text-white/60 mt-1'
                         }
                       >
@@ -781,7 +781,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       <div
                         className={
                           moncashQuote.instantAvailable
-                            ? 'mt-2 text-xs text-brand-300 space-y-1'
+                            ? 'mt-2 text-xs text-white/90 space-y-1'
                             : 'mt-2 text-xs text-white/90 space-y-1'
                         }
                       >
@@ -806,12 +806,12 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       </div>
                     </div>
                   ) : isInstantPrefundingAvailable ? (
-                    <div className="border border-brand-500/30 rounded-lg p-3">
-                      <p className="text-sm font-medium text-brand-300">{t('event_earnings.instant_moncash_prefunding')}</p>
-                      <p className="text-xs text-brand-300 mt-1">
+                    <div className="rounded-xl bg-white/[0.06] p-3">
+                      <p className="text-sm font-medium text-white">{t('event_earnings.instant_moncash_prefunding')}</p>
+                      <p className="text-xs text-white/60 mt-1">
                         {t('event_earnings.prefunding_instant_note')}
                       </p>
-                      <div className="mt-2 text-xs text-brand-300 space-y-1">
+                      <div className="mt-2 text-xs text-white/90 space-y-1">
                         <div className="flex justify-between">
                           <span>{t('event_earnings.prefunding_fee')}</span>
                           <span className="font-mono tabular-nums">-{formatCurrency(prefundingFeeCents, earnings.currency)}</span>
@@ -834,7 +834,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               {withdrawMethod === 'bank' && (
                 <div className="space-y-4">
                   {bankDestinationsError ? (
-                    <div className="border border-amber-500/30 rounded-lg p-3 text-sm text-amber-300">
+                    <div className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-200">
                       {bankDestinationsError}
                     </div>
                   ) : null}
@@ -890,7 +890,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   </div>
 
                   {(bankMode === 'on_file' || bankMode === 'saved') && bankDestinations ? (
-                    <div className="rounded-lg bg-white/[0.06] p-3">
+                    <div className="rounded-xl bg-white/[0.06] p-3">
                       {bankMode === 'saved' ? (
                         <div className="mb-2">
                           <label className="block text-xs font-medium text-white/60 mb-1">{t('event_earnings.select_account')}</label>
@@ -912,7 +912,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                         <div className="text-sm text-white">
                           <div className="font-semibold">{selectedBankDestination.bankName}</div>
                           <div className="text-xs text-white/60">
-                            {selectedBankDestination.accountName} • ****{selectedBankDestination.accountNumberLast4}
+                            {selectedBankDestination.accountName} · ****{selectedBankDestination.accountNumberLast4}
                           </div>
                         </div>
                       ) : (
@@ -923,7 +923,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
                   {bankMode === 'new' ? (
                     <div className="space-y-3">
-                      <div className="rounded-lg bg-white/[0.06] p-3">
+                      <div className="rounded-xl bg-white/[0.06] p-3">
                         <p className="text-sm text-white font-medium">{t('event_earnings.verification_required')}</p>
                         <p className="text-xs text-white/60 mt-1">
                           {t('event_earnings.new_bank_needs_verification_long')}
@@ -1007,14 +1007,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               )}
 
               {payoutChangeVerificationRequired ? (
-                <div className="mt-4 border border-brand-500/30 rounded-lg p-3">
-                  <p className="text-sm font-semibold text-brand-300">{t('event_earnings.email_verification')}</p>
-                  <p className="text-xs text-brand-300 mt-1">
+                <div className="mt-4 rounded-xl bg-white/[0.06] p-3">
+                  <p className="text-sm font-semibold text-white">{t('event_earnings.email_verification')}</p>
+                  <p className="text-xs text-white/60 mt-1">
                     {verificationMessage || 'For your security, confirm this change with the code we email you.'}
                   </p>
 
                   {debugVerificationCode ? (
-                    <p className="text-xs text-brand-300 mt-2">Dev code: {debugVerificationCode}</p>
+                    <p className="text-xs text-white/60 mt-2">Dev code: {debugVerificationCode}</p>
                   ) : null}
 
                   <div className="mt-3 flex gap-2">
@@ -1022,7 +1022,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       type="button"
                       onClick={sendVerificationCode}
                       disabled={isSendingVerificationCode}
-                      className="px-3 py-2 bg-brand-700 text-white rounded-lg text-sm font-medium disabled:bg-brand-300"
+                      className="px-3 py-2 bg-white/[0.1] text-white rounded-full text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-40"
                     >
                       {isSendingVerificationCode ? 'Sending…' : 'Send code'}
                     </button>
@@ -1030,13 +1030,13 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value)}
                       placeholder="6-digit code"
-                      className="flex-1 px-3 py-2 border border-brand-500/30 rounded-lg text-sm"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                     <button
                       type="button"
                       onClick={verifyCode}
                       disabled={isVerifyingVerificationCode || !/^\d{6}$/.test(verificationCode)}
-                      className="px-3 py-2 bg-white/[0.03] border border-brand-400 text-brand-300 rounded-lg text-sm font-medium hover:bg-white/10 disabled:opacity-50"
+                      className="px-3 py-2 bg-white/[0.1] text-white rounded-full text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-50"
                     >
                       {isVerifyingVerificationCode ? 'Verifying…' : 'Verify'}
                     </button>
@@ -1049,8 +1049,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               ) : null}
 
               {error && (
-                <div className="border border-red-500/30 rounded-lg p-3 mt-4">
-                  <p className="text-red-300 text-sm">❌ {error}</p>
+                <div className="rounded-xl bg-red-500/10 p-3 mt-4">
+                  <p className="text-red-200 text-sm">{error}</p>
                 </div>
               )}
             </div>
@@ -1065,7 +1065,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     ((bankMode === 'new' && (!bankDetails.accountHolder || !bankDetails.bankName || !bankDetails.accountNumber)) ||
                       (bankMode !== 'new' && !selectedBankDestinationId)))
                 }
-                className="flex-1 px-4 py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition-colors font-medium disabled:bg-white/10 disabled:text-white/40 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 bg-white text-black rounded-full hover:bg-white/90 transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm Withdrawal'}
               </button>
@@ -1090,7 +1090,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   })
                 }}
                 disabled={isSubmitting}
-                className="px-4 py-3 rounded-[10px] bg-white/[0.08] text-white/80 hover:bg-white/10 transition-colors font-medium disabled:cursor-not-allowed"
+                className="px-4 py-3 rounded-full bg-white/[0.07] text-white hover:bg-white/[0.12] transition-colors font-semibold disabled:cursor-not-allowed"
               >
                 {t('actions.cancel')}
               </button>

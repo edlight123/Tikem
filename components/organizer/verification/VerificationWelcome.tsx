@@ -37,11 +37,11 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
       <div className="max-w-2xl w-full">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-brand-700 rounded-2xl mb-6 shadow-lg">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/[0.07] rounded-2xl mb-6">
             <Shield className="w-10 h-10 text-white" />
           </div>
           
-          <h1 className="mb-4 font-display !text-[34px] !leading-[1.04] text-white sm:!text-[44px]">
+          <h1 className="mb-4 font-display lowercase italic !text-[34px] !leading-[1.04] text-white sm:!text-[44px]">
             {userName ? `Welcome, ${userName}!` : 'Become a Verified Organizer'}
           </h1>
           
@@ -55,10 +55,10 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
           {benefits.map((benefit, index) => (
             <div 
               key={index}
-              className="bg-white/[0.03] rounded-xl p-6 text-center transition-colors hover:bg-white/[0.06]"
+              className="bg-white/[0.055] rounded-2xl p-6 text-center"
             >
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-500/15 mb-4">
-                <benefit.icon className="w-6 h-6 text-brand-300" />
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/[0.07] mb-4">
+                <benefit.icon className="w-6 h-6 text-white/80" />
               </div>
               <h3 className="font-semibold text-white mb-2">{benefit.title}</h3>
               <p className="text-sm text-white/60">{benefit.description}</p>
@@ -67,13 +67,13 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
         </div>
 
         {/* What you'll need */}
-        <div className="bg-white/[0.03] rounded-xl p-6 mb-8">
+        <div className="bg-white/[0.055] rounded-2xl p-6 mb-8">
           {/* `!` because `.mobile-typography h2` (0,1,1) beats a bare size. */}
-          <h2 className="mb-4 font-display !text-[22px] !leading-[1.1] text-white">What you&apos;ll need</h2>
+          <h2 className="mb-4 font-display lowercase italic !text-[22px] !leading-snug text-white">What you&apos;ll need</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold text-brand-300">1</span>
+                <span className="text-xs font-bold text-white/70">1</span>
               </div>
               <div>
                 <p className="font-medium text-white text-sm">{t('verification_welcome.government_issued_id')}</p>
@@ -82,7 +82,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
             </div>
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold text-brand-300">2</span>
+                <span className="text-xs font-bold text-white/70">2</span>
               </div>
               <div>
                 <p className="font-medium text-white text-sm">{t('verification_welcome.a_clear_selfie')}</p>
@@ -100,7 +100,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
             </div>
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold text-brand-300">~5</span>
+                <span className="text-xs font-bold text-white/70">~5</span>
               </div>
               <div>
                 <p className="font-medium text-white text-sm">{t('verification_welcome.about_5_minutes')}</p>
@@ -114,7 +114,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
         <div className="text-center">
           <button
             onClick={onStart}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-brand-700 hover:bg-brand-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all text-lg"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-all text-lg"
           >
             {t('verification_welcome.start_verification')}
             <ArrowRight className="w-5 h-5" />

@@ -74,7 +74,7 @@ export default function AnalyticsView({
 
         {/* Charts */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 p-6">
+          <div className="rounded-2xl bg-white/[0.055] p-6">
             <SectionHeader eyebrow={t('analytics.last_7_days')} title={t('analytics.sales_trend')} className="mb-5" />
             <SalesChart data={salesChartData} currency={organizerCurrency} />
             <div className="mt-4 flex justify-center gap-6">
@@ -89,7 +89,7 @@ export default function AnalyticsView({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 p-6">
+          <div className="rounded-2xl bg-white/[0.055] p-6">
             <SectionHeader title={t('analytics.events_by_category')} className="mb-5" />
             {categoryChartData.length > 0 ? (
               <CategoryChart data={categoryChartData} />
@@ -102,7 +102,7 @@ export default function AnalyticsView({
         </div>
 
         {/* Top events */}
-        <div className="mt-6 rounded-2xl border border-white/10 p-6">
+        <div className="mt-6 rounded-2xl bg-white/[0.055] p-6">
           <SectionHeader eyebrow={t('analytics.leaderboard')} title={t('analytics.top_performing_events')} className="mb-6" />
           {eventsWithSales.length === 0 ? (
             <OrgEmptyState
@@ -112,7 +112,7 @@ export default function AnalyticsView({
               action={
                 <Link
                   href="/organizer/events/new"
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-6 py-3 font-semibold text-white hover:bg-brand-800 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black hover:bg-white/90 transition-colors"
                 >
                   <Calendar className="h-5 w-5" />
                   {t('analytics.create_event')}
@@ -124,15 +124,15 @@ export default function AnalyticsView({
               {eventsWithSales.slice(0, 10).map((event: any, index: number) => (
                 <div
                   key={event.id}
-                  className="flex items-center gap-4 rounded-xl border border-white/10 p-4 transition-colors hover:bg-white/[0.04]"
+                  className="flex items-center gap-4 rounded-xl bg-white/[0.06] p-4 transition-colors hover:bg-white/[0.12]"
                 >
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-700 font-mono tabular-nums font-bold text-white text-sm">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] font-mono tabular-nums font-bold text-white text-sm">
                     {index + 1}
                   </div>
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/organizer/events/${event.id}`}
-                      className="block truncate font-display italic text-white hover:text-brand-300 transition-colors"
+                      className="block truncate font-display italic text-white hover:text-white/75 transition-colors"
                     >
                       {event.title}
                     </Link>

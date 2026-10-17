@@ -5,7 +5,7 @@
  * pastel pink band strobing across a black page on every navigation, the same
  * family of mistake as the `bg-white/80` flash this codebase used to ship. The
  * bars are `.skeleton` now; the RED lives where the real page puts it, in the
- * `border-2 border-red-500/30` outline and the per-card border tiers.
+ * `bg-red-500/10` banner fill and the per-card tinted fills.
  *
  * Page body only: the organizer layout already paints OrganizerTopNav and the
  * `pb-mobile-nav` main.
@@ -17,19 +17,19 @@
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *           mt-1.5  (the eyebrow was missing here). The banner follows with no
  *           top margin, so they touch.
- *   banner  border-2 border-red-500/30 rounded-xl p-4 mb-6 — a 20px icon
+ *   banner  bg-red-500/10 rounded-2xl p-4 mb-6, a 20px icon
  *           beside a bold line over two lines of 14px copy
- *   cards   space-y-4 of three `rounded-xl border-2 bg-white/[0.03] p-6`, one
- *           per escalation tier (white/10 → amber-300 → red-300): an icon plus
+ *   cards   space-y-4 of three `rounded-2xl p-6` fills, one per escalation
+ *           tier (white/[0.055] → amber-500/10 → red-500/10): an icon plus
  *           a bold line and a 14px paragraph on the left, a `px-4 py-2
- *           rounded-lg` outlined button on the right
+ *           rounded-full` tinted button on the right
  */
 
 function Bar({ className = '' }: { className?: string }) {
   return <div className={`skeleton rounded ${className}`} />
 }
 
-const TIERS = ['border-white/10', 'border-amber-300', 'border-red-300']
+const TIERS = ['bg-white/[0.055]', 'bg-amber-500/10', 'bg-red-500/10']
 
 export default function DangerZoneLoading() {
   return (
@@ -43,8 +43,8 @@ export default function DangerZoneLoading() {
           <Bar className="mt-1.5 h-4 w-72 max-w-full" />
         </div>
 
-        {/* Warning banner — the red is the outline, never a fill. */}
-        <div className="mb-6 rounded-xl border-2 border-red-500/30 p-4">
+        {/* Warning banner: a tinted fill, matching the page. */}
+        <div className="mb-6 rounded-2xl bg-red-500/10 p-4">
           <div className="flex items-start gap-3">
             <div className="skeleton mt-0.5 h-5 w-5 shrink-0 rounded" />
             <div className="min-w-0 flex-1">
@@ -58,7 +58,7 @@ export default function DangerZoneLoading() {
         {/* Action cards */}
         <div className="space-y-4">
           {TIERS.map((tier) => (
-            <div key={tier} className={`rounded-xl border-2 bg-white/[0.03] p-6 ${tier}`}>
+            <div key={tier} className={`rounded-2xl p-6 ${tier}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex items-center gap-2">

@@ -64,7 +64,7 @@ export default function EventStaffHub({
         <p className="text-white/60 mb-6">{t('staff_hub.create_event_to_invite')}</p>
         <Link
           href="/organizer/events/new"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
         >
           {t('actions.create_event')}
         </Link>
@@ -82,7 +82,7 @@ export default function EventStaffHub({
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-white">{t('staff_hub.select_an_event')}</h2>
+                <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('staff_hub.select_an_event')}</h2>
                 <p className="text-sm text-white/60">{t('staff_hub.staff_per_event')}</p>
               </div>
               <div className="min-w-0">

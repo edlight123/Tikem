@@ -46,7 +46,7 @@ export default async function AccountDeletePage() {
       <Navbar user={user} />
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <p className="eyebrow text-brand-400">{p('eyebrow', 'Your data')}</p>
+        <p className="eyebrow text-white/45">{p('eyebrow', 'Your data')}</p>
         {/* `!` beats the legacy `.mobile-typography h1` rule on a phone. */}
         <h1 className="mt-2 font-display lowercase !text-[clamp(30px,6vw,44px)] !leading-[1.04] text-white">
           {p('title', 'Delete your Tikèm account')}
@@ -55,11 +55,11 @@ export default async function AccountDeletePage() {
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl bg-white/[0.055] p-5">
-            <h2 className="!text-[15px] font-semibold text-white">{p('app_heading', 'In the Tikèm app')}</h2>
+            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{p('app_heading', 'In the Tikèm app')}</h2>
             <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">{p('app_steps', '')}</p>
           </div>
           <div className="rounded-2xl bg-white/[0.055] p-5">
-            <h2 className="!text-[15px] font-semibold text-white">{p('web_heading', 'On the web')}</h2>
+            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{p('web_heading', 'On the web')}</h2>
             <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">{p('web_steps', '')}</p>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default async function AccountDeletePage() {
 
         <Link
           href={ctaHref}
-          className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-[15px] font-bold text-black transition-colors hover:bg-white/85"
+          className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-[15px] font-semibold text-black transition-colors hover:bg-white/85"
         >
           {ctaLabel}
         </Link>
@@ -75,13 +75,13 @@ export default async function AccountDeletePage() {
         <div className="mt-12 space-y-8">
           {sections.map((s) => (
             <section key={s.heading}>
-              <h2 className="font-display lowercase !text-[22px] !leading-tight text-white">{s.heading}</h2>
+              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{s.heading}</h2>
               <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">{s.body}</p>
             </section>
           ))}
 
           <section className="rounded-2xl bg-white/[0.03] p-5">
-            <h2 className="!text-[15px] font-semibold text-white">{p('support_heading', "Can't sign in?")}</h2>
+            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{p('support_heading', "Can't sign in?")}</h2>
             <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">
               {supportBefore}
               <a href={`mailto:${SUPPORT_EMAIL}?subject=Account%20deletion`} className="text-white underline underline-offset-2">

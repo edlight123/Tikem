@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link2, Copy, Check, Plus, Trash2 } from 'lucide-react'
 import { FormField, OrgEmptyState } from '@/components/organizer/ui'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
+import { EMPTY_VALUE } from '@/lib/format'
 import { buildTrackingUrl, formatConversion } from '@/lib/attribution'
 
 interface TrackingLink {
@@ -39,7 +41,7 @@ function fmtMoney(cents: number, currency: string): string {
 /** Each currency on its own — never summed across currencies. */
 function fmtRevenue(byCurrency: Record<string, number>): string {
   const entries = Object.entries(byCurrency || {}).filter(([, v]) => v > 0)
-  if (entries.length === 0) return '—'
+  if (entries.length === 0) return EMPTY_VALUE
   return entries
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([cur, cents]) => fmtMoney(cents, cur))
@@ -48,6 +50,7 @@ function fmtRevenue(byCurrency: Record<string, number>): string {
 
 export default function TrackingLinksClient({ eventId }: TrackingLinksClientProps) {
   const { t } = useTranslation('organizer')
+  const confirmDialog = useConfirm()
   const { showToast } = useToast()
   // Held in a ref so the loader's identity never depends on the toast context.
   const showToastRef = useRef(showToast)
@@ -126,7 +129,12 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
   }
 
   const deleteLink = async (link: TrackingLink) => {
-    if (!window.confirm(t('tracking_links.delete_confirm'))) return
+    const ok = await confirmDialog({
+      title: t('tracking_links.delete_confirm'),
+      confirmLabel: t('event_card_detail.delete'),
+      variant: 'danger',
+    })
+    if (!ok) return
     try {
       const res = await fetch(`/api/organizer/events/${eventId}/tracking-links/${link.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('delete failed')
@@ -149,7 +157,10 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              // The empty state carries the white pill while there are no links.
+              links.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+            }`}
           >
             <Plus className="h-4 w-4" />
             {t('tracking_links.new_link')}
@@ -159,8 +170,8 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
 
       {/* Builder form */}
       {showForm && (
-        <div className="rounded-2xl border border-white/10 p-5">
-          <h2 className="mb-4 font-semibold text-white">{t('tracking_links.build_tracking_link')}</h2>
+        <div className="rounded-2xl p-5 bg-white/[0.055]">
+          <h2 className="mb-4 font-display lowercase italic !text-[22px] !leading-snug text-white">{t('tracking_links.build_tracking_link')}</h2>
           <div className="space-y-4">
             <FormField label={t('actions.label')} htmlFor="tl-label" required>
               <input
@@ -170,7 +181,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. Instagram story"
                 maxLength={80}
-                className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
               />
             </FormField>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -181,7 +192,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
                   placeholder="instagram"
-                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
                 />
               </FormField>
               <FormField label={t('tracking_links.medium')} htmlFor="tl-medium">
@@ -191,7 +202,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                   value={medium}
                   onChange={(e) => setMedium(e.target.value)}
                   placeholder="story"
-                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
                 />
               </FormField>
               <FormField label={t('tracking_links.campaign')} htmlFor="tl-campaign">
@@ -201,14 +212,14 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                   value={campaign}
                   onChange={(e) => setCampaign(e.target.value)}
                   placeholder="launch"
-                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
                 />
               </FormField>
             </div>
           </div>
 
           {/* Live preview */}
-          <div className="mt-4 rounded-xl border border-white/10 px-4 py-3">
+          <div className="mt-4 rounded-xl px-4 py-3 bg-white/[0.055]">
             <p className="label-mono uppercase mb-1 text-white/40">{t('tracking_links.preview')}</p>
             <p className="break-all font-mono text-xs text-white/70">{previewUrl}</p>
             <p className="mt-1 text-xs text-white/40">{t('tracking_links.preview_id_note')}</p>
@@ -218,7 +229,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
             <button
               type="button"
               onClick={reset}
-              className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('actions.cancel')}
             </button>
@@ -226,7 +237,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
               type="button"
               onClick={handleCreate}
               disabled={!label.trim() || !source.trim() || saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus className="h-4 w-4" />
               {t('tracking_links.create_link')}
@@ -237,7 +248,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
 
       {/* Links list */}
       {loading ? (
-        <div className="rounded-2xl border border-white/10 divide-y divide-white/5" aria-busy="true">
+        <div className="rounded-2xl divide-y divide-white/5 bg-white/[0.055]" aria-busy="true">
           {[0, 1].map((i) => (
             <div key={i} className="px-5 py-4">
               <div className="h-4 w-40 animate-pulse rounded bg-white/10" />
@@ -254,7 +265,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus className="h-4 w-4" />
               {t('tracking_links.new_tracking_link')}
@@ -262,7 +273,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
           }
         />
       ) : links.length > 0 ? (
-        <div className="rounded-2xl border border-white/10 divide-y divide-white/5">
+        <div className="rounded-2xl divide-y divide-white/5 bg-white/[0.055]">
           {links.map((link) => (
             <div key={link.id} className="px-5 py-4">
               <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
@@ -281,7 +292,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                       .map(([k, v]) => (
                         <span
                           key={k}
-                          className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[11px] text-white/70"
+                          className="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[11px] text-white/70"
                         >
                           {k}={v}
                         </span>
@@ -313,7 +324,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                     type="button"
                     onClick={() => copyLink(link.id, link.url)}
                     aria-label={`Copy tracking link: ${link.label}`}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     {copiedId === link.id ? (
                       <><Check className="h-3.5 w-3.5 text-emerald-400" />{t('tracking_links.copied')}</>
@@ -325,7 +336,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                     type="button"
                     onClick={() => deleteLink(link)}
                     aria-label={`Delete tracking link: ${link.label}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-white/70 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.07] text-white/70 transition-colors hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

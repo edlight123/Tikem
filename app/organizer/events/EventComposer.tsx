@@ -465,7 +465,7 @@ function InfoPopover({ label, text }: { label: string; text: string }) {
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
         aria-label={label}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-white/50 transition-colors hover:border-white/40 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-white/50 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 bg-white/[0.07]"
       >
         <Info className="h-3 w-3" />
       </button>
@@ -473,7 +473,7 @@ function InfoPopover({ label, text }: { label: string; text: string }) {
         <span
           id={id}
           role="note"
-          className="absolute left-0 top-7 z-30 w-64 rounded-xl border border-white/15 bg-[#111] px-3 py-2.5 text-xs leading-relaxed text-white/75 shadow-xl"
+          className="absolute left-0 top-7 z-30 w-64 rounded-xl bg-[#1c1c1c] px-3 py-2.5 text-xs leading-relaxed text-white/75 shadow-xl"
         >
           {text}
         </span>
@@ -2024,7 +2024,7 @@ export default function EventComposer({
         <div className="order-2 min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           {/* Region payout-profile nudge — which profile this event pays through. */}
           {payoutProfileGap && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            <div className="mb-6 flex items-start gap-3 rounded-xl bg-amber-500/10 px-4 py-3">
               <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-300" />
               <p className="text-sm leading-relaxed text-white/80">
                 {payoutProfileGap === 'stripe_connect'
@@ -2050,8 +2050,8 @@ export default function EventComposer({
 
           {/* Draft signposting — makes the two-step create→edit flow explicit */}
           {isEdit && !isPublished && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl border border-brand-500/30 bg-brand-500/10 px-4 py-3">
-              <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand-300" />
+            <div className="mb-6 flex items-start gap-3 rounded-xl bg-white/[0.055] px-4 py-3">
+              <Info className="mt-0.5 h-[18px] w-[18px] shrink-0 text-white/60" />
               <p className="text-sm text-white/80">
                 <span className="font-semibold text-white">
                   {t('composer.draftBanner.saved', { defaultValue: 'Draft saved.' })}
@@ -2617,7 +2617,7 @@ export default function EventComposer({
                               /* max-w clamp as a belt: the anchor is now always the card's
                                  right edge, but a 224px menu must never be able to
                                  exceed a 402px screen minus its margins. */
-                              className="absolute right-0 top-10 z-30 w-56 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl bg-[#141414] py-1 shadow-2xl ring-1 ring-white/10"
+                              className="absolute right-0 top-10 z-30 w-56 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl bg-[#1c1c1c] py-1 shadow-2xl"
                             >
                               <button
                                 type="button"
@@ -2896,7 +2896,7 @@ export default function EventComposer({
                 <button
                   type="button"
                   onClick={addTier}
-                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-transparent px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                 >
                   <Plus className="h-4 w-4" /> {t('composer.addTicketType', { defaultValue: 'Add ticket type' })}
                 </button>
@@ -2984,7 +2984,7 @@ export default function EventComposer({
                             className="h-10 w-10 shrink-0 rounded-full object-cover"
                           />
                         ) : (
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-sm font-bold text-white">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm font-bold text-white">
                             {g.name.charAt(0).toUpperCase()}
                           </span>
                         )}
@@ -3044,7 +3044,7 @@ export default function EventComposer({
               <button
                 type="button"
                 onClick={openNewGuest}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
               >
                 <Plus className="h-4 w-4" /> {t('composer.addToGuestlist', { defaultValue: 'Add to guestlist' })}
               </button>
@@ -3302,7 +3302,13 @@ export default function EventComposer({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="w-full rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`w-full rounded-full px-7 py-3.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                // One white pill per screen: while an unpublished edit shows the
+                // white "Publish event" pill below, saving is the secondary action.
+                isEdit && !isPublished
+                  ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+                  : 'bg-white text-black hover:bg-white/90'
+              }`}
             >
               {guest
                 ? authed
@@ -3336,9 +3342,9 @@ export default function EventComposer({
                     publishing ||
                     (!isPublished && (paidPublishingBlocked || !readyToPublish))
                   }
-                  className={`w-full rounded-xl px-7 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`w-full rounded-full px-7 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                     isPublished
-                      ? 'border border-white/15 text-white/80 hover:bg-white/[0.04]'
+                      ? 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12]'
                       : 'bg-white text-black hover:bg-white/90'
                   }`}
                 >

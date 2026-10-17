@@ -55,7 +55,7 @@ export function FormField({
       >
         {label}
         {required && (
-          <span aria-hidden="true" className="ml-0.5 text-brand-400">
+          <span aria-hidden="true" className="ml-0.5 text-white/45">
             *
           </span>
         )}

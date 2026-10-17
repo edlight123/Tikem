@@ -30,13 +30,13 @@
     "status_published": "Published",
     "status_draft": "Draft",
     "no_events_yet": "No events created yet",
-    "daily_stats_title": "📊 Daily Statistics",
+    "daily_stats_title": "Daily Statistics",
     "daily_stats_desc": "Metrics are calculated from platform_stats_daily rollups for optimal performance.",
-    "daily_stats_updated": "✅ Updated daily at 1 AM UTC",
+    "daily_stats_updated": "Updated daily at 1 AM UTC",
     "daily_stats_gmv": "GMV from ticket sales",
     "daily_stats_tickets": "Total tickets sold",
     "daily_stats_refunds": "Refunds tracking",
-    "daily_stats_docs": "📖 See docs/DAILY_STATS_SYSTEM.md for docs"
+    "daily_stats_docs": "See docs/DAILY_STATS_SYSTEM.md for docs"
   },
   "events": {
     "title": "Events Moderation",

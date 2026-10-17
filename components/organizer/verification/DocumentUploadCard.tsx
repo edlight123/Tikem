@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
+import { Camera } from 'lucide-react'
 import { getDocumentDownloadURL, VERIFICATION_IMAGE_ACCEPT } from '@/lib/verification'
 
 interface Props {
@@ -183,12 +184,12 @@ export default function DocumentUploadCard({
   }
 
   return (
-    <div className="bg-white/[0.06] rounded-lg p-4 md:p-6">
+    <div className="bg-white/[0.06] rounded-2xl p-4 md:p-6">
       {/* Header */}
       <div className="mb-4">
         <h3 className="font-semibold text-white text-sm md:text-base mb-1">
           {title}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-red-400 ml-1">*</span>}
         </h3>
         <p className="text-xs md:text-sm text-white/60">
           {description}
@@ -199,7 +200,7 @@ export default function DocumentUploadCard({
       {previewUrl ? (
         <div className="space-y-3">
           {/* Image Preview */}
-          <div className="relative aspect-video bg-white/[0.10] rounded-lg overflow-hidden">
+          <div className="relative aspect-video bg-white/[0.10] rounded-xl overflow-hidden">
             <Image
               src={previewUrl}
               alt={title}
@@ -214,14 +215,14 @@ export default function DocumentUploadCard({
               <button
                 onClick={openFileDialog}
                 disabled={isUploading}
-                className="flex-1 px-4 py-2 text-sm font-medium text-brand-300 hover:bg-brand-500/15 rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] rounded-full transition-colors disabled:opacity-50"
               >
                 {t('document_upload.replace')}
               </button>
               <button
                 onClick={handleRemove}
                 disabled={isUploading}
-                className="flex-1 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/15 rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-red-200 bg-red-500/15 hover:bg-red-500/25 rounded-full transition-colors disabled:opacity-50"
               >
                 {t('actions.remove')}
               </button>
@@ -233,23 +234,23 @@ export default function DocumentUploadCard({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          className={`border-2 border-dashed rounded-lg p-6 md:p-8 text-center transition-all ${
+          className={`rounded-xl p-6 md:p-8 text-center transition-all ${
             isDragging
-              ? 'border-brand-400 bg-brand-500/15'
-              : 'border-white/15 bg-white/[0.03] hover:bg-white/[0.12]'
+              ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.12]'
+              : 'bg-white/[0.06] hover:bg-white/[0.1]'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           onClick={disabled ? undefined : openFileDialog}
         >
           {isUploading ? (
             <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-12 h-12 border-4 border-white/60 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm text-white/60">{t('document_upload.uploading')}</p>
             </div>
           ) : (
             <>
               {/* Upload Icon */}
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/[0.08] flex items-center justify-center">
+                <svg className="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
@@ -270,7 +271,7 @@ export default function DocumentUploadCard({
                     openFileDialog()
                   }}
                   disabled={disabled}
-                  className="px-4 py-2 text-sm font-medium text-brand-300 bg-white/[0.08] rounded-lg hover:bg-white/[0.14] transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] rounded-full hover:bg-white/[0.12] transition-colors disabled:opacity-50"
                 >
                   {t('document_upload.choose_file')}
                 </button>
@@ -281,9 +282,10 @@ export default function DocumentUploadCard({
                     openCameraDialog()
                   }}
                   disabled={disabled}
-                  className="px-4 py-2 text-sm font-medium text-white bg-brand-700 rounded-lg hover:bg-brand-800 transition-colors disabled:opacity-50 sm:hidden"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-black bg-white rounded-full hover:bg-white/90 transition-colors disabled:opacity-50 sm:hidden"
                 >
-                  📷 Take Photo
+                  <Camera className="h-4 w-4" aria-hidden="true" />
+                  Take Photo
                 </button>
               </div>
             </>
@@ -293,8 +295,8 @@ export default function DocumentUploadCard({
 
       {/* Error Message */}
       {error && (
-        <div className="mt-3 p-3 bg-red-500/10 rounded-lg">
-          <p className="text-sm text-red-300">{error}</p>
+        <div className="mt-3 p-3 bg-red-500/10 rounded-xl">
+          <p className="text-sm text-red-200">{error}</p>
         </div>
       )}
 

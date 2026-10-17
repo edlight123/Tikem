@@ -60,9 +60,9 @@ export function EventLivePreview({ data, tiers }: EventLivePreviewProps) {
 
   return (
     <div className="sticky top-24 space-y-4">
-      <div className="border-2 border-brand-500/30 rounded-xl p-4">
+      <div className="bg-white/[0.055] rounded-2xl p-4">
         <h3 className="font-bold text-white mb-1 flex items-center gap-2">
-          <span className="w-2 h-2 bg-brand-600 rounded-full animate-pulse"></span>
+          <span className="w-2 h-2 bg-brand-400 rounded-full animate-pulse"></span>
           {t('live_preview.live_preview')}
         </h3>
         <p className="text-sm text-white/60">
@@ -70,7 +70,7 @@ export function EventLivePreview({ data, tiers }: EventLivePreviewProps) {
         </p>
       </div>
 
-      <div className="bg-white/[0.03] border-2 border-white/10 rounded-xl overflow-hidden shadow-lg">
+      <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
         {/* Banner Image */}
         <div className="relative w-full h-48 bg-gradient-to-br from-white/10 to-white/20">
           {data.banner_image_url ? (
@@ -94,7 +94,7 @@ export function EventLivePreview({ data, tiers }: EventLivePreviewProps) {
           {/* Category Badge */}
           {data.category && (
             <div className="absolute top-3 left-3">
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white backdrop-blur-sm text-black text-xs font-bold rounded-lg shadow-md">
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white backdrop-blur-sm text-black text-xs font-bold rounded-full">
                 <Tag className="w-3 h-3" />
                 {data.category}
               </span>
@@ -103,7 +103,7 @@ export function EventLivePreview({ data, tiers }: EventLivePreviewProps) {
 
           {/* Price Badge */}
           <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-brand-700 text-white text-xs font-bold rounded-lg shadow-md">
+            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-bold rounded-full">
               <DollarSign className="w-3 h-3" />
               {formattedPrice()}
             </span>
@@ -228,7 +228,7 @@ export function EventLivePreview({ data, tiers }: EventLivePreviewProps) {
 
                 {/* Premium Tiers */}
                 {tiers.filter(t => t.name && t.quantity).map((tier, index) => (
-                  <div key={index} className="border border-brand-500/30 rounded-lg p-3">
+                  <div key={index} className="bg-white/[0.06] rounded-xl p-3">
                     <div className="flex items-center justify-between mb-1">
                       <p className="font-semibold text-sm text-white">{tier.name}</p>
                       <p className="font-bold text-brand-300">

@@ -11,6 +11,7 @@ import {
   ConsolePanel,
   ConsoleSection,
 } from '@/components/admin/console'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
 
 /**
  * Test data — seeds seven sample events (each with three ticket tiers) under
@@ -18,13 +19,14 @@ import {
  * delete-then-recreate that wipes every event that account already owns.
  *
  * The seeding and deleting logic is untouched by the console restyle,
- * including the window.confirm that names the exact number of events about to
+ * including the confirm dialog that names the exact number of events about to
  * be destroyed — that count is the only thing standing between a slip and a
  * wiped organizer.
  *
  * The page frame (container, breadcrumb trail, title) comes from DevToolShell.
  */
 export default function CreateTestDataClient() {
+  const confirmDialog = useConfirm()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -42,7 +44,7 @@ export default function CreateTestDataClient() {
 
   const deleteAndRecreateEvents = async () => {
     if (!user) {
-      setResults(['❌ You must be logged in to manage test events'])
+      setResults(['ERROR  You must be logged in to manage test events'])
       return
     }
 
@@ -55,7 +57,7 @@ export default function CreateTestDataClient() {
       const userSnapshot = await getDocs(usersQuery)
 
       if (userSnapshot.empty) {
-        setResults(['❌ User document not found in database'])
+        setResults(['ERROR  User document not found in database'])
         return
       }
 
@@ -63,24 +65,27 @@ export default function CreateTestDataClient() {
       const eventsQuery = query(collection(db, 'events'), where('organizer_id', '==', userId))
       eventsSnapshot = await getDocs(eventsQuery)
     } catch (error: any) {
-      setResults(['', `❌ Error: ${error.message}`])
+      setResults(['', `ERROR  ${error.message}`])
       return
     }
 
     const eventCount = eventsSnapshot.size
-    const confirmed = window.confirm(
-      `⚠️ IRREVERSIBLE ACTION\n\n` +
-      `This will PERMANENTLY DELETE all ${eventCount} event${eventCount === 1 ? '' : 's'} for ${user.email} ` +
-      `and every associated ticket tier, then recreate ${testEvents.length} fresh test events.\n\n` +
-      `Deleted events and tiers cannot be recovered. Continue?`
-    )
+    const confirmed = await confirmDialog({
+      title: 'Irreversible action',
+      description:
+        `This will PERMANENTLY DELETE all ${eventCount} event${eventCount === 1 ? '' : 's'} for ${user.email} ` +
+        `and every associated ticket tier, then recreate ${testEvents.length} fresh test events. ` +
+        `Deleted events and tiers cannot be recovered.`,
+      confirmLabel: `Delete ${eventCount} & recreate`,
+      variant: 'danger',
+    })
     if (!confirmed) return
 
     setDeleting(true)
-    setResults(['🗑️ Deleting existing test events...', ''])
+    setResults(['DEL  Deleting existing test events...', ''])
 
     try {
-      setResults(prev => [...prev, `✅ Found user: ${user.email}`, ''])
+      setResults(prev => [...prev, `OK  Found user: ${user.email}`, ''])
 
       let deletedCount = 0
       let deletedTiersCount = 0
@@ -96,18 +101,18 @@ export default function CreateTestDataClient() {
         }
 
         await deleteDoc(eventDoc.ref)
-        setResults(prev => [...prev, `🗑️ Deleted: ${(eventDoc.data() as any).title}`])
+        setResults(prev => [...prev, `DEL  Deleted: ${(eventDoc.data() as any).title}`])
         deletedCount++
       }
 
-      setResults(prev => [...prev, '', `✅ Deleted ${deletedCount} events and ${deletedTiersCount} ticket tiers`, '', '🔄 Creating new test events...', ''])
+      setResults(prev => [...prev, '', `OK  Deleted ${deletedCount} events and ${deletedTiersCount} ticket tiers`, '', 'Creating new test events...', ''])
       setDeleting(false)
 
       // Now create new events
       await createTestEvents(userId)
 
     } catch (error: any) {
-      setResults(prev => [...prev, '', `❌ Error: ${error.message}`])
+      setResults(prev => [...prev, '', `ERROR  ${error.message}`])
       setDeleting(false)
     }
   }
@@ -257,7 +262,7 @@ export default function CreateTestDataClient() {
 
   const createTestEvents = async (userId?: string) => {
     if (!user) {
-      setResults(['❌ You must be logged in to create test events'])
+      setResults(['ERROR  You must be logged in to create test events'])
       return
     }
 
@@ -265,7 +270,7 @@ export default function CreateTestDataClient() {
 
     // Only add these messages if we're not already deleting
     if (!deleting) {
-      setResults(['🔄 Starting event creation...', ''])
+      setResults(['Starting event creation...', ''])
     }
 
     try {
@@ -275,12 +280,12 @@ export default function CreateTestDataClient() {
         const userSnapshot = await getDocs(usersQuery)
 
         if (userSnapshot.empty) {
-          setResults(prev => [...prev, '❌ User document not found in database'])
+          setResults(prev => [...prev, 'ERROR  User document not found in database'])
           return
         }
 
         userId = userSnapshot.docs[0].id
-        setResults(prev => [...prev, `✅ Found user: ${user.email}`, `✅ User ID: ${userId}`, ''])
+        setResults(prev => [...prev, `OK  Found user: ${user.email}`, `OK  User ID: ${userId}`, ''])
       }
 
       let successCount = 0
@@ -307,7 +312,7 @@ export default function CreateTestDataClient() {
           }
 
           await setDoc(doc(db, 'events', eventId), eventData)
-          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${eventId})`])
+          setResults(prev => [...prev, `OK  Created: ${event.title} (ID: ${eventId})`])
 
           // Create ticket tiers for this event
           const tiers = [
@@ -363,7 +368,7 @@ export default function CreateTestDataClient() {
           setResults(prev => [...prev, `   ↳ Added 3 ticket tiers`])
           successCount++
         } catch (error: any) {
-          setResults(prev => [...prev, `❌ Failed: ${event.title} - ${error.message}`])
+          setResults(prev => [...prev, `ERROR  Failed: ${event.title} - ${error.message}`])
           errorCount++
         }
       }
@@ -372,14 +377,14 @@ export default function CreateTestDataClient() {
         ...prev,
         '',
         '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        `✅ Successfully created ${successCount} events`,
-        errorCount > 0 ? `❌ Failed to create ${errorCount} events` : '',
+        `OK  Successfully created ${successCount} events`,
+        errorCount > 0 ? `ERROR  Failed to create ${errorCount} events` : '',
         '',
-        '🎉 Done! You can now view the events at /discover'
+        'Done. You can now view the events at /discover'
       ])
 
     } catch (error: any) {
-      setResults(prev => [...prev, '', `❌ Error: ${error.message}`])
+      setResults(prev => [...prev, '', `ERROR  ${error.message}`])
     } finally {
       setCreating(false)
     }

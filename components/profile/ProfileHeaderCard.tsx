@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import { User, Mail, Phone, Check, X, Pencil } from 'lucide-react'
+import { useToast } from '@/components/ui/Toast'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import { FIELD, GHOST_BTN, WHITE_BTN, Panel, PanelRows, ReadoutRow, FieldLabel } from './ui'
 
@@ -31,6 +32,7 @@ interface ProfileHeaderCardProps {
  */
 export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps) {
   const { t } = useTranslation('profile')
+  const { showToast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [displayName, setDisplayName] = useState(profile.displayName)
   const [phone, setPhone] = useState(profile.phone || '')
@@ -38,7 +40,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      alert(t('header.full_name_required'))
+      showToast({ type: 'error', title: t('header.full_name_required') })
       return
     }
 
@@ -48,7 +50,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
       setIsEditing(false)
     } catch (error) {
       console.error('Failed to update profile:', error)
-      alert(t('header.save_error'))
+      showToast({ type: 'error', title: t('header.save_error') })
     } finally {
       setIsLoading(false)
     }

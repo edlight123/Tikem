@@ -76,7 +76,7 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
   return (
     <div className="bg-[#0a0a0a]">
       {/* Header */}
-      <div className="bg-white/[0.03] border-b border-white/10">
+      <div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-white/60 mb-3">
@@ -92,7 +92,7 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
           </div>
 
           {/* Title */}
-          <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.04] text-white mb-2">
+          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-white mb-2">
             {t('payout_history.payout_history')}
           </h1>
           <p className="text-white/60">
@@ -103,12 +103,12 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="rounded-xl bg-white/[0.03] overflow-hidden">
+        <div className="rounded-2xl bg-white/[0.055] overflow-hidden">
           
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-white/[0.03] border-b border-white/10">
+              <thead className="border-b border-white/[0.06]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">
                     Date
@@ -127,7 +127,7 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-white/[0.06]">
                 {payouts.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-white/50">
@@ -169,7 +169,7 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden divide-y divide-white/10">
+          <div className="md:hidden divide-y divide-white/[0.06]">
             {payouts.length === 0 ? (
               <div className="px-6 py-12 text-center text-white/50">
                 <div className="flex flex-col items-center gap-2">

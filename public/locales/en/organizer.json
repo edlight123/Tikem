@@ -10,7 +10,7 @@
   "action_center": {
     "title": "Needs Attention",
     "action_items": "action item",
-    "all_caught_up": "All caught up! 🎉",
+    "all_caught_up": "All caught up!",
     "no_action_items": "No action items need your attention right now.",
     "draft_events": "Draft Event",
     "draft_description": "Publish your events to start selling tickets",

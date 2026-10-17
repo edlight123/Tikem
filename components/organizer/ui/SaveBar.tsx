@@ -44,7 +44,7 @@ export function SaveBar({
             type="button"
             onClick={onDiscard}
             disabled={saving}
-            className="rounded-lg bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {discardLabel}
           </button>
@@ -52,7 +52,7 @@ export function SaveBar({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="rounded-lg bg-brand-700 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {saving ? 'Saving…' : saveLabel}
           </button>

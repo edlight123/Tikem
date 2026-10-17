@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Flag } from 'lucide-react'
 import { ConsolePanel, ConsoleState, consoleTone } from '@/components/admin/console'
 import { EMPTY_VALUE } from '@/lib/format'
 
@@ -85,8 +86,8 @@ export default function OrganizerEventsList({
                   </ConsoleState>
 
                   {event.reports_count > 0 && (
-                    <span className="label-mono shrink-0 text-xs font-semibold tabular-nums text-console-amber" title={`${event.reports_count} report(s)`}>
-                      ⚑ {event.reports_count}
+                    <span className="label-mono inline-flex shrink-0 items-center gap-1 text-xs font-semibold tabular-nums text-console-amber" title={`${event.reports_count} report(s)`}>
+                      <Flag className="h-3 w-3" aria-hidden /> {event.reports_count}
                     </span>
                   )}
                 </Link>

@@ -137,7 +137,10 @@ export default function GuestListClient({ eventId, eventTitle, guests }: GuestLi
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+            // The empty state below carries the white pill while the list is empty.
+            guests.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+          }`}
         >
           <UserPlus className="h-4 w-4" />
           {t('guest_list.invite_guest')}
@@ -153,7 +156,7 @@ export default function GuestListClient({ eventId, eventTitle, guests }: GuestLi
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <UserPlus className="h-4 w-4" />
               {t('guest_list.invite_guest')}
@@ -178,7 +181,7 @@ export default function GuestListClient({ eventId, eventTitle, guests }: GuestLi
             <button
               type="button"
               onClick={() => { setOpen(false); reset() }}
-              className="rounded-xl  px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('actions.cancel')}
             </button>
@@ -186,7 +189,7 @@ export default function GuestListClient({ eventId, eventTitle, guests }: GuestLi
               type="button"
               onClick={handleInvite}
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Mail className="h-4 w-4" />
               {isPending ? 'Sending…' : 'Send invite'}
@@ -201,7 +204,7 @@ export default function GuestListClient({ eventId, eventTitle, guests }: GuestLi
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
           <FormField label={t('guest_list.email_address')} required>
@@ -210,7 +213,7 @@ export default function GuestListClient({ eventId, eventTitle, guests }: GuestLi
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jane@example.com"
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
           <FormField label={t('guest_list.allow_plus_one')}>

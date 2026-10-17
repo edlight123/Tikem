@@ -149,7 +149,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
                   <div
                     key={i}
                     aria-hidden="true"
-                    className="flex-1 rounded-t bg-brand-500/80 transition-colors hover:bg-brand-400"
+                    className="flex-1 rounded-t bg-white/70 transition-colors hover:bg-white"
                     style={{ height: `${Math.max(3, (b.count / maxCount) * 100)}%` }}
                     title={`${format(b.date, 'MMM d')}: ${b.count}`}
                   />
@@ -178,7 +178,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
                     <div key={tier.id} className="flex items-center gap-3">
                       <span className="w-28 shrink-0 truncate text-sm text-white">{tier.name || 'Ticket'}</span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                        <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
+                        <div className="h-full rounded-full bg-white" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="shrink-0 text-xs font-mono tabular-nums text-white/50">
                         {tsold}{qty > 0 ? `/${qty}` : ''} · {Number(tier.price) > 0 ? formatMoneyFromCents(Math.round(Number(tier.price) * 100), currency) : 'Free'}

@@ -40,11 +40,11 @@ interface PayoutsSetupWizardProps {
 }
 
 const SUPPORTED_LOCATIONS = [
-  { id: 'haiti', name: 'Haiti', flag: '🇭🇹', methods: ['bank_transfer', 'mobile_money'] },
-  { id: 'united_states', name: 'United States', flag: '🇺🇸', methods: ['stripe'] },
-  { id: 'canada', name: 'Canada', flag: '🇨🇦', methods: ['stripe'] },
+  { id: 'haiti', name: 'Haiti', flag: 'HT', methods: ['bank_transfer', 'mobile_money'] },
+  { id: 'united_states', name: 'United States', flag: 'US', methods: ['stripe'] },
+  { id: 'canada', name: 'Canada', flag: 'CA', methods: ['stripe'] },
   // /api/organizer/stripe/connect onboards FR accounts (country 'FR').
-  { id: 'france', name: 'France', flag: '🇫🇷', methods: ['stripe'] },
+  { id: 'france', name: 'France', flag: 'FR', methods: ['stripe'] },
 ]
 
 /** Locations paid out through Stripe Connect (everything except Haiti). */
@@ -66,8 +66,8 @@ const HAITI_BANKS = [
 const NATCASH_ENABLED = false
 
 const MOBILE_PROVIDERS = [
-  { value: 'moncash', label: 'MonCash', icon: '📱' },
-  ...(NATCASH_ENABLED ? [{ value: 'natcash', label: 'NatCash', icon: '💳' }] : []),
+  { value: 'moncash', label: 'MonCash', icon: Smartphone },
+  ...(NATCASH_ENABLED ? [{ value: 'natcash', label: 'NatCash', icon: CreditCard }] : []),
 ]
 
 const providerLabel = (value: string) =>
@@ -85,8 +85,8 @@ function normalizeHaitiPhone(raw: string): string {
 }
 
 const inputClass = (fieldError?: string) =>
-  `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 ${
-    fieldError ? 'border-red-500/60' : 'border-white/15'
+  `w-full rounded-xl bg-white/[0.07] px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+    fieldError ? 'ring-1 ring-inset ring-red-500/60' : ''
   }`
 
 type FieldKey = 'bankName' | 'customBankName' | 'accountName' | 'accountNumber' | 'routingNumber' | 'phoneNumber'
@@ -398,7 +398,7 @@ export default function PayoutsSetupWizard({
   }
 
   return (
-    <div className="min-h-[80vh] bg-white/[0.03]">
+    <div className="min-h-[80vh]">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         {currentStep !== 'welcome' && (
@@ -412,7 +412,7 @@ export default function PayoutsSetupWizard({
             </button>
 
             {/* Progress Bar */}
-            <div className="bg-white/[0.03] rounded-xl border border-white/10 p-4">
+            <div className="bg-white/[0.055] rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-white">
                   {t('onboarding.payouts.progress_title', { defaultValue: 'Setting up payouts' })}
@@ -430,7 +430,7 @@ export default function PayoutsSetupWizard({
                   <div
                     key={step.id}
                     className={`flex-1 h-2 rounded-full transition-colors ${
-                      idx <= currentStepIndex ? 'bg-brand-600' : 'bg-white/[0.03]'
+                      idx <= currentStepIndex ? 'bg-white' : 'bg-white/[0.08]'
                     }`}
                   />
                 ))}
@@ -441,9 +441,9 @@ export default function PayoutsSetupWizard({
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-red-300">
+          <div className="mb-6 rounded-xl bg-red-500/10 p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-200">
               <p>{error}</p>
               {needsStepUp ? (
                 <Link
@@ -461,10 +461,10 @@ export default function PayoutsSetupWizard({
         {/* Welcome Step */}
         {currentStep === 'welcome' && (
           <div className="text-center py-12">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/25">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white/[0.07] flex items-center justify-center">
               <Wallet className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">
+            <h1 className="font-display lowercase italic !text-[32px] !leading-tight text-white mb-3">
               {t('onboarding.payouts.welcome.title', { defaultValue: 'Get paid for your events' })}
             </h1>
             <p className="text-lg text-white/60 mb-8 max-w-md mx-auto">
@@ -473,23 +473,23 @@ export default function PayoutsSetupWizard({
 
             {/* Benefits */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white/[0.03] rounded-xl  p-4 text-left">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3">
-                  <Shield className="w-5 h-5 text-brand-300" />
+              <div className="bg-white/[0.055] rounded-2xl p-4 text-left">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.07] flex items-center justify-center mb-3">
+                  <Shield className="w-5 h-5 text-white/80" />
                 </div>
                 <h3 className="font-semibold text-white mb-1">{t('onboarding.payouts.welcome.secure_title', { defaultValue: 'Secure' })}</h3>
                 <p className="text-sm text-white/60">{t('onboarding.payouts.welcome.secure_desc', { defaultValue: 'Bank-level encryption protects your data' })}</p>
               </div>
-              <div className="bg-white/[0.03] rounded-xl  p-4 text-left">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3">
-                  <Sparkles className="w-5 h-5 text-brand-300" />
+              <div className="bg-white/[0.055] rounded-2xl p-4 text-left">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.07] flex items-center justify-center mb-3">
+                  <Sparkles className="w-5 h-5 text-white/80" />
                 </div>
                 <h3 className="font-semibold text-white mb-1">{t('onboarding.payouts.welcome.fast_title', { defaultValue: 'Fast' })}</h3>
                 <p className="text-sm text-white/60">{t('onboarding.payouts.welcome.fast_desc', { defaultValue: 'Funds become available to withdraw 72 hours after your event ends (24 hours once you’ve run 3 events or sold $1,000).' })}</p>
               </div>
-              <div className="bg-white/[0.03] rounded-xl  p-4 text-left">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3">
-                  <Globe className="w-5 h-5 text-brand-300" />
+              <div className="bg-white/[0.055] rounded-2xl p-4 text-left">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.07] flex items-center justify-center mb-3">
+                  <Globe className="w-5 h-5 text-white/80" />
                 </div>
                 <h3 className="font-semibold text-white mb-1">{t('onboarding.payouts.welcome.flexible_title', { defaultValue: 'Flexible' })}</h3>
                 <p className="text-sm text-white/60">{t('onboarding.payouts.welcome.flexible_desc', { defaultValue: 'Multiple payout methods available' })}</p>
@@ -498,7 +498,7 @@ export default function PayoutsSetupWizard({
 
             <button
               onClick={handleNext}
-              className="px-8 py-3.5 bg-brand-700 text-white rounded-xl font-semibold hover:bg-brand-800 transition-all shadow-lg shadow-brand-500/25"
+              className="px-8 py-3.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
             >
               {t('onboarding.payouts.welcome.cta', { defaultValue: 'Set Up Payouts' })}
             </button>
@@ -511,10 +511,10 @@ export default function PayoutsSetupWizard({
         {currentStep === 'markets' && (
           <div>
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-brand-700 flex items-center justify-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white/[0.07] flex items-center justify-center">
                 <Globe className="w-7 h-7 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.payouts.markets.title', { defaultValue: 'Where will you run events?' })}</h2>
+              <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">{t('onboarding.payouts.markets.title', { defaultValue: 'Where will you run events?' })}</h2>
               <p className="text-white/60">
                 {t('onboarding.payouts.markets.subtitle', { defaultValue: 'Pick every country you plan to hold events in. We’ll only set up the payout methods those countries use, and you can change this any time.' })}
               </p>
@@ -535,8 +535,8 @@ export default function PayoutsSetupWizard({
                           : [...current, code]
                       )
                     }
-                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                      isOn ? 'border-brand-500' : 'border-white/10 hover:border-white/15 bg-white/[0.03]'
+                    className={`w-full p-4 rounded-2xl transition-all flex items-center gap-4 ${
+                      isOn ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.08]' : 'bg-white/[0.055] hover:bg-white/[0.08]'
                     }`}
                   >
                     <div className="flex-1 text-left">
@@ -558,7 +558,7 @@ export default function PayoutsSetupWizard({
             </div>
 
             {declaredRails.length > 1 ? (
-              <div className="mb-6 rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60">
+              <div className="mb-6 rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white/60">
                 {t('onboarding.payouts.markets.two_rails_note', { defaultValue: 'Those markets use two different payout systems, so you’ll set up two separate methods. We’ll do one now. You can add the other straight after.' })}
               </div>
             ) : null}
@@ -566,14 +566,14 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleMarketsContinue}
                 disabled={savingMarkets}
-                className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white rounded-lg font-semibold hover:bg-brand-800 transition-all disabled:opacity-60"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all disabled:opacity-60"
               >
                 {savingMarkets ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {markets.length === 0
@@ -589,10 +589,10 @@ export default function PayoutsSetupWizard({
         {currentStep === 'location' && (
           <div>
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-brand-700 flex items-center justify-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white/[0.07] flex items-center justify-center">
                 <MapPin className="w-7 h-7 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.payouts.location.title', { defaultValue: 'Where is your bank located?' })}</h2>
+              <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">{t('onboarding.payouts.location.title', { defaultValue: 'Where is your bank located?' })}</h2>
               <p className="text-white/60">{t('onboarding.payouts.location.subtitle', { defaultValue: 'This determines the payment methods available to you' })}</p>
             </div>
 
@@ -601,13 +601,13 @@ export default function PayoutsSetupWizard({
                 <button
                   key={location.id}
                   onClick={() => setSelectedLocation(location.id)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                  className={`w-full p-4 rounded-2xl transition-all flex items-center gap-4 ${
                     selectedLocation === location.id
-                      ? 'border-brand-500 '
-                      : 'border-white/10 hover:border-white/15 bg-white/[0.03]'
+                      ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.08]'
+                      : 'bg-white/[0.055] hover:bg-white/[0.08]'
                   }`}
                 >
-                  <span className="text-3xl">{location.flag}</span>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xs font-semibold tracking-wide text-white/80">{location.flag}</span>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-white">{t(`onboarding.payouts.location.${location.id}`, { defaultValue: location.name })}</div>
                     <div className="text-sm text-white/50">
@@ -626,13 +626,13 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white rounded-lg font-semibold hover:bg-brand-800 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
               >
                 {t('onboarding.payouts.nav.continue', { defaultValue: 'Continue' })}
                 <ArrowRight className="w-4 h-4" />
@@ -645,10 +645,10 @@ export default function PayoutsSetupWizard({
         {currentStep === 'method' && (
           <div>
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-brand-700 flex items-center justify-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white/[0.07] flex items-center justify-center">
                 <CreditCard className="w-7 h-7 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">
                 {isStripeLocation
                   ? t('onboarding.payouts.method.title_stripe', { defaultValue: 'Payment Method' })
                   : t('onboarding.payouts.method.title_haiti', { defaultValue: 'How would you like to receive payouts?' })}
@@ -661,15 +661,15 @@ export default function PayoutsSetupWizard({
             </div>
 
             {isStripeLocation ? (
-              <div className="bg-white/[0.03] rounded-xl border-2 border-brand-500 p-6 mb-8">
+              <div className="bg-white/[0.055] rounded-2xl p-6 mb-8">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.08] flex items-center justify-center flex-shrink-0">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
                       <path d="M13.976 9.15c-2.172-.806-3.234-1.354-3.234-2.31 0-.788.636-1.262 1.885-1.262 2.217 0 3.614.964 3.614.964l.667-2.524s-1.397-.89-4.238-.89c-2.888 0-4.822 1.567-4.822 3.8 0 1.973 1.419 3.178 3.586 3.938 1.85.66 2.634 1.18 2.634 2.094 0 .888-.67 1.433-1.948 1.433-2.218 0-4.08-1.18-4.08-1.18l-.69 2.547s1.866 1.28 4.72 1.28c3.044 0 4.93-1.504 4.93-3.908 0-2.016-1.51-3.17-3.024-3.982z" fill="#635BFF"/>
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-white text-lg mb-1">Stripe Connect</h3>
+                    <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-1">Stripe Connect</h3>
                     <p className="text-white/60 text-sm mb-3">
                       {t('onboarding.payouts.method.stripe_connect_desc', { defaultValue: 'Stripe handles payouts for US, Canadian and French bank accounts. You’ll be redirected to complete setup.' })}
                     </p>
@@ -684,14 +684,14 @@ export default function PayoutsSetupWizard({
               <div className="space-y-3 mb-8">
                 <button
                   onClick={() => setSelectedMethod('bank_transfer')}
-                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                  className={`w-full p-4 rounded-2xl transition-all flex items-center gap-4 ${
                     selectedMethod === 'bank_transfer'
-                      ? 'border-brand-500 '
-                      : 'border-white/10 hover:border-white/15 bg-white/[0.03]'
+                      ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.08]'
+                      : 'bg-white/[0.055] hover:bg-white/[0.08]'
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-brand-300" />
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.07] flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-white/80" />
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-white">{t('onboarding.payouts.method.bank_transfer', { defaultValue: 'Bank Transfer' })}</div>
@@ -704,14 +704,14 @@ export default function PayoutsSetupWizard({
 
                 <button
                   onClick={() => setSelectedMethod('mobile_money')}
-                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
+                  className={`w-full p-4 rounded-2xl transition-all flex items-center gap-4 ${
                     selectedMethod === 'mobile_money'
-                      ? 'border-brand-500 '
-                      : 'border-white/10 hover:border-white/15 bg-white/[0.03]'
+                      ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.08]'
+                      : 'bg-white/[0.055] hover:bg-white/[0.08]'
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-                    <Smartphone className="w-6 h-6 text-brand-300" />
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.07] flex items-center justify-center">
+                    <Smartphone className="w-6 h-6 text-white/80" />
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-white">{t('onboarding.payouts.method.mobile_money', { defaultValue: 'Mobile Money' })}</div>
@@ -727,13 +727,13 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white rounded-lg font-semibold hover:bg-brand-800 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
               >
                 {t('onboarding.payouts.nav.continue', { defaultValue: 'Continue' })}
                 <ArrowRight className="w-4 h-4" />
@@ -746,14 +746,14 @@ export default function PayoutsSetupWizard({
         {currentStep === 'details' && (
           <div>
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-brand-700 flex items-center justify-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-white/[0.07] flex items-center justify-center">
                 {selectedMethod === 'bank_transfer' ? (
                   <Building2 className="w-7 h-7 text-white" />
                 ) : (
                   <Smartphone className="w-7 h-7 text-white" />
                 )}
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">
                 {isStripeLocation
                   ? t('onboarding.payouts.details.title_stripe', { defaultValue: 'Ready for Stripe' })
                   : selectedMethod === 'bank_transfer'
@@ -768,8 +768,8 @@ export default function PayoutsSetupWizard({
             </div>
 
             {isStripeLocation ? (
-              <div className="bg-white/[0.03] rounded-xl p-6 mb-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center">
+              <div className="bg-white/[0.055] rounded-2xl p-6 mb-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/[0.08] flex items-center justify-center">
                   <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
                     <path d="M13.976 9.15c-2.172-.806-3.234-1.354-3.234-2.31 0-.788.636-1.262 1.885-1.262 2.217 0 3.614.964 3.614.964l.667-2.524s-1.397-.89-4.238-.89c-2.888 0-4.822 1.567-4.822 3.8 0 1.973 1.419 3.178 3.586 3.938 1.85.66 2.634 1.18 2.634 2.094 0 .888-.67 1.433-1.948 1.433-2.218 0-4.08-1.18-4.08-1.18l-.69 2.547s1.866 1.28 4.72 1.28c3.044 0 4.93-1.504 4.93-3.908 0-2.016-1.51-3.17-3.024-3.982z" fill="#635BFF"/>
                   </svg>
@@ -782,11 +782,11 @@ export default function PayoutsSetupWizard({
                 </p>
               </div>
             ) : selectedMethod === 'bank_transfer' ? (
-              <div className="bg-white/[0.03] rounded-xl  p-5 space-y-4 mb-8">
+              <div className="bg-white/[0.055] rounded-2xl p-5 space-y-4 mb-8">
                 {/* Bank Selection */}
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">
-                    {t('onboarding.payouts.field.bank', { defaultValue: 'Bank' })} <span className="text-red-500">*</span>
+                    {t('onboarding.payouts.field.bank', { defaultValue: 'Bank' })} <span className="text-red-400">*</span>
                   </label>
                   <select
                     value={bankForm.bankName}
@@ -803,7 +803,7 @@ export default function PayoutsSetupWizard({
                 {bankForm.bankName === 'other' && (
                   <div>
                     <label className="block text-sm font-medium text-white/70 mb-2">
-                      {t('onboarding.payouts.field.bank_name', { defaultValue: 'Bank Name' })} <span className="text-red-500">*</span>
+                      {t('onboarding.payouts.field.bank_name', { defaultValue: 'Bank Name' })} <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -822,7 +822,7 @@ export default function PayoutsSetupWizard({
                 {/* Account Holder Name */}
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">
-                    {t('onboarding.payouts.field.account_holder_name', { defaultValue: 'Account Holder Name' })} <span className="text-red-500">*</span>
+                    {t('onboarding.payouts.field.account_holder_name', { defaultValue: 'Account Holder Name' })} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -840,7 +840,7 @@ export default function PayoutsSetupWizard({
                 {/* Account Number */}
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">
-                    {t('onboarding.payouts.field.account_number', { defaultValue: 'Account Number' })} <span className="text-red-500">*</span>
+                    {t('onboarding.payouts.field.account_number', { defaultValue: 'Account Number' })} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -874,11 +874,11 @@ export default function PayoutsSetupWizard({
                 </div>
               </div>
             ) : (
-              <div className="bg-white/[0.03] rounded-xl  p-5 space-y-4 mb-8">
+              <div className="bg-white/[0.055] rounded-2xl p-5 space-y-4 mb-8">
                 {/* Provider Selection */}
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">
-                    {t('onboarding.payouts.field.provider', { defaultValue: 'Provider' })} <span className="text-red-500">*</span>
+                    {t('onboarding.payouts.field.provider', { defaultValue: 'Provider' })} <span className="text-red-400">*</span>
                   </label>
                   <div className={`grid gap-3 ${MOBILE_PROVIDERS.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {MOBILE_PROVIDERS.map((provider) => (
@@ -886,13 +886,13 @@ export default function PayoutsSetupWizard({
                         key={provider.value}
                         type="button"
                         onClick={() => setMobileForm(prev => ({ ...prev, provider: provider.value }))}
-                        className={`p-4 rounded-xl border-2 transition-all ${
+                        className={`p-4 rounded-2xl transition-all ${
                           mobileForm.provider === provider.value
-                            ? 'border-brand-500 '
-                            : 'border-white/10 hover:border-white/15'
+                            ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.1]'
+                            : 'bg-white/[0.07] hover:bg-white/[0.1]'
                         }`}
                       >
-                        <span className="text-2xl mb-1 block">{provider.icon}</span>
+                        <provider.icon className="mx-auto mb-1.5 h-6 w-6 text-white/80" aria-hidden="true" />
                         <span className="font-medium text-white">{provider.label}</span>
                       </button>
                     ))}
@@ -902,7 +902,7 @@ export default function PayoutsSetupWizard({
                 {/* Phone Number */}
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">
-                    {t('onboarding.payouts.field.phone_number', { defaultValue: 'Phone Number' })} <span className="text-red-500">*</span>
+                    {t('onboarding.payouts.field.phone_number', { defaultValue: 'Phone Number' })} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="tel"
@@ -933,7 +933,7 @@ export default function PayoutsSetupWizard({
                     value={mobileForm.accountName}
                     onChange={(e) => setMobileForm(prev => ({ ...prev, accountName: e.target.value }))}
                     placeholder={t('onboarding.payouts.field.account_name_placeholder', { defaultValue: 'Name on account' })}
-                    className="w-full px-4 py-3 border border-white/15 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    className={inputClass()}
                   />
                 </div>
               </div>
@@ -942,13 +942,13 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white rounded-lg font-semibold hover:bg-brand-800 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
               >
                 {t('onboarding.payouts.nav.continue', { defaultValue: 'Continue' })}
                 <ArrowRight className="w-4 h-4" />
@@ -961,27 +961,27 @@ export default function PayoutsSetupWizard({
         {currentStep === 'review' && (
           <div>
             <div className="text-center mb-8">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <Check className="w-7 h-7 text-green-400" />
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <Check className="w-7 h-7 text-emerald-300" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.payouts.review.title', { defaultValue: 'Review Your Setup' })}</h2>
+              <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">{t('onboarding.payouts.review.title', { defaultValue: 'Review Your Setup' })}</h2>
               <p className="text-white/60">{t('onboarding.payouts.review.subtitle', { defaultValue: 'Confirm your payout details before finishing' })}</p>
             </div>
 
-            <div className="bg-white/[0.03] rounded-xl  overflow-hidden mb-8">
+            <div className="bg-white/[0.055] rounded-2xl overflow-hidden mb-8">
               {/* Location */}
-              <div className="p-4 border-b border-white/10">
+              <div className="p-4 border-b border-white/[0.06]">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/50">{t('onboarding.payouts.review.location', { defaultValue: 'Location' })}</span>
                   <span className="font-medium text-white flex items-center gap-2">
-                    <span>{locationData?.flag}</span>
+                    <span className="text-xs font-semibold tracking-wide text-white/50">{locationData?.flag}</span>
                     {locationData ? t(`onboarding.payouts.location.${locationData.id}`, { defaultValue: locationData.name }) : null}
                   </span>
                 </div>
               </div>
 
               {/* Method */}
-              <div className="p-4 border-b border-white/10">
+              <div className="p-4 border-b border-white/[0.06]">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/50">{t('onboarding.payouts.review.payout_method', { defaultValue: 'Payout Method' })}</span>
                   <span className="font-medium text-white">
@@ -997,7 +997,7 @@ export default function PayoutsSetupWizard({
               {/* Details */}
               {!isStripeLocation && selectedMethod === 'bank_transfer' && (
                 <>
-                  <div className="p-4 border-b border-white/10">
+                  <div className="p-4 border-b border-white/[0.06]">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-white/50">{t('onboarding.payouts.review.bank', { defaultValue: 'Bank' })}</span>
                       <span className="font-medium text-white">
@@ -1007,7 +1007,7 @@ export default function PayoutsSetupWizard({
                       </span>
                     </div>
                   </div>
-                  <div className="p-4 border-b border-white/10">
+                  <div className="p-4 border-b border-white/[0.06]">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-white/50">{t('onboarding.payouts.review.account_holder', { defaultValue: 'Account Holder' })}</span>
                       <span className="font-medium text-white">{bankForm.accountName}</span>
@@ -1026,7 +1026,7 @@ export default function PayoutsSetupWizard({
 
               {!isStripeLocation && selectedMethod === 'mobile_money' && (
                 <>
-                  <div className="p-4 border-b border-white/10">
+                  <div className="p-4 border-b border-white/[0.06]">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-white/50">{t('onboarding.payouts.review.provider', { defaultValue: 'Provider' })}</span>
                       <span className="font-medium text-white">
@@ -1049,8 +1049,8 @@ export default function PayoutsSetupWizard({
             {/* Saving a method never needed identity; WITHDRAWING does (the
                 withdraw routes require an `active` profile). Say so up front. */}
             {!isStripeLocation && (
-              <div className="mb-8 rounded-xl bg-white/[0.05] p-4 flex items-start gap-3">
-                <Shield className="w-5 h-5 text-brand-300 flex-shrink-0 mt-0.5" />
+              <div className="mb-8 rounded-xl bg-white/[0.055] p-4 flex items-start gap-3">
+                <Shield className="w-5 h-5 text-white/60 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-white/70">
                   <p className="font-semibold text-white">
                     {t('verify_to_withdraw.title', { defaultValue: 'Verify your identity to withdraw' })}
@@ -1070,14 +1070,14 @@ export default function PayoutsSetupWizard({
               <button
                 onClick={handleBack}
                 disabled={saving}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors disabled:opacity-50"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>

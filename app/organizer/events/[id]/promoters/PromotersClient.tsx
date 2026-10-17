@@ -164,14 +164,14 @@ export default function PromotersClient({
   }
 
   const inputClass =
-    'w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
+    'w-full rounded-xl bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      <div className="rounded-2xl border border-white/10">
+      <div className="rounded-2xl bg-white/[0.055]">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div>
-            <h2 className="font-semibold text-white">{t('promoters.promoters')}</h2>
+            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('promoters.promoters')}</h2>
             <p className="text-sm text-white/50 mt-0.5">
               Personal links for your street team. Each sale through a link counts for
               its promoter, and Tikèm tallies the commission you owe them.
@@ -180,7 +180,7 @@ export default function PromotersClient({
           <button
             type="button"
             onClick={() => setShowForm((v) => !v)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Plus className="h-3.5 w-3.5" />
             {t('promoters.add_promoter')}
@@ -234,7 +234,7 @@ export default function PromotersClient({
                     onChange={(e) => setCommissionValue(e.target.value)}
                   />
                   <select
-                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&>option]:bg-white/[0.03]"
+                    className="rounded-xl bg-white/[0.06] px-3 py-3 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&>option]:bg-white/[0.03]"
                     value={commissionType}
                     onChange={(e) => setCommissionType(e.target.value as any)}
                   >
@@ -249,14 +249,14 @@ export default function PromotersClient({
                 type="button"
                 onClick={handleCreate}
                 disabled={saving || !name.trim()}
-                className="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {saving ? 'Adding…' : 'Add promoter'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10"
+                className="rounded-full px-5 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] bg-white/[0.07]"
               >
                 {t('actions.cancel')}
               </button>
@@ -276,7 +276,7 @@ export default function PromotersClient({
                 <button
                   type="button"
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Plus className="h-4 w-4" />
                   {t('promoters.add_first_promoter')}
@@ -332,7 +332,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => copy(`share-${p.id}`, p.shareUrl)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                   >
                     {copiedKey === `share-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     Sales link
@@ -340,7 +340,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => copy(`stats-${p.id}`, p.statsUrl)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                   >
                     {copiedKey === `stats-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     Their stats page
@@ -351,7 +351,7 @@ export default function PromotersClient({
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     {t('promoters.send_via_whatsapp')}

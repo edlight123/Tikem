@@ -70,7 +70,7 @@ export default function NotificationsForm({ userId, initialData }: Notifications
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-brand-300" />
-          <h3 className="text-lg font-semibold text-white">{t('notifications_form.email_notifications')}</h3>
+          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('notifications_form.email_notifications')}</h3>
         </div>
         <div className="space-y-4">
           <ToggleItem
@@ -110,7 +110,7 @@ export default function NotificationsForm({ userId, initialData }: Notifications
       <div className="pt-6 border-t border-white/10">
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare className="w-5 h-5 text-brand-300" />
-          <h3 className="text-lg font-semibold text-white">{t('notifications_form.sms_notifications')}</h3>
+          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('notifications_form.sms_notifications')}</h3>
         </div>
         <div className="space-y-4">
           <ToggleItem
@@ -135,7 +135,7 @@ export default function NotificationsForm({ userId, initialData }: Notifications
       <div className="pt-6 border-t border-white/10">
         <div className="flex items-center gap-2 mb-4">
           <Smartphone className="w-5 h-5 text-brand-300" />
-          <h3 className="text-lg font-semibold text-white">{t('notifications_form.push_notifications')}</h3>
+          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('notifications_form.push_notifications')}</h3>
         </div>
         <div className="space-y-4">
           <ToggleItem
@@ -161,7 +161,7 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSubmitting ? 'Saving...' : 'Save Preferences'}

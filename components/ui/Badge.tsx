@@ -24,13 +24,14 @@ interface BadgeProps {
 // with the BRIGHT end of that hue as the type — and no border, because the fill
 // is what makes it a surface (docs/POSH_DESIGN_BRIEF.md).
 const variantStyles: Record<BadgeVariant, string> = {
-  primary: 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm',
+  // Flat, not a teal gradient: teal is semantic, never a surface.
+  primary: 'bg-white/[0.08] text-white',
   secondary: 'bg-brand-500/15 text-brand-300',
   success: 'bg-success-500/15 text-success-500',
   warning: 'bg-warning-500/15 text-warning-500',
   error: 'bg-error-500/15 text-error-500',
   neutral: 'bg-white/[0.06] text-white/70',
-  vip: 'bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-md',
+  vip: 'bg-amber-400/[0.12] text-amber-200',
   trending: 'bg-brand-500/15 text-brand-300',
   new: 'bg-success-500/15 text-success-500',
 };

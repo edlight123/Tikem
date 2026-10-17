@@ -74,7 +74,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
             action={
               <Link
                 href={`/organizer/events/${id}/edit`}
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Pencil className="h-4 w-4" />
                 <T k="server_bits.add_tickets" />
@@ -111,7 +111,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.12]">
                       <div
-                        className={`h-2 rounded-full ${soldOut ? 'bg-red-500' : 'bg-brand-500'}`}
+                        className={`h-2 rounded-full ${soldOut ? 'bg-red-500' : 'bg-white'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>

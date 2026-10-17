@@ -143,7 +143,7 @@ export default function FlyerLibraryPicker({
            which is the honest number, and --chrome-h is the navbar's own
            height (globals.css). Same class of bug as the homepage phone
            mockup. */
-        className="relative flex max-h-[calc(100svh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-[#0d0f0e] shadow-2xl ring-1 ring-white/10 sm:max-h-[85svh] sm:rounded-3xl"
+        className="relative flex max-h-[calc(100svh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-[#1c1c1c] shadow-2xl sm:max-h-[85svh] sm:rounded-3xl"
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
           <div>
@@ -285,7 +285,7 @@ export default function FlyerLibraryPicker({
                 </span>
                 {selected && (
                   <span className="pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white">
-                    <Check className="h-3.5 w-3.5 text-gray-900" />
+                    <Check className="h-3.5 w-3.5 text-black" />
                   </span>
                 )}
               </button>

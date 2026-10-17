@@ -230,7 +230,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
   return (
     <>
       {ticketsError && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+        <div className="mb-4 flex items-start gap-3 rounded-xl bg-red-500/10 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white">Couldn&apos;t load attendees</p>
@@ -283,7 +283,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
           <button
             type="button"
             onClick={handleEmailAttendees}
-            className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-brand-700 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline">{tx('attendees.email_all')}</span>
@@ -499,7 +499,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
         type="button"
         onClick={handleResendTicket}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-700 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
       >
         <Mail className="h-4 w-4" />
         {tx('attendees.resend_ticket_email')}

@@ -183,7 +183,7 @@ export default function GuestEditorSheet({
             ? t('composer.guest.addTitle', { defaultValue: 'Add to lineup' })
             : t('composer.guest.editTitle', { defaultValue: 'Edit lineup entry' })
         }
-        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0d0f0e] shadow-2xl sm:rounded-3xl"
+        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[#1c1c1c] shadow-2xl sm:rounded-3xl"
       >
         <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
           <h2 className="min-w-0 truncate text-[15px] font-semibold text-white">
@@ -208,7 +208,7 @@ export default function GuestEditorSheet({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="group relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.06] transition-colors hover:border-white/25 disabled:opacity-60"
+              className="group relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12] disabled:opacity-60"
               aria-label={t('composer.guest.photo', { defaultValue: 'Add a photo' })}
             >
               {draft.photoUrl ? (
@@ -383,7 +383,7 @@ export default function GuestEditorSheet({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 min-w-0 flex-1 rounded-xl bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+            className="min-h-11 min-w-0 flex-1 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
           >
             {t('common.cancel', { defaultValue: 'Cancel' })}
           </button>
@@ -391,7 +391,7 @@ export default function GuestEditorSheet({
             type="button"
             onClick={onSave}
             disabled={!draft.name.trim() || uploading}
-            className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 min-w-0 flex-1 rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t('common.save', { defaultValue: 'Save' })}
           </button>

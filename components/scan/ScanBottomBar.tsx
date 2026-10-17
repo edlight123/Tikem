@@ -41,10 +41,10 @@ export function ScanBottomBar({ onManualLookup }: ScanBottomBarProps) {
           {/* Flashlight */}
           <button
             onClick={toggleFlashlight}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all ${
               flashlightOn
-                ? 'bg-brand-600 text-white'
-                : 'text-white hover:bg-white/20'
+                ? 'bg-white/[0.14] text-white ring-1 ring-inset ring-brand-400/50'
+                : 'text-white hover:bg-white/[0.12]'
             }`}
           >
             <Flashlight className="w-6 h-6" />
@@ -54,7 +54,7 @@ export function ScanBottomBar({ onManualLookup }: ScanBottomBarProps) {
           {/* Manual Lookup */}
           <button
             onClick={onManualLookup}
-            className="flex flex-col items-center gap-1 px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl transition-colors"
+            className="flex flex-col items-center gap-1 px-6 py-2 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
           >
             <Search className="w-6 h-6" />
             <span className="text-xs font-medium">{t('door.manual', { defaultValue: 'Manual' })}</span>
@@ -63,10 +63,10 @@ export function ScanBottomBar({ onManualLookup }: ScanBottomBarProps) {
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundOn(!soundOn)}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all ${
               soundOn
                 ? 'text-white hover:bg-white/20'
-                : 'bg-gray-700 text-white/40'
+                : 'bg-white/[0.07] text-white/40'
             }`}
           >
             {soundOn ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}

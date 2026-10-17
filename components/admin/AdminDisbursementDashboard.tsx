@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { formatCurrency } from '@/lib/currency'
 import { ConsolePanel, ConsoleState, consoleTone } from '@/components/admin/console'
+import { useToast } from '@/components/ui/Toast'
 import {
   AlertCircle,
   Building2,
@@ -61,6 +62,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [filter, setFilter] = useState<'all' | 'eligible' | 'pending' | 'completed'>('eligible')
   const [copiedValue, setCopiedValue] = useState<string | null>(null)
+  const { showToast } = useToast()
 
   const copyToClipboard = async (value: string) => {
     try {
@@ -68,8 +70,9 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
       setCopiedValue(value)
       window.setTimeout(() => setCopiedValue((current) => (current === value ? null : current)), 1500)
     } catch {
-      // Clipboard may be blocked by browser settings; fall back to a manual copy prompt.
-      window.prompt('Copy to clipboard:', value)
+      // Clipboard may be blocked by browser settings; say so and show the value
+      // so it can be copied by hand (no browser prompt()).
+      showToast({ type: 'warning', title: 'Copy blocked', message: `Copy it manually: ${value}` })
     }
   }
 

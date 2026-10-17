@@ -32,7 +32,9 @@ function ConsoleConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'default',
+  tone = 'console',
 }: {
+  tone?: 'console' | 'posh'
   open: boolean
   loading?: boolean
   onClose: () => void
@@ -78,6 +80,48 @@ function ConsoleConfirmDialog({
       <div className="absolute inset-0 bg-black/60" aria-hidden="true" onClick={onClose} />
 
       {/* Dialog */}
+      {tone === 'posh' ? (
+        // Public-site dialog (POSH): sheet fill, serif title, pill buttons.
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={description ? descId : undefined}
+          className="relative w-full max-w-sm rounded-2xl bg-[#1c1c1c] p-6 shadow-2xl"
+        >
+          <h2 id={titleId} className="font-display text-[26px] lowercase leading-tight text-white">
+            {title}
+          </h2>
+          {description && (
+            <p id={descId} className="mt-2 text-sm leading-relaxed text-white/60">
+              {description}
+            </p>
+          )}
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              ref={cancelRef}
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="h-11 rounded-full bg-white/[0.07] px-5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50"
+            >
+              {cancelLabel}
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className={
+                variant === 'danger'
+                  ? 'h-11 rounded-full bg-red-500/15 px-5 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:opacity-50'
+                  : 'h-11 rounded-full bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
+              }
+            >
+              {loading ? 'Working…' : confirmLabel}
+            </button>
+          </div>
+        </div>
+      ) : (
       <div
         role="alertdialog"
         aria-modal="true"
@@ -111,6 +155,7 @@ function ConsoleConfirmDialog({
           </ConsoleButton>
         </div>
       </div>
+      )}
     </div>
   )
 }
@@ -123,7 +168,17 @@ function ConsoleConfirmDialog({
  *   const confirmDialog = useConfirm()
  *   if (!(await confirmDialog({ title: 'Ban organizer?', variant: 'danger' }))) return
  */
-export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+/**
+ * `tone="posh"` renders the public-site dialog (organizer pages); the default
+ * stays the admin console's.
+ */
+export function ConfirmProvider({
+  children,
+  tone = 'console',
+}: {
+  children: React.ReactNode
+  tone?: 'console' | 'posh'
+}) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [opts, setOpts] = useState<ConfirmOptions>({ title: '' })
@@ -151,6 +206,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       <ConsoleConfirmDialog
+        tone={tone}
         open={open}
         loading={pending}
         onClose={() => settle(false)}

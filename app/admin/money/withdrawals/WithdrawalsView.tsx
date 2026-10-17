@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Smartphone, Landmark, Check, X } from 'lucide-react'
 import { formatCurrency } from '@/lib/fees'
 import { formatAge } from '@/lib/admin/age'
 import {
@@ -166,7 +167,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
         const reasons = Array.isArray(data.blockers) && data.blockers.length
           ? data.blockers.map((b: any) => b.message).join(' ')
           : data.details
-        throw new Error([data.error || `Failed to ${action} withdrawal`, reasons].filter(Boolean).join(' — '))
+        throw new Error([data.error || `Failed to ${action} withdrawal`, reasons].filter(Boolean).join(' · '))
       }
 
       showToast({
@@ -198,7 +199,8 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
   }
 
   const getMethodIcon = (method: string) => {
-    return method === 'moncash' ? '📱' : '🏦'
+    const Icon = method === 'moncash' ? Smartphone : Landmark
+    return <Icon className="inline h-4 w-4 shrink-0 text-console-mut" aria-hidden />
   }
 
   const containerClassName = embedded
@@ -290,7 +292,7 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <span>{getMethodIcon(withdrawal.method)}</span>
+                        {getMethodIcon(withdrawal.method)}
                         <span className="text-sm font-medium text-console-mut">
                           {withdrawal.method === 'moncash' ? 'MonCash' : 'Bank'}
                         </span>
@@ -356,7 +358,9 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                 <div className="flex justify-between items-center">
                   <div className="font-mono font-bold tabular-nums text-console-text">{formatCurrency(withdrawal.amount)}</div>
                   <div className="text-sm text-console-mut">
-                    {getMethodIcon(withdrawal.method)} {withdrawal.method === 'moncash' ? 'MonCash' : 'Bank'}
+                    <span className="inline-flex items-center gap-1.5">
+                      {getMethodIcon(withdrawal.method)} {withdrawal.method === 'moncash' ? 'MonCash' : 'Bank'}
+                    </span>
                   </div>
                 </div>
                 <div className="font-mono text-xs tabular-nums text-console-faint mt-2">
@@ -618,17 +622,19 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                     variant="primary"
                     onClick={() => handleAction(selectedWithdrawal.id, 'approve')}
                     disabled={processing}
-                    className="flex-1"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5"
                   >
-                    ✓ Approve & Process
+                    <Check className="h-4 w-4" aria-hidden />
+                    Approve & Process
                   </ConsoleButton>
                   <ConsoleButton
                     variant="danger"
                     onClick={() => handleAction(selectedWithdrawal.id, 'reject')}
                     disabled={processing}
-                    className="flex-1"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5"
                   >
-                    ✗ Reject
+                    <X className="h-4 w-4" aria-hidden />
+                    Reject
                   </ConsoleButton>
                 </>
               )}
@@ -638,17 +644,19 @@ export default function WithdrawalsView({ embedded = false, showHeader = true }:
                     variant="primary"
                     onClick={() => handleAction(selectedWithdrawal.id, 'complete')}
                     disabled={processing}
-                    className="flex-1"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5"
                   >
-                    ✓ Mark Complete
+                    <Check className="h-4 w-4" aria-hidden />
+                    Mark Complete
                   </ConsoleButton>
                   <ConsoleButton
                     variant="danger"
                     onClick={() => handleAction(selectedWithdrawal.id, 'fail')}
                     disabled={processing}
-                    className="flex-1"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5"
                   >
-                    ✗ Mark Failed
+                    <X className="h-4 w-4" aria-hidden />
+                    Mark Failed
                   </ConsoleButton>
                 </>
               )}

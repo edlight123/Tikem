@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Check, X, FileText, CreditCard, AlertCircle, ExternalLink } from 'lucide-react'
-import { ConsoleButton, ConsoleState } from '@/components/admin/console'
+import { ConsoleButton, ConsoleInput, ConsoleState } from '@/components/admin/console'
 import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { useToast } from '@/components/ui/Toast'
 
@@ -39,6 +39,9 @@ export default function BankVerificationReviewCard({ verification }: Props) {
   const [processing, setProcessing] = useState(false)
   const [expanded, setExpanded] = useState(verification.verificationDoc.status === 'pending')
   const [isOpeningDocument, setIsOpeningDocument] = useState(false)
+  // Inline rejection reason (replaces the browser prompt()).
+  const [rejecting, setRejecting] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   const openDocument = async () => {
     const path = verification.verificationDoc.documentPath
@@ -108,7 +111,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
   }
 
   const handleReject = async () => {
-    const reason = prompt('Reason for rejection (will be sent to organizer):')
+    const reason = rejectReason.trim()
     if (!reason) return
 
     setProcessing(true)
@@ -333,7 +336,43 @@ export default function BankVerificationReviewCard({ verification }: Props) {
           </div>
 
           {/* Actions */}
-          {verification.verificationDoc.status === 'pending' && (
+          {verification.verificationDoc.status === 'pending' && rejecting && (
+            <div className="mt-6 space-y-3">
+              <label htmlFor={`reject-reason-${verification.destinationId}`} className="block text-[13px] text-console-mut">
+                Reason for rejection (will be sent to organizer)
+              </label>
+              <ConsoleInput
+                id={`reject-reason-${verification.destinationId}`}
+                autoFocus
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && rejectReason.trim()) handleReject()
+                  if (e.key === 'Escape') setRejecting(false)
+                }}
+              />
+              <div className="flex gap-4">
+                <ConsoleButton
+                  variant="quiet"
+                  onClick={() => setRejecting(false)}
+                  disabled={processing}
+                  className="flex-1"
+                >
+                  Cancel
+                </ConsoleButton>
+                <ConsoleButton
+                  variant="danger"
+                  onClick={handleReject}
+                  disabled={processing || !rejectReason.trim()}
+                  className="flex-1 flex items-center justify-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  {processing ? 'Processing...' : 'Send rejection'}
+                </ConsoleButton>
+              </div>
+            </div>
+          )}
+          {verification.verificationDoc.status === 'pending' && !rejecting && (
             <div className="mt-6 flex gap-4">
               <ConsoleButton
                 variant="primary"
@@ -346,7 +385,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
               </ConsoleButton>
               <ConsoleButton
                 variant="danger"
-                onClick={handleReject}
+                onClick={() => setRejecting(true)}
                 disabled={processing}
                 className="flex-1 flex items-center justify-center gap-2"
               >

@@ -181,7 +181,7 @@ export default function PayoutsPageWrapper({
             <span className="text-white/40">/</span>
             <span className="text-white font-medium">{t('actions.payouts')}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">{t('actions.payouts')}</h1>
+          <h1 className="font-display lowercase italic !text-[28px] sm:!text-[32px] !leading-tight text-white">{t('actions.payouts')}</h1>
           <p className="text-white/60 mt-1">
             {t('payouts_wrapper.manage_earnings')}
           </p>
@@ -208,7 +208,7 @@ export default function PayoutsPageWrapper({
 
         {/* Link to advanced settings */}
         {hasAnySetup && (
-          <div className="mt-8 pt-6 border-t border-white/10">
+          <div className="mt-8 pt-6">
             <Link 
               href="/organizer/settings/payouts?view=advanced"
               className="inline-flex items-center gap-1 text-sm font-medium text-white/50 hover:text-white/70"

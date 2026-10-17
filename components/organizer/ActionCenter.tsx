@@ -58,15 +58,15 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
   const getColor = (type: Alert['type']) => {
     switch (type) {
       case 'draft':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-brand-300', btn: 'bg-brand-600 hover:bg-brand-700' }
+        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-brand-300', btn: 'bg-white/[0.07] text-white hover:bg-white/[0.12]' }
       case 'low-sales':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-amber-300', btn: 'bg-amber-600 hover:bg-amber-700' }
+        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-amber-300', btn: 'bg-amber-500/15 text-amber-200 hover:bg-amber-500/25' }
       case 'payout':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-brand-300', btn: 'bg-brand-600 hover:bg-brand-700' }
+        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-brand-300', btn: 'bg-white/[0.07] text-white hover:bg-white/[0.12]' }
       case 'verification':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-amber-300', btn: 'bg-amber-600 hover:bg-amber-700' }
+        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-amber-300', btn: 'bg-amber-500/15 text-amber-200 hover:bg-amber-500/25' }
       default:
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-white/60', btn: 'bg-white/[0.12] hover:bg-white/[0.18]' }
+        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-white/60', btn: 'bg-white/[0.07] text-white hover:bg-white/[0.12]' }
     }
   }
 
@@ -101,7 +101,7 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
                   <p className={`text-sm ${colors.text} opacity-80 mb-3`}>{alert.description}</p>
                   <Link
                     href={alert.ctaHref}
-                    className={`inline-flex items-center gap-2 px-4 py-2 ${colors.btn} text-white rounded-lg font-semibold transition-colors text-sm`}
+                    className={`inline-flex items-center gap-2 px-4 py-2 ${colors.btn} rounded-full font-semibold transition-colors text-sm`}
                   >
                     {alert.ctaText}
                   </Link>

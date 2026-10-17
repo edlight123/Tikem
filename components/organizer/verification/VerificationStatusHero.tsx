@@ -54,24 +54,24 @@ export default function VerificationStatusHero({
   }> = {
     not_started: {
       icon: FileText,
-      bgColor: 'bg-brand-500/10',
-      iconBgColor: 'bg-brand-500/20',
-      iconColor: 'text-brand-300',
+      bgColor: 'bg-white/[0.055]',
+      iconBgColor: 'bg-white/[0.08]',
+      iconColor: 'text-white',
       title: 'Start Verification',
       description: 'Complete identity verification to withdraw your earnings.'
     },
     in_progress: {
       icon: Clock,
-      bgColor: 'bg-amber-500/10',
-      iconBgColor: 'bg-amber-500/20',
+      bgColor: 'bg-white/[0.055]',
+      iconBgColor: 'bg-amber-500/15',
       iconColor: 'text-amber-300',
       title: 'Complete Your Verification',
       description: `You're ${completionPercentage}% complete. Finish the required steps to submit for review.`
     },
     pending_review: {
       icon: Eye,
-      bgColor: 'bg-amber-500/10',
-      iconBgColor: 'bg-amber-500/20',
+      bgColor: 'bg-white/[0.055]',
+      iconBgColor: 'bg-amber-500/15',
       iconColor: 'text-amber-300',
       title: 'Verification Submitted',
       description: 'Your verification is pending review. Our team reviews it usually within 1–2 business days.',
@@ -80,8 +80,8 @@ export default function VerificationStatusHero({
     // Legacy alias (older documents used "pending")
     pending: {
       icon: Eye,
-      bgColor: 'bg-amber-500/10',
-      iconBgColor: 'bg-amber-500/20',
+      bgColor: 'bg-white/[0.055]',
+      iconBgColor: 'bg-amber-500/15',
       iconColor: 'text-amber-300',
       title: 'Verification Submitted',
       description: 'Your verification is pending review. Our team reviews it usually within 1–2 business days.',
@@ -89,8 +89,8 @@ export default function VerificationStatusHero({
     },
     in_review: {
       icon: Eye,
-      bgColor: 'bg-amber-500/10',
-      iconBgColor: 'bg-amber-500/20',
+      bgColor: 'bg-white/[0.055]',
+      iconBgColor: 'bg-amber-500/15',
       iconColor: 'text-amber-300',
       title: 'Under Review',
       description: 'Our team is currently reviewing your verification documents.',
@@ -98,10 +98,10 @@ export default function VerificationStatusHero({
     },
     approved: {
       icon: BadgeCheck,
-      bgColor: 'bg-emerald-500/10',
-      iconBgColor: 'bg-emerald-500/20',
+      bgColor: 'bg-white/[0.055]',
+      iconBgColor: 'bg-emerald-500/15',
       iconColor: 'text-emerald-300',
-      title: 'Verification Approved!',
+      title: 'Verification Approved',
       description: 'Your account is verified. You can now publish paid events and request payouts.',
       ctaHref: '/organizer/events/new',
       actionType: 'link'
@@ -130,7 +130,7 @@ export default function VerificationStatusHero({
   const Icon = config.icon
 
   return (
-    <div className={`${config.bgColor} rounded-xl p-6 md:p-8 mb-6`}>
+    <div className={`${config.bgColor} rounded-2xl p-6 md:p-8 mb-6`}>
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div className={`${config.iconBgColor} rounded-full p-3 md:p-4 flex-shrink-0`}>
@@ -142,7 +142,7 @@ export default function VerificationStatusHero({
           {/* `!` on the size: body carries `.mobile-typography`, whose
               `h1` rule (0,1,1) outranks a bare arbitrary size (0,1,0) under
               640px and would drag this back to text-xl with its own leading. */}
-          <h1 className="mb-2 font-display !text-[26px] !leading-[1.05] text-white md:!text-[32px]">
+          <h1 className="mb-2 font-display lowercase italic !text-[26px] !leading-[1.05] text-white md:!text-[32px]">
             {config.title}
           </h1>
           <p className="text-sm md:text-base text-white/70 mb-4">
@@ -162,7 +162,7 @@ export default function VerificationStatusHero({
               </div>
               <div className="w-full bg-white/[0.12] rounded-full h-2">
                 <div
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-amber-400 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${completionPercentage}%` }}
                 />
               </div>
@@ -173,7 +173,7 @@ export default function VerificationStatusHero({
               A neutral step UP, not the hero's own tint again: the same colour
               nested inside itself renders as nothing. */}
           {(status === 'changes_requested' || status === 'rejected') && reviewNotes && (
-            <div className="bg-white/[0.08] rounded-lg p-4 mb-4">
+            <div className="bg-white/[0.08] rounded-xl p-4 mb-4">
               <h3 className="text-sm font-semibold text-white mb-2">
                 {t('verification_status.feedback_from_team')}
               </h3>
@@ -188,13 +188,13 @@ export default function VerificationStatusHero({
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href={config.ctaHref}
-                className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base text-center transition-all shadow-md hover:shadow-lg"
+                className="bg-white hover:bg-white/90 text-black px-6 py-3 rounded-full font-semibold text-sm md:text-base text-center transition-all"
               >
                 {t('actions.create_event')}
               </Link>
               <Link
                 href="/organizer"
-                className="bg-white/[0.06] hover:bg-white/[0.12] text-white/80 hover:text-white px-6 py-3 rounded-lg font-medium text-sm md:text-base text-center transition-colors"
+                className="bg-white/[0.07] hover:bg-white/[0.12] text-white hover:text-white px-6 py-3 rounded-full font-medium text-sm md:text-base text-center transition-colors"
               >
                 {t('verification_status.back_to_dashboard')}
               </Link>
@@ -206,12 +206,12 @@ export default function VerificationStatusHero({
               <button
                 onClick={onRestart}
                 disabled={isRestarting}
-                className={`bg-red-600 hover:bg-red-700 ${
+                className={`bg-white hover:bg-white/90 ${
                   isRestarting ? 'opacity-50 cursor-not-allowed' : ''
-                } text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2`}
+                } text-black px-6 py-3 rounded-full font-semibold text-sm md:text-base transition-colors flex items-center justify-center gap-2`}
               >
                 {isRestarting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-black/60 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <RefreshCw className="w-4 h-4" />
                 )}
@@ -219,7 +219,7 @@ export default function VerificationStatusHero({
               </button>
               <Link
                 href="/organizer"
-                className="bg-white/[0.06] hover:bg-white/[0.12] text-white/80 hover:text-white px-6 py-3 rounded-lg font-medium text-sm md:text-base text-center transition-colors"
+                className="bg-white/[0.07] hover:bg-white/[0.12] text-white hover:text-white px-6 py-3 rounded-full font-medium text-sm md:text-base text-center transition-colors"
               >
                 {t('verification_status.back_to_dashboard')}
               </Link>

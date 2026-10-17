@@ -77,16 +77,16 @@ export default async function TeamSettingsPage({
         />
 
         {eventsError ? (
-          <div className="mt-8 mb-6 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4 text-sm text-white/70">
+          <div className="mt-8 mb-6 rounded-2xl bg-amber-500/10 p-4 text-sm text-white/70">
             We couldn&apos;t load your events right now. Some counts may be incomplete, please refresh to try again.
           </div>
         ) : null}
 
         {/* mt-8, matching the sibling settings pages. */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-          <div className="rounded-xl bg-white/[0.03] p-4">
+          <div className="rounded-2xl bg-white/[0.055] p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-brand-500/10 text-brand-300 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-white/[0.07] text-white/70 flex items-center justify-center">
                 <CalendarDays className="w-5 h-5" />
               </div>
               <div>
@@ -95,9 +95,9 @@ export default async function TeamSettingsPage({
               </div>
             </div>
           </div>
-          <div className="rounded-xl bg-white/[0.03] p-4">
+          <div className="rounded-2xl bg-white/[0.055] p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-brand-500/10 text-brand-300 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-white/[0.07] text-white/70 flex items-center justify-center">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
@@ -106,9 +106,9 @@ export default async function TeamSettingsPage({
               </div>
             </div>
           </div>
-          <div className="rounded-xl bg-white/[0.03] p-4">
+          <div className="rounded-2xl bg-white/[0.055] p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-brand-500/10 text-brand-300 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-white/[0.07] text-white/70 flex items-center justify-center">
                 <Users className="w-5 h-5" />
               </div>
               <div>
@@ -125,24 +125,24 @@ export default async function TeamSettingsPage({
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-xl bg-white/[0.03] p-5">
-              <h3 className="text-lg font-semibold text-white mb-3"><T k="event_analytics.guidelines" /></h3>
+            <div className="rounded-2xl bg-white/[0.055] p-5">
+              <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3"><T k="event_analytics.guidelines" /></h3>
               <ul className="space-y-3 text-sm text-white/70">
                 <li className="flex gap-2">
-                  <span className="text-brand-300">•</span><T k="event_analytics.invite_staff_for_event" /></li>
+                  <span className="text-white/40">•</span><T k="event_analytics.invite_staff_for_event" /></li>
                 <li className="flex gap-2">
-                  <span className="text-brand-300">•</span><T k="event_analytics.one_time_invite_links" /></li>
+                  <span className="text-white/40">•</span><T k="event_analytics.one_time_invite_links" /></li>
                 <li className="flex gap-2">
-                  <span className="text-brand-300">•</span><T k="event_analytics.remove_access_if_lost" /></li>
+                  <span className="text-white/40">•</span><T k="event_analytics.remove_access_if_lost" /></li>
               </ul>
             </div>
 
-            <div className="bg-brand-500/[0.06] border border-brand-500/30 rounded-xl p-5">
-              <h3 className="text-base font-semibold text-brand-300 mb-2"><T k="event_analytics.need_help" /></h3>
+            <div className="bg-white/[0.055] rounded-2xl p-5">
+              <h3 className="text-base font-semibold text-white mb-2"><T k="event_analytics.need_help" /></h3>
               <p className="text-sm text-white/70 mb-4"><T k="event_analytics.support_can_help" /></p>
               <Link
                 href="mailto:support@tikem.co"
-                className="inline-flex items-center text-sm font-semibold text-brand-300 hover:text-brand-200 transition-colors"
+                className="inline-flex items-center text-sm font-semibold text-white underline underline-offset-4 hover:text-white/80 transition-colors"
               >
                 Contact Support →
               </Link>

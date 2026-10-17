@@ -103,9 +103,9 @@ export default function DeclaredMarketsCard({
   }
 
   return (
-    <div className={`bg-white/[0.03] rounded-xl border border-white/10 overflow-hidden ${className || ''}`}>
+    <div className={`bg-white/[0.055] rounded-2xl overflow-hidden ${className || ''}`}>
       <div className="p-6">
-        <h2 className="text-lg font-semibold text-white">{t('markets.title', { defaultValue: 'Where you run events' })}</h2>
+        <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('markets.title', { defaultValue: 'Where you run events' })}</h2>
         <p className="mt-1 text-sm text-white/60">
           Pick every country you plan to hold events in. We&apos;ll only ask you to set up the
           payout methods those countries actually use, and you can change this whenever you
@@ -121,10 +121,10 @@ export default function DeclaredMarketsCard({
                 type="button"
                 aria-pressed={isOn}
                 onClick={() => toggle(code)}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   isOn
-                    ? 'border-brand-700 bg-brand-700 text-white'
-                    : 'border-white/15 bg-white/[0.03] text-white/80 hover:bg-white/[0.04]'
+                    ? 'bg-white text-black'
+                    : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white'
                 }`}
               >
                 {isOn ? <Check className="h-3.5 w-3.5" /> : null}
@@ -141,7 +141,7 @@ export default function DeclaredMarketsCard({
             type="button"
             onClick={handleSave}
             disabled={!isDirty || isSaving}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {isSaving ? t('markets.saving', { defaultValue: 'Saving…' }) : t('markets.save', { defaultValue: 'Save markets' })}
@@ -153,7 +153,7 @@ export default function DeclaredMarketsCard({
 
         {/* What the declaration implies, stated plainly. Two markets on two
             different rails are TWO setups, not two options. */}
-        <div className="mt-6 border-t border-white/10 pt-5">
+        <div className="mt-6 border-t border-white/[0.06] pt-5">
           {saved.length === 0 ? (
             <p className="text-sm text-white/50">
               {t('markets.none_declared', { defaultValue: 'Nothing declared yet, so every payout method is shown below.' })}

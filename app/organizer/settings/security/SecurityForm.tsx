@@ -153,7 +153,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
           <button
             type="submit"
             disabled={isChangingPassword}
-            className="px-6 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             {isChangingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
             {isChangingPassword ? 'Updating...' : 'Update Password'}

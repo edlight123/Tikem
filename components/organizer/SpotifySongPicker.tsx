@@ -189,7 +189,7 @@ export default function SpotifySongPicker({
   }
 
   const shell =
-    'flex items-center gap-3 rounded-xl border border-white/10 px-4 transition-colors focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-400/40'
+    'bg-white/[0.06] flex items-center gap-3 rounded-xl px-4 transition-colors focus-within:ring-2 focus-within:ring-brand-400/40'
 
   // ── Selected state ──────────────────────────────────────────────────────
   // A picked track (or a saved/pasted link) collapses to one compact row.
@@ -199,7 +199,7 @@ export default function SpotifySongPicker({
 
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2.5">
+        <div className="flex items-center gap-3 rounded-xl bg-white/[0.055] px-3 py-2.5">
           {picked?.albumArt ? (
             // Plain <img>: i.scdn.co isn't in images.remotePatterns and these are
             // already 64px squares, so /_next/image would only add a hop.
@@ -215,7 +215,7 @@ export default function SpotifySongPicker({
           ) : (
             // A saved or pasted link has no album art to show, so the logo
             // stands in — it still says where the song lives.
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.07]">
               <SpotifyLogo className="h-[20px] w-[20px]" />
             </span>
           )}
@@ -231,7 +231,7 @@ export default function SpotifySongPicker({
           <button
             type="button"
             onClick={clear}
-            className="shrink-0 rounded-lg px-2 py-1 text-xs text-brand-400 transition-colors hover:text-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
+            className="shrink-0 rounded-lg px-2 py-1 text-xs text-white/60 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
           >
             {t('composer.spotifyChange', { defaultValue: 'Change' })}
           </button>
@@ -313,7 +313,7 @@ export default function SpotifySongPicker({
           id={listboxId}
           role="listbox"
           aria-label={t('composer.spotifyResultsLabel', { defaultValue: 'Song results' })}
-          className="absolute left-0 right-0 z-30 mt-2 max-h-80 overflow-y-auto rounded-xl border border-white/10 bg-[#111] py-1 shadow-2xl"
+          className="absolute left-0 right-0 z-30 mt-2 max-h-80 overflow-y-auto rounded-xl bg-[#1c1c1c] py-1 shadow-2xl"
         >
           {results.length === 0 ? (
             <li className="px-4 py-3 text-xs text-white/40">
@@ -351,7 +351,7 @@ export default function SpotifySongPicker({
                       className="h-10 w-10 shrink-0 rounded-lg object-cover"
                     />
                   ) : (
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.07]">
                       <Music2 className="h-[18px] w-[18px] text-white/40" />
                     </span>
                   )}

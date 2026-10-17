@@ -6,6 +6,7 @@ import { OrganizerTopNav } from '@/components/organizer/OrganizerTopNav'
 import OrganizerChrome from '@/components/organizer/OrganizerChrome'
 import { isAdmin } from '@/lib/admin'
 import { adminDb } from '@/lib/firebase/admin'
+import { ConfirmProvider } from '@/components/ui/ConfirmProvider'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -57,7 +58,7 @@ export default async function OrganizerLayout({
         chromeTop={<Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />}
         chromeBottom={<MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />}
       >
-        {children}
+        <ConfirmProvider tone="posh">{children}</ConfirmProvider>
       </OrganizerChrome>
     )
   }
@@ -79,7 +80,7 @@ export default async function OrganizerLayout({
       }
       chromeBottom={<MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />}
     >
-      {children}
+      <ConfirmProvider tone="posh">{children}</ConfirmProvider>
     </OrganizerChrome>
   )
 }

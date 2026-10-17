@@ -33,38 +33,38 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
   if (result.success && result.type === 'VALID') {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-gradient-to-br from-green-900 to-green-800 rounded-2xl p-8 max-w-md w-full mx-4 border-2 border-green-500 shadow-2xl">
+        <div className="bg-emerald-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
           <div className="text-center">
-            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
               <CheckCircle className="w-12 h-12 text-white" strokeWidth={3} />
             </div>
             
-            <h2 className="text-3xl font-bold text-white mb-2">✅ {t('door.valid', { defaultValue: 'VALID' })}</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">{t('door.valid', { defaultValue: 'VALID' })}</h2>
             
             <div className="bg-black/20 rounded-xl p-4 mb-4 text-left">
-              <div className="text-green-100 space-y-2">
+              <div className="text-emerald-100 space-y-2">
                 <div>
-                  <div className="text-xs text-green-300 uppercase tracking-wide">{t('door.attendee', { defaultValue: 'Attendee' })}</div>
+                  <div className="text-xs text-emerald-300 uppercase tracking-wide">{t('door.attendee', { defaultValue: 'Attendee' })}</div>
                   <div className="text-xl font-bold">{result.attendeeName}</div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-green-300 uppercase tracking-wide">{t('door.ticket_type', { defaultValue: 'Ticket Type' })}</div>
+                    <div className="text-xs text-emerald-300 uppercase tracking-wide">{t('door.ticket_type', { defaultValue: 'Ticket Type' })}</div>
                     <div className="font-semibold">{result.ticketType}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-green-300 uppercase tracking-wide">{t('door.quantity', { defaultValue: 'Quantity' })}</div>
+                    <div className="text-xs text-emerald-300 uppercase tracking-wide">{t('door.quantity', { defaultValue: 'Quantity' })}</div>
                     <div className="font-semibold">{result.quantity}</div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-green-300 uppercase tracking-wide">{t('door.entry_point', { defaultValue: 'Entry Point' })}</div>
+                  <div className="text-xs text-emerald-300 uppercase tracking-wide">{t('door.entry_point', { defaultValue: 'Entry Point' })}</div>
                   <div className="font-semibold">{result.entryPoint}</div>
                 </div>
               </div>
             </div>
             
-            <p className="text-green-200 font-medium text-lg">{t('door.checked_in_now', { defaultValue: 'Checked in now' })}</p>
+            <p className="text-emerald-200 font-medium text-lg">{t('door.checked_in_now', { defaultValue: 'Checked in now' })}</p>
           </div>
         </div>
       </div>
@@ -74,23 +74,23 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
   if (result.type === 'ALREADY_CHECKED_IN') {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-gradient-to-br from-yellow-900 to-yellow-800 rounded-2xl p-8 max-w-md w-full mx-4 border-2 border-yellow-500 shadow-2xl">
+        <div className="bg-amber-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
           <div className="text-center">
-            <div className="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
               <AlertTriangle className="w-12 h-12 text-white" strokeWidth={3} />
             </div>
             
-            <h2 className="text-3xl font-bold text-white mb-2">⚠️ {t('door.already_checked_in', { defaultValue: 'ALREADY CHECKED-IN' })}</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">{t('door.already_checked_in', { defaultValue: 'ALREADY CHECKED-IN' })}</h2>
             
             <div className="bg-black/20 rounded-xl p-4 mb-4 text-left">
-              <div className="text-yellow-100 space-y-2">
+              <div className="text-amber-100 space-y-2">
                 <div>
-                  <div className="text-xs text-yellow-300 uppercase tracking-wide">{t('door.attendee', { defaultValue: 'Attendee' })}</div>
+                  <div className="text-xs text-amber-300 uppercase tracking-wide">{t('door.attendee', { defaultValue: 'Attendee' })}</div>
                   <div className="text-xl font-bold">{result.attendeeName}</div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-yellow-300 uppercase tracking-wide">{t('door.previous_checkin', { defaultValue: 'Previous Check-in' })}</div>
+                    <div className="text-xs text-amber-300 uppercase tracking-wide">{t('door.previous_checkin', { defaultValue: 'Previous Check-in' })}</div>
                     <div className="font-semibold">
                       {new Date(result.checkedInAt).toLocaleTimeString(intlLocaleFor(i18n.language), {
                         hour: 'numeric',
@@ -99,7 +99,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-yellow-300 uppercase tracking-wide">{t('door.entry_point', { defaultValue: 'Entry Point' })}</div>
+                    <div className="text-xs text-amber-300 uppercase tracking-wide">{t('door.entry_point', { defaultValue: 'Entry Point' })}</div>
                     <div className="font-semibold">{result.entryPoint}</div>
                   </div>
                 </div>
@@ -109,12 +109,12 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
             {result.allowReentry ? (
               <button
                 onClick={onOverride}
-                className="w-full px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl transition-colors mb-2"
+                className="w-full px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors mb-2"
               >
                 {t('door.override_allow_reentry', { defaultValue: 'Override / Allow Re-entry' })}
               </button>
             ) : (
-              <p className="text-yellow-200 font-medium">{t('door.reentry_not_allowed', { defaultValue: 'Re-entry not allowed' })}</p>
+              <p className="text-amber-200 font-medium">{t('door.reentry_not_allowed', { defaultValue: 'Re-entry not allowed' })}</p>
             )}
           </div>
         </div>
@@ -139,13 +139,13 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-gradient-to-br from-red-900 to-red-800 rounded-2xl p-8 max-w-md w-full mx-4 border-2 border-red-500 shadow-2xl">
+      <div className="bg-red-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="text-center">
           <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
             <XCircle className="w-12 h-12 text-white" strokeWidth={3} />
           </div>
           
-          <h2 className="text-3xl font-bold text-white mb-2">❌ {t('door.invalid', { defaultValue: 'INVALID' })}</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">{t('door.invalid', { defaultValue: 'INVALID' })}</h2>
           
           <div className="bg-black/20 rounded-xl p-4 mb-4">
             <div className="text-red-100">

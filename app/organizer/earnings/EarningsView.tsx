@@ -55,7 +55,7 @@ function StatCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl bg-white/[0.03] p-5 shadow-soft">
+    <div className="rounded-2xl bg-white/[0.055] p-5 shadow-soft">
       <div className="flex items-center gap-2 text-white/50">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/[0.06] text-brand-300">{icon}</span>
         <span className="label-mono text-xs uppercase">{label}</span>
@@ -164,7 +164,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
           one large figure on the canvas, the way the public pages let a number
           or a title do the work, and teal is left to the one accent that
           matters, the wallet mark. */}
-      <section className="relative overflow-hidden rounded-2xl bg-white/[0.03] p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl bg-white/[0.055] p-6 sm:p-8">
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-white/50">
@@ -210,8 +210,8 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
           <div className="shrink-0">
             <a
               href="#events-earnings"
-              className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold transition lg:w-auto ${
-                anyAvailable ? 'bg-white text-gray-900 shadow-sm hover:opacity-90' : 'bg-white/15 text-white/60'
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold transition lg:w-auto ${
+                anyAvailable ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white/60'
               }`}
             >
               Withdraw from an event
@@ -247,7 +247,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
       </div>
 
       {/* Fee structure — compact disclosure to keep the page focused */}
-      <details className="group overflow-hidden rounded-2xl bg-white/[0.03] shadow-soft">
+      <details className="group overflow-hidden rounded-2xl bg-white/[0.055] shadow-soft">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
           <span className="flex items-center gap-2 text-sm font-medium text-white">
             <Receipt className="h-4 w-4 text-brand-300" />
@@ -290,12 +290,12 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
         </div>
       </details>
 
-      <div id="events-earnings" className="scroll-mt-24 overflow-hidden rounded-2xl bg-white/[0.03] shadow-soft">
+      <div id="events-earnings" className="scroll-mt-24 overflow-hidden rounded-2xl bg-white/[0.055] shadow-soft">
         {/* Filter Tabs */}
-        <div className="border-b border-white/10 px-4 sm:px-6 py-4">
+        <div className="px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="font-display text-[20px] lowercase italic leading-none text-white">events</div>
+              <div className="font-display lowercase italic !text-[22px] !leading-snug text-white">events</div>
               <div className="text-xs text-white/50">{tx('earnings.filter_by_settlement')}</div>
             </div>
 

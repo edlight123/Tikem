@@ -153,7 +153,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
         if (e.target === e.currentTarget && !busy) onClose()
       }}
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-[#141414] p-6">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-[#1c1c1c] p-6">
         <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-red-500/10 text-red-300">
           <AlertTriangle className="h-6 w-6" aria-hidden />
         </div>
@@ -260,7 +260,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded-xl bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
+            className="flex-1 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
           >
             {step === 'blocked' ? k('close') : k('cancel')}
           </button>
@@ -270,7 +270,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
               onClick={step === 'confirm' ? attemptDelete : handleReauth}
               disabled={confirmDisabled}
               aria-busy={busy}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-bold text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
               {busy

@@ -65,7 +65,7 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
               >
                 {tab.label}
                 {tab.badge ? (
-                  <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">
+                  <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-white/[0.14] px-1.5 text-[11px] font-bold text-white">
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 ) : null}
@@ -86,7 +86,7 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
           >
             <DollarSign className="h-[18px] w-[18px]" />
             {pendingPayouts > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-black">
                 {pendingPayouts > 9 ? '9+' : pendingPayouts}
               </span>
             )}
@@ -103,7 +103,7 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
           <Link
             href="/profile"
             aria-label={t('actions.account')}
-            className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-white/[0.12] text-sm font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {accountInitial}
           </Link>

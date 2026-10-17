@@ -30,13 +30,13 @@
     "status_published": "Pibliye",
     "status_draft": "Bwouyon",
     "no_events_yet": "Poko kreye evènman",
-    "daily_stats_title": "📊 Estatistik chak jou",
+    "daily_stats_title": "Estatistik chak jou",
     "daily_stats_desc": "Metrik yo kalkile nan akimilasyon platform_stats_daily pou pèfòmans optimal.",
-    "daily_stats_updated": "✅ Mete ajou chak jou nan 1 AM UTC",
+    "daily_stats_updated": "Mete ajou chak jou nan 1 AM UTC",
     "daily_stats_gmv": "GMV nan vant tikè",
     "daily_stats_tickets": "Total tikè ki vann",
     "daily_stats_refunds": "Suivi ranbousman",
-    "daily_stats_docs": "📖 Gade docs/DAILY_STATS_SYSTEM.md pou dokimantasyon"
+    "daily_stats_docs": "Gade docs/DAILY_STATS_SYSTEM.md pou dokimantasyon"
   },
   "events": {
     "title": "Moderasyon Evènman",

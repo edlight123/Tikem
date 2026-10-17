@@ -199,7 +199,7 @@ export default function MessagesClient({
 
           {/* Conversation */}
           {selected && (
-            <div className="rounded-2xl border border-white/10 p-5 sm:p-6">
+            <div className="rounded-2xl p-5 sm:p-6 bg-white/[0.055]">
               <div className="border-b border-white/10 pb-4">
                 <p className="text-sm font-medium text-white">{selected.sender_name}</p>
                 <p className="mt-0.5 text-xs text-white/45">
@@ -215,7 +215,7 @@ export default function MessagesClient({
 
                 {selected.replies.map((r) => (
                   <div key={r.id} className="flex justify-end">
-                    <div className="max-w-prose rounded-2xl rounded-tr-sm bg-brand-700/25 px-4 py-3">
+                    <div className="max-w-prose rounded-2xl rounded-tr-sm bg-white/[0.12] px-4 py-3">
                       <p className="whitespace-pre-line text-sm text-white/90">{r.body}</p>
                       <p className="mt-1.5 text-[11px] text-white/40">
                         You · {formatWhen(r.created_at)}
@@ -237,7 +237,7 @@ export default function MessagesClient({
                   maxLength={maxReplyLength}
                   disabled={sending}
                   placeholder={`Reply to ${selected.sender_name}…`}
-                  className="w-full resize-y rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full resize-y rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
                 />
                 <div className="mt-3 flex items-center justify-between gap-4">
                   <p className="text-[11px] text-white/35">
@@ -251,7 +251,7 @@ export default function MessagesClient({
                       type="button"
                       onClick={handleSend}
                       disabled={sending || reply.trim().length === 0}
-                      className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <Send className="h-4 w-4" />
                       {sending ? 'Sending…' : 'Send reply'}

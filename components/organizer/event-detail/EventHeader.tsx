@@ -134,7 +134,7 @@ export function EventHeader({ event }: EventHeaderProps) {
             <div className="flex items-center gap-2 ml-4">
               <Link
                 href={`/organizer/events/${event.id}/edit`}
-                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/[0.08] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
               >
                 <Edit className="w-4 h-4" />
                 {t('organizer.edit')}
@@ -142,7 +142,7 @@ export function EventHeader({ event }: EventHeaderProps) {
               <Link
                 href={`/events/${event.id}`}
                 target="_blank"
-                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/[0.08] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
               >
                 <Eye className="w-4 h-4" />
                 {t('organizer.preview')}
@@ -158,7 +158,7 @@ export function EventHeader({ event }: EventHeaderProps) {
                     navigator.clipboard.writeText(`${window.location.origin}/events/${event.id}`)
                   }
                 }}
-                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/[0.08] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
               >
                 <Share2 className="w-4 h-4" />
                 {t('organizer.share')}
@@ -166,10 +166,10 @@ export function EventHeader({ event }: EventHeaderProps) {
               <button
                 onClick={handlePublishToggle}
                 disabled={isPublishing}
-                className={`h-11 rounded-[10px] px-4 text-sm font-semibold transition-colors ${
+                className={`h-11 rounded-full px-4 text-sm font-semibold transition-colors ${
                   event.is_published
                     ? 'bg-white/[0.12] text-white hover:bg-white/[0.18]'
-                    : 'bg-brand-700 text-white hover:bg-brand-800'
+                    : 'bg-white text-black hover:bg-white/90'
                 }`}
               >
                 {isPublishing ? t('organizer.processing') : event.is_published ? t('organizer.unpublish') : t('organizer.publish')}
@@ -250,8 +250,8 @@ export function EventHeader({ event }: EventHeaderProps) {
               event.is_published ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'
             }`}
           >
-            <div className={`h-5 w-5 rounded-full ${event.is_published ? 'bg-white/30' : 'bg-brand-500'}`} />
-            <span className={`text-xs font-medium ${event.is_published ? 'text-white/70' : 'text-brand-300'}`}>
+            <div className={`h-5 w-5 rounded-full ${event.is_published ? 'bg-brand-400' : 'bg-white/30'}`} />
+            <span className={`text-xs font-medium ${event.is_published ? 'text-brand-300' : 'text-white/70'}`}>
               {event.is_published ? t('organizer.live') : t('organizer.publish')}
             </span>
           </button>

@@ -45,7 +45,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
     <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-2">
       {/* Left — textured brand panel */}
       <div className="relative hidden overflow-hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c2b28] via-[#0a0a0a] to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0a0a0a] to-[#0a0a0a]" />
         <div aria-hidden className="absolute left-1/3 top-1/4 h-[420px] w-[420px] max-w-full rounded-full blur-[140px]" />
         {/* No wordmark here — the site navbar above already carries the logo. */}
         <div className="relative flex h-full flex-col justify-end p-10">
@@ -71,7 +71,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
           </p>
 
           {error && (
-            <div className="mt-5 rounded-lg border border-red-500/30 px-4 py-3 text-sm text-red-300">
+            <div className="mt-5 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {error}
             </div>
           )}
@@ -86,7 +86,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
               placeholder={t('upgrade_prompt.brand_name')}
-              className="w-full rounded-xl border border-white/10 bg-transparent px-4 py-3 text-[15px] text-white placeholder:text-white/40 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-[15px] text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400/40"
             />
           </div>
 
@@ -105,7 +105,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
             type="button"
             disabled={isPending}
             onClick={handleContinue}
-            className="mt-8 w-full rounded-xl bg-brand-600 px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-8 w-full rounded-full bg-white px-5 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? 'Setting up…' : 'Continue'}
           </button>
@@ -115,7 +115,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
           <button
             type="button"
             onClick={() => router.push('/discover')}
-            className="mt-2 w-full rounded-xl px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:text-white"
+            className="mt-2 w-full rounded-full px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:text-white"
           >
             {t('upgrade_prompt.browse_events_instead')}
           </button>

@@ -89,9 +89,9 @@ export function ConfirmationDialog({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="mb-4 grid h-12 w-12 place-items-center rounded-xl ">
+        <div className="mb-4 grid h-12 w-12 place-items-center rounded-xl bg-white/[0.07]">
           <AlertTriangle
-            className={`h-6 w-6 ${variant === 'danger' ? 'text-red-400' : 'text-brand-400'}`}
+            className={`h-6 w-6 ${variant === 'danger' ? 'text-red-400' : 'text-white/70'}`}
           />
         </div>
 
@@ -110,7 +110,7 @@ export function ConfirmationDialog({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="h-11 flex-1 rounded-[10px] bg-white/[0.08] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="h-11 flex-1 rounded-full bg-white/[0.07] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -118,10 +118,10 @@ export function ConfirmationDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`h-11 flex-1 rounded-[10px] text-sm font-semibold text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 ${
+            className={`h-11 flex-1 rounded-full text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 ${
               variant === 'danger'
-                ? 'bg-red-600 hover:bg-red-700 focus-visible:ring-red-500'
-                : 'bg-brand-700 hover:bg-brand-800 focus-visible:ring-brand-500'
+                ? 'bg-red-500/15 text-red-200 hover:bg-red-500/25 focus-visible:ring-red-500'
+                : 'bg-white text-black hover:bg-white/90 focus-visible:ring-brand-500'
             }`}
           >
             {loading ? 'Working…' : confirmLabel}

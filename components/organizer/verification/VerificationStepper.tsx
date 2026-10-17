@@ -74,7 +74,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
     { surface: string; iconBgColor: string; icon: React.ReactNode; tone: ChipTone; badgeText: string }
   > = {
     complete: {
-      surface: 'bg-white/[0.05]',
+      surface: 'bg-white/[0.08]',
       iconBgColor: 'bg-emerald-500',
       icon: (
         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +85,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
       badgeText: 'Complete'
     },
     incomplete: {
-      surface: 'bg-white/[0.03]',
+      surface: 'bg-white/[0.055]',
       iconBgColor: 'bg-white/[0.10]',
       icon: (
         <span className="text-xs font-bold text-white/60">
@@ -96,7 +96,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
       badgeText: step.required ? 'Required' : 'Optional'
     },
     needs_attention: {
-      surface: 'bg-white/[0.05] ring-1 ring-inset ring-red-500/40',
+      surface: 'bg-white/[0.08] ring-1 ring-inset ring-red-500/40',
       iconBgColor: 'bg-red-500',
       icon: (
         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,7 +125,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
   return (
     <div 
       onClick={isClickable ? handleCardClick : undefined}
-      className={`${config.surface} rounded-lg p-4 transition-colors ${isClickable ? 'cursor-pointer hover:bg-white/[0.12]' : ''}`}
+      className={`${config.surface} rounded-2xl p-4 transition-colors ${isClickable ? 'cursor-pointer hover:bg-white/[0.12]' : ''}`}
     >
       <div className="flex items-start gap-4">
         {/* Step icon */}

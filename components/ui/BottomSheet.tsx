@@ -78,8 +78,8 @@ export default function BottomSheet({
             (the fixed parent above), so a translucent fill lets the page show
             straight through the sheet, text over text. That is exactly what
             happened when a surface sweep treated it as a card, which broke
-            guest checkout. #111 lifts it off the page's own black. */}
-        <div className="bg-[#111] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[85vh] flex flex-col">
+            guest checkout. #1c1c1c (the sheet token) lifts it off the page's own black. */}
+        <div className="bg-[#1c1c1c] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[85vh] flex flex-col">
           {/* Header */}
           {(title || showCloseButton) && (
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10 flex-shrink-0">

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { format, isValid } from 'date-fns'
 import Link from 'next/link'
 import Image from 'next/image'
-import { QrCode, Calendar, MapPin } from 'lucide-react'
+import { QrCode, Calendar, CalendarDays, MapPin } from 'lucide-react'
 import { getPosterTheme } from '@/lib/posterGradient'
 
 interface EventSelectorProps {
@@ -24,7 +24,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
 
   return (
     <Link href={`/organizer/scan/${event.id}`} prefetch className="group block h-full">
-      <article className="hover-lift h-full overflow-hidden rounded-2xl border border-white/10 shadow-poster-sm transition-all duration-300 group-hover:border-brand-500/30 group-hover:shadow-card-hover">
+      <article className="hover-lift h-full overflow-hidden rounded-2xl bg-white/[0.055] shadow-poster-sm transition-all duration-300 group-hover:bg-white/[0.08] group-hover:shadow-card-hover">
         {/* ---------- Poster ---------- */}
         <div
           className="poster-vignette relative flex aspect-[4/5] flex-col justify-between overflow-hidden p-3.5 text-white"
@@ -49,7 +49,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
             {badge ? (
               <span
                 className={`eyebrow inline-flex rounded-md px-2 py-1 text-[9px] tracking-[0.12em] backdrop-blur-md ${
-                  badge.tone === 'today' ? 'bg-brand-600/90 text-white' : 'bg-white/85 text-black/70'
+                  badge.tone === 'today' ? 'bg-black/70 text-brand-300' : 'bg-white/85 text-black/70'
                 }`}
               >
                 {badge.label}
@@ -96,7 +96,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
           <span className="text-xs font-medium text-white/50">
             {ticketsSold} {ticketsSold === 1 ? 'ticket' : 'tickets'} sold
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors group-hover:bg-brand-800">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition-colors group-hover:bg-white/90">
             <QrCode className="h-3.5 w-3.5" />
             Scan
           </span>
@@ -127,13 +127,13 @@ export default function EventSelector({ events }: EventSelectorProps) {
 
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 p-6 shadow-sm">
+      <div className="rounded-2xl bg-white/[0.055] p-6">
         <div className="py-12 text-center">
-          <div className="mb-4 text-6xl">📅</div>
+          <CalendarDays className="mx-auto mb-4 h-12 w-12 text-white/40" aria-hidden />
           <p className="mb-4 text-white/60">You don&apos;t have any events yet.</p>
           <Link
             href="/organizer/events/new"
-            className="inline-block rounded-lg bg-brand-700 px-6 py-3 font-medium text-white hover:bg-brand-800"
+            className="inline-block rounded-full bg-white px-6 py-3 font-semibold text-black hover:bg-white/90"
           >
             {t('scan_selector.create_first_event')}
           </Link>
@@ -147,8 +147,8 @@ export default function EventSelector({ events }: EventSelectorProps) {
       {/* Today's Events */}
       {todayEvents.length > 0 && (
         <section>
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-brand-300">
-            <span>📍</span>
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-white/45">
+            <MapPin className="h-4 w-4" aria-hidden />
             <span>{t('scan_selector.happening_today')}</span>
           </h3>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

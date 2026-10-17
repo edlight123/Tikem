@@ -47,10 +47,10 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white/[0.03] rounded-lg p-6 md:p-8">
+      <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h3 className="mb-2 font-display !text-[22px] !leading-[1.1] text-white">
+            <h3 className="mb-2 font-display lowercase italic !text-[22px] !leading-snug text-white">
               {t('actions.business_details')}
             </h3>
             <p className="text-sm md:text-base text-white/60">
@@ -134,7 +134,7 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
 
         {/* Error */}
         {error && (
-          <div className="mt-4 p-3 bg-red-500/10 rounded-lg">
+          <div className="mt-4 p-3 bg-red-500/10 rounded-xl">
             <p className="text-sm text-red-300">{error}</p>
           </div>
         )}
@@ -146,7 +146,7 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white/80 bg-white/[0.06] rounded-lg font-semibold hover:bg-white/[0.12] hover:text-white transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded-full font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
         >
           {t('actions.cancel')}
         </button>
@@ -154,14 +154,14 @@ export default function BusinessDetailsForm({ initialData, onSave, onCancel, onS
           type="button"
           onClick={onSkip}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white/60 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white/80 rounded-lg font-semibold transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-white/60 bg-white/[0.07] hover:bg-white/[0.12] hover:text-white/80 rounded-full font-semibold transition-colors disabled:opacity-50"
         >
           {t('verification_business.skip_for_now')}
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="flex-1 px-6 py-3 bg-brand-700 hover:bg-brand-800 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-all disabled:opacity-50"
         >
           {isSaving ? 'Saving...' : 'Save & Continue'}
         </button>

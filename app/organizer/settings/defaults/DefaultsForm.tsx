@@ -216,10 +216,10 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
               key={category}
               type="button"
               onClick={() => handleCategoryToggle(category)}
-              className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 formData.default_categories.includes(category)
-                  ? 'border-brand-500 bg-brand-500/15 text-white'
-                  : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-white/15'
+                  ? 'bg-white text-black'
+                  : 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'
               }`}
             >
               {category}
@@ -236,7 +236,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSubmitting ? 'Saving...' : 'Save Defaults'}

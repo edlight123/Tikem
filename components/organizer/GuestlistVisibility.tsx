@@ -65,7 +65,7 @@ export function FacePile({
       {shown.map((f, i) => (
         <span
           key={f.id}
-          className="grid place-items-center overflow-hidden rounded-full bg-gradient-to-br from-brand-400 to-brand-600 font-semibold text-white ring-2 ring-[#0f0f0f]"
+          className="grid place-items-center overflow-hidden rounded-full bg-white/[0.12] font-semibold text-white ring-2 ring-[#0f0f0f]"
           style={{
             width: size,
             height: size,

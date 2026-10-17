@@ -30,13 +30,13 @@
     "status_published": "Publié",
     "status_draft": "Brouillon",
     "no_events_yet": "Aucun événement créé",
-    "daily_stats_title": "📊 Statistiques quotidiennes",
+    "daily_stats_title": "Statistiques quotidiennes",
     "daily_stats_desc": "Les métriques sont calculées à partir des cumuls platform_stats_daily pour des performances optimales.",
-    "daily_stats_updated": "✅ Mis à jour quotidiennement à 1h UTC",
+    "daily_stats_updated": "Mis à jour quotidiennement à 1h UTC",
     "daily_stats_gmv": "GMV des ventes de billets",
     "daily_stats_tickets": "Total des billets vendus",
     "daily_stats_refunds": "Suivi des remboursements",
-    "daily_stats_docs": "📖 Voir docs/DAILY_STATS_SYSTEM.md pour la documentation"
+    "daily_stats_docs": "Voir docs/DAILY_STATS_SYSTEM.md pour la documentation"
   },
   "events": {
     "title": "Modération des événements",

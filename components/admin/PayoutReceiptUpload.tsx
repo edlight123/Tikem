@@ -183,10 +183,10 @@ export default function PayoutReceiptUpload({
           />
           <label
             htmlFor="receipt-upload"
-            className={`flex items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors ${
+            className={`flex items-center justify-center gap-2 rounded-lg bg-console-ground p-6 transition-colors ${
               uploading
-                ? 'cursor-not-allowed border-console-faint opacity-50'
-                : 'cursor-pointer border-console-faint hover:border-console-mut hover:bg-console-raise'
+                ? 'cursor-not-allowed opacity-50'
+                : 'cursor-pointer hover:bg-console-raise'
             }`}
           >
             <Upload className="w-5 h-5 text-console-faint" />

@@ -49,7 +49,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
       {/* Summary Sections */}
       <div className="space-y-6">
         {!hasAnyDetails && isReadOnly ? (
-          <div className="p-4 bg-white/[0.03] rounded-lg">
+          <div className="p-4 bg-white/[0.055] rounded-2xl">
             <div className="text-sm font-semibold text-white">{t('verification_review.no_verification_details')}</div>
             <div className="text-sm text-white/60 mt-1">
               This account is marked as verified, but no submitted verification fields/files were found.
@@ -74,8 +74,8 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
             icon={<IdCard className="w-5 h-5 text-white/70" />}
             fields={{
               ...request.steps.governmentId.fields,
-              'ID Front': request.files.governmentId?.front ? '✓ Uploaded' : 'Not uploaded',
-              'ID Back': request.files.governmentId?.back ? '✓ Uploaded' : 'Not uploaded'
+              'ID Front': request.files.governmentId?.front ? 'Uploaded' : 'Not uploaded',
+              'ID Back': request.files.governmentId?.back ? 'Uploaded' : 'Not uploaded'
             }}
           />
         )}
@@ -87,7 +87,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
             icon={<Fingerprint className="w-5 h-5 text-white/70" />}
             fields={{
               ...request.steps.selfie.fields,
-              'Selfie Photo': request.files.selfie?.path ? '✓ Uploaded' : 'Not uploaded'
+              'Selfie Photo': request.files.selfie?.path ? 'Uploaded' : 'Not uploaded'
             }}
           />
         )}
@@ -104,11 +104,11 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
       {/* Blocking Issues */}
       {!canSubmit && !isReadOnly && blockingIssues.length > 0 && (
-        <div className="mt-6 rounded-lg bg-amber-500/10 p-4">
-          <h3 className="font-semibold text-amber-300 mb-2 text-sm md:text-base">
+        <div className="mt-6 rounded-xl bg-amber-500/10 p-4">
+          <h3 className="font-semibold text-amber-200 mb-2 text-sm md:text-base">
             {t('verification_review.complete_required_steps')}
           </h3>
-          <ul className="list-disc list-inside text-sm text-amber-300 space-y-1">
+          <ul className="list-disc list-inside text-sm text-amber-200/80 space-y-1">
             {blockingIssues.map((issue, index) => (
               <li key={index}>{issue}</li>
             ))}
@@ -118,18 +118,18 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
       {/* Submission Status */}
       {isSubmitted && (
-        <div className="mt-6 rounded-lg bg-brand-500/10 p-4">
+        <div className="mt-6 rounded-xl bg-white/[0.055] p-4">
           <div className="flex items-start gap-3">
             <div className="rounded-full p-2 flex-shrink-0">
-              <svg className="w-5 h-5 text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-brand-300 mb-1 text-sm md:text-base">
+              <h3 className="font-semibold text-white mb-1 text-sm md:text-base">
                 {t('verification_review.verification_submitted')}
               </h3>
-              <p className="text-sm text-brand-300">
+              <p className="text-sm text-white/60">
                 Submitted on {request.submittedAt ? new Date(request.submittedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -139,7 +139,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
                 }) : 'N/A'}
               </p>
               {request.reviewedAt && (
-                <p className="text-sm text-brand-300 mt-1">
+                <p className="text-sm text-white/60 mt-1">
                   Reviewed on {new Date(request.reviewedAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -159,17 +159,17 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <button
             onClick={onBack}
-            className="flex-1 rounded-lg bg-white/[0.06] px-6 py-3 font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white"
+            className="flex-1 rounded-full bg-white/[0.07] px-6 py-3 font-semibold text-white transition-colors hover:bg-white/[0.12] hover:text-white"
           >
             ← Back to Steps
           </button>
           <button
             onClick={onSubmit}
             disabled={!canSubmit}
-            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all shadow-md ${
+            className={`flex-1 px-6 py-3 rounded-full font-semibold transition-colors ${
               canSubmit
-                ? 'bg-brand-700 hover:bg-brand-800 text-white hover:shadow-lg'
-                : 'bg-white/[0.03] text-white/50 cursor-not-allowed'
+                ? 'bg-white hover:bg-white/90 text-black'
+                : 'bg-white/[0.07] text-white/50 cursor-not-allowed'
             }`}
           >
             {canSubmit ? 'Submit for Review' : 'Complete Required Steps'}
@@ -214,7 +214,7 @@ function SummarySection({ title, icon, fields }: SummarySectionProps) {
           <span aria-hidden="true">{icon}</span>
           {/* Matches the wizard's own review cards. `!` because
               `.mobile-typography h3` (0,1,1) outranks a bare size utility. */}
-          <h3 className="font-display !text-lg !leading-[1.15] text-white">
+          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">
             {title}
           </h3>
         </div>

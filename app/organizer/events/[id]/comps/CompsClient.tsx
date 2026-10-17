@@ -146,7 +146,10 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+            // The empty state below carries the white pill while the list is empty.
+            comps.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+          }`}
         >
           <Gift className="h-4 w-4" />
           {tx('comps.issue_comp')}
@@ -162,7 +165,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Gift className="h-4 w-4" />
               {tx('comps.issue_comp_ticket')}
@@ -183,7 +186,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
             <button
               type="button"
               onClick={() => { setOpen(false); reset() }}
-              className="rounded-xl  px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {tx('actions.cancel')}
             </button>
@@ -191,7 +194,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               type="button"
               onClick={handleIssue}
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Gift className="h-4 w-4" />
               {isPending ? 'Issuing…' : 'Issue ticket'}
@@ -206,7 +209,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
           <FormField label={tx('comps.email_address')} required>
@@ -215,7 +218,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jane@example.com"
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
         </FormSection>
@@ -227,7 +230,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
                 id="comp-tier"
                 value={tierId}
                 onChange={(e) => setTierId(e.target.value)}
-                className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
               >
                 {tiers.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -245,7 +248,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               max={20}
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
           <FormField label={tx('comps.internal_note')}>
@@ -254,7 +257,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. Press pass, sponsor, VIP"
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
           {error && (

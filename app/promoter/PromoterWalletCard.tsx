@@ -152,8 +152,8 @@ export default function PromoterWalletCard() {
   const numberOnHold = Number.isFinite(holdUntilMs) && holdUntilMs > Date.now()
 
   return (
-    <div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <p className="label-mono text-[11px] uppercase tracking-widest text-brand-400 mb-3">{t('promoter.wallet_title', 'Your wallet')}</p>
+    <div className="mb-8 rounded-2xl bg-white/[0.055] p-5">
+      <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">{t('promoter.wallet_title', 'Your wallet')}</h2>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -199,13 +199,13 @@ export default function PromoterWalletCard() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder={t('promoter.wallet_code_placeholder', '6-digit code')}
-            className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="flex-1 rounded-xl bg-white/[0.07] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           />
           <button
             type="button"
             onClick={handleConfirmCode}
             disabled={working || code.length !== 6}
-            className="rounded-xl bg-white hover:bg-white/90 px-5 py-3 text-sm font-medium text-black transition-colors disabled:opacity-50 min-h-[44px]"
+            className="rounded-full bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {t('promoter.wallet_code_confirm', 'Confirm')}
           </button>
@@ -219,13 +219,13 @@ export default function PromoterWalletCard() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder={t('promoter.wallet_phone_placeholder', 'MonCash number (e.g. 509 XX XX XX XX)')}
-            className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="flex-1 rounded-xl bg-white/[0.07] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           />
           <button
             type="button"
             onClick={handleWithdraw}
             disabled={working || !phone.trim()}
-            className="rounded-xl bg-white hover:bg-white/90 px-5 py-3 text-sm font-medium text-black transition-colors disabled:opacity-50 min-h-[44px]"
+            className="rounded-full bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {working ? t('promoter.wallet_sending', 'Sending…') : t('promoter.wallet_withdraw_btn', 'Withdraw to MonCash')}
           </button>
@@ -239,7 +239,7 @@ export default function PromoterWalletCard() {
       )}
 
       {withdrawals.length > 0 && (
-        <div className="mt-5 border-t border-white/10 pt-4 space-y-2">
+        <div className="mt-5 border-t border-white/[0.06] pt-4 space-y-2">
           {withdrawals.map((w) => (
             <div key={w.id} className="flex items-center justify-between gap-3 text-sm">
               <span className="text-white/60">

@@ -170,10 +170,10 @@ export default function SettingsContent({
           tickets. Unfinished, it leads; finished, it disappears entirely rather
           than sitting there as a green trophy. */}
       {!isVerified && (
-        <div className="mt-6 overflow-hidden rounded-2xl bg-brand-500/[0.08] ring-1 ring-brand-400/25">
+        <div className="mt-6 overflow-hidden rounded-2xl bg-amber-500/10">
           <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3.5">
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-300">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-300">
                 <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <div className="min-w-0">
@@ -202,7 +202,7 @@ export default function SettingsContent({
             {!isPending && (
               <Link
                 href="/organizer/verify"
-                className="shrink-0 rounded-xl bg-white px-5 py-2.5 text-center text-sm font-bold text-gray-900 transition-opacity hover:opacity-90"
+                className="shrink-0 rounded-full bg-white px-5 py-2.5 text-center text-sm font-semibold text-black transition-opacity hover:opacity-90"
               >
                 {t('settings.verify_banner_cta', { defaultValue: 'Start verification' })}
               </Link>

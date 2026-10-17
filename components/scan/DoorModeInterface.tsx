@@ -93,7 +93,7 @@ export function DoorModeInterface({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-900 flex flex-col">
+    <div className="fixed inset-0 bg-black flex flex-col">
       {/* Top Bar */}
       <DoorModeTopBar
         eventTitle={eventTitle}

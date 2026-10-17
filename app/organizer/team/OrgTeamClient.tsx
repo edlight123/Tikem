@@ -171,7 +171,7 @@ export default function OrgTeamClient({
       {/* Owner card */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 font-semibold text-white">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.12] font-semibold text-white">
             {ownerInitial}
           </div>
           <div>
@@ -185,7 +185,7 @@ export default function OrgTeamClient({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           <UserPlus className="h-4 w-4" />
           {t('org_team.invite_member')}
@@ -202,7 +202,7 @@ export default function OrgTeamClient({
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <UserPlus className="h-4 w-4" />
               {t('org_team.invite_team_member')}
@@ -218,17 +218,17 @@ export default function OrgTeamClient({
       )}
 
       {/* Guidelines */}
-      <div className="mt-8 rounded-2xl border border-white/10 p-5">
-        <h3 className="mb-3 font-semibold text-white">{t('org_team.access_levels')}</h3>
+      <div className="mt-8 rounded-2xl bg-white/[0.055] p-5">
+        <h3 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">{t('org_team.access_levels')}</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex items-start gap-3 rounded-xl bg-white/[0.03] p-4">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
+          <div className="flex items-start gap-3 rounded-xl bg-white/[0.06] p-4">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-white/60" />
             <div>
               <p className="text-sm font-semibold text-white">{t('actions.admin')}</p>
               <p className="mt-0.5 text-xs text-white/50">{t('org_team.full_access')}</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl bg-white/[0.03] p-4">
+          <div className="flex items-start gap-3 rounded-xl bg-white/[0.06] p-4">
             <User className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
             <div>
               <p className="text-sm font-semibold text-white">{t('actions.staff')}</p>
@@ -249,7 +249,7 @@ export default function OrgTeamClient({
             <button
               type="button"
               onClick={() => { setOpen(false); reset() }}
-              className="rounded-xl  px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('actions.cancel')}
             </button>
@@ -257,7 +257,7 @@ export default function OrgTeamClient({
               type="button"
               onClick={handleInvite}
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-800 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <UserPlus className="h-4 w-4" />
               {isPending ? 'Inviting…' : 'Send invite'}
@@ -273,7 +273,7 @@ export default function OrgTeamClient({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="colleague@example.com"
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
           <FormField label="Name" htmlFor="team-name">
@@ -283,7 +283,7 @@ export default function OrgTeamClient({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('org_team.optional')}
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
           <FormField label="Role" htmlFor="team-role">
@@ -291,7 +291,7 @@ export default function OrgTeamClient({
               id="team-role"
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -301,7 +301,7 @@ export default function OrgTeamClient({
             </select>
           </FormField>
           {error && (
-            <p className="rounded-lg px-3 py-2 text-sm text-red-400">{error}</p>
+            <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
           )}
         </FormSection>
       </Drawer>

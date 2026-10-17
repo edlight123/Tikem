@@ -214,7 +214,7 @@ export function FiltersModal({
           // chrome, so a 90vh box overshoots what is actually on screen. No
           // border on the panel either — shadow-poster and the blurred
           // backdrop already separate it from the page.
-          className="pointer-events-auto bg-[#111] w-full h-full md:h-auto md:max-h-[90svh] md:max-w-[600px] rounded-t-3xl md:rounded-3xl shadow-poster flex flex-col overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 duration-200"
+          className="pointer-events-auto bg-[#1c1c1c] w-full h-full md:h-auto md:max-h-[90svh] md:max-w-[600px] rounded-t-3xl md:rounded-3xl shadow-poster flex flex-col overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header. The hairline is a region divider (title bar vs scroller),
@@ -425,7 +425,7 @@ export function FiltersModal({
           {/* Footer — action bar. Panel colour, not the page colour; the
               hairline divides two stacked regions, so it stays. The bottom
               padding clears the iPhone home indicator. */}
-          <div className="border-t border-white/10 bg-[#111]/90 backdrop-blur px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+          <div className="border-t border-white/10 bg-[#1c1c1c]/90 backdrop-blur px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={onReset}

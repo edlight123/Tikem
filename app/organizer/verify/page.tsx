@@ -278,9 +278,9 @@ export default function VerifyOrganizerPage() {
 
   if (authLoading || loading || restarting) {
     return (
-      <div className="bg-white/[0.03] flex items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-16 h-16 border-4 border-white/60 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/60">
             {restarting ? 'Resetting verification...' : 'Loading verification...'}
           </p>
@@ -291,13 +291,13 @@ export default function VerifyOrganizerPage() {
 
   if (error && !request) {
     return (
-      <div className="bg-white/[0.03] flex items-center justify-center p-4">
-        <div className="bg-white/[0.03] border border-red-500/30 rounded-lg p-6 max-w-md">
-          <h2 className="text-lg font-bold text-red-300 mb-2">{t('verification_page.error_loading')}</h2>
-          <p className="text-sm text-red-300 mb-4">{error}</p>
+      <div className="flex min-h-[60vh] items-center justify-center p-4">
+        <div className="bg-red-500/10 rounded-2xl p-6 max-w-md">
+          <h2 className="mb-2 font-display lowercase italic !text-[22px] !leading-snug text-red-200">{t('verification_page.error_loading')}</h2>
+          <p className="text-sm text-red-200 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            className="w-full px-4 py-2.5 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-colors"
           >
             {t('actions.retry')}
           </button>
@@ -366,7 +366,7 @@ export default function VerifyOrganizerPage() {
         />
 
         {statusForUI === 'approved' && !wantsDetails ? (
-          <div className="bg-white/[0.03] border border-emerald-500/30 rounded-xl p-4 md:p-5 mb-6">
+          <div className="bg-emerald-500/10 rounded-2xl p-4 md:p-5 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-white">{t('verification_page.already_verified')}</div>
@@ -375,13 +375,13 @@ export default function VerifyOrganizerPage() {
               <div className="flex flex-col sm:flex-row gap-2">
                 <Link
                   href="/organizer/verify?details=1"
-                  className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-white/[0.03] border border-white/15 hover:border-white/20 hover:bg-white/[0.04] transition-all text-center"
+                  className="px-4 py-2 rounded-full font-semibold text-sm text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors text-center"
                 >
                   {t('verification_page.view_verification_details')}
                 </Link>
                 <Link
                   href="/organizer"
-                  className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gray-900 hover:bg-gray-800 transition-all text-center"
+                  className="px-4 py-2 rounded-full font-semibold text-sm text-black bg-white hover:bg-white/90 transition-colors text-center"
                 >
                   {t('verification_page.go_to_dashboard')}
                 </Link>
@@ -391,11 +391,11 @@ export default function VerifyOrganizerPage() {
         ) : null}
 
         {error ? (
-          <div className="bg-white/[0.03] border border-red-500/30 rounded-lg p-4 mb-6">
+          <div className="bg-red-500/10 rounded-xl p-4 mb-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold text-red-300">{t('verification_page.something_went_wrong')}</div>
-                <div className="text-sm text-red-300 mt-1">{error}</div>
+                <div className="text-sm font-semibold text-red-200">{t('verification_page.something_went_wrong')}</div>
+                <div className="text-sm text-red-200/80 mt-1">{error}</div>
               </div>
               <button
                 onClick={dismissError}
@@ -419,10 +419,10 @@ export default function VerifyOrganizerPage() {
             </div>
 
             <aside className="lg:col-span-1">
-              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5 md:p-6 shadow-sm">
+              <div className="bg-white/[0.055] rounded-2xl p-5 md:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base md:text-lg font-bold text-white">{t('verification_page.submission')}</h2>
+                    <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('verification_page.submission')}</h2>
                     <p className="text-sm text-white/60 mt-1">
                       {statusForUI === 'approved'
                         ? 'Your verification is approved. You can view the details anytime.'
@@ -442,7 +442,7 @@ export default function VerifyOrganizerPage() {
                 <div className="mt-4">
                   <div className="w-full bg-white/10 rounded-full h-2">
                     <div
-                      className="bg-brand-700 h-2 rounded-full transition-all"
+                      className="bg-brand-400 h-2 rounded-full transition-all"
                       style={{ width: `${completionPercentage}%` }}
                     />
                   </div>
@@ -451,12 +451,12 @@ export default function VerifyOrganizerPage() {
                 <div className="mt-5 space-y-3">
                   <button
                     onClick={() => setViewMode('review')}
-                    className={`w-full px-4 py-3 rounded-lg font-semibold transition-all shadow-sm ${
+                    className={`w-full px-4 py-3 rounded-full font-semibold transition-colors ${
                       isReadOnly
-                        ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                        ? 'bg-white/[0.07] hover:bg-white/[0.12] text-white'
                         : canSubmit
-                          ? 'bg-brand-700 hover:bg-brand-800 text-white'
-                          : 'bg-white/10 text-white/40 cursor-not-allowed'
+                          ? 'bg-white hover:bg-white/90 text-black'
+                          : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
                     }`}
                     disabled={!isReadOnly && !canSubmit}
                   >

@@ -51,12 +51,12 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                   {/* Step Number/Status Icon */}
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
                     isActive
-                      ? 'bg-brand-700 text-white shadow-md'
+                      ? 'bg-white text-black'
                       : isCompleted
-                      ? 'text-emerald-300 group-hover:bg-green-200'
+                      ? 'text-emerald-300 group-hover:bg-emerald-500/15'
                       : hasWarnings || tab.missingFields.length > 0
-                      ? 'text-amber-300 group-hover:bg-amber-200'
-                      : 'bg-white/[0.03] text-white/60 group-hover:bg-white/[0.04]'
+                      ? 'text-amber-300 group-hover:bg-amber-500/15'
+                      : 'bg-white/[0.03] text-white/60 group-hover:bg-white/[0.08]'
                   }`}>
                     {isCompleted && !isActive ? (
                       <Check className="w-5 h-5" />
@@ -134,13 +134,13 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
             <select
               value={currentTab}
               onChange={(e) => onTabChange(e.target.value)}
-              className="w-full px-4 py-3 pr-10 border-2 border-white/10 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none font-semibold text-white"
+              className="w-full px-4 py-3 pr-10 bg-white/[0.06] rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none font-semibold text-white"
             >
               {tabs.map((tab, index) => {
                 const Icon = TAB_ICONS[tab.id] || FileText
                 return (
                   <option key={tab.id} value={tab.id}>
-                    {tab.isComplete ? '✅' : tab.missingFields.length > 0 ? '⚠️' : '○'} Step {index + 1}: {tab.title}
+                    {tab.isComplete ? '✓' : tab.missingFields.length > 0 ? '!' : '○'} Step {index + 1}: {tab.title}
                   </option>
                 )
               })}

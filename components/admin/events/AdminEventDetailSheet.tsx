@@ -1,6 +1,6 @@
 'use client'
 
-import { X, ExternalLink, CheckCircle, XCircle, Trash2, User, Ticket, Calendar, MapPin, Star } from 'lucide-react'
+import { X, ExternalLink, CheckCircle, XCircle, Trash2, User, Ticket, Calendar, MapPin, Star, ImageOff, FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -163,7 +163,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
             </div>
           ) : (
             <div className="w-full h-48 bg-console-raise flex items-center justify-center">
-              <span className="text-6xl">🎉</span>
+              <ImageOff className="h-10 w-10 text-console-faint" aria-hidden />
             </div>
           )}
 
@@ -275,7 +275,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
                   {event.audit_logs.map((log) => (
                     <div key={log.id} className="flex gap-3">
                       <div className="flex-shrink-0 w-8 h-8 bg-console-raise rounded-full flex items-center justify-center">
-                        <span className="text-xs">📝</span>
+                        <FileText className="h-3.5 w-3.5 text-console-mut" aria-hidden />
                       </div>
                       <div>
                         <div className="text-sm text-console-text">{log.action}</div>

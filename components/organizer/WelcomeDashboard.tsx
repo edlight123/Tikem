@@ -26,8 +26,8 @@ export default function WelcomeDashboard({
     <div className="space-y-8">
       {/* Welcome Header */}
       <div className="text-center py-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-brand-500/15 to-brand-600/10 rounded-2xl mb-4">
-          <Sparkles className="w-8 h-8 text-brand-300" />
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-white/[0.055] rounded-2xl mb-4">
+          <Sparkles className="w-8 h-8 text-white/70" />
         </div>
         <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.02] text-white mb-2">
           {t('organizer.welcome.greeting', 'Welcome, {{name}}!', { name: firstName })}
@@ -49,18 +49,18 @@ export default function WelcomeDashboard({
 
       {/* Primary CTA - Only show if no events yet */}
       {!hasCreatedEvent && (
-        <div className="bg-brand-700 rounded-2xl p-6 md:p-8 text-white">
+        <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8 text-white">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="flex-shrink-0">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 bg-white/[0.07] rounded-2xl flex items-center justify-center">
                 <Calendar className="w-8 h-8 text-white" />
               </div>
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-semibold mb-2">
+              <h2 className="font-display lowercase italic !text-[22px] !leading-snug mb-2">
                 {t('organizer.welcome.createFirst', 'Ready to create your first event?')}
               </h2>
-              <p className="text-brand-50 text-sm">
+              <p className="text-white/60 text-sm">
                 {t(
                   'organizer.welcome.createFirstDesc',
                   "It only takes a few minutes. You can save as draft and publish when you're ready."
@@ -69,7 +69,7 @@ export default function WelcomeDashboard({
             </div>
             <Link
               href="/organizer/events/new"
-              className="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-black shadow-lg transition-colors hover:bg-white/90"
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
             >
               {t('organizer.welcome.createEventBtn', 'Create Event')}
               <ArrowRight className="w-5 h-5" />

@@ -121,7 +121,7 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
         subtitle={t('orders.every_ticket_sold')}
         actions={
           orders.length > 0 ? (
-            <span className="rounded-full border border-white/10 px-3.5 py-2 text-sm text-white/70">
+            <span className="rounded-full bg-white/[0.055] px-3.5 py-2 text-sm text-white/70">
               <span className="font-mono tabular-nums">{orders.length}</span> order{orders.length !== 1 ? 's' : ''}
             </span>
           ) : undefined

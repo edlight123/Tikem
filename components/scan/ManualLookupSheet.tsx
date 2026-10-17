@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, Search, User, Mail, Ticket } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { StatusChip } from '@/components/ui/kit'
 
 interface Attendee {
   ticketId: string
@@ -36,20 +37,20 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-gray-900 rounded-t-3xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="bg-[#1c1c1c] rounded-t-3xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
           <h2 className="text-xl font-bold text-white">{t('door.manual_lookup', { defaultValue: 'Manual Lookup' })}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/[0.08] rounded-full transition-colors"
           >
             <X className="w-5 h-5 text-white/40" />
           </button>
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-white/[0.06]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
             <input
@@ -57,7 +58,7 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('door.search_placeholder', { defaultValue: 'Search by name, email, or ticket ID...' })}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-3 bg-white/[0.06] rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500"
               autoFocus
             />
           </div>
@@ -81,7 +82,7 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
                     onSelect(attendee.ticketId)
                     onClose()
                   }}
-                  className="w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 transition-colors text-left"
+                  className="w-full p-4 bg-white/[0.055] hover:bg-white/[0.1] rounded-2xl transition-colors text-left"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -91,9 +92,7 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
                           {attendee.attendeeName}
                         </span>
                         {attendee.checkedIn && (
-                          <span className="px-2 py-0.5 bg-green-900/50 text-green-400 text-xs font-medium rounded-full">
-                            {t('actions.checked_in')}
-                          </span>
+                          <StatusChip tone="success">{t('actions.checked_in')}</StatusChip>
                         )}
                       </div>
                       

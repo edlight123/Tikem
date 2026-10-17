@@ -8,18 +8,20 @@ import {
   ConsoleSection,
   ConsoleState,
 } from '@/components/admin/console'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
 
 /**
  * Seed events — posts to the seed API to create 30 template events under the
  * info@edlight.org organizer, and reads back a verify endpoint that reports
  * whether those events are actually visible to the feed.
  *
- * Both requests, their payloads, the confirm() in front of the seed, and every
+ * Both requests, their payloads, the confirm dialog in front of the seed, and every
  * error path are unchanged by the console restyle; only the surfaces are.
  *
  * The page frame (container, breadcrumb trail, title) comes from DevToolShell.
  */
 export default function SeedEventsClient() {
+  const confirmDialog = useConfirm()
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [result, setResult] = useState<{
@@ -31,7 +33,12 @@ export default function SeedEventsClient() {
   const [verifyResult, setVerifyResult] = useState<any>(null)
 
   const handleSeedEvents = async () => {
-    if (!confirm('This will create 30 template events. Continue?')) {
+    const ok = await confirmDialog({
+      title: 'Seed 30 template events?',
+      description: 'This will create 30 template events under the info@edlight.org organizer.',
+      confirmLabel: 'Seed events',
+    })
+    if (!ok) {
       return
     }
 

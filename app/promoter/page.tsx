@@ -182,12 +182,12 @@ export default async function PromoterPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Navbar user={user as any} isAdmin={false} />
 
       <main className="max-w-2xl mx-auto px-4 py-8 pb-mobile-nav md:pb-16">
         <header className="mb-8">
-          <p className="label-mono text-[11px] uppercase tracking-widest text-brand-400 mb-2">
+          <p className="label-mono text-[11px] uppercase tracking-widest text-white/50 mb-2">
             {copy.eyebrow}
           </p>
           <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
@@ -201,7 +201,7 @@ export default async function PromoterPortalPage() {
         {Object.keys(totalsByCurrency).length > 0 && (
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Object.entries(totalsByCurrency).map(([currency, t]) => (
-              <div key={currency} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div key={currency} className="rounded-2xl bg-white/[0.055] p-4">
                 <p className="text-lg font-bold text-white">{fmtMoney(t.commissionCents, currency)}</p>
                 <p className="text-[11px] uppercase tracking-wider text-white/50 mt-1">
                   {copy.commissionEarned(t.ticketsSold)}
@@ -212,7 +212,7 @@ export default async function PromoterPortalPage() {
         )}
 
         {records.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
+          <div className="rounded-2xl bg-white/[0.055] p-6 text-center">
             <p className="text-white font-semibold">{copy.emptyTitle}</p>
             <p className="text-sm text-white/60 mt-2 leading-relaxed">{copy.emptyDesc}</p>
           </div>
@@ -235,7 +235,7 @@ export default async function PromoterPortalPage() {
                 </div>
                 <div className="space-y-4">
                   {group.rows.map((r) => (
-                    <div key={r.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <div key={r.id} className="rounded-2xl bg-white/[0.055] p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-white font-semibold truncate">{r.eventTitle}</p>
@@ -267,7 +267,7 @@ export default async function PromoterPortalPage() {
                       <div className="mt-4 flex gap-2">
                         <Link
                           href={r.statsUrl}
-                          className="flex-1 text-center rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 transition-colors"
+                          className="flex-1 text-center rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/[0.12] transition-colors"
                         >
                           {copy.openStatsPage}
                         </Link>

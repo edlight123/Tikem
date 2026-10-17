@@ -180,7 +180,7 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
               <div className="mt-4">
                 <a
                   href={openInAppUrl}
-                  className="inline-block px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors"
+                  className="inline-block px-5 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
                 >
                   Open Tikèm app
                 </a>

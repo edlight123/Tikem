@@ -137,8 +137,8 @@ export default async function EventAnalyticsPage({
 
           {/* Ticket tier breakdown */}
           {tierBreakdown.length > 0 && (
-            <div className="rounded-2xl border border-white/10 p-5">
-              <h2 className="mb-4 font-semibold text-white"><T k="event_analytics.sales_by_tier" /></h2>
+            <div className="rounded-2xl p-5 bg-white/[0.055]">
+              <h2 className="mb-4 font-display lowercase italic !text-[22px] !leading-snug text-white"><T k="event_analytics.sales_by_tier" /></h2>
               <div className="space-y-3">
                 {tierBreakdown.map((tier) => {
                   const pct = ticketsSold > 0 ? (tier.sold / ticketsSold) * 100 : 0
@@ -152,7 +152,7 @@ export default async function EventAnalyticsPage({
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-white/[0.03]">
                         <div
-                          className="h-full rounded-full bg-brand-600 transition-all"
+                          className="h-full rounded-full bg-white transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -165,8 +165,8 @@ export default async function EventAnalyticsPage({
 
           {/* Daily sales chart (text-based sparkline) */}
           {salesByDay.length > 1 && (
-            <div className="rounded-2xl border border-white/10 p-5">
-              <h2 className="mb-4 font-semibold text-white"><T k="event_analytics.daily_sales" /></h2>
+            <div className="rounded-2xl p-5 bg-white/[0.055]">
+              <h2 className="mb-4 font-display lowercase italic !text-[22px] !leading-snug text-white"><T k="event_analytics.daily_sales" /></h2>
               <div className="flex items-end gap-1 overflow-x-auto pb-1">
                 {salesByDay.map(({ date, count }) => {
                   const max = Math.max(...salesByDay.map((d) => d.count), 1)
@@ -178,7 +178,7 @@ export default async function EventAnalyticsPage({
                       style={{ minWidth: '24px' }}
                     >
                       <div
-                        className="w-4 rounded-sm bg-brand-600 transition-all group-hover:bg-brand-400"
+                        className="w-4 rounded-sm bg-white/70 transition-all group-hover:bg-white"
                         style={{ height: `${heightPct * 0.8}px`, maxHeight: '80px' }}
                         title={`${count} on ${date}`}
                       />

@@ -73,13 +73,13 @@ export default function OrganizerDashboardClient({
           <button
             type="button"
             onClick={() => router.refresh()}
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <RefreshCw className="h-4 w-4" />
             {t('organizer.dashboard_error.retry', { defaultValue: 'Try again' })}
           </button>
           <p className="mt-4 text-sm text-white/70">
-            <Link href="/organizer/events" className="text-brand-300 hover:text-brand-200">
+            <Link href="/organizer/events" className="text-white underline underline-offset-2 hover:text-white/80">
               {t('organizer.dashboard_error.go_to_events', { defaultValue: 'Go to your events' })}
             </Link>
           </p>
@@ -129,7 +129,7 @@ export default function OrganizerDashboardClient({
         actions={
           <Link
             href="/organizer/events/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg font-semibold transition-colors text-sm shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <CalendarPlus className="w-4 h-4" />
             {t('organizer.create_event')}
@@ -165,7 +165,7 @@ export default function OrganizerDashboardClient({
           actions={
             <Link
               href="/organizer/events"
-              className="eyebrow inline-flex shrink-0 items-center gap-1 text-[11px] text-brand-300 transition-colors hover:text-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="eyebrow inline-flex shrink-0 items-center gap-1 text-[11px] text-white/60 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('organizer.view_all_events')} →
             </Link>
@@ -208,7 +208,7 @@ export default function OrganizerDashboardClient({
             action={
               <Link
                 href="/organizer/events/new"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-brand-700 hover:bg-brand-800 text-white rounded-xl font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <CalendarPlus className="w-4 h-4" />
                 {t('organizer.no_events.cta')}

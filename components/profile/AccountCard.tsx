@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
 import { ProfileSection, Panel, PanelRows } from './ui'
 import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
@@ -33,6 +34,7 @@ import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
 export function AccountCard() {
   const { t } = useTranslation('profile')
   const { t: tCommon } = useTranslation('common')
+  const { showToast } = useToast()
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -71,7 +73,7 @@ export function AccountCard() {
     } catch (error) {
       console.error('Error signing out:', error)
       setIsSigningOut(false)
-      alert(t('account.sign_out_error'))
+      showToast({ type: 'error', title: t('account.sign_out_error') })
     }
   }
 

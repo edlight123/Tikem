@@ -30,7 +30,7 @@ export function MetricCard({
     >
       <div className="mb-3 flex items-center gap-2">
         {Icon && (
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-brand-400">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/50">
             <Icon className="h-4 w-4" />
           </span>
         )}

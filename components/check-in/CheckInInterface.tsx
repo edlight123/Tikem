@@ -143,9 +143,9 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
   }, [searchQuery, tickets])
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700">
+      <div className="bg-black">
         <div className="px-4 py-4 flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold truncate">{event.title}</h1>
@@ -153,7 +153,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
           </div>
           <Link
             href={`/organizer/events/${event.id}/attendees`}
-            className="ml-4 flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+            className="ml-4 flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] rounded-full text-sm font-semibold transition-colors"
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">{t('door.manage', { defaultValue: 'Manage' })}</span>
@@ -162,27 +162,27 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
       </div>
 
       {/* Live Stats */}
-      <div className="bg-gradient-to-br from-teal-600 to-teal-700 px-4 py-6">
+      <div className="mx-4 rounded-2xl bg-white/[0.055] px-4 py-6">
         <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
           <div className="text-center">
             <div className="text-3xl font-bold">{stats.checkedIn}</div>
-            <div className="text-sm text-teal-100 mt-1">{t('door.checked_in', { defaultValue: 'Checked In' })}</div>
+            <div className="text-xs uppercase tracking-wide text-white/50 mt-1">{t('door.checked_in', { defaultValue: 'Checked In' })}</div>
           </div>
-          <div className="text-center border-x border-teal-500">
+          <div className="text-center border-x border-white/[0.08]">
             <div className="text-3xl font-bold">{stats.remaining}</div>
-            <div className="text-sm text-teal-100 mt-1">{t('door.remaining', { defaultValue: 'Remaining' })}</div>
+            <div className="text-xs uppercase tracking-wide text-white/50 mt-1">{t('door.remaining', { defaultValue: 'Remaining' })}</div>
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold">{stats.total}</div>
-            <div className="text-sm text-teal-100 mt-1">{t('door.total', { defaultValue: 'Total' })}</div>
+            <div className="text-xs uppercase tracking-wide text-white/50 mt-1">{t('door.total', { defaultValue: 'Total' })}</div>
           </div>
         </div>
         
         {/* Progress Bar */}
         <div className="max-w-2xl mx-auto mt-4">
-          <div className="h-2 bg-teal-800 rounded-full overflow-hidden">
+          <div className="h-2 bg-white/[0.08] rounded-full overflow-hidden">
             <div 
-              className="h-full bg-white transition-all duration-500"
+              className="h-full bg-brand-400 transition-all duration-500"
               style={{ width: `${stats.total > 0 ? (stats.checkedIn / stats.total) * 100 : 0}%` }}
             />
           </div>
@@ -190,12 +190,12 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
       </div>
 
       {/* Entry Point Selector */}
-      <div className="bg-gray-800 px-4 py-3 border-b border-gray-700">
+      <div className="px-4 py-3">
         <label className="block text-sm font-medium text-white/70 mb-2">{t('door.entry_point', { defaultValue: 'Entry Point' })}</label>
         <select
           value={selectedEntryPoint}
           onChange={(e) => setSelectedEntryPoint(e.target.value)}
-          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full px-4 py-2.5 bg-white/[0.06] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-brand-400"
         >
           <option value="Main Entrance">{t('door.entry_main_entrance', { defaultValue: 'Main Entrance' })}</option>
           <option value="VIP Entrance">{t('door.entry_vip_entrance', { defaultValue: 'VIP Entrance' })}</option>
@@ -208,8 +208,8 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
       {scanResult && (
         <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center p-4">
           <div className={`max-w-md w-full rounded-2xl p-8 text-center ${
-            scanResult.type === 'success' ? 'bg-green-600' :
-            scanResult.type === 'already-checked-in' ? 'bg-yellow-600' :
+            scanResult.type === 'success' ? 'bg-emerald-600' :
+            scanResult.type === 'already-checked-in' ? 'bg-amber-600' :
             'bg-red-600'
           }`}>
             {scanResult.type === 'success' && <CheckCircle className="w-20 h-20 mx-auto mb-4" />}
@@ -238,7 +238,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
         <button
           onClick={() => setShowScanner(true)}
           disabled={isProcessing}
-          className="w-full flex items-center justify-center gap-3 px-6 py-6 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-700 rounded-2xl font-bold text-lg shadow-lg transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-6 bg-white text-black hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 rounded-full font-semibold text-lg transition-colors"
         >
           <Camera className="w-8 h-8" />
           {isProcessing ? 'Processing...' : 'Scan QR Code'}
@@ -246,7 +246,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
         <button
           onClick={() => setShowManualLookup(true)}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.07] hover:bg-white/[0.12] rounded-full font-semibold transition-colors"
         >
           <Search className="w-5 h-5" />
           {t('check_in.manual_lookup')}
@@ -255,23 +255,23 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
       {/* Recent Check-Ins */}
       <div className="px-4 pb-20">
-        <h2 className="text-lg font-bold mb-3">{t('door.recent_checkins', { defaultValue: 'Recent Check-Ins' })}</h2>
+        <h2 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">{t('door.recent_checkins', { defaultValue: 'Recent Check-Ins' })}</h2>
         
         {recentCheckIns.length === 0 ? (
-          <div className="bg-gray-800 rounded-xl p-8 text-center">
+          <div className="bg-white/[0.055] rounded-2xl p-8 text-center">
             <Clock className="w-12 h-12 text-white/65 mx-auto mb-3" />
             <p className="text-white/70">{t('door.no_checkins_yet', { defaultValue: 'No check-ins yet' })}</p>
           </div>
         ) : (
           <div className="space-y-2">
             {recentCheckIns.map((ticket) => (
-              <div key={ticket.id} className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+              <div key={ticket.id} className="bg-white/[0.055] rounded-2xl p-4 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{ticket.attendee_name}</p>
                   <p className="text-sm text-white/70 truncate">{ticket.ticket_type}</p>
                 </div>
                 <div className="text-right ml-4">
-                  <CheckCircle className="w-5 h-5 text-green-400 mb-1" />
+                  <CheckCircle className="w-5 h-5 text-emerald-400 mb-1" />
                   <p className="text-xs text-white/70">
                     {ticket.checked_in_at && new Date(ticket.checked_in_at).toLocaleTimeString([], { 
                       hour: '2-digit', 
@@ -295,15 +295,15 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
       {/* Manual Lookup Modal */}
       {showManualLookup && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
-          <div className="bg-gray-800 p-4 flex items-center justify-between border-b border-gray-700">
+        <div className="fixed inset-0 bg-[#1c1c1c] z-50 flex flex-col">
+          <div className="p-4 flex items-center justify-between border-b border-white/[0.06]">
             <h2 className="text-lg font-bold">{t('door.manual_lookup', { defaultValue: 'Manual Lookup' })}</h2>
             <button
               onClick={() => {
                 setShowManualLookup(false)
                 setSearchQuery('')
               }}
-              className="p-2 hover:bg-gray-700 rounded-lg"
+              className="p-2 hover:bg-white/[0.08] rounded-full"
             >
               <XCircle className="w-6 h-6" />
             </button>
@@ -318,7 +318,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('door.search_placeholder', { defaultValue: 'Search by name, email, or ticket ID...' })}
                 autoFocus
-                className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-white/40 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full pl-12 pr-4 py-3 bg-white/[0.06] rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
           </div>
@@ -337,10 +337,10 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                   key={ticket.id}
                   onClick={() => handleManualCheckIn(ticket.id)}
                   disabled={ticket.checked_in}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                  className={`w-full text-left p-4 rounded-2xl transition-all ${
                     ticket.checked_in
-                      ? 'bg-gray-800 border-gray-700 opacity-50'
-                      : 'bg-gray-700 border-gray-600 hover:border-teal-500'
+                      ? 'bg-white/[0.03] opacity-50'
+                      : 'bg-white/[0.055] hover:bg-white/[0.1]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -350,9 +350,9 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                       <p className="text-xs text-white/70 mt-1">{ticket.ticket_type}</p>
                     </div>
                     {ticket.checked_in ? (
-                      <CheckCircle className="w-6 h-6 text-green-400 ml-4" />
+                      <CheckCircle className="w-6 h-6 text-emerald-400 ml-4" />
                     ) : (
-                      <div className="ml-4 px-3 py-1 bg-teal-600 rounded-lg text-sm font-semibold">
+                      <div className="ml-4 px-3 py-1.5 bg-white/[0.1] text-white rounded-full text-sm font-semibold">
                         {t('actions.check_in')}
                       </div>
                     )}

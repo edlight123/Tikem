@@ -297,7 +297,7 @@ export function OrgDataTable<T>({
               type="button"
               onClick={() => goToPage((footerPage ?? 1) - 1)}
               disabled={(footerPage ?? 1) <= 1}
-              className="inline-flex items-center gap-1 rounded-lg  px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
@@ -306,7 +306,7 @@ export function OrgDataTable<T>({
               type="button"
               onClick={() => goToPage((footerPage ?? 1) + 1)}
               disabled={(footerPage ?? 1) >= (footerTotalPages ?? 1)}
-              className="inline-flex items-center gap-1 rounded-lg  px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
               <ChevronRight className="h-4 w-4" />

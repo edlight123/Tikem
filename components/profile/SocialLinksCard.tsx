@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Instagram, Music2, Twitter, Facebook, Check, X, Pencil } from 'lucide-react'
+import { useToast } from '@/components/ui/Toast'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import type { SocialLinks } from '@/types/social'
 import { FIELD, GHOST_BTN, WHITE_BTN, ProfileSection, Panel, PanelRows, FieldLabel } from './ui'
@@ -39,6 +40,7 @@ const PLATFORMS: Array<{
 ]
 
 export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
+  const { showToast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [bio, setBio] = useState(profile.bio || '')
@@ -56,7 +58,7 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
       setIsEditing(false)
     } catch (error) {
       console.error('Failed to update social links:', error)
-      alert('Could not save. Please try again.')
+      showToast({ type: 'error', title: 'Could not save. Please try again.' })
     } finally {
       setIsLoading(false)
     }

@@ -344,7 +344,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   return (
     <div className="space-y-6">
       {listenerError ? (
-        <div className="border border-red-500/30 bg-red-500/10 text-red-300 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-500/10 text-red-300 px-4 py-3 rounded-lg text-sm">
           {listenerError}
         </div>
       ) : null}
@@ -352,15 +352,15 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
         >
           {tx('event_staff.invite_staff')}
         </button>
       </div>
 
-      <div className="bg-white/[0.03] border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/10">
-          <h3 className="text-lg font-bold text-white">{tx('event_staff.staff_members')}</h3>
+          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{tx('event_staff.staff_members')}</h3>
           <p className="text-sm text-white/70">{tx('event_staff.event_scoped_access')}</p>
         </div>
         {members.length === 0 ? (
@@ -408,7 +408,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                                 disabled={Boolean(permBusy[m.id])}
                                 onClick={() => handleToggleViewAttendees(m.id, !m.permissions?.viewAttendees)}
                                 className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50 ${
-                                  m.permissions?.viewAttendees ? 'bg-brand-700' : 'bg-white/15'
+                                  m.permissions?.viewAttendees ? 'bg-brand-500' : 'bg-white/15'
                                 }`}
                               >
                                 <span
@@ -446,9 +446,9 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
         )}
       </div>
 
-      <div className="bg-white/[0.03] border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/10">
-          <h3 className="text-lg font-bold text-white">{tx('event_staff.invites')}</h3>
+          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{tx('event_staff.invites')}</h3>
           <p className="text-sm text-white/70">{tx('event_staff.invite_links_one_time')}</p>
         </div>
         {invites.length === 0 ? (
@@ -518,7 +518,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             aria-modal="true"
             aria-labelledby="invite-staff-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#141414] border border-white/10 rounded-xl max-w-md w-full p-6"
+            className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6"
           >
             <h3 id="invite-staff-title" className="font-display text-xl text-white mb-4">{tx('event_staff.invite_staff')}</h3>
 
@@ -530,7 +530,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   ref={inviteMethodRef}
                   value={method}
                   onChange={(e) => setMethod(e.target.value as InviteMethod)}
-                  className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/15 rounded-lg text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-white/[0.06] rounded-lg text-white focus:ring-2 focus:ring-brand-500/60"
                 >
                   <option value="link">Link</option>
                   <option value="email">{tx('actions.email')}</option>
@@ -546,7 +546,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                     type="email"
                     value={targetEmail}
                     onChange={(e) => setTargetEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/15 rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 bg-white/[0.06] rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-brand-500/60"
                     placeholder="staff@example.com"
                   />
                 </div>
@@ -560,7 +560,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                     type="tel"
                     value={targetPhone}
                     onChange={(e) => setTargetPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/15 rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 bg-white/[0.06] rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-brand-500/60"
                     placeholder="+509..."
                   />
                 </div>
@@ -578,7 +578,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   aria-label={tx('event_staff.allow_viewing_attendee_details')}
                   onClick={() => setViewAttendees((v) => !v)}
                   className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                    viewAttendees ? 'bg-brand-700' : 'bg-white/15'
+                    viewAttendees ? 'bg-brand-500' : 'bg-white/15'
                   }`}
                 >
                   <span
@@ -593,7 +593,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 <button
                   type="button"
                   onClick={closeInviteModal}
-                  className="flex-1 px-4 py-2.5 border border-white/15 text-white/70 font-medium rounded-lg hover:bg-white/[0.04] transition-colors"
+                  className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded-full hover:bg-white/[0.12] transition-colors bg-white/[0.07]"
                 >
                   {tx('actions.cancel')}
                 </button>
@@ -601,7 +601,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   type="button"
                   disabled={!canSubmit || isSubmitting}
                   onClick={handleCreateInvite}
-                  className="flex-1 px-4 py-2.5 bg-brand-700 hover:bg-brand-800 text-white font-medium rounded-lg disabled:opacity-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 transition-colors"
                 >
                   {isSubmitting ? 'Creating…' : 'Create Invite'}
                 </button>
@@ -621,7 +621,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             aria-modal="true"
             aria-labelledby="staff-confirm-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#141414] border border-white/10 rounded-xl max-w-md w-full p-6"
+            className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6"
           >
             <h3 id="staff-confirm-title" className="font-display text-xl text-white mb-2">{pendingConfirm.title}</h3>
             <p className="text-sm text-white/70 mb-6">{pendingConfirm.message}</p>
@@ -630,7 +630,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 type="button"
                 onClick={() => setPendingConfirm(null)}
                 disabled={confirmBusy}
-                className="flex-1 px-4 py-2.5 border border-white/15 text-white/70 font-medium rounded-lg hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded-full hover:bg-white/[0.12] transition-colors disabled:opacity-50 bg-white/[0.07]"
               >
                 {tx('actions.cancel')}
               </button>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { User as UserIcon, Globe, Clock } from 'lucide-react'
+import type React from 'react'
+import { User as UserIcon, Globe, Clock, Zap, Ticket, Bot, CreditCard, Users } from 'lucide-react'
 import { ConsoleButton, ConsoleInput, ConsolePanel, ConsoleState } from '@/components/admin/console'
 import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { useToast } from '@/components/ui/Toast'
@@ -32,12 +33,22 @@ const SEVERITY_COLORS = {
 }
 
 const ACTIVITY_TYPE_LABELS: Record<string, string> = {
-  rapid_purchases: '🚀 Rapid Purchases',
-  duplicate_tickets: '🎫 Duplicate Tickets',
-  unusual_location: '🌍 Unusual Location',
-  bot_behavior: '🤖 Bot Behavior',
-  chargeback: '💳 Chargeback',
-  multiple_accounts: '👥 Multiple Accounts',
+  rapid_purchases: 'Rapid Purchases',
+  duplicate_tickets: 'Duplicate Tickets',
+  unusual_location: 'Unusual Location',
+  bot_behavior: 'Bot Behavior',
+  chargeback: 'Chargeback',
+  multiple_accounts: 'Multiple Accounts',
+}
+
+/* Lucide marks in place of the emoji the labels used to carry. */
+const ACTIVITY_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  rapid_purchases: Zap,
+  duplicate_tickets: Ticket,
+  unusual_location: Globe,
+  bot_behavior: Bot,
+  chargeback: CreditCard,
+  multiple_accounts: Users,
 }
 
 export default function SecurityDashboardClient() {
@@ -369,7 +380,11 @@ export default function SecurityDashboardClient() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="mb-2 flex items-center gap-3">
-                    <span className="text-sm font-medium text-console-text">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-console-text">
+                      {(() => {
+                        const TypeIcon = ACTIVITY_TYPE_ICONS[activity.activity_type]
+                        return TypeIcon ? <TypeIcon className="h-4 w-4 text-console-mut" aria-hidden /> : null
+                      })()}
                       {ACTIVITY_TYPE_LABELS[activity.activity_type] || activity.activity_type}
                     </span>
                     {getSeverityBadge(activity.severity)}
