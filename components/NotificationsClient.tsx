@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { markAsRead, markAllAsRead } from '@/lib/notifications'
 import { ConfirmProvider, useConfirm } from '@/components/ui/ConfirmProvider'
+import { useToast } from '@/components/ui/Toast'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import { Chip } from '@/components/ui/kit'
 import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
@@ -175,6 +176,8 @@ function NotificationsFeed({
   const router = useRouter()
   const { t, i18n } = useTranslation('notifications')
   const confirmDialog = useConfirm()
+  const { showToast } = useToast()
+  const toastError = (title: string) => showToast({ type: 'error', title })
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount)
   const [isLoading, setIsLoading] = useState(false)
@@ -302,7 +305,7 @@ function NotificationsFeed({
     const token = String(metadata?.token || '')
 
     if (!eventId || !token) {
-      alert(
+      toastError(
         t('invite.missing_details', {
           defaultValue: 'Missing invite details. Please open the invite link.',
         })
@@ -320,7 +323,7 @@ function NotificationsFeed({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         const msg = data?.error || t('invite.accept_failed', { defaultValue: 'Failed to accept invite' })
-        alert(msg)
+        toastError(msg)
         return
       }
 
@@ -332,7 +335,7 @@ function NotificationsFeed({
       router.push('/staff')
     } catch (error) {
       console.error('Error accepting staff invite:', error)
-      alert(t('invite.accept_failed', { defaultValue: 'Failed to accept invite' }))
+      toastError(t('invite.accept_failed', { defaultValue: 'Failed to accept invite' }))
     }
   }
 
@@ -342,7 +345,7 @@ function NotificationsFeed({
     const token = String(metadata?.token || '')
 
     if (!eventId || !token) {
-      alert(
+      toastError(
         t('invite.missing_details', {
           defaultValue: 'Missing invite details. Please open the invite link.',
         })
@@ -360,7 +363,7 @@ function NotificationsFeed({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         const msg = data?.error || t('invite.decline_failed', { defaultValue: 'Failed to decline invite' })
-        alert(msg)
+        toastError(msg)
         return
       }
 
@@ -372,7 +375,7 @@ function NotificationsFeed({
       setNotifications((prev) => prev.filter((n) => n.id !== notification.id))
     } catch (error) {
       console.error('Error declining staff invite:', error)
-      alert(t('invite.decline_failed', { defaultValue: 'Failed to decline invite' }))
+      toastError(t('invite.decline_failed', { defaultValue: 'Failed to decline invite' }))
     }
   }
 
@@ -434,7 +437,7 @@ function NotificationsFeed({
       setUnreadCount(0)
     } catch (error) {
       console.error('Error clearing notifications:', error)
-      alert(t('clear_failed', { defaultValue: 'Failed to clear notifications. Please try again.' }))
+      toastError(t('clear_failed', { defaultValue: 'Failed to clear notifications. Please try again.' }))
     } finally {
       setIsClearing(false)
     }

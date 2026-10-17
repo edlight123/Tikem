@@ -171,7 +171,7 @@ export default function LoginPage() {
 
         <form className="space-y-5" onSubmit={handleLogin}>
           {error && (
-            <div className="border border-red-500/30 text-red-300 px-4 py-2.5 rounded-lg text-sm">
+            <div className="rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
               {error}
             </div>
           )}
@@ -235,7 +235,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-3.5 px-4 rounded-lg text-white text-base font-semibold bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex justify-center py-3.5 px-4 rounded-full text-black text-base font-semibold bg-white hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? t('login.submit_loading') : t('login.submit')}
           </button>
@@ -245,7 +245,7 @@ export default function LoginPage() {
               <div className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-[13px]">
-              <span className="px-2 bg-white/[0.03] text-white/45">{t('login.or_continue_with')}</span>
+              <span className="px-3 bg-[#0a0a0a] text-white/45">{t('login.or_continue_with')}</span>
             </div>
           </div>
 
@@ -253,7 +253,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-lg border border-white/15 text-white text-base font-semibold hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-full bg-white/[0.07] text-white text-base font-semibold hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path

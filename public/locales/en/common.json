@@ -486,7 +486,7 @@
       "setupPayoutsDesc": "Add your bank or mobile money to receive earnings",
       "setupPayoutsCta": "Add Payout Method",
       "title": "Getting Started",
-      "allComplete": "You're all set! 🎉",
+      "allComplete": "You're all set!",
       "progress": "{{completed}} of {{total}} steps complete"
     },
     "welcome": {
@@ -899,8 +899,11 @@
     }
   },
   "attendance_notice": {
-    "body": "Your friends can now see which events you're going to. Change this in Privacy settings.",
-    "cta": "Privacy settings",
+    "eyebrow": "Privacy",
+    "title": "your friends can see your plans",
+    "body": "Events you're going to now show to your friends. You choose who sees them.",
+    "cta": "Review privacy",
+    "got_it": "Got it",
     "dismiss": "Dismiss"
   },
   "checkout": {
@@ -959,7 +962,7 @@
     "error_details_label": "Error details:",
     "try_again": "Try Again",
     "go_home": "Go Home",
-    "get_your_tickets_now": "Get your tickets now! 🎫",
+    "get_your_tickets_now": "Get your tickets now!",
     "tickets_added_collection_one": "{{count}} ticket added to your collection",
     "tickets_added_collection_other": "{{count}} tickets added to your collection",
     "tickets_claimed_email_one": "{{count}} free ticket. Check your email",
@@ -1052,7 +1055,7 @@
   },
   "guest_tickets": {
     "date_tba": "Date to be announced",
-    "payment_confirmed": "Payment confirmed 🎉",
+    "payment_confirmed": "Payment confirmed",
     "also_sent_prefix": "We also sent",
     "also_sent_you": "you",
     "also_sent_copy_and_text": "a copy and a text message.",
@@ -1583,8 +1586,8 @@
     "comment_counter": "{{count}}/500 characters",
     "organizer_rating_label": "How was the organizer? (optional)",
     "recommend_label": "Would you recommend this event?",
-    "recommend_yes": "👍 Yes",
-    "recommend_no": "👎 No",
+    "recommend_yes": "Yes",
+    "recommend_no": "No",
     "submitting": "Submitting...",
     "submit": "Submit Review"
   },

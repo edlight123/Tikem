@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { EMPTY_VALUE } from '@/lib/format'
 
 interface WalletData {
   availableByCurrency: Record<string, number>
@@ -242,7 +243,7 @@ export default function PromoterWalletCard() {
           {withdrawals.map((w) => (
             <div key={w.id} className="flex items-center justify-between gap-3 text-sm">
               <span className="text-white/60">
-                {w.createdAt ? new Date(w.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ', '}
+                {w.createdAt ? new Date(w.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : EMPTY_VALUE}
                 {' · '}
                 {fmtMoney(w.payoutHtgCents, 'HTG')}
                 {w.instant ? ` · ${t('promoter.wallet_instant_label', 'instant')}` : ''}

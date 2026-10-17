@@ -97,7 +97,7 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
             aria-label={t('filters.categories', { defaultValue: 'Category' })}
           >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-hidden="true" />
-            <div className="relative z-[101] w-full max-w-sm rounded-t-2xl border border-white/10 bg-[#111] p-4 shadow-2xl sm:rounded-2xl">
+            <div className="relative z-[101] w-full max-w-sm rounded-t-2xl bg-[#141414] p-4 shadow-2xl sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-white">{t('filters.categories', { defaultValue: 'Category' })}</h3>
                 <button
@@ -138,14 +138,14 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
                 {count > 0 && (
                   <button
                     onClick={clearAll}
-                    className="flex-1 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.04]"
+                    className="flex-1 rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.12]"
                   >
                     {t('filters.clear_all', { defaultValue: 'Clear all' })}
                   </button>
                 )}
                 <button
                   onClick={() => setOpen(false)}
-                  className="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+                  className="flex-1 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
                 >
                   {t('common.done', { defaultValue: 'Done' })}
                 </button>

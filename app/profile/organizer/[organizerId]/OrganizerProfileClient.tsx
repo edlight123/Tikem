@@ -46,6 +46,7 @@ import {
   Twitter,
   Facebook,
 } from 'lucide-react'
+import OrganizerMark from '@/components/OrganizerMark'
 import { socialUrlFor, type SocialLinks, type FriendshipState } from '@/types/social'
 
 interface OrganizerProfileClientProps {
@@ -185,16 +186,11 @@ export default function OrganizerProfileClient({
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
-            {/* Avatar. A real surface — `bg-[#0a0a0a]` here would be the page
-                colour, which is the invisible-card mistake this codebase has
-                ~500 of. No organizer has uploaded a logo (checked against
-                production), so the letter is the identity, set in the display
-                serif rather than a bold sans. */}
-            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-white/[0.07] text-4xl text-white shadow-lg ring-1 ring-inset ring-white/10 sm:h-24 sm:w-24 sm:text-5xl">
-              <span className="font-display leading-none">
-                {(organizer.name[0] || '?').toUpperCase()}
-              </span>
-            </div>
+            {/* Avatar. A real surface (`bg-[#0a0a0a]` would be the page colour,
+                the invisible-card mistake). No organizer has uploaded a logo
+                (checked against production), so the mark is an organization
+                glyph, not the name's first letter (owner rule). */}
+            <OrganizerMark className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
 
             <div className="min-w-0 flex-1">
               <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-white !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">

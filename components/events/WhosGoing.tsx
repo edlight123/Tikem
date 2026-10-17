@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { Users, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import type { PublicUserSummary } from '@/types/social'
 import type { GuestlistVisibility } from '@/lib/guestlistVisibility'
 
@@ -37,7 +37,7 @@ function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number })
   const initial = (user.displayName || 'U').charAt(0).toUpperCase()
   return (
     <div
-      className="rounded-full overflow-hidden bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-semibold ring-2 ring-[#0a0a0a]"
+      className="rounded-full overflow-hidden bg-white/[0.08] flex items-center justify-center text-white font-semibold ring-2 ring-black"
       style={{ width: size, height: size, fontSize: size * 0.4 }}
       title={user.displayName}
     >
@@ -111,8 +111,7 @@ export default function WhosGoing({
   if (visibility === 'count') {
     return (
       <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
-        <h2 className="flex items-center gap-2 text-lg font-bold text-white md:text-xl">
-          <Users className="h-5 w-5 text-brand-400" />
+        <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
           {t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' })}
         </h2>
         {viewerIsGoing && (
@@ -131,8 +130,7 @@ export default function WhosGoing({
   return (
     <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
-          <Users className="w-5 h-5 text-brand-400" />
+        <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
           {t('whos_going.title', "Who's going")}
         </h2>
         <span className="text-sm font-semibold text-white/50">
@@ -157,7 +155,7 @@ export default function WhosGoing({
               <Link
                 key={f.uid}
                 href={`/profile/organizer/${f.uid}`}
-                className="flex items-center gap-2 hover:bg-brand-500/25 rounded-full pl-1 pr-3 py-1 transition-colors"
+                className="flex items-center gap-2 hover:bg-white/[0.07] rounded-full pl-1 pr-3 py-1 transition-colors"
               >
                 <Avatar user={f} size={28} />
                 <span className="text-sm font-medium text-white truncate max-w-[120px]">{f.displayName}</span>
@@ -173,7 +171,7 @@ export default function WhosGoing({
           <div className="flex -space-x-3">
             {viewerIsGoing && (
               <div
-                className="rounded-full w-10 h-10 bg-brand-600 flex items-center justify-center text-white text-xs font-semibold ring-2 ring-[#0a0a0a]"
+                className="rounded-full w-10 h-10 bg-white/[0.14] flex items-center justify-center text-white text-xs font-semibold ring-2 ring-black"
                 title={t('whos_going.youre_going', "You're going")}
               >
                 {t('whos_going.you_badge', 'You')}
@@ -183,7 +181,7 @@ export default function WhosGoing({
               <Avatar key={u.uid} user={u} size={40} />
             ))}
             {remaining > 0 && (
-              <div className="rounded-full w-10 h-10 flex items-center justify-center text-white/70 text-xs font-semibold ring-2 ring-[#0a0a0a]">
+              <div className="rounded-full w-10 h-10 bg-white/[0.08] flex items-center justify-center text-white/70 text-xs font-semibold ring-2 ring-black">
                 +{remaining}
               </div>
             )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Wallet, Download, Smartphone } from 'lucide-react'
 import { format } from 'date-fns'
 import { escapeHtml } from '@/lib/html'
+import { useToast } from '@/components/ui/Toast'
 
 interface AddToWalletButtonProps {
   ticket: any
@@ -14,6 +15,7 @@ interface AddToWalletButtonProps {
 }
 
 export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket-qr-code' }: AddToWalletButtonProps) {
+  const { showToast } = useToast()
   const [isDownloading, setIsDownloading] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
   /**
@@ -66,22 +68,22 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             apple: platform === 'ios' ? false : Boolean(prev?.apple),
             google: platform === 'android' ? false : Boolean(prev?.google),
           }))
-          alert('Wallet passes aren’t available yet. Use "Download PDF" to save your ticket.')
+          showToast({ type: 'info', title: 'Wallet passes aren’t available yet', message: 'Use "Download PDF" to save your ticket.' })
           return
         }
-        alert(data?.error || 'Could not create your wallet pass.')
+        showToast({ type: 'error', title: data?.error || 'Could not create your wallet pass.' })
         return
       }
 
       const url = platform === 'ios' ? data?.passUrl : data?.saveUrl
       if (!url) {
-        alert('Wallet passes aren’t available yet. Use "Download PDF" to save your ticket.')
+        showToast({ type: 'info', title: 'Wallet passes aren’t available yet', message: 'Use "Download PDF" to save your ticket.' })
         return
       }
       window.location.href = url
     } catch (error) {
       console.error('Error adding to wallet:', error)
-      alert('Could not create your wallet pass.')
+      showToast({ type: 'error', title: 'Could not create your wallet pass.' })
     } finally {
       setIsAddingToWallet(null)
       setShowOptions(false)
@@ -93,7 +95,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
     
     // Validate required fields
     if (!event || !ticket) {
-      alert('Ticket data is incomplete')
+      showToast({ type: 'error', title: 'Ticket data is incomplete' })
       setIsDownloading(false)
       return
     }
@@ -108,7 +110,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
       
       if (!qrCodeElement) {
         console.error('QR code not found. Container:', qrContainer)
-        alert('QR code not found. Please wait a moment and try again.')
+        showToast({ type: 'warning', title: 'QR code not found', message: 'Please wait a moment and try again.' })
         setIsDownloading(false)
         return
       }
@@ -146,7 +148,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
       // Create a clean, printable version
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
-        alert('Please allow popups to download your ticket')
+        showToast({ type: 'warning', title: 'Please allow popups to download your ticket' })
         setIsDownloading(false)
         return
       }
@@ -323,7 +325,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
           </div>
           
           <div class="instructions">
-            <h3>📱 How to Use Your Ticket</h3>
+            <h3>How to Use Your Ticket</h3>
             <ul>
               <li>Show the QR code above at the venue entrance</li>
               <li>Keep this ticket on your phone or print it</li>
@@ -345,7 +347,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
       printWindow.document.close()
     } catch (error) {
       console.error('Error generating PDF:', error)
-      alert('Failed to generate ticket PDF')
+      showToast({ type: 'error', title: 'Failed to generate ticket PDF' })
     } finally {
       setIsDownloading(false)
     }
@@ -360,7 +362,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
       <button
         onClick={() => setShowOptions(!showOptions)}
         disabled={isDownloading}
-        className="w-full inline-flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        className="w-full inline-flex h-14 items-center justify-center gap-3 px-6 bg-white hover:bg-white/90 text-black rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <Wallet className="w-5 h-5" />
         {isDownloading ? 'Preparing...' : 'Save Ticket'}
@@ -376,12 +378,12 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
 
       {/* Options Dropdown */}
       {showOptions && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#111] rounded-xl shadow-2xl border-2 border-white/10 overflow-hidden z-50">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1c] rounded-2xl shadow-2xl overflow-hidden z-50">
           <button
             onClick={handleDownloadPDF}
-            className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.03] transition-colors text-left border-b border-white/10"
+            className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left"
           >
-            <div className="w-10 h-10 bg-white/[0.06] rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/[0.08] rounded-full flex items-center justify-center">
               <Download className="w-5 h-5 text-white/90" />
             </div>
             <div>
@@ -394,9 +396,9 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             <button
               onClick={handleAddToAppleWallet}
               disabled={isAddingToWallet !== null}
-              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.03] transition-colors text-left border-b border-white/10 disabled:opacity-50"
+              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-white/[0.06] rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/[0.08] rounded-full flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -412,9 +414,9 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             <button
               onClick={handleAddToGooglePay}
               disabled={isAddingToWallet !== null}
-              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.03] transition-colors text-left disabled:opacity-50"
+              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-white/[0.06] rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/[0.08] rounded-full flex items-center justify-center">
                 <Smartphone className="w-5 h-5 text-white/90" />
               </div>
               <div>

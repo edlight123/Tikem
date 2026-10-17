@@ -56,7 +56,7 @@ export default function ShareButtonInline({ eventId, eventTitle, eventDate, even
   return (
     <button
       onClick={handleShare}
-      className="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white py-3 px-4 rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 min-h-[44px]"
+      className="w-full h-12 bg-white/[0.07] hover:bg-white/[0.12] text-white px-4 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
     >
       {copied ? (
         <>

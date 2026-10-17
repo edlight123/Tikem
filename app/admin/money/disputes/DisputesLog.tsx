@@ -11,6 +11,7 @@ import {
   type ConsoleTone,
 } from '@/components/admin/console'
 import { formatAge } from '@/lib/admin/age'
+import { EMPTY_VALUE } from '@/lib/format'
 
 /**
  * The chargeback log.
@@ -85,14 +86,14 @@ function formatMinor(amountMinor: number, currency: string): string {
 
 function formatMoneyMap(map: Record<string, number>): string {
   const entries = Object.entries(map || {})
-  if (!entries.length) return ', '
+  if (!entries.length) return EMPTY_VALUE
   return entries.map(([currency, minor]) => formatMinor(minor, currency)).join(' · ')
 }
 
 function shortDate(iso: string | null): string {
-  if (!iso) return ', '
+  if (!iso) return EMPTY_VALUE
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ', '
+  if (Number.isNaN(date.getTime())) return EMPTY_VALUE
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 

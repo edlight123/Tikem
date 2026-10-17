@@ -486,7 +486,7 @@
       "setupPayoutsDesc": "Ajoute bank ou oswa mobil manni w pou resevwa lajan ou",
       "setupPayoutsCta": "Ajoute yon fason pou resevwa lajan",
       "title": "Premye Etap yo",
-      "allComplete": "Ou pare nèt 🎉",
+      "allComplete": "Ou pare nèt",
       "progress": "{{completed}} nan {{total}} etap fini"
     },
     "welcome": {
@@ -899,8 +899,11 @@
     }
   },
   "attendance_notice": {
-    "body": "Zanmi w yo kapab wè ki evènman w prale kounye a. Chanje sa nan paramèt konfidansyalite yo.",
-    "cta": "Paramèt konfidansyalite",
+    "eyebrow": "Konfidansyalite",
+    "title": "Zanmi ou ka wè ki kote w prale",
+    "body": "Kounye a zanmi ou ka wè evènman ou prale yo. Se ou ki chwazi kiyès ki ka wè yo.",
+    "cta": "Gade paramèt yo",
+    "got_it": "Mwen konprann",
     "dismiss": "Fèmen"
   },
   "checkout": {
@@ -959,7 +962,7 @@
     "error_details_label": "Detay erè a:",
     "try_again": "Eseye Ankò",
     "go_home": "Tounen Akèy",
-    "get_your_tickets_now": "Pran tikè ou kounye a! 🎫",
+    "get_your_tickets_now": "Pran tikè ou kounye a!",
     "tickets_added_collection_one": "{{count}} tikè ajoute nan koleksyon ou",
     "tickets_added_collection_other": "{{count}} tikè ajoute nan koleksyon ou",
     "tickets_claimed_email_one": "{{count}} tikè gratis. Verifye imel ou",
@@ -1052,7 +1055,7 @@
   },
   "guest_tickets": {
     "date_tba": "Dat poko anonse",
-    "payment_confirmed": "Peman konfime 🎉",
+    "payment_confirmed": "Peman konfime",
     "also_sent_prefix": "Nou voye tou bay",
     "also_sent_you": "ou",
     "also_sent_copy_and_text": "yon kopi ak yon SMS.",
@@ -1583,8 +1586,8 @@
     "comment_counter": "{{count}}/500 karaktè",
     "organizer_rating_label": "Kijan òganizatè a te ye? (opsyonèl)",
     "recommend_label": "Èske w ta rekòmande evènman sa a?",
-    "recommend_yes": "👍 Wi",
-    "recommend_no": "👎 Non",
+    "recommend_yes": "Wi",
+    "recommend_no": "Non",
     "submitting": "N ap soumèt...",
     "submit": "Soumèt avi a"
   },

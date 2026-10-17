@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ThumbsUp, ThumbsDown } from 'lucide-react'
 
 interface ReviewFormProps {
   eventId: string
@@ -60,8 +61,8 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white/[0.03] rounded-xl shadow-sm border border-white/10 p-6">
-      <h3 className="text-xl font-bold text-white mb-4">
+    <form onSubmit={handleSubmit} className="bg-white/[0.055] rounded-2xl p-6">
+      <h3 className="mb-5 font-display lowercase italic !text-[22px] !leading-snug text-white">
         {t('review_form.heading', { defaultValue: 'Review: {{eventTitle}}', eventTitle })}
       </h3>
 
@@ -101,7 +102,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={4}
-          className="w-full px-4 py-2 border border-white/10 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full rounded-xl bg-white/[0.07] px-4 py-3 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/60"
           placeholder={t('review_form.comment_placeholder', 'Share your experience...')}
           maxLength={500}
         />
@@ -136,34 +137,34 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
         <label className="block text-sm font-medium text-white/70 mb-2">
           {t('review_form.recommend_label', 'Would you recommend this event?')}
         </label>
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={() => setWouldRecommend(true)}
-            className={`px-6 py-2 rounded-lg border-2 transition-colors ${
-              wouldRecommend === true
-                ? 'border-teal-600 text-brand-300'
-                : 'border-white/10 text-white/70 hover:border-gray-400'
-            }`}
-          >
-            {t('review_form.recommend_yes', '👍 Yes')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setWouldRecommend(false)}
-            className={`px-6 py-2 rounded-lg border-2 transition-colors ${
-              wouldRecommend === false
-                ? 'border-brand-600 text-brand-300'
-                : 'border-white/10 text-white/70 hover:border-gray-400'
-            }`}
-          >
-            {t('review_form.recommend_no', '👎 No')}
-          </button>
+        <div className="flex gap-3">
+          {([
+            [true, ThumbsUp, t('review_form.recommend_yes', 'Yes')],
+            [false, ThumbsDown, t('review_form.recommend_no', 'No')],
+          ] as const).map(([value, Icon, label]) => {
+            const selected = wouldRecommend === value
+            return (
+              <button
+                key={String(value)}
+                type="button"
+                onClick={() => setWouldRecommend(value)}
+                aria-pressed={selected}
+                className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors ${
+                  selected
+                    ? 'bg-white/[0.16] text-white'
+                    : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.1] hover:text-white'
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${selected ? 'text-brand-300' : ''}`} aria-hidden />
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 border border-red-200 rounded-lg text-sm text-red-300">
+        <div role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">
           {error}
         </div>
       )}
@@ -171,7 +172,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
       <button
         type="submit"
         disabled={loading || rating === 0}
-        className="w-full py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-full bg-white py-3 font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? t('review_form.submitting', 'Submitting...') : t('review_form.submit', 'Submit Review')}
       </button>

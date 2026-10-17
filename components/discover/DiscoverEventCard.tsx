@@ -63,14 +63,20 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
         // 9px with 0.1em tracking was below readable on a phone, where this
         // chip is often the only thing naming the event's type. 10px is still a
         // micro-label but it can actually be read.
-        className={`eyebrow inline-flex rounded-md px-2 py-1 text-[10px] tracking-[0.1em] backdrop-blur-md ${
-          cue
-            ? cue.variant === 'warning'
-              ? 'bg-amber-400/90 text-amber-950'
-              : 'bg-white text-black'
-            : 'bg-black/30 text-white'
+        // A status cue reads as a dot + label on a dark scrim, never a filled
+        // pill (house rule); amber marks scarcity, white marks popularity.
+        className={`eyebrow inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] tracking-[0.1em] text-white backdrop-blur-md ${
+          cue ? 'bg-black/40' : 'bg-black/30'
         }`}
       >
+        {cue && (
+          <span
+            aria-hidden
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+              cue.variant === 'warning' ? 'bg-amber-400' : 'bg-white'
+            }`}
+          />
+        )}
         {cue ? cue.label : event.category}
       </span>
       {friendsGoing > 0 && (

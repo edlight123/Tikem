@@ -9,6 +9,7 @@ import ShareIconButton from './ShareIconButton'
 import ShareButtonInline from './ShareButtonInline'
 import { ReportButton } from '@/components/moderation/ModerationActions'
 import MobileHero from './MobileHero'
+import OrganizerMark from '@/components/OrganizerMark'
 import MobileKeyFacts from './MobileKeyFacts'
 import MobileSections from './MobileSections'
 import WhosGoing from '@/components/events/WhosGoing'
@@ -93,7 +94,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   // Organization brand overrides the personal name wherever the organizer is
   // shown (falls back to full_name, then a generic label).
   const organizerLabel = event.users?.organization_name || event.users?.full_name || 'Event Organizer'
-  const organizerInitial = (event.users?.organization_name || event.users?.full_name || 'E')[0].toUpperCase()
 
   // The venue map tile opens exactly what the "Google Maps" text link opens —
   // same query, same destination — so a visitor never gets two different places
@@ -122,6 +122,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         category={event.category}
         bannerUrl={event.banner_image_url}
         organizerName={organizerLabel}
+        organizerLogo={event.users?.organization_logo}
         isVerified={event.users?.is_verified || false}
         organizerId={event.organizer_id}
         isTrending={isTrending}
@@ -237,14 +238,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
 
               {/* Organizer */}
               <a href={`/profile/organizer/${event.organizer_id}`} className="inline-flex items-center gap-3 mb-7 hover:opacity-80 transition-opacity">
-                <div className="w-11 h-11 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white font-bold text-base overflow-hidden">
-                  {event.users?.organization_logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={event.users.organization_logo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    organizerInitial
-                  )}
-                </div>
+                <OrganizerMark logoUrl={event.users?.organization_logo} className="h-11 w-11 rounded-xl" />
                 <div>
                   <p className="text-white font-semibold text-sm md:text-base">
                     {organizerLabel}
@@ -372,6 +366,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         endDatetime={event.end_datetime || event.start_datetime}
         zone={zone}
         organizerName={organizerLabel}
+        organizerLogo={event.users?.organization_logo}
         organizerId={event.organizer_id}
         isVerified={event.users?.is_verified || false}
         venueMap={
@@ -525,14 +520,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {t('events.organizer')}
               </h2>
               <a href={`/profile/organizer/${event.organizer_id}`} className="inline-flex items-center gap-4 transition-opacity hover:opacity-80">
-                <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden">
-                  {event.users?.organization_logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={event.users.organization_logo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    organizerInitial
-                  )}
-                </div>
+                <OrganizerMark logoUrl={event.users?.organization_logo} className="h-12 w-12 rounded-xl" />
                 <div>
                   <p className="font-medium text-white text-base">
                     {organizerLabel}
@@ -571,7 +559,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <div>
                     <p className="font-grotesk text-3xl font-bold text-white">
                       {t('common.free')}
-                      <span className="text-white/40">, </span>
+                      <span className="text-white/40"> · </span>
+                      <span className="text-base font-medium lowercase text-white/50">{t('common.from')}</span>{' '}
                       <span className="text-base font-medium text-white/50">{event.currency || 'HTG'}</span> {headlineDisplayPrice.toLocaleString(numLocale)}
                     </p>
                     <p className="mt-1.5 text-[13px] text-white/50">{t('events.per_ticket', { defaultValue: 'per ticket' })}</p>

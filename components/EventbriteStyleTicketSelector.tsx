@@ -279,7 +279,7 @@ export default function EventbriteStyleTicketSelector({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-white">{t('events.select_tickets')}</h3>
+      <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('events.select_tickets')}</h3>
 
       {/* Tier List with Quantity Selectors */}
       <div className="space-y-3">
@@ -502,7 +502,7 @@ export default function EventbriteStyleTicketSelector({
       <button
         onClick={handlePurchase}
         disabled={!canPurchase || totalTickets === 0}
-        className="min-h-11 w-full rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-700 disabled:bg-white/10 disabled:text-white/40 disabled:cursor-not-allowed"
+        className="h-14 w-full rounded-full bg-white px-6 font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 disabled:cursor-not-allowed"
       >
         {!canPurchase
           ? t('events.sign_in_to_purchase')

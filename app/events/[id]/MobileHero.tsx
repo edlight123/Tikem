@@ -2,8 +2,8 @@
 
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
-import Badge from '@/components/ui/Badge'
-import { Shield, TrendingUp } from 'lucide-react'
+import { Shield } from 'lucide-react'
+import OrganizerMark from '@/components/OrganizerMark'
 import { getPosterTheme } from '@/lib/posterGradient'
 
 interface MobileHeroProps {
@@ -11,6 +11,8 @@ interface MobileHeroProps {
   category: string
   bannerUrl?: string
   organizerName: string
+  /** Organizer's uploaded logo; the organization mark stands in without one. */
+  organizerLogo?: string | null
   organizerId: string
   isVerified: boolean
   isTrending: boolean
@@ -23,6 +25,7 @@ export default function MobileHero({
   category,
   bannerUrl,
   organizerName,
+  organizerLogo,
   organizerId,
   isVerified,
   isTrending,
@@ -107,33 +110,25 @@ export default function MobileHero({
             </div>
           )}
 
-          {/* Badges Overlay - Top Right */}
+          {/* Status over the poster: a dark scrim chip with a coloured dot,
+              never a filled pill (house rule). The scrim keeps the label
+              legible over whatever colours the flyer has. */}
           <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
-            {isSoldOut && (
-              <Badge variant="error" size="sm">
-                {t('ticket.sold_out').toUpperCase()}
-              </Badge>
-            )}
+            {isSoldOut && <PosterChip dot="bg-red-400">{t('ticket.sold_out')}</PosterChip>}
             {!isSoldOut && selloutSoon && (
-              <Badge variant="warning" size="sm">
-                {t('ticket.almost_sold_out')}
-              </Badge>
+              <PosterChip dot="bg-amber-400">{t('ticket.almost_sold_out')}</PosterChip>
             )}
-            {isTrending && (
-              <Badge variant="trending" size="sm" icon={<TrendingUp className="w-3 h-3" />}>
-                {t('events.trending')}
-              </Badge>
-            )}
+            {isTrending && <PosterChip dot="bg-brand-400">{t('events.trending')}</PosterChip>}
           </div>
         </div>
       </div>
 
       {/* Title & Organizer - Below image */}
       <div className="px-4 py-4">
-        {/* Category Badge */}
-        <Badge variant="neutral" size="sm" className="mb-3">
+        {/* Category: a quiet eyebrow, not a pill */}
+        <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
           {category}
-        </Badge>
+        </p>
 
         {/* Title */}
         <h1 className="font-grotesk font-bold !text-[26px] tracking-[-0.01em] text-white mb-3 !leading-[1.05] break-words">
@@ -145,9 +140,7 @@ export default function MobileHero({
           href={`/profile/organizer/${organizerId}`}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {(organizerName?.[0] || 'E').toUpperCase()}
-          </div>
+          <OrganizerMark logoUrl={organizerLogo} className="h-10 w-10 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white truncate">
               {organizerName}
@@ -162,5 +155,14 @@ export default function MobileHero({
         </a>
       </div>
     </div>
+  )
+}
+
+function PosterChip({ dot, children }: { dot: string; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white backdrop-blur-md">
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
+      {children}
+    </span>
   )
 }

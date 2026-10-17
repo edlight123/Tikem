@@ -1,5 +1,6 @@
 'use client'
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -495,7 +496,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                             {tx('actions.revoke')}
                           </button>
                         ) : (
-                          <span className="text-sm text-white/70">, </span>
+                          <span className="text-sm text-white/70">{EMPTY_VALUE}</span>
                         )}
                       </td>
                     </tr>

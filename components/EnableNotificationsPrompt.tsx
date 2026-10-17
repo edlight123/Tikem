@@ -61,56 +61,65 @@ export function EnableNotificationsPrompt({
   }
 
   return (
-    <div className="bg-gradient-to-r from-brand-50 to-brand-100 border border-brand-200 rounded-lg p-4 shadow-sm">
-      <div className="flex items-start gap-3">
-        {/* Icon */}
-        <div className="flex-shrink-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center">
-          <Bell className="w-5 h-5 text-white" />
-        </div>
+    <div className="relative overflow-hidden rounded-2xl bg-[#1c1c1c] p-5">
+      {/* Decorative only: a faint teal glow in one corner. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.14),transparent_70%)]"
+      />
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-white mb-1">
-            {t('notifications_prompt.title', 'Enable Notifications')}
-          </h3>
-          <p className="text-sm text-white/65 mb-3">
-            {getContextMessage()}
-          </p>
+      {/* Close button */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/[0.08] hover:text-white/70"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
 
-          {error && (
-            <div className="mb-3 p-2 border border-red-200 rounded text-sm text-red-300">
-              {error}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleEnable}
-              disabled={isLoading}
-              className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? t('notifications_prompt.enabling', 'Enabling...') : t('notifications_prompt.enable', 'Enable')}
-            </button>
-            <button
-              onClick={onClose}
-              disabled={isLoading}
-              className="px-4 py-2 border border-white/10 text-white/70 text-sm font-medium rounded-lg hover:bg-white/[0.03] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {t('notifications_prompt.not_now', 'Not Now')}
-            </button>
+      <div className="relative">
+        {/* Eyebrow */}
+        <div className="mb-3 flex items-center gap-2">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.08]">
+            <Bell className="h-4 w-4 text-white/80" />
           </div>
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-400" aria-hidden="true" />
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
+            {t('notifications.title', 'Notifications')}
+          </span>
         </div>
 
-        {/* Close button */}
-        {onClose && (
+        <h3 className="mb-1 pr-8 font-display lowercase italic !text-[22px] !leading-snug text-white">
+          {t('notifications_prompt.title', 'Enable Notifications')}
+        </h3>
+        <p className="mb-4 text-sm text-white/60">
+          {getContextMessage()}
+        </p>
+
+        {error && (
+          <div className="mb-4 rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleEnable}
+            disabled={isLoading}
+            className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isLoading ? t('notifications_prompt.enabling', 'Enabling...') : t('notifications_prompt.enable', 'Enable')}
+          </button>
           <button
             onClick={onClose}
-            className="flex-shrink-0 text-white/40 hover:text-white/65 transition-colors"
+            disabled={isLoading}
+            className="text-sm font-medium text-white/55 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <X className="w-5 h-5" />
+            {t('notifications_prompt.not_now', 'Not Now')}
           </button>
-        )}
+        </div>
       </div>
     </div>
   )

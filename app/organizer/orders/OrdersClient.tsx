@@ -15,6 +15,7 @@ import {
   TableToolbar,
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
+import { EMPTY_VALUE } from '@/lib/format'
 
 interface Order {
   id: string
@@ -40,7 +41,7 @@ const COLUMNS: OrgColumn<Order>[] = [
     sortAccessor: (o) => o.attendeeName,
     render: (o) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">{o.attendeeName || ', '}</p>
+        <p className="truncate font-medium text-white">{o.attendeeName || EMPTY_VALUE}</p>
         {o.attendeeEmail && (
           <p className="truncate text-xs text-white/45">{o.attendeeEmail}</p>
         )}
@@ -78,7 +79,7 @@ const COLUMNS: OrgColumn<Order>[] = [
       const d = new Date(o.purchasedAt)
       return (
         <span className="font-mono tabular-nums text-white/55">
-          {isValid(d) ? format(d, 'MMM d, yyyy') : ', '}
+          {isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}
         </span>
       )
     },
@@ -162,7 +163,7 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
             return (
               <div className="px-4 py-3.5">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="truncate font-medium text-white">{o.attendeeName || ', '}</p>
+                  <p className="truncate font-medium text-white">{o.attendeeName || EMPTY_VALUE}</p>
                   <StatusChip tone={statusTone(o.status)}>
                     {o.status.replace(/_/g, ' ')}
                   </StatusChip>
@@ -173,7 +174,7 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
                     {money(o.amount, o.currency)}
                   </span>
                   <span className="font-mono tabular-nums text-white/40">
-                    {isValid(d) ? format(d, 'MMM d, yyyy') : ', '}
+                    {isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}
                   </span>
                 </div>
               </div>

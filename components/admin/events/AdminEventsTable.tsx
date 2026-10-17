@@ -2,14 +2,15 @@
 
 import { format } from 'date-fns'
 import { ConsoleState, consoleTone } from '@/components/admin/console'
+import { EMPTY_VALUE } from '@/lib/format'
 
 // Some legacy/seed events carry a missing or malformed start_datetime. Passing an
 // Invalid Date to date-fns `format` throws "RangeError: Invalid time value" and
 // crashes the whole moderation table, so format defensively.
 function formatEventDate(value?: string): string {
-  if (!value) return ', '
+  if (!value) return EMPTY_VALUE
   const d = new Date(value)
-  return isNaN(d.getTime()) ? ', ' : format(d, 'MMM d, yyyy')
+  return isNaN(d.getTime()) ? EMPTY_VALUE : format(d, 'MMM d, yyyy')
 }
 
 interface Event {
@@ -46,7 +47,7 @@ function ReportsCell({ event }: { event: Event }) {
   return event.reports_count && event.reports_count > 0 ? (
     <span className="label-mono text-sm tabular-nums text-console-amber">{event.reports_count}</span>
   ) : (
-    <span className="text-sm text-console-faint">, </span>
+    <span className="text-sm text-console-faint">{EMPTY_VALUE}</span>
   )
 }
 

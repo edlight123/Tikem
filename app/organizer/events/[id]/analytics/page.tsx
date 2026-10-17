@@ -9,6 +9,7 @@ import { formatPrimaryMoneyFromCentsByCurrency } from '@/lib/money'
 import { BarChart2, Ticket, Users, CheckCircle, TrendingUp } from 'lucide-react'
 import { MetricCard } from '@/components/organizer/ui'
 import { OrgEmptyState } from '@/components/organizer/ui'
+import { EMPTY_VALUE } from '@/lib/format'
 
 export const revalidate = 0
 
@@ -71,7 +72,7 @@ export default async function EventAnalyticsPage({
       ? formatPrimaryMoneyFromCentsByCurrency(revenueByCurrencyCents, eventCurrency, 'en-US', {
           currencyDisplay: 'code',
         })
-      : ', '
+      : EMPTY_VALUE
 
   // Sales by day (last 30 days of purchases)
   type DayStat = { date: string; count: number }
@@ -123,7 +124,7 @@ export default async function EventAnalyticsPage({
             <MetricCard
               icon={Users}
               label={<T k="event_analytics.capacity" />}
-              value={capacity > 0 ? capacity : ', '}
+              value={capacity > 0 ? capacity : EMPTY_VALUE}
               sublabel={capacity > 0 ? `${(capacity - ticketsSold)} remaining` : 'Unlimited'}
             />
             <MetricCard

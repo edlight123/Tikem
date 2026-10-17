@@ -198,8 +198,8 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Order Summary */}
-      <div className="bg-white/[0.03] border border-white/10 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-white mb-3">{t('events.order_summary')}</h3>
+      <div className="bg-white/[0.055] rounded-2xl p-4">
+        <h3 className="mb-3 font-display lowercase italic !text-[20px] !leading-snug text-white">{t('events.order_summary')}</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-white/65">{eventTitle}</span>
@@ -221,7 +221,7 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           )}
           <div className="flex justify-between items-center pt-2 border-t border-white/10">
             <span className="font-semibold text-white">{t('events.total')}</span>
-            <span className="text-lg font-bold text-brand-300">{formatAmount(chargeTotal)}</span>
+            <span className="text-lg font-bold text-white">{formatAmount(chargeTotal)}</span>
           </div>
           {showFeeLine && (
             <p className="text-xs text-white/45">
@@ -234,17 +234,17 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
       </div>
 
       {/* Payment Element */}
-      <div className="bg-white/[0.03] border border-white/10 rounded-lg p-4">
+      <div className="bg-white/[0.055] rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-4">
           <CreditCard className="w-5 h-5 text-white/65" />
-          <h3 className="text-sm font-semibold text-white">{t('events.payment_details')}</h3>
+          <h3 className="font-display lowercase italic !text-[20px] !leading-snug text-white">{t('events.payment_details')}</h3>
         </div>
         <PaymentElement />
       </div>
 
       {error && (
-        <div className="rounded-lg bg-error-500/10 p-4">
-          <p className="text-sm text-red-300">{error}</p>
+        <div className="rounded-xl bg-red-500/10 p-4">
+          <p className="text-sm text-red-200">{error}</p>
         </div>
       )}
 
@@ -260,14 +260,14 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           type="button"
           onClick={onClose}
           disabled={processing}
-          className="flex-1 px-4 py-3 border border-white/10 rounded-lg font-medium text-white/70 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={!stripe || processing}
-          className="flex-1 px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+          className="flex-1 h-12 px-4 rounded-full bg-white text-black font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? t('events.processing') : `${t('events.pay')} ${formatAmount(chargeTotal)}`}
         </button>
@@ -471,15 +471,15 @@ export default function EmbeddedStripePayment({
         role="dialog"
         aria-modal="true"
         aria-label={t('events.complete_payment')}
-        className="bg-[#111] w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-[#1c1c1c] w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-[#0a0a0a] border-b border-white/10 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">{t('events.complete_payment')}</h2>
+        <div className="sticky top-0 z-10 bg-[#1c1c1c] px-6 py-4 flex items-center justify-between">
+          <h2 className="font-display lowercase italic !text-[24px] !leading-snug text-white">{t('events.complete_payment')}</h2>
           <button
             ref={closeButtonRef}
             onClick={closeSheet}
-            className="p-2 hover:bg-white/[0.04] rounded-lg transition-colors"
+            className="p-2 hover:bg-white/[0.08] rounded-full transition-colors"
             aria-label={t('common.close')}
           >
             <X className="w-5 h-5 text-white/50" />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { PayoutReleaseConfig, PayoutReleaseOverride } from '@/types/platform-settings'
+import { EMPTY_VALUE } from '@/lib/format'
 
 /**
  * Per-organizer payout release override (/api/admin/organizers/[id]/payout-release).
@@ -72,7 +73,7 @@ function unitSuffix(kind: FieldKind): string {
 }
 
 function pretty(kind: FieldKind, apiValue: number): string {
-  if (!Number.isFinite(apiValue)) return ', '
+  if (!Number.isFinite(apiValue)) return EMPTY_VALUE
   if (kind === 'money') return majorFormatter.format(apiValue / 100)
   return `${apiValue} ${unitSuffix(kind)}`
 }

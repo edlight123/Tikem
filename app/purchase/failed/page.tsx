@@ -89,7 +89,7 @@ export default async function PurchaseFailedPage({
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
       <PurchasePopupBridge status="failed" reason={reason} />
       <div className="max-w-md w-full">
-        <div className="bg-white/[0.03] rounded-xl border border-white/10 p-6 md:p-8 text-center">
+        <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8 text-center">
           {/* Error Icon */}
           <div className="w-14 h-14 md:w-16 md:h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
@@ -107,7 +107,7 @@ export default async function PurchaseFailedPage({
             </svg>
           </div>
 
-          <h1 className="text-xl md:text-2xl font-bold text-white mb-2">
+          <h1 className="font-display lowercase italic !text-[28px] md:!text-[32px] !leading-tight text-white mb-2">
             {message.title}
           </h1>
 
@@ -118,22 +118,22 @@ export default async function PurchaseFailedPage({
           <div className="space-y-2.5">
             <Link
               href="/"
-              className="block w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 md:py-3.5 px-6 rounded-lg transition-colors text-base"
+              className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded-full transition-colors text-base"
             >
               {t('purchase.browse_events', 'Browse Events')}
             </Link>
 
             <Link
               href="/tickets"
-              className="block w-full border border-white/10 hover:bg-white/[0.03] text-white/70 font-semibold py-3 md:py-3.5 px-6 rounded-lg transition-colors text-base"
+              className="flex h-12 w-full items-center justify-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold px-6 rounded-full transition-colors text-base"
             >
               {t('purchase.view_my_tickets', 'View My Tickets')}
             </Link>
           </div>
 
           {reason === 'ticket_creation_failed' && (
-            <div className="mt-5 p-3.5 md:p-4 border border-amber-500/30 rounded-lg">
-              <p className="text-[13px] md:text-sm text-amber-300">
+            <div className="mt-5 p-3.5 md:p-4 bg-amber-500/10 rounded-xl text-left">
+              <p className="text-[13px] md:text-sm text-amber-200">
                 <strong>{t('purchase.important_label', 'Important:')}</strong>{' '}
                 {t('purchase.ticket_creation_failed_contact', 'Your payment was processed. Please contact support at')}{' '}
                 <a href="mailto:support@tikem.co" className="underline font-semibold">

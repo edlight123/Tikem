@@ -9,12 +9,12 @@ export default function FavoritesSignInPrompt() {
   return (
     <div className="flex items-center justify-center py-16">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-4">
+        <h2 className="font-display lowercase !text-[26px] !leading-tight text-white mb-5">
           {t('sign_in.title')}
         </h2>
         <Link
           href="/auth/login?redirect=/favorites"
-          className="text-brand-300 hover:text-brand-200 font-medium"
+          className="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
         >
           {t('sign_in.action')}
         </Link>

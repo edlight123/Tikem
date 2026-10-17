@@ -17,14 +17,14 @@ export default function TicketsError({
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white/[0.03] border border-white/10 rounded-2xl shadow-lg p-8 text-center">
+      <div className="max-w-md w-full bg-white/[0.055] rounded-2xl p-8 text-center">
         <div className="mb-6 flex justify-center">
           <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center">
             <AlertCircle className="w-8 h-8 text-red-400" />
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-white mb-2">
+        <h1 className="font-display lowercase !text-[26px] !leading-tight text-white mb-3">
           We couldn&apos;t load your tickets
         </h1>
 
@@ -36,7 +36,7 @@ export default function TicketsError({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={reset}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
@@ -44,7 +44,7 @@ export default function TicketsError({
 
           <Link
             href="/"
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-white/10 bg-white/[0.03] text-white/70 rounded-lg hover:bg-white/[0.06] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.07] text-white rounded-full hover:bg-white/[0.12] transition-colors"
           >
             <Home className="w-4 h-4" />
             Go Home

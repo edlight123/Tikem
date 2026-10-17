@@ -34,7 +34,7 @@ export default function TicketCard({
 
   return (
     <Link href={`/tickets/event/${eventId}`} prefetch className="group block h-full">
-      <article className="hover-lift h-full overflow-hidden rounded-none border border-white/10 bg-white/[0.03] shadow-poster-sm transition-all duration-300 group-hover:border-brand-200 group-hover:shadow-card-hover">
+      <article className="hover-lift h-full overflow-hidden rounded-none bg-white/[0.055] shadow-poster-sm transition-all duration-300 group-hover:bg-white/[0.12] group-hover:shadow-card-hover">
         <div
           className="poster-vignette relative flex aspect-[4/5] flex-col justify-between overflow-hidden p-3.5 text-white"
           style={hasImage ? undefined : { backgroundImage: theme.bg }}

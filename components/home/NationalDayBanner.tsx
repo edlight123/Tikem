@@ -101,7 +101,7 @@ export default function NationalDayBanner({
       {showCta && (
         <Link
           href={href}
-          className="mt-6 inline-flex h-12 items-center self-start rounded-xl bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          className="mt-6 inline-flex h-12 items-center self-start rounded-full bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
           {t('home.nationalDay.see_events', { defaultValue: 'See events' })}
         </Link>

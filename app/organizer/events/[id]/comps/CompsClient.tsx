@@ -1,5 +1,6 @@
 'use client'
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useState, useTransition } from 'react'
@@ -45,7 +46,7 @@ const columns: OrgColumn<Comp>[] = [
     sortable: true,
     render: (c) => (
       <div>
-        <p className="font-medium text-white">{c.recipient_name || ', '}</p>
+        <p className="font-medium text-white">{c.recipient_name || EMPTY_VALUE}</p>
         <p className="text-xs text-white/50">{c.recipient_email}</p>
       </div>
     ),
@@ -72,7 +73,7 @@ const columns: OrgColumn<Comp>[] = [
   {
     key: 'note',
     header: 'Note',
-    render: (c) => <span className="text-sm text-white/40 italic">{c.note || ', '}</span>,
+    render: (c) => <span className="text-sm text-white/40 italic">{c.note || EMPTY_VALUE}</span>,
   },
 ]
 

@@ -18,13 +18,11 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
   if (!hasFilters) {
     // No events in user's country at all
     return (
-      <div className="text-center py-16 sm:py-20  rounded-3xl shadow-sm">
-        <div className="relative inline-block mb-6">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center">
-            <MapPin className="w-10 h-10 text-brand-400" />
-          </div>
+      <div className="rounded-3xl bg-white/[0.055] px-6 py-16 text-center sm:py-20">
+        <div className="mx-auto mb-5 grid h-14 w-14 place-items-center text-white/45">
+          <MapPin className="h-9 w-9" strokeWidth={1.5} />
         </div>
-        <h3 className="text-2xl font-bold text-white mb-3">
+        <h3 className="mb-3 font-display lowercase !text-[22px] !leading-tight text-white">
           No events in {countryName} yet
         </h3>
         <p className="text-white/55 mb-8 max-w-md mx-auto px-4">
@@ -33,9 +31,9 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
         </p>
         <Link
           href="/profile"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 hover:scale-[1.02] transition-all duration-200 font-semibold"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
         >
-          <MapPin className="w-5 h-5" />
+          <MapPin className="h-4 w-4" />
           Change your location
         </Link>
       </div>
@@ -62,8 +60,8 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
   }
 
   return (
-    <div className="text-center py-20  rounded-3xl shadow-sm">
-      <h3 className="text-2xl font-bold text-white mb-3">
+    <div className="rounded-3xl bg-white/[0.055] px-6 py-20 text-center">
+      <h3 className="mb-3 font-display lowercase !text-[22px] !leading-tight text-white">
         {t('events.no_events')}
       </h3>
       <p className="text-white/55 mb-8">{t('common.try_different_search')}</p>
@@ -71,19 +69,19 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
       <div className="flex flex-wrap justify-center gap-3 max-w-md mx-auto">
         <button
           onClick={() => handleSuggestion('any-date')}
-          className="px-4 py-2 hover:bg-white/15 rounded-lg text-sm font-medium text-white/80 transition-colors"
+          className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
         >
           {t('common.show_any_date')}
         </button>
         <button
           onClick={() => handleSuggestion('expand-location')}
-          className="px-4 py-2 hover:bg-white/15 rounded-lg text-sm font-medium text-white/80 transition-colors"
+          className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
         >
           {t('common.expand_location')}
         </button>
         <button
           onClick={() => handleSuggestion('online')}
-          className="px-4 py-2 hover:bg-white/15 rounded-lg text-sm font-medium text-white/80 transition-colors"
+          className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
         >
           {t('common.show_online_events')}
         </button>
@@ -91,7 +89,7 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
 
       <button
         onClick={() => router.push('/discover')}
-        className="mt-8 px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-semibold"
+        className="mt-8 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
       >
         {t('common.clear_all_filters')}
       </button>

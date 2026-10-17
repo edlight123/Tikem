@@ -486,7 +486,7 @@
       "setupPayoutsDesc": "Ajoutez votre banque ou votre mobile money pour recevoir vos gains",
       "setupPayoutsCta": "Ajouter un moyen de versement",
       "title": "Premiers pas",
-      "allComplete": "Tout est en ordre 🎉",
+      "allComplete": "Tout est en ordre",
       "progress": "{{completed}} étape(s) sur {{total}} terminée(s)"
     },
     "welcome": {
@@ -899,8 +899,11 @@
     }
   },
   "attendance_notice": {
-    "body": "Vos amis peuvent désormais voir les événements auxquels vous allez. Modifiez cela dans les paramètres de confidentialité.",
-    "cta": "Paramètres de confidentialité",
+    "eyebrow": "Confidentialité",
+    "title": "vos amis peuvent voir vos sorties",
+    "body": "Les événements auxquels vous allez sont désormais visibles par vos amis. Vous choisissez qui peut les voir.",
+    "cta": "Voir les paramètres",
+    "got_it": "Compris",
     "dismiss": "Fermer"
   },
   "checkout": {
@@ -959,7 +962,7 @@
     "error_details_label": "Détails de l'erreur :",
     "try_again": "Réessayer",
     "go_home": "Retour à l'accueil",
-    "get_your_tickets_now": "Réservez vos billets maintenant ! 🎫",
+    "get_your_tickets_now": "Réservez vos billets maintenant !",
     "tickets_added_collection_one": "{{count}} billet ajouté à votre collection",
     "tickets_added_collection_other": "{{count}} billets ajoutés à votre collection",
     "tickets_claimed_email_one": "{{count}} billet gratuit. Vérifiez votre email",
@@ -1052,7 +1055,7 @@
   },
   "guest_tickets": {
     "date_tba": "Date à annoncer",
-    "payment_confirmed": "Paiement confirmé 🎉",
+    "payment_confirmed": "Paiement confirmé",
     "also_sent_prefix": "Nous avons aussi envoyé à",
     "also_sent_you": "vous",
     "also_sent_copy_and_text": "une copie et un SMS.",
@@ -1583,8 +1586,8 @@
     "comment_counter": "{{count}}/500 caractères",
     "organizer_rating_label": "Comment était l’organisateur ? (facultatif)",
     "recommend_label": "Recommanderiez-vous cet événement ?",
-    "recommend_yes": "👍 Oui",
-    "recommend_no": "👎 Non",
+    "recommend_yes": "Oui",
+    "recommend_no": "Non",
     "submitting": "Envoi en cours...",
     "submit": "Envoyer l’avis"
   },

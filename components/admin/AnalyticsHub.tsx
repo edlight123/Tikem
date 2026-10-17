@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { useAdminMetrics } from '@/lib/realtime/AdminRealtimeProvider'
+import { EMPTY_VALUE } from '@/lib/format'
 
 const fmtNum = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`)
 const fmtHTG = (n: number) =>
@@ -20,12 +21,12 @@ export function HeroScorecard() {
   const m = metrics
 
   const cells = [
-    { label: 'Total users', value: m ? fmtNum(m.usersCount) : ', ' },
-    { label: 'Active events', value: m ? fmtNum(m.eventsCount) : ', ' },
-    { label: 'Tickets · 7d', value: m ? fmtNum(m.tickets7d) : ', ' },
-    { label: 'Revenue · 7d', value: m ? fmtHTG(m.gmv7d) : ', ', sub: 'HTG' },
-    { label: 'Refunds · 7d', value: m ? fmtNum(m.refunds7d) : ', ' },
-    { label: 'Pending', value: m ? fmtNum(m.pendingCount) : ', ' },
+    { label: 'Total users', value: m ? fmtNum(m.usersCount) : EMPTY_VALUE },
+    { label: 'Active events', value: m ? fmtNum(m.eventsCount) : EMPTY_VALUE },
+    { label: 'Tickets · 7d', value: m ? fmtNum(m.tickets7d) : EMPTY_VALUE },
+    { label: 'Revenue · 7d', value: m ? fmtHTG(m.gmv7d) : EMPTY_VALUE, sub: 'HTG' },
+    { label: 'Refunds · 7d', value: m ? fmtNum(m.refunds7d) : EMPTY_VALUE },
+    { label: 'Pending', value: m ? fmtNum(m.pendingCount) : EMPTY_VALUE },
   ]
 
   return (

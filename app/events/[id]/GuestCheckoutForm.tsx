@@ -97,7 +97,7 @@ export default function GuestCheckoutForm({
   // which next to the filled phone control read as two different form systems
   // in one sheet. 16px so iOS does not zoom the sheet on focus.
   const inputClass =
-    'w-full rounded-lg bg-white/[0.06] px-4 py-3 text-[16px] text-white placeholder-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50'
+    'w-full rounded-xl bg-white/[0.06] px-4 py-3 text-[16px] text-white placeholder-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,7 +109,7 @@ export default function GuestCheckoutForm({
       </p>
 
       {orderSummary ? (
-        <div className="rounded-lg bg-white/[0.03] border border-white/10 p-4 space-y-2 text-sm">
+        <div className="rounded-2xl bg-white/[0.055] p-4 space-y-2 text-sm">
           {orderSummary.fee > 0 && (
             <>
               <div className="flex justify-between">
@@ -134,7 +134,7 @@ export default function GuestCheckoutForm({
             <span className="text-white/80">
               {t('checkout.you_pay', { defaultValue: "You'll pay" })}
             </span>
-            <span className="text-brand-300">
+            <span className="text-white">
               {orderSummary.total.toLocaleString()} {orderSummary.currency}
             </span>
           </div>
@@ -226,13 +226,13 @@ export default function GuestCheckoutForm({
       </div>
 
       {error && (
-        <div className="border border-red-200/40 text-red-300 px-4 py-3 rounded-lg text-sm">{error}</div>
+        <div className="bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">{error}</div>
       )}
 
       <button
         type="submit"
         disabled={busy}
-        className="block w-full bg-brand-600 hover:bg-brand-700 text-white text-center font-semibold py-3 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
+        className="block w-full h-12 bg-white hover:bg-white/90 text-black text-center font-semibold px-5 rounded-full transition-colors disabled:opacity-50"
       >
         {busy ? t('events.processing') : submitLabel}
       </button>
@@ -242,7 +242,7 @@ export default function GuestCheckoutForm({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="w-full px-4 py-3 border border-white/10 rounded-lg font-medium text-white/70 hover:bg-white/10 disabled:opacity-50"
+          className="w-full h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
         >
           {t('common.cancel')}
         </button>

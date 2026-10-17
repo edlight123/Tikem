@@ -161,7 +161,7 @@
     "submitting": "Sending…",
     "cancel": "Cancel",
     "sent": "Your request was sent. We'll email you the decision.",
-    "status_requested": "Refund requested — under review",
+    "status_requested": "Refund requested · under review",
     "status_requested_detail": "We'll email you the decision.",
     "status_in_progress": "Refund in progress",
     "status_denied": "Refund request not approved",

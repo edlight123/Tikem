@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { ArrowLeft, Calendar, MapPin, User, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import Badge from '@/components/ui/Badge'
+import { StatusChip } from '@/components/ui/kit'
 import QRCodeDisplay from './QRCodeDisplay'
 import TicketActions from './TicketActions'
 import AddToWalletButton from '@/components/AddToWalletButton'
@@ -26,9 +26,9 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
   const getStatusBadge = () => {
     if (ticket.checked_in_at) {
       return (
-        <Badge variant="success" className="text-sm px-4 py-2">
+        <StatusChip tone="neutral" className="!text-sm">
           {t('detail.status.used')}
-        </Badge>
+        </StatusChip>
       )
     }
 
@@ -36,9 +36,9 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
 
     if (status === 'active' || status === 'valid') {
       return (
-        <Badge variant="success" className="text-sm px-4 py-2">
+        <StatusChip tone="success" className="!text-sm">
           {t('detail.status.valid')}
-        </Badge>
+        </StatusChip>
       )
     }
 
@@ -55,9 +55,9 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
     }
 
     return (
-      <Badge variant="neutral" className="text-sm px-4 py-2">
+      <StatusChip tone="neutral" className="!text-sm">
         {statusLabels[status] || 'Inactive'}
-      </Badge>
+      </StatusChip>
     )
   }
 
@@ -77,7 +77,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
         {/* Left Column - QR & Actions */}
         <div className="space-y-4 sm:space-y-6">
           {/* QR Code Card */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-center">
+          <div className="bg-white/[0.055] rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-center">
             <div className="flex items-center justify-between w-full mb-4">
               {getStatusBadge()}
             </div>
@@ -97,8 +97,8 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
             </div>
 
             {ticket.checked_in_at && (
-              <div className="w-full border border-green-500/30 rounded-lg p-3 sm:p-4 mb-4">
-                <p className="text-xs sm:text-sm font-semibold text-emerald-300 text-center">
+              <div className="w-full rounded-xl bg-emerald-500/10 p-3 sm:p-4 mb-4">
+                <p className="text-xs sm:text-sm font-semibold text-emerald-200 text-center">
                   {t('detail.checked_in')} {t('detail.checked_in_at', { 
                     time: format(new Date(ticket.checked_in_at), 'MMM d, yyyy • h:mm a') 
                   })}
@@ -134,7 +134,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
         {/* Right Column - Event Details */}
         <div className="space-y-4 sm:space-y-6">
           {/* Event Banner Card */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-none overflow-hidden">
+          <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
             {event.banner_image_url ? (
               <div className="relative w-full h-40 sm:h-48">
                 <Image
@@ -147,7 +147,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
                 />
               </div>
             ) : (
-              <div className="relative w-full h-40 sm:h-48 bg-gradient-to-br from-brand-700 to-[#0C5E57] flex items-center justify-center">
+              <div className="relative w-full h-40 sm:h-48 bg-[#1c1c1c] flex items-center justify-center">
                 <span className="font-display text-5xl text-[#F8F5EE]">T</span>
               </div>
             )}
@@ -164,7 +164,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
               <div className="space-y-3 mt-6">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-5 h-5 text-brand-300" />
+                    <Calendar className="w-5 h-5 text-white/50" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="label-mono text-[10px] text-white/70 uppercase mb-1.5">
@@ -181,7 +181,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
 
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-brand-300" />
+                    <MapPin className="w-5 h-5 text-white/50" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="label-mono text-[10px] text-white/70 uppercase mb-1.5">
@@ -217,7 +217,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
 
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-brand-300" />
+                    <User className="w-5 h-5 text-white/50" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="label-mono text-[10px] text-white/70 uppercase mb-1.5">
@@ -229,7 +229,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
 
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 text-brand-300" />
+                    <Clock className="w-5 h-5 text-white/50" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="label-mono text-[10px] text-white/70 uppercase mb-1.5">
@@ -248,13 +248,13 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
           </div>
 
           {/* Instructions Card */}
-          <div className="border border-white/10 rounded-2xl p-4 sm:p-6">
+          <div className="bg-white/[0.055] rounded-2xl p-4 sm:p-6">
             <div className="flex items-start gap-3 mb-3 sm:mb-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-brand-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-white mb-1">
+                <h3 className="font-display lowercase !text-[22px] !leading-none text-white mb-1.5">
                   {t('detail.how_to_use_title')}
                 </h3>
                 <p className="text-xs sm:text-sm text-white/60">{t('detail.how_to_use_subtitle')}</p>
@@ -262,19 +262,19 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
             </div>
             <ul className="space-y-2 text-xs sm:text-sm text-white/70">
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-300" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/45" />
                 <span>{t('detail.how_to_use_steps.show_qr')}</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-300" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/45" />
                 <span>{t('detail.how_to_use_steps.save_wallet')}</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-300" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/45" />
                 <span>{t('detail.how_to_use_steps.one_entry')}</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-300" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-white/45" />
                 <span>{t('detail.how_to_use_steps.digital_print')}</span>
               </li>
             </ul>

@@ -1,5 +1,6 @@
 'use client'
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useState, useTransition } from 'react'
@@ -46,7 +47,7 @@ const buildColumns = (t: (k: string) => string): OrgColumn<Guest>[] => [
     sortable: true,
     render: (g) => (
       <div>
-        <p className="font-medium text-white">{g.name || ', '}</p>
+        <p className="font-medium text-white">{g.name || EMPTY_VALUE}</p>
         <p className="text-xs text-white/50">{g.email}</p>
       </div>
     ),
@@ -64,7 +65,7 @@ const buildColumns = (t: (k: string) => string): OrgColumn<Guest>[] => [
     key: 'plus_one',
     header: '+1',
     render: (g) => (
-      <span className="text-sm text-white/60">{g.plus_one ? 'Yes' : ', '}</span>
+      <span className="text-sm text-white/60">{g.plus_one ? 'Yes' : EMPTY_VALUE}</span>
     ),
   },
   {

@@ -15,6 +15,7 @@
  * dashed edge of the empty state.
  */
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format, isValid } from 'date-fns'
@@ -47,7 +48,7 @@ interface EventTicketsContentProps {
   tickets: any[]
 }
 
-const FALLBACK = ', '
+const FALLBACK = EMPTY_VALUE
 
 /** date-fns `format` throws on invalid dates; always guard through this. */
 function safeFormat(value: any, fmt: string, fallback: string = FALLBACK): string {

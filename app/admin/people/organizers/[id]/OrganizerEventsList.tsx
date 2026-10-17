@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ConsolePanel, ConsoleState, consoleTone } from '@/components/admin/console'
+import { EMPTY_VALUE } from '@/lib/format'
 
 export type OrganizerEventRow = {
   id: string
@@ -21,9 +22,9 @@ export type OrganizerEventRow = {
 
 /** ISO-sliced so the server and client agree — same approach as the rest of this page. */
 function formatDay(dateStr: string | null): string {
-  if (!dateStr) return ', '
+  if (!dateStr) return EMPTY_VALUE
   const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return ', '
+  if (isNaN(date.getTime())) return EMPTY_VALUE
   return date.toISOString().slice(0, 10)
 }
 

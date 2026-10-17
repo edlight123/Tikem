@@ -113,9 +113,9 @@ export function Chip({
 /**
  * Designed empty state — serif title + optional CTA.
  *
- * KEEP the dashed border. The fill-not-hairline rule carves out exactly this
- * case: a dashed edge around genuinely empty space, where the hairline IS the
- * meaning. This is the one border in this file that is not a violation.
+ * A fill and a radius only. The dashed edge it used to carry was doing the
+ * "nothing here" work the fill does on its own, and the owner has ruled out
+ * dashed borders entirely (matches OrgEmptyState in components/organizer/ui).
  */
 export function EmptyState({
   icon: Icon,
@@ -131,7 +131,7 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={`rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center ${className}`}>
+    <div className={`rounded-2xl bg-white/[0.03] p-10 text-center ${className}`}>
       {Icon && (
         <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl text-brand-300">
           <Icon className="h-7 w-7" />

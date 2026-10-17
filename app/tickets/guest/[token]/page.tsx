@@ -16,6 +16,8 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import GuestAccountOffer from './GuestAccountOffer'
 import RefundRequestAction from '@/components/tickets/RefundRequestAction'
+import { StatusChip } from '@/components/ui/kit'
+import { Ticket } from 'lucide-react'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
 import { intlLocaleFor } from '@/lib/dateLocale'
 
@@ -109,8 +111,8 @@ export default async function GuestTicketsPage({
 
       <main className="max-w-2xl mx-auto px-4 py-8 pb-mobile-nav md:pb-16">
         {purchased === '1' && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
-            <p className="text-emerald-300 font-semibold">{t('guest_tickets.payment_confirmed', 'Payment confirmed 🎉')}</p>
+          <div className="mb-6 rounded-2xl bg-emerald-500/10 px-5 py-4">
+            <p className="text-emerald-200 font-semibold">{t('guest_tickets.payment_confirmed', 'Payment confirmed')}</p>
             <p className="text-sm text-white/70 mt-1">
               {t('guest_tickets.also_sent_prefix', 'We also sent')}{' '}
               {order.email ? (
@@ -127,12 +129,12 @@ export default async function GuestTicketsPage({
         )}
 
         <header className="mb-8">
-          <p className="label-mono text-[11px] uppercase tracking-widest text-brand-400 mb-2">
+          <p className="label-mono text-[11px] uppercase tracking-widest text-white/50 mb-2">
             {tickets.length > 1
               ? t('guest_tickets.tickets_count', '{{count}} tickets').replace('{{count}}', String(tickets.length))
               : t('guest_tickets.your_ticket', 'Your ticket')}
           </p>
-          <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+          <h1 className="font-display italic !text-[34px] md:!text-[44px] !leading-[1.05] text-white">
             {event?.title || t('guest_tickets.your_event', 'Your event')}
           </h1>
           <p className="text-white/60 mt-2">{formatDate(startIso, intlLocaleFor(lang), dateFallback)}</p>
@@ -144,7 +146,7 @@ export default async function GuestTicketsPage({
         </header>
 
         {ticketsMovedAway ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
+          <div className="rounded-2xl bg-white/[0.055] p-6 text-center">
             <p className="text-white font-semibold">{t('guest_tickets.no_longer_here', 'These tickets are no longer on this link.')}</p>
             <p className="text-sm text-white/60 mt-2">
               {t(
@@ -154,7 +156,7 @@ export default async function GuestTicketsPage({
             </p>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
+          <div className="rounded-2xl bg-white/[0.055] p-6 text-center">
             <p className="text-white font-semibold">{t('guest_tickets.still_being_issued', 'Your tickets are still being issued.')}</p>
             <p className="text-sm text-white/60 mt-2">
               {t('guest_tickets.still_being_issued_detail', 'This usually takes a few seconds. Refresh this page. The link stays valid.')}
@@ -165,18 +167,18 @@ export default async function GuestTicketsPage({
             {tickets.map((ticket, index) => (
               <div
                 key={ticket.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden"
+                className="rounded-2xl bg-white/[0.055] overflow-hidden"
               >
-                <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3">
+                <div className="px-5 py-4 bg-white/[0.03] flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-white font-semibold truncate">
                       {ticket.tier_name || ticket.ticket_type || t('guest_tickets.general_admission', 'General Admission')}
                     </p>
                     <p className="text-xs text-white/50 mt-0.5">{order.name}</p>
                   </div>
-                  <span className="text-[11px] uppercase tracking-wider text-white/50 shrink-0">
+                  <StatusChip tone={ticket.checked_in ? 'neutral' : 'success'} className="shrink-0">
                     {ticket.checked_in ? t('guest_tickets.checked_in', 'Checked in') : t('guest_tickets.valid', 'Valid')}
-                  </span>
+                  </StatusChip>
                 </div>
 
                 <div className="p-6 flex flex-col items-center">
@@ -192,7 +194,9 @@ export default async function GuestTicketsPage({
                       />
                     </div>
                   ) : (
-                    <div className="rounded-2xl bg-white/10 px-8 py-12 text-4xl">🎫</div>
+                    <div className="grid place-items-center rounded-2xl bg-white/[0.08] px-10 py-12">
+                      <Ticket className="h-10 w-10 text-white/45" strokeWidth={1.5} aria-hidden />
+                    </div>
                   )}
                   <p className="mt-4 font-mono text-lg tracking-[0.2em] text-white">
                     {String(ticket.id).slice(0, 12).toUpperCase()}

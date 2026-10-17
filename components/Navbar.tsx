@@ -215,7 +215,7 @@ export default function Navbar({ user, isAdmin = false, flush = false }: NavbarP
                     aria-label={user.full_name}
                     className="flex items-center gap-2 text-sm text-white/80 hover:text-white transition-colors duration-200"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-md ring-2 ring-white/10">
+                    <div className="w-8 h-8 bg-white/[0.08] rounded-full flex items-center justify-center text-white font-semibold text-xs">
                       {user.full_name?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <span className="font-medium">{user.full_name}</span>

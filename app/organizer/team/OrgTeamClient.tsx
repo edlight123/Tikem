@@ -1,5 +1,6 @@
 'use client'
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useState, useTransition } from 'react'
@@ -69,7 +70,7 @@ const columns: OrgColumn<Member>[] = [
       <span className="font-mono tabular-nums text-sm text-white/40">
         {m.joined_at
           ? new Date(m.joined_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-          : ', '}
+          : EMPTY_VALUE}
       </span>
     ),
   },

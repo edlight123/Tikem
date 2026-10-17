@@ -19,6 +19,7 @@ import {
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
 import { toCsv } from '@/lib/csv'
+import { EMPTY_VALUE } from '@/lib/format'
 
 interface Ticket {
   id: string
@@ -82,7 +83,7 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
     sortable: true,
     sortAccessor: (t: Ticket) => t.attendee?.email || '',
     render: (t: Ticket) => (
-      <span className="text-sm text-white/70">{t.attendee?.email || ', '}</span>
+      <span className="text-sm text-white/70">{t.attendee?.email || EMPTY_VALUE}</span>
     ),
     cellClassName: 'hidden sm:table-cell',
     headerClassName: 'hidden sm:table-cell',
@@ -354,10 +355,10 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
         </p>
         <div className="space-y-3">
           <InfoRow icon={<User className="h-4 w-4" />} label="Name">
-            {ticket.attendee?.full_name || ', '}
+            {ticket.attendee?.full_name || EMPTY_VALUE}
           </InfoRow>
           <InfoRow icon={<Mail className="h-4 w-4" />} label={tx('actions.email')}>
-            {ticket.attendee?.email || ', '}
+            {ticket.attendee?.email || EMPTY_VALUE}
           </InfoRow>
           <InfoRow
             icon={
@@ -367,7 +368,7 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
             }
             label={tx('actions.phone')}
           >
-            {ticket.attendee?.phone_number || ', '}
+            {ticket.attendee?.phone_number || EMPTY_VALUE}
           </InfoRow>
         </div>
       </section>

@@ -13,6 +13,7 @@ import {
   TableToolbar,
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
+import { EMPTY_VALUE } from '@/lib/format'
 
 interface Attendee {
   id: string
@@ -26,7 +27,7 @@ interface Attendee {
 
 function spendLabel(spend: Record<string, number>) {
   const entries = Object.entries(spend).filter(([, v]) => v > 0)
-  if (entries.length === 0) return ', '
+  if (entries.length === 0) return EMPTY_VALUE
   return entries.map(([cur, v]) => `${cur} ${Number(v).toLocaleString()}`).join(' · ')
 }
 
@@ -37,7 +38,7 @@ const COLUMNS: OrgColumn<Attendee>[] = [
     sortable: true,
     render: (a) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">{a.name || ', '}</p>
+        <p className="truncate font-medium text-white">{a.name || EMPTY_VALUE}</p>
         <p className="truncate text-xs text-white/45">{a.email || a.phone || ''}</p>
       </div>
     ),
@@ -47,7 +48,7 @@ const COLUMNS: OrgColumn<Attendee>[] = [
     header: 'Contact',
     hideOnMobile: true,
     render: (a) => (
-      <span className="truncate text-white/60">{a.email || a.phone || ', '}</span>
+      <span className="truncate text-white/60">{a.email || a.phone || EMPTY_VALUE}</span>
     ),
   },
   {
@@ -78,7 +79,7 @@ const COLUMNS: OrgColumn<Attendee>[] = [
     render: (a) => {
       const d = new Date(a.lastPurchase)
       return (
-        <span className="font-mono tabular-nums text-white/55">{isValid(d) ? format(d, 'MMM d, yyyy') : ', '}</span>
+        <span className="font-mono tabular-nums text-white/55">{isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}</span>
       )
     },
   },
@@ -150,14 +151,14 @@ export default function MarketingClient({ attendees }: { attendees: Attendee[] }
             return (
               <div className="px-4 py-3.5">
                 <p className="truncate font-medium text-white">{a.name}</p>
-                <p className="truncate text-xs text-white/45">{a.email || a.phone || ', '}</p>
+                <p className="truncate text-xs text-white/45">{a.email || a.phone || EMPTY_VALUE}</p>
                 <div className="mt-2 flex items-center gap-4 text-sm">
                   <span className="text-white/60">
                     <span className="font-mono tabular-nums">{a.ticketCount}</span> ticket{a.ticketCount !== 1 ? 's' : ''}
                   </span>
                   <span className="font-mono tabular-nums text-white/40">{spendLabel(a.spendByCurrency)}</span>
                   <span className="ml-auto font-mono tabular-nums text-white/40">
-                    {isValid(d) ? format(d, 'MMM d') : ', '}
+                    {isValid(d) ? format(d, 'MMM d') : EMPTY_VALUE}
                   </span>
                 </div>
               </div>

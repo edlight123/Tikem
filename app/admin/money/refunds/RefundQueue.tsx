@@ -1,5 +1,6 @@
 'use client'
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { RefreshCw, Undo2 } from 'lucide-react'
@@ -153,16 +154,16 @@ function formatMoney(amount: number, currency: string): string {
 function totals(items: Item[]): string {
   const map = new Map<string, number>()
   for (const i of items) map.set(i.currency, (map.get(i.currency) || 0) + (Number(i.amount) || 0))
-  if (map.size === 0) return ', '
+  if (map.size === 0) return EMPTY_VALUE
   return Array.from(map.entries())
     .map(([c, a]) => formatMoney(a, c))
     .join(' · ')
 }
 
 function shortDate(iso: string | null): string {
-  if (!iso) return ', '
+  if (!iso) return EMPTY_VALUE
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ', '
+  if (Number.isNaN(d.getTime())) return EMPTY_VALUE
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 

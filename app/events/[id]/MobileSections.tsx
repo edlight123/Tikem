@@ -21,6 +21,7 @@ import { formatInZone } from '@/lib/home/format'
 import { dayKey } from '@/lib/home/feed'
 import Badge from '@/components/ui/Badge'
 import PromoVideo from '@/components/events/PromoVideo'
+import OrganizerMark from '@/components/OrganizerMark'
 import { dateLocaleFor } from '@/lib/dateLocale'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -48,6 +49,8 @@ interface MobileSectionsProps {
   /** The event's IANA zone (lib/home/feed eventZone): times print in it. */
   zone: string
   organizerName: string
+  /** Organizer's uploaded logo; the organization mark stands in without one. */
+  organizerLogo?: string | null
   organizerId: string
   isVerified: boolean
   shareButton: React.ReactNode
@@ -73,6 +76,7 @@ export default function MobileSections({
   endDatetime,
   zone,
   organizerName,
+  organizerLogo,
   organizerId,
   isVerified,
   shareButton,
@@ -193,9 +197,7 @@ export default function MobileSections({
           href={`/profile/organizer/${organizerId}`}
           className="flex items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-base font-semibold text-white">
-            {organizerName[0].toUpperCase()}
-          </div>
+          <OrganizerMark logoUrl={organizerLogo} className="h-11 w-11 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-medium text-white">{organizerName}</p>
             {isVerified && (

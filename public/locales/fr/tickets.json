@@ -161,7 +161,7 @@
     "submitting": "Envoi…",
     "cancel": "Annuler",
     "sent": "Votre demande a été envoyée. Vous recevrez la décision par e-mail.",
-    "status_requested": "Remboursement demandé — en cours d'examen",
+    "status_requested": "Remboursement demandé · en cours d'examen",
     "status_requested_detail": "Vous recevrez la décision par e-mail.",
     "status_in_progress": "Remboursement en cours",
     "status_denied": "Demande de remboursement refusée",

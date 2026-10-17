@@ -354,7 +354,7 @@ export function SearchSuggest({
               if (hasQuery && flatRows.length > 0) setOpen(true)
             }}
             placeholder={t('filters.search_placeholder')}
-            className="w-full pl-10 pr-4 py-2.5 border border-white/15 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent text-[16px]"
+            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.07] rounded-full text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400 text-[16px]"
             role="combobox"
             aria-expanded={showDropdown}
             aria-controls={listboxId}

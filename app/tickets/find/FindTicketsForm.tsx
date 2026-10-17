@@ -34,8 +34,8 @@ export default function FindTicketsForm() {
 
   if (status === 'sent') {
     return (
-      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-6 text-center">
-        <p className="text-emerald-300 font-semibold">{t('find_tickets.success_title', 'Check your messages')}</p>
+      <div className="rounded-2xl bg-emerald-500/10 px-5 py-6 text-center">
+        <p className="text-emerald-200 font-semibold">{t('find_tickets.success_title', 'Check your messages')}</p>
         <p className="text-sm text-white/70 mt-2 leading-relaxed">
           {t(
             'find_tickets.success_desc',
@@ -59,14 +59,14 @@ export default function FindTicketsForm() {
           onChange={(e) => setContact(e.target.value)}
           disabled={status === 'sending'}
           placeholder={t('find_tickets.placeholder', 'you@example.com')}
-          className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-brand-500 disabled:opacity-50"
+          className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400/60 disabled:opacity-50"
         />
       </div>
 
       <button
         type="submit"
         disabled={status === 'sending' || !contact.trim()}
-        className="block w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
+        className="block w-full bg-white hover:bg-white/90 text-black font-semibold py-3 px-5 rounded-full transition-colors disabled:opacity-50 min-h-[44px]"
       >
         {status === 'sending' ? t('find_tickets.sending', 'Sending…') : t('find_tickets.submit', 'Send my ticket link')}
       </button>

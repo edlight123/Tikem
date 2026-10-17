@@ -10,6 +10,7 @@ import { allSelectionsFree, computeSelectionTotal } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
+import { Check, Lock } from 'lucide-react'
 import GuestCheckoutForm, { type GuestContactInput } from './GuestCheckoutForm'
 import { paymentNavigationMode } from '@/lib/utils/in-app-browser'
 import { captureAttribution } from '@/lib/attribution-client'
@@ -1109,7 +1110,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         >
           <form onSubmit={handleVerifyCode} className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-white/70">
-              <span aria-hidden="true">🔒</span>
+              <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
               <span>
                 {t('events.password_protected_hint', {
                   defaultValue: 'This event is password protected. Enter the code to continue.',
@@ -1124,11 +1125,11 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               onChange={(e) => setCodeInput(e.target.value)}
               placeholder={t('events.access_code_placeholder', { defaultValue: 'Access code' })}
               disabled={verifyingCode}
-              className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-brand-500 disabled:opacity-50"
+              className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-400/50 disabled:opacity-50"
             />
 
             {codeError && (
-              <div className="bg-error-500/10 text-red-300 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">
                 {codeError}
               </div>
             )}
@@ -1136,7 +1137,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <button
               type="submit"
               disabled={verifyingCode || !codeInput.trim()}
-              className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-medium py-3 px-5 rounded-xl transition-colors disabled:opacity-50 min-h-[44px]"
+              className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-3 px-5 rounded-full transition-colors disabled:opacity-50 min-h-12"
             >
               {verifyingCode
                 ? t('events.processing')
@@ -1151,7 +1152,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 pendingActionRef.current = null
               }}
               disabled={verifyingCode}
-              className="w-full px-4 py-3 border border-white/10 rounded-lg font-medium text-white/70 hover:bg-white/10 disabled:opacity-50"
+              className="w-full h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
             >
               {t('common.cancel')}
             </button>
@@ -1161,14 +1162,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       {isFree ? (
         <div className="space-y-4">
           {/* Quantity Selector for Free Tickets */}
-          <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-lg p-4">
+          <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
             <span className="text-sm font-medium text-white/70">{t('events.quantity')}</span>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity <= 1 || loading}
                 aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -1179,7 +1180,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 onClick={() => setQuantity(Math.min(10, quantity + 1))}
                 disabled={quantity >= 10 || loading}
                 aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1190,7 +1191,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
           {isPasswordProtected && hasAccess !== true && (
             <div className="flex items-center gap-2 text-sm text-white/70">
-              <span aria-hidden="true">🔒</span>
+              <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
               <span>{t('events.password_required', { defaultValue: 'Password required' })}</span>
             </div>
           )}
@@ -1198,7 +1199,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           <button
             onClick={() => gateOrRun('free')}
             disabled={loading}
-            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-medium py-2.5 px-5 rounded-xl transition-colors disabled:opacity-50 min-h-[44px]"
+            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded-full transition-colors disabled:opacity-50 min-h-12"
           >
             {loading ? t('events.processing') : `${t('events.claim')} ${quantity} ${t('events.free_ticket')}${quantity !== 1 ? 's' : ''}`}
           </button>
@@ -1207,7 +1208,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         <>
           {isPasswordProtected && hasAccess !== true && (
             <div className="mb-3 flex items-center gap-2 text-sm text-white/70">
-              <span aria-hidden="true">🔒</span>
+              <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
               <span>{t('events.password_required', { defaultValue: 'Password required' })}</span>
             </div>
           )}
@@ -1215,7 +1216,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           <button
             onClick={() => gateOrRun('paid')}
             disabled={loading || tierProbeLoading}
-            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-medium py-2.5 px-5 rounded-xl transition-colors disabled:opacity-50 min-h-[44px]"
+            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded-full transition-colors disabled:opacity-50 min-h-12"
           >
             {loading || tierProbeLoading ? t('events.processing') : t('events.buy_ticket')}
           </button>
@@ -1243,7 +1244,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       )}
 
       {error && !showModal && (
-        <div className="mt-3 bg-error-500/10 text-red-300 px-4 py-3 rounded-lg text-sm">
+        <div className="mt-3 bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
@@ -1261,14 +1262,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
             {/* Quantity Selector - Only show for single tier purchases */}
             {selectedTiers.length === 0 && (
-              <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-lg p-4">
+              <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
                 <span className="text-sm font-medium text-white/70">{t('events.quantity')}</span>
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1 || loading}
                     aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                    className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -1279,7 +1280,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     onClick={() => setQuantity(Math.min(10, quantity + 1))}
                     disabled={quantity >= 10 || loading}
                     aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                    className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1289,7 +1290,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               </div>
             )}
 
-            <div className="rounded-lg bg-white/[0.03] border border-white/10 p-4">
+            <div className="rounded-xl bg-white/[0.055] p-4">
               {selectedTiers.length > 0 ? (
                 // Show itemized breakdown for multi-tier purchases
                 <div className="space-y-2">
@@ -1402,14 +1403,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               )}
 
               {promoCode && (
-                <div className="mt-2 text-sm text-green-400">
-                  ✓ {t('events.promo_code_applied')}
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-green-400">
+                  <Check className="h-4 w-4" aria-hidden="true" /> {t('events.promo_code_applied')}
                 </div>
               )}
             </div>
 
             {error && (
-              <div className="bg-error-500/10 text-red-300 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
@@ -1421,7 +1422,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               <button
                 onClick={() => handlePurchase(isHaitiEvent ? 'sogepay' : 'stripe')}
                 disabled={loading}
-                className="w-full flex items-center justify-between px-4 py-4 border-2 border-white/10 rounded-lg hover:border-brand-500 hover:bg-white/10 transition disabled:opacity-50"
+                className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-white/[0.055] hover:bg-white/[0.12] transition disabled:opacity-50"
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
@@ -1453,7 +1454,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   <button
                     onClick={() => handlePurchase('moncash')}
                     disabled={loading}
-                    className="w-full flex items-center justify-between px-4 py-4 border-2 border-white/10 rounded-lg hover:border-brand-500 hover:bg-white/10 transition disabled:opacity-50"
+                    className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-white/[0.055] hover:bg-white/[0.12] transition disabled:opacity-50"
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
@@ -1482,7 +1483,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   <button
                     onClick={() => handlePurchase('natcash')}
                     disabled={loading}
-                    className="w-full flex items-center justify-between px-4 py-4 border-2 border-white/10 rounded-lg hover:border-brand-500 hover:bg-white/10 transition disabled:opacity-50"
+                    className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-white/[0.055] hover:bg-white/[0.12] transition disabled:opacity-50"
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
@@ -1514,7 +1515,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <button
               onClick={() => setShowModal(false)}
               disabled={loading}
-              className="w-full px-4 py-3 border border-white/10 rounded-lg font-medium text-white/70 hover:bg-white/10 disabled:opacity-50"
+              className="w-full h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
             >
               {loading ? t('events.processing') : t('common.cancel')}
             </button>

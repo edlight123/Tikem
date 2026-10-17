@@ -13,6 +13,7 @@ import {
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
 import { Ticket, Plus, Trash2 } from 'lucide-react'
+import { EMPTY_VALUE } from '@/lib/format'
 
 type Event = {
   id: string
@@ -221,7 +222,7 @@ export default function PromoCodeManager({
       sortAccessor: (p) => (p.expires_at ? new Date(p.expires_at).getTime() : 0),
       render: (p) => (
         <span className="font-mono tabular-nums">
-          {p.expires_at ? new Date(p.expires_at).toLocaleDateString() : ', '}
+          {p.expires_at ? new Date(p.expires_at).toLocaleDateString() : EMPTY_VALUE}
         </span>
       ),
     },

@@ -14,6 +14,7 @@ import {
   TableToolbar,
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
+import { EMPTY_VALUE } from '@/lib/format'
 
 interface Order {
   id: string
@@ -65,7 +66,7 @@ const COLUMNS: OrgColumn<Order>[] = [
       const d = new Date(o.purchasedAt)
       return (
         <span className="font-mono tabular-nums text-white/70">
-          {isValid(d) ? format(d, 'MMM d, yyyy') : ', '}
+          {isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}
         </span>
       )
     },
@@ -145,7 +146,7 @@ export default function EventOrdersClient({ orders }: { orders: Order[] }) {
                 <span className="font-mono font-semibold text-white tabular-nums">{o.amount}</span>
                 <span className="text-white/70">{o.tierName}</span>
                 <span className="ml-auto font-mono tabular-nums text-white/70">
-                  {isValid(d) ? format(d, 'MMM d') : ', '}
+                  {isValid(d) ? format(d, 'MMM d') : EMPTY_VALUE}
                 </span>
               </div>
             </div>

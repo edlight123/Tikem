@@ -1,5 +1,6 @@
 'use client'
 
+import { EMPTY_VALUE } from '@/lib/format'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, CheckCircle, RefreshCw, ShieldQuestion, XCircle } from 'lucide-react'
@@ -311,7 +312,7 @@ export default function PayoutReviewQueue() {
                 </span>
               ))
             ) : (
-              <span>, </span>
+              <span>{EMPTY_VALUE}</span>
             )}
           </p>
         </div>

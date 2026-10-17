@@ -8,11 +8,12 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '@/components/ui/Toast'
 import { ConsoleButton, ConsoleState, consoleTone } from '@/components/admin/console'
 import { AdminReportsPanel } from './AdminReportsPanel'
+import { EMPTY_VALUE } from '@/lib/format'
 
 // Guard against missing/malformed dates: date-fns `format` throws
 // "RangeError: Invalid time value" on an Invalid Date, which would crash the
 // whole detail sheet when opening a legacy/seed event with a bad date field.
-function safeFormat(value: string | undefined, fmt: string, fallback = ', '): string {
+function safeFormat(value: string | undefined, fmt: string, fallback = EMPTY_VALUE): string {
   if (!value) return fallback
   const d = new Date(value)
   return isNaN(d.getTime()) ? fallback : format(d, fmt)

@@ -207,7 +207,7 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
             onClick={onOpenFilters}
             // On a phone the label is hidden, leaving a bare icon — so the box
             // has to carry the target: min-h-11 (44px) there, natural above.
-            className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-lg border border-white/15 px-4 py-2.5 text-sm font-normal text-white/80 transition-colors hover:border-white/30 hover:text-white sm:min-h-0"
+            className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-normal text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white sm:min-h-0"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">{t('filters.filters')}</span>
