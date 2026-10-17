@@ -509,7 +509,14 @@ describe('invite copy', () => {
 
 describe('mobile invite links', () => {
   /* eslint-disable @typescript-eslint/no-require-imports */
-  const { parseInviteUrl, whatsappPhone } = require('../mobile/lib/inviteLinkParse')
+  const {
+    contactPhoneE164,
+    matchedContactIds,
+    parseInviteUrl,
+    smsUrl,
+    whatsappPhone,
+  } = require('../mobile/lib/inviteLinkParse')
+  const { phoneToE164 } = require('../types/social')
   /* eslint-enable @typescript-eslint/no-require-imports */
 
   it('reads the app scheme and the web link, with an optional event', () => {
@@ -524,5 +531,31 @@ describe('mobile invite links', () => {
   it('only passes international numbers to WhatsApp', () => {
     expect(whatsappPhone('+509 37 00 0000')).toBe('50937000000')
     expect(whatsappPhone('3700 0000')).toBeNull()
+  })
+
+  it('reads contact numbers exactly like the server does', () => {
+    for (const raw of ['3700 0001', '+509 37 00 0001', '0050937000001', '(555) 123-4567', '1 555 123 4567', '12345', '']) {
+      expect(contactPhoneE164(raw)).toBe(phoneToE164(raw))
+    }
+  })
+
+  it('builds a Messages link per platform', () => {
+    expect(smsUrl('hi there', null, 'ios')).toBe('sms:&body=hi%20there')
+    expect(smsUrl('hi', '3700 0001', 'android')).toBe('sms:+50937000001?body=hi')
+  })
+
+  it('marks a contact as on Tikèm by any of its numbers, else by name for older servers', () => {
+    const contacts = [
+      { id: 'c1', name: 'Bob', phones: ['3700 0001'] },
+      { id: 'c2', name: 'Carl', phones: ['555 000 0000', '(555) 123-4567'] },
+      { id: 'c3', name: 'Bob', phones: ['3700 9999'] },
+    ]
+    const exact = matchedContactIds(contacts, [
+      { displayName: 'Robert', phones: ['3700 0001'] },
+      { displayName: 'Carl', phones: ['(555) 123-4567'] },
+    ])
+    expect(Array.from(exact).sort()).toEqual(['c1', 'c2'])
+    const byName = matchedContactIds(contacts, [{ displayName: 'bob' }])
+    expect(Array.from(byName).sort()).toEqual(['c1', 'c3'])
   })
 })

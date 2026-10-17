@@ -5,15 +5,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { radius } from '../theme/tokens';
 import { fetchInviteLink } from '../lib/api/invites';
-import { openWhatsAppInvite } from '../lib/inviteLink';
+import { contactPhoneE164, matchedContactIds, openWhatsAppInvite } from '../lib/inviteLink';
+import type { DeviceContact } from '../lib/contactSync';
+import type { ContactMatch } from '../types/social';
 import { useAppAlert } from './AppAlert';
 import SectionHeader from './SectionHeader';
-
-export interface DeviceContact {
-  id: string;
-  name: string;
-  phone: string;
-}
 
 /** Rendered at most; the search box reaches the rest. */
 const MAX_ROWS = 50;
@@ -24,18 +20,17 @@ const MAX_ROWS = 50;
  * opens WhatsApp with the sharer's personal link (falls back to the share
  * sheet). Contacts never leave the phone here: only the link is fetched.
  *
- * Which contacts matched is not something the server says (it returns people,
- * not numbers), so a contact whose name equals a matched person's name is
- * left out; anyone else is offered.
+ * A contact is left out when one of its numbers matched someone on Tikèm (the
+ * server echoes the numbers it matched; older servers fall back to names).
  */
 export default function InviteContactsCard({
   contacts,
-  matchedNames,
+  matches,
   eventId,
   eventTitle,
 }: {
   contacts: DeviceContact[];
-  matchedNames: string[];
+  matches: ContactMatch[];
   eventId?: string | null;
   eventTitle?: string | null;
 }) {
@@ -48,13 +43,13 @@ export default function InviteContactsCard({
   const linkRef = useRef<string | null>(null);
 
   const candidates = useMemo(() => {
-    const matched = new Set(matchedNames.map((n) => n.trim().toLowerCase()));
+    const matched = matchedContactIds(contacts, matches);
     const q = query.trim().toLowerCase();
     return contacts
-      .filter((c) => !matched.has(c.name.trim().toLowerCase()))
+      .filter((c) => !matched.has(c.id))
       .filter((c) => !q || c.name.toLowerCase().includes(q))
       .slice(0, MAX_ROWS);
-  }, [contacts, matchedNames, query]);
+  }, [contacts, matches, query]);
 
   if (contacts.length === 0) return null;
 
@@ -71,7 +66,7 @@ export default function InviteContactsCard({
       const text = eventTitle
         ? t('invites.messageEvent', { event: eventTitle, link })
         : t('invites.messageApp', { link });
-      await openWhatsAppInvite(text, c.phone);
+      await openWhatsAppInvite(text, contactPhoneE164(c.phone) || c.phone);
     } finally {
       setBusyId(null);
     }

@@ -18,7 +18,9 @@ export const dynamic = 'force-dynamic'
 const IOS_BUNDLE_ID = 'co.tikem.mobile'
 
 // Paths the mobile app handles as deep links (see mobile/navigation/AppNavigator).
-const APP_PATHS = ['/events/*', '/tickets/*', '/invite', '/notifications']
+// /i/* is a friend's personal invite link: with the app installed it opens the
+// app, which saves the code itself (the web route's cookie never reaches it).
+const APP_PATHS = ['/events/*', '/tickets/*', '/invite', '/notifications', '/i/*']
 
 export async function GET() {
   const teamId = process.env.APPLE_TEAM_ID?.trim()

@@ -1031,7 +1031,19 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* Invite your connections (config/auth.invites). Nothing when off,
               signed out, or the event is not on sale. */}
-          <InviteFriendsRow eventId={eventId} invitable={!isPastEvent && !notOnSale} />
+          <InviteFriendsRow
+            eventId={eventId}
+            invitable={!isPastEvent && !notOnSale}
+            event={{
+              title: event.title,
+              details: [
+                startValid ? safeFormatForLanguage(startValid, 'EEE, MMM d', language) : '',
+                (event as any).is_online && !event.venue_name ? '' : event.venue_name || event.city || '',
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            }}
+          />
 
           {/* Who's Going: faces, a count, or nothing, per the organizer's
               guest-list setting (same resolver as the web event page). */}

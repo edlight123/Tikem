@@ -69,6 +69,11 @@
               "scheme": "https",
               "host": "www.tikem.co",
               "pathPrefix": "/notifications"
+            },
+            {
+              "scheme": "https",
+              "host": "www.tikem.co",
+              "pathPrefix": "/i/"
             }
           ],
           "category": [
@@ -98,6 +103,11 @@
               "scheme": "https",
               "host": "tikem.co",
               "pathPrefix": "/notifications"
+            },
+            {
+              "scheme": "https",
+              "host": "tikem.co",
+              "pathPrefix": "/i/"
             }
           ],
           "category": [

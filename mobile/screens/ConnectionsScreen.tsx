@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Users, Search, Phone, Inbox, Send, Share2, UserPlus } from 'lucide-react-native';
-import * as Contacts from 'expo-contacts';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
@@ -29,12 +28,12 @@ import { useSocialFlags } from '../lib/socialFlags';
 import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
-import InviteContactsCard, { type DeviceContact } from '../components/InviteContactsCard';
+import InviteContactsCard from '../components/InviteContactsCard';
+import { requestContactsPermission, syncContacts as readAndMatchContacts, type DeviceContact } from '../lib/contactSync';
 import { useAppAlert } from '../components/AppAlert';
 import {
   fetchConnections,
   searchUsers,
-  matchContacts,
   fetchFriendSuggestions,
   type ConnectionsOverview,
   type UserSearchResult,
@@ -374,10 +373,10 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
     };
   }, [query]);
 
+  const { user } = useAuth();
   const syncContacts = useCallback(async () => {
     try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== 'granted') {
+      if (!(await requestContactsPermission())) {
         showAlert(
           t('connections.find.permissionTitle'),
           t('connections.find.permissionBody')
@@ -385,33 +384,21 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
         return;
       }
       setContactLoading(true);
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Name],
-      });
-      const phones: string[] = [];
-      const list: DeviceContact[] = [];
-      data.forEach((c, i) => {
-        (c.phoneNumbers || []).forEach((p) => {
-          if (p.number) phones.push(p.number);
-        });
-        const first = (c.phoneNumbers || []).find((p) => p.number)?.number;
-        const name = String(c.name || '').trim();
-        if (first && name) list.push({ id: String(c.id || i), name, phone: first });
-      });
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      setDeviceContacts(list);
-      if (phones.length === 0) {
+      // A tap here is an explicit refresh, so skip the shared cache.
+      const { contacts, matches } = await readAndMatchContacts(user?.uid || '', { force: true });
+      setDeviceContacts(contacts);
+      if (contacts.length === 0) {
         showAlert(t('connections.find.noNumbersTitle'), t('connections.find.noNumbersBody'));
         setContactMatches([]);
         return;
       }
-      setContactMatches(await matchContacts(phones));
+      setContactMatches(matches);
     } catch (e: any) {
       showAlert(t('connections.find.errorTitle'), e?.message || t('connections.find.errorBody'));
     } finally {
       setContactLoading(false);
     }
-  }, [t]);
+  }, [t, user?.uid]);
 
   const startSync = useCallback(() => {
     if (needsPhone) {
@@ -575,7 +562,7 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
       {flags.invites && contactMatches !== null && (
         <InviteContactsCard
           contacts={deviceContacts}
-          matchedNames={contactMatches.map((m) => m.displayName)}
+          matches={contactMatches}
           eventId={inviteEventId}
           eventTitle={inviteEventTitle}
         />

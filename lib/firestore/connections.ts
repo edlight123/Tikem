@@ -298,6 +298,8 @@ export async function getConnectionsOverview(userId: string): Promise<Connection
 
 export interface ContactMatch extends PublicUserSummary {
   friendship: FriendshipState
+  /** The caller's own submitted number strings that matched this person, as sent. */
+  phones: string[]
 }
 
 /**
@@ -315,18 +317,31 @@ export async function matchContacts(
   // profile `phone` field is free text anyone can type someone else's number
   // into. A last-8-digit match against that field let a caller learn which
   // account claimed a number, and sweep a suffix across every country code.
-  const numbers = Array.from(
-    new Set(phoneNumbers.map((p) => phoneToE164(p)).filter(Boolean))
-  )
+  // Each E.164 number back to the strings the caller sent for it, so a match
+  // can say which of the caller's own contacts it is (the app used to guess
+  // by display name). Echoes only what the caller submitted.
+  const rawByNumber = new Map<string, string[]>()
+  for (const raw of phoneNumbers) {
+    const e164 = phoneToE164(raw)
+    if (!e164) continue
+    const list = rawByNumber.get(e164)
+    if (list) list.push(raw)
+    else rawByNumber.set(e164, [raw])
+  }
+  const numbers = Array.from(rawByNumber.keys())
   if (numbers.length === 0) return []
 
   // getUsers accepts at most 100 identifiers per call.
   const uids = new Set<string>()
+  const phonesByUid = new Map<string, string[]>()
   for (let i = 0; i < numbers.length; i += 100) {
     const chunk = numbers.slice(i, i + 100).map((phoneNumber) => ({ phoneNumber }))
     const result = await adminAuth.getUsers(chunk)
     for (const u of result.users as any[]) {
-      if (u.uid !== userId && !u.disabled && u.phoneNumber) uids.add(u.uid)
+      if (u.uid !== userId && !u.disabled && u.phoneNumber) {
+        uids.add(u.uid)
+        phonesByUid.set(u.uid, rawByNumber.get(u.phoneNumber) || [])
+      }
     }
   }
   if (uids.size === 0) return []
@@ -368,6 +383,7 @@ export async function matchContacts(
       photoURL: data.photo_url || data.photoURL || '',
       isVerified: Boolean(data.is_verified),
       friendship: friendshipStateFrom(conn, userId, id),
+      phones: phonesByUid.get(id) || [],
     }
   })
 }

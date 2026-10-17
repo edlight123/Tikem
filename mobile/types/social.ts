@@ -69,6 +69,11 @@ export interface FriendsGoingResponse {
 
 export interface ContactMatch extends PublicUserSummary {
   friendship: FriendshipState;
+  /**
+   * The numbers this client sent that matched the person, echoed as sent.
+   * Missing from servers before 2026-10-16: fall back to matching by name.
+   */
+  phones?: string[];
 }
 
 export interface EventSocialAttendance {

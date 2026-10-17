@@ -10,7 +10,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Share } from 'react-native';
 import { normalizeInviteCode, safeInviteEventId, whatsappPhone } from './inviteLinkParse';
 
-export { normalizeInviteCode, parseInviteUrl, whatsappPhone } from './inviteLinkParse';
+export {
+  contactPhoneE164,
+  matchedContactIds,
+  normalizeInviteCode,
+  parseInviteUrl,
+  smsUrl,
+  whatsappPhone,
+} from './inviteLinkParse';
 
 const KEY = '@Tikem:inviteCode';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
