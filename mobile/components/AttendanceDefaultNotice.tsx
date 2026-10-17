@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { X } from 'lucide-react-native';
-import { useTheme } from '../contexts/ThemeContext';
+import { StyleSheet } from 'react-native';
+import { Eye } from 'lucide-react-native';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
-import WhitePillCTA from './WhitePillCTA';
-import { radius } from '../theme/tokens';
+import AnnouncementCard from './AnnouncementCard';
 import { attendanceVisibilityUnset } from '../types/social';
 
 interface Props {
@@ -22,7 +20,6 @@ interface Props {
  * Dismissing it or opening the settings both count as seen.
  */
 export default function AttendanceDefaultNotice({ onOpenSettings }: Props) {
-  const { colors } = useTheme();
   const { t } = useI18n();
   const { user, userProfile, updateUserProfile } = useAuth();
   const [hidden, setHidden] = useState(false);
@@ -45,50 +42,24 @@ export default function AttendanceDefaultNotice({ onOpenSettings }: Props) {
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface }]}>
-      <Pressable
-        onPress={markSeen}
-        hitSlop={10}
-        style={styles.close}
-        accessibilityRole="button"
-        accessibilityLabel={t('home.attendanceNotice.dismiss')}
-      >
-        <X size={16} color={colors.textSecondary} strokeWidth={2.2} />
-      </Pressable>
-      <Text style={[styles.body, { color: colors.text }]}>{t('home.attendanceNotice.body')}</Text>
-      <WhitePillCTA
-        compact
-        label={t('home.attendanceNotice.cta')}
-        style={styles.cta}
-        onPress={() => {
+    <AnnouncementCard
+      icon={Eye}
+      eyebrow={t('home.attendanceNotice.eyebrow')}
+      title={t('home.attendanceNotice.title')}
+      body={t('home.attendanceNotice.body')}
+      primary={{
+        label: t('home.attendanceNotice.cta'),
+        onPress: () => {
           markSeen();
           onOpenSettings();
-        }}
-      />
-    </View>
+        },
+      }}
+      secondary={{ label: t('home.attendanceNotice.gotIt'), onPress: markSeen }}
+      style={styles.card}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    padding: 16,
-    paddingRight: 40,
-    borderRadius: radius.lg,
-  },
-  close: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-  },
-  body: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  cta: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-  },
+  card: { marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
 });

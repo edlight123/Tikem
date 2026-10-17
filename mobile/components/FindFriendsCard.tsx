@@ -1,15 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
-import { X } from 'lucide-react-native';
+import { Users } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { colors as T, radius } from '../theme/tokens';
 import { db, isDemoMode } from '../config/firebase';
 import { fetchConnections } from '../lib/api/social';
-import SectionHeader from './SectionHeader';
+import AnnouncementCard from './AnnouncementCard';
 
 const DISMISS_PREFIX = 'tikem_find_friends_card_done_';
 
@@ -75,57 +73,14 @@ export default function FindFriendsCard({ variant, style }: { variant: 'profile'
   if (!user || !visible) return null;
 
   return (
-    <View style={style}>
-      <SectionHeader
-        title={t('profile.findFriends.title')}
-        trailing={
-          variant === 'home' ? (
-            <TouchableOpacity
-              onPress={markDone}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('profile.findFriends.dismiss')}
-            >
-              <X size={18} color={T.textTertiary} />
-            </TouchableOpacity>
-          ) : undefined
-        }
-      />
-      <View style={styles.card}>
-        <Text style={styles.body}>{t('profile.findFriends.body')}</Text>
-        <TouchableOpacity style={styles.cta} onPress={open} activeOpacity={0.85} accessibilityRole="button">
-          <Text style={styles.ctaText}>{t('profile.findFriends.cta')}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <AnnouncementCard
+      icon={Users}
+      eyebrow={t('profile.findFriends.eyebrow')}
+      title={t('profile.findFriends.title')}
+      body={t('profile.findFriends.body')}
+      primary={{ label: t('profile.findFriends.cta'), onPress: open }}
+      secondary={variant === 'home' ? { label: t('profile.findFriends.notNow'), onPress: markDone } : undefined}
+      style={style}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  // A fill, never a hairline around an empty box.
-  card: {
-    backgroundColor: T.surface,
-    borderRadius: radius.lg,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  body: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    color: T.textSecondary,
-  },
-  cta: {
-    backgroundColor: T.white,
-    borderRadius: radius.button,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-  },
-  ctaText: {
-    color: T.onWhite,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});

@@ -210,7 +210,7 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
 
           <View style={styles.textContainer}>
             <Text style={styles.title} numberOfLines={2}>
-              {t('locationBanner.title', { inCountry })}
+              {t('locationBanner.title', { inCountry }).toLowerCase()}
             </Text>
             {!!city && (
               <Text style={styles.subtitle} numberOfLines={1}>
@@ -305,11 +305,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     paddingRight: 8,
   },
+  // Editorial serif, lowercased at the call site (house voice, as in
+  // AnnouncementCard).
   title: {
-    fontSize: 15,
-    lineHeight: 19,
-    fontWeight: '700',
-    letterSpacing: -0.2,
+    fontFamily: 'InstrumentSerif_400Regular',
+    fontSize: 22,
+    lineHeight: 26,
     color: colors.text,
   },
   subtitle: {

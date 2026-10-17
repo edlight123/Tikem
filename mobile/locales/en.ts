@@ -458,9 +458,11 @@ export default {
       a11y: 'Change profile photo',
     },
     findFriends: {
-      title: 'Find your friends',
-      body: 'See who you know on Tikèm. The more friends you add, the better your recommendations.',
+      eyebrow: "Friends",
+      title: "Find your people",
+      body: "See who you know on Tikèm. More friends, better picks, and you can invite them to events.",
       cta: 'Find friends',
+      notNow: "Not now",
       dismiss: 'Dismiss',
     },
     version: 'Version',
@@ -1025,8 +1027,11 @@ export default {
   },
   home: {
     attendanceNotice: {
-      body: 'Your friends can now see which events you\'re going to. Change this in Privacy settings.',
-      cta: 'Privacy settings',
+      eyebrow: "Privacy",
+      title: "Your friends can see your plans",
+      body: "Events you're going to now show to your friends. You choose who sees them.",
+      cta: "Review privacy",
+      gotIt: "Got it",
       dismiss: 'Dismiss',
     },
     nationalDay: {

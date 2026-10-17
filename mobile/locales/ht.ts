@@ -457,9 +457,11 @@ export default {
       a11y: 'Chanje foto pwofil',
     },
     findFriends: {
-      title: 'Jwenn zanmi ou yo',
-      body: 'Gade ki moun ou konnen sou Tikèm. Plis zanmi ou ajoute, plis rekòmandasyon ou yo ap bon.',
+      eyebrow: "Zanmi",
+      title: "Jwenn moun pa w yo",
+      body: "Gade ki moun ou konnen sou Tikèm. Plis zanmi, pi bon rekòmandasyon, epi ou ka envite yo nan evènman.",
       cta: 'Jwenn zanmi',
+      notNow: "Pita",
       dismiss: 'Fèmen',
     },
     version: 'Vèsyon',
@@ -651,8 +653,11 @@ export default {
   },
   home: {
     attendanceNotice: {
-      body: 'Zanmi w yo kapab wè ki evènman w prale kounye a. Chanje sa nan paramèt konfidansyalite yo.',
-      cta: 'Konfidansyalite',
+      eyebrow: "Konfidansyalite",
+      title: "Zanmi ou ka wè ki kote w prale",
+      body: "Kounye a zanmi ou ka wè evènman ou prale yo. Se ou ki chwazi kiyès ki ka wè yo.",
+      cta: "Gade paramèt yo",
+      gotIt: "Mwen konprann",
       dismiss: 'Fèmen',
     },
     nationalDay: {

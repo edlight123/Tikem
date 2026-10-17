@@ -485,9 +485,11 @@ export default {
       a11y: 'Changer la photo de profil',
     },
     findFriends: {
-      title: 'Retrouvez vos amis',
-      body: 'Voyez qui vous connaissez sur Tikèm. Plus vous ajoutez d’amis, meilleures sont vos recommandations.',
+      eyebrow: "Amis",
+      title: "Retrouvez vos proches",
+      body: "Voyez qui vous connaissez sur Tikèm. Plus d’amis, de meilleures suggestions, et des invitations aux événements.",
       cta: 'Trouver des amis',
+      notNow: "Plus tard",
       dismiss: 'Masquer',
     },
     version: 'Version',
@@ -681,8 +683,11 @@ export default {
   },
   home: {
     attendanceNotice: {
-      body: 'Vos amis peuvent désormais voir les événements auxquels vous allez. Modifiez cela dans les paramètres de confidentialité.',
-      cta: 'Confidentialité',
+      eyebrow: "Confidentialité",
+      title: "Vos amis voient vos sorties",
+      body: "Les événements où vous allez sont maintenant visibles par vos amis. C'est vous qui choisissez qui les voit.",
+      cta: "Voir la confidentialité",
+      gotIt: "Compris",
       dismiss: 'Fermer',
     },
     nationalDay: {
