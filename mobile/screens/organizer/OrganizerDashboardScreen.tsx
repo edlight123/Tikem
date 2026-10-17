@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import OrgMark from '../../components/OrgMark';
 import {
   View,
   Text,
@@ -132,7 +133,6 @@ export default function OrganizerDashboardScreen() {
   const displayName =
     userProfile?.organization_name || userProfile?.full_name || t('organizerDashboard.organizerFallback');
   const avatarUri = userProfile?.organization_logo || userProfile?.photo_url || null;
-  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
 
   const greeting = (
     <View style={[styles.greetingRow, { paddingTop: insets.top + 16 }]}>
@@ -154,7 +154,7 @@ export default function OrganizerDashboardScreen() {
             transition={150}
           />
         ) : (
-          <Text style={styles.avatarInitial}>{initial}</Text>
+          <OrgMark size={56} color={colors.text} />
         )}
       </View>
     </View>

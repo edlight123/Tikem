@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import OrgMark from '../components/OrgMark';
 import {
   View,
   Text,
@@ -564,9 +565,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                     style={styles.avatarImage}
                   />
                 ) : (
-                  <Text style={styles.avatarText}>
-                    {((organizer.organization_name || organizer.full_name)?.[0] || '?').toUpperCase()}
-                  </Text>
+                  <OrgMark size={52} color="#000000" />
                 )}
               </View>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import OrgMark from '../components/OrgMark';
 import { 
   View, 
   Text, 
@@ -829,9 +830,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   cachePolicy="memory-disk"
                 />
               ) : (
-                <Text style={styles.hostedByAvatarText}>
-                  {(event.users?.organization_name || event.users?.full_name || event.organizer_name || 'E')[0].toUpperCase()}
-                </Text>
+                <OrgMark size={44} color={colors.text} />
               )}
             </View>
             <Text style={styles.hostBylineTopName} numberOfLines={1}>
@@ -973,9 +972,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                       cachePolicy="memory-disk"
                     />
                   ) : (
-                    <Text style={styles.hostedByAvatarText}>
-                      {(event.users?.organization_name || event.users?.full_name || event.organizer_name || 'E')[0].toUpperCase()}
-                    </Text>
+                    <OrgMark size={44} color={colors.text} />
                   )}
                 </View>
                 <View style={styles.hostedByInfo}>
