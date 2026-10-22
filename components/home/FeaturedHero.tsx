@@ -17,8 +17,6 @@ import type { HomeEvent } from '@/lib/home/feed'
 import { metroOf } from '@/lib/home/feed'
 import { eventWhen } from '@/lib/home/format'
 import { getEventPriceLabel } from '@/lib/discover/helpers'
-import { culturalCategoryFor } from '@/lib/categories'
-import { normalizeEventCategory } from '@/lib/filters/config'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -34,10 +32,6 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
   if (!count) return null
   const ev = events[Math.min(index, count - 1)]
   const city = metroOf(ev.city, ev.country)
-  const world = culturalCategoryFor(normalizeEventCategory(ev.category)).label
-  const subtitle =
-    ev.blurb ||
-    (city ? t('home.hero.in_city', { world, city, defaultValue: `${world} in ${city}` }) : world)
   const venue = [ev.venue_name, city].filter(Boolean).join(', ')
   const price = getEventPriceLabel(ev, t)
   const lineup =
@@ -105,12 +99,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             <h2 className="break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
               {ev.title}
             </h2>
-            {subtitle && (
-              <p className="mt-4 line-clamp-2 max-w-md font-display italic text-white/55 !text-[clamp(17px,1.5vw,21px)] !leading-[1.25]">
-                {subtitle}
-              </p>
-            )}
-            <p className="mt-5 font-mono text-[11px] uppercase leading-relaxed tracking-[0.08em] text-white/50">
+            <p className="mt-5 truncate whitespace-nowrap font-mono text-[10px] uppercase leading-relaxed tracking-[0.04em] text-white/50 sm:text-[11px] sm:tracking-[0.08em]">
               {eventWhen(ev.start_datetime, zone, i18n.language)}
               {venue && <> · {venue}</>}
             </p>

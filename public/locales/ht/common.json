@@ -697,8 +697,7 @@
       "lineup": "Atis",
       "prev": "Evènman anvan an",
       "next": "Pwochen evènman",
-      "slide": "{{i}} sou {{n}}",
-      "in_city": "{{world}} nan {{city}}"
+      "slide": "{{i}} sou {{n}}"
     },
     "week": {
       "title": "semèn sa a",

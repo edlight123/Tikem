@@ -697,8 +697,7 @@
       "lineup": "Line-up",
       "prev": "Événement précédent",
       "next": "Événement suivant",
-      "slide": "{{i}} sur {{n}}",
-      "in_city": "{{world}} à {{city}}"
+      "slide": "{{i}} sur {{n}}"
     },
     "week": {
       "title": "cette semaine",
