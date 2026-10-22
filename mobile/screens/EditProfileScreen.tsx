@@ -329,6 +329,8 @@ export default function EditProfileScreen() {
 
             <SelectField
               label={t('profile.defaultCountry')}
+              labelStyle={styles.label}
+              fieldStyle={styles.selectField}
               value={COUNTRIES.find((c) => c.code === country)?.name || ''}
               options={COUNTRIES.map((c) => c.name)}
               placeholder={t('profile.placeholders.country')}
@@ -342,6 +344,8 @@ export default function EditProfileScreen() {
             />
             <SelectField
               label={t('profile.defaultCity')}
+              labelStyle={styles.label}
+              fieldStyle={styles.selectField}
               value={city}
               options={citiesForCountry}
               placeholder={t('profile.placeholders.city')}
@@ -480,6 +484,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.text,
       backgroundColor: T.surfaceRaised,
     },
+    // The country/city pickers wear the inputs' fill, not SelectField's
+    // default hairline box, so the form reads as one set of controls.
+    selectField: { borderWidth: 0, backgroundColor: T.surfaceRaised, minHeight: 50 },
     bioInput: { minHeight: 88, textAlignVertical: 'top' },
     charCount: { marginTop: 4, fontSize: 11, color: colors.textTertiary, textAlign: 'right' },
     dialRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
