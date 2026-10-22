@@ -7,6 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { fetchEventSocial } from '../lib/api/social';
 import { colors as T, radius } from '../theme/tokens';
 import { useI18n } from '../contexts/I18nContext';
+import SectionHeader from './SectionHeader';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
 
@@ -77,8 +78,8 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
 
   if (visibility === 'hidden') return null;
 
-  // Editorial heading, same voice as "about" and "hosted by" above it.
-  const heading = <Text style={styles.heading}>{t('whosGoing.title').toLowerCase()}</Text>;
+  // The shared section rail, same component as "about" and "hosted by" above.
+  const heading = <SectionHeader title={t('whosGoing.title')} />;
 
   if (loading) {
     return (
@@ -203,12 +204,6 @@ const getStyles = (colors: any) =>
     section: {
       marginTop: 32,
     },
-    heading: {
-      fontFamily: 'InstrumentSerif_400Regular',
-      fontSize: 26,
-      color: colors.text,
-      marginBottom: 16,
-    },
     pile: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -253,7 +248,8 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
       gap: 8,
       backgroundColor: T.surface,
-      borderRadius: radius.xl,
+      // A rounded rectangle, not a stadium: no pill shapes (house rule).
+      borderRadius: radius.md,
       paddingLeft: 6,
       paddingRight: 14,
       paddingVertical: 6,

@@ -55,6 +55,7 @@ import FollowButton from '../components/FollowButton';
 import CountdownTimer from '../components/CountdownTimer';
 import VenueStaticMap from '../components/VenueStaticMap';
 import WhosGoing from '../components/WhosGoing';
+import SectionHeader from '../components/SectionHeader';
 import { guestlistVisibilityFrom } from '../lib/guestlistVisibility';
 import ContactOrganizerModal from '../components/ContactOrganizerModal';
 import ReportContentModal from '../components/ReportContentModal';
@@ -910,7 +911,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('eventDetail.sections.about').toLowerCase()}</Text>
+            <SectionHeader title={t('eventDetail.sections.about')} />
             <Text style={styles.description}>{event.description}</Text>
           </View>
 
@@ -956,7 +957,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
               byline-above-title experiment (tester ask): read the event first,
               then who is throwing it, with Follow and Contact right here. */}
           <View style={styles.hostByline}>
-            <Text style={styles.sectionTitle}>{t('eventDetail.sections.hostedBy').toLowerCase()}</Text>
+            <SectionHeader title={t('eventDetail.sections.hostedBy')} />
             <View style={styles.hostedByCard}>
               <TouchableOpacity 
                 style={styles.hostedByMain}
@@ -1437,16 +1438,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderLight,
   },
-  // Editorial section heading (Instrument Serif, lowercased at the call
-  // site), the same voice as SectionHeader. The old 18pt bold sans read as a
-  // generic template heading against the serif event title.
-  sectionTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
-    fontSize: 26,
-    lineHeight: 30,
-    color: colors.text,
-    marginBottom: 10,
-  },
+  // Section headings go through components/SectionHeader (the house rail:
+  // Instrument Serif 22, lowercased), so About, Hosted by and Who's going all
+  // read in one voice. A hand-rolled heading here drifted to 26pt.
   description: {
     fontSize: 15,
     color: colors.text,

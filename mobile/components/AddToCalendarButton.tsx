@@ -162,7 +162,8 @@ export default function AddToCalendarButton({ event, style }: AddToCalendarButto
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
-  // POSH: a quiet secondary — raised surface, hairline border, neutral text.
+  // POSH: a quiet secondary: a surface fill and neutral text, no outline
+  // (fill, not a hairline; same step as the event page's other quiet rows).
   // No teal fill/border (teal stays a sparing accent, not a button style).
   // Label-only (no calendar glyph) and squared off to `radius.md`, the radius the
   // other quiet/secondary buttons on the event page use — the softer
@@ -172,10 +173,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     paddingVertical: 13,
     paddingHorizontal: 16,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
   },
   buttonText: {
     fontSize: 14,
@@ -192,8 +191,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingTop: 20,
     paddingBottom: 40,
     paddingHorizontal: 20,

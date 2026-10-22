@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Check, MessageSquare, Search, Share2, UserPlus, Users, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -102,6 +103,7 @@ export function InviteFriendsSheet({
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const needsPhone = usePhonePromptAvailable();
   const [friends, setFriends] = useState<InvitePickerFriend[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -286,7 +288,18 @@ export function InviteFriendsSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                // Sized to its content, capped below the status bar. The cap is
+                // a number, not '90%': a percentage height inside the auto-height
+                // KeyboardAvoidingView has nothing to resolve against.
+                maxHeight: windowHeight - insets.top - 24,
+                paddingBottom: Math.max(insets.bottom, 16) + 8,
+              },
+            ]}
+          >
             {/* Paints below the sheet's edge: on device the sheet stopped short
                 of the screen bottom and the page showed through the gap. */}
             <View pointerEvents="none" style={styles.bottomFill} />
@@ -608,15 +621,18 @@ export default function InviteFriendsRow({
 const getStyles = (colors: any) =>
   StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-    sheetWrap: { width: '100%' },
-    // A fixed tall sheet, not auto-height: the list gets the room and never
-    // collapses to a sliver behind the button.
+    // flexShrink so the keyboard's padding squeezes the sheet (and with it the
+    // list) instead of pushing the header off the top of the screen.
+    sheetWrap: { width: '100%', flexShrink: 1 },
+    // Auto-height up to the cap set inline: a short friend list gets a short
+    // sheet, a long one fills the cap and scrolls. The old fixed 90% height
+    // left the list a clipped half-row behind the button on device.
     sheet: {
       backgroundColor: colors.surface,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: 20,
-      height: '90%',
+      flexShrink: 1,
     },
     bottomFill: {
       position: 'absolute',
@@ -673,7 +689,8 @@ const getStyles = (colors: any) =>
       marginTop: 14,
     },
     searchInput: { flex: 1, fontSize: 16, color: colors.text },
-    list: { flex: 1, marginTop: 8 },
+    // Grows with its rows, shrinks (and scrolls) once the sheet hits its cap.
+    list: { flexGrow: 0, flexShrink: 1, marginTop: 8 },
     sectionLabel: {
       fontSize: 12,
       fontWeight: '700',
@@ -725,7 +742,7 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
       gap: 6,
       backgroundColor: colors.white,
-      borderRadius: radius.pill,
+      borderRadius: radius.chip,
       paddingHorizontal: 14,
       height: 34,
       minWidth: 88,
@@ -737,7 +754,7 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
       gap: 6,
       backgroundColor: colors.surfaceRaised,
-      borderRadius: radius.pill,
+      borderRadius: radius.chip,
       paddingHorizontal: 14,
       height: 34,
       minWidth: 88,

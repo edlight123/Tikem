@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +47,7 @@ export default function ContactOrganizerModal({
   const { t } = useI18n();
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [topic, setTopic] = useState<Topic>('event');
   const [message, setMessage] = useState('');
@@ -92,7 +94,17 @@ export default function ContactOrganizerModal({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheetWrap}
         >
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                // A number, not '88%': a percentage inside the auto-height
+                // KeyboardAvoidingView has nothing to resolve against.
+                maxHeight: windowHeight - insets.top - 24,
+                paddingBottom: Math.max(insets.bottom, 16) + 8,
+              },
+            ]}
+          >
             {/* Paints below the sheet's edge. On device the sheet stopped short
                 of the screen bottom and the page's "Event Ended" bar showed
                 through the gap; whatever opens that gap, the fill covers it. */}
@@ -218,7 +230,6 @@ const getStyles = (colors: any) =>
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: 20,
-      maxHeight: '88%',
     },
     bottomFill: {
       position: 'absolute',

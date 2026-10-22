@@ -160,9 +160,13 @@ export default function TieredTicketSelector({
       );
       
       const tiersSnapshot = await getDocs(tiersQuery);
+      // `id` goes LAST: quantities are keyed by tier id, so a stray `id` field
+      // in a tier document (an import, a copied tier) must never override the
+      // document id. Two tiers sharing an id would share one counter, and "+"
+      // on one row would light up the other.
       const tiersData = (tiersSnapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
       })) as TicketTier[])
         // A tier the organizer deactivated is refused by both checkout routes
         // ("This ticket tier is not available."), so it is not offered at all.
@@ -810,8 +814,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 11,
     color: colors.textTertiary,
   },
-  // Outlined 28pt glyph buttons (44pt touch target via STEPPER_HIT_SLOP) —
-  // deliberately unfilled so the row stays quiet.
+  // Filled 28pt glyph buttons (44pt touch target via STEPPER_HIT_SLOP). A
+  // fill, not a ring around nothing (POSH_DESIGN_BRIEF "Surfaces").
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -824,8 +828,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     width: 28,
     height: 28,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },

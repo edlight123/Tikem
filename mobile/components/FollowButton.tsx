@@ -161,8 +161,8 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
       ) : (
         <>
           <Ionicons
-            name={isFollowing ? 'checkmark-circle' : 'person-add'}
-            size={18}
+            name={isFollowing ? 'checkmark' : 'person-add'}
+            size={16}
             color={isFollowing ? colors.text : '#000000'}
           />
           <Text style={[styles.buttonText, isFollowing && styles.buttonTextFollowing]}>
@@ -179,26 +179,23 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
     borderRadius: radius.md,
     gap: 6,
   },
   loadingButton: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
     minWidth: 100,
   },
-  // POSH §2.2: primary follow = solid white pill (black label). "Following" is
-  // a dark-grey secondary. Teal never carries the follow CTA.
+  // POSH §2.2: primary follow = solid white (black label). "Following" is a
+  // quiet dark-grey fill, no outline (fill, not a hairline). Teal never
+  // carries the follow CTA.
   buttonNotFollowing: {
     backgroundColor: colors.white,
   },
   buttonFollowing: {
     backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   buttonText: {
     fontSize: 14,
@@ -218,7 +215,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   compactButtonFollowing: {
     backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
 });
