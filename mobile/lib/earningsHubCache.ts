@@ -222,10 +222,23 @@ export function refreshEarningsHub(userId: string): Promise<EarningsHubSnapshot>
   return p;
 }
 
-/** Fire-and-forget warm-up, e.g. from the organizer dashboard. */
+/** A prefetch skips the network when the snapshot in memory is this fresh. */
+const PREFETCH_FRESH_MS = 60_000;
+
+/**
+ * Fire-and-forget warm-up, e.g. from the organizer dashboard (which calls it on
+ * every focus). First pulls the persisted snapshot into memory, so the hub's
+ * synchronous peekEarningsHub() has numbers on its very first render even on a
+ * cold start, then refreshes from the network unless memory is already fresh.
+ */
 export function prefetchEarningsHub(userId: string | null | undefined): void {
   if (!userId) return;
-  refreshEarningsHub(userId).catch(() => {
-    // Silent: the hub retries on focus and falls back to its cached snapshot.
-  });
+  getCachedEarningsHub(userId)
+    .then((cached) => {
+      if (cached && Date.now() - cached.fetchedAt < PREFETCH_FRESH_MS) return;
+      return refreshEarningsHub(userId);
+    })
+    .catch(() => {
+      // Silent: the hub retries on focus and falls back to its cached snapshot.
+    });
 }

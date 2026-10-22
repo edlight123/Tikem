@@ -1266,6 +1266,11 @@ export default {
       performance: 'Performance',
       eventControls: 'Contrôles de l’événement',
     },
+    actionGroups: {
+      door: 'À l’entrée',
+      sales: 'Ventes',
+      promote: 'Promotion',
+    },
     actions: {
       scanTickets: 'Scanner des billets',
       staff: 'Équipe',

@@ -1669,6 +1669,11 @@ export default {
       performance: 'Performance',
       eventControls: 'Event Controls',
     },
+    actionGroups: {
+      door: 'At the door',
+      sales: 'Sales',
+      promote: 'Promote',
+    },
     actions: {
       scanTickets: 'Scan Tickets',
       staff: 'Team',
