@@ -676,7 +676,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     backgroundColor: 'transparent',
   },
   markAllText: {
@@ -687,7 +687,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   clearAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     backgroundColor: 'transparent',
   },
   clearAllText: {

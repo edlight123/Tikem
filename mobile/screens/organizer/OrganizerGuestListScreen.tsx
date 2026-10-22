@@ -663,7 +663,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     checkButton: {
       width: 40,
       height: 40,
-      borderRadius: radius.pill,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',

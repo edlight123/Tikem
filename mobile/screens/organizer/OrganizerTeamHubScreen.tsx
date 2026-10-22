@@ -165,11 +165,11 @@ export default function OrganizerTeamHubScreen() {
         {/* Identical header to the loaded branch: no in-flow -> overlay flash. */}
         {header}
         <View style={[styles.content, { paddingTop: headerH }]}>
-          <Skeleton width={120} height={18} radius={5} style={{ marginBottom: 14 }} />
+          <Skeleton width={120} height={18} radius={4} style={{ marginBottom: 14 }} />
           {[0, 1].map((i) => (
             <Skeleton key={i} width="100%" height={60} radius={RADIUS.md} style={{ marginBottom: 8 }} />
           ))}
-          <Skeleton width={150} height={18} radius={5} style={{ marginTop: 24, marginBottom: 14 }} />
+          <Skeleton width={150} height={18} radius={4} style={{ marginTop: 24, marginBottom: 14 }} />
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} width="100%" height={74} radius={RADIUS.lg} style={{ marginBottom: SPACING.md }} />
           ))}

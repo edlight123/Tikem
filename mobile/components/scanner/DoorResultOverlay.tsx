@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.xl,
   },
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   iconDisc: {
     width: 60,
     height: 60,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

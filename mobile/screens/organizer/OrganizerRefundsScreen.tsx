@@ -234,7 +234,7 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
         <View style={[styles.tabsWrap, { marginTop: headerH }]}>
           <View style={styles.tabsSkeletonRow}>
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} width={92} height={36} radius={999} />
+              <Skeleton key={i} width={92} height={36} radius={4} />
             ))}
           </View>
         </View>
@@ -243,12 +243,12 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
         {[0, 1].map((i) => (
           <View key={i} style={styles.requestCard}>
             <View style={styles.requestHeader}>
-              <Skeleton width="55%" height={16} radius={6} />
-              <Skeleton width={70} height={22} radius={11} />
+              <Skeleton width="55%" height={16} radius={4} />
+              <Skeleton width={70} height={22} radius={4} />
             </View>
             <View style={styles.requestDetails}>
               {['62%', '38%', '52%'].map((w, j) => (
-                <Skeleton key={j} width={w as `${number}%`} height={16} radius={6} />
+                <Skeleton key={j} width={w as `${number}%`} height={16} radius={4} />
               ))}
             </View>
             <Skeleton width="100%" height={58} radius={radius.sm} style={{ marginTop: 12 }} />

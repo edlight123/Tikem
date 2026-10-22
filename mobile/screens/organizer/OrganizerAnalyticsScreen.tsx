@@ -288,7 +288,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           <View style={styles.timeRangeContainer}>
             <View style={styles.timeRangeSkeletonRow}>
               {[0, 1, 2].map((i) => (
-                <Skeleton key={i} width={82} height={35} radius={999} />
+                <Skeleton key={i} width={82} height={35} radius={4} />
               ))}
             </View>
           </View>
@@ -306,23 +306,23 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           </View>
           {/* Sales chart card: title, 120-tall bar area, hairline baseline. */}
           <View style={styles.chartCard}>
-            <Skeleton width={130} height={16} radius={6} style={{ marginBottom: 20 }} />
+            <Skeleton width={130} height={16} radius={4} style={{ marginBottom: 20 }} />
             <View style={styles.chartSkeletonRow}>
               {[46, 78, 60, 100, 34, 88, 52].map((h, i) => (
-                <Skeleton key={i} width={24} height={h} radius={6} />
+                <Skeleton key={i} width={24} height={h} radius={4} />
               ))}
             </View>
             <View style={styles.chartBaseline} />
           </View>
           {/* Top events card: title + rank-circle rows. */}
           <View style={styles.sectionCard}>
-            <Skeleton width={170} height={16} radius={6} style={{ marginBottom: 16 }} />
+            <Skeleton width={170} height={16} radius={4} style={{ marginBottom: 16 }} />
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.eventRow}>
                 <Skeleton width={32} height={32} radius={radius.lg} style={{ marginRight: 12 }} />
                 <View style={styles.eventInfo}>
-                  <Skeleton width="65%" height={15} radius={6} />
-                  <Skeleton width="45%" height={13} radius={5} style={{ marginTop: 4 }} />
+                  <Skeleton width="65%" height={15} radius={4} />
+                  <Skeleton width="45%" height={13} radius={4} style={{ marginTop: 4 }} />
                 </View>
               </View>
             ))}
@@ -539,7 +539,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   chartBar: {
     width: 24,
     backgroundColor: colors.primary,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     minHeight: 3,
   },
   chartBarDim: {

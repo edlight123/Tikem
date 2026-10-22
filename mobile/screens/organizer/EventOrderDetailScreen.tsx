@@ -184,7 +184,7 @@ export default function EventOrderDetailScreen() {
           />
           {[96, 140, 120].map((h, i) => (
             <View key={i} style={{ marginTop: 28 }}>
-              <Skeleton width={110} height={18} radius={6} style={{ marginBottom: 14 }} />
+              <Skeleton width={110} height={18} radius={4} style={{ marginBottom: 14 }} />
               <Skeleton width="100%" height={h} radius={radius.lg} />
             </View>
           ))}

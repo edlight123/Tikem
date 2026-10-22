@@ -612,7 +612,7 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
       gap: 6,
       paddingVertical: 8,
-      borderRadius: 9,
+      borderRadius: radius.sm,
     },
     tabBtnActive: {
       backgroundColor: colors.surfaceRaised,

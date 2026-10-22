@@ -492,7 +492,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.chip,
+    borderRadius: radius.pill,
   },
   activeBadgeText: {
     color: '#FFF',
@@ -566,7 +566,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
-    borderRadius: 9,
+    borderRadius: radius.sm,
     padding: 3,
   },
   segment: {
@@ -574,15 +574,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   segmentFirst: {
-    borderTopLeftRadius: 6,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: radius.sm,
+    borderBottomLeftRadius: radius.sm,
   },
   segmentLast: {
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
+    borderTopRightRadius: radius.sm,
+    borderBottomRightRadius: radius.sm,
   },
   segmentActive: {
     backgroundColor: colors.surfaceRaised,

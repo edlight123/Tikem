@@ -212,8 +212,8 @@ export default function OrganizerEarningsHubScreen() {
     if (!moneyLoaded) {
       return (
         <View style={styles.balanceBlock}>
-          <Skeleton width="62%" height={48} radius={8} />
-          <Skeleton width="44%" height={12} radius={5} style={{ marginTop: 12 }} />
+          <Skeleton width="62%" height={48} radius={4} />
+          <Skeleton width="44%" height={12} radius={4} style={{ marginTop: 12 }} />
         </View>
       );
     }

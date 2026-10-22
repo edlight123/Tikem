@@ -221,7 +221,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   controlButton: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: radius.md,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',

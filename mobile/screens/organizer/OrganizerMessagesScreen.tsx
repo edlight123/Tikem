@@ -223,16 +223,16 @@ export default function OrganizerMessagesScreen() {
           onHeight={onHeight}
         />
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
-          <Skeleton width={160} height={22} radius={6} style={{ marginBottom: 14 }} />
+          <Skeleton width={160} height={22} radius={4} style={{ marginBottom: 14 }} />
           {[0, 1, 2].map((i) => (
             <View key={i} style={styles.card}>
               <View style={styles.cardHead}>
-                <Skeleton width="45%" height={15} radius={6} />
-                <Skeleton width={90} height={11} radius={5} />
+                <Skeleton width="45%" height={15} radius={4} />
+                <Skeleton width={90} height={11} radius={4} />
               </View>
-              <Skeleton width="100%" height={13} radius={5} style={{ marginTop: 10 }} />
-              <Skeleton width="70%" height={13} radius={5} style={{ marginTop: 6 }} />
-              <Skeleton width={120} height={11} radius={5} style={{ marginTop: 10 }} />
+              <Skeleton width="100%" height={13} radius={4} style={{ marginTop: 10 }} />
+              <Skeleton width="70%" height={13} radius={4} style={{ marginTop: 6 }} />
+              <Skeleton width={120} height={11} radius={4} style={{ marginTop: 10 }} />
             </View>
           ))}
         </ScrollView>

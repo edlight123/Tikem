@@ -215,8 +215,8 @@ const getStyles = (colors: any) =>
     },
     sheet: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: radius.lg,
+      borderTopRightRadius: radius.lg,
       paddingHorizontal: 20,
       maxHeight: '88%',
     },
@@ -259,7 +259,7 @@ const getStyles = (colors: any) =>
     close: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',

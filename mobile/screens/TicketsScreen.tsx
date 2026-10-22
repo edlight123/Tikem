@@ -121,15 +121,15 @@ function rowStatusFor(
 function TicketsListSkeleton({ styles }: { styles: ReturnType<typeof getStyles> }) {
   return (
     <View>
-      <Skeleton width={120} height={12} radius={5} style={styles.skeletonSectionHeader} />
+      <Skeleton width={120} height={12} radius={4} style={styles.skeletonSectionHeader} />
       {Array.from({ length: 4 }).map((_, i) => (
         <View key={i} style={styles.ticketRow}>
-          <Skeleton width={POSTER_W} height={POSTER_H} radius={8} />
+          <Skeleton width={POSTER_W} height={POSTER_H} radius={4} />
           <View style={styles.ticketBody}>
-            <Skeleton width={'88%'} height={18} radius={6} />
-            <Skeleton width={'64%'} height={12} radius={5} style={{ marginTop: 6 }} />
-            <Skeleton width={'50%'} height={12} radius={5} style={{ marginTop: 6 }} />
-            <Skeleton width={'40%'} height={11} radius={5} style={{ marginTop: 8 }} />
+            <Skeleton width={'88%'} height={18} radius={4} />
+            <Skeleton width={'64%'} height={12} radius={4} style={{ marginTop: 6 }} />
+            <Skeleton width={'50%'} height={12} radius={4} style={{ marginTop: 6 }} />
+            <Skeleton width={'40%'} height={11} radius={4} style={{ marginTop: 8 }} />
           </View>
         </View>
       ))}

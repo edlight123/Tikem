@@ -1274,7 +1274,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: radius.button,
   },
   retryButtonText: {
     color: '#FFF',
@@ -1303,7 +1303,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   heroPoster: {
     width: POSTER_W,
     aspectRatio: 4 / 5,
-    borderRadius: 0,
+    borderRadius: radius.poster,
     overflow: 'hidden',
     backgroundColor: colors.surfaceMuted,
     shadowColor: '#000',
@@ -1343,7 +1343,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   iconButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.md,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1558,7 +1558,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   contactOrganizerIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1623,7 +1623,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   accessCard: {
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: radius.lg,
     padding: 22,
     gap: 14,
   },
@@ -1636,7 +1636,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   accessInput: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 16,
@@ -1651,7 +1651,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   accessButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: radius.button,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',

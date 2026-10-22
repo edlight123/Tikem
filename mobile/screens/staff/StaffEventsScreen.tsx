@@ -196,8 +196,8 @@ export default function StaffEventsScreen() {
               <View key={i} style={styles.skeletonRow}>
                 <Skeleton width={72} aspectRatio={4 / 5} radius={radius.poster} />
                 <View style={styles.skeletonText}>
-                  <Skeleton width="75%" height={16} radius={6} />
-                  <Skeleton width="55%" height={12} radius={5} style={{ marginTop: 8 }} />
+                  <Skeleton width="75%" height={16} radius={4} />
+                  <Skeleton width="55%" height={12} radius={4} style={{ marginTop: 8 }} />
                 </View>
               </View>
             ))}

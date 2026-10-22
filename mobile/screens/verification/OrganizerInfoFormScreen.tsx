@@ -365,7 +365,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   radio: {
     width: 20,
     height: 20,
-    borderRadius: radius.chip,
+    borderRadius: radius.pill,
     borderWidth: 2,
     borderColor: colors.primary,
     marginRight: 8,

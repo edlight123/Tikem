@@ -74,13 +74,15 @@ export const font = {
   monoRegular: 'JetBrainsMono_400Regular',
 } as const;
 
-// `pill: 999` is retained ONLY for true circles (avatars, round icon buttons,
-// dots, spinners). Under the platform-wide de-pill, WIDE stadium shapes use a
-// rounded rectangle instead: `button` for buttons/toggles/tabs/CTAs, `chip` for
-// small chips / badges / counts.
-// `poster`: a whisper of rounding on artwork (owner: "not fully sharp —
-// 2–5% is okay"). Everything chrome-like uses the larger steps.
-export const radius = { none: 0, poster: 4, sm: 8, chip: 10, md: 12, button: 14, lg: 16, xl: 20, pill: 999 } as const;
+// ONE corner radius across the whole mobile app: 4px, the same as the poster.
+// This is a brand rule from the owner. Every step below (sm, chip, md, button,
+// lg, xl) is 4 so existing imports keep working; do not reintroduce larger
+// values. Bottom sheets round their top corners at 4 too.
+// `pill: 999` (or `size / 2`) is ONLY for TRUE CIRCLES: avatars, profile
+// photos, status dots, radio buttons, toggle thumbs, small count badges,
+// pagination dots and the centre "+" tab button. Never use it for a wide
+// shape (button, chip, search bar, filter, tab) - those take 4.
+export const radius = { none: 0, poster: 4, sm: 4, chip: 4, md: 4, button: 4, lg: 4, xl: 4, pill: 999 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 

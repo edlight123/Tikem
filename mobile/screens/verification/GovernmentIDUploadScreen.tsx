@@ -562,7 +562,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 10,
-    borderRadius: radius.pill ?? 999,
+    borderRadius: radius.chip,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,

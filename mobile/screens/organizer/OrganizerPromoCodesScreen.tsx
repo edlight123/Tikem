@@ -369,24 +369,24 @@ export default function OrganizerPromoCodesScreen() {
           <View style={styles.section}>
             {/* Section label + "New code" pill on one row, like the loaded list. */}
             <View style={styles.sectionTitleRow}>
-              <Skeleton width={110} height={12} radius={5} />
+              <Skeleton width={110} height={12} radius={4} />
               <Skeleton width={104} height={32} radius={radius.button} />
             </View>
             {/* Active / Expired segmented pills. */}
             <View style={[styles.tabsWrap, styles.tabsSkeletonRow]}>
-              <Skeleton width={96} height={35} radius={999} />
-              <Skeleton width={96} height={35} radius={999} />
+              <Skeleton width={96} height={35} radius={4} />
+              <Skeleton width={96} height={35} radius={4} />
             </View>
             {/* Compact promo cards: code+discount header row, claimed/expiry meta. */}
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.promoCard}>
                 <View style={styles.promoHeader}>
-                  <Skeleton width={130} height={17} radius={6} />
-                  <Skeleton width={44} height={15} radius={5} />
+                  <Skeleton width={130} height={17} radius={4} />
+                  <Skeleton width={44} height={15} radius={4} />
                 </View>
                 <View style={styles.promoSkeletonMetaRow}>
-                  <Skeleton width={96} height={12} radius={5} />
-                  <Skeleton width={72} height={12} radius={5} />
+                  <Skeleton width={96} height={12} radius={4} />
+                  <Skeleton width={72} height={12} radius={4} />
                 </View>
               </View>
             ))}

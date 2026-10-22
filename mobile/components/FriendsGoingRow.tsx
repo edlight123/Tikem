@@ -76,7 +76,7 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
       gap: 12,
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: 4,
       paddingHorizontal: 14,
       paddingVertical: 12,
       marginBottom: 20,

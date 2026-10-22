@@ -63,7 +63,7 @@ export default function TicketQRCard({
           logo={require('../assets/tikem_logo_color.png')}
           logoSize={44}
           logoBackgroundColor="#FFFFFF"
-          logoBorderRadius={6}
+          logoBorderRadius={radius.poster}
         />
       </View>
 

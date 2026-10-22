@@ -113,7 +113,7 @@ const getStyles = (colors: any) =>
     card: {
       width: 148,
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: 4,
       padding: 12,
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -141,7 +141,7 @@ const getStyles = (colors: any) =>
     contactsIcon: {
       width: 64,
       height: 64,
-      borderRadius: 32,
+      borderRadius: 4,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
