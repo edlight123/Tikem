@@ -61,9 +61,17 @@ interface NavbarProps {
    * supplies the band's single bottom edge.
    */
   flush?: boolean
+  /**
+   * An opaque black bar instead of the frosted one. For the homepage, whose
+   * city row sits right under the nav on the same black: through the frosted
+   * bar that row's text showed as it slid underneath (a page reloaded a few
+   * pixels down opened with "New York · Change country" ghosting under the
+   * nav), and the bar's #0a0a0a read as a second tone above the row.
+   */
+  solid?: boolean
 }
 
-export default function Navbar({ user, isAdmin = false, flush = false }: NavbarProps) {
+export default function Navbar({ user, isAdmin = false, flush = false, solid = false }: NavbarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -155,7 +163,11 @@ export default function Navbar({ user, isAdmin = false, flush = false }: NavbarP
     'block w-full text-left px-4 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white transition-colors duration-200'
 
   return (
-    <nav className={`sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl ${flush ? '' : 'border-b border-white/10'}`}>
+    <nav
+      className={`sticky top-0 z-50 ${solid ? 'bg-black' : 'bg-[#0a0a0a]/80 backdrop-blur-xl'} ${
+        flush ? '' : 'border-b border-white/10'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-14 sm:h-16">
           <div className="flex items-center">

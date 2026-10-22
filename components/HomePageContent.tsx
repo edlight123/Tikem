@@ -68,7 +68,7 @@ export default function HomePageContent({
     <>
       {/* The page's one h1 names the brand; the rotating hero event is an h2. */}
       <h1 className="sr-only">Tikèm (Tikem): event tickets in Haiti and the diaspora</h1>
-      <FeaturedHero events={hero} now={now} zone={zone} />
+      <FeaturedHero events={hero} zone={zone} />
       <PosterFilmStrip events={filmStrip} />
       <div className="mx-auto max-w-7xl space-y-20 px-4 pb-20 pt-16 sm:space-y-24 sm:px-6 sm:pt-20 lg:space-y-28 lg:px-8 lg:pb-28">
         {/* Nothing listed here: say so first, then show what is. */}

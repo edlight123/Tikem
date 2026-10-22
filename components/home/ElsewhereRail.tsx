@@ -74,7 +74,7 @@ export default function ElsewhereRail({
         cta={t('home.see_all', { defaultValue: 'see all' })}
         ctaTone="quiet"
       />
-      <EventRail events={events} />
+      <EventRail events={events} contained />
     </section>
   )
 }

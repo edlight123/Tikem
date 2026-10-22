@@ -101,7 +101,7 @@ export default function NationalDayBanner({
       {showCta && (
         <Link
           href={href}
-          className="mt-6 inline-flex h-12 items-center self-start rounded-full bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          className="mt-6 inline-flex h-12 items-center self-start rounded bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
           {t('home.nationalDay.see_events', { defaultValue: 'See events' })}
         </Link>
@@ -136,7 +136,7 @@ export default function NationalDayBanner({
       <script dangerouslySetInnerHTML={{ __html: hideIfDismissed }} />
       <div className="relative">
         {/* Phone and tablet: the poster, words on the scrim. */}
-        <div className="relative overflow-hidden rounded-2xl bg-white/[0.045] lg:hidden">
+        <div className="relative overflow-hidden rounded bg-white/[0.045] lg:hidden">
           <div className="relative aspect-[4/5] max-h-[78vh] w-full sm:aspect-[16/11]">
             <Image
               src={art.src}
@@ -161,7 +161,7 @@ export default function NationalDayBanner({
         </div>
 
         {/* Desktop: words on a fill, the art at its own 4:5 on the right. */}
-        <div className="hidden overflow-hidden rounded-2xl bg-white/[0.045] lg:grid lg:grid-cols-12">
+        <div className="hidden overflow-hidden rounded bg-white/[0.045] lg:grid lg:grid-cols-12">
           <div className="flex flex-col justify-end p-12 lg:col-span-7 xl:p-14">{words}</div>
           <div className="relative aspect-[4/5] max-h-[520px] w-full lg:col-span-5">
             <Image src={art.src} alt={art.alt} fill sizes="(min-width: 1024px) 40vw, 1px" className="object-cover" />
@@ -179,7 +179,7 @@ export default function NationalDayBanner({
           title={t('home.nationalDay.dismiss', {
             defaultValue: 'Hide this banner',
           })}
-          className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full text-white/60 outline-none transition-colors [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+          className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded text-white/60 outline-none transition-colors [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-white/70"
         >
           <X aria-hidden className="h-5 w-5" strokeWidth={2} />
         </button>

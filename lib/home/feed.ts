@@ -38,6 +38,8 @@ export interface HomeEvent {
   tickets_sold: number
   total_tickets: number
   featured: boolean
+  /** A sample listing (lib/home/feed isTemplateEvent): never the hero. */
+  template: boolean
   lineup: string[]
 }
 
@@ -53,6 +55,29 @@ function toIso(v: any): string | null {
   if (typeof v?.seconds === 'number') return new Date(v.seconds * 1000).toISOString()
   const d = new Date(v)
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+/**
+ * A template (sample) listing: the free events scripts/seed-free-template-
+ * events.mjs seeds so a new organizer sees what a listing looks like. They
+ * stay browsable, but a sample must never be the page's headline. Read off
+ * the stored flags (the seeder's `tags: ['template']` and its seed_batch),
+ * never the description text; `is_template` is the shaped field the discover
+ * read passes through.
+ */
+export function isTemplateEvent(e: any): boolean {
+  if (e?.is_template === true || e?.template === true) return true
+  if (Array.isArray(e?.tags) && e.tags.some((t: unknown) => str(t).toLowerCase() === 'template')) return true
+  return str(e?.seed_batch).startsWith('free-templates')
+}
+
+/**
+ * The identity of a picture, for "no image twice on the page": the URL
+ * without its query, so one photo requested at two sizes (or a storage URL
+ * with a fresh token) still counts once.
+ */
+export function imageKey(url: string | null | undefined): string {
+  return str(url).split('?')[0].trim()
 }
 
 /** The first sentence of a description, or '' when there is no short one. */
@@ -95,6 +120,7 @@ export function toHomeEvent(e: any): HomeEvent | null {
     tickets_sold: Math.max(0, num(e.tickets_sold)),
     total_tickets: Math.max(0, num(e.total_tickets)),
     featured: e.featured === true || e.is_featured === true,
+    template: isTemplateEvent(e),
     lineup,
   }
 }
@@ -365,17 +391,25 @@ export function buildTickerSignals(events: HomeEvent[], now: number, max = 12): 
 /* -------------------------------------------------------------------------- */
 
 /**
- * Up to `n` hero slides: the admin's featured picks first (soonest first),
- * then the most-sold upcoming events, soonest breaking ties. Artwork is
- * required — the hero is the poster.
+ * Up to `n` hero slides: the admin's featured picks first, then every other
+ * upcoming event, soonest first in both. Artwork is required (the hero is the
+ * poster) and template listings never qualify: a sample event as the
+ * headline reads as a site with nothing on.
  */
 export function pickHeroEvents(events: HomeEvent[], now: number, n = 5): HomeEvent[] {
-  const pool = events.filter((e) => e.banner_image_url && !hasEnded(e, now))
-  const picks = pool.filter((e) => e.featured).sort((a, b) => startMs(a) - startMs(b))
-  const rest = pool
-    .filter((e) => !e.featured)
-    .sort((a, b) => b.tickets_sold - a.tickets_sold || startMs(a) - startMs(b))
-  return [...picks, ...rest].slice(0, n)
+  const pool = events
+    .filter((e) => e.banner_image_url && !e.template && !hasEnded(e, now))
+    .sort((a, b) => Number(b.featured) - Number(a.featured) || startMs(a) - startMs(b))
+  // One poster, one slide: two listings sharing a photo would show it twice.
+  const seen = new Set<string>()
+  return pool
+    .filter((e) => {
+      const key = imageKey(e.banner_image_url)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, n)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -390,8 +424,17 @@ export interface WeekDay {
   top: { id: string; title: string; banner_image_url: string } | null
 }
 
-/** Seven days from today, on the reader's calendar. */
-export function buildWeek(events: HomeEvent[], now: number, zone: string): WeekDay[] {
+/**
+ * Seven days from today, on the reader's calendar. `used` holds the images
+ * already on the page: a day's poster prefers one that is not, and the
+ * chosen one is added to it.
+ */
+export function buildWeek(
+  events: HomeEvent[],
+  now: number,
+  zone: string,
+  used: Set<string> = new Set()
+): WeekDay[] {
   const today = dayKey(now, zone)
   const days: WeekDay[] = Array.from({ length: 7 }, (_, i) => ({
     date: addDays(today, i),
@@ -400,23 +443,25 @@ export function buildWeek(events: HomeEvent[], now: number, zone: string): WeekD
     top: null,
   }))
   const index = new Map(days.map((d) => [d.date, d]))
-  const best = new Map<string, HomeEvent>()
+  const art = new Map<string, HomeEvent[]>()
   for (const e of events) {
     if (hasEnded(e, now)) continue
     const day = index.get(dayKey(e.start_datetime, zone))
     if (!day) continue
     day.count += 1
     if (!e.banner_image_url) continue
-    const cur = best.get(day.date)
-    const better =
-      !cur ||
-      e.tickets_sold > cur.tickets_sold ||
-      (e.tickets_sold === cur.tickets_sold && Number(e.featured) > Number(cur.featured))
-    if (better) best.set(day.date, e)
+    art.set(day.date, [...(art.get(day.date) || []), e])
   }
   for (const d of days) {
-    const e = best.get(d.date)
-    if (e) d.top = { id: e.id, title: e.title, banner_image_url: e.banner_image_url as string }
+    // The biggest event, featured breaking ties; a poster not yet on the
+    // page wins over one that is, but a day never goes blank for it.
+    const ranked = (art.get(d.date) || []).sort(
+      (a, b) => b.tickets_sold - a.tickets_sold || Number(b.featured) - Number(a.featured)
+    )
+    const e = ranked.find((x) => !used.has(imageKey(x.banner_image_url))) || ranked[0]
+    if (!e) continue
+    used.add(imageKey(e.banner_image_url))
+    d.top = { id: e.id, title: e.title, banner_image_url: e.banner_image_url as string }
   }
   return days
 }
@@ -434,13 +479,19 @@ export interface HomeWorld {
   poster: { id: string; title: string; banner_image_url: string } | null
 }
 
-/** The eight Kreyòl worlds in their canonical order, each with its real count. */
-export function buildWorlds(events: HomeEvent[]): HomeWorld[] {
+/**
+ * The eight Kreyòl worlds in their canonical order, each with its real count.
+ * A world's tile shows a poster not already on the page (`used`, which gains
+ * each one chosen); when every poster it has is taken, the tile has none
+ * rather than repeating a picture.
+ */
+export function buildWorlds(events: HomeEvent[], used: Set<string> = new Set()): HomeWorld[] {
   return CULTURAL_CATEGORIES.map((w) => {
     const mine = events.filter((e) => w.categories.includes(normalizeEventCategory(e.category)))
     const art = mine
-      .filter((e) => e.banner_image_url)
+      .filter((e) => e.banner_image_url && !used.has(imageKey(e.banner_image_url)))
       .sort((a, b) => b.tickets_sold - a.tickets_sold || startMs(a) - startMs(b))[0]
+    if (art) used.add(imageKey(art.banner_image_url))
     return {
       key: w.key,
       label: w.label,

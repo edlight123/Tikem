@@ -694,8 +694,6 @@
     },
     "hero": {
       "aria": "Featured events",
-      "featured": "Featured",
-      "coming_up": "Coming up",
       "lineup": "Lineup",
       "prev": "Previous event",
       "next": "Next event",
