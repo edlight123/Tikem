@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +28,9 @@ interface SelectFieldProps {
   placeholder?: string;
   /** Sheet heading (defaults to the label, then "Select"). */
   sheetTitle?: string;
+  /** Overrides so a host form can match its own labels and filled inputs. */
+  labelStyle?: StyleProp<TextStyle>;
+  fieldStyle?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -40,6 +46,8 @@ export default function SelectField({
   onSelect,
   placeholder = 'Select…',
   sheetTitle,
+  labelStyle,
+  fieldStyle,
 }: SelectFieldProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -53,10 +61,10 @@ export default function SelectField({
 
   return (
     <>
-      {!!label && <Text style={styles.label}>{label}</Text>}
+      {!!label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
 
       <TouchableOpacity
-        style={styles.field}
+        style={[styles.field, fieldStyle]}
         onPress={() => setOpen(true)}
         activeOpacity={0.7}
         accessibilityRole="button"
