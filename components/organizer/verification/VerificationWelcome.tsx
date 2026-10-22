@@ -72,7 +72,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
           <h2 className="mb-4 font-display lowercase italic !text-[22px] !leading-snug text-white">What you&apos;ll need</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 bg-white/[0.08] rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-white/70">1</span>
               </div>
               <div>
@@ -81,7 +81,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 bg-white/[0.08] rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-white/70">2</span>
               </div>
               <div>
@@ -90,7 +90,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 bg-white/[0.08] rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-white/50">3</span>
               </div>
               <div>
@@ -99,7 +99,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 bg-white/[0.08] rounded flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-white/70">~5</span>
               </div>
               <div>
@@ -114,7 +114,7 @@ export default function VerificationWelcome({ onStart, userName }: Props) {
         <div className="text-center">
           <button
             onClick={onStart}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-all text-lg"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black font-semibold rounded transition-all text-lg"
           >
             {t('verification_welcome.start_verification')}
             <ArrowRight className="w-5 h-5" />

@@ -107,8 +107,8 @@ export function EventPerformanceAnalytics() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <div className="h-1.5 w-16 overflow-hidden rounded-full bg-console-raise">
-                    <div className="h-full rounded-full bg-console-mut" style={{ width: `${Math.min(100, event.successScore)}%` }} />
+                  <div className="h-1.5 w-16 overflow-hidden rounded bg-console-raise">
+                    <div className="h-full rounded bg-console-mut" style={{ width: `${Math.min(100, event.successScore)}%` }} />
                   </div>
                   <span className="w-10 text-right font-mono text-sm tabular-nums text-console-text">{event.successScore}</span>
                 </div>
@@ -133,8 +133,8 @@ export function EventPerformanceAnalytics() {
               return (
                 <div key={category.category} className="flex items-center gap-3">
                   <span className="w-24 shrink-0 truncate text-sm text-console-text">{category.category}</span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-console-raise">
-                    <div className="h-full rounded-full bg-console-mut transition-all duration-500" style={{ width: `${percentage}%` }} />
+                  <div className="h-1.5 flex-1 overflow-hidden rounded bg-console-raise">
+                    <div className="h-full rounded bg-console-mut transition-all duration-500" style={{ width: `${percentage}%` }} />
                   </div>
                   <span className="shrink-0 font-mono text-xs tabular-nums text-console-mut">{category.count} · {percentage.toFixed(0)}%</span>
                 </div>

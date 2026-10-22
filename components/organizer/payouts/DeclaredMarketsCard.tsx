@@ -121,7 +121,7 @@ export default function DeclaredMarketsCard({
                 type="button"
                 aria-pressed={isOn}
                 onClick={() => toggle(code)}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-medium transition-colors ${
                   isOn
                     ? 'bg-white text-black'
                     : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white'
@@ -141,7 +141,7 @@ export default function DeclaredMarketsCard({
             type="button"
             onClick={handleSave}
             disabled={!isDirty || isSaving}
-            className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {isSaving ? t('markets.saving', { defaultValue: 'Saving…' }) : t('markets.save', { defaultValue: 'Save markets' })}

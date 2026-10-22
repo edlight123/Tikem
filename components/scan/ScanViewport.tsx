@@ -159,7 +159,7 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
 
       {/* Helper Text */}
       <div className="absolute bottom-8 left-0 right-0 text-center">
-        <p className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full inline-block">
+        <p className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-4 py-2 rounded inline-block">
           {isProcessing ? 'Processing...' : 'Point camera at ticket QR code'}
         </p>
       </div>
@@ -168,7 +168,7 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
           <div className="text-center px-6">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -180,7 +180,7 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
               <div className="mt-4">
                 <a
                   href={openInAppUrl}
-                  className="inline-block px-5 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
+                  className="inline-block px-5 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors"
                 >
                   Open Tikèm app
                 </a>

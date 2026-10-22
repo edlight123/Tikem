@@ -125,14 +125,14 @@ export async function POST(request: NextRequest) {
               </div>
               
               <div style="padding: 40px 20px; background: #f9fafb;">
-                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="background: white; border-radius: 4px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                   <p style="font-size: 18px; color: #111827; margin-bottom: 10px;">Hi ${user.user_metadata?.full_name || user.email}!</p>
                   
                   <p style="font-size: 16px; color: #374151; line-height: 1.6;">
                     This is a <strong>test email</strong> from Tikèm. If you're seeing this, email notifications are working correctly! 🎉
                   </p>
                   
-                  <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                  <div style="background: #f3f4f6; border-radius: 4px; padding: 20px; margin: 20px 0;">
                     <p style="margin: 0; color: #6b7280; font-size: 14px;">
                       <strong>Sent at:</strong> ${new Date().toLocaleString('en-US', {
                         weekday: 'long',
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
                   
                   <div style="text-align: center; margin-top: 30px;">
                     <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tikem.co'}/notifications"
-                       style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                       style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 16px;">
                       View All Notifications
                     </a>
                   </div>

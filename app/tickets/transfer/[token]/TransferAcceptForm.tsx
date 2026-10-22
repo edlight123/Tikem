@@ -216,14 +216,14 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
               <button
                 onClick={() => setShowRejectConfirm(false)}
                 disabled={loading}
-                className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/[0.07] rounded-full text-[13px] sm:text-base text-white font-semibold hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
+                className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/[0.07] rounded text-[13px] sm:text-base text-white font-semibold hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
               >
                 {t('transfer.keep_ticket', { defaultValue: 'Keep Ticket' })}
               </button>
               <button
                 onClick={handleReject}
                 disabled={loading}
-                className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-red-500/10 text-red-200 text-[13px] sm:text-base font-semibold rounded-full hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
+                className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-red-500/10 text-red-200 text-[13px] sm:text-base font-semibold rounded hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
               >
                 {loading
                   ? t('transfer.processing', { defaultValue: 'Processing...' })
@@ -236,14 +236,14 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
             <button
               onClick={() => setShowRejectConfirm(true)}
               disabled={loading}
-              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/[0.07] rounded-full text-[13px] sm:text-base text-white font-semibold hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
+              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/[0.07] rounded text-[13px] sm:text-base text-white font-semibold hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
             >
               {t('transfer.reject_transfer', { defaultValue: 'Reject Transfer' })}
             </button>
             <button
               onClick={handleAccept}
               disabled={loading}
-              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[13px] sm:text-base font-semibold rounded-full hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
+              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[13px] sm:text-base font-semibold rounded hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
             >
               {loading
                 ? t('transfer.processing', { defaultValue: 'Processing...' })

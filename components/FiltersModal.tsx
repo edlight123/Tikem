@@ -232,7 +232,7 @@ export function FiltersModal({
               aria-label={t('common.close', { defaultValue: 'Close' })}
               // 36px of ink, 44px of target: the ::after stretches 4px past
               // every edge without adding a visible pixel.
-              className="relative grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white after:absolute after:-inset-1 after:content-['']"
+              className="relative grid h-9 w-9 place-items-center rounded bg-white/[0.06] text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white after:absolute after:-inset-1 after:content-['']"
             >
               <X className="w-[18px] h-[18px]" />
             </button>
@@ -276,14 +276,14 @@ export function FiltersModal({
               <label className="eyebrow text-[11px] text-white/70">{t('filters.event_type')}</label>
               {/* A real toggle, so it gets fills: a 0.06 track (44px tall with
                   its 4px padding) and a white pill on the chosen segment. */}
-              <div className="inline-flex rounded-[14px] bg-white/[0.06] p-1">
+              <div className="inline-flex rounded bg-white/[0.06] p-1">
                 {EVENT_TYPE_OPTIONS.map(option => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => onDraftChange({ ...draftFilters, eventType: option.value })}
                     aria-pressed={draftFilters.eventType === option.value}
-                    className={`min-h-9 rounded-[10px] px-4 text-[13px] leading-[18px] font-medium transition-colors
+                    className={`min-h-9 rounded px-4 text-[13px] leading-[18px] font-medium transition-colors
                       ${draftFilters.eventType === option.value
                         ? 'bg-white text-black'
                         : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -311,10 +311,10 @@ export function FiltersModal({
               >
                 <div className="relative h-6">
                   {/* Track */}
-                  <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white/20" />
+                  <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-white/20" />
                   {/* Selected portion */}
                   <div
-                    className="pointer-events-none absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-brand-400"
+                    className="pointer-events-none absolute top-1/2 h-[3px] -translate-y-1/2 rounded bg-brand-400"
                     style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
                   />
                   <input

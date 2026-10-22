@@ -33,7 +33,7 @@ export default function Loading() {
       <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
-          <Bar className="h-8 w-20 rounded-full" />
+          <Bar className="h-8 w-20 rounded" />
         </div>
       </div>
 
@@ -47,7 +47,7 @@ export default function Loading() {
             <div className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6 lg:p-8">
               <div className="mb-4 flex w-full items-center justify-between">
                 <Bar className="h-5 w-24" />
-                <Bar className="h-9 w-28 rounded-full" />
+                <Bar className="h-9 w-28 rounded" />
               </div>
               <div className="mb-6 w-full text-center">
                 <Bar className="mx-auto mb-2 h-3 w-28" />

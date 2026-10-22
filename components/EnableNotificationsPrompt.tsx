@@ -72,7 +72,7 @@ export function EnableNotificationsPrompt({
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/[0.08] hover:text-white/70"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/[0.08] hover:text-white/70"
         >
           <X className="h-4 w-4" />
         </button>
@@ -81,7 +81,7 @@ export function EnableNotificationsPrompt({
       <div className="relative">
         {/* Eyebrow */}
         <div className="mb-3 flex items-center gap-2">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.08]">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-white/[0.08]">
             <Bell className="h-4 w-4 text-white/80" />
           </div>
           <span className="h-1.5 w-1.5 rounded-full bg-brand-400" aria-hidden="true" />
@@ -108,7 +108,7 @@ export function EnableNotificationsPrompt({
           <button
             onClick={handleEnable}
             disabled={isLoading}
-            className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 rounded bg-white px-6 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? t('notifications_prompt.enabling', 'Enabling...') : t('notifications_prompt.enable', 'Enable')}
           </button>

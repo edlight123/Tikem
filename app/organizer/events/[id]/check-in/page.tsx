@@ -52,7 +52,7 @@ export default async function CheckInPage({ params }: PageProps) {
           <p className="text-sm text-white/70">You don&apos;t have permission to run check-in for this event.</p>
           <Link
             href="/organizer/events"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="mt-6 inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           ><T k="server_bits.back_to_events" /></Link>
         </div>
       </div>

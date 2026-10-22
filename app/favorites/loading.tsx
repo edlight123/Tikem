@@ -31,7 +31,7 @@ export default function Loading() {
       <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
-          <Bar className="h-8 w-20 rounded-full" />
+          <Bar className="h-8 w-20 rounded" />
         </div>
       </div>
 

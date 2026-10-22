@@ -69,7 +69,7 @@ export default function SalesChart({ data, currency = 'HTG' }: SalesChartProps) 
           contentStyle={{
             backgroundColor: '#1a1a1a',
             border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '10px',
+            borderRadius: '4px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             color: '#fff',
           }}

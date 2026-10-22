@@ -91,7 +91,7 @@ export default function PurchaseProcessingPage() {
             </>
           ) : (
             <>
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-amber-500/10 rounded flex items-center justify-center mx-auto mb-4">
                 <svg className="w-7 h-7 md:w-8 md:h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -110,7 +110,7 @@ export default function PurchaseProcessingPage() {
               </p>
               <Link
                 href="/tickets"
-                className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded-full transition-colors text-base"
+                className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded transition-colors text-base"
               >
                 {t('purchase.view_my_tickets', { defaultValue: 'View My Tickets' })}
               </Link>

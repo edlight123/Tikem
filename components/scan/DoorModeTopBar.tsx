@@ -41,7 +41,7 @@ export function DoorModeTopBar({
           {/* Exit Button */}
           <button
             onClick={() => router.push(resolvedExitHref)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.07] hover:bg-white/[0.12] rounded-full transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.07] hover:bg-white/[0.12] rounded transition-colors text-sm font-medium"
           >
             <X className="w-4 h-4" />
             Exit

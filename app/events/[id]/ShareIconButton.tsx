@@ -61,7 +61,7 @@ export default function ShareIconButton({
       onClick={handleShare}
       aria-label={t('events.share_event')}
       title={copied ? t('events.link_copied') : t('events.share_event')}
-      className={`grid h-10 w-10 place-items-center rounded-full transition-all duration-200 active:scale-90 ${toneClasses} ${className}`}
+      className={`grid h-10 w-10 place-items-center rounded transition-all duration-200 active:scale-90 ${toneClasses} ${className}`}
     >
       {copied ? <Check className="h-[18px] w-[18px]" /> : <Share2 className="h-[18px] w-[18px]" />}
     </button>

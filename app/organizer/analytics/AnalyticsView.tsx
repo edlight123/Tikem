@@ -112,7 +112,7 @@ export default function AnalyticsView({
               action={
                 <Link
                   href="/organizer/events/new"
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black hover:bg-white/90 transition-colors"
+                  className="inline-flex items-center gap-2 rounded bg-white px-6 py-3 font-semibold text-black hover:bg-white/90 transition-colors"
                 >
                   <Calendar className="h-5 w-5" />
                   {t('analytics.create_event')}
@@ -126,7 +126,7 @@ export default function AnalyticsView({
                   key={event.id}
                   className="flex items-center gap-4 rounded-xl bg-white/[0.06] p-4 transition-colors hover:bg-white/[0.12]"
                 >
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] font-mono tabular-nums font-bold text-white text-sm">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/[0.08] font-mono tabular-nums font-bold text-white text-sm">
                     {index + 1}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -156,7 +156,7 @@ export default function AnalyticsView({
                       </p>
                     </div>
                     {!event.is_published && (
-                      <span className="rounded-full bg-white/[0.03] px-2.5 py-1 text-xs font-medium text-white/60">
+                      <span className="rounded bg-white/[0.03] px-2.5 py-1 text-xs font-medium text-white/60">
                         {t('analytics.draft')}
                       </span>
                     )}

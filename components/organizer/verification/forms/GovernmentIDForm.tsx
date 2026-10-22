@@ -165,7 +165,7 @@ export default function GovernmentIDForm({ userId, initialData, onSave, onCancel
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded-full font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
         >
           {t('actions.cancel')}
         </button>
@@ -173,7 +173,7 @@ export default function GovernmentIDForm({ userId, initialData, onSave, onCancel
           type="button"
           onClick={handleContinue}
           disabled={isSaving || !frontPath || !backPath}
-          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? 'Saving...' : 'Save & Continue'}
         </button>

@@ -251,7 +251,7 @@ export default function EventTicketsContent({ event, tickets }: EventTicketsCont
                         </h3>
                         <div className="label-mono mt-1 text-[11.5px] text-black/55">{dateLine}</div>
                       </div>
-                      <span className="shrink-0 rounded-full bg-black/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-black/70">
+                      <span className="shrink-0 rounded bg-black/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-black/70">
                         {tierName}
                       </span>
                     </div>
@@ -419,14 +419,14 @@ export default function EventTicketsContent({ event, tickets }: EventTicketsCont
       <div className="mt-8 flex flex-col gap-2.5 sm:flex-row-reverse">
         <a
           href="/tickets"
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-bold text-black transition-colors hover:bg-white/90"
+          className="flex flex-1 items-center justify-center gap-2 rounded bg-white px-6 py-3.5 text-sm font-bold text-black transition-colors hover:bg-white/90"
         >
           <TicketIcon className="h-4 w-4" />
           {t('event_tickets.all_my_tickets')}
         </a>
         <a
           href={`/events/${event.id}`}
-          className="group/link flex flex-1 items-center justify-center gap-2 rounded-full bg-white/[0.055] px-6 py-3.5 text-sm font-semibold text-white/75 transition-colors hover:bg-white/[0.12] hover:text-white"
+          className="group/link flex flex-1 items-center justify-center gap-2 rounded bg-white/[0.055] px-6 py-3.5 text-sm font-semibold text-white/75 transition-colors hover:bg-white/[0.12] hover:text-white"
         >
           {t('event_tickets.view_event_details')}
           <ArrowRight className="h-4 w-4 transition-transform group-hover/link:translate-x-0.5" />

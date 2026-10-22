@@ -99,7 +99,7 @@ function GuideRow({ guide, index }: { guide: Guide; index: string }) {
         {/* the languages */}
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {guide.codes.map((c) => (
-            <span key={c} className="flex items-center overflow-hidden rounded-full border border-white/10">
+            <span key={c} className="flex items-center overflow-hidden rounded border border-white/10">
               <a
                 href={`/guides/${guide.slug}-${c}.html`}
                 target="_blank"

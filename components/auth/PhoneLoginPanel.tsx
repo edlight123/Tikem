@@ -174,7 +174,7 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-3.5 px-4 rounded-full bg-white text-black text-base font-semibold disabled:opacity-50"
+            className="w-full py-3.5 px-4 rounded bg-white text-black text-base font-semibold disabled:opacity-50"
           >
             {t('phone.continueWithWhatsApp')}
           </button>

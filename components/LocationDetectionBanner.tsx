@@ -157,7 +157,7 @@ export function LocationDetectionBanner({
       {/* Compact single-line pill: pin + "Events near {place}?" + Use / dismiss.
           A solid raised fill, not a hairline around a see-through box: it
           floats over posters and has to read on any of them. */}
-      <div className="flex items-center gap-2 rounded-full bg-[#1c1c1c] pl-3.5 pr-1.5 py-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
+      <div className="flex items-center gap-2 rounded bg-[#1c1c1c] pl-3.5 pr-1.5 py-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0 text-brand-500" aria-hidden>
           <path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
           <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="2" />
@@ -171,14 +171,14 @@ export function LocationDetectionBanner({
         <button
           onClick={handleAccept}
           disabled={isAccepting}
-          className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-black hover:opacity-90 disabled:opacity-60 transition-opacity"
+          className="shrink-0 rounded bg-white px-3 py-1.5 text-[13px] font-semibold text-black hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {isAccepting ? '…' : t('location_banner.use', 'Use')}
         </button>
         <button
           onClick={handleDismiss}
           aria-label={t('location_banner.not_now_aria', 'Not now')}
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/60 hover:bg-white/[0.08] hover:text-white transition-colors"
+          className="shrink-0 flex h-7 w-7 items-center justify-center rounded text-white/60 hover:bg-white/[0.08] hover:text-white transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

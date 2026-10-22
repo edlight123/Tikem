@@ -164,7 +164,7 @@ export default function PromoCodeManager({
     <div className="flex items-center justify-end gap-2">
       <button
         onClick={() => toggleActive(promo.id, promo.is_active)}
-        className={`px-3 py-1.5 rounded-full font-medium text-xs md:text-sm transition ${
+        className={`px-3 py-1.5 rounded font-medium text-xs md:text-sm transition ${
           promo.is_active
             ? 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12]'
             : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12]'
@@ -275,7 +275,7 @@ export default function PromoCodeManager({
         <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('promo_codes.your_promo_codes')}</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition"
+          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded bg-white text-black font-semibold text-sm hover:bg-white/90 transition"
         >
           <Plus className="w-4 h-4" />
           {t('promo_codes.create_promo_code')}
@@ -286,7 +286,7 @@ export default function PromoCodeManager({
       <div className="fixed bottom-24 right-4 z-40 md:hidden">
         <button
           onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition"
         >
           <Plus className="w-4 h-4" />
           {t('actions.create')}
@@ -411,14 +411,14 @@ export default function PromoCodeManager({
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-full bg-white/[0.07] px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.12] transition"
+              className="rounded bg-white/[0.07] px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.12] transition"
             >
               {t('actions.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90 transition disabled:opacity-50"
+              className="rounded bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90 transition disabled:opacity-50"
             >
               {loading ? 'Creating…' : 'Create Code'}
             </button>

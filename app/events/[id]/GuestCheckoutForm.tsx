@@ -232,7 +232,7 @@ export default function GuestCheckoutForm({
       <button
         type="submit"
         disabled={busy}
-        className="block w-full h-12 bg-white hover:bg-white/90 text-black text-center font-semibold px-5 rounded-full transition-colors disabled:opacity-50"
+        className="block w-full h-12 bg-white hover:bg-white/90 text-black text-center font-semibold px-5 rounded transition-colors disabled:opacity-50"
       >
         {busy ? t('events.processing') : submitLabel}
       </button>
@@ -242,7 +242,7 @@ export default function GuestCheckoutForm({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="w-full h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
+          className="w-full h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
         >
           {t('common.cancel')}
         </button>

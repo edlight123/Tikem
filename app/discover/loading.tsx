@@ -33,7 +33,7 @@ export default function Loading() {
                 <div className="skeleton h-4 w-24 rounded" />
               </div>
             </div>
-            <div className="skeleton h-9 w-20 rounded-full" />
+            <div className="skeleton h-9 w-20 rounded" />
           </div>
         </div>
       </div>

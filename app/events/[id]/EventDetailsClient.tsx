@@ -193,7 +193,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {/* Status overlaid on poster — dot + label, never a filled pill */}
                 {(isSoldOut || selloutSoon) && (
                   <div className="absolute left-3 top-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
+                    <span className="inline-flex items-center gap-1.5 rounded bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
                       <span className={`h-1.5 w-1.5 rounded-full ${isSoldOut ? 'bg-red-400' : 'bg-amber-400'}`} />
                       {(() => {
                         if (isSoldOut) return t('ticket.sold_out')

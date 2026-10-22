@@ -260,7 +260,7 @@ function TabButton({
       </span>
       <span
         aria-hidden
-        className={`absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-brand-400 transition-opacity ${
+        className={`absolute inset-x-0 bottom-0 h-[2px] rounded bg-brand-400 transition-opacity ${
           active ? 'opacity-100' : 'opacity-0'
         }`}
       />

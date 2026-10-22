@@ -355,7 +355,7 @@ export default function VerificationWizard({
                         setError('')
                       }}
                       className={`
-                        w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all
+                        w-8 h-8 rounded flex items-center justify-center text-xs font-semibold transition-all
                         ${isComplete
                           ? 'bg-emerald-500 text-white'
                           : isCurrent
@@ -370,7 +370,7 @@ export default function VerificationWizard({
                     </button>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`flex-1 h-1 mx-2 rounded-full transition-colors ${
+                        className={`flex-1 h-1 mx-2 rounded transition-colors ${
                           isComplete || isPast ? 'bg-emerald-500' : 'bg-white/[0.08]'
                         }`}
                       />
@@ -779,7 +779,7 @@ export default function VerificationWizard({
             onClick={handlePrevious}
             disabled={currentStepIndex === 0 || saving}
             className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all
+              flex items-center gap-2 px-4 py-2.5 rounded text-sm font-semibold transition-all
               ${currentStepIndex === 0
                 ? 'text-white/40 cursor-not-allowed'
                 : 'text-white/70 hover:bg-white/[0.07] hover:text-white'
@@ -795,7 +795,7 @@ export default function VerificationWizard({
               <button
                 onClick={handleSkipStep}
                 disabled={saving}
-                className="px-4 py-2.5 rounded-full text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors"
+                className="px-4 py-2.5 rounded text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors"
               >
                 {t('onboarding.verification.nav.skip_for_now', { defaultValue: 'Skip for now' })}
               </button>
@@ -805,7 +805,7 @@ export default function VerificationWizard({
               <button
                 onClick={onComplete}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 rounded text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -820,7 +820,7 @@ export default function VerificationWizard({
               <button
                 onClick={handleSaveCurrentStep}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

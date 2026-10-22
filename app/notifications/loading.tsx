@@ -23,7 +23,7 @@ export default function Loading() {
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-28" />
-          <Bar className="h-8 w-24 rounded-full" />
+          <Bar className="h-8 w-24 rounded" />
         </div>
       </div>
 

@@ -67,7 +67,7 @@ export default async function AccountDeletePage() {
 
         <Link
           href={ctaHref}
-          className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-[15px] font-semibold text-black transition-colors hover:bg-white/85"
+          className="mt-6 inline-flex items-center justify-center rounded bg-white px-6 py-3 text-[15px] font-semibold text-black transition-colors hover:bg-white/85"
         >
           {ctaLabel}
         </Link>

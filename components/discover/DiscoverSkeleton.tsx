@@ -24,11 +24,11 @@ import React from 'react'
  * Geometry derived from the real markup:
  *   header row 1  DiscoverTopBar — max-w-7xl · px-4 sm:px-6 lg:px-8 · pt-3 pb-2
  *                 search: `relative flex-1`, input py-2.5 + 1px border + 16px
- *                 text ≈ 41px · two location pills py-2 rounded-full, md and up
+ *                 text ≈ 41px · two location pills py-2 rounded, md and up
  *                 only · filter button min-h-11 (44px) with its label hidden
  *                 below sm, so ~56px wide on a phone and ~100px from sm
  *   header row 2  DiscoverFilterChipsStrip — px-4 pb-3 pt-2 sm:px-6 lg:px-8,
- *                 chips 30px tall and rounded-[10px], with a h-5 w-px divider
+ *                 chips 30px tall and rounded, with a h-5 w-px divider
  *                 between the date set and the category set
  *   feed          tabs row mb-6 (buttons min-h-11 on a phone, pb-2) then
  *                 grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3
@@ -94,8 +94,8 @@ export function DiscoverFilterBarSkeleton() {
           {/* search field */}
           <Bar className="h-[41px] flex-1 rounded-lg" />
           {/* the two location pills — md and up, as in DiscoverTopBar */}
-          <Bar className="hidden h-9 w-28 rounded-full md:block" />
-          <Bar className="hidden h-9 w-32 rounded-full md:block" />
+          <Bar className="hidden h-9 w-28 rounded md:block" />
+          <Bar className="hidden h-9 w-32 rounded md:block" />
           {/* filter button: icon only on a phone, icon + label from sm */}
           <Bar className="h-11 w-14 shrink-0 rounded-lg sm:w-[100px]" />
         </div>
@@ -103,11 +103,11 @@ export function DiscoverFilterBarSkeleton() {
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center gap-3 overflow-hidden px-4 pb-3 pt-2 sm:px-6 lg:px-8">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Bar key={i} className="h-[30px] w-16 shrink-0 rounded-[10px]" />
+            <Bar key={i} className="h-[30px] w-16 shrink-0 rounded" />
           ))}
           <div className="h-5 w-px shrink-0 bg-white/10" />
           {Array.from({ length: 6 }).map((_, i) => (
-            <Bar key={i} className="h-[30px] w-20 shrink-0 rounded-[10px]" />
+            <Bar key={i} className="h-[30px] w-20 shrink-0 rounded" />
           ))}
         </div>
       </div>

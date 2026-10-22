@@ -115,7 +115,7 @@ export function EventTabs({ eventId, ticketCount }: EventTabsProps) {
                 {tab.label}
                 {tab.count !== undefined && (
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold font-mono tabular-nums ${
+                    className={`rounded px-2 py-0.5 text-[11px] font-semibold font-mono tabular-nums ${
                       active ? 'text-brand-300' : 'bg-white/8 text-white/55'
                     }`}
                   >

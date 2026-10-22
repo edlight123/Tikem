@@ -64,7 +64,7 @@ export default function EventStaffHub({
         <p className="text-white/60 mb-6">{t('staff_hub.create_event_to_invite')}</p>
         <Link
           href="/organizer/events/new"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors"
         >
           {t('actions.create_event')}
         </Link>
@@ -89,7 +89,7 @@ export default function EventStaffHub({
                 <select
                   value={selectedEventId}
                   onChange={(e) => handleChange(e.target.value)}
-                  className="w-full sm:w-[420px] px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                  className="w-full sm:w-[420px] px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                 >
                   {events.map((e) => (
                     <option key={e.id} value={e.id}>

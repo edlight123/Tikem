@@ -146,7 +146,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+          className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
             // The empty state below carries the white pill while the list is empty.
             comps.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
           }`}
@@ -165,7 +165,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Gift className="h-4 w-4" />
               {tx('comps.issue_comp_ticket')}
@@ -186,7 +186,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
             <button
               type="button"
               onClick={() => { setOpen(false); reset() }}
-              className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {tx('actions.cancel')}
             </button>
@@ -194,7 +194,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               type="button"
               onClick={handleIssue}
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Gift className="h-4 w-4" />
               {isPending ? 'Issuing…' : 'Issue ticket'}

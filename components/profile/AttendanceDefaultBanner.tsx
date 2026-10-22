@@ -41,7 +41,7 @@ export function AttendanceDefaultBanner({ show, className = '' }: { show: boolea
       />
       <div className="relative">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.08] text-white/80">
+          <span className="flex h-8 w-8 items-center justify-center rounded bg-white/[0.08] text-white/80">
             <Lock className="h-3.5 w-3.5" aria-hidden />
           </span>
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-400" />
@@ -57,7 +57,7 @@ export function AttendanceDefaultBanner({ show, className = '' }: { show: boolea
           <Link
             href="/profile#privacy"
             onClick={markSeen}
-            className="inline-flex h-10 items-center rounded-full bg-white px-5 text-[13px] font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="inline-flex h-10 items-center rounded bg-white px-5 text-[13px] font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
             {t('attendance_notice.cta')}
           </Link>

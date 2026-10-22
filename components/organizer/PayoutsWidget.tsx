@@ -141,7 +141,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, currency = 'HTG', la
       {/* CTA Button */}
       <Link
         href={statusInfo.ctaHref}
-        className={`block w-full rounded-full px-4 py-3 text-center font-semibold transition-colors ${statusInfo.ctaColor}`}
+        className={`block w-full rounded px-4 py-3 text-center font-semibold transition-colors ${statusInfo.ctaColor}`}
       >
         {statusInfo.ctaText}
       </Link>

@@ -134,7 +134,7 @@ export function DiscoverPageContent({
               }`}
             >
               {t.label}
-              {tab === t.key && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-400" />}
+              {tab === t.key && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded bg-brand-400" />}
             </button>
           ))}
         </div>

@@ -170,7 +170,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               max-width: 600px;
               margin: 0 auto;
               border: 3px solid #000;
-              border-radius: 20px;
+              border-radius: 4px;
               overflow: hidden;
             }
             .header {
@@ -191,7 +191,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               display: inline-block;
               padding: 20px;
               background: white;
-              border-radius: 15px;
+              border-radius: 4px;
               border: 2px solid #e5e7eb;
             }
             .qr-code img { display: block; width: 250px; height: 250px; }
@@ -201,7 +201,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               padding: 10px 20px;
               background: #dcfce7;
               color: #166534;
-              border-radius: 20px;
+              border-radius: 4px;
               font-weight: bold;
               font-size: 14px;
             }
@@ -251,7 +251,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               padding: 20px;
               background: #eff6ff;
               border: 2px solid #3b82f6;
-              border-radius: 10px;
+              border-radius: 4px;
             }
             .instructions h3 {
               font-size: 16px;
@@ -362,7 +362,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
       <button
         onClick={() => setShowOptions(!showOptions)}
         disabled={isDownloading}
-        className="w-full inline-flex h-14 items-center justify-center gap-3 px-6 bg-white hover:bg-white/90 text-black rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full inline-flex h-14 items-center justify-center gap-3 px-6 bg-white hover:bg-white/90 text-black rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <Wallet className="w-5 h-5" />
         {isDownloading ? 'Preparing...' : 'Save Ticket'}
@@ -383,7 +383,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             onClick={handleDownloadPDF}
             className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left"
           >
-            <div className="w-10 h-10 bg-white/[0.08] rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/[0.08] rounded flex items-center justify-center">
               <Download className="w-5 h-5 text-white/90" />
             </div>
             <div>
@@ -398,7 +398,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               disabled={isAddingToWallet !== null}
               className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-white/[0.08] rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/[0.08] rounded flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -416,7 +416,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
               disabled={isAddingToWallet !== null}
               className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-white/[0.08] rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/[0.08] rounded flex items-center justify-center">
                 <Smartphone className="w-5 h-5 text-white/90" />
               </div>
               <div>

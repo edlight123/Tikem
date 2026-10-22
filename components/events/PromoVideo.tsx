@@ -107,7 +107,7 @@ export default function PromoVideo({
                 is the only teal, and it means "this is the thing to press". */}
             <span
               aria-hidden
-              className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.7)] ring-1 ring-brand-400/0 transition-all duration-200 group-hover:scale-105 group-hover:ring-4 group-hover:ring-brand-400/30 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded bg-white/95 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.7)] ring-1 ring-brand-400/0 transition-all duration-200 group-hover:scale-105 group-hover:ring-4 group-hover:ring-brand-400/30 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             >
               {/* Nudged right by a pixel: a triangle's optical centre sits
                   left of its bounding box. */}

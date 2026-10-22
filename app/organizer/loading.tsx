@@ -50,7 +50,7 @@ export default function Loading() {
       <div className="rounded-2xl bg-white/[0.03] p-4 shadow-soft sm:p-5">
         <div className="mb-3.5 flex items-center justify-between gap-3">
           <Bar className="h-5 w-40 sm:h-6" />
-          <Bar className="h-9 w-40 shrink-0 rounded-[12px]" />
+          <Bar className="h-9 w-40 shrink-0 rounded" />
         </div>
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -96,7 +96,7 @@ export default function Loading() {
             >
               <div className="skeleton h-[72px] w-[58px] shrink-0 rounded-none" />
               <div className="min-w-0 flex-1 space-y-2">
-                <Bar className="h-4 w-20 rounded-[10px]" />
+                <Bar className="h-4 w-20 rounded" />
                 <Bar className="h-4 w-2/3" />
                 <Bar className="h-3 w-1/2" />
               </div>

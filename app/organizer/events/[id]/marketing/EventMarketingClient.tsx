@@ -91,7 +91,7 @@ export default function EventMarketingClient({
             type="button"
             onClick={copyLink}
             aria-label={t('event_marketing.copy_event_link')}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {copied ? <><Check className="h-4 w-4" />{t('event_marketing.copied')}</> : <><Copy className="h-4 w-4" />{t('event_marketing.copy_link')}</>}
           </button>
@@ -99,7 +99,7 @@ export default function EventMarketingClient({
             href={`/events/${eventId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             aria-label={t('event_marketing.open_in_new_tab')}
           >
             <ExternalLink className="h-4 w-4" />
@@ -115,7 +115,7 @@ export default function EventMarketingClient({
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {s.label}
             </a>
@@ -129,7 +129,7 @@ export default function EventMarketingClient({
           <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promo_codes')}</h2>
           <Link
             href={`/organizer/promo-codes?eventId=${eventId}`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Tag className="h-3.5 w-3.5" />
             {t('event_marketing.create_code')}
@@ -145,7 +145,7 @@ export default function EventMarketingClient({
               action={
                 <Link
                   href={`/organizer/promo-codes?eventId=${eventId}`}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Tag className="h-4 w-4" />
                   {t('event_marketing.create_promo_code')}
@@ -189,7 +189,7 @@ export default function EventMarketingClient({
           </div>
           <Link
             href={`/organizer/events/${eventId}/promoters`}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {t('event_marketing.manage_promoters')}
           </Link>
@@ -207,7 +207,7 @@ export default function EventMarketingClient({
             Send targeted SMS blasts to your ticket buyers directly from Tikèm.
             This feature is in development and will be available soon.
           </p>
-          <span className="mt-4 inline-block rounded-full px-3 py-1 text-xs font-semibold text-white/45">
+          <span className="mt-4 inline-block rounded px-3 py-1 text-xs font-semibold text-white/45">
             {t('actions.coming_soon')}
           </span>
         </div>

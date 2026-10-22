@@ -197,9 +197,9 @@ export function EventPageVignette({ posters = [] }: { posters?: VignettePoster[]
             )}
             {/* the rest of the page, suggested */}
             <div className="plt-ev-lines mt-4 space-y-2">
-              <div className="h-2 w-full rounded-full bg-white/[0.07]" />
-              <div className="h-2 w-4/5 rounded-full bg-white/[0.07]" />
-              <div className="h-2 w-3/5 rounded-full bg-white/[0.07]" />
+              <div className="h-2 w-full rounded bg-white/[0.07]" />
+              <div className="h-2 w-4/5 rounded bg-white/[0.07]" />
+              <div className="h-2 w-3/5 rounded bg-white/[0.07]" />
             </div>
             <div className="plt-ev-cta mt-auto rounded-xl bg-white py-2.5 text-center text-[12px] font-medium text-black">
               {t('platform.vignettes.getTickets', { defaultValue: 'Get tickets' })}
@@ -239,7 +239,7 @@ function FeedCard({
       <div className="relative">
         <MockPoster from={from} to={to} glow={glow} src={poster?.banner_image_url} />
         {save && (
-          <span className="plt-feed-save absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
+          <span className="plt-feed-save absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]">
             <Bookmark className="h-3 w-3 fill-black text-black" />
           </span>
         )}

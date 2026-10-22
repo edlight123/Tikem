@@ -45,7 +45,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
           <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/[0.08]">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
             </div>
             <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Not Found</h1>
@@ -54,7 +54,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
             </p>
             <a
               href="/tickets"
-              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded-full hover:bg-white/90 min-h-[44px]"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded hover:bg-white/90 min-h-[44px]"
             >
               View My Tickets
             </a>
@@ -92,7 +92,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
           <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/[0.08]">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               <Clock className="h-8 w-8 text-amber-300" strokeWidth={1.5} />
             </div>
             <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Expired</h1>
@@ -103,7 +103,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
             </p>
             <a
               href="/tickets"
-              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded-full hover:bg-white/90 min-h-[44px]"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded hover:bg-white/90 min-h-[44px]"
             >
               View My Tickets
             </a>
@@ -121,7 +121,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
           <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/[0.08]">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               {transfer.status === 'accepted' ? (
                 <CheckCircle2 className="h-8 w-8 text-emerald-300" strokeWidth={1.5} />
               ) : (
@@ -136,7 +136,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
             </p>
             <a
               href="/tickets"
-              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded-full hover:bg-white/90 min-h-[44px]"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded hover:bg-white/90 min-h-[44px]"
             >
               View My Tickets
             </a>
@@ -156,7 +156,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
           <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white/[0.08]">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
             </div>
             <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Ticket Not Found</h1>

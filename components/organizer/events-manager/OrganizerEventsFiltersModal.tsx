@@ -95,14 +95,14 @@ export default function OrganizerEventsFiltersModal({
           <div className="flex items-center gap-3">
             <h2 className="font-display text-[22px] lowercase italic leading-none">filters</h2>
             {activeFiltersCount > 0 && (
-              <span className="rounded-[8px] bg-white/[0.12] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-white/80">
+              <span className="rounded bg-white/[0.12] px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums text-white/80">
                 {activeFiltersCount} active
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-[10px] bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+            className="grid h-11 w-11 place-items-center rounded bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
             aria-label={t('events_filters.close_filters')}
           >
             <X className="w-6 h-6" />
@@ -132,7 +132,7 @@ export default function OrganizerEventsFiltersModal({
                       }
                     }))
                   }
-                  className="h-11 w-full rounded-[10px] bg-white/[0.06] px-3 text-[16px] text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                  className="h-11 w-full rounded bg-white/[0.06] px-3 text-[16px] text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
                 />
               </div>
               <div>
@@ -149,7 +149,7 @@ export default function OrganizerEventsFiltersModal({
                       }
                     }))
                   }
-                  className="h-11 w-full rounded-[10px] bg-white/[0.06] px-3 text-[16px] text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                  className="h-11 w-full rounded bg-white/[0.06] px-3 text-[16px] text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
                 />
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function OrganizerEventsFiltersModal({
                   <button
                     key={city}
                     onClick={() => toggleCity(city)}
-                    className={`relative inline-flex items-center rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+                    className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                       isSelected
                         ? 'bg-white text-black'
                         : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -202,7 +202,7 @@ export default function OrganizerEventsFiltersModal({
                   <button
                     key={category}
                     onClick={() => toggleCategory(category)}
-                    className={`relative inline-flex items-center rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+                    className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                       isSelected
                         ? 'bg-white text-black'
                         : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -224,7 +224,7 @@ export default function OrganizerEventsFiltersModal({
             <div className="flex gap-2">
               <button
                 onClick={() => setLocalFilters((prev) => ({ ...prev, hasSales: null }))}
-                className={`h-11 flex-1 rounded-[10px] text-[13px] font-medium transition-colors ${
+                className={`h-11 flex-1 rounded text-[13px] font-medium transition-colors ${
                   localFilters.hasSales === null
                     ? 'bg-white text-black'
                     : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -234,7 +234,7 @@ export default function OrganizerEventsFiltersModal({
               </button>
               <button
                 onClick={() => setLocalFilters((prev) => ({ ...prev, hasSales: true }))}
-                className={`h-11 flex-1 rounded-[10px] text-[13px] font-medium transition-colors ${
+                className={`h-11 flex-1 rounded text-[13px] font-medium transition-colors ${
                   localFilters.hasSales === true
                     ? 'bg-white text-black'
                     : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -244,7 +244,7 @@ export default function OrganizerEventsFiltersModal({
               </button>
               <button
                 onClick={() => setLocalFilters((prev) => ({ ...prev, hasSales: false }))}
-                className={`h-11 flex-1 rounded-[10px] text-[13px] font-medium transition-colors ${
+                className={`h-11 flex-1 rounded text-[13px] font-medium transition-colors ${
                   localFilters.hasSales === false
                     ? 'bg-white text-black'
                     : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -270,7 +270,7 @@ export default function OrganizerEventsFiltersModal({
                     sortBy: e.target.value as EventFilters['sortBy']
                   }))
                 }
-                className="h-11 rounded-[10px] bg-white/[0.06] px-3 text-[16px] font-medium text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                className="h-11 rounded bg-white/[0.06] px-3 text-[16px] font-medium text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
               >
                 <option value="date">{t('events_filters.event_date')}</option>
                 <option value="sales">{t('events_filters.ticket_sales')}</option>
@@ -285,7 +285,7 @@ export default function OrganizerEventsFiltersModal({
                     sortOrder: e.target.value as EventFilters['sortOrder']
                   }))
                 }
-                className="h-11 rounded-[10px] bg-white/[0.06] px-3 text-[16px] font-medium text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+                className="h-11 rounded bg-white/[0.06] px-3 text-[16px] font-medium text-white focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
               >
                 <option value="desc">{t('events_filters.descending')}</option>
                 <option value="asc">{t('events_filters.ascending')}</option>
@@ -305,13 +305,13 @@ export default function OrganizerEventsFiltersModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="h-11 rounded-[10px] bg-white/[0.08] px-5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+              className="h-11 rounded bg-white/[0.08] px-5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
             >
               {t('actions.cancel')}
             </button>
             <button
               onClick={handleApply}
-              className="h-11 rounded-[10px] bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+              className="h-11 rounded bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
             >
               {t('events_filters.apply_filters')}
             </button>

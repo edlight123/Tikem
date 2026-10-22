@@ -114,7 +114,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
           <button
             onClick={handleExportData}
             disabled={isExporting}
-            className="px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white font-medium rounded-full transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white font-medium rounded transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             {isExporting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isExporting ? 'Exporting...' : 'Export Data'}
@@ -136,7 +136,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
           </div>
           <button
             onClick={() => setShowDeactivateModal(true)}
-            className="px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-medium rounded-full transition-colors"
+            className="px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-medium rounded transition-colors"
           >
             {t('danger_zone.deactivate')}
           </button>
@@ -163,7 +163,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
           </div>
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 bg-red-500/15 hover:bg-red-500/25 text-red-200 font-medium rounded-full transition-colors"
+            className="px-4 py-2 bg-red-500/15 hover:bg-red-500/25 text-red-200 font-medium rounded transition-colors"
           >
             {t('danger_zone.delete_account')}
           </button>
@@ -184,14 +184,14 @@ export default function DangerZone({ userId }: DangerZoneProps) {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeactivateModal(false)}
-                className="flex-1 px-4 py-3 text-white/70 font-medium rounded-full bg-white/[0.07] hover:bg-white/[0.12] text-[16px] focus:outline-none"
+                className="flex-1 px-4 py-3 text-white/70 font-medium rounded bg-white/[0.07] hover:bg-white/[0.12] text-[16px] focus:outline-none"
               >
                 {t('actions.cancel')}
               </button>
               <button
                 onClick={handleDeactivate}
                 disabled={isDeactivating}
-                className="flex-1 px-4 py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-medium rounded-full disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-medium rounded disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isDeactivating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isDeactivating ? 'Deactivating...' : 'Deactivate'}

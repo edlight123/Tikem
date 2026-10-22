@@ -66,7 +66,7 @@ export default function FindTicketsForm() {
       <button
         type="submit"
         disabled={status === 'sending' || !contact.trim()}
-        className="block w-full bg-white hover:bg-white/90 text-black font-semibold py-3 px-5 rounded-full transition-colors disabled:opacity-50 min-h-[44px]"
+        className="block w-full bg-white hover:bg-white/90 text-black font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-[44px]"
       >
         {status === 'sending' ? t('find_tickets.sending', 'Sending…') : t('find_tickets.submit', 'Send my ticket link')}
       </button>

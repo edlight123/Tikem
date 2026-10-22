@@ -275,7 +275,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
           <button
             type="button"
             onClick={handleExportCSV}
-            className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/[0.08] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.08] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">{tx('attendees.export_csv')}</span>
@@ -283,7 +283,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
           <button
             type="button"
             onClick={handleEmailAttendees}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline">{tx('attendees.email_all')}</span>
@@ -499,7 +499,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
         type="button"
         onClick={handleResendTicket}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded bg-white px-4 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
       >
         <Mail className="h-4 w-4" />
         {tx('attendees.resend_ticket_email')}
@@ -513,7 +513,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
               type="button"
               onClick={() => setConfirmingRefund(false)}
               disabled={loading}
-              className="h-11 flex-1 rounded-[10px] bg-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.16] hover:text-white disabled:opacity-50"
+              className="h-11 flex-1 rounded bg-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.16] hover:text-white disabled:opacity-50"
             >
               {tx('actions.cancel')}
             </button>
@@ -521,7 +521,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
               type="button"
               onClick={handleRefund}
               disabled={loading}
-              className="h-11 flex-1 rounded-[10px] bg-red-600 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className="h-11 flex-1 rounded bg-red-600 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
               {loading ? 'Refunding…' : 'Confirm refund'}
             </button>

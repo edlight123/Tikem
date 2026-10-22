@@ -120,7 +120,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
       {isSubmitted && (
         <div className="mt-6 rounded-xl bg-white/[0.055] p-4">
           <div className="flex items-start gap-3">
-            <div className="rounded-full p-2 flex-shrink-0">
+            <div className="rounded p-2 flex-shrink-0">
               <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -159,14 +159,14 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <button
             onClick={onBack}
-            className="flex-1 rounded-full bg-white/[0.07] px-6 py-3 font-semibold text-white transition-colors hover:bg-white/[0.12] hover:text-white"
+            className="flex-1 rounded bg-white/[0.07] px-6 py-3 font-semibold text-white transition-colors hover:bg-white/[0.12] hover:text-white"
           >
             ← Back to Steps
           </button>
           <button
             onClick={onSubmit}
             disabled={!canSubmit}
-            className={`flex-1 px-6 py-3 rounded-full font-semibold transition-colors ${
+            className={`flex-1 px-6 py-3 rounded font-semibold transition-colors ${
               canSubmit
                 ? 'bg-white hover:bg-white/90 text-black'
                 : 'bg-white/[0.07] text-white/50 cursor-not-allowed'

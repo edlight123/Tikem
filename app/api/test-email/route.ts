@@ -37,7 +37,7 @@ export async function GET() {
           }
           .card {
             background: white;
-            border-radius: 12px;
+            border-radius: 4px;
             padding: 30px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
           }
@@ -50,35 +50,35 @@ export async function GET() {
             border-left: 4px solid #3b82f6;
             padding: 15px;
             margin: 20px 0;
-            border-radius: 6px;
+            border-radius: 4px;
           }
           .warning {
             background: #fef3c7;
             border-left: 4px solid #f59e0b;
             padding: 15px;
             margin: 20px 0;
-            border-radius: 6px;
+            border-radius: 4px;
           }
           .success {
             background: #d1fae5;
             border-left: 4px solid #10b981;
             padding: 15px;
             margin: 20px 0;
-            border-radius: 6px;
+            border-radius: 4px;
           }
           .error {
             background: #fee2e2;
             border-left: 4px solid #ef4444;
             padding: 15px;
             margin: 20px 0;
-            border-radius: 6px;
+            border-radius: 4px;
           }
           button {
             background: #0d9488;
             color: white;
             border: none;
             padding: 12px 24px;
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 16px;
             cursor: pointer;
             width: 100%;
@@ -95,7 +95,7 @@ export async function GET() {
             width: 100%;
             padding: 12px;
             border: 2px solid #e5e7eb;
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 16px;
             margin: 10px 0;
             box-sizing: border-box;
@@ -261,7 +261,7 @@ export async function POST(request: Request) {
             <table role="presentation" style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td align="center" style="padding: 40px 0;">
-                  <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                     <tr>
                       <td style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); padding: 40px; text-align: center;">
                         <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">🧪 Test Email</h1>
@@ -274,7 +274,7 @@ export async function POST(request: Request) {
                           This is a test email from Tikèm. If you're receiving this, the email notification system is working correctly! 🎉
                         </p>
                         
-                        <div style="background: #f3f4f6; border-radius: 12px; padding: 24px; margin: 24px 0;">
+                        <div style="background: #f3f4f6; border-radius: 4px; padding: 24px; margin: 24px 0;">
                           <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;"><strong>Sent to:</strong> ${recipient}</p>
                           <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;"><strong>Sent at:</strong> ${new Date().toLocaleString('en-US', {
                             weekday: 'long',
@@ -288,7 +288,7 @@ export async function POST(request: Request) {
                           <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>User:</strong> ${user.user_metadata?.full_name || 'Unknown'}</p>
                         </div>
 
-                        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px; margin: 24px 0;">
+                        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin: 24px 0;">
                           <p style="margin: 0; color: #1e40af; font-size: 14px;">
                             <strong>✅ Success!</strong> Your email notification system is properly configured and working.
                           </p>
@@ -296,7 +296,7 @@ export async function POST(request: Request) {
 
                         <div style="text-align: center; margin-top: 32px;">
                           <a href="${process.env.NEXT_PUBLIC_APP_URL}/notifications" 
-                             style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                             style="display: inline-block; background: #0d9488; color: white; padding: 14px 32px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 16px;">
                             View Notifications
                           </a>
                         </div>

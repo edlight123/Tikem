@@ -202,7 +202,7 @@ export default function SettingsContent({
             {!isPending && (
               <Link
                 href="/organizer/verify"
-                className="shrink-0 rounded-full bg-white px-5 py-2.5 text-center text-sm font-semibold text-black transition-opacity hover:opacity-90"
+                className="shrink-0 rounded bg-white px-5 py-2.5 text-center text-sm font-semibold text-black transition-opacity hover:opacity-90"
               >
                 {t('settings.verify_banner_cta', { defaultValue: 'Start verification' })}
               </Link>

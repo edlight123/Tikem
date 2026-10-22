@@ -149,7 +149,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
                 type="button"
                 onClick={() => setWouldRecommend(value)}
                 aria-pressed={selected}
-                className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-medium transition-colors ${
                   selected
                     ? 'bg-white/[0.16] text-white'
                     : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.1] hover:text-white'
@@ -172,7 +172,7 @@ export default function ReviewForm({ eventId, ticketId, eventTitle, onSuccess }:
       <button
         type="submit"
         disabled={loading || rating === 0}
-        className="w-full rounded-full bg-white py-3 font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded bg-white py-3 font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? t('review_form.submitting', 'Submitting...') : t('review_form.submit', 'Submit Review')}
       </button>

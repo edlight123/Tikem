@@ -57,7 +57,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
           actions={
           <Link
             href={`/organizer/events/${id}/edit`}
-            className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 items-center gap-2 rounded bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Pencil className="h-4 w-4" />
             <T k="server_bits.edit_tickets" />
@@ -74,7 +74,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
             action={
               <Link
                 href={`/organizer/events/${id}/edit`}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Pencil className="h-4 w-4" />
                 <T k="server_bits.add_tickets" />
@@ -109,9 +109,9 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
                         {tier.quantity > 0 && <span className="text-white/70"> / {tier.quantity}</span>}
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.12]">
+                    <div className="h-2 w-full overflow-hidden rounded bg-white/[0.12]">
                       <div
-                        className={`h-2 rounded-full ${soldOut ? 'bg-red-500' : 'bg-white'}`}
+                        className={`h-2 rounded ${soldOut ? 'bg-red-500' : 'bg-white'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>

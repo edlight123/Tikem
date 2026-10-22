@@ -708,7 +708,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
           <div className="relative max-w-4xl max-h-full">
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-console-panel text-console-text rounded-full p-2 hover:bg-console-raise"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-console-panel text-console-text rounded p-2 hover:bg-console-raise"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

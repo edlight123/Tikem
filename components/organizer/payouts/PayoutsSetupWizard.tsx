@@ -429,7 +429,7 @@ export default function PayoutsSetupWizard({
                 {steps.map((step, idx) => (
                   <div
                     key={step.id}
-                    className={`flex-1 h-2 rounded-full transition-colors ${
+                    className={`flex-1 h-2 rounded transition-colors ${
                       idx <= currentStepIndex ? 'bg-white' : 'bg-white/[0.08]'
                     }`}
                   />
@@ -498,7 +498,7 @@ export default function PayoutsSetupWizard({
 
             <button
               onClick={handleNext}
-              className="px-8 py-3.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
+              className="px-8 py-3.5 bg-white text-black rounded font-semibold hover:bg-white/90 transition-all"
             >
               {t('onboarding.payouts.welcome.cta', { defaultValue: 'Set Up Payouts' })}
             </button>
@@ -566,14 +566,14 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleMarketsContinue}
                 disabled={savingMarkets}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all disabled:opacity-60"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded font-semibold hover:bg-white/90 transition-all disabled:opacity-60"
               >
                 {savingMarkets ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {markets.length === 0
@@ -607,7 +607,7 @@ export default function PayoutsSetupWizard({
                       : 'bg-white/[0.055] hover:bg-white/[0.08]'
                   }`}
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xs font-semibold tracking-wide text-white/80">{location.flag}</span>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/[0.08] text-xs font-semibold tracking-wide text-white/80">{location.flag}</span>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-white">{t(`onboarding.payouts.location.${location.id}`, { defaultValue: location.name })}</div>
                     <div className="text-sm text-white/50">
@@ -626,13 +626,13 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded font-semibold hover:bg-white/90 transition-all"
               >
                 {t('onboarding.payouts.nav.continue', { defaultValue: 'Continue' })}
                 <ArrowRight className="w-4 h-4" />
@@ -727,13 +727,13 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded font-semibold hover:bg-white/90 transition-all"
               >
                 {t('onboarding.payouts.nav.continue', { defaultValue: 'Continue' })}
                 <ArrowRight className="w-4 h-4" />
@@ -769,7 +769,7 @@ export default function PayoutsSetupWizard({
 
             {isStripeLocation ? (
               <div className="bg-white/[0.055] rounded-2xl p-6 mb-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/[0.08] flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded bg-white/[0.08] flex items-center justify-center">
                   <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
                     <path d="M13.976 9.15c-2.172-.806-3.234-1.354-3.234-2.31 0-.788.636-1.262 1.885-1.262 2.217 0 3.614.964 3.614.964l.667-2.524s-1.397-.89-4.238-.89c-2.888 0-4.822 1.567-4.822 3.8 0 1.973 1.419 3.178 3.586 3.938 1.85.66 2.634 1.18 2.634 2.094 0 .888-.67 1.433-1.948 1.433-2.218 0-4.08-1.18-4.08-1.18l-.69 2.547s1.866 1.28 4.72 1.28c3.044 0 4.93-1.504 4.93-3.908 0-2.016-1.51-3.17-3.024-3.982z" fill="#635BFF"/>
                   </svg>
@@ -942,13 +942,13 @@ export default function PayoutsSetupWizard({
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded transition-colors"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded font-semibold hover:bg-white/90 transition-all"
               >
                 {t('onboarding.payouts.nav.continue', { defaultValue: 'Continue' })}
                 <ArrowRight className="w-4 h-4" />
@@ -1070,14 +1070,14 @@ export default function PayoutsSetupWizard({
               <button
                 onClick={handleBack}
                 disabled={saving}
-                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded-full transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/[0.07] rounded transition-colors disabled:opacity-50"
               >
                 {t('onboarding.payouts.nav.back', { defaultValue: 'Back' })}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded font-semibold hover:bg-white/90 transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>

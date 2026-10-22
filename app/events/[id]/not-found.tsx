@@ -26,13 +26,13 @@ export default function EventNotFound() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/discover"
-            className="flex flex-1 items-center justify-center rounded-full bg-white px-6 py-3 text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
+            className="flex flex-1 items-center justify-center rounded bg-white px-6 py-3 text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
           >
             {t('purchase.browse_events', { defaultValue: 'Browse events' })}
           </Link>
           <Link
             href="/"
-            className="flex flex-1 items-center justify-center rounded-full bg-white/[0.08] px-6 py-3 text-[15px] font-medium text-white transition-colors hover:bg-white/[0.12]"
+            className="flex flex-1 items-center justify-center rounded bg-white/[0.08] px-6 py-3 text-[15px] font-medium text-white transition-colors hover:bg-white/[0.12]"
           >
             {t('checkout.go_home', { defaultValue: 'Go home' })}
           </Link>

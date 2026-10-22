@@ -66,7 +66,7 @@ export default function PurchaseSuccessContentClient(props: Props) {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-green-500/10 mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded bg-green-500/10 mb-4">
           <svg className="w-8 h-8 md:w-10 md:h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
@@ -144,13 +144,13 @@ export default function PurchaseSuccessContentClient(props: Props) {
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link
           href="/tickets"
-          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded-full bg-white text-black text-base font-semibold hover:bg-white/90 transition-colors text-center"
+          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded bg-white text-black text-base font-semibold hover:bg-white/90 transition-colors text-center"
         >
           {t('tickets:purchase_success.view_tickets')}
         </Link>
         <Link
           href="/"
-          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded-full bg-white/[0.07] text-white text-base font-semibold hover:bg-white/[0.12] transition-colors text-center"
+          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded bg-white/[0.07] text-white text-base font-semibold hover:bg-white/[0.12] transition-colors text-center"
         >
           {t('tickets:purchase_success.find_more_events')}
         </Link>

@@ -129,7 +129,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
     >
       <div className="flex items-start gap-4">
         {/* Step icon */}
-        <div className={`${config.iconBgColor} rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5`}>
+        <div className={`${config.iconBgColor} rounded w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5`}>
           {config.icon}
         </div>
 

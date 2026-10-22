@@ -31,7 +31,7 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
         </p>
         <Link
           href="/profile"
-          className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+          className="inline-flex items-center gap-2 rounded bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
         >
           <MapPin className="h-4 w-4" />
           Change your location
@@ -69,19 +69,19 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
       <div className="flex flex-wrap justify-center gap-3 max-w-md mx-auto">
         <button
           onClick={() => handleSuggestion('any-date')}
-          className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
+          className="rounded bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
         >
           {t('common.show_any_date')}
         </button>
         <button
           onClick={() => handleSuggestion('expand-location')}
-          className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
+          className="rounded bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
         >
           {t('common.expand_location')}
         </button>
         <button
           onClick={() => handleSuggestion('online')}
-          className="rounded-full bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
+          className="rounded bg-white/[0.07] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
         >
           {t('common.show_online_events')}
         </button>
@@ -89,7 +89,7 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
 
       <button
         onClick={() => router.push('/discover')}
-        className="mt-8 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+        className="mt-8 rounded bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
       >
         {t('common.clear_all_filters')}
       </button>
