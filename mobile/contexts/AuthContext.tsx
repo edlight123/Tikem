@@ -129,6 +129,9 @@ async function clearUserScopedStorage() {
 
 export const useAuth = () => useContext(AuthContext);
 
+/** Error code for a build carrying no Google client IDs (see eas-update env). */
+export const GOOGLE_NOT_CONFIGURED = 'auth/google-not-configured';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -414,7 +417,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     if (!googleConfigured) {
-      throw new Error('Google Sign-In is not configured (missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).');
+      // Coded, so the screens can tell a build without the client IDs (an OTA
+      // published without them in the EAS environment) from any other failure.
+      throw Object.assign(
+        new Error('Google Sign-In is not configured (missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).'),
+        { code: GOOGLE_NOT_CONFIGURED },
+      );
     }
     try {
       if (Platform.OS === 'android') {
@@ -561,7 +569,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { credential } = await getAppleCredential();
       await reauthenticateWithCredential(current, credential);
     } else if (method === 'google') {
-      if (!googleConfigured) throw new Error('Google Sign-In is not configured.');
+      if (!googleConfigured) {
+        throw Object.assign(new Error('Google Sign-In is not configured.'), { code: GOOGLE_NOT_CONFIGURED });
+      }
       if (Platform.OS === 'android') {
         const idToken = await nativeGoogleIdToken();
         if (!idToken) throw Object.assign(new Error('Re-authentication cancelled'), { code: 'auth/cancelled' });

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mail, Lock } from 'lucide-react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../config/firebase';
-import { useAuth } from '../../contexts/AuthContext';
+import { GOOGLE_NOT_CONFIGURED, useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { AuthBackground } from '../../components/auth/AuthBackground';
 import { TikemWordmark } from '../../components/TikemWordmark';
@@ -50,6 +50,15 @@ function firebaseErrorKey(code?: string): string {
     default:
       return 'auth.errors.generic';
   }
+}
+
+// Only a build that truly lacks the client IDs says "not configured"; every
+// other failure (a cancelled exchange, a timeout, a network drop) used to fall
+// through to that copy too, because those errors carry no Firebase code.
+function googleErrorKey(error: any): string {
+  return error?.code === GOOGLE_NOT_CONFIGURED
+    ? 'auth.login.google.configRequired'
+    : firebaseErrorKey(error?.code);
 }
 
 export default function LoginScreen({ navigation }: any) {
@@ -122,9 +131,7 @@ export default function LoginScreen({ navigation }: any) {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      // Firebase codes map to localized messages; the unconfigured-build case
-      // (a plain Error, no code) falls back to the config-required copy.
-      const msg = error?.code ? t(firebaseErrorKey(error.code)) : t('auth.login.google.configRequired');
+      const msg = t(googleErrorKey(error));
       showAlert(t('auth.login.google.title'), msg);
     } finally {
       setLoading(false);
