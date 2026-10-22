@@ -2,7 +2,7 @@
 
 // The featured-event hero. One event at a time: its poster at 4:5 on the
 // right, the same artwork blurred and darkened behind the whole hero, and the
-// facts on the left — label, title, a serif line, a mono data line, the
+// facts on the left — title, a serif line, a mono data line, the
 // all-in price and one white "Get tickets". The poster takes the larger half
 // and the type steps down: the art is the headline, the facts caption it. A counter steps through up to
 // five events: the admin's picks first, then the most-sold upcoming ones
@@ -14,7 +14,7 @@ import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { HomeEvent } from '@/lib/home/feed'
-import { isLiveNow, metroOf } from '@/lib/home/feed'
+import { metroOf } from '@/lib/home/feed'
 import { eventWhen } from '@/lib/home/format'
 import { getEventPriceLabel } from '@/lib/discover/helpers'
 import { culturalCategoryFor } from '@/lib/categories'
@@ -22,7 +22,7 @@ import { normalizeEventCategory } from '@/lib/filters/config'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[]; now: number; zone: string }) {
+export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zone: string }) {
   const { t, i18n } = useTranslation('common')
   const [index, setIndex] = useState(0)
   const count = events.length
@@ -33,7 +33,6 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
 
   if (!count) return null
   const ev = events[Math.min(index, count - 1)]
-  const live = isLiveNow(ev, now)
   const city = metroOf(ev.city, ev.country)
   const world = culturalCategoryFor(normalizeEventCategory(ev.category)).label
   const subtitle =
@@ -45,11 +44,6 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
     ev.lineup.length > 4
       ? `${ev.lineup.slice(0, 4).join(', ')} +${ev.lineup.length - 4}`
       : ev.lineup.join(', ')
-  const label = live
-    ? t('home.ticker.live', { defaultValue: 'Live now' })
-    : ev.featured
-      ? t('home.hero.featured', { defaultValue: 'Featured' })
-      : t('home.hero.coming_up', { defaultValue: 'Coming up' })
   const href = `/events/${ev.id}`
 
   return (
@@ -108,14 +102,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
         {/* The facts. */}
         <div className="min-w-0 lg:order-1 lg:col-span-6">
           <div key={`copy-${ev.id}`} className="hero-arrive" aria-live="polite">
-            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white/60">
-              <span
-                aria-hidden
-                className={`h-1.5 w-1.5 rounded-full ${live ? 'ticker-live bg-[#14B8A6]' : 'bg-white/70'}`}
-              />
-              {label}
-            </p>
-            <h2 className="mt-4 break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
+            <h2 className="break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
               {ev.title}
             </h2>
             {subtitle && (
@@ -136,7 +123,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
               <Link
                 href={href}
-                className="inline-flex h-12 items-center rounded-xl bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                className="inline-flex h-12 items-center rounded bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 {t('events.get_tickets', { defaultValue: 'Get tickets' })}
               </Link>
@@ -166,7 +153,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
                     type="button"
                     onClick={() => go(-1)}
                     aria-label={t('home.hero.prev', { defaultValue: 'Previous event' })}
-                    className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.08] text-white outline-none transition-colors hover:bg-white/[0.16] focus-visible:ring-2 focus-visible:ring-white/70"
+                    className="grid h-10 w-10 place-items-center rounded bg-white/[0.08] text-white outline-none transition-colors hover:bg-white/[0.16] focus-visible:ring-2 focus-visible:ring-white/70"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -174,7 +161,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
                     type="button"
                     onClick={() => go(1)}
                     aria-label={t('home.hero.next', { defaultValue: 'Next event' })}
-                    className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.08] text-white outline-none transition-colors hover:bg-white/[0.16] focus-visible:ring-2 focus-visible:ring-white/70"
+                    className="grid h-10 w-10 place-items-center rounded bg-white/[0.08] text-white outline-none transition-colors hover:bg-white/[0.16] focus-visible:ring-2 focus-visible:ring-white/70"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>

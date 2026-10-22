@@ -18,18 +18,15 @@ import { useTranslation } from 'react-i18next'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import type { HomeWorld } from '@/lib/home/feed'
 
-// Desktop columns by how many worlds are lit, so the grid never ends on a
-// half-empty row of holes. Static strings so Tailwind keeps them.
-const LG_COLS: Record<number, string> = {
-  1: 'lg:grid-cols-2',
-  2: 'lg:grid-cols-2',
-  3: 'lg:grid-cols-3',
-  4: 'lg:grid-cols-4',
-  5: 'lg:grid-cols-5',
-  6: 'lg:grid-cols-3',
-  7: 'lg:grid-cols-4',
-  8: 'lg:grid-cols-4',
-}
+// One tile size whatever the count: a poster-rail proportion (six across on
+// a desktop, four on a tablet, two on a phone). Sizing the grid to the number
+// of lit worlds made two worlds two half-page posters with a lone digit in
+// the corner, which read as oversized and empty rather than chosen.
+//
+// No picture repeats on the page (app/page.tsx claims each one), so a world
+// whose posters are all shown above has none to give. Then every tile goes
+// typographic, short and filled: a row of mixed poster and blank tiles
+// read as images that failed to load.
 
 export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; scopeQs: string }) {
   const { t } = useTranslation('common')
@@ -38,6 +35,7 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
   // Two columns on a phone: with an odd count the first world goes full
   // width (and wider than tall) so the grid closes square.
   const oddOnPhone = live.length % 2 === 1
+  const posters = live.every((w) => w.poster)
 
   return (
     <section>
@@ -47,34 +45,37 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
         cta={t('home.see_all', { defaultValue: 'see all' })}
         ctaTone="quiet"
       />
-      <ul className={`grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 ${LG_COLS[live.length] ?? 'lg:grid-cols-4'}`}>
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-6">
         {live.map((w, i) => {
           const wide = oddOnPhone && i === 0
+          const countLabel = t('home.week.events', { count: w.count, defaultValue: `${w.count} events` })
           return (
             <li key={w.key} className={wide ? 'col-span-2 sm:col-span-1' : ''}>
               <Link
                 href={`/discover?${w.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}&${scopeQs}`}
-                aria-label={`${w.label}: ${t('home.week.events', { count: w.count, defaultValue: `${w.count} events` })}`}
-                className={`group relative block overflow-hidden rounded bg-white/[0.06] outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                  wide ? 'aspect-[16/10] sm:aspect-[3/4]' : 'aspect-[3/4]'
+                aria-label={`${w.label}: ${countLabel}`}
+                className={`group relative block overflow-hidden rounded bg-white/[0.06] outline-none transition-colors hover:bg-white/[0.09] focus-visible:ring-2 focus-visible:ring-white/70 ${
+                  !posters ? 'aspect-[16/9]' : wide ? 'aspect-[16/10] sm:aspect-[4/5]' : 'aspect-[4/5]'
                 }`}
               >
-                {w.poster && (
-                  <Image
-                    src={w.poster.banner_image_url}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                    quality={65}
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                  />
+                {posters && w.poster && (
+                  <>
+                    <Image
+                      src={w.poster.banner_image_url}
+                      alt=""
+                      fill
+                      sizes="(min-width: 1024px) 210px, (min-width: 640px) 25vw, 50vw"
+                      quality={65}
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                    />
+                    <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+                  </>
                 )}
-                <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
-                <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 sm:p-4">
-                  <span className="font-grotesk font-bold lowercase !leading-none tracking-[-0.03em] text-white !text-[clamp(20px,2.2vw,28px)]">
+                <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-3 sm:p-4">
+                  <span className="font-grotesk font-bold lowercase !leading-none tracking-[-0.03em] text-white !text-[clamp(19px,1.6vw,23px)]">
                     {w.label}
                   </span>
-                  <span className="font-mono text-[11px] tabular-nums text-white/60">{w.count}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">{countLabel}</span>
                 </span>
               </Link>
             </li>

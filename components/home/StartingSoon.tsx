@@ -70,9 +70,9 @@ export default function StartingSoon({ events, now: serverNow, zone }: { events:
             <li key={ev.id}>
               <Link
                 href={`/events/${ev.id}`}
-                className="group flex items-center gap-4 rounded-xl bg-white/[0.04] p-3 outline-none transition-colors hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/70 sm:gap-6 sm:p-4"
+                className="group flex items-center gap-4 rounded bg-white/[0.04] p-3 outline-none transition-colors hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/70 sm:gap-6 sm:p-4"
               >
-                <span className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-[3px] bg-white/[0.06] sm:w-20">
+                <span className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded bg-white/[0.06] sm:w-20">
                   {ev.banner_image_url && (
                     <Image src={ev.banner_image_url} alt={ev.title} fill sizes="80px" quality={60} className="object-cover" />
                   )}

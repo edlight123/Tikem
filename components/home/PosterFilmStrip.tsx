@@ -15,19 +15,34 @@ interface StripEvent {
   banner_image_url?: string | null
 }
 
+/**
+ * The marquee repeats its track, so it needs enough posters that one copy
+ * spans the widest screen (11 × 191px ≈ 2100px); with fewer, the copy shows
+ * up on screen beside the original and the same poster appears twice. Below
+ * this the strip is a still row instead.
+ */
+const MARQUEE_MIN = 11
+
 export default function PosterFilmStrip({ events }: { events: StripEvent[] }) {
   const posters = (events || []).filter((e) => e?.banner_image_url).slice(0, 14)
   if (posters.length < 4) return null
 
+  const moving = posters.length >= MARQUEE_MIN
   // Duplicate the track so the -50% loop is seamless.
-  const track = [...posters, ...posters]
+  const track = moving ? [...posters, ...posters] : posters
 
   return (
     <section
       aria-label="Event posters"
       className="film-strip group relative isolate overflow-hidden bg-white/[0.03] py-6"
     >
-      <div className="film-strip-track flex w-max gap-3 motion-reduce:w-auto motion-reduce:overflow-x-auto">
+      <div
+        className={
+          moving
+            ? 'film-strip-track flex w-max gap-3 motion-reduce:w-auto motion-reduce:overflow-x-auto'
+            : 'mx-auto flex w-max max-w-full gap-3 overflow-x-auto px-4 [scrollbar-width:none] sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden'
+        }
+      >
         {track.map((ev, i) => (
           <Link
             key={`${ev.id}-${i}`}
@@ -55,7 +70,7 @@ export default function PosterFilmStrip({ events }: { events: StripEvent[] }) {
                * hero's — every image on this page was lazy, and the first
                * request on production did not fire until 1279ms.
                */
-              loading={i < 6 ? 'eager' : 'lazy'}
+              loading={i < 8 ? 'eager' : 'lazy'}
               className="object-cover"
             />
           </Link>

@@ -27,7 +27,7 @@ import {
 } from 'firebase/firestore'
 import { unstable_cache } from 'next/cache'
 import { getCityMatchGroup } from '@/lib/filters/config'
-import { eventHasEnded } from '@/lib/home/feed'
+import { eventHasEnded, isTemplateEvent } from '@/lib/home/feed'
 
 export interface Event {
   id: string
@@ -426,6 +426,8 @@ const readPublishedEvents = unstable_cache(
         // The national day the organizer tagged it for (lib/nationalDays.ts):
         // the homepage banner counts these and /discover?day= lists them.
         national_day: typeof data.national_day === 'string' ? data.national_day : undefined,
+        // A seeded sample listing: browsable, never the homepage hero.
+        is_template: isTemplateEvent(data),
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       } as Event

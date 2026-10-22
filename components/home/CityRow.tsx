@@ -66,7 +66,7 @@ export default function CityRow({
                     href={item.href}
                     scroll={false}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex h-10 items-center gap-2 rounded-lg px-2.5 font-grotesk text-[15px] font-medium leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    className={`flex h-10 items-center gap-2 rounded px-2.5 font-grotesk text-[15px] font-medium leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70 ${
                       isActive ? 'text-white' : 'text-white/45 hover:text-white/85'
                     }`}
                   >

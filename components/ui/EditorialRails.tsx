@@ -61,9 +61,27 @@ export function SectionHeader({
 }
 
 /** Horizontal, snapping rail of poster cards that bleeds to the screen edges. */
-export function EventRail({ events }: { events: any[]; userCity?: string }) {
+/**
+ * A horizontal poster rail. It bleeds to the container edge with the first
+ * card on the page gutter; the scroll padding matches that inset, or snapping
+ * (.rail is x mandatory) parks the first card half a gutter to the left of
+ * the section header above it. `contained` keeps a desktop rail inside the
+ * content column instead, so both its edges sit on the gutters.
+ */
+export function EventRail({
+  events,
+  contained = false,
+}: {
+  events: any[]
+  userCity?: string
+  contained?: boolean
+}) {
   return (
-    <div className="rail -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <div
+      className={`rail -mx-4 scroll-px-4 px-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 ${
+        contained ? 'lg:mx-0 lg:scroll-px-0 lg:px-0' : 'lg:-mx-8 lg:scroll-px-8 lg:px-8'
+      }`}
+    >
       {events.map((event) => (
         <div key={event.id} className="w-[228px] sm:w-[248px]">
           <DiscoverEventCard event={event} />

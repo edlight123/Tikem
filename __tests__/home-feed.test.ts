@@ -4,6 +4,7 @@ import {
   buildTickerSignals,
   buildWeek,
   buildWorlds,
+  imageKey,
   inCity,
   pickHeroEvents,
   resolveActiveCity,
@@ -34,12 +35,13 @@ function ev(over: Partial<HomeEvent> & { startIn?: number } = {}): HomeEvent {
     country: 'HT',
     start_datetime: new Date(NOW + startIn).toISOString(),
     end_datetime: null,
-    banner_image_url: 'https://example.com/p.jpg',
+    banner_image_url: `https://example.com/p${seq}.jpg`,
     ticket_price: 1000,
     currency: 'HTG',
     tickets_sold: 0,
     total_tickets: 0,
     featured: false,
+    template: false,
     lineup: [],
     ...rest,
   }
@@ -103,16 +105,49 @@ describe('cities', () => {
 })
 
 describe('hero', () => {
-  it('leads with admin picks, then the most-sold, and requires artwork', () => {
+  it('leads with admin picks, then the soonest, and requires artwork', () => {
     const plain = ev({ startIn: 2 * H })
     const popular = ev({ startIn: 100 * H, tickets_sold: 80 })
     const pick = ev({ startIn: 200 * H, featured: true })
     const noArt = ev({ featured: true, banner_image_url: null })
     expect(pickHeroEvents([plain, popular, pick, noArt], NOW).map((e) => e.id)).toEqual([
       pick.id,
-      popular.id,
       plain.id,
+      popular.id,
     ])
+  })
+
+  it('never headlines a template listing, featured or not', () => {
+    const sample = ev({ startIn: 1 * H, template: true, featured: true })
+    const real = ev({ startIn: 50 * H })
+    expect(pickHeroEvents([sample, real], NOW).map((e) => e.id)).toEqual([real.id])
+  })
+
+  it('reads the template flag off the stored doc, not the copy', () => {
+    const base = { id: 'x', start_datetime: '2026-11-01T00:00:00Z' }
+    expect(toHomeEvent({ ...base, tags: ['template'] })?.template).toBe(true)
+    expect(toHomeEvent({ ...base, seed_batch: 'free-templates-2026-10' })?.template).toBe(true)
+    expect(toHomeEvent({ ...base, is_template: true })?.template).toBe(true)
+    expect(toHomeEvent({ ...base, description: 'Template event: a sample.' })?.template).toBe(false)
+  })
+
+  it('shows one photo once, even across two listings', () => {
+    const a = ev({ startIn: 2 * H, banner_image_url: 'https://img.test/a.jpg?w=1200' })
+    const b = ev({ startIn: 3 * H, banner_image_url: 'https://img.test/a.jpg?w=600' })
+    expect(pickHeroEvents([a, b], NOW).map((e) => e.id)).toEqual([a.id])
+  })
+})
+
+describe('no image twice on the page', () => {
+  it('worlds and the week skip posters already shown, and claim their own', () => {
+    const shown = ev({ category: 'Party' })
+    const other = ev({ category: 'Party' })
+    const used = new Set([imageKey(shown.banner_image_url)])
+    const worlds = buildWorlds([shown, other], used)
+    expect(worlds.find((w) => w.key === 'lavi-lannwit')?.poster?.id).toBe(other.id)
+    expect(used.has(imageKey(other.banner_image_url))).toBe(true)
+    // Every poster taken: the tile goes without rather than repeating one.
+    expect(buildWorlds([shown, other], used).find((w) => w.key === 'lavi-lannwit')?.poster).toBeNull()
   })
 })
 

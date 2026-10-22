@@ -100,7 +100,7 @@ function TabBar() {
       <div className="flex items-center justify-around px-3">
         {items.map((it, i) =>
           it === null ? (
-            <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white">
+            <span key={i} className="grid h-9 w-9 place-items-center rounded bg-white">
               <Plus className="h-[18px] w-[18px] text-black" strokeWidth={2.5} />
             </span>
           ) : (
@@ -271,7 +271,7 @@ export default function AppScrub({
                   {/* wordmark bar + location chip — the real home top bar */}
                   <div className="flex items-center justify-between">
                     <Wordmark />
-                    <span className="flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-1 text-[9px] font-medium text-white/70">
+                    <span className="flex items-center gap-1 rounded bg-white/[0.06] px-2 py-1 text-[9px] font-medium text-white/70">
                       <MapPin className="h-[9px] w-[9px]" />
                       Port-au-Prince
                       <ChevronDown className="h-[9px] w-[9px] text-white/40" />
@@ -279,16 +279,16 @@ export default function AppScrub({
                   </div>
 
                   {/* search pill */}
-                  <div className="mt-3 flex items-center gap-2 rounded-full bg-white/[0.06] px-3 py-2">
+                  <div className="mt-3 flex items-center gap-2 rounded bg-white/[0.06] px-3 py-2">
                     <Search className="h-[11px] w-[11px] text-white/40" />
                     <span className="text-[10px] text-white/40">Search events, organizers…</span>
                   </div>
 
                   {/* category chips */}
                   <div className="mt-3 flex gap-1.5">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[9px] font-semibold text-black">All</span>
+                    <span className="rounded bg-white px-2.5 py-1 text-[9px] font-semibold text-black">All</span>
                     {['mizik', 'fèt', 'espò', 'kilti'].map((c) => (
-                      <span key={c} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[9px] text-white/60">
+                      <span key={c} className="rounded bg-white/[0.06] px-2.5 py-1 text-[9px] text-white/60">
                         {c}
                       </span>
                     ))}
@@ -332,10 +332,10 @@ export default function AppScrub({
                     <Image src={star.banner_image_url} alt="" fill sizes="280px" quality={60} className="object-cover" />
                     <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
                     {/* push-screen chrome over the poster */}
-                    <span className="absolute left-3 top-10 grid h-7 w-7 place-items-center rounded-full bg-black/40 backdrop-blur-md">
+                    <span className="absolute left-3 top-10 grid h-7 w-7 place-items-center rounded bg-black/40 backdrop-blur-md">
                       <ChevronLeft className="h-4 w-4 text-white" />
                     </span>
-                    <span className="absolute right-3 top-10 grid h-7 w-7 place-items-center rounded-full bg-black/40 backdrop-blur-md">
+                    <span className="absolute right-3 top-10 grid h-7 w-7 place-items-center rounded bg-black/40 backdrop-blur-md">
                       <Share className="h-3.5 w-3.5 text-white" />
                     </span>
                   </div>
@@ -348,10 +348,10 @@ export default function AppScrub({
                       <p className="mt-1 text-[11px] font-semibold text-brand-400">{priceLabel}</p>
                     )}
                     <div className="mt-3 space-y-1.5">
-                      <span className="block h-1.5 w-full rounded-full bg-white/[0.07]" />
-                      <span className="block h-1.5 w-4/5 rounded-full bg-white/[0.07]" />
+                      <span className="block h-1.5 w-full rounded bg-white/[0.07]" />
+                      <span className="block h-1.5 w-4/5 rounded bg-white/[0.07]" />
                     </div>
-                    <div className="mt-auto rounded-xl bg-white py-2.5 text-center text-[12px] font-medium text-black">
+                    <div className="mt-auto rounded bg-white py-2.5 text-center text-[12px] font-medium text-black">
                       {t('events.get_tickets', { defaultValue: 'Get tickets' })}
                     </div>
                   </div>
@@ -371,8 +371,8 @@ export default function AppScrub({
                       perforation, the real app's ticket, made poster-grade */}
                   <div className="relative mt-4 w-full max-w-[216px]">
                     {/* soft brand glow behind the card */}
-                    <span aria-hidden className="absolute -inset-5 rounded-[30px] bg-brand-400/15 blur-2xl" />
-                    <div className="relative overflow-hidden rounded-[18px] bg-white text-center shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
+                    <span aria-hidden className="absolute -inset-5 rounded bg-brand-400/15 blur-2xl" />
+                    <div className="relative overflow-hidden rounded bg-white text-center shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
                       {/* event artwork band */}
                       <div className="relative h-14 w-full">
                         <Image
@@ -390,7 +390,7 @@ export default function AppScrub({
                         {place && <p className="mt-0.5 truncate text-[9px] text-black/50">{place}</p>}
                         {/* the QR, framed like the real ticket screen */}
                         <div className="mt-3 flex justify-center">
-                          <div className="rounded-xl border border-black/[0.08] bg-white p-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+                          <div className="rounded border border-black/[0.08] bg-white p-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
                             <QRCodeSVG
                               value={`tikem://ticket/${code}`}
                               size={100}

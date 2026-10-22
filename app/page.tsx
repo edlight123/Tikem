@@ -31,6 +31,7 @@ import {
   buildWeek,
   buildWorlds,
   hasEnded,
+  imageKey,
   inCity,
   pickHeroEvents,
   resolveActiveCity,
@@ -150,18 +151,51 @@ export default async function HomePage({
   )
   const scoped = inCountry.filter((e) => inCity(e, active?.key ?? null))
 
+  // Every date prints in the reader's zone, as on the event page and cards:
+  // Vercel's per-request zone, else the browsing country's, else Haiti's.
+  // Resolved once here so server render and hydration agree.
+  const zone = validZone(headerList.get('x-vercel-ip-timezone')) || zoneFor(country) || DEFAULT_ZONE
+
+  // The hero: the scope's own events, never a template listing (pickHeroEvents).
+  // A scope that only has samples borrows from the country, then from
+  // everywhere, so the page still opens on something real.
+  let hero = pickHeroEvents(scoped, now)
+  if (!hero.length) hero = pickHeroEvents(inCountry, now)
+  if (!hero.length) hero = pickHeroEvents(upcoming, now)
+  const heroIds = new Set(hero.map((e) => e.id))
+
+  // No picture twice on the page. Every image a section shows is claimed in
+  // `used`, in the order the sections need it most: the hero, then the cards
+  // of the "elsewhere" rail (an event card must show its own poster), then
+  // the week's days, then the worlds tiles (which can go without), and the
+  // film strip runs on whatever art is left.
+  const used = new Set(hero.map((e) => imageKey(e.banner_image_url)))
+
   // The one step outside the country, asymmetric on purpose (ElsewhereRail):
   // a diaspora visitor gets "back home", Haiti's upcoming events; a visitor in
   // Haiti gets a quiet link to the events abroad, or the events themselves
-  // when Haiti has nothing listed.
+  // when Haiti has nothing listed. An event the hero already carries is left
+  // out of it.
   const elsewhereMode = country === 'HT' ? 'abroad' : 'home'
   const elsewhere = upcoming
     .filter((e) => (elsewhereMode === 'home' ? e.country === 'HT' : e.country !== 'HT'))
+    .filter((e) => !heroIds.has(e.id) && !(e.banner_image_url && used.has(imageKey(e.banner_image_url))))
     .slice(0, ELSEWHERE_MAX)
+  // In Haiti with events of its own, the rail is only a text link: no posters.
+  if (elsewhereMode === 'home' || inCountry.length === 0) {
+    elsewhere.forEach((e) => e.banner_image_url && used.add(imageKey(e.banner_image_url)))
+  }
+
+  // The week claims its posters only when it shows (ThisWeek: two events or more).
+  const weekUsed = new Set(used)
+  const week = buildWeek(scoped, now, zone, weekUsed)
+  if (week.reduce((n, d) => n + d.count, 0) >= 2) weekUsed.forEach((k) => used.add(k))
+  const worlds = buildWorlds(scoped, used)
 
   // The film strip runs on artwork, which outlives its event: upcoming
   // posters first, then recent past ones. The chosen city's art when it has
-  // enough to fill the strip, else the country's; never another country's.
+  // enough to fill the strip, else the country's; never another country's,
+  // and never a picture another section already shows.
   const archive = isDemoMode() ? [] : filterBlockedEvents(await getCinemaArtworkEvents(40), blockedOrganizers)
   const stripShape = (e: any) => ({
     id: String(e.id),
@@ -172,23 +206,24 @@ export default async function HomePage({
   })
   const upcomingArt = inCountry.filter((e) => e.banner_image_url).map(stripShape)
   const seen = new Set(upcomingArt.map((e) => e.id))
+  const stripArt = new Set(used)
   const countryArt = [
     ...upcomingArt,
     ...archive
       .map(stripShape)
       .filter((e) => e.banner_image_url && e.country === country && !seen.has(e.id)),
-  ]
+  ].filter((e) => {
+    const key = imageKey(e.banner_image_url)
+    if (stripArt.has(key)) return false
+    stripArt.add(key)
+    return true
+  })
   const cityArt = active
     ? countryArt.filter((e) => inCity({ city: e.city, country: e.country } as HomeEvent, active.key))
     : []
   const filmStrip = (cityArt.length >= 6 ? cityArt : countryArt)
     .slice(0, 14)
     .map(({ id, title, banner_image_url }) => ({ id, title, banner_image_url }))
-
-  // Every date prints in the reader's zone, as on the event page and cards:
-  // Vercel's per-request zone, else the browsing country's, else Haiti's.
-  // Resolved once here so server render and hydration agree.
-  const zone = validZone(headerList.get('x-vercel-ip-timezone')) || zoneFor(country) || DEFAULT_ZONE
 
   // Links into discover carry the same scope, so a day or a world opens on
   // the events it counted.
@@ -206,8 +241,9 @@ export default async function HomePage({
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       <LiveTicker signals={buildTickerSignals(inCountry, now)} />
-      {/* flush: one black canvas, no hairline under the nav. */}
-      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} flush />
+      {/* flush + solid: one black band with the city row, no hairline, and
+          nothing showing through the bar as the page scrolls under it. */}
+      <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} flush solid />
       <CityRow country={country} cities={cities} active={active?.key ?? null} total={inCountry.length} />
 
       <LocationBannerWrapper userId={user?.id} currentCountry={country} currentCity={profileCity} />
@@ -247,10 +283,10 @@ export default async function HomePage({
         country={country}
         countryEmpty={inCountry.length === 0}
         scopeQs={scopeQs}
-        hero={pickHeroEvents(scoped, now)}
+        hero={hero}
         filmStrip={filmStrip}
-        week={buildWeek(scoped, now, zone)}
-        worlds={buildWorlds(scoped)}
+        week={week}
+        worlds={worlds}
         soon={startingSoon(scoped, now)}
         elsewhereMode={elsewhereMode}
         elsewhere={elsewhere}

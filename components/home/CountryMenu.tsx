@@ -56,7 +56,7 @@ export default function CountryMenu({ country }: { country: CountryCode }) {
         aria-expanded={open}
         aria-label={`${t('home.country.change', { defaultValue: 'Change country' })}: ${name(country)}`}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-[13px] leading-none text-white/45 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+        className="flex h-10 items-center gap-1.5 rounded px-2.5 text-[13px] leading-none text-white/45 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
       >
         <span className="text-white/75">{name(country)}</span>
         <span className="hidden sm:inline">· {t('home.country.change', { defaultValue: 'Change country' })}</span>
@@ -66,7 +66,7 @@ export default function CountryMenu({ country }: { country: CountryCode }) {
         <div
           role="menu"
           aria-label={t('home.country.aria', { defaultValue: 'Choose a country' })}
-          className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl bg-[#1c1c1c] p-1.5"
+          className="absolute right-0 top-full z-50 mt-1 w-52 rounded bg-[#1c1c1c] p-1.5"
         >
           {SUPPORTED_COUNTRIES.map((c) => {
             const current = c === country
@@ -77,7 +77,7 @@ export default function CountryMenu({ country }: { country: CountryCode }) {
                 role="menuitemradio"
                 aria-checked={current}
                 onClick={() => choose(c)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[14px] outline-none transition-colors hover:bg-white/[0.08] focus-visible:bg-white/[0.1] ${
+                className={`flex w-full items-center gap-2.5 rounded px-3 py-2.5 text-left text-[14px] outline-none transition-colors hover:bg-white/[0.08] focus-visible:bg-white/[0.1] ${
                   current ? 'text-white' : 'text-white/65'
                 }`}
               >
