@@ -116,7 +116,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     play: {
       width: 42,
       height: 42,
-      borderRadius: radius.pill,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',

@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   art: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 4,
   },
   artFallback: {
     alignItems: 'center',

@@ -235,27 +235,27 @@ export default function OrganizerCompsScreen() {
           {/* Issue form: title, then label + input pairs (inputs ≈45 tall:
               paddingVertical 12×2 + text), a stepper row, and the submit pill. */}
           <View style={styles.formCard}>
-            <Skeleton width={150} height={16} radius={6} />
+            <Skeleton width={150} height={16} radius={4} />
             {[0, 1, 2].map((i) => (
               <View key={i}>
-                <Skeleton width={110} height={12} radius={5} style={{ marginTop: 14, marginBottom: 6 }} />
+                <Skeleton width={110} height={12} radius={4} style={{ marginTop: 14, marginBottom: 6 }} />
                 <Skeleton width="100%" height={45} radius={RADIUS.md} />
               </View>
             ))}
-            <Skeleton width={90} height={12} radius={5} style={{ marginTop: 14, marginBottom: 6 }} />
+            <Skeleton width={90} height={12} radius={4} style={{ marginTop: 14, marginBottom: 6 }} />
             <Skeleton width={140} height={44} radius={RADIUS.md} />
-            <Skeleton width="100%" height={48} radius={999} style={{ marginTop: 20 }} />
+            <Skeleton width="100%" height={48} radius={4} style={{ marginTop: 20 }} />
           </View>
           {/* Issued list: section title + recipient cards (name/chip + meta). */}
           <View style={styles.section}>
-            <Skeleton width={140} height={18} radius={6} style={{ marginBottom: 12 }} />
+            <Skeleton width={140} height={18} radius={4} style={{ marginBottom: 12 }} />
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.compCard}>
                 <View style={styles.compHeader}>
-                  <Skeleton width="55%" height={15} radius={6} />
-                  <Skeleton width={60} height={22} radius={11} />
+                  <Skeleton width="55%" height={15} radius={4} />
+                  <Skeleton width={60} height={22} radius={4} />
                 </View>
-                <Skeleton width="40%" height={13} radius={5} style={{ marginTop: 10 }} />
+                <Skeleton width="40%" height={13} radius={4} style={{ marginTop: 10 }} />
               </View>
             ))}
           </View>

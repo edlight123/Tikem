@@ -456,10 +456,10 @@ function Block({
 function ContentSkeleton({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   return (
     <View style={{ padding: 20 }}>
-      <Skeleton width={'70%'} height={30} radius={8} />
-      <Skeleton width={'34%'} height={12} radius={6} style={{ marginTop: 12 }} />
+      <Skeleton width={'70%'} height={30} radius={4} />
+      <Skeleton width={'34%'} height={12} radius={4} style={{ marginTop: 12 }} />
       {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} width={'100%'} height={54} radius={14} style={{ marginTop: 12 }} />
+        <Skeleton key={i} width={'100%'} height={54} radius={4} style={{ marginTop: 12 }} />
       ))}
     </View>
   );

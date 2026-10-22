@@ -227,21 +227,21 @@ export default function OrganizerPromotersScreen() {
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
           <Skeleton width="100%" height={64} radius={RADIUS.md} />
           <View style={styles.formCard}>
-            <Skeleton width={150} height={16} radius={6} />
+            <Skeleton width={150} height={16} radius={4} />
             {[0, 1, 2].map((i) => (
               <View key={i}>
-                <Skeleton width={110} height={12} radius={5} style={{ marginTop: 14, marginBottom: 6 }} />
+                <Skeleton width={110} height={12} radius={4} style={{ marginTop: 14, marginBottom: 6 }} />
                 <Skeleton width="100%" height={45} radius={RADIUS.md} />
               </View>
             ))}
-            <Skeleton width="100%" height={48} radius={999} style={{ marginTop: 20 }} />
+            <Skeleton width="100%" height={48} radius={4} style={{ marginTop: 20 }} />
           </View>
           <View style={styles.section}>
-            <Skeleton width={140} height={18} radius={6} style={{ marginBottom: 12 }} />
+            <Skeleton width={140} height={18} radius={4} style={{ marginBottom: 12 }} />
             {[0, 1].map((i) => (
               <View key={i} style={styles.promoterCard}>
-                <Skeleton width="55%" height={15} radius={6} />
-                <Skeleton width="40%" height={13} radius={5} style={{ marginTop: 10 }} />
+                <Skeleton width="55%" height={15} radius={4} />
+                <Skeleton width="40%" height={13} radius={4} style={{ marginTop: 10 }} />
               </View>
             ))}
           </View>

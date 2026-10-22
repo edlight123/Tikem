@@ -3022,12 +3022,12 @@ export default function CreateEventFlowRefactored() {
 }
 
 /**
- * Corner radius of the flyer panel — `radius.sm`, the poster-preview rounding
+ * Corner radius of the flyer panel — `radius.poster` (4), the single brand radius
  * posh uses: the flyer reads as near-full-bleed artwork with a whisper of
  * rounding, not a soft capsule slab (the old 40 made the poster read as a
  * decorative blob instead of the event's actual artwork).
  */
-const FLYER_RADIUS = radius.sm;
+const FLYER_RADIUS = radius.poster;
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: {
@@ -3115,7 +3115,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   entryTileIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceMuted,
@@ -3523,7 +3523,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   stepperBtnOnRaised: {
     width: 36,
     height: 36,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -3664,7 +3664,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   stepperBtn: {
     width: 36,
     height: 36,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceRaised,

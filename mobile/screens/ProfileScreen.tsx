@@ -481,7 +481,7 @@ export default function ProfileScreen() {
                 {statsLoaded ? (
                   <Text style={styles.statValue}>{s.value}</Text>
                 ) : (
-                  <Skeleton width={32} height={24} radius={6} />
+                  <Skeleton width={32} height={24} radius={4} />
                 )}
                 <Text style={styles.statLabel} numberOfLines={1}>
                   {s.label}
@@ -1004,7 +1004,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     switchTrack: {
       width: 48,
       height: 28,
-      borderRadius: 14,
+      borderRadius: radius.sm,
       backgroundColor: T.surfaceRaised,
       padding: 3,
       justifyContent: 'center',

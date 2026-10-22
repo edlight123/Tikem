@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     right: 12,
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     // A fill, so the X reads on any art.

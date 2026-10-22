@@ -309,9 +309,9 @@ export default function OrganizerEventManagementScreen() {
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <View style={[styles.skeletonBody, { paddingTop: insets.top + 64 }]}>
           <Skeleton width={posterW} height={posterW * 1.25} radius={radius.poster} style={{ alignSelf: 'center' }} />
-          <Skeleton width={90} height={12} radius={6} style={{ marginTop: 28 }} />
-          <Skeleton width="80%" height={30} radius={8} style={{ marginTop: 12 }} />
-          <Skeleton width="60%" height={14} radius={6} style={{ marginTop: 12 }} />
+          <Skeleton width={90} height={12} radius={4} style={{ marginTop: 28 }} />
+          <Skeleton width="80%" height={30} radius={4} style={{ marginTop: 12 }} />
+          <Skeleton width="60%" height={14} radius={4} style={{ marginTop: 12 }} />
           <Skeleton width="100%" height={64} radius={radius.lg} style={{ marginTop: 28 }} />
           <Skeleton width="100%" height={140} radius={radius.xl} style={{ marginTop: 28 }} />
         </View>
@@ -783,7 +783,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   toggleThumb: {
     width: 22,
     height: 22,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     backgroundColor: colors.textSecondary,
   },
   toggleThumbOn: {

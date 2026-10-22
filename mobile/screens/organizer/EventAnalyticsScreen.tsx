@@ -96,7 +96,7 @@ export default function EventAnalyticsScreen() {
             />
           </View>
           <View style={styles.section}>
-            <Skeleton width={150} height={20} radius={6} style={{ marginBottom: 14 }} />
+            <Skeleton width={150} height={20} radius={4} style={{ marginBottom: 14 }} />
             <View style={styles.card}>
               <View style={styles.chartSkeletonRow}>
                 {[40, 64, 30, 88, 52, 110, 46, 72, 36, 58].map((h, i) => (
@@ -107,7 +107,7 @@ export default function EventAnalyticsScreen() {
           </View>
           {[0, 1].map((i) => (
             <View key={i} style={styles.section}>
-              <Skeleton width={130} height={20} radius={6} style={{ marginBottom: 14 }} />
+              <Skeleton width={130} height={20} radius={4} style={{ marginBottom: 14 }} />
               <Skeleton width="100%" height={120} radius={radius.lg} />
             </View>
           ))}

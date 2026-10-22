@@ -768,7 +768,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   failureIconRing: {
     width: 96,
     height: 96,
-    borderRadius: 48,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.errorLight,

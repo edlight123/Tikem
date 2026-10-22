@@ -25,7 +25,7 @@ interface MarketsSheetProps {
  * your country at a glance without importing flag images.
  */
 export function FlagSquare({ code, size = 24 }: { code: string; size?: number }) {
-  const box = { width: size, height: size, borderRadius: 5, overflow: 'hidden' as const };
+  const box = { width: size, height: size, borderRadius: RADIUS.sm, overflow: 'hidden' as const };
   const col = (c: string) => ({ flex: 1, backgroundColor: c });
   switch (code) {
     case 'HT':

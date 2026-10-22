@@ -336,7 +336,7 @@ const getStyles = (colors: any) =>
       backgroundColor: '#fff',
       paddingHorizontal: 32,
       paddingVertical: 16,
-      borderRadius: radius.pill ?? 999,
+      borderRadius: radius.button,
     },
     primaryButtonText: { color: '#000', fontWeight: '700', fontSize: 16 },
     cancelButton: { padding: 12 },

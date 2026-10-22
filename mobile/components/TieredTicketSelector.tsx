@@ -827,7 +827,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   stepperButton: {
     width: 28,
     height: 28,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',

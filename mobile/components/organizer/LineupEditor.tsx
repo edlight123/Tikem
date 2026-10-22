@@ -188,7 +188,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     removeBtn: {
       width: 30,
       height: 30,
-      borderRadius: radius.pill,
+      borderRadius: radius.md,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surfaceRaised,

@@ -1709,10 +1709,10 @@ export default function OrganizerPayoutSettingsScreenV2() {
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.destinationCard}>
                 <View style={styles.destinationHeader}>
-                  <Skeleton width={32} height={32} radius={10} />
+                  <Skeleton width={32} height={32} radius={4} />
                   <View style={{ flex: 1, marginLeft: 10, gap: 7 }}>
-                    <Skeleton width="52%" height={14} radius={6} />
-                    <Skeleton width="38%" height={11} radius={5} />
+                    <Skeleton width="52%" height={14} radius={4} />
+                    <Skeleton width="38%" height={11} radius={4} />
                   </View>
                 </View>
               </View>

@@ -505,7 +505,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     filterChip: {
       paddingHorizontal: 14,
       height: 36,
-      borderRadius: 18,
+      borderRadius: 4,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: 'center',

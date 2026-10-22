@@ -83,7 +83,7 @@ export default function QRCodeModal({ visible, onClose, qrValue, ticketNumber }:
                 logo={require('../assets/tikem_logo_color.png')}
                 logoSize={60}
                 logoBackgroundColor="white"
-                logoBorderRadius={8}
+                logoBorderRadius={4}
               />
             </View>
             
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     right: 20,
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   qrWrapper: {
     backgroundColor: '#FFF',
     padding: 30,
-    borderRadius: 24,
+    borderRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,

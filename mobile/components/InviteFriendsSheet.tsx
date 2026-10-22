@@ -629,8 +629,8 @@ const getStyles = (colors: any) =>
     // left the list a clipped half-row behind the button on device.
     sheet: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: radius.lg,
+      borderTopRightRadius: radius.lg,
       paddingHorizontal: 20,
       flexShrink: 1,
     },
@@ -657,7 +657,7 @@ const getStyles = (colors: any) =>
     close: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
@@ -769,7 +769,7 @@ const getStyles = (colors: any) =>
     connectIcon: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius.md,
       backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
@@ -804,7 +804,7 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
       gap: 12,
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: radius.lg,
       paddingHorizontal: 14,
       paddingVertical: 12,
       marginTop: 12,
@@ -812,7 +812,7 @@ const getStyles = (colors: any) =>
     entryIcon: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',

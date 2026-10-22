@@ -103,13 +103,18 @@ export const SPACING = {
   '4xl': 40,
 } as const;
 
-/** Corner radii — crisp, Posh-like rounding. */
+/**
+ * Corner radii. ONE brand radius across the mobile app: 4px, the same as the
+ * poster (see theme/tokens.ts `radius`). Every step is 4 so imports keep
+ * working. `full` (999) is ONLY for true circles (avatars, dots, radios,
+ * toggle thumbs, count badges).
+ */
 export const RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  '2xl': 24,
+  sm: 4,
+  md: 4,
+  lg: 4,
+  xl: 4,
+  '2xl': 4,
   full: 999,
 } as const;
 

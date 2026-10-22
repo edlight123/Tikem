@@ -33,35 +33,35 @@ function RefundRequestSkeleton({ styles }: { styles: ReturnType<typeof getStyles
     <View>
       <View style={styles.header}>
         <Skeleton width={24} height={24} radius={radius.sm} />
-        <Skeleton width={140} height={20} radius={7} />
+        <Skeleton width={140} height={20} radius={4} />
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.ticketCard}>
-        <Skeleton width={'78%'} height={18} radius={6} />
-        <Skeleton width={'62%'} height={14} radius={5} style={{ marginTop: 14 }} />
-        <Skeleton width={'44%'} height={14} radius={5} style={{ marginTop: 10 }} />
+        <Skeleton width={'78%'} height={18} radius={4} />
+        <Skeleton width={'62%'} height={14} radius={4} style={{ marginTop: 14 }} />
+        <Skeleton width={'44%'} height={14} radius={4} style={{ marginTop: 10 }} />
         <View style={styles.priceRow}>
-          <Skeleton width={92} height={14} radius={5} />
-          <Skeleton width={72} height={20} radius={7} />
+          <Skeleton width={92} height={14} radius={4} />
+          <Skeleton width={72} height={20} radius={4} />
         </View>
       </View>
 
       <View style={styles.section}>
-        <Skeleton width={'60%'} height={16} radius={6} style={{ marginBottom: 12 }} />
+        <Skeleton width={'60%'} height={16} radius={4} style={{ marginBottom: 12 }} />
         {Array.from({ length: 4 }).map((_, i) => (
           <View key={i} style={styles.reasonOption}>
             <Skeleton width={22} height={22} radius={11} />
-            <Skeleton width={'55%'} height={15} radius={6} style={{ marginLeft: 12 }} />
+            <Skeleton width={'55%'} height={15} radius={4} style={{ marginLeft: 12 }} />
           </View>
         ))}
       </View>
 
       <View style={styles.policyCard}>
-        <Skeleton width={20} height={20} radius={10} />
+        <Skeleton width={20} height={20} radius={4} />
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Skeleton width={'100%'} height={13} radius={5} />
-          <Skeleton width={'82%'} height={13} radius={5} style={{ marginTop: 6 }} />
+          <Skeleton width={'100%'} height={13} radius={4} />
+          <Skeleton width={'82%'} height={13} radius={4} style={{ marginTop: 6 }} />
         </View>
       </View>
 

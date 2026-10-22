@@ -424,8 +424,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   modalContainer: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingTop: 12,
@@ -456,7 +456,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   iconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: radius.md,
     backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -514,7 +514,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   quantityButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.primary,

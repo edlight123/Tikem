@@ -56,7 +56,7 @@ function SearchResultsSkeleton() {
   return (
     <View style={{ paddingTop: 16 }}>
       <View style={{ paddingHorizontal: 16 }}>
-        <Skeleton width={150} height={22} radius={7} />
+        <Skeleton width={150} height={22} radius={4} />
       </View>
       <ListSkeleton count={6} />
     </View>

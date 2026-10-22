@@ -222,12 +222,12 @@ export default function OrganizerEventsScreen() {
               <View style={styles.eventContent}>
                 <View>
                   <Skeleton width={70} height={10} radius={4} />
-                  <Skeleton width="80%" height={18} radius={6} style={{ marginTop: 12 }} />
-                  <Skeleton width="60%" height={13} radius={5} style={{ marginTop: 8 }} />
+                  <Skeleton width="80%" height={18} radius={4} style={{ marginTop: 12 }} />
+                  <Skeleton width="60%" height={13} radius={4} style={{ marginTop: 8 }} />
                 </View>
                 <View>
                   <Skeleton width={90} height={11} radius={4} />
-                  <Skeleton width="100%" height={4} radius={2} style={{ marginTop: 8 }} />
+                  <Skeleton width="100%" height={4} radius={4} style={{ marginTop: 8 }} />
                 </View>
               </View>
             </View>

@@ -272,7 +272,7 @@ const getStyles = (colors: any) =>
     privateIcon: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius.md,
       backgroundColor: T.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',

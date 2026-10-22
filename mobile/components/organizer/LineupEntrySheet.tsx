@@ -356,7 +356,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     closeBtn: {
       width: 34,
       height: 34,
-      borderRadius: radius.pill,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',

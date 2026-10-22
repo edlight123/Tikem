@@ -342,12 +342,12 @@ export default function OrganizerDashboardScreen() {
         {greeting}
         {/* Tonight: a poster-led hero, poster straight on the canvas. */}
         <View style={styles.section}>
-          <Skeleton width={110} height={22} radius={7} style={{ marginBottom: 12 }} />
+          <Skeleton width={110} height={22} radius={4} style={{ marginBottom: 12 }} />
           <Skeleton width="100%" aspectRatio={4 / 5} radius={radius.poster} />
         </View>
         {/* This week: section title + the metric triplet (••• while loading). */}
         <View style={styles.section}>
-          <Skeleton width={120} height={22} radius={7} style={{ marginBottom: 12 }} />
+          <Skeleton width={120} height={22} radius={4} style={{ marginBottom: 12 }} />
           <StatTriplet
             items={[
               { label: t('organizerDashboard.revenue'), value: null },

@@ -287,7 +287,7 @@ export default function OrganizerEventStaffScreen() {
           <Skeleton width="100%" height={56} radius={RADIUS.md} style={{ marginBottom: 20 }} />
           {[0, 1].map((section) => (
             <View key={section} style={{ marginBottom: 12 }}>
-              <Skeleton width={140} height={18} radius={6} style={{ marginBottom: 12 }} />
+              <Skeleton width={140} height={18} radius={4} style={{ marginBottom: 12 }} />
               {[0, 1].map((i) => (
                 <Skeleton key={i} width="100%" height={72} radius={RADIUS.lg} style={{ marginBottom: 12 }} />
               ))}

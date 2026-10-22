@@ -153,7 +153,7 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
       gap: 6,
       backgroundColor: colors.white,
-      borderRadius: radius.pill,
+      borderRadius: radius.button,
       paddingHorizontal: 14,
       paddingVertical: 8,
       minWidth: 84,

@@ -29,7 +29,7 @@ interface SkeletonProps {
 }
 
 /** A single shimmering placeholder block. */
-export function Skeleton({ width = '100%', height, radius = 8, aspectRatio, style }: SkeletonProps) {
+export function Skeleton({ width = '100%', height, radius = 4, aspectRatio, style }: SkeletonProps) {
   const { colors, isDark } = useTheme();
   const shimmer = useRef(new Animated.Value(0)).current;
 
@@ -75,12 +75,12 @@ export function PosterCardSkeleton({ width, ratio = 1.25 }: { width?: number; ra
       <View style={styles.posterMeta}>
         {/* Three lines, like the real card: serif title (16), price · venue
             (11.5), date (11). Two lines left each card ~15pt short. */}
-        <Skeleton width={'74%'} height={16} radius={6} />
+        <Skeleton width={'74%'} height={16} radius={4} />
         <View style={styles.posterMetaRow}>
-          <Skeleton width={'60%'} height={12} radius={5} />
-          <Skeleton width={34} height={12} radius={5} />
+          <Skeleton width={'60%'} height={12} radius={4} />
+          <Skeleton width={34} height={12} radius={4} />
         </View>
-        <Skeleton width={'38%'} height={11} radius={5} style={{ marginTop: 6 }} />
+        <Skeleton width={'38%'} height={11} radius={4} style={{ marginTop: 6 }} />
       </View>
     </View>
   );
@@ -108,10 +108,10 @@ export function SectionHeaderSkeleton() {
   return (
     <View style={styles.sectionHeader}>
       <View style={{ gap: 4 }}>
-        <Skeleton width={138} height={22} radius={7} />
-        <Skeleton width={96} height={11} radius={5} />
+        <Skeleton width={138} height={22} radius={4} />
+        <Skeleton width={96} height={11} radius={4} />
       </View>
-      <Skeleton width={46} height={13} radius={6} />
+      <Skeleton width={46} height={13} radius={4} />
     </View>
   );
 }
@@ -137,24 +137,24 @@ export function HomeFeedSkeleton({ sections = 3 }: { sections?: number }) {
 export function DiscoverCardSkeleton() {
   return (
     <View style={styles.discoverCard}>
-      {/* 2:3 like the card's default aspect and radius 8 (radius.sm) like its
+      {/* 2:3 like the card's default aspect and the single 4pt brand radius like its
           poster — the old fixed 1.15x height was ~30% too short and the 16pt
           corners read rounder than anything on the real card. */}
       <Skeleton aspectRatio={2 / 3} radius={4} style={{ width: '100%' } as ViewStyle} />
       <View style={styles.discoverBody}>
         <View style={styles.discoverBodyText}>
-          <Skeleton width={'88%'} height={20} radius={7} />
-          <Skeleton width={'52%'} height={20} radius={7} />
-          <Skeleton width={'40%'} height={13} radius={6} style={{ marginTop: 3 } as ViewStyle} />
-          <Skeleton width={'72%'} height={13} radius={6} />
+          <Skeleton width={'88%'} height={20} radius={4} />
+          <Skeleton width={'52%'} height={20} radius={4} />
+          <Skeleton width={'40%'} height={13} radius={4} style={{ marginTop: 3 } as ViewStyle} />
+          <Skeleton width={'72%'} height={13} radius={4} />
         </View>
         <View style={styles.discoverActions}>
-          <Skeleton width={20} height={20} radius={10} />
-          <Skeleton width={20} height={20} radius={10} />
+          <Skeleton width={20} height={20} radius={4} />
+          <Skeleton width={20} height={20} radius={4} />
         </View>
       </View>
-      {/* Compact WhitePillCTA: 46 tall, radius.button 14. */}
-      <Skeleton height={46} radius={14} style={{ width: '100%', marginTop: 14 } as ViewStyle} />
+      {/* Compact WhitePillCTA: 46 tall, radius.button (4). */}
+      <Skeleton height={46} radius={4} style={{ width: '100%', marginTop: 14 } as ViewStyle} />
     </View>
   );
 }
@@ -174,12 +174,12 @@ export function DiscoverFeedSkeleton({ count = 3 }: { count?: number }) {
 export function ListCardSkeleton() {
   return (
     <View style={styles.listCard}>
-      <Skeleton width={92} radius={16} aspectRatio={4 / 5} />
+      <Skeleton width={92} radius={4} aspectRatio={4 / 5} />
       <View style={styles.listBody}>
-        <Skeleton width={'82%'} height={15} radius={6} />
-        <Skeleton width={'55%'} height={12} radius={5} />
-        <Skeleton width={'45%'} height={12} radius={5} />
-        <Skeleton width={54} height={12} radius={5} style={{ marginTop: 2 } as ViewStyle} />
+        <Skeleton width={'82%'} height={15} radius={4} />
+        <Skeleton width={'55%'} height={12} radius={4} />
+        <Skeleton width={'45%'} height={12} radius={4} />
+        <Skeleton width={54} height={12} radius={4} style={{ marginTop: 2 } as ViewStyle} />
       </View>
     </View>
   );
@@ -215,8 +215,8 @@ function StatTripletSkeleton() {
     <View style={styles.statTriplet}>
       {Array.from({ length: 3 }).map((_, i) => (
         <View key={i} style={styles.statCol}>
-          <Skeleton width={46} height={22} radius={7} />
-          <Skeleton width={58} height={11} radius={5} style={{ marginTop: 8 } as ViewStyle} />
+          <Skeleton width={46} height={22} radius={4} />
+          <Skeleton width={58} height={11} radius={4} style={{ marginTop: 8 } as ViewStyle} />
         </View>
       ))}
     </View>
@@ -232,31 +232,31 @@ export function EventDetailSkeleton() {
   return (
     <View style={{ flex: 1 }}>
       <View style={[styles.eventHero, { backgroundColor: colors.surfaceMuted }]}>
-        <Skeleton radius={0} aspectRatio={4 / 5} style={{ width: EVENT_POSTER_W } as ViewStyle} />
+        <Skeleton radius={4} aspectRatio={4 / 5} style={{ width: EVENT_POSTER_W } as ViewStyle} />
       </View>
       <View style={styles.eventContent}>
-        <Skeleton width={'82%'} height={30} radius={8} />
-        <Skeleton width={'54%'} height={30} radius={8} style={{ marginTop: 8 } as ViewStyle} />
+        <Skeleton width={'82%'} height={30} radius={4} />
+        <Skeleton width={'54%'} height={30} radius={4} style={{ marginTop: 8 } as ViewStyle} />
         <View style={styles.eventFacts}>
           {Array.from({ length: 2 }).map((_, i) => (
             <View key={i} style={styles.eventFactRow}>
-              <Skeleton width={18} height={18} radius={5} />
+              <Skeleton width={18} height={18} radius={4} />
               <View style={styles.eventFactText}>
-                <Skeleton width={'62%'} height={13} radius={6} />
-                <Skeleton width={'40%'} height={11} radius={5} />
+                <Skeleton width={'62%'} height={13} radius={4} />
+                <Skeleton width={'40%'} height={11} radius={4} />
               </View>
             </View>
           ))}
         </View>
         <View style={styles.eventSection}>
-          <Skeleton width={120} height={18} radius={7} />
-          <Skeleton width={'100%'} height={13} radius={6} style={{ marginTop: 14 } as ViewStyle} />
-          <Skeleton width={'92%'} height={13} radius={6} style={{ marginTop: 8 } as ViewStyle} />
-          <Skeleton width={'70%'} height={13} radius={6} style={{ marginTop: 8 } as ViewStyle} />
+          <Skeleton width={120} height={18} radius={4} />
+          <Skeleton width={'100%'} height={13} radius={4} style={{ marginTop: 14 } as ViewStyle} />
+          <Skeleton width={'92%'} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
+          <Skeleton width={'70%'} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
         </View>
       </View>
       <View style={styles.eventFloatingCta}>
-        <Skeleton height={54} radius={16} />
+        <Skeleton height={54} radius={4} />
       </View>
     </View>
   );
@@ -267,17 +267,17 @@ export function TicketDetailSkeleton() {
   const { colors } = useTheme();
   return (
     <View style={styles.ticketDetail}>
-      <Skeleton width={'70%'} height={28} radius={8} />
-      <Skeleton width={96} height={26} radius={13} style={{ alignSelf: 'center', marginTop: 18 } as ViewStyle} />
-      <Skeleton height={360} radius={20} style={{ width: '86%', alignSelf: 'center', marginTop: 24 } as ViewStyle} />
-      <Skeleton width={'60%'} height={13} radius={6} style={{ alignSelf: 'center', marginTop: 16 } as ViewStyle} />
+      <Skeleton width={'70%'} height={28} radius={4} />
+      <Skeleton width={96} height={26} radius={4} style={{ alignSelf: 'center', marginTop: 18 } as ViewStyle} />
+      <Skeleton height={360} radius={4} style={{ width: '86%', alignSelf: 'center', marginTop: 24 } as ViewStyle} />
+      <Skeleton width={'60%'} height={13} radius={4} style={{ alignSelf: 'center', marginTop: 16 } as ViewStyle} />
       <View style={styles.ticketInfoCards}>
         {Array.from({ length: 3 }).map((_, i) => (
           <View key={i} style={[styles.ticketInfoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Skeleton width={40} height={40} radius={20} />
+            <Skeleton width={40} height={40} radius={4} />
             <View style={styles.ticketInfoText}>
-              <Skeleton width={'40%'} height={11} radius={5} />
-              <Skeleton width={'70%'} height={14} radius={6} />
+              <Skeleton width={'40%'} height={11} radius={4} />
+              <Skeleton width={'70%'} height={14} radius={4} />
             </View>
           </View>
         ))}
@@ -290,9 +290,9 @@ export function TicketDetailSkeleton() {
 export function TicketPassSkeleton() {
   return (
     <View style={styles.ticketPass}>
-      <Skeleton width={'70%'} height={24} radius={8} style={{ alignSelf: 'center' } as ViewStyle} />
-      <Skeleton width={120} height={12} radius={6} style={{ alignSelf: 'center', marginTop: 10 } as ViewStyle} />
-      <Skeleton height={480} radius={24} style={{ width: '100%', marginTop: 28 } as ViewStyle} />
+      <Skeleton width={'70%'} height={24} radius={4} style={{ alignSelf: 'center' } as ViewStyle} />
+      <Skeleton width={120} height={12} radius={4} style={{ alignSelf: 'center', marginTop: 10 } as ViewStyle} />
+      <Skeleton height={480} radius={4} style={{ width: '100%', marginTop: 28 } as ViewStyle} />
     </View>
   );
 }
@@ -304,11 +304,11 @@ export function NotificationsSkeleton({ count = 6 }: { count?: number }) {
     <View style={styles.notifList}>
       {Array.from({ length: count }).map((_, i) => (
         <View key={i} style={[styles.notifCard, { backgroundColor: colors.surfaceRaised }]}>
-          <Skeleton width={40} height={40} radius={12} />
+          <Skeleton width={40} height={40} radius={4} />
           <View style={styles.notifBody}>
-            <Skeleton width={'70%'} height={14} radius={6} />
-            <Skeleton width={'92%'} height={12} radius={5} />
-            <Skeleton width={90} height={11} radius={5} style={{ marginTop: 2 } as ViewStyle} />
+            <Skeleton width={'70%'} height={14} radius={4} />
+            <Skeleton width={'92%'} height={12} radius={4} />
+            <Skeleton width={90} height={11} radius={4} style={{ marginTop: 2 } as ViewStyle} />
           </View>
         </View>
       ))}
@@ -332,9 +332,9 @@ export function PeopleRowsSkeleton({ count = 7 }: { count?: number }) {
           >
             <Skeleton width={44} height={44} radius={22} />
             <View style={{ flex: 1 }}>
-              <Skeleton width={'55%'} height={14} radius={6} />
+              <Skeleton width={'55%'} height={14} radius={4} />
             </View>
-            <Skeleton width={74} height={32} radius={16} />
+            <Skeleton width={74} height={32} radius={4} />
           </View>
         ))}
       </View>
@@ -348,15 +348,15 @@ export function EarningsSkeleton() {
   return (
     <View style={styles.earnings}>
       <View style={[styles.earningsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Skeleton width={'40%'} height={12} radius={6} />
-        <Skeleton width={'62%'} height={34} radius={9} style={{ marginTop: 10 } as ViewStyle} />
-        <Skeleton width={'50%'} height={12} radius={6} style={{ marginTop: 14 } as ViewStyle} />
+        <Skeleton width={'40%'} height={12} radius={4} />
+        <Skeleton width={'62%'} height={34} radius={4} style={{ marginTop: 10 } as ViewStyle} />
+        <Skeleton width={'50%'} height={12} radius={4} style={{ marginTop: 14 } as ViewStyle} />
       </View>
       <View style={{ height: 12 }} />
       <StatTripletSkeleton />
       <View style={{ height: 24 }} />
-      <Skeleton height={52} radius={14} />
-      <Skeleton height={52} radius={14} style={{ marginTop: 12 } as ViewStyle} />
+      <Skeleton height={52} radius={4} />
+      <Skeleton height={52} radius={4} style={{ marginTop: 12 } as ViewStyle} />
     </View>
   );
 }
@@ -383,16 +383,16 @@ export function OrganizerProfileSkeleton() {
           {/* 36 (name lineHeight) + 4 (gap) + 18 (meta line) = the real 58pt
               identity column, so the hero lands at the same height. */}
           <View style={{ flex: 1 }}>
-            <Skeleton width={'75%'} height={36} radius={8} />
-            <Skeleton width={'45%'} height={18} radius={6} style={{ marginTop: 4 } as ViewStyle} />
+            <Skeleton width={'75%'} height={36} radius={4} />
+            <Skeleton width={'45%'} height={18} radius={4} style={{ marginTop: 4 } as ViewStyle} />
           </View>
         </View>
       </View>
       <View style={styles.profileContent}>
-        <Skeleton width={'62%'} height={18} radius={6} />
+        <Skeleton width={'62%'} height={18} radius={4} />
         <View style={{ height: 20 }} />
-        <Skeleton width={160} height={24} radius={8} />
-        <Skeleton width={120} height={13} radius={6} style={{ marginTop: 8 } as ViewStyle} />
+        <Skeleton width={160} height={24} radius={4} />
+        <Skeleton width={120} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
       </View>
       <GridSkeleton count={4} />
     </View>
@@ -409,42 +409,42 @@ export function ReviewSkeleton() {
   return (
     <View style={{ flex: 1 }}>
       <View style={[styles.reviewHeader, { borderBottomColor: colors.border }]}>
-        <Skeleton width={24} height={24} radius={7} />
-        <Skeleton width={140} height={20} radius={7} />
+        <Skeleton width={24} height={24} radius={4} />
+        <Skeleton width={140} height={20} radius={4} />
         <View style={{ width: 40 }} />
       </View>
 
       <View style={[styles.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Skeleton width={'80%'} height={18} radius={6} />
-        <Skeleton width={'45%'} height={13} radius={5} style={{ marginTop: 8 } as ViewStyle} />
+        <Skeleton width={'80%'} height={18} radius={4} />
+        <Skeleton width={'45%'} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
       </View>
 
       {Array.from({ length: 2 }).map((_, i) => (
         <View key={i} style={[styles.reviewRatingBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Skeleton width={'60%'} height={15} radius={6} />
+          <Skeleton width={'60%'} height={15} radius={4} />
           <View style={styles.reviewStarsRow}>
             {Array.from({ length: 5 }).map((__, s) => (
-              <Skeleton key={s} width={36} height={36} radius={8} />
+              <Skeleton key={s} width={36} height={36} radius={4} />
             ))}
           </View>
-          <Skeleton width={80} height={12} radius={5} style={{ marginTop: 8 } as ViewStyle} />
+          <Skeleton width={80} height={12} radius={4} style={{ marginTop: 8 } as ViewStyle} />
         </View>
       ))}
 
       <View style={[styles.reviewRatingBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Skeleton width={'70%'} height={15} radius={6} />
+        <Skeleton width={'70%'} height={15} radius={4} />
         <View style={styles.reviewRecommendRow}>
-          <Skeleton width={110} height={48} radius={12} />
-          <Skeleton width={110} height={48} radius={12} />
+          <Skeleton width={110} height={48} radius={4} />
+          <Skeleton width={110} height={48} radius={4} />
         </View>
       </View>
 
       <View style={styles.reviewComment}>
-        <Skeleton width={'55%'} height={15} radius={6} />
-        <Skeleton height={120} radius={12} style={{ marginTop: 16 } as ViewStyle} />
+        <Skeleton width={'55%'} height={15} radius={4} />
+        <Skeleton height={120} radius={4} style={{ marginTop: 16 } as ViewStyle} />
       </View>
 
-      <Skeleton height={52} radius={12} style={styles.reviewSubmit as ViewStyle} />
+      <Skeleton height={52} radius={4} style={styles.reviewSubmit as ViewStyle} />
     </View>
   );
 }
@@ -460,24 +460,24 @@ export function PaymentSkeleton() {
     <View style={styles.payment}>
       <View style={[styles.paymentSummary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.paymentRow}>
-          <Skeleton width={'46%'} height={14} radius={6} />
-          <Skeleton width={72} height={22} radius={7} />
+          <Skeleton width={'46%'} height={14} radius={4} />
+          <Skeleton width={72} height={22} radius={4} />
         </View>
         <View style={[styles.paymentDivider, { backgroundColor: colors.border }]} />
         <View style={styles.paymentRow}>
-          <Skeleton width={'34%'} height={12} radius={5} />
-          <Skeleton width={90} height={12} radius={5} />
+          <Skeleton width={'34%'} height={12} radius={4} />
+          <Skeleton width={90} height={12} radius={4} />
         </View>
       </View>
 
       {Array.from({ length: 2 }).map((_, i) => (
         <View key={i} style={styles.paymentField}>
-          <Skeleton width={i === 0 ? '40%' : '52%'} height={12} radius={5} />
-          <Skeleton height={52} radius={12} style={{ marginTop: 10 } as ViewStyle} />
+          <Skeleton width={i === 0 ? '40%' : '52%'} height={12} radius={4} />
+          <Skeleton height={52} radius={4} style={{ marginTop: 10 } as ViewStyle} />
         </View>
       ))}
 
-      <Skeleton height={54} radius={27} style={{ marginTop: 28 } as ViewStyle} />
+      <Skeleton height={54} radius={4} style={{ marginTop: 28 } as ViewStyle} />
     </View>
   );
 }
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   paymentSummary: {
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     padding: 18,
   },
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     gap: 12,
   },
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   },
   notifCard: {
     flexDirection: 'row',
-    borderRadius: 16,
+    borderRadius: 4,
     padding: 16,
     gap: 12,
   },
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   peopleCard: {
-    borderRadius: 16,
+    borderRadius: 4,
     paddingHorizontal: 14,
   },
   peopleRow: {
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   earningsCard: {
-    borderRadius: 16,
+    borderRadius: 4,
     padding: 20,
     borderWidth: 1,
   },
@@ -729,14 +729,14 @@ const styles = StyleSheet.create({
   reviewCard: {
     margin: 16,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
   },
   reviewRatingBlock: {
     marginHorizontal: 16,
     marginTop: 8,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     alignItems: 'center',
   },

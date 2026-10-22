@@ -625,7 +625,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   infoCardIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.md,
     backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',

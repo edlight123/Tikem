@@ -275,7 +275,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // lighter, with a soft shadow for lift over the header and the feed.
   card: {
     backgroundColor: colors.surfaceRaised,
-    borderRadius: 20,
+    borderRadius: 4,
     paddingTop: 14,
     paddingBottom: 12,
     paddingHorizontal: 14,
@@ -292,7 +292,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   flag: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 4,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
@@ -342,7 +342,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     minWidth: 72,
     height: 34,
     paddingHorizontal: 18,
-    borderRadius: 17,
+    borderRadius: 4,
     // White on the dark canvas; inverts with the theme so it never vanishes.
     backgroundColor: colors.text,
     alignItems: 'center',

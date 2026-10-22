@@ -169,7 +169,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     sheet: {
       marginHorizontal: 12,
       marginBottom: 24,
-      borderRadius: 24,
+      borderRadius: 4,
       backgroundColor: colors.surface,
       paddingTop: 18,
       paddingBottom: 24,
@@ -194,7 +194,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     iconRing: {
       width: 64,
       height: 64,
-      borderRadius: 32,
+      borderRadius: 4,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: 'center',

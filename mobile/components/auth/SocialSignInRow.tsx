@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   circle: {
     width: SIZE,
     height: SIZE,
-    borderRadius: SIZE / 2,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',

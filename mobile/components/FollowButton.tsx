@@ -208,7 +208,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   compactButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius.button,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',

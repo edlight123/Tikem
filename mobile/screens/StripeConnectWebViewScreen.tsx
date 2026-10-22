@@ -179,18 +179,18 @@ export default function StripeConnectWebViewScreen() {
   const brandedLoading = (
     <View style={[styles.loadingOverlay, { paddingTop: insets.top + 72 }]}>
       <View style={styles.onboardingSkeleton}>
-        <Skeleton width={'62%'} height={26} radius={8} />
-        <Skeleton width={'88%'} height={13} radius={6} style={{ marginTop: 12 } as ViewStyle} />
-        <Skeleton width={'54%'} height={13} radius={6} style={{ marginTop: 8 } as ViewStyle} />
+        <Skeleton width={'62%'} height={26} radius={4} />
+        <Skeleton width={'88%'} height={13} radius={4} style={{ marginTop: 12 } as ViewStyle} />
+        <Skeleton width={'54%'} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
 
         {[0, 1, 2].map((i) => (
           <View key={i} style={styles.skeletonField}>
-            <Skeleton width={i === 1 ? '46%' : '36%'} height={12} radius={5} />
-            <Skeleton height={50} radius={12} style={{ marginTop: 10 } as ViewStyle} />
+            <Skeleton width={i === 1 ? '46%' : '36%'} height={12} radius={4} />
+            <Skeleton height={50} radius={4} style={{ marginTop: 10 } as ViewStyle} />
           </View>
         ))}
 
-        <Skeleton height={52} radius={12} style={{ marginTop: 30 } as ViewStyle} />
+        <Skeleton height={52} radius={4} style={{ marginTop: 30 } as ViewStyle} />
       </View>
     </View>
   )
@@ -358,7 +358,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   failureIconRing: {
     width: 88,
     height: 88,
-    borderRadius: 44,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,

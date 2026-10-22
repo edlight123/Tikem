@@ -475,11 +475,11 @@ export default function DiscoverScreen({ navigation, route }: any) {
             if (h) setHeaderH(h);
           }}
         >
-          <Skeleton height={44} radius={22} style={{ width: '100%' }} />
+          <Skeleton height={44} radius={4} style={{ width: '100%' }} />
           <View style={styles.tabsRow}>
-            <Skeleton width={64} height={16} radius={6} />
-            <Skeleton width={78} height={16} radius={6} />
-            <Skeleton width={52} height={16} radius={6} />
+            <Skeleton width={64} height={16} radius={4} />
+            <Skeleton width={78} height={16} radius={4} />
+            <Skeleton width={52} height={16} radius={4} />
           </View>
         </View>
         {/* The header above is position: absolute — without this inset the
@@ -844,7 +844,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   filterBtn: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,

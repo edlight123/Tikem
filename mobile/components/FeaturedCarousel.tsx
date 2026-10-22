@@ -148,7 +148,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   poster: {
     width: '100%',
     height: 420,
-    borderRadius: 0,
+    borderRadius: 4,
     overflow: 'hidden',
     backgroundColor: colors.surfaceMuted,
   },

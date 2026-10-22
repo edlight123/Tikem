@@ -399,7 +399,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     linkIcon: {
       width: 38,
       height: 38,
-      borderRadius: radius.pill,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
@@ -495,7 +495,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     iconButton: {
       width: 36,
       height: 36,
-      borderRadius: radius.pill,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
