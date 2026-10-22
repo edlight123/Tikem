@@ -99,12 +99,12 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             <h2 className="break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
               {ev.title}
             </h2>
-            <p className="mt-5 truncate whitespace-nowrap font-mono text-[10px] uppercase leading-relaxed tracking-[0.04em] text-white/50 sm:text-[11px] sm:tracking-[0.08em]">
+            <p className="mt-5 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/50 sm:!text-[11px] sm:tracking-[0.08em]">
               {eventWhen(ev.start_datetime, zone, i18n.language)}
               {venue && <> · {venue}</>}
             </p>
             {lineup && (
-              <p className="mt-1 font-mono text-[11px] uppercase leading-relaxed tracking-[0.08em] text-white/35">
+              <p className="mt-1 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/35 sm:!text-[11px] sm:tracking-[0.08em]">
                 {t('home.hero.lineup', { defaultValue: 'Lineup' })}: {lineup}
               </p>
             )}
