@@ -109,7 +109,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
                 id="current_password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                 placeholder={t('security.enter_current_password')}
                 required
               />
@@ -126,7 +126,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
                 id="new_password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                 placeholder={t('security.enter_new_password')}
                 required
                 minLength={8}
@@ -144,7 +144,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
                 id="confirm_password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                 placeholder={t('security.confirm_new_password')}
                 required
               />
@@ -153,7 +153,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
           <button
             type="submit"
             disabled={isChangingPassword}
-            className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             {isChangingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
             {isChangingPassword ? 'Updating...' : 'Update Password'}
@@ -176,7 +176,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
               </p>
             </div>
           </div>
-          <span className="shrink-0 rounded-[8px] bg-white/[0.08] px-2.5 py-1 text-xs font-medium text-white/60">
+          <span className="shrink-0 rounded bg-white/[0.08] px-2.5 py-1 text-xs font-medium text-white/60">
             {t('security.coming_soon')}
           </span>
         </div>

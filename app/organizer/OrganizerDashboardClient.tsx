@@ -61,7 +61,7 @@ export default function OrganizerDashboardClient({
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="mx-auto max-w-md rounded-2xl bg-white/[0.05] p-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded bg-amber-500/10">
             <AlertTriangle className="h-6 w-6 text-amber-300" />
           </div>
           <h1 className="font-display text-2xl text-white">{t('organizer.dashboard_error.title', { defaultValue: "We couldn't load your dashboard" })}</h1>
@@ -73,7 +73,7 @@ export default function OrganizerDashboardClient({
           <button
             type="button"
             onClick={() => router.refresh()}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="mt-6 inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <RefreshCw className="h-4 w-4" />
             {t('organizer.dashboard_error.retry', { defaultValue: 'Try again' })}
@@ -129,7 +129,7 @@ export default function OrganizerDashboardClient({
         actions={
           <Link
             href="/organizer/events/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-white/90 text-black rounded font-semibold transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <CalendarPlus className="w-4 h-4" />
             {t('organizer.create_event')}
@@ -207,7 +207,7 @@ export default function OrganizerDashboardClient({
             action={
               <Link
                 href="/organizer/events/new"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-black rounded font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <CalendarPlus className="w-4 h-4" />
                 {t('organizer.no_events.cta')}

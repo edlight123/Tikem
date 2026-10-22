@@ -502,7 +502,7 @@ export default function EventbriteStyleTicketSelector({
       <button
         onClick={handlePurchase}
         disabled={!canPurchase || totalTickets === 0}
-        className="h-14 w-full rounded-full bg-white px-6 font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 disabled:cursor-not-allowed"
+        className="h-14 w-full rounded bg-white px-6 font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 disabled:cursor-not-allowed"
       >
         {!canPurchase
           ? t('events.sign_in_to_purchase')

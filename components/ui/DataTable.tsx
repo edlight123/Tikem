@@ -240,7 +240,7 @@ export function DataTable<T>({
                 <div className={`h-3.5 w-1/3 animate-pulse rounded ${isConsole ? 'bg-console-raise' : 'bg-white/[0.07]'}`} />
                 <div className={`h-3 w-1/4 animate-pulse rounded ${isConsole ? 'bg-console-raise' : 'bg-white/[0.07]'}`} />
               </div>
-              <div className={`h-6 w-16 animate-pulse ${isConsole ? 'rounded bg-console-raise' : 'rounded-full bg-white/[0.07]'}`} />
+              <div className={`h-6 w-16 animate-pulse ${isConsole ? 'rounded bg-console-raise' : 'rounded bg-white/[0.07]'}`} />
             </div>
           ))}
         </div>

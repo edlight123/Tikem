@@ -153,7 +153,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
           </div>
           <Link
             href={`/organizer/events/${event.id}/attendees`}
-            className="ml-4 flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] rounded-full text-sm font-semibold transition-colors"
+            className="ml-4 flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] rounded text-sm font-semibold transition-colors"
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">{t('door.manage', { defaultValue: 'Manage' })}</span>
@@ -180,7 +180,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
         
         {/* Progress Bar */}
         <div className="max-w-2xl mx-auto mt-4">
-          <div className="h-2 bg-white/[0.08] rounded-full overflow-hidden">
+          <div className="h-2 bg-white/[0.08] rounded overflow-hidden">
             <div 
               className="h-full bg-brand-400 transition-all duration-500"
               style={{ width: `${stats.total > 0 ? (stats.checkedIn / stats.total) * 100 : 0}%` }}
@@ -238,7 +238,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
         <button
           onClick={() => setShowScanner(true)}
           disabled={isProcessing}
-          className="w-full flex items-center justify-center gap-3 px-6 py-6 bg-white text-black hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 rounded-full font-semibold text-lg transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-6 bg-white text-black hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 rounded font-semibold text-lg transition-colors"
         >
           <Camera className="w-8 h-8" />
           {isProcessing ? 'Processing...' : 'Scan QR Code'}
@@ -246,7 +246,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
 
         <button
           onClick={() => setShowManualLookup(true)}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.07] hover:bg-white/[0.12] rounded-full font-semibold transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.07] hover:bg-white/[0.12] rounded font-semibold transition-colors"
         >
           <Search className="w-5 h-5" />
           {t('check_in.manual_lookup')}
@@ -303,7 +303,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                 setShowManualLookup(false)
                 setSearchQuery('')
               }}
-              className="p-2 hover:bg-white/[0.08] rounded-full"
+              className="p-2 hover:bg-white/[0.08] rounded"
             >
               <XCircle className="w-6 h-6" />
             </button>
@@ -352,7 +352,7 @@ export function CheckInInterface({ event, tickets, onCheckIn }: CheckInInterface
                     {ticket.checked_in ? (
                       <CheckCircle className="w-6 h-6 text-emerald-400 ml-4" />
                     ) : (
-                      <div className="ml-4 px-3 py-1.5 bg-white/[0.1] text-white rounded-full text-sm font-semibold">
+                      <div className="ml-4 px-3 py-1.5 bg-white/[0.1] text-white rounded text-sm font-semibold">
                         {t('actions.check_in')}
                       </div>
                     )}

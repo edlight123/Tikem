@@ -44,7 +44,7 @@ export default async function FinancePage() {
           actions={
             <Link
               href="/organizer/settings/payouts"
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/[0.08] px-4 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+              className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.08] px-4 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
             >
               Payout settings
             </Link>

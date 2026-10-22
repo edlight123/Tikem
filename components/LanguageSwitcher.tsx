@@ -90,7 +90,7 @@ export default function LanguageSwitcher({ className = '' }: { className?: strin
               // The app-wide chip spec: 10px radius, ~30px of ink, and the
               // 44px touch target supplied by the ::after inset rather than by
               // making the chip tall.
-              className={`relative rounded-[10px] px-2.5 py-1.5 text-[13px] leading-[18px] font-medium transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+              className={`relative rounded px-2.5 py-1.5 text-[13px] leading-[18px] font-medium transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                 on
                   ? 'bg-white text-black'
                   : 'text-white/50 hover:bg-white/[0.08] hover:text-white'

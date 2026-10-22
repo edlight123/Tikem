@@ -131,7 +131,7 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
                   setShowSubareaDropdown(false)
                   setShowCityDropdown(!showCityDropdown)
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 hover:bg-white/15 rounded-full text-sm font-medium text-white/80 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 hover:bg-white/15 rounded text-sm font-medium text-white/80 transition-colors"
               >
                 <MapPin className="w-4 h-4" />
                 {filters.city || t('filters.all_cities')}
@@ -169,7 +169,7 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
                     setShowCityDropdown(false)
                     setShowSubareaDropdown(!showSubareaDropdown)
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 hover:bg-white/15 rounded-full text-sm font-medium text-white/80 transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 hover:bg-white/15 rounded text-sm font-medium text-white/80 transition-colors"
                 >
                   {filters.commune || `${t('filters.all_areas')} ${locationLabel.toLowerCase()}s`}
                   <ChevronDown className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: D
             onClick={onOpenFilters}
             // On a phone the label is hidden, leaving a bare icon — so the box
             // has to carry the target: min-h-11 (44px) there, natural above.
-            className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-normal text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white sm:min-h-0"
+            className="flex min-h-11 items-center gap-2 whitespace-nowrap rounded bg-white/[0.07] px-4 py-2.5 text-sm font-normal text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white sm:min-h-0"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">{t('filters.filters')}</span>

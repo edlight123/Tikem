@@ -267,7 +267,7 @@ export default async function PromoterPortalPage() {
                       <div className="mt-4 flex gap-2">
                         <Link
                           href={r.statsUrl}
-                          className="flex-1 text-center rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/[0.12] transition-colors"
+                          className="flex-1 text-center rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/[0.12] transition-colors"
                         >
                           {copy.openStatsPage}
                         </Link>

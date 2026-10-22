@@ -122,7 +122,7 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
                       // tint inside a teal border — a coloured status pill.
                       // min-h-11 here, unlike the rail chip: this sheet has room
                       // for a proper 44px target, so it gets one.
-                      className={`flex min-h-11 items-center gap-2 rounded-[10px] px-3 py-2 text-left text-[13px] leading-[18px] font-medium transition-colors ${
+                      className={`flex min-h-11 items-center gap-2 rounded px-3 py-2 text-left text-[13px] leading-[18px] font-medium transition-colors ${
                         isSel ? 'bg-white text-black' : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
                       }`}
                     >
@@ -138,14 +138,14 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
                 {count > 0 && (
                   <button
                     onClick={clearAll}
-                    className="flex-1 rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.12]"
+                    className="flex-1 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.12]"
                   >
                     {t('filters.clear_all', { defaultValue: 'Clear all' })}
                   </button>
                 )}
                 <button
                   onClick={() => setOpen(false)}
-                  className="flex-1 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
+                  className="flex-1 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
                 >
                   {t('common.done', { defaultValue: 'Done' })}
                 </button>

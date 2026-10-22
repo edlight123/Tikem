@@ -180,7 +180,7 @@ export default function PromotersClient({
           <button
             type="button"
             onClick={() => setShowForm((v) => !v)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Plus className="h-3.5 w-3.5" />
             {t('promoters.add_promoter')}
@@ -249,14 +249,14 @@ export default function PromotersClient({
                 type="button"
                 onClick={handleCreate}
                 disabled={saving || !name.trim()}
-                className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {saving ? 'Adding…' : 'Add promoter'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-full px-5 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] bg-white/[0.07]"
+                className="rounded px-5 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] bg-white/[0.07]"
               >
                 {t('actions.cancel')}
               </button>
@@ -276,7 +276,7 @@ export default function PromotersClient({
                 <button
                   type="button"
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Plus className="h-4 w-4" />
                   {t('promoters.add_first_promoter')}
@@ -332,7 +332,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => copy(`share-${p.id}`, p.shareUrl)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                   >
                     {copiedKey === `share-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     Sales link
@@ -340,7 +340,7 @@ export default function PromotersClient({
                   <button
                     type="button"
                     onClick={() => copy(`stats-${p.id}`, p.statsUrl)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                   >
                     {copiedKey === `stats-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     Their stats page
@@ -351,7 +351,7 @@ export default function PromotersClient({
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     {t('promoters.send_via_whatsapp')}

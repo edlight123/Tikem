@@ -69,7 +69,7 @@ export default function CalendarView({
       <div className="flex items-center justify-between px-6 py-4 text-white">
         <button
           onClick={handlePreviousMonth}
-          className="grid h-11 w-11 place-items-center rounded-[10px] transition-colors hover:bg-white/[0.08]"
+          className="grid h-11 w-11 place-items-center rounded transition-colors hover:bg-white/[0.08]"
           aria-label={t('calendar.previous_month')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ export default function CalendarView({
 
         <button
           onClick={handleNextMonth}
-          className="grid h-11 w-11 place-items-center rounded-[10px] transition-colors hover:bg-white/[0.08]"
+          className="grid h-11 w-11 place-items-center rounded transition-colors hover:bg-white/[0.08]"
           aria-label={t('calendar.next_month')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ export default function CalendarView({
                 <span
                   className={`text-sm font-semibold font-mono tabular-nums ${
                     isTodayDate
-                      ? 'w-7 h-7 rounded-full bg-white text-black flex items-center justify-center'
+                      ? 'w-7 h-7 rounded bg-white text-black flex items-center justify-center'
                       : isCurrentMonth
                       ? 'text-white'
                       : 'text-white/40'
@@ -137,7 +137,7 @@ export default function CalendarView({
                   {format(day, 'd')}
                 </span>
                 {dayEvents.length > 0 && (
-                  <span className="rounded-[6px] bg-white/[0.10] px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-white/80">
+                  <span className="rounded bg-white/[0.10] px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-white/80">
                     {dayEvents.length}
                   </span>
                 )}

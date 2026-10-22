@@ -1058,7 +1058,7 @@ export default function PayoutsPageNew({
                     type="button"
                     onClick={verifyPayoutChangeEmailCode}
                     disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)}
-                    className="px-4 py-2 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                    className="px-4 py-2 bg-white text-black rounded font-semibold hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isVerifyingPayoutChangeCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_and_continue', { defaultValue: 'Verify & continue' })}
                   </button>
@@ -1066,7 +1066,7 @@ export default function PayoutsPageNew({
                     type="button"
                     onClick={sendPayoutChangeEmailCode}
                     disabled={isSendingPayoutChangeCode}
-                    className="px-4 py-2 rounded-full bg-amber-500/20 text-amber-200 font-semibold hover:bg-amber-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 rounded bg-amber-500/20 text-amber-200 font-semibold hover:bg-amber-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingPayoutChangeCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.resend_code', { defaultValue: 'Resend code' })}
                   </button>
@@ -1112,7 +1112,7 @@ export default function PayoutsPageNew({
                         return (
                           <div key={step.key} className={`flex items-center ${i < steps.length - 1 ? 'flex-1' : ''}`}>
                             <div className="flex shrink-0 items-center gap-2">
-                              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${isDone ? 'bg-emerald-500 text-white' : isActive ? 'bg-white text-black' : 'bg-white/10 text-white/40'}`}>
+                              <div className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${isDone ? 'bg-emerald-500 text-white' : isActive ? 'bg-white text-black' : 'bg-white/10 text-white/40'}`}>
                                 {isDone ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : i + 1}
                               </div>
                               <span className={`whitespace-nowrap text-sm font-medium ${isActive ? 'text-white' : isDone ? 'text-white/60' : 'text-white/30'}`}>{step.label}</span>
@@ -1143,10 +1143,10 @@ export default function PayoutsPageNew({
                             aria-label={t('payouts_page.code_aria', { defaultValue: '6-digit verification code' })}
                             className="w-full rounded-xl bg-white/[0.09] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500 sm:w-48"
                           />
-                          <button type="button" onClick={verifyPayoutChangeEmailCode} disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)} className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40">
+                          <button type="button" onClick={verifyPayoutChangeEmailCode} disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)} className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40">
                             {isVerifyingPayoutChangeCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_and_continue', { defaultValue: 'Verify & continue' })}
                           </button>
-                          <button type="button" onClick={sendPayoutChangeEmailCode} disabled={isSendingPayoutChangeCode} className="rounded-full bg-amber-500/20 px-4 py-2.5 text-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/30 disabled:opacity-50">
+                          <button type="button" onClick={sendPayoutChangeEmailCode} disabled={isSendingPayoutChangeCode} className="rounded bg-amber-500/20 px-4 py-2.5 text-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/30 disabled:opacity-50">
                             {isSendingPayoutChangeCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.resend_code', { defaultValue: 'Resend code' })}
                           </button>
                         </div>
@@ -1173,11 +1173,11 @@ export default function PayoutsPageNew({
                           {stripeStatusError ? <div className="mt-3 text-sm text-red-300">{stripeStatusError}</div> : null}
                           <div className="mt-3 flex gap-2">
                             {!stripeStatus?.connected ? (
-                              <button type="button" onClick={startStripeOnboarding} className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90">{t('payouts_page.connect_with_stripe', { defaultValue: 'Connect with Stripe' })}</button>
+                              <button type="button" onClick={startStripeOnboarding} className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90">{t('payouts_page.connect_with_stripe', { defaultValue: 'Connect with Stripe' })}</button>
                             ) : (
                               <>
-                                <button type="button" onClick={startStripeOnboarding} className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]">{t('payouts_page.continue_onboarding', { defaultValue: 'Continue onboarding' })}</button>
-                                <button type="button" onClick={openStripeDashboard} className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]">{t('payouts_page.manage_in_stripe', { defaultValue: 'Manage in Stripe' })}</button>
+                                <button type="button" onClick={startStripeOnboarding} className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]">{t('payouts_page.continue_onboarding', { defaultValue: 'Continue onboarding' })}</button>
+                                <button type="button" onClick={openStripeDashboard} className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]">{t('payouts_page.manage_in_stripe', { defaultValue: 'Manage in Stripe' })}</button>
                               </>
                             )}
                             {isLoadingStripeStatus ? <span className="self-center text-sm text-white/50">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</span> : null}
@@ -1292,7 +1292,7 @@ export default function PayoutsPageNew({
 
                         {error && <div className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">{error}</div>}
 
-                        <button type="button" onClick={() => handleSavePayoutDetails(() => setEditStep('verify'))} disabled={isSaving || payoutChangeVerificationRequired} className="w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40">
+                        <button type="button" onClick={() => handleSavePayoutDetails(() => setEditStep('verify'))} disabled={isSaving || payoutChangeVerificationRequired} className="w-full rounded bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40">
                           {isSaving ? (activeProfile === 'stripe_connect' ? t('payouts_page.opening_stripe', { defaultValue: 'Opening Stripe…' }) : t('payouts_page.saving', { defaultValue: 'Saving…' })) : (activeProfile === 'stripe_connect' ? t('payouts_page.continue_to_stripe', { defaultValue: 'Continue to Stripe' }) : t('payouts_page.save_and_continue', { defaultValue: 'Save & continue' }))}
                         </button>
                       </div>
@@ -1357,7 +1357,7 @@ export default function PayoutsPageNew({
                                       <label className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.upload_document', { defaultValue: 'Upload document' })}</label>
                                       <input type="file" accept="image/*,application/pdf" aria-label={t('payouts_page.upload_document', { defaultValue: 'Upload document' })} onChange={(e) => setBankVerificationFile(e.target.files?.[0] || null)} className="w-full text-sm text-white" />
                                     </div>
-                                    <button type="button" onClick={submitBankVerification} disabled={isSubmittingBankVerification} className="w-full rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                    <button type="button" onClick={submitBankVerification} disabled={isSubmittingBankVerification} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
                                       {isSubmittingBankVerification ? t('payouts_page.submitting', { defaultValue: 'Submitting…' }) : t('payouts_page.submit_bank_verification', { defaultValue: 'Submit bank verification' })}
                                     </button>
                                     {bankVerificationMessage && <div className="text-sm text-white/60">{bankVerificationMessage}</div>}
@@ -1402,7 +1402,7 @@ export default function PayoutsPageNew({
                                         <label htmlFor="step2-swift" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.swift_code_optional', { defaultValue: 'SWIFT code (optional)' })}</label>
                                         <input id="step2-swift" type="text" value={newBankDestination.swiftCode} onChange={(e) => setNewBankDestination((p) => ({ ...p, swiftCode: e.target.value }))} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                       </div>
-                                      <button type="button" onClick={addBankDestination} disabled={isAddingBankDestination} className="w-full rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                      <button type="button" onClick={addBankDestination} disabled={isAddingBankDestination} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
                                         {isAddingBankDestination ? t('payouts_page.adding', { defaultValue: 'Adding…' }) : t('payouts_page.add_bank_account', { defaultValue: 'Add bank account' })}
                                       </button>
                                       <p className="!text-xs text-white/50">{t('payouts_page.bank_doc_note', { defaultValue: "You'll need to submit a bank statement or void check for each bank account." })}</p>
@@ -1422,14 +1422,14 @@ export default function PayoutsPageNew({
                             </div>
                             {phoneStatus !== 'verified' && (
                               <div className="space-y-3">
-                                <button type="button" onClick={sendPhoneVerificationCode} disabled={isSendingPhoneCode} className="w-full rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                <button type="button" onClick={sendPhoneVerificationCode} disabled={isSendingPhoneCode} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
                                   {isSendingPhoneCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.send_verification_code', { defaultValue: 'Send verification code' })}
                                 </button>
                                 <div>
                                   <label htmlFor="step2-phone-code" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.enter_6_digit_code', { defaultValue: 'Enter 6-digit code' })}</label>
                                   <input id="step2-phone-code" type="text" inputMode="numeric" value={phoneVerificationCode} onChange={(e) => setPhoneVerificationCode(e.target.value)} placeholder="123456" className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                 </div>
-                                <button type="button" onClick={submitPhoneVerificationCode} disabled={isSubmittingPhoneCode} className="w-full rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                <button type="button" onClick={submitPhoneVerificationCode} disabled={isSubmittingPhoneCode} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
                                   {isSubmittingPhoneCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_phone', { defaultValue: 'Verify phone' })}
                                 </button>
                                 {phoneVerificationMessage && <div className="text-sm text-white/60">{phoneVerificationMessage}</div>}
@@ -1440,7 +1440,7 @@ export default function PayoutsPageNew({
                       </div>
 
                       <p className="mt-4 !text-xs text-white/50">{t('payouts_page.verification_required_note', { defaultValue: 'Verification is required to receive payouts and publish paid events.' })}</p>
-                      <button type="button" onClick={() => setEditStep('done')} className="mt-4 w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90">
+                      <button type="button" onClick={() => setEditStep('done')} className="mt-4 w-full rounded bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90">
                         {t('payouts_page.done_back_to_overview', { defaultValue: 'Done, back to overview' })}
                       </button>
                     </div>
@@ -1455,7 +1455,7 @@ export default function PayoutsPageNew({
                     </div>
                     <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white">{t('payouts_page.all_set_title', { defaultValue: "You're all set!" })}</h2>
                     <p className="mt-2 text-sm text-white/60">{t('payouts_page.all_set_desc', { defaultValue: 'Your payout details have been saved. If your identity isn’t verified yet, verify it to withdraw. Our team reviews it usually within 1–2 business days.' })}</p>
-                    <Link href="/organizer/settings/payouts" className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    <Link href="/organizer/settings/payouts" className="mt-6 inline-flex items-center gap-2 rounded bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
                       {t('payouts_page.back_to_payouts', { defaultValue: 'Back to payouts' })}
                     </Link>
                   </div>
@@ -1689,7 +1689,7 @@ export default function PayoutsPageNew({
                                 type="button"
                                 onClick={submitBankVerification}
                                 disabled={isSubmittingBankVerification}
-                                className="w-full px-4 py-2 rounded-full bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isSubmittingBankVerification ? t('payouts_page.submitting', { defaultValue: 'Submitting…' }) : t('payouts_page.submit_bank_verification', { defaultValue: 'Submit bank verification' })}
                               </button>
@@ -1808,7 +1808,7 @@ export default function PayoutsPageNew({
                                   type="button"
                                   onClick={addBankDestination}
                                   disabled={isAddingBankDestination}
-                                  className="w-full px-4 py-2 rounded-full bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isAddingBankDestination ? t('payouts_page.adding', { defaultValue: 'Adding…' }) : t('payouts_page.add_bank_account', { defaultValue: 'Add bank account' })}
                                 </button>
@@ -1845,7 +1845,7 @@ export default function PayoutsPageNew({
                             type="button"
                             onClick={sendPhoneVerificationCode}
                             disabled={isSendingPhoneCode}
-                            className="w-full px-4 py-2 rounded-full bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isSendingPhoneCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.send_verification_code', { defaultValue: 'Send verification code' })}
                           </button>
@@ -1866,7 +1866,7 @@ export default function PayoutsPageNew({
                             type="button"
                             onClick={submitPhoneVerificationCode}
                             disabled={isSubmittingPhoneCode}
-                            className="w-full px-4 py-2 rounded-full bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isSubmittingPhoneCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_phone', { defaultValue: 'Verify phone' })}
                           </button>
@@ -1919,7 +1919,7 @@ export default function PayoutsPageNew({
                         <button
                           type="button"
                           onClick={startStripeOnboarding}
-                          className="px-3 py-2 bg-white/[0.1] text-white rounded-full text-sm font-semibold hover:bg-white/[0.15]"
+                          className="px-3 py-2 bg-white/[0.1] text-white rounded text-sm font-semibold hover:bg-white/[0.15]"
                         >
                           {t('payouts_page.connect_with_stripe', { defaultValue: 'Connect with Stripe' })}
                         </button>
@@ -1928,14 +1928,14 @@ export default function PayoutsPageNew({
                           <button
                             type="button"
                             onClick={startStripeOnboarding}
-                            className="px-3 py-2 rounded-full bg-white/[0.07] text-white text-sm font-medium transition-colors hover:bg-white/[0.12]"
+                            className="px-3 py-2 rounded bg-white/[0.07] text-white text-sm font-medium transition-colors hover:bg-white/[0.12]"
                           >
                             {t('payouts_page.continue_onboarding', { defaultValue: 'Continue onboarding' })}
                           </button>
                           <button
                             type="button"
                             onClick={openStripeDashboard}
-                            className="px-3 py-2 rounded-full bg-white/[0.07] text-white text-sm font-medium transition-colors hover:bg-white/[0.12]"
+                            className="px-3 py-2 rounded bg-white/[0.07] text-white text-sm font-medium transition-colors hover:bg-white/[0.12]"
                           >
                             {t('payouts_page.manage_in_stripe', { defaultValue: 'Manage in Stripe' })}
                           </button>
@@ -2067,7 +2067,7 @@ export default function PayoutsPageNew({
                     <button
                       type="button"
                       onClick={() => setIsEditing(true)}
-                      className="w-full px-4 py-2 rounded-full bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors"
+                      className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors"
                     >
                       {t('payouts_page.edit_payout_details', { defaultValue: 'Edit payout details' })}
                     </button>
@@ -2273,7 +2273,7 @@ export default function PayoutsPageNew({
                         type="button"
                         onClick={() => handleSavePayoutDetails()}
                         disabled={isSaving || payoutChangeVerificationRequired}
-                        className="flex-1 px-4 py-2 bg-white text-black rounded-full font-semibold hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex-1 px-4 py-2 bg-white text-black rounded font-semibold hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {isSaving
                           ? (activeProfile === 'stripe_connect' ? t('payouts_page.opening_stripe', { defaultValue: 'Opening Stripe…' }) : t('payouts_page.saving', { defaultValue: 'Saving…' }))
@@ -2291,7 +2291,7 @@ export default function PayoutsPageNew({
                             setPayoutChangeMessage(null)
                           }}
                           disabled={isSaving}
-                          className="px-4 py-2 rounded-full bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t('payouts_page.cancel', { defaultValue: 'Cancel' })}
                         </button>

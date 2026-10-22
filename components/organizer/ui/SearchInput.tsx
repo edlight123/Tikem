@@ -34,7 +34,7 @@ export function SearchInput({
         // A form field is a FILL, not a hairline around nothing: this was
         // `border-white/10` over `bg-transparent`, i.e. an outline around the
         // page. 16px keeps iOS from zooming the page on focus.
-        className="h-11 w-full rounded-[10px] bg-white/[0.06] pl-9 pr-8 text-[16px] text-white placeholder:text-white/30 focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
+        className="h-11 w-full rounded bg-white/[0.06] pl-9 pr-8 text-[16px] text-white placeholder:text-white/30 focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500/40"
       />
       {value && (
         <button

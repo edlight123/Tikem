@@ -110,7 +110,7 @@ export function ConfirmationDialog({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="h-11 flex-1 rounded-full bg-white/[0.07] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="h-11 flex-1 rounded bg-white/[0.07] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -118,7 +118,7 @@ export function ConfirmationDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`h-11 flex-1 rounded-full text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 ${
+            className={`h-11 flex-1 rounded text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 ${
               variant === 'danger'
                 ? 'bg-red-500/15 text-red-200 hover:bg-red-500/25 focus-visible:ring-red-500'
                 : 'bg-white text-black hover:bg-white/90 focus-visible:ring-brand-500'

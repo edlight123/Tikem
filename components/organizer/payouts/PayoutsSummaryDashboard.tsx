@@ -182,7 +182,7 @@ export default function PayoutsSummaryDashboard({
         <button
           type="button"
           onClick={() => onEdit(profile)}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-colors ${
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-semibold transition-colors ${
             method.status === 'needs_attention'
               ? 'bg-red-500/15 text-red-200 hover:bg-red-500/25'
               : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
@@ -215,7 +215,7 @@ export default function PayoutsSummaryDashboard({
           {needsIdentity && (
             <Link
               href="/organizer/verify"
-              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/90"
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/90"
             >
               <ShieldCheck className="h-4 w-4" />
               {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
@@ -225,7 +225,7 @@ export default function PayoutsSummaryDashboard({
             <button
               type="button"
               onClick={onSetupNew}
-              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/90"
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/90"
             >
               <Plus className="h-4 w-4" />
               {t('payouts_summary.set_up_payouts')}
@@ -267,7 +267,7 @@ export default function PayoutsSummaryDashboard({
             <button
               type="button"
               onClick={onSetupNew}
-              className="px-6 py-2.5 bg-white/[0.07] text-white rounded-full font-semibold hover:bg-white/[0.12] transition-colors"
+              className="px-6 py-2.5 bg-white/[0.07] text-white rounded font-semibold hover:bg-white/[0.12] transition-colors"
             >
               {t('payouts_summary.set_up_payouts_title')}
             </button>

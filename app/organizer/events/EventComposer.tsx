@@ -334,7 +334,7 @@ function FormProgress({ done, total }: { done: number; total: number }) {
             // short teal line rather than one quarter of four, which is the
             // entire thing it is meant to communicate. /20 keeps the track
             // quiet but present.
-            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+            className={`h-1 flex-1 rounded transition-colors duration-300 ${
               i < done ? 'bg-brand-400' : 'bg-white/20'
             }`}
           />
@@ -391,7 +391,7 @@ const CHIP_OFF = 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text
  * ("pills way to big"). Padding alone then left them at 34px and fully round,
  * and the answer to that was "make them smaller and maybe less round".
  *
- * So the INK is 30px and `rounded-[10px]`, and the TOUCH TARGET is separate: an
+ * So the INK is 30px and `rounded`, and the TOUCH TARGET is separate: an
  * ::after pseudo-element stretched 7px past the top and bottom edges gives 44px
  * of tappable box without adding a pixel of visible height or shifting the
  * layout. `leading-[18px]` is explicit because an arbitrary `text-[13px]` sets
@@ -400,7 +400,7 @@ const CHIP_OFF = 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text
  */
 const chipCls = (on: boolean) =>
   [
-    'relative inline-flex items-center rounded-[10px] px-2.5 py-1.5',
+    'relative inline-flex items-center rounded px-2.5 py-1.5',
     'text-[13px] leading-[18px] font-medium transition-colors',
     // Verified emitted: `.after\\:-inset-y-\\[7px\\]:after{top:-7px;bottom:-7px}`
     // is in the built CSS. Worth checking rather than assuming — a hit area
@@ -465,7 +465,7 @@ function InfoPopover({ label, text }: { label: string; text: string }) {
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
         aria-label={label}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-white/50 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 bg-white/[0.07]"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-white/50 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 bg-white/[0.07]"
       >
         <Info className="h-3 w-3" />
       </button>
@@ -2066,14 +2066,14 @@ export default function EventComposer({
           )}
 
           {/* Sell Tickets / RSVP */}
-          <div className="mx-auto mb-8 grid max-w-md grid-cols-2 rounded-full bg-white/[0.05] p-1">
+          <div className="mx-auto mb-8 grid max-w-md grid-cols-2 rounded bg-white/[0.05] p-1">
             {(['tickets', 'rsvp'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setSellMode(m)}
                 aria-pressed={sellMode === m}
-                className={`rounded-full py-2.5 text-sm font-semibold transition-all ${
+                className={`rounded py-2.5 text-sm font-semibold transition-all ${
                   sellMode === m ? 'bg-white text-black' : 'text-white/70 hover:text-white'
                 }`}
               >
@@ -2115,7 +2115,7 @@ export default function EventComposer({
               <button
                 type="button"
                 onClick={() => setShowSummary(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-3.5 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.09] hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded bg-white/[0.05] px-3.5 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.09] hover:text-white"
               >
                 <Plus className="h-4 w-4" /> {t('composer.shortSummary', { defaultValue: 'Short Summary' })}
               </button>
@@ -2443,7 +2443,7 @@ export default function EventComposer({
                     type="button"
                     onClick={addTier}
                     aria-label={t('composer.addTicketType', { defaultValue: 'Add ticket type' })}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -2457,14 +2457,14 @@ export default function EventComposer({
                 <span className="label-mono text-[11px] uppercase tracking-wide text-white/70">
                   {t('composer.currency', { defaultValue: 'Currency' })}
                 </span>
-                <div className="flex rounded-full bg-white/[0.06] p-0.5" role="group" aria-label={tx('event_composer.ticket_currency')}>
+                <div className="flex rounded bg-white/[0.06] p-0.5" role="group" aria-label={tx('event_composer.ticket_currency')}>
                   {allowedCurrencies.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setCurrency(c)}
                       aria-pressed={currency === c}
-                      className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
+                      className={`rounded px-3.5 py-1 text-xs font-semibold transition-colors ${
                         currency === c ? 'bg-white text-black' : 'text-white/70 hover:text-white'
                       }`}
                     >
@@ -2896,7 +2896,7 @@ export default function EventComposer({
                 <button
                   type="button"
                   onClick={addTier}
-                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
                 >
                   <Plus className="h-4 w-4" /> {t('composer.addTicketType', { defaultValue: 'Add ticket type' })}
                 </button>
@@ -3044,7 +3044,7 @@ export default function EventComposer({
               <button
                 type="button"
                 onClick={openNewGuest}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
               >
                 <Plus className="h-4 w-4" /> {t('composer.addToGuestlist', { defaultValue: 'Add to guestlist' })}
               </button>
@@ -3115,7 +3115,7 @@ export default function EventComposer({
               <span className="flex items-center gap-3">
                 <ImageIcon className="h-[18px] w-[18px]" /> {t('composer.imageGallery', { defaultValue: 'Image Gallery' })}
               </span>
-              <span className="inline-flex select-none items-center rounded-full bg-white/[0.07] px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white/60">
+              <span className="inline-flex select-none items-center rounded bg-white/[0.07] px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white/60">
                 {t('composer.comingSoon', { defaultValue: 'Coming soon' })}
               </span>
             </div>
@@ -3302,7 +3302,7 @@ export default function EventComposer({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className={`w-full rounded-full px-7 py-3.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`w-full rounded px-7 py-3.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                 // One white pill per screen: while an unpublished edit shows the
                 // white "Publish event" pill below, saving is the secondary action.
                 isEdit && !isPublished
@@ -3342,7 +3342,7 @@ export default function EventComposer({
                     publishing ||
                     (!isPublished && (paidPublishingBlocked || !readyToPublish))
                   }
-                  className={`w-full rounded-full px-7 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`w-full rounded px-7 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                     isPublished
                       ? 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12]'
                       : 'bg-white text-black hover:bg-white/90'

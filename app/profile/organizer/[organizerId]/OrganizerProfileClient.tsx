@@ -283,7 +283,7 @@ export default function OrganizerProfileClient({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={label}
-                      className="grid h-11 w-11 place-items-center rounded-full bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white"
+                      className="grid h-11 w-11 place-items-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white"
                     >
                       <Icon className="h-4 w-4" />
                     </a>

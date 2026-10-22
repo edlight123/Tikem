@@ -160,7 +160,7 @@ export default function MobileHero({
 
 function PosterChip({ dot, children }: { dot: string; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white backdrop-blur-md">
+    <span className="inline-flex items-center gap-1.5 rounded bg-black/40 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white backdrop-blur-md">
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
       {children}
     </span>

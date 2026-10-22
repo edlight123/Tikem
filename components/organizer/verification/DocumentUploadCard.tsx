@@ -215,14 +215,14 @@ export default function DocumentUploadCard({
               <button
                 onClick={openFileDialog}
                 disabled={isUploading}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] rounded-full transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] rounded transition-colors disabled:opacity-50"
               >
                 {t('document_upload.replace')}
               </button>
               <button
                 onClick={handleRemove}
                 disabled={isUploading}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-red-200 bg-red-500/15 hover:bg-red-500/25 rounded-full transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-red-200 bg-red-500/15 hover:bg-red-500/25 rounded transition-colors disabled:opacity-50"
               >
                 {t('actions.remove')}
               </button>
@@ -249,7 +249,7 @@ export default function DocumentUploadCard({
           ) : (
             <>
               {/* Upload Icon */}
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/[0.08] flex items-center justify-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded bg-white/[0.08] flex items-center justify-center">
                 <svg className="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
@@ -271,7 +271,7 @@ export default function DocumentUploadCard({
                     openFileDialog()
                   }}
                   disabled={disabled}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] rounded-full hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] rounded hover:bg-white/[0.12] transition-colors disabled:opacity-50"
                 >
                   {t('document_upload.choose_file')}
                 </button>
@@ -282,7 +282,7 @@ export default function DocumentUploadCard({
                     openCameraDialog()
                   }}
                   disabled={disabled}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-black bg-white rounded-full hover:bg-white/90 transition-colors disabled:opacity-50 sm:hidden"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-black bg-white rounded hover:bg-white/90 transition-colors disabled:opacity-50 sm:hidden"
                 >
                   <Camera className="h-4 w-4" aria-hidden="true" />
                   Take Photo

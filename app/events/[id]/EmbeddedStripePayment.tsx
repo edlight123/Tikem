@@ -260,14 +260,14 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, co
           type="button"
           onClick={onClose}
           disabled={processing}
-          className="flex-1 h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={!stripe || processing}
-          className="flex-1 h-12 px-4 rounded-full bg-white text-black font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 h-12 px-4 rounded bg-white text-black font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? t('events.processing') : `${t('events.pay')} ${formatAmount(chargeTotal)}`}
         </button>
@@ -461,7 +461,7 @@ export default function EmbeddedStripePayment({
       colorDanger: '#ef4444',
       fontFamily: 'system-ui, sans-serif',
       spacingUnit: '4px',
-      borderRadius: '8px',
+      borderRadius: '4px',
     },
   }
 
@@ -479,7 +479,7 @@ export default function EmbeddedStripePayment({
           <button
             ref={closeButtonRef}
             onClick={closeSheet}
-            className="p-2 hover:bg-white/[0.08] rounded-full transition-colors"
+            className="p-2 hover:bg-white/[0.08] rounded transition-colors"
             aria-label={t('common.close')}
           >
             <X className="w-5 h-5 text-white/50" />

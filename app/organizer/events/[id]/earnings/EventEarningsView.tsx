@@ -260,7 +260,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           </p>
           <Link 
             href={`/events/${event.id}`}
-            className="inline-block px-6 py-3 bg-white text-black rounded-full hover:bg-white/90 transition-colors font-semibold"
+            className="inline-block px-6 py-3 bg-white text-black rounded hover:bg-white/90 transition-colors font-semibold"
           >
             {t('event_earnings.view_event_page')}
           </Link>
@@ -602,14 +602,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           <div className="mt-3 flex flex-wrap gap-3">
             <Link
               href="/organizer/verify"
-              className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+              className="inline-flex items-center rounded bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
             >
               {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
             </Link>
             {needsPayoutMethodToWithdraw && (
               <Link
                 href="/organizer/settings/payouts"
-                className="inline-flex items-center rounded-full bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
+                className="inline-flex items-center rounded bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
               >
                 {t('verify_to_withdraw.add_method_cta', { defaultValue: 'Set up payouts' })}
               </Link>
@@ -745,7 +745,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       value={moncashNumber}
                       onChange={(e) => setMoncashNumber(e.target.value)}
                       placeholder="+509 1234 5678"
-                      className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                      className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                       required
                     />
                   </div>
@@ -897,7 +897,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                           <select
                             value={selectedBankDestinationId}
                             onChange={(e) => setSelectedBankDestinationId(e.target.value)}
-                            className="w-full px-3 py-3 rounded-[10px] text-[16px] bg-white/[0.08] text-white placeholder:text-white/35 focus:outline-none"
+                            className="w-full px-3 py-3 rounded text-[16px] bg-white/[0.08] text-white placeholder:text-white/35 focus:outline-none"
                           >
                             {bankDestinations.map((d) => (
                               <option key={d.id} value={d.id}>
@@ -947,7 +947,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                           value={bankDetails.accountHolder}
                           onChange={(e) => setBankDetails({ ...bankDetails, accountHolder: e.target.value })}
                           placeholder={t('event_earnings.full_name_on_account')}
-                          className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                           required
                         />
                       </div>
@@ -959,7 +959,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                           value={bankDetails.bankName}
                           onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
                           placeholder="e.g., Unibank"
-                          className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                           required
                         />
                       </div>
@@ -971,7 +971,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                           value={bankDetails.accountNumber}
                           onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
                           placeholder={t('event_earnings.account_number_placeholder')}
-                          className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                           required
                         />
                       </div>
@@ -983,7 +983,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                           value={bankDetails.routingNumber}
                           onChange={(e) => setBankDetails({ ...bankDetails, routingNumber: e.target.value })}
                           placeholder={t('event_earnings.for_international_transfers')}
-                          className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                         />
                       </div>
 
@@ -994,7 +994,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                           value={bankDetails.swiftCode}
                           onChange={(e) => setBankDetails({ ...bankDetails, swiftCode: e.target.value })}
                           placeholder={t('event_earnings.for_international_transfers')}
-                          className="w-full px-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+                          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.08] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1022,7 +1022,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       type="button"
                       onClick={sendVerificationCode}
                       disabled={isSendingVerificationCode}
-                      className="px-3 py-2 bg-white/[0.1] text-white rounded-full text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-40"
+                      className="px-3 py-2 bg-white/[0.1] text-white rounded text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-40"
                     >
                       {isSendingVerificationCode ? 'Sending…' : 'Send code'}
                     </button>
@@ -1036,7 +1036,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       type="button"
                       onClick={verifyCode}
                       disabled={isVerifyingVerificationCode || !/^\d{6}$/.test(verificationCode)}
-                      className="px-3 py-2 bg-white/[0.1] text-white rounded-full text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-50"
+                      className="px-3 py-2 bg-white/[0.1] text-white rounded text-sm font-semibold hover:bg-white/[0.15] disabled:opacity-50"
                     >
                       {isVerifyingVerificationCode ? 'Verifying…' : 'Verify'}
                     </button>
@@ -1065,7 +1065,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     ((bankMode === 'new' && (!bankDetails.accountHolder || !bankDetails.bankName || !bankDetails.accountNumber)) ||
                       (bankMode !== 'new' && !selectedBankDestinationId)))
                 }
-                className="flex-1 px-4 py-3 bg-white text-black rounded-full hover:bg-white/90 transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex-1 px-4 py-3 bg-white text-black rounded hover:bg-white/90 transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm Withdrawal'}
               </button>
@@ -1090,7 +1090,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   })
                 }}
                 disabled={isSubmitting}
-                className="px-4 py-3 rounded-full bg-white/[0.07] text-white hover:bg-white/[0.12] transition-colors font-semibold disabled:cursor-not-allowed"
+                className="px-4 py-3 rounded bg-white/[0.07] text-white hover:bg-white/[0.12] transition-colors font-semibold disabled:cursor-not-allowed"
               >
                 {t('actions.cancel')}
               </button>

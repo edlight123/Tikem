@@ -68,9 +68,9 @@ export function EditEventHeader({
                       </span>
                     )}
                   </div>
-                  <div className="w-full bg-white/[0.07] rounded-full h-2">
+                  <div className="w-full bg-white/[0.07] rounded h-2">
                     <div
-                      className={`h-2 rounded-full transition-all duration-500 ${
+                      className={`h-2 rounded transition-all duration-500 ${
                         completionPercentage === 100
                           ? 'bg-emerald-400'
                           : completionPercentage >= 60
@@ -104,7 +104,7 @@ export function EditEventHeader({
               type="button"
               onClick={onSave}
               disabled={isSaving || !hasUnsavedChanges}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded font-semibold transition-all ${
                 hasUnsavedChanges
                   ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
                   : 'bg-white/[0.07] text-white/40 cursor-not-allowed'
@@ -121,7 +121,7 @@ export function EditEventHeader({
               <Link
                 href={`/events/${eventId}`}
                 target="_blank"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold bg-white/[0.07] text-white/70 hover:bg-white/[0.12] transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded font-semibold bg-white/[0.07] text-white/70 hover:bg-white/[0.12] transition-all"
               >
                 <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">{t('actions.preview')}</span>
@@ -133,7 +133,7 @@ export function EditEventHeader({
               type="button"
               onClick={onPublish}
               disabled={!canPublish || isSaving}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded font-semibold transition-all ${
                 canPublish && !isSaving
                   ? isPublished
                     ? 'bg-white/[0.07] text-white hover:bg-white/[0.12]'

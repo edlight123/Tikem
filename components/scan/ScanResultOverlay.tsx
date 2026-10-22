@@ -35,7 +35,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="bg-emerald-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
           <div className="text-center">
-            <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-emerald-500 rounded flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
               <CheckCircle className="w-12 h-12 text-white" strokeWidth={3} />
             </div>
             
@@ -76,7 +76,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="bg-amber-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
           <div className="text-center">
-            <div className="w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-amber-500 rounded flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
               <AlertTriangle className="w-12 h-12 text-white" strokeWidth={3} />
             </div>
             
@@ -109,7 +109,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
             {result.allowReentry ? (
               <button
                 onClick={onOverride}
-                className="w-full px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors mb-2"
+                className="w-full px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors mb-2"
               >
                 {t('door.override_allow_reentry', { defaultValue: 'Override / Allow Re-entry' })}
               </button>
@@ -141,7 +141,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-red-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="text-center">
-          <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-red-500 rounded flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
             <XCircle className="w-12 h-12 text-white" strokeWidth={3} />
           </div>
           

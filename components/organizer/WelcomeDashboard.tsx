@@ -69,7 +69,7 @@ export default function WelcomeDashboard({
             </div>
             <Link
               href="/organizer/events/new"
-              className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
             >
               {t('organizer.welcome.createEventBtn', 'Create Event')}
               <ArrowRight className="w-5 h-5" />

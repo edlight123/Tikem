@@ -205,7 +205,7 @@ export default function PromoterWalletCard() {
             type="button"
             onClick={handleConfirmCode}
             disabled={working || code.length !== 6}
-            className="rounded-full bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
+            className="rounded bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {t('promoter.wallet_code_confirm', 'Confirm')}
           </button>
@@ -225,7 +225,7 @@ export default function PromoterWalletCard() {
             type="button"
             onClick={handleWithdraw}
             disabled={working || !phone.trim()}
-            className="rounded-full bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
+            className="rounded bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {working ? t('promoter.wallet_sending', 'Sending…') : t('promoter.wallet_withdraw_btn', 'Withdraw to MonCash')}
           </button>

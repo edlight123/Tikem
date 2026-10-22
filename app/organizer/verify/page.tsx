@@ -297,7 +297,7 @@ export default function VerifyOrganizerPage() {
           <p className="text-sm text-red-200 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="w-full px-4 py-2.5 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-colors"
+            className="w-full px-4 py-2.5 bg-white text-black font-semibold rounded hover:bg-white/90 transition-colors"
           >
             {t('actions.retry')}
           </button>
@@ -375,13 +375,13 @@ export default function VerifyOrganizerPage() {
               <div className="flex flex-col sm:flex-row gap-2">
                 <Link
                   href="/organizer/verify?details=1"
-                  className="px-4 py-2 rounded-full font-semibold text-sm text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors text-center"
+                  className="px-4 py-2 rounded font-semibold text-sm text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors text-center"
                 >
                   {t('verification_page.view_verification_details')}
                 </Link>
                 <Link
                   href="/organizer"
-                  className="px-4 py-2 rounded-full font-semibold text-sm text-black bg-white hover:bg-white/90 transition-colors text-center"
+                  className="px-4 py-2 rounded font-semibold text-sm text-black bg-white hover:bg-white/90 transition-colors text-center"
                 >
                   {t('verification_page.go_to_dashboard')}
                 </Link>
@@ -440,9 +440,9 @@ export default function VerifyOrganizerPage() {
                 </div>
 
                 <div className="mt-4">
-                  <div className="w-full bg-white/10 rounded-full h-2">
+                  <div className="w-full bg-white/10 rounded h-2">
                     <div
-                      className="bg-brand-400 h-2 rounded-full transition-all"
+                      className="bg-brand-400 h-2 rounded transition-all"
                       style={{ width: `${completionPercentage}%` }}
                     />
                   </div>
@@ -451,7 +451,7 @@ export default function VerifyOrganizerPage() {
                 <div className="mt-5 space-y-3">
                   <button
                     onClick={() => setViewMode('review')}
-                    className={`w-full px-4 py-3 rounded-full font-semibold transition-colors ${
+                    className={`w-full px-4 py-3 rounded font-semibold transition-colors ${
                       isReadOnly
                         ? 'bg-white/[0.07] hover:bg-white/[0.12] text-white'
                         : canSubmit

@@ -49,7 +49,7 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                   }}
                 >
                   {/* Step Number/Status Icon */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                  <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 transition-all ${
                     isActive
                       ? 'bg-white text-black'
                       : isCompleted

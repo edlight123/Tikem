@@ -101,7 +101,7 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
                   <p className={`text-sm ${colors.text} opacity-80 mb-3`}>{alert.description}</p>
                   <Link
                     href={alert.ctaHref}
-                    className={`inline-flex items-center gap-2 px-4 py-2 ${colors.btn} rounded-full font-semibold transition-colors text-sm`}
+                    className={`inline-flex items-center gap-2 px-4 py-2 ${colors.btn} rounded font-semibold transition-colors text-sm`}
                   >
                     {alert.ctaText}
                   </Link>

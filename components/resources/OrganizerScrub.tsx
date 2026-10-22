@@ -68,7 +68,7 @@ function OrgTabBar({ active }: { active: 'home' | 'events' | 'scan' | 'team' }) 
       <div className="flex items-center justify-around px-3">
         {items.map((it, i) =>
           it === null ? (
-            <span key={i} className="grid h-9 w-9 place-items-center rounded-full bg-white">
+            <span key={i} className="grid h-9 w-9 place-items-center rounded bg-white">
               <Plus className="h-[18px] w-[18px] text-black" strokeWidth={2.5} />
             </span>
           ) : (
@@ -99,7 +99,7 @@ function ScreenBar({ title, back = true, poster = false }: { title: string; back
   return (
     <div className="flex items-center gap-2.5 px-4 pt-12">
       {back && (
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/[0.06]">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded bg-white/[0.06]">
           <ChevronLeft className="h-4 w-4 text-white" />
         </span>
       )}
@@ -284,7 +284,7 @@ export default function OrganizerScrub() {
                             sizes="104px"
                             className="object-cover"
                           />
-                          <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/50 backdrop-blur-sm">
+                          <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded bg-black/50 backdrop-blur-sm">
                             <ImagePlus className="h-2.5 w-2.5 text-white/85" />
                           </span>
                         </div>
@@ -333,8 +333,8 @@ export default function OrganizerScrub() {
                       <p className="mt-1 font-grotesk text-[24px] font-bold leading-none text-white tabular-nums">
                         {revenue.toLocaleString()} <span className="text-[13px] text-white/50">HTG</span>
                       </p>
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-                        <span className="block h-full rounded-full bg-brand-400" style={{ width: `${soldPct}%` }} />
+                      <div className="mt-3 h-1.5 overflow-hidden rounded bg-white/10">
+                        <span className="block h-full rounded bg-brand-400" style={{ width: `${soldPct}%` }} />
                       </div>
                       <p className="mt-1.5 text-[9px] text-white/50 tabular-nums">
                         <span className="font-semibold text-white">
@@ -472,7 +472,7 @@ export default function OrganizerScrub() {
                       </div>
                       {/* the laser rests once the ticket reads */}
                       {!still && !scanHit && (
-                        <span className="tk-scanline absolute inset-x-8 top-1/2 h-[2px] rounded-full bg-brand-400/80" />
+                        <span className="tk-scanline absolute inset-x-8 top-1/2 h-[2px] rounded bg-brand-400/80" />
                       )}
                     </div>
                     {/* the green YES pops on the hit */}
@@ -483,7 +483,7 @@ export default function OrganizerScrub() {
                         transform: `translate3d(0, ${(1 - smooth(w4, 0.45, 0.62)) * 14}px, 0) scale(${0.96 + 0.04 * smooth(w4, 0.45, 0.62)})`,
                       }}
                     >
-                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-400">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded bg-emerald-400">
                         <Check className="h-4 w-4 text-black" strokeWidth={3} />
                       </span>
                       <span className="min-w-0 flex-1">

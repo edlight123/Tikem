@@ -69,7 +69,7 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 ) : null}
-                {active && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-400" />}
+                {active && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded bg-brand-400" />}
               </Link>
             )
           })}

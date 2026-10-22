@@ -85,12 +85,12 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
           fills, so nothing read as chosen. Selection is a white fill now, and
           the ::after gives each 30px chip a 44px touch box.
         */}
-        <div className="flex shrink-0 items-center gap-0.5 rounded-[12px] bg-white/[0.06] p-1">
+        <div className="flex shrink-0 items-center gap-0.5 rounded bg-white/[0.06] p-1">
           {(['7d', '30d', 'lifetime'] as TimeRange[]).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`relative inline-flex items-center rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              className={`relative inline-flex items-center rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                 range === r
                   ? 'bg-white text-black'
                   : 'text-white/70 hover:bg-white/[0.12] hover:text-white'

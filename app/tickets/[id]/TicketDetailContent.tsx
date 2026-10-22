@@ -250,7 +250,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
           {/* Instructions Card */}
           <div className="bg-white/[0.055] rounded-2xl p-4 sm:p-6">
             <div className="flex items-start gap-3 mb-3 sm:mb-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/[0.08] rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/[0.08] rounded flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>

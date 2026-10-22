@@ -13,7 +13,7 @@
  *           NO top margin, so nothing sits between them.
  *   cards   space-y-6 of three `rounded-xl bg-white/[0.03] p-6`:
  *             1. Change Password — a 20px serif heading, then three
- *                `py-3 rounded-[10px]` fields in a max-w-md column and a submit
+ *                `py-3 rounded` fields in a max-w-md column and a submit
  *             2. Two-Factor — heading + copy with a small status pill right
  *             3. Recent Login Activity — a p-6 head over `divide-y` p-4 rows
  *
@@ -47,7 +47,7 @@ export default function SecurityLoading() {
               {[0, 1, 2].map((i) => (
                 <div key={i}>
                   <Bar className="mb-2 h-5 w-32" />
-                  <Bar className="h-12 w-full rounded-[10px]" />
+                  <Bar className="h-12 w-full rounded" />
                 </div>
               ))}
               <Bar className="h-11 w-36 rounded-lg" />
@@ -61,7 +61,7 @@ export default function SecurityLoading() {
                 <Bar className="h-5 w-56 max-w-full" />
                 <Bar className="mt-2 h-4 w-72 max-w-full" />
               </div>
-              <Bar className="h-6 w-24 shrink-0 rounded-[8px]" />
+              <Bar className="h-6 w-24 shrink-0 rounded" />
             </div>
           </div>
 

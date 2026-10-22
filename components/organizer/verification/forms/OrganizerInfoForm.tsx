@@ -252,14 +252,14 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded-full font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
         >
           {t('onboarding.verification.nav.cancel', { defaultValue: 'Cancel' })}
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded-full font-semibold transition-all disabled:opacity-50"
+          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded font-semibold transition-all disabled:opacity-50"
         >
           {isSaving
             ? t('onboarding.verification.nav.saving', { defaultValue: 'Saving...' })

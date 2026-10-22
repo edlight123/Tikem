@@ -114,7 +114,7 @@ export default async function StaffHomePage() {
                       {e.city ? ` • ${e.city}` : ''}
                     </div>
                   </div>
-                  <div className="shrink-0 text-xs font-semibold text-white bg-white/[0.07] rounded-full px-3 py-1.5">
+                  <div className="shrink-0 text-xs font-semibold text-white bg-white/[0.07] rounded px-3 py-1.5">
                     Scan
                   </div>
                 </div>

@@ -210,7 +210,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
           <div className="shrink-0">
             <a
               href="#events-earnings"
-              className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold transition lg:w-auto ${
+              className={`inline-flex w-full items-center justify-center gap-2 rounded px-6 py-3 font-semibold transition lg:w-auto ${
                 anyAvailable ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white/60'
               }`}
             >
@@ -304,7 +304,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`relative inline-flex items-center whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+                  className={`relative inline-flex items-center whitespace-nowrap rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                     filter === status
                       ? 'bg-white text-black'
                       : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'

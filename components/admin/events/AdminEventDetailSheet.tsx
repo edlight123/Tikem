@@ -274,7 +274,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
                 <div className="space-y-3">
                   {event.audit_logs.map((log) => (
                     <div key={log.id} className="flex gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 bg-console-raise rounded-full flex items-center justify-center">
+                      <div className="flex-shrink-0 w-8 h-8 bg-console-raise rounded flex items-center justify-center">
                         <FileText className="h-3.5 w-3.5 text-console-mut" aria-hidden />
                       </div>
                       <div>

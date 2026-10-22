@@ -57,7 +57,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
             ) : (
               <span />
             )}
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-black/35 text-white backdrop-blur-md">
+            <span className="grid h-8 w-8 place-items-center rounded bg-black/35 text-white backdrop-blur-md">
               <QrCode className="h-[15px] w-[15px]" />
             </span>
           </div>
@@ -96,7 +96,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
           <span className="text-xs font-medium text-white/50">
             {ticketsSold} {ticketsSold === 1 ? 'ticket' : 'tickets'} sold
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition-colors group-hover:bg-white/90">
+          <span className="inline-flex items-center gap-1.5 rounded bg-white px-3 py-1.5 text-xs font-semibold text-black transition-colors group-hover:bg-white/90">
             <QrCode className="h-3.5 w-3.5" />
             Scan
           </span>
@@ -133,7 +133,7 @@ export default function EventSelector({ events }: EventSelectorProps) {
           <p className="mb-4 text-white/60">You don&apos;t have any events yet.</p>
           <Link
             href="/organizer/events/new"
-            className="inline-block rounded-full bg-white px-6 py-3 font-semibold text-black hover:bg-white/90"
+            className="inline-block rounded bg-white px-6 py-3 font-semibold text-black hover:bg-white/90"
           >
             {t('scan_selector.create_first_event')}
           </Link>

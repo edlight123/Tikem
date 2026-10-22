@@ -93,7 +93,7 @@ export default function SupportContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="text-center max-w-3xl mx-auto">
             {/* Pill Label */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 backdrop-blur-sm rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 backdrop-blur-sm rounded text-sm font-medium mb-4">
               <MessageCircle className="w-4 h-4 text-white/90" />
               <span>{t('hero.title')}</span>
             </div>
@@ -146,7 +146,7 @@ export default function SupportContent() {
               // Chosen chip = the white pill, unchosen = the ladder's control
               // fill with a real hover step. Same correction as ui/kit's Chip:
               // teal is semantic in this app, never a surface.
-              className={`px-6 py-2.5 rounded-full font-semibold transition-colors ${
+              className={`px-6 py-2.5 rounded font-semibold transition-colors ${
                 role === 'attendee'
                   ? 'bg-white text-black'
                   : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
@@ -163,7 +163,7 @@ export default function SupportContent() {
                 setSearchQuery('')
                 setOpenFAQs(new Set())
               }}
-              className={`px-6 py-2.5 rounded-full font-semibold transition-colors ${
+              className={`px-6 py-2.5 rounded font-semibold transition-colors ${
                 role === 'organizer'
                   ? 'bg-white text-black'
                   : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'

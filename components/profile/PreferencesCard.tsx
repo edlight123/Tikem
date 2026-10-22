@@ -259,7 +259,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                   aria-pressed={isSelected}
                   onClick={() => handleCategoryToggle(category)}
                   disabled={isUpdating}
-                  className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
+                  className={`rounded px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
                     isSelected
                       ? 'bg-white text-black'
                       : 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'

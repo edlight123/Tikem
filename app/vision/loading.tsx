@@ -138,7 +138,7 @@ export default function Loading() {
                 <Bar className="h-4 w-24" />
               </div>
             </div>
-            <Bar className="h-9 w-20 rounded-full" />
+            <Bar className="h-9 w-20 rounded" />
           </div>
         </div>
       </div>

@@ -157,7 +157,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+            className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               // The empty state carries the white pill while there are no links.
               links.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
             }`}
@@ -229,7 +229,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
             <button
               type="button"
               onClick={reset}
-              className="rounded-full bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {t('actions.cancel')}
             </button>
@@ -237,7 +237,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
               type="button"
               onClick={handleCreate}
               disabled={!label.trim() || !source.trim() || saving}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus className="h-4 w-4" />
               {t('tracking_links.create_link')}
@@ -265,7 +265,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus className="h-4 w-4" />
               {t('tracking_links.new_tracking_link')}
@@ -324,7 +324,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                     type="button"
                     onClick={() => copyLink(link.id, link.url)}
                     aria-label={`Copy tracking link: ${link.label}`}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    className="inline-flex h-9 items-center gap-1.5 rounded bg-white/[0.07] px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     {copiedId === link.id ? (
                       <><Check className="h-3.5 w-3.5 text-emerald-400" />{t('tracking_links.copied')}</>
@@ -336,7 +336,7 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
                     type="button"
                     onClick={() => deleteLink(link)}
                     aria-label={`Delete tracking link: ${link.label}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.07] text-white/70 transition-colors hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

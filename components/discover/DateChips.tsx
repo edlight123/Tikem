@@ -19,12 +19,12 @@ interface DateChipsProps {
  * composer's `chipCls` (app/organizer/events/EventComposer.tsx) so a filter
  * chip is the same object wherever the reader meets one.
  *
- * These used to be the shared <FilterChip>: `rounded-full`, a hairline border,
+ * These used to be the shared <FilterChip>: `rounded`, a hairline border,
  * `min-h-11`. Round + outlined + 44px tall made four date options read as four
  * fat lozenges, and the selected one was a teal-bordered pill — a coloured
  * status pill, which this codebase does not ship.
  *
- * So the INK is 30px and `rounded-[10px]`, state is fill-vs-fill (white when
+ * So the INK is 30px and `rounded`, state is fill-vs-fill (white when
  * on, barely-there when off), and the TOUCH TARGET is a separate concern: an
  * ::after stretched 7px past the top and bottom edges buys the 44px tappable
  * box without a pixel of visible height. `leading-[18px]` is explicit because
@@ -36,7 +36,7 @@ const CHIP_OFF = 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text
 export const discoverChipCls = (on: boolean) =>
   [
     'relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap',
-    'rounded-[10px] px-2.5 py-1.5 text-[13px] leading-[18px] font-medium transition-colors',
+    'rounded px-2.5 py-1.5 text-[13px] leading-[18px] font-medium transition-colors',
     "after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-['']",
     on ? CHIP_ON : CHIP_OFF,
   ].join(' ')

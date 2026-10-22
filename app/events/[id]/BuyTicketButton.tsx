@@ -1137,7 +1137,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <button
               type="submit"
               disabled={verifyingCode || !codeInput.trim()}
-              className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-3 px-5 rounded-full transition-colors disabled:opacity-50 min-h-12"
+              className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
             >
               {verifyingCode
                 ? t('events.processing')
@@ -1152,7 +1152,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 pendingActionRef.current = null
               }}
               disabled={verifyingCode}
-              className="w-full h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
+              className="w-full h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
             >
               {t('common.cancel')}
             </button>
@@ -1169,7 +1169,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity <= 1 || loading}
                 aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -1180,7 +1180,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 onClick={() => setQuantity(Math.min(10, quantity + 1))}
                 disabled={quantity >= 10 || loading}
                 aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1199,7 +1199,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           <button
             onClick={() => gateOrRun('free')}
             disabled={loading}
-            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded-full transition-colors disabled:opacity-50 min-h-12"
+            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
             {loading ? t('events.processing') : `${t('events.claim')} ${quantity} ${t('events.free_ticket')}${quantity !== 1 ? 's' : ''}`}
           </button>
@@ -1216,7 +1216,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           <button
             onClick={() => gateOrRun('paid')}
             disabled={loading || tierProbeLoading}
-            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded-full transition-colors disabled:opacity-50 min-h-12"
+            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
             {loading || tierProbeLoading ? t('events.processing') : t('events.buy_ticket')}
           </button>
@@ -1269,7 +1269,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1 || loading}
                     aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                    className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -1280,7 +1280,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     onClick={() => setQuantity(Math.min(10, quantity + 1))}
                     disabled={quantity >= 10 || loading}
                     aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                    className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1515,7 +1515,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <button
               onClick={() => setShowModal(false)}
               disabled={loading}
-              className="w-full h-12 px-4 rounded-full bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
+              className="w-full h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
             >
               {loading ? t('events.processing') : t('common.cancel')}
             </button>

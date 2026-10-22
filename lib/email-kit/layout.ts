@@ -96,14 +96,14 @@ export function gap(px: number): string {
 export function poster(url: string | null | undefined, alt: string, width = 536): string {
   if (!url || !/^https:\/\//i.test(String(url))) return ''
   const h = Math.round((width * 5) / 4)
-  return `<img src="${esc(url)}" width="${width}" height="${h}" alt="${esc(alt)}" style="display:block;width:${width}px;max-width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:20px;border:0;outline:none;background:${C.surface};">`
+  return `<img src="${esc(url)}" width="${width}" height="${h}" alt="${esc(alt)}" style="display:block;width:${width}px;max-width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:4px;border:0;outline:none;background:${C.surface};">`
 }
 
 export function button(label: string, url: string, variant: 'primary' | 'secondary' = 'primary'): string {
   const bg = variant === 'primary' ? C.paper : C.raised
   const fg = variant === 'primary' ? C.ink : C.text
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;"><tr><td align="center" bgcolor="${bg}" style="background:${bg};border-radius:14px;">
-<a href="${esc(url)}" target="_blank" style="display:block;padding:18px 24px;font-family:${FONT.sans};font-size:16px;font-weight:700;line-height:20px;color:${fg};text-decoration:none;border-radius:14px;">${esc(label)}</a>
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;"><tr><td align="center" bgcolor="${bg}" style="background:${bg};border-radius:4px;">
+<a href="${esc(url)}" target="_blank" style="display:block;padding:18px 24px;font-family:${FONT.sans};font-size:16px;font-weight:700;line-height:20px;color:${fg};text-decoration:none;border-radius:4px;">${esc(label)}</a>
 </td></tr></table>`
 }
 
@@ -129,7 +129,7 @@ export function rowsBlock(
   const n = note
     ? `<tr><td colspan="2" style="padding:12px 0 0;font-family:${FONT.sans};font-size:13px;color:${C.text3};">${esc(note)}</td></tr>`
     : ''
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:20px;border-collapse:separate;"><tr><td style="padding:20px 22px;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:20px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${tr}${n}</table>
 </td></tr></table>`
 }
@@ -142,7 +142,7 @@ export function facts(items: Array<{ label: string; value: string }>): string {
   const tds = list
     .map(
       (it, i) => `<td width="${w}%" valign="top" style="padding:${i === 0 ? '0 6px 0 0' : i === list.length - 1 ? '0 0 0 6px' : '0 6px'};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:14px;border-collapse:separate;"><tr><td style="padding:14px 14px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:14px 14px 16px;">
 <div style="font-family:${FONT.sans};font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${C.text3};">${esc(it.label)}</div>
 <div style="margin-top:6px;font-family:${FONT.sans};font-size:16px;font-weight:700;color:${C.text};line-height:1.3;">${esc(it.value)}</div>
 </td></tr></table></td>`
@@ -198,7 +198,7 @@ export function timeline(items: Array<{ label: string; detail?: string; done?: b
 export function eventRow(posterUrl: string | null | undefined, name: string, sub?: string): string {
   const img =
     posterUrl && /^https:\/\//i.test(posterUrl)
-      ? `<td width="76" valign="middle" style="padding-right:16px;"><img src="${esc(posterUrl)}" width="64" height="80" alt="" style="display:block;width:64px;height:80px;object-fit:cover;border-radius:8px;border:0;background:${C.surface};"></td>`
+      ? `<td width="76" valign="middle" style="padding-right:16px;"><img src="${esc(posterUrl)}" width="64" height="80" alt="" style="display:block;width:64px;height:80px;object-fit:cover;border-radius:4px;border:0;background:${C.surface};"></td>`
       : ''
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${img}<td valign="middle">
 <div style="font-family:${FONT.sans};font-size:17px;font-weight:700;color:${C.text};line-height:1.3;">${esc(name)}</div>
@@ -208,7 +208,7 @@ ${sub ? `<div style="margin-top:4px;font-family:${FONT.sans};font-size:14px;colo
 
 /** A quoted message (organizer reply, transfer note). */
 export function quote(label: string, text: string): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:20px;border-collapse:separate;"><tr><td style="padding:18px 22px;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:18px 22px;">
 <div style="font-family:${FONT.sans};font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:${C.text3};margin-bottom:8px;">${esc(label)}</div>
 <div style="font-family:${FONT.sans};font-size:15px;line-height:1.65;color:${C.text};white-space:pre-wrap;">${esc(text)}</div>
 </td></tr></table>`
@@ -217,7 +217,7 @@ export function quote(label: string, text: string): string {
 /** A one-time code, huge and letter-spaced. */
 export function codeBlock(code: string, note?: string): string {
   const spaced = String(code).replace(/\s+/g, '').replace(/^(\d{3})(\d{3})$/, '$1 $2')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:20px;border-collapse:separate;"><tr><td align="center" style="padding:34px 20px 30px;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td align="center" style="padding:34px 20px 30px;">
 <div style="font-family:${FONT.mono};font-size:52px;line-height:1;font-weight:700;letter-spacing:10px;color:${C.text};">${esc(spaced)}</div>
 ${note ? `<div style="margin-top:14px;font-family:${FONT.sans};font-size:13px;color:${C.text2};">${esc(note)}</div>` : ''}
 </td></tr></table>`
@@ -226,7 +226,7 @@ ${note ? `<div style="margin-top:14px;font-family:${FONT.sans};font-size:13px;co
 /** A monospace link to copy (event URL). */
 export function linkBlock(url: string): string {
   const shown = url.replace(/^https?:\/\/(www\.)?/, '')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:14px;border-collapse:separate;"><tr><td style="padding:16px 18px;font-family:${FONT.mono};font-size:14px;color:${C.text};word-break:break-all;"><a href="${esc(url)}" target="_blank" style="color:${C.text};text-decoration:none;">${esc(shown)}</a></td></tr></table>`
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:16px 18px;font-family:${FONT.mono};font-size:14px;color:${C.text};word-break:break-all;"><a href="${esc(url)}" target="_blank" style="color:${C.text};text-decoration:none;">${esc(shown)}</a></td></tr></table>`
 }
 
 /** The white ticket stub with side notches, holder/tier, QR and code. */
@@ -242,7 +242,7 @@ export function ticketStub(opts: {
   const qr = opts.qrSrc
     ? `<img src="${esc(opts.qrSrc)}" width="190" height="190" alt="QR" style="display:block;width:190px;height:190px;margin:0 auto;border:0;">`
     : ''
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.paper}" style="background:${C.paper};border-radius:20px;border-collapse:separate;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.paper}" style="background:${C.paper};border-radius:4px;border-collapse:separate;">
 <tr><td style="padding:22px 24px 18px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 <td valign="top"><div style="font-family:${FONT.sans};font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${C.inkMuted};">${esc(opts.holderLabel)}</div>

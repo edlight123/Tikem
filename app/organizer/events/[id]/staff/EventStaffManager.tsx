@@ -352,7 +352,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors"
         >
           {tx('event_staff.invite_staff')}
         </button>
@@ -593,7 +593,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 <button
                   type="button"
                   onClick={closeInviteModal}
-                  className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded-full hover:bg-white/[0.12] transition-colors bg-white/[0.07]"
+                  className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded hover:bg-white/[0.12] transition-colors bg-white/[0.07]"
                 >
                   {tx('actions.cancel')}
                 </button>
@@ -601,7 +601,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                   type="button"
                   disabled={!canSubmit || isSubmitting}
                   onClick={handleCreateInvite}
-                  className="flex-1 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 transition-colors"
                 >
                   {isSubmitting ? 'Creating…' : 'Create Invite'}
                 </button>
@@ -630,7 +630,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 type="button"
                 onClick={() => setPendingConfirm(null)}
                 disabled={confirmBusy}
-                className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded-full hover:bg-white/[0.12] transition-colors disabled:opacity-50 bg-white/[0.07]"
+                className="flex-1 px-4 py-2.5 text-white/70 font-medium rounded hover:bg-white/[0.12] transition-colors disabled:opacity-50 bg-white/[0.07]"
               >
                 {tx('actions.cancel')}
               </button>

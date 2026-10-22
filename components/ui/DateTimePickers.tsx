@@ -238,13 +238,13 @@ function PickerModal({
 
 // ---------------------------------------------------------------------------
 // Shared chip — the app-wide spec, so a shortcut here is the same object as a
-// filter chip on discover: rounded-[10px], 30px of ink, 13px type, and a 44px
+// filter chip on discover: rounded, 30px of ink, 13px type, and a 44px
 // touch target contributed by an ::after that is bigger than the paint.
 // ---------------------------------------------------------------------------
 
 function quickChipCls(on: boolean, disabled = false) {
   return [
-    'relative rounded-[10px] px-2.5 py-1.5 text-[13px] leading-[18px] font-semibold transition-colors',
+    'relative rounded px-2.5 py-1.5 text-[13px] leading-[18px] font-semibold transition-colors',
     "after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-['']",
     disabled
       ? 'cursor-not-allowed bg-white/[0.03] text-white/25'

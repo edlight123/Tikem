@@ -84,7 +84,7 @@ export default function FavoriteButton({ eventId, userId, initialIsFavorite = fa
     <button
       onClick={toggleFavorite}
       disabled={loading}
-      className={`grid h-10 w-10 place-items-center rounded-full transition-colors duration-200 active:scale-90 disabled:opacity-50 ${
+      className={`grid h-10 w-10 place-items-center rounded transition-colors duration-200 active:scale-90 disabled:opacity-50 ${
         isFavorite
           ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
           : 'bg-white/[0.06] text-white/65 hover:bg-white/[0.12] hover:text-red-400'

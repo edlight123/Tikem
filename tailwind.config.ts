@@ -95,16 +95,23 @@ const config: Config = {
         '128': '32rem',
         '144': '36rem',
       },
-      // Tightened, crisp corners across the platform (Posh-like). rounded-full is
-      // untouched so avatars/pills stay round. Overriding lg→3xl sharpens the
-      // cards, buttons, inputs and modals app-wide without per-file edits.
+      // BRAND RULE: 4px is the single corner radius on the website, the same
+      // radius as the event poster. Every named step resolves to 4px so a
+      // stray rounded-2xl can never drift the site back to soft corners; write
+      // plain `rounded`. `rounded-full` is left alone and is ONLY for true
+      // circles: avatars, status dots, radios, spinners, toggle thumbs and
+      // small count badges. Pills, buttons, inputs, chips and search bars get
+      // `rounded`. See docs/POSH_DESIGN_BRIEF.md.
       borderRadius: {
-        'lg': '0.375rem',   // 6px  (was 8)
-        'xl': '0.5rem',     // 8px  (was 12)
-        '2xl': '0.625rem',  // 10px (was 16)
-        '3xl': '0.75rem',   // 12px (was 24)
-        '4xl': '0.875rem',  // 14px
-        '5xl': '1rem',      // 16px
+        'sm': '0.25rem',
+        'DEFAULT': '0.25rem',
+        'md': '0.25rem',
+        'lg': '0.25rem',
+        'xl': '0.25rem',
+        '2xl': '0.25rem',
+        '3xl': '0.25rem',
+        '4xl': '0.25rem',
+        '5xl': '0.25rem',
       },
       boxShadow: {
         'soft': '0 2px 15px rgba(0, 0, 0, 0.08)',

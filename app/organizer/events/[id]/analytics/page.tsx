@@ -150,9 +150,9 @@ export default async function EventAnalyticsPage({
                           {tier.sold} <span className="text-white/40">({pct.toFixed(0)}%)</span>
                         </span>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-white/[0.03]">
+                      <div className="h-2 overflow-hidden rounded bg-white/[0.03]">
                         <div
-                          className="h-full rounded-full bg-white transition-all"
+                          className="h-full rounded bg-white transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>

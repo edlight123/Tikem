@@ -97,8 +97,8 @@ export function ConversionFunnelAnalytics() {
                   </span>
                   <span className="font-mono text-sm tabular-nums text-console-text">{stage.value.toLocaleString()}</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-console-raise">
-                  <div className="h-full rounded-full bg-console-mut transition-all duration-500" style={{ width: `${widthPercentage}%` }} />
+                <div className="h-2 w-full overflow-hidden rounded bg-console-raise">
+                  <div className="h-full rounded bg-console-mut transition-all duration-500" style={{ width: `${widthPercentage}%` }} />
                 </div>
               </div>
             )

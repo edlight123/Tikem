@@ -218,7 +218,7 @@ export default function ImageUpload({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
+                className="rounded bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
               >
                 {changeLabel}
               </button>
@@ -226,7 +226,7 @@ export default function ImageUpload({
                 <button
                   type="button"
                   onClick={() => setLibraryOpen(true)}
-                  className="rounded-full border border-white/40 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="rounded border border-white/40 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
                 >
                   {t('upload.browseLibrary', { defaultValue: 'Browse library' })}
                 </button>
@@ -245,7 +245,7 @@ export default function ImageUpload({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg transition-transform group-hover/flyer:scale-105"
+              className="rounded bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg transition-transform group-hover/flyer:scale-105"
             >
               {ctaLabel}
             </button>

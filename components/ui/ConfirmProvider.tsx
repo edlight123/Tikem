@@ -103,7 +103,7 @@ function ConsoleConfirmDialog({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="h-11 rounded-full bg-white/[0.07] px-5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50"
+              className="h-11 rounded bg-white/[0.07] px-5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50"
             >
               {cancelLabel}
             </button>
@@ -113,8 +113,8 @@ function ConsoleConfirmDialog({
               disabled={loading}
               className={
                 variant === 'danger'
-                  ? 'h-11 rounded-full bg-red-500/15 px-5 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:opacity-50'
-                  : 'h-11 rounded-full bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
+                  ? 'h-11 rounded bg-red-500/15 px-5 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:opacity-50'
+                  : 'h-11 rounded bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
               }
             >
               {loading ? 'Working…' : confirmLabel}

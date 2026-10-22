@@ -56,7 +56,7 @@ export default function OnboardingClient({ bearerToken }: { bearerToken: string 
           colorSecondaryText: '#A3A3A3',
           colorBorder: '#262626',
           colorDanger: '#F87171',
-          borderRadius: '12px',
+          borderRadius: '4px',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           buttonPrimaryColorBackground: '#FFFFFF',
           buttonPrimaryColorText: '#0A0A0A',

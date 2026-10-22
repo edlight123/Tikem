@@ -107,7 +107,7 @@ export default function NotificationPreferences({ userId }: Props) {
               key={t.key}
               type="button"
               onClick={() => toggleTopic(t.key)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition ${topics.includes(t.key) ? 'bg-brand-600 text-white border-brand-600' : 'border-white/10 text-white/70 hover:bg-white/[0.04]'}`}
+              className={`px-3 py-1.5 rounded text-xs border transition ${topics.includes(t.key) ? 'bg-brand-600 text-white border-brand-600' : 'border-white/10 text-white/70 hover:bg-white/[0.04]'}`}
               aria-pressed={topics.includes(t.key)}
             >{t.label}</button>
           ))}

@@ -133,7 +133,7 @@ export default function VerificationStatusHero({
     <div className={`${config.bgColor} rounded-2xl p-6 md:p-8 mb-6`}>
       <div className="flex items-start gap-4">
         {/* Icon */}
-        <div className={`${config.iconBgColor} rounded-full p-3 md:p-4 flex-shrink-0`}>
+        <div className={`${config.iconBgColor} rounded p-3 md:p-4 flex-shrink-0`}>
           <Icon className={`w-6 h-6 md:w-7 md:h-7 ${config.iconColor}`} />
         </div>
 
@@ -160,9 +160,9 @@ export default function VerificationStatusHero({
                   {completionPercentage}%
                 </span>
               </div>
-              <div className="w-full bg-white/[0.12] rounded-full h-2">
+              <div className="w-full bg-white/[0.12] rounded h-2">
                 <div
-                  className="bg-amber-400 h-2 rounded-full transition-all duration-300"
+                  className="bg-amber-400 h-2 rounded transition-all duration-300"
                   style={{ width: `${completionPercentage}%` }}
                 />
               </div>
@@ -188,13 +188,13 @@ export default function VerificationStatusHero({
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href={config.ctaHref}
-                className="bg-white hover:bg-white/90 text-black px-6 py-3 rounded-full font-semibold text-sm md:text-base text-center transition-all"
+                className="bg-white hover:bg-white/90 text-black px-6 py-3 rounded font-semibold text-sm md:text-base text-center transition-all"
               >
                 {t('actions.create_event')}
               </Link>
               <Link
                 href="/organizer"
-                className="bg-white/[0.07] hover:bg-white/[0.12] text-white hover:text-white px-6 py-3 rounded-full font-medium text-sm md:text-base text-center transition-colors"
+                className="bg-white/[0.07] hover:bg-white/[0.12] text-white hover:text-white px-6 py-3 rounded font-medium text-sm md:text-base text-center transition-colors"
               >
                 {t('verification_status.back_to_dashboard')}
               </Link>
@@ -208,7 +208,7 @@ export default function VerificationStatusHero({
                 disabled={isRestarting}
                 className={`bg-white hover:bg-white/90 ${
                   isRestarting ? 'opacity-50 cursor-not-allowed' : ''
-                } text-black px-6 py-3 rounded-full font-semibold text-sm md:text-base transition-colors flex items-center justify-center gap-2`}
+                } text-black px-6 py-3 rounded font-semibold text-sm md:text-base transition-colors flex items-center justify-center gap-2`}
               >
                 {isRestarting ? (
                   <div className="w-4 h-4 border-2 border-black/60 border-t-transparent rounded-full animate-spin" />
@@ -219,7 +219,7 @@ export default function VerificationStatusHero({
               </button>
               <Link
                 href="/organizer"
-                className="bg-white/[0.07] hover:bg-white/[0.12] text-white hover:text-white px-6 py-3 rounded-full font-medium text-sm md:text-base text-center transition-colors"
+                className="bg-white/[0.07] hover:bg-white/[0.12] text-white hover:text-white px-6 py-3 rounded font-medium text-sm md:text-base text-center transition-colors"
               >
                 {t('verification_status.back_to_dashboard')}
               </Link>

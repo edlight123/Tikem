@@ -92,9 +92,9 @@ export default function GettingStartedTracker({
         </div>
 
         {/* Progress Bar */}
-        <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-2 overflow-hidden rounded bg-white/[0.08]">
           <div
-            className="h-full rounded-full bg-brand-400 transition-all duration-500 ease-out"
+            className="h-full rounded bg-brand-400 transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -145,7 +145,7 @@ export default function GettingStartedTracker({
             {!step.completed && (
               <Link
                 href={step.href}
-                className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`inline-flex flex-shrink-0 items-center gap-1 rounded px-4 py-2 text-sm font-medium transition-colors ${
                   nextStep?.id === step.id
                     ? 'bg-white text-black hover:bg-white/90'
                     : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12] hover:text-white'

@@ -105,7 +105,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
             type="button"
             disabled={isPending}
             onClick={handleContinue}
-            className="mt-8 w-full rounded-full bg-white px-5 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-8 w-full rounded bg-white px-5 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? 'Setting up…' : 'Continue'}
           </button>
@@ -115,7 +115,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
           <button
             type="button"
             onClick={() => router.push('/discover')}
-            className="mt-2 w-full rounded-full px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:text-white"
+            className="mt-2 w-full rounded px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:text-white"
           >
             {t('upgrade_prompt.browse_events_instead')}
           </button>

@@ -177,8 +177,8 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
                   return (
                     <div key={tier.id} className="flex items-center gap-3">
                       <span className="w-28 shrink-0 truncate text-sm text-white">{tier.name || 'Ticket'}</span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                        <div className="h-full rounded-full bg-white" style={{ width: `${pct}%` }} />
+                      <div className="h-1.5 flex-1 overflow-hidden rounded bg-white/[0.06]">
+                        <div className="h-full rounded bg-white" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="shrink-0 text-xs font-mono tabular-nums text-white/50">
                         {tsold}{qty > 0 ? `/${qty}` : ''} · {Number(tier.price) > 0 ? formatMoneyFromCents(Math.round(Number(tier.price) * 100), currency) : 'Free'}
@@ -262,7 +262,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
           </div>
           <Link
             href={`/organizer/events/${event.id}/edit`}
-            className="flex h-11 w-full items-center justify-center rounded-[10px] bg-white/[0.08] text-center text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+            className="flex h-11 w-full items-center justify-center rounded bg-white/[0.08] text-center text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
           >
             {tx('command_center.edit_event')}
           </Link>

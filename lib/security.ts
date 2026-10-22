@@ -261,7 +261,7 @@ export async function logSuspiciousActivity(activity: SuspiciousActivity): Promi
           rowsBlock(rows),
           activity.metadata ? gap(12) : '',
           activity.metadata
-            ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:20px;border-collapse:separate;"><tr><td style="padding:18px 22px;">
+            ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:18px 22px;">
 <div style="font-family:${FONT.sans};font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:${C.text3};margin-bottom:8px;">Metadata</div>
 <pre style="margin:0;font-family:${FONT.mono};font-size:12px;line-height:1.6;color:${C.text2};white-space:pre-wrap;word-break:break-all;">${escapeHtml(JSON.stringify(activity.metadata, null, 2))}</pre>
 </td></tr></table>`

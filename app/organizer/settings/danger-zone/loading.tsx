@@ -22,7 +22,7 @@
  *   cards   space-y-4 of three `rounded-2xl p-6` fills, one per escalation
  *           tier (white/[0.055] → amber-500/10 → red-500/10): an icon plus
  *           a bold line and a 14px paragraph on the left, a `px-4 py-2
- *           rounded-full` tinted button on the right
+ *           rounded` tinted button on the right
  */
 
 function Bar({ className = '' }: { className?: string }) {

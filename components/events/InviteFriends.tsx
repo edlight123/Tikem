@@ -222,7 +222,7 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
           type="button"
           onClick={send}
           disabled={selected.size === 0 || sending}
-          className="mt-4 w-full rounded-full bg-white py-3 text-[15px] font-bold text-black transition-opacity disabled:opacity-40"
+          className="mt-4 w-full rounded bg-white py-3 text-[15px] font-bold text-black transition-opacity disabled:opacity-40"
         >
           {sending ? t('invites.sending') : t('invites.sendCount', { count: selected.size })}
         </button>

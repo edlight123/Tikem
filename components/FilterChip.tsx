@@ -19,7 +19,7 @@ export function FilterChip({ label, active, onClick, onRemove, className = '' }:
         // floor, and they are the primary control on Discover. The pill itself
         // is not redrawn — the box grows to a thumb-sized target and the label
         // stays centred.
-        className={`inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/15 sm:min-h-0 ${className}`}
+        className={`inline-flex min-h-11 items-center gap-1.5 rounded bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/15 sm:min-h-0 ${className}`}
       >
         {label}
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -33,7 +33,7 @@ export function FilterChip({ label, active, onClick, onRemove, className = '' }:
   return (
     <button
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center rounded-full border px-3.5 py-1.5 text-sm transition-colors sm:min-h-0
+      className={`inline-flex min-h-11 items-center rounded border px-3.5 py-1.5 text-sm transition-colors sm:min-h-0
         ${active
           ? 'border-brand-400/60 font-medium text-brand-300'
           : 'border-white/15 font-normal text-white/70 hover:border-white/30 hover:text-white'

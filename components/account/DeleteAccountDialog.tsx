@@ -260,7 +260,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded-full bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
+            className="flex-1 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
           >
             {step === 'blocked' ? k('close') : k('cancel')}
           </button>
@@ -270,7 +270,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
               onClick={step === 'confirm' ? attemptDelete : handleReauth}
               disabled={confirmDisabled}
               aria-busy={busy}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-1 items-center justify-center gap-2 rounded bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
               {busy

@@ -138,7 +138,7 @@ export function UserGrowthAnalytics({ days = 30 }: Props) {
                   const date = new Date(value as string | number)
                   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString()
                 }}
-                contentStyle={{ background: '#20252E', border: 'none', borderRadius: 8, fontSize: 12 }}
+                contentStyle={{ background: '#20252E', border: 'none', borderRadius: 4, fontSize: 12 }}
                 labelStyle={{ color: '#8B93A1' }}
                 itemStyle={{ color: '#E8EAED' }}
               />

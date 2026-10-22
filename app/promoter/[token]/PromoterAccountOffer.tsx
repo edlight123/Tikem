@@ -87,7 +87,7 @@ export default function PromoterAccountOffer({
       <div className="mt-4 flex flex-col sm:flex-row gap-3">
         <a
           href={signupHref}
-          className="flex-1 text-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold py-3 px-5 rounded-full transition-colors min-h-[44px] flex items-center justify-center"
+          className="flex-1 text-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold py-3 px-5 rounded transition-colors min-h-[44px] flex items-center justify-center"
         >
           {t('promoter.create_account', 'Create an account')}
         </a>
@@ -95,7 +95,7 @@ export default function PromoterAccountOffer({
           type="button"
           onClick={handleAddToAccount}
           disabled={status === 'working'}
-          className="flex-1 bg-white/[0.07] text-white/80 hover:bg-white/[0.12] font-semibold py-3 px-5 rounded-full transition-colors disabled:opacity-50 min-h-[44px]"
+          className="flex-1 bg-white/[0.07] text-white/80 hover:bg-white/[0.12] font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-[44px]"
         >
           {status === 'working' ? t('promoter.adding', 'Adding…') : t('promoter.already_have_one', 'I already have one')}
         </button>

@@ -60,7 +60,13 @@ lowest-risk to ship.
 The event flyer is the hero on every surface.
 
 - **Aspect ratios:** portrait **~2:3** in grids and rails; **~4:5** for the feature/hero slot.
-- **Radius:** ~20px on poster cards.
+- **Radius:** **4px, and only 4px** (owner rule, 2026-10-22). The website has ONE corner
+  radius, the same as the poster: Tailwind `rounded` (0.25rem). Cards, buttons, CTAs,
+  inputs, search bars, chips, segmented controls, sheets, dialogs, toasts and email
+  cards all use it; every named step (`rounded-sm` … `rounded-5xl`) is pinned to 4px in
+  `tailwind.config.ts`. `rounded-full` is for **true circles only**: avatars and profile
+  photos, status dots, radios, spinners, toggles, small count badges and carousel dots.
+  Never a pill. Device drawings (phone mockup frames) are the one exception.
 - **Full-bleed:** the image fills the card; text tiers sit *below* it, not on top of it.
 - **Profile grids:** near-zero-gutter **3-column** poster grids on host/organizer profiles
   (but keep a hair of gutter on Android — see §3).
@@ -72,7 +78,7 @@ The event flyer is the hero on every surface.
 PosterCard (grid, 2:3)
 ┌───────────────┐
 │               │
-│               │  ← full-bleed flyer, cover-cropped, r=20
+│               │  ← full-bleed flyer, cover-cropped, r=4
 │   [ flyer ]   │
 │               │
 └───────────────┘
@@ -85,7 +91,7 @@ PosterCard (grid, 2:3)
 
 Exactly **one** primary action per screen, and it is always a solid **white pill**.
 
-- Solid white background, **black** text, **~56px** tall, **fully rounded**.
+- Solid white background, **black** text, **~56px** tall, **4px corners** (web: no pill — see the radius rule in 2.1).
 - Carries an inline **muted price sub-label** so the CTA states the commitment:
   `Achte tikè · apati $X` (Buy ticket · from $X).
 - **Adaptive:** free events read `RSVP`; paid events read `Get Tickets from $X`
@@ -307,7 +313,7 @@ have every component consume them.
   variant: 'paid' | 'rsvp';
   onPress: () => void;
 }
-// solid white, black text, ~56px, fully rounded; one per screen
+// solid white, black text, ~56px, 4px corners on web; one per screen
 ```
 
 ### `StatusChip`

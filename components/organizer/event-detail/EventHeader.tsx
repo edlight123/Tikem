@@ -134,7 +134,7 @@ export function EventHeader({ event }: EventHeaderProps) {
             <div className="flex items-center gap-2 ml-4">
               <Link
                 href={`/organizer/events/${event.id}/edit`}
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
               >
                 <Edit className="w-4 h-4" />
                 {t('organizer.edit')}
@@ -142,7 +142,7 @@ export function EventHeader({ event }: EventHeaderProps) {
               <Link
                 href={`/events/${event.id}`}
                 target="_blank"
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
               >
                 <Eye className="w-4 h-4" />
                 {t('organizer.preview')}
@@ -158,7 +158,7 @@ export function EventHeader({ event }: EventHeaderProps) {
                     navigator.clipboard.writeText(`${window.location.origin}/events/${event.id}`)
                   }
                 }}
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
               >
                 <Share2 className="w-4 h-4" />
                 {t('organizer.share')}
@@ -166,7 +166,7 @@ export function EventHeader({ event }: EventHeaderProps) {
               <button
                 onClick={handlePublishToggle}
                 disabled={isPublishing}
-                className={`h-11 rounded-full px-4 text-sm font-semibold transition-colors ${
+                className={`h-11 rounded px-4 text-sm font-semibold transition-colors ${
                   event.is_published
                     ? 'bg-white/[0.12] text-white hover:bg-white/[0.18]'
                     : 'bg-white text-black hover:bg-white/90'
@@ -216,7 +216,7 @@ export function EventHeader({ event }: EventHeaderProps) {
         <div className="grid grid-cols-4 gap-2">
           <Link
             href={`/organizer/events/${event.id}/edit`}
-            className="flex flex-col items-center gap-1 rounded-[10px] p-2 transition-colors hover:bg-white/[0.06]"
+            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-white/[0.06]"
           >
             <Edit className="w-5 h-5 text-white/70" />
             <span className="text-xs text-white/70">{t('organizer.edit')}</span>
@@ -224,7 +224,7 @@ export function EventHeader({ event }: EventHeaderProps) {
           <Link
             href={`/events/${event.id}`}
             target="_blank"
-            className="flex flex-col items-center gap-1 rounded-[10px] p-2 transition-colors hover:bg-white/[0.06]"
+            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-white/[0.06]"
           >
             <Eye className="w-5 h-5 text-white/70" />
             <span className="text-xs text-white/70">{t('organizer.preview')}</span>
@@ -238,7 +238,7 @@ export function EventHeader({ event }: EventHeaderProps) {
                 })
               }
             }}
-            className="flex flex-col items-center gap-1 rounded-[10px] p-2 transition-colors hover:bg-white/[0.06]"
+            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-white/[0.06]"
           >
             <Share2 className="w-5 h-5 text-white/70" />
             <span className="text-xs text-white/70">{t('organizer.share')}</span>
@@ -246,7 +246,7 @@ export function EventHeader({ event }: EventHeaderProps) {
           <button
             onClick={handlePublishToggle}
             disabled={isPublishing}
-            className={`flex flex-col items-center gap-1 rounded-[10px] p-2 transition-colors ${
+            className={`flex flex-col items-center gap-1 rounded p-2 transition-colors ${
               event.is_published ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'
             }`}
           >

@@ -251,7 +251,7 @@ export default function MessagesClient({
                       type="button"
                       onClick={handleSend}
                       disabled={sending || reply.trim().length === 0}
-                      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                      className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <Send className="h-4 w-4" />
                       {sending ? 'Sending…' : 'Send reply'}

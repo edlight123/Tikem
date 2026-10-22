@@ -166,7 +166,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
         <div className="flex-1">
           <label
             htmlFor="photo-upload"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white/80 rounded-full cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white/80 rounded cursor-pointer transition-colors"
           >
             <Camera className="w-4 h-4" />
             {t('profile_form.change_photo')}
@@ -197,7 +197,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
             id="full_name"
             value={formData.full_name}
             onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
             placeholder={t('profile_form.enter_full_name')}
             required
           />
@@ -215,7 +215,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
             type="email"
             id="email"
             value={formData.email}
-            className="w-full pl-10 pr-4 py-3 rounded-[10px] bg-white/[0.04] text-white/45 cursor-not-allowed text-[16px] focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded bg-white/[0.04] text-white/45 cursor-not-allowed text-[16px] focus:outline-none"
             disabled
           />
         </div>
@@ -236,7 +236,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
             id="phone_number"
             value={formData.phone_number}
             onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
             placeholder="+509 1234 5678"
           />
         </div>

@@ -120,7 +120,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
               id="default_country"
               value={formData.default_country}
               onChange={(e) => handleCountryChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+              className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
             >
               <option value="">{t('defaults_form.select_a_country')}</option>
               {countries.map((country) => (
@@ -143,7 +143,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
               id="default_city"
               value={formData.default_city}
               onChange={(e) => setFormData({ ...formData, default_city: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+              className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
               disabled={!formData.default_country}
             >
               <option value="">{t('defaults_form.select_a_city')}</option>
@@ -171,7 +171,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
             id="default_timezone"
             value={formData.default_timezone}
             onChange={(e) => setFormData({ ...formData, default_timezone: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -193,7 +193,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
             id="default_currency"
             value={formData.default_currency}
             onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded-[10px] focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 appearance-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
           >
             {CURRENCIES.map((currency) => (
               <option key={currency.value} value={currency.value}>
@@ -236,7 +236,7 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSubmitting ? 'Saving...' : 'Save Defaults'}

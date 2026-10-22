@@ -110,11 +110,11 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
         // 44px on a phone, 32px above. The visible disc stays 32px either way
         // — the extra size is transparent padding around it, so save doesn't
         // become a thumb-sized black circle sitting on the poster art.
-        className="absolute right-2.5 top-2.5 z-20 grid h-11 w-11 place-items-center rounded-full transition-transform duration-200 active:scale-90 sm:h-8 sm:w-8"
+        className="absolute right-2.5 top-2.5 z-20 grid h-11 w-11 place-items-center rounded transition-transform duration-200 active:scale-90 sm:h-8 sm:w-8"
       >
         {/* The disc moved in here so the button's larger hit area stays
             invisible while the affordance keeps its original size. */}
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-black/30 backdrop-blur-md">
+        <span className="grid h-8 w-8 place-items-center rounded bg-black/30 backdrop-blur-md">
           <Bookmark className={`h-[15px] w-[15px] ${isBookmarked ? 'fill-white text-white' : 'text-white'}`} />
         </span>
       </button>

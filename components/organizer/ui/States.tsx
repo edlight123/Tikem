@@ -95,7 +95,7 @@ export function OrgLoadingSkeleton({
             <div className="h-3.5 w-2/5 rounded bg-white/[0.06]" />
             <div className="h-3 w-1/4 rounded bg-white/[0.06]" />
           </div>
-          <div className="h-6 w-16 rounded-[10px] bg-white/[0.06]" />
+          <div className="h-6 w-16 rounded bg-white/[0.06]" />
         </div>
       ))}
     </div>

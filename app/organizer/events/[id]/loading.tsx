@@ -52,7 +52,7 @@ export default function Loading() {
             key={i}
             className="flex items-center gap-4 rounded-xl bg-white/[0.03] px-4 py-3.5"
           >
-            <div className="skeleton h-9 w-9 shrink-0 rounded-full" />
+            <div className="skeleton h-9 w-9 shrink-0 rounded" />
             <div className="min-w-0 flex-1 space-y-2">
               <Bar className="h-4 w-2/5" />
               <Bar className="h-3 w-1/4" />

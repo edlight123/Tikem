@@ -284,7 +284,7 @@ export default function OrganizerEventsPage() {
           actions={
             <Link
               href="/organizer/events/new"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90"
+              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90"
             >
               <Plus className="h-5 w-5" />
               <span className="hidden sm:inline">{t('events_page.create_event', 'Create Event')}</span>
@@ -313,12 +313,12 @@ export default function OrganizerEventsPage() {
               value — so the group read as an empty outline. It is a fill now,
               and each 36px icon button carries a 44px tap box on an ::after.
             */}
-            <div className="flex items-center rounded-[12px] bg-white/[0.06] p-1">
+            <div className="flex items-center rounded bg-white/[0.06] p-1">
               <button
                 type="button"
                 onClick={() => setView('list')}
                 aria-pressed={view === 'list'}
-                className={`relative rounded-[10px] p-2 transition-colors after:absolute after:-inset-[4px] after:content-[''] ${
+                className={`relative rounded p-2 transition-colors after:absolute after:-inset-[4px] after:content-[''] ${
                   view === 'list' ? 'bg-white text-black' : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
                 }`}
                 aria-label={t('events_page.list_view', 'List view')}
@@ -329,7 +329,7 @@ export default function OrganizerEventsPage() {
                 type="button"
                 onClick={() => setView('calendar')}
                 aria-pressed={view === 'calendar'}
-                className={`relative rounded-[10px] p-2 transition-colors after:absolute after:-inset-[4px] after:content-[''] ${
+                className={`relative rounded p-2 transition-colors after:absolute after:-inset-[4px] after:content-[''] ${
                   view === 'calendar' ? 'bg-white text-black' : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
                 }`}
                 aria-label={t('events_page.calendar_view', 'Calendar view')}
@@ -342,7 +342,7 @@ export default function OrganizerEventsPage() {
             <button
               type="button"
               onClick={() => setShowFiltersModal(true)}
-              className="relative inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/[0.06] px-4 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+              className="relative inline-flex h-11 items-center gap-2 rounded bg-white/[0.06] px-4 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
             >
               <SlidersHorizontal className="h-4 w-4" />
               <span>{t('events_page.filters', 'Filters')}</span>
@@ -403,7 +403,7 @@ export default function OrganizerEventsPage() {
                         type="button"
                         onClick={handleLoadMore}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-60"
                       >
                         {loadingMore ? t('events_page.loading', 'Loading…') : t('events_page.load_more', 'Load more events')}
                       </button>
@@ -419,7 +419,7 @@ export default function OrganizerEventsPage() {
                 ) : (
                   <Link
                     href="/organizer/events/new"
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
+                    className="inline-flex items-center gap-2 rounded bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
                   >
                     <Plus className="h-5 w-5" />
                     {t('events_page.create_event', 'Create Event')}

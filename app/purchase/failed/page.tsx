@@ -91,7 +91,7 @@ export default async function PurchaseFailedPage({
       <div className="max-w-md w-full">
         <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8 text-center">
           {/* Error Icon */}
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 md:w-16 md:h-16 bg-red-500/10 rounded flex items-center justify-center mx-auto mb-4">
             <svg
               className="w-7 h-7 md:w-8 md:h-8 text-red-400"
               fill="none"
@@ -118,14 +118,14 @@ export default async function PurchaseFailedPage({
           <div className="space-y-2.5">
             <Link
               href="/"
-              className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded-full transition-colors text-base"
+              className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded transition-colors text-base"
             >
               {t('purchase.browse_events', 'Browse Events')}
             </Link>
 
             <Link
               href="/tickets"
-              className="flex h-12 w-full items-center justify-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold px-6 rounded-full transition-colors text-base"
+              className="flex h-12 w-full items-center justify-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold px-6 rounded transition-colors text-base"
             >
               {t('purchase.view_my_tickets', 'View My Tickets')}
             </Link>
