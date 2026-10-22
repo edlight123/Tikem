@@ -157,6 +157,12 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const { formatDate } = useLocaleFormat()
   const { user, userProfile } = useAuth()
   const showAlert = useAppAlert()
+  // From an AppAlert button: the alert's own Modal is still fading out when
+  // onPress fires, and a native-stack push racing that teardown can be dropped
+  // on iOS (the "Verify Identity does nothing" report). Wait it out first.
+  const openVerificationAfterAlert = useCallback(() => {
+    setTimeout(() => navigation.navigate('OrganizerVerification'), AFTER_ALERT_MS)
+  }, [navigation])
 
   // FIRST-PAINT gate only. `loading` starts true and flips false exactly once —
   // when the cache seed or the first network load paints. Background refreshes
@@ -587,7 +593,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         t('organizerPayoutSettings.identityRequired.body'),
         [
           { text: t('common.cancel'), style: 'cancel' },
-          { text: t('organizerPayoutSettings.verifyIdentity'), onPress: () => navigation.navigate('OrganizerVerification') },
+          { text: t('organizerPayoutSettings.verifyIdentity'), onPress: openVerificationAfterAlert },
         ]
       ), AFTER_ALERT_MS)
       return
@@ -603,7 +609,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
       setMoncashForm({ provider: 'moncash', accountName: '', phoneNumber: '+509 ' })
       setShowMoncashForm(true)
     }
-  }, [identityVerified, navigation, t])
+  }, [identityVerified, openVerificationAfterAlert, t])
 
   // Stripe Connect onboarding for events OUTSIDE Haiti (US/Canada/France).
   // The mobile payout screen was Haiti-only; this is the entry point that lets a
@@ -676,7 +682,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         t('organizerPayoutSettings.identityRequired.body'),
         [
           { text: t('common.cancel'), style: 'cancel' },
-          { text: t('organizerPayoutSettings.verifyIdentity'), onPress: () => navigation.navigate('OrganizerVerification') },
+          { text: t('organizerPayoutSettings.verifyIdentity'), onPress: openVerificationAfterAlert },
         ]
       ), AFTER_ALERT_MS)
       return
@@ -688,7 +694,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
       { text: t('organizerPayoutSettings.countries.france'), onPress: () => startStripeConnect('france') },
       { text: t('common.cancel'), style: 'cancel' },
     ])
-  }, [identityVerified, navigation, startStripeConnect, t])
+  }, [identityVerified, openVerificationAfterAlert, startStripeConnect, t])
 
   const internationalGroup = useMemo(
     () => ({
@@ -1386,12 +1392,12 @@ export default function OrganizerPayoutSettingsScreenV2() {
           text: t('organizerPayoutSettings.verifyIdentity'),
           // Step 1 only exists inside the first-time setup; from the summary
           // (e.g. Change on an existing method) open the verification hub.
-          onPress: () => (showSetup ? setSetupStep(1) : navigation.navigate('OrganizerVerification')),
+          onPress: () => (showSetup ? setSetupStep(1) : openVerificationAfterAlert()),
         },
       ]
     )
     return false
-  }, [identityVerified, showAlert, showSetup, navigation, t])
+  }, [identityVerified, showAlert, showSetup, openVerificationAfterAlert, t])
 
   const finishSetup = useCallback(async () => {
     if (setupMethod === 'moncash') {
@@ -1879,7 +1885,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                             { text: t('organizerPayoutSettings.moncashVerify.cancel'), style: 'cancel' },
                             {
                               text: t('organizerPayoutSettings.moncashVerify.verifyCta'),
-                              onPress: () => navigation.navigate('OrganizerVerification'),
+                              onPress: openVerificationAfterAlert,
                             },
                           ])
                         }
