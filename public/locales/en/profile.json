@@ -18,7 +18,13 @@
     "phone_not_set": "Not set",
     "member_since": "Member since",
     "bio": "Bio",
-    "save_error": "Failed to update profile"
+    "save_error": "Failed to update profile",
+    "change_photo": "Change photo",
+    "uploading_photo": "Uploading…",
+    "photo_updated": "Photo updated",
+    "photo_invalid": "Choose a JPEG, PNG, WebP or GIF image",
+    "photo_too_large": "Choose an image smaller than 5 MB",
+    "photo_error": "Couldn't upload your photo. Try again."
   },
   "preferences": {
     "title": "Preferences",

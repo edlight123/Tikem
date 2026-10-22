@@ -18,7 +18,13 @@
     "phone_not_set": "Pa mete",
     "member_since": "Manm depi",
     "bio": "Biyo",
-    "save_error": "Pa t kapab mete pwofil la ajou"
+    "save_error": "Pa t kapab mete pwofil la ajou",
+    "change_photo": "Chanje foto",
+    "uploading_photo": "Ap voye…",
+    "photo_updated": "Foto a mete ajou",
+    "photo_invalid": "Chwazi yon imaj JPEG, PNG, WebP oswa GIF",
+    "photo_too_large": "Chwazi yon imaj ki pi piti pase 5 MB",
+    "photo_error": "Nou pa t ka voye foto w la. Eseye ankò."
   },
   "preferences": {
     "title": "Preferans",

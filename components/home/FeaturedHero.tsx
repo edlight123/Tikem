@@ -3,7 +3,8 @@
 // The featured-event hero. One event at a time: its poster at 4:5 on the
 // right, the same artwork blurred and darkened behind the whole hero, and the
 // facts on the left — label, title, a serif line, a mono data line, the
-// all-in price and one white "Get tickets". A counter steps through up to
+// all-in price and one white "Get tickets". The poster takes the larger half
+// and the type steps down: the art is the headline, the facts caption it. A counter steps through up to
 // five events: the admin's picks first, then the most-sold upcoming ones
 // (lib/home/feed pickHeroEvents). Nothing advances on its own.
 
@@ -85,11 +86,11 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 pb-12 pt-6 sm:px-6 sm:pt-10 lg:grid-cols-12 lg:items-center lg:gap-12 lg:px-8 lg:pb-20 lg:pt-14">
         {/* Poster — first on a phone, right on a desktop. */}
-        <div key={`poster-${ev.id}`} className="hero-arrive lg:order-2 lg:col-span-5">
+        <div key={`poster-${ev.id}`} className="hero-arrive lg:order-2 lg:col-span-6">
           <Link
             href={href}
             tabIndex={-1}
-            className="relative block aspect-[4/5] w-[78%] max-w-[340px] overflow-hidden rounded bg-white/[0.06] sm:w-[60%] lg:ml-auto lg:w-full lg:max-w-[460px]"
+            className="relative block aspect-[4/5] w-full max-w-[440px] overflow-hidden rounded bg-white/[0.06] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:w-[70%] lg:ml-auto lg:w-full lg:max-w-[560px]"
           >
             {ev.banner_image_url && (
               <Image
@@ -97,7 +98,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
                 alt={ev.title}
                 fill
                 priority={index === 0}
-                sizes="(min-width: 1024px) 460px, (min-width: 640px) 60vw, 78vw"
+                sizes="(min-width: 1024px) 560px, (min-width: 640px) 70vw, 100vw"
                 className="object-cover"
               />
             )}
@@ -105,7 +106,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
         </div>
 
         {/* The facts. */}
-        <div className="min-w-0 lg:order-1 lg:col-span-7">
+        <div className="min-w-0 lg:order-1 lg:col-span-6">
           <div key={`copy-${ev.id}`} className="hero-arrive" aria-live="polite">
             <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white/60">
               <span
@@ -114,20 +115,20 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
               />
               {label}
             </p>
-            <h2 className="mt-4 break-words font-grotesk font-bold text-white text-balance !text-[clamp(44px,7.4vw,112px)] !leading-[0.93] tracking-[-0.035em]">
+            <h2 className="mt-4 break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
               {ev.title}
             </h2>
             {subtitle && (
-              <p className="mt-5 line-clamp-2 max-w-xl font-display italic text-white/75 !text-[clamp(20px,2.2vw,28px)] !leading-[1.15]">
+              <p className="mt-4 line-clamp-2 max-w-md font-display italic text-white/55 !text-[clamp(17px,1.5vw,21px)] !leading-[1.25]">
                 {subtitle}
               </p>
             )}
-            <p className="mt-6 font-mono text-[12px] uppercase leading-relaxed tracking-[0.08em] text-white/60">
+            <p className="mt-5 font-mono text-[11px] uppercase leading-relaxed tracking-[0.08em] text-white/50">
               {eventWhen(ev.start_datetime, zone, i18n.language)}
               {venue && <> · {venue}</>}
             </p>
             {lineup && (
-              <p className="mt-1.5 font-mono text-[12px] uppercase leading-relaxed tracking-[0.08em] text-white/45">
+              <p className="mt-1 font-mono text-[11px] uppercase leading-relaxed tracking-[0.08em] text-white/35">
                 {t('home.hero.lineup', { defaultValue: 'Lineup' })}: {lineup}
               </p>
             )}
@@ -143,7 +144,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
             </div>
           </div>
 
-          <div className="mt-10 flex items-center justify-between gap-6 lg:mt-16">
+          <div className="mt-10 flex items-center gap-6 lg:mt-14">
             {count > 1 ? (
               <div className="flex items-center gap-4">
                 <p
@@ -179,12 +180,7 @@ export default function FeaturedHero({ events, now, zone }: { events: HomeEvent[
                   </button>
                 </div>
               </div>
-            ) : (
-              <span />
-            )}
-            <p className="hidden font-display italic text-white/40 !text-[15px] sm:block">
-              {t('events.hero_tagline', { defaultValue: 'where Haiti goes out.' }).toLowerCase()}
-            </p>
+            ) : null}
           </div>
         </div>
       </div>

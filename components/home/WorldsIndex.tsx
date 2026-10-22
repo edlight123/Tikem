@@ -1,30 +1,43 @@
 'use client'
 
 // "worlds": the eight Kreyòl cultural worlds (lib/categories — a display
-// layer over the canonical categories) as a typographic index. Each row is its
-// real upcoming count and a door into discover; on a desktop, hovering a row
-// raises that world’s top poster beside it. When enough worlds are lit, the
-// empty ones stay in the index muted and unlinked (the map is the point);
-// in a thin scope only the lit ones show. Nobody is sent to an empty page.
+// layer over the canonical categories) as poster tiles. Each tile is that
+// world's top poster with its name set small over the bottom and the real
+// upcoming count, and opens discover on the world's categories. Only lit
+// worlds show; nobody is sent to an empty page.
+//
+// Before, this was a typographic index: eight 80px words with sublabels and
+// counts, the empty worlds greyed in place. It was the tallest thing on the
+// page and all of it type, so the art the page is selling sat further down
+// than a list of category names. The poster now carries the world and the
+// name captions it.
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowUpRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import type { HomeWorld } from '@/lib/home/feed'
 
-const pad = (n: number) => String(n).padStart(2, '0')
-const SHOW_ALL_FROM = 4
+// Desktop columns by how many worlds are lit, so the grid never ends on a
+// half-empty row of holes. Static strings so Tailwind keeps them.
+const LG_COLS: Record<number, string> = {
+  1: 'lg:grid-cols-2',
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+  5: 'lg:grid-cols-5',
+  6: 'lg:grid-cols-3',
+  7: 'lg:grid-cols-4',
+  8: 'lg:grid-cols-4',
+}
 
 export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; scopeQs: string }) {
   const { t } = useTranslation('common')
   const live = worlds.filter((w) => w.count > 0)
   if (!live.length) return null
-  // A thin scope (one city, a quiet month) would print a column of greyed-out
-  // words with one live row; then only the live worlds show. With enough of
-  // them lit, the whole map reads, empty worlds muted in place.
-  const rows = live.length >= SHOW_ALL_FROM ? worlds : live
+  // Two columns on a phone: with an odd count the first world goes full
+  // width (and wider than tall) so the grid closes square.
+  const oddOnPhone = live.length % 2 === 1
 
   return (
     <section>
@@ -34,65 +47,40 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
         cta={t('home.see_all', { defaultValue: 'see all' })}
         ctaTone="quiet"
       />
-      <ol className="-mx-3">
-        {rows.map((w, i) => {
-          const sublabel = t(`worlds.${w.key}.sublabel`, { defaultValue: '' })
-          const row = (
-            <>
-              <span className="w-8 shrink-0 self-start pt-[0.55em] font-mono text-[11px] tabular-nums text-white/35 sm:w-12 sm:text-[12px]">
-                {pad(i + 1)}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span
-                  className={`block font-grotesk font-bold lowercase !leading-[0.95] tracking-[-0.035em] transition-transform duration-300 ease-out !text-[clamp(34px,6vw,80px)] ${
-                    w.count ? 'text-white lg:group-hover:translate-x-2' : 'text-white/20'
-                  }`}
-                >
-                  {w.label}
-                </span>
-                {sublabel && (
-                  <span className={`mt-1.5 block text-[13px] ${w.count ? 'text-white/40' : 'text-white/20'}`}>
-                    {sublabel}
-                  </span>
-                )}
-              </span>
-              <span
-                className={`flex shrink-0 items-center gap-2 self-start pt-[0.5em] font-mono text-[13px] tabular-nums ${
-                  w.count ? 'text-white/75' : 'text-white/20'
+      <ul className={`grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 ${LG_COLS[live.length] ?? 'lg:grid-cols-4'}`}>
+        {live.map((w, i) => {
+          const wide = oddOnPhone && i === 0
+          return (
+            <li key={w.key} className={wide ? 'col-span-2 sm:col-span-1' : ''}>
+              <Link
+                href={`/discover?${w.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}&${scopeQs}`}
+                aria-label={`${w.label}: ${t('home.week.events', { count: w.count, defaultValue: `${w.count} events` })}`}
+                className={`group relative block overflow-hidden rounded bg-white/[0.06] outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                  wide ? 'aspect-[16/10] sm:aspect-[3/4]' : 'aspect-[3/4]'
                 }`}
               >
-                {w.count}
-                {w.count > 0 && (
-                  <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                {w.poster && (
+                  <Image
+                    src={w.poster.banner_image_url}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                    quality={65}
+                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  />
                 )}
-              </span>
-            </>
-          )
-          return (
-            <li key={w.key} className="relative">
-              {w.count > 0 ? (
-                <Link
-                  href={`/discover?${w.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}&${scopeQs}`}
-                  aria-label={`${w.label}: ${t('home.week.events', { count: w.count, defaultValue: `${w.count} events` })}`}
-                  className="group relative flex items-start gap-3 rounded-xl px-3 py-3 outline-none transition-colors hover:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-white/70 sm:gap-5 sm:py-4"
-                >
-                  {row}
-                  {w.poster && (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute right-[16%] top-1/2 z-10 hidden aspect-[4/5] w-[132px] -translate-y-1/2 rotate-[-4deg] scale-95 overflow-hidden rounded opacity-0 transition duration-300 ease-out group-hover:rotate-[-2deg] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:opacity-100 lg:block"
-                    >
-                      <Image src={w.poster.banner_image_url} alt="" fill sizes="132px" quality={60} className="object-cover" />
-                    </span>
-                  )}
-                </Link>
-              ) : (
-                <div className="flex items-start gap-3 px-3 py-3 sm:gap-5 sm:py-4">{row}</div>
-              )}
+                <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 sm:p-4">
+                  <span className="font-grotesk font-bold lowercase !leading-none tracking-[-0.03em] text-white !text-[clamp(20px,2.2vw,28px)]">
+                    {w.label}
+                  </span>
+                  <span className="font-mono text-[11px] tabular-nums text-white/60">{w.count}</span>
+                </span>
+              </Link>
             </li>
           )
         })}
-      </ol>
+      </ul>
     </section>
   )
 }

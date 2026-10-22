@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
-import { User, Mail, Phone, Check, X, Pencil } from 'lucide-react'
+import { User, Mail, Phone, Check, X, Pencil, Camera, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import { FIELD, GHOST_BTN, WHITE_BTN, Panel, PanelRows, ReadoutRow, FieldLabel } from './ui'
@@ -29,6 +30,11 @@ interface ProfileHeaderCardProps {
  * since sits under it as metadata, and email/phone are read-out rows in one
  * filled panel. Editing swaps each value for a filled field in the same slot, so
  * nothing jumps.
+ *
+ * The avatar is the photo control: tapping it opens the file picker and the
+ * upload writes `photo_url` server-side. Before, it was a bare image with no
+ * handler, so the only way to change a picture on the web was the organization
+ * logo in organizer settings — a different field entirely.
  */
 export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps) {
   const { t } = useTranslation('profile')
@@ -37,6 +43,46 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
   const [displayName, setDisplayName] = useState(profile.displayName)
   const [phone, setPhone] = useState(profile.phone || '')
   const [isLoading, setIsLoading] = useState(false)
+  const [photoURL, setPhotoURL] = useState(profile.photoURL || '')
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
+
+  const handlePhotoPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = ''
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      showToast({ type: 'error', title: t('header.photo_invalid') })
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast({ type: 'error', title: t('header.photo_too_large') })
+      return
+    }
+
+    setIsUploadingPhoto(true)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const response = await fetch('/api/profile/upload-photo', { method: 'POST', body })
+      if (!response.ok) {
+        const { error } = await response.json().catch(() => ({ error: '' }))
+        throw new Error(error || 'Upload failed')
+      }
+      const { photo_url } = await response.json()
+      setPhotoURL(photo_url)
+      showToast({ type: 'success', title: t('header.photo_updated') })
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to upload profile photo:', error)
+      showToast({ type: 'error', title: t('header.photo_error') })
+    } finally {
+      setIsUploadingPhoto(false)
+    }
+  }
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -69,22 +115,47 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
   return (
     <section>
       <div className="flex items-start gap-4 sm:gap-5">
-        {/* Avatar well: a fill, not a bright tint. */}
-        <div className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-full bg-white/[0.06] sm:h-24 sm:w-24">
-          {profile.photoURL ? (
-            <Image
-              src={profile.photoURL}
-              alt={profile.displayName}
-              width={96}
-              height={96}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="grid h-full w-full place-items-center">
-              <User className="h-8 w-8 text-white/30 sm:h-10 sm:w-10" aria-hidden />
-            </div>
-          )}
-        </div>
+        {/* Avatar well: a fill, not a bright tint. The whole well is the
+            photo button; the camera badge says so without a label. */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploadingPhoto}
+          aria-label={t('header.change_photo')}
+          title={t('header.change_photo')}
+          className="group relative h-[72px] w-[72px] shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-wait sm:h-24 sm:w-24"
+        >
+          <span className="block h-full w-full overflow-hidden rounded-full bg-white/[0.06]">
+            {photoURL ? (
+              <Image
+                src={photoURL}
+                alt={profile.displayName}
+                width={96}
+                height={96}
+                className="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+              />
+            ) : (
+              <span className="grid h-full w-full place-items-center">
+                <User className="h-8 w-8 text-white/30 sm:h-10 sm:w-10" aria-hidden />
+              </span>
+            )}
+          </span>
+          {isUploadingPhoto ? (
+            <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60">
+              <Loader2 className="h-6 w-6 animate-spin text-white" aria-hidden />
+            </span>
+          ) : null}
+          <span className="absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full bg-white text-black ring-[3px] ring-black transition-transform group-hover:scale-105 sm:h-8 sm:w-8">
+            <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+          </span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={handlePhotoPicked}
+          className="hidden"
+        />
 
         <div className="min-w-0 flex-1">
           {isEditing ? (
