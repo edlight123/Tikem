@@ -32,7 +32,7 @@ import { useLocaleFormat } from '../../lib/format';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Skeleton } from '../../components/Skeleton';
-import ActionTileGrid from '../../components/organizer/ActionTileGrid';
+import ActionTileGrid, { type ActionTile } from '../../components/organizer/ActionTileGrid';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import ChromeBlur from '../../components/ChromeBlur';
@@ -374,6 +374,39 @@ export default function OrganizerEventManagementScreen() {
   const canCancel = event?.status !== 'cancelled';
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
 
+  const actionGroups: { key: string; label: string; tiles: ActionTile[] }[] = [
+    {
+      key: 'door',
+      label: t('organizerEventManagement.actionGroups.door'),
+      tiles: [
+        { key: 'staff', icon: 'people-outline', label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
+        { key: 'attendees', icon: 'people-circle-outline', label: t('organizerEventManagement.actions.viewAttendees'), onPress: handleViewAttendees },
+        { key: 'guestList', icon: 'list-outline', label: t('organizerEventManagement.actions.guestList'), onPress: handleGuestList },
+        { key: 'comps', icon: 'gift-outline', label: t('organizerEventManagement.actions.comps'), onPress: handleViewComps },
+      ],
+    },
+    {
+      key: 'sales',
+      label: t('organizerEventManagement.actionGroups.sales'),
+      tiles: [
+        { key: 'orders', icon: 'receipt-outline', label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
+        { key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings },
+        { key: 'analytics', icon: 'bar-chart-outline', label: t('organizerEventManagement.actions.analytics'), onPress: handleViewAnalytics },
+        { key: 'public', icon: 'eye-outline', label: t('organizerEventManagement.actions.viewPublicPage'), onPress: handleViewPublicPage },
+      ],
+    },
+    {
+      key: 'promote',
+      label: t('organizerEventManagement.actionGroups.promote'),
+      tiles: [
+        { key: 'messages', icon: 'chatbubble-ellipses-outline', label: t('organizerEventManagement.actions.messages'), onPress: handleViewMessages },
+        { key: 'promo', icon: 'pricetag-outline', label: t('organizerEventManagement.actions.promoCodes'), onPress: handlePromoCodes },
+        { key: 'promoters', icon: 'megaphone-outline', label: t('organizerEventManagement.actions.promoters'), onPress: handlePromoters },
+        { key: 'tracking', icon: 'link-outline', label: t('organizerEventManagement.actions.trackingLinks'), onPress: handleTrackingLinks },
+      ],
+    },
+  ];
+
   // Chrome covers the safe area plus the button row (8 + 40 + 8). The poster
   // passing under the buttons is fine; the identity block (which starts right
   // below the hero) is what must not. Begin the fade halfway down the poster
@@ -409,32 +442,11 @@ export default function OrganizerEventManagementScreen() {
           />
         }
       >
-        {/* Poster hero: a soft blurred copy of the artwork bleeds behind the sharp,
-            centred poster and fades into the canvas. */}
+        {/* Poster hero: the flyer stands alone on the canvas. The blurred
+            copy that used to bleed behind it read as a mismatched backdrop and
+            ghosted the flyer's own text out past its edges (TestFlight: "fix
+            the poster"; standing rule: no background behind the posters). */}
         <View style={[styles.hero, { paddingTop: insets.top + 64 }]}>
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <LinearGradient
-              colors={posterTheme.colors}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={[StyleSheet.absoluteFill, { opacity: 0.35 }]}
-            />
-            {!!posterUri && (
-              <ExpoImage
-                source={{ uri: posterUri }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                blurRadius={40}
-                cachePolicy="memory-disk"
-              />
-            )}
-            <View style={styles.heroScrim} />
-            <LinearGradient
-              colors={['rgba(10,10,10,0)', T.bg]}
-              locations={[0.35, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-          </View>
           {/* The flyer is the artwork: 4:5 with its text baked in, so it gets only
               the poster whisper of rounding and nothing painted behind it. The
               gradient is a stand-in for events without artwork, never an underlay. */}
@@ -502,26 +514,16 @@ export default function OrganizerEventManagementScreen() {
         {/* Quick actions */}
         <View style={styles.section}>
           <SectionHeader title={t('organizerEventManagement.sections.quickActions')} />
-          {/* Two columns of compact icon + label tiles; labels wrap rather than
-              truncate, and an odd last tile spans the full row. */}
-          <ActionTileGrid
-            variant="compact"
-            tiles={[
-              { key: 'scan', icon: 'qr-code-outline', label: t('organizerEventManagement.actions.scanTickets'), onPress: handleScanTickets },
-              { key: 'staff', icon: 'people-outline', label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
-              { key: 'attendees', icon: 'people-circle-outline', label: t('organizerEventManagement.actions.viewAttendees'), onPress: handleViewAttendees },
-              { key: 'orders', icon: 'receipt-outline', label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
-              { key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings },
-              { key: 'analytics', icon: 'bar-chart-outline', label: t('organizerEventManagement.actions.analytics'), onPress: handleViewAnalytics },
-              { key: 'messages', icon: 'chatbubble-ellipses-outline', label: t('organizerEventManagement.actions.messages'), onPress: handleViewMessages },
-              { key: 'comps', icon: 'gift-outline', label: t('organizerEventManagement.actions.comps'), onPress: handleViewComps },
-              { key: 'promo', icon: 'pricetag-outline', label: t('organizerEventManagement.actions.promoCodes'), onPress: handlePromoCodes },
-              { key: 'promoters', icon: 'megaphone-outline', label: t('organizerEventManagement.actions.promoters'), onPress: handlePromoters },
-              { key: 'guestList', icon: 'list-outline', label: t('organizerEventManagement.actions.guestList'), onPress: handleGuestList },
-              { key: 'tracking', icon: 'link-outline', label: t('organizerEventManagement.actions.trackingLinks'), onPress: handleTrackingLinks },
-              { key: 'public', icon: 'eye-outline', label: t('organizerEventManagement.actions.viewPublicPage'), onPress: handleViewPublicPage },
-            ]}
-          />
+          {/* Twelve actions in three named groups of four, each a 2x2 grid of
+              compact tiles, instead of one undifferentiated wall of tiles
+              (TestFlight: "this looks weird"). Scan is not repeated here: the
+              pinned "Open door scanner" button below already does it. */}
+          {actionGroups.map((group) => (
+            <View key={group.key} style={styles.actionGroup}>
+              <Text style={styles.groupEyebrow}>{group.label}</Text>
+              <ActionTileGrid variant="compact" tiles={group.tiles} />
+            </View>
+          ))}
         </View>
 
         {/* Controls: one surface-filled group, rows split by a subtle inset divider. */}
@@ -628,7 +630,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     width: 40,
     height: 40,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    // With no blurred hero behind them these sit on the bare canvas, so they
+    // need a fill of their own; translucent so the poster still reads through.
+    backgroundColor: 'rgba(38,38,38,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -651,11 +655,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   hero: {
     alignItems: 'center',
     paddingBottom: 36,
-    overflow: 'hidden',
-  },
-  heroScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,10,10,0.35)',
   },
   poster: {
     aspectRatio: 4 / 5,
@@ -684,6 +683,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   section: {
     paddingHorizontal: 20,
     paddingTop: 32,
+  },
+  actionGroup: {
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  // Group label under the section rail (the profile screen's ACTIONS eyebrow).
+  groupEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 10,
   },
   group: {
     backgroundColor: T.surface,
@@ -765,14 +777,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   toggleTrackOn: {
     backgroundColor: T.accent,
   },
+  // Off: a grey thumb resting left, so "off" doesn't read as a lit white
+  // switch (TestFlight: the white thumb on a dark track looked switched on).
+  // On: white thumb on the accent track, slid right.
   toggleThumb: {
     width: 22,
     height: 22,
     borderRadius: 6,
-    backgroundColor: T.white,
+    backgroundColor: colors.textSecondary,
   },
   toggleThumbOn: {
     alignSelf: 'flex-end',
+    backgroundColor: T.white,
   },
   ctaDock: {
     position: 'absolute',

@@ -38,6 +38,7 @@ import InfoNotice from '../../components/organizer/InfoNotice'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
 import { EarningsSkeleton } from '../../components/Skeleton'
 import { useAppAlert } from '../../components/AppAlert'
+import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 import { withdrawableMinor, type EventEarningsRow } from '../../lib/eventEarnings'
 
 type RouteParams = {
@@ -405,7 +406,11 @@ export default function OrganizerEventEarningsScreen() {
         t('organizerEarnings.identity.alertBody'),
         [
           { text: t('common.cancel'), style: 'cancel' },
-          { text: t('organizerEarnings.identity.cta'), onPress: () => navigation.navigate('OrganizerVerification') },
+          {
+            text: t('organizerEarnings.identity.cta'),
+            // Let the alert's Modal finish closing before the push (iOS can drop it).
+            onPress: () => setTimeout(() => navigation.navigate('OrganizerVerification'), AFTER_ALERT_MS),
+          },
         ]
       )
       return

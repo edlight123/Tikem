@@ -1235,6 +1235,11 @@ export default {
       performance: 'Pèfòmans',
       eventControls: 'Kontwòl evènman',
     },
+    actionGroups: {
+      door: 'Nan pòt la',
+      sales: 'Lavant',
+      promote: 'Pwomosyon',
+    },
     actions: {
       scanTickets: 'Eskane biyè',
       staff: 'Ekip',

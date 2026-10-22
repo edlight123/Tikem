@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Wallet } from 'lucide-react-native';
@@ -19,6 +20,7 @@ import {
   type EventMoney,
 } from '../../lib/earningsHubCache';
 import { radius } from '../../theme/tokens';
+import { resolvePosterTheme } from '../../lib/posterGradient';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
 import SectionHeader from '../../components/SectionHeader';
@@ -330,7 +332,14 @@ export default function OrganizerEarningsHubScreen() {
                         recyclingKey={event.id}
                       />
                     ) : (
-                      <Ionicons name="image-outline" size={18} color={colors.textTertiary} />
+                      // No artwork: the same poster gradient My Events shows, so
+                      // the row never falls back to an empty grey box.
+                      <LinearGradient
+                        colors={resolvePosterTheme(event, event.id || event.title).colors}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
                     )}
                   </View>
                   <View style={styles.rowBody}>
@@ -527,9 +536,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       aspectRatio: 4 / 5,
       borderRadius: radius.poster,
       overflow: 'hidden',
+      // Loading placeholder only: it sits inside the poster's own 4:5 box.
       backgroundColor: colors.surfaceMuted,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     rowBody: {
       flex: 1,
