@@ -20,7 +20,10 @@ import {
 import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { addTicketToEarnings } from '@/lib/earnings'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
-import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/notifications/helpers'
+import {
+  notifyTicketPurchase as notifyTicketPurchaseNotification,
+  notifyOrganizerTicketSale,
+} from '@/lib/notifications/helpers'
 import { onSaleCompleted } from '@/lib/notifications/campaigns'
 import { promoBuyerKey, redeemPromoInTransaction } from '@/lib/promo-codes'
 import { recordPromoterSale } from '@/lib/promoters'
@@ -774,6 +777,26 @@ export async function fulfillPaidOrder(params: {
           )
         } catch (error) {
           console.error(`${logPrefix} failed to send purchase notification`, error)
+        }
+      }
+
+      // The organizer hears about MonCash/SogePay sales too (the card rail and
+      // free claims already notify them). Guest buyers included: the audience
+      // is the organizer, not the buyer.
+      if (eventDetails?.organizer_id && pendingTx.event_id) {
+        try {
+          const paid = createdTickets.reduce((sum, t) => sum + (Number(t?.charged_amount) || 0), 0)
+          await notifyOrganizerTicketSale(
+            String(eventDetails.organizer_id),
+            String(pendingTx.event_id),
+            String(eventDetails.title || 'Event'),
+            createdTickets.length || Number(pendingTx.quantity) || 1,
+            Math.round(paid * 100) / 100,
+            attendee?.full_name || undefined,
+            chargedCurrency
+          )
+        } catch (error) {
+          console.error(`${logPrefix} failed to notify the organizer`, error)
         }
       }
 

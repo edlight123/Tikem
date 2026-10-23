@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import type { NotificationType } from '@/types/database'
+import { formatMoneyFromCents } from '@/lib/money'
 
 /**
  * SERVER-SIDE notification helpers using Firebase Admin SDK
@@ -138,26 +139,59 @@ export async function notifyEventReminder(
 }
 
 /**
- * Notify organizer when a ticket is sold
+ * The organizer's sale line. A free claim says "claimed" with no amount
+ * ("1 ticket sold for $0.00" read as a glitch), and a paid sale shows the
+ * amount in the currency it was paid in, not a hard-coded "$" (an HTG sale
+ * used to read "$7000.00").
+ */
+export function organizerSaleCopy(
+  ticketCount: number,
+  amount: number,
+  currency?: string | null
+): { title: string; body: (eventTitle: string, buyerName?: string) => string; push: string } {
+  const n = Math.max(1, Math.round(Number(ticketCount) || 1))
+  const tickets = `${n} ticket${n > 1 ? 's' : ''}`
+  const free = !(Number.isFinite(amount) && amount > 0)
+  if (free) {
+    return {
+      title: `🎟️ ${n} Free Ticket${n > 1 ? 's' : ''} Claimed`,
+      body: (eventTitle, buyerName) =>
+        `${buyerName || 'Someone'} claimed ${n > 1 ? `${n} free tickets` : 'a free ticket'} for "${eventTitle}".`,
+      push: `${n > 1 ? `${n} free tickets` : 'A free ticket'} just claimed`,
+    }
+  }
+  const money = formatMoneyFromCents(Math.round(amount * 100), currency || 'HTG')
+  return {
+    title: `🎫 ${n} New Ticket${n > 1 ? 's' : ''} Sold!`,
+    body: (eventTitle, buyerName) => `${buyerName || 'Someone'} just bought ${tickets} for "${eventTitle}". Total: ${money}`,
+    push: `${tickets} sold for ${money}`,
+  }
+}
+
+/**
+ * Notify organizer when a ticket is sold or a free ticket is claimed.
+ * `amount` is what the buyer paid, in `currency` (major units); 0 = free.
  */
 export async function notifyOrganizerTicketSale(
   organizerId: string,
   eventId: string,
   eventTitle: string,
   ticketCount: number,
-  revenue: number,
-  buyerName?: string
+  amount: number,
+  buyerName?: string,
+  currency?: string | null
 ): Promise<void> {
-  const buyer = buyerName || 'Someone'
+  const copy = organizerSaleCopy(ticketCount, amount, currency)
+  const free = !(Number.isFinite(amount) && amount > 0)
   await createNotification(
     organizerId,
     'ticket_purchased',
-    `🎫 ${ticketCount} New Ticket${ticketCount > 1 ? 's' : ''} Sold!`,
-    `${buyer} just purchased ${ticketCount} ticket${ticketCount > 1 ? 's' : ''} for "${eventTitle}". Revenue: $${revenue.toFixed(2)}`,
+    copy.title,
+    copy.body(eventTitle, buyerName),
     `/organizer/events/${eventId}/attendees`,
-    { eventId, ticketCount, revenue }
+    { eventId, ticketCount, revenue: free ? 0 : amount, currency: currency || null, free }
   )
-  
+
   // Push only — same reason as the buyer path above: the trigger wrapper would
   // write a SECOND in-app notification on top of the one just created.
   try {
@@ -168,10 +202,10 @@ export async function notifyOrganizerTicketSale(
     if (prefs.notifyTicketPurchase) {
       await sendPushNotification(
         organizerId,
-        `🎫 New Sale: ${eventTitle}`,
-        `${ticketCount} ticket${ticketCount > 1 ? 's' : ''} sold for $${revenue.toFixed(2)}`,
+        `${free ? '🎟️ Free RSVP' : '🎫 New Sale'}: ${eventTitle}`,
+        copy.push,
         `/organizer/events/${eventId}/attendees`,
-        { type: 'ticket_sale', eventId, ticketCount, revenue }
+        { type: 'ticket_sale', eventId, ticketCount, revenue: free ? 0 : amount, free }
       )
     }
   } catch (error) {
