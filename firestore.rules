@@ -110,9 +110,13 @@ service cloud.firestore {
 
       // Update: users may update profile fields but cannot change role/verification.
       allow update: if isOwner(userId)
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.is_verified == resource.data.is_verified
-        && request.resource.data.verification_status == resource.data.verification_status
+        // .get() with a default: a bare resource.data.role on a profile that
+        // never had the field is an evaluation error, which denies EVERY
+        // profile write (photo, logo, name) for that account. Equality with
+        // the same default still forbids adding or changing these fields.
+        && request.resource.data.get('role', null) == resource.data.get('role', null)
+        && request.resource.data.get('is_verified', null) == resource.data.get('is_verified', null)
+        && request.resource.data.get('verification_status', null) == resource.data.get('verification_status', null)
         && (request.resource.data.get('email', null) == resource.data.get('email', null)
             || request.resource.data.get('email', null) == request.auth.token.email)
         // Moderation and reputation are server-owned (admin ban / disable
