@@ -41,7 +41,16 @@
     "language_fr": "Français",
     "language_ht": "Kreyòl",
     "timezone": "Fuseau horaire",
-    "default_country": "Pays"
+    "default_country": "Pays",
+    "area_types": {
+      "commune": "Commune",
+      "neighborhood": "Quartier",
+      "state": "État",
+      "province": "Province",
+      "region": "Région",
+      "department": "Département",
+      "area": "Zone"
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -72,7 +81,8 @@
     "delete_button": "Supprimer le compte",
     "deleting": "Suppression...",
     "sign_out_error": "Échec de la déconnexion",
-    "delete_error": "Échec de la suppression du compte"
+    "delete_error": "Échec de la suppression du compte",
+    "staff_desc": "Outils du staff et contrôle des entrées"
   },
   "organizer_profile": {
     "verified": "Vérifié",
@@ -140,7 +150,8 @@
       "tickets": "Mes billets",
       "friends": "Amis",
       "create_event": "Créer un événement",
-      "organizer_settings": "Réglages organisateur"
+      "organizer_settings": "Réglages organisateur",
+      "following_desc": "Les organisateurs que vous suivez"
     },
     "help": {
       "title": "Aide",
@@ -150,6 +161,53 @@
       "privacy_policy": "Politique de confidentialité",
       "refunds": "Politique de remboursement",
       "instagram": "Suivez-nous sur Instagram"
+    },
+    "following": {
+      "title": "Abonnements",
+      "subtitle": "Les organisateurs que vous suivez. Vos abonnés restent un simple nombre, par respect de la vie privée.",
+      "empty_title": "Aucun abonnement",
+      "empty_body": "Les organisateurs que vous suivez apparaîtront ici.",
+      "unknown": "Organisateur",
+      "follow": "Suivre",
+      "unfollow": "Se désabonner",
+      "follow_name": "Suivre {{name}}",
+      "unfollow_name": "Se désabonner de {{name}}",
+      "unfollowed": "Vous ne suivez plus {{name}}",
+      "update_error": "Mise à jour impossible. Réessayez.",
+      "load_error": "Impossible de charger les organisateurs que vous suivez.",
+      "retry": "Réessayer",
+      "show_more": "Afficher plus"
     }
+  },
+  "privacy": {
+    "title": "Confidentialité",
+    "subtitle": "Vous choisissez qui voit votre activité. Sauf si vous changez ce réglage, vos amis voient les événements auxquels vous allez.",
+    "attendance_label": "Qui peut voir les événements auxquels je vais",
+    "att_nobody": "Privé",
+    "att_nobody_desc": "Personne ne voit les événements où vous allez",
+    "att_friends": "Amis uniquement",
+    "att_friends_desc": "Seuls vos amis voient que vous y allez",
+    "att_everyone": "Tout le monde",
+    "att_everyone_desc": "M'afficher dans la liste publique « Qui y va »",
+    "attendance_note": "Ce réglage contrôle la section « Qui y va » des événements.",
+    "public_profile": "Profil public",
+    "public_profile_desc": "Tout le monde peut voir votre profil, votre bio et vos réseaux sociaux. Désactivé, seuls vos amis les voient.",
+    "find_by_phone": "Permettre aux gens de me trouver par numéro de téléphone",
+    "find_by_phone_desc": "Les personnes qui ont déjà votre numéro peuvent vous trouver en synchronisant leurs contacts. Votre numéro n'est jamais affiché.",
+    "suggest_me": "Me suggérer aux personnes que je connais peut-être",
+    "suggest_me_desc": "Les personnes avec qui vous partagez des amis ou des événements vous voient dans leurs suggestions, et vos amis voient que vous y allez. Désactivé, vous n'apparaissez ni dans l'un ni dans l'autre."
+  },
+  "social": {
+    "title": "Réseaux sociaux et bio",
+    "subtitle": "Permettez aux gens de vous retrouver en dehors de Tikèm",
+    "edit": "Modifier",
+    "bio": "Bio",
+    "bio_placeholder": "Parlez un peu de vous",
+    "no_bio": "Pas encore de bio",
+    "no_links": "Aucun compte social ajouté pour le moment.",
+    "handle_placeholder": "votrepseudo",
+    "profile_placeholder": "votre.profil",
+    "notice": "Ces liens s'affichent sur votre profil public tels que vous les saisissez. Nous ne vérifions pas que ces comptes vous appartiennent.",
+    "save_error": "Enregistrement impossible. Veuillez réessayer."
   }
 }

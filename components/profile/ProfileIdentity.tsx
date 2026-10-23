@@ -14,6 +14,8 @@ interface ProfileIdentityProps {
   stats: { attended: number; following: number; followers: number }
   /** Opens the "Edit profile" panel (name, phone, bio, socials). */
   onEdit: () => void
+  /** Opens the "Following" panel (/profile#following). */
+  onOpenFollowing: () => void
 }
 
 /**
@@ -27,10 +29,11 @@ interface ProfileIdentityProps {
  * width instead of leaving a column of dead space beside a 112px circle.
  *
  * Stats are big numerals over tiny captions with no rules between them (the
- * mobile treatment). "Attended" opens /tickets; Following and Followers are
- * counts only: the web has no following list, and who follows you is private.
+ * mobile treatment). "Attended" opens /tickets and Following opens the
+ * Following panel; Followers stays a count only, because who follows you is
+ * private.
  */
-export function ProfileIdentity({ profile, stats, onEdit }: ProfileIdentityProps) {
+export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: ProfileIdentityProps) {
   const { t, i18n } = useTranslation('profile')
   const { showToast } = useToast()
   const router = useRouter()
@@ -88,9 +91,9 @@ export function ProfileIdentity({ profile, stats, onEdit }: ProfileIdentityProps
     }
   }
 
-  const statCells: Array<{ key: string; label: string; value: number; href?: string }> = [
+  const statCells: Array<{ key: string; label: string; value: number; href?: string; onClick?: () => void }> = [
     { key: 'attended', label: t('dashboard.stats.attended'), value: stats.attended, href: '/tickets' },
-    { key: 'following', label: t('dashboard.stats.following'), value: stats.following },
+    { key: 'following', label: t('dashboard.stats.following'), value: stats.following, onClick: onOpenFollowing },
     { key: 'followers', label: t('dashboard.stats.followers'), value: stats.followers },
   ]
 
@@ -149,7 +152,7 @@ export function ProfileIdentity({ profile, stats, onEdit }: ProfileIdentityProps
               {name}
             </h1>
             {isVerified ? (
-              <BadgeCheck className="mt-1 h-5 w-5 shrink-0 text-brand-400 sm:mt-2 sm:h-6 sm:w-6" aria-label="Verified" />
+              <BadgeCheck className="mt-1 h-5 w-5 shrink-0 text-brand-400 sm:mt-2 sm:h-6 sm:w-6" aria-label={t('organizer_profile.verified')} />
             ) : null}
             <button
               type="button"
@@ -198,14 +201,16 @@ export function ProfileIdentity({ profile, stats, onEdit }: ProfileIdentityProps
                 </span>
               </>
             )
+            const linkClass =
+              'flex min-w-0 flex-col items-center rounded px-1 transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 lg:items-start lg:px-0 lg:hover:bg-transparent lg:hover:opacity-80'
             return s.href ? (
-              <Link
-                key={s.key}
-                href={s.href}
-                className="flex flex-col items-center rounded px-1 transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 lg:items-start lg:px-0 lg:hover:bg-transparent lg:hover:opacity-80"
-              >
+              <Link key={s.key} href={s.href} className={linkClass}>
                 {body}
               </Link>
+            ) : s.onClick ? (
+              <button key={s.key} type="button" onClick={s.onClick} className={linkClass}>
+                {body}
+              </button>
             ) : (
               <div key={s.key} className="flex flex-col items-center px-1 lg:items-start lg:px-0">
                 {body}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Instagram, Music2, Twitter, Facebook, Check, X, Pencil } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import type { UserProfile } from '@/lib/firestore/user-profile'
@@ -29,17 +30,20 @@ interface SocialLinksCardProps {
  */
 const PLATFORMS: Array<{
   key: keyof SocialLinks
+  /** Platform names are brands: the same in every language. */
   label: string
-  placeholder: string
+  /** profile:social.* key for the example handle. */
+  placeholderKey: 'handle_placeholder' | 'profile_placeholder'
   Icon: typeof Instagram
 }> = [
-  { key: 'instagram', label: 'Instagram', placeholder: 'yourhandle', Icon: Instagram },
-  { key: 'tiktok', label: 'TikTok', placeholder: 'yourhandle', Icon: Music2 },
-  { key: 'twitter', label: 'X (Twitter)', placeholder: 'yourhandle', Icon: Twitter },
-  { key: 'facebook', label: 'Facebook', placeholder: 'your.profile', Icon: Facebook },
+  { key: 'instagram', label: 'Instagram', placeholderKey: 'handle_placeholder', Icon: Instagram },
+  { key: 'tiktok', label: 'TikTok', placeholderKey: 'handle_placeholder', Icon: Music2 },
+  { key: 'twitter', label: 'X (Twitter)', placeholderKey: 'handle_placeholder', Icon: Twitter },
+  { key: 'facebook', label: 'Facebook', placeholderKey: 'profile_placeholder', Icon: Facebook },
 ]
 
 export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
+  const { t } = useTranslation('profile')
   const { showToast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -58,7 +62,7 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
       setIsEditing(false)
     } catch (error) {
       console.error('Failed to update social links:', error)
-      showToast({ type: 'error', title: 'Could not save. Please try again.' })
+      showToast({ type: 'error', title: t('social.save_error') })
     } finally {
       setIsLoading(false)
     }
@@ -79,23 +83,23 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
 
   return (
     <ProfileSection
-      title="Social & Bio"
-      description="Let people connect with you off Tikèm"
+      title={t('social.title')}
+      description={t('social.subtitle')}
       actions={
         !isEditing ? (
           <button onClick={() => setIsEditing(true)} className={GHOST_BTN}>
             <Pencil className="h-3.5 w-3.5" aria-hidden />
-            Edit
+            {t('social.edit')}
           </button>
         ) : (
           <div className="flex items-center gap-2">
             <button onClick={handleCancel} disabled={isLoading} className={GHOST_BTN}>
               <X className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">Cancel</span>
+              <span className="hidden sm:inline">{t('header.cancel')}</span>
             </button>
             <button onClick={handleSave} disabled={isLoading} className={WHITE_BTN}>
               <Check className="h-3.5 w-3.5" aria-hidden />
-              {isLoading ? 'Saving...' : 'Save'}
+              {isLoading ? t('header.saving') : t('header.save')}
             </button>
           </div>
         )
@@ -106,7 +110,7 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
           {/* Bio */}
           <div className="px-4 py-4 sm:px-5">
             <FieldLabel htmlFor="profile-bio" className="mb-2">
-              Bio
+              {t('social.bio')}
             </FieldLabel>
             {isEditing ? (
               <>
@@ -115,20 +119,20 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
                   value={bio}
                   onChange={(e) => setBio(e.target.value.slice(0, 280))}
                   rows={3}
-                  placeholder="Tell people a little about yourself"
+                  placeholder={t('social.bio_placeholder')}
                   className={`${FIELD} resize-none`}
                 />
                 <p className="mt-1.5 text-right !text-[12px] text-white/35">{bio.length}/280</p>
               </>
             ) : (
               <p className="!text-[15px] !leading-relaxed whitespace-pre-line text-white/80">
-                {profile.bio?.trim() ? profile.bio : <span className="text-white/35">No bio yet</span>}
+                {profile.bio?.trim() ? profile.bio : <span className="text-white/35">{t('social.no_bio')}</span>}
               </p>
             )}
           </div>
 
           {/* Handles. Read mode hides the empty ones; edit mode shows all four. */}
-          {PLATFORMS.map(({ key, label, placeholder, Icon }) => {
+          {PLATFORMS.map(({ key, label, placeholderKey, Icon }) => {
             const value = isEditing ? links[key] || '' : profile.socialLinks?.[key] || ''
             if (!isEditing && !value) return null
             return (
@@ -143,7 +147,7 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
                       type="text"
                       value={links[key] || ''}
                       onChange={(e) => setLinks((prev) => ({ ...prev, [key]: e.target.value }))}
-                      placeholder={placeholder}
+                      placeholder={t(`social.${placeholderKey}`)}
                       className="min-w-0 flex-1 bg-transparent py-3 pr-3.5 text-[16px] text-white outline-none placeholder:text-white/35"
                       aria-label={label}
                     />
@@ -161,17 +165,14 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
           })}
 
           {!isEditing && !hasAnyLink && (
-            <p className="px-4 py-4 !text-[14px] text-white/35 sm:px-5">No social accounts added yet.</p>
+            <p className="px-4 py-4 !text-[14px] text-white/35 sm:px-5">{t('social.no_links')}</p>
           )}
         </PanelRows>
       </Panel>
 
       {isEditing && (
         <div className="mt-3 rounded-xl bg-amber-400/[0.08] px-4 py-3">
-          <p className="!text-[12px] !leading-relaxed text-amber-200/85">
-            These links are shown on your public profile exactly as you enter them. We don&apos;t verify
-            account ownership.
-          </p>
+          <p className="!text-[12px] !leading-relaxed text-amber-200/85">{t('social.notice')}</p>
         </div>
       )}
     </ProfileSection>

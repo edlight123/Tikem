@@ -95,7 +95,7 @@ export function AccountCard() {
               <span className="min-w-0 flex-1">
                 <span className="block !text-[15px] font-semibold text-white">{tCommon('nav.staff')}</span>
                 <span className="mt-0.5 block !text-[13px] !leading-snug text-white/50">
-                  Staff tools and check-in
+                  {t('account.staff_desc')}
                 </span>
               </span>
               <ChevronRight

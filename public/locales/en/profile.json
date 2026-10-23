@@ -41,7 +41,16 @@
     "language_fr": "Français",
     "language_ht": "Kreyòl",
     "timezone": "Timezone",
-    "default_country": "Country"
+    "default_country": "Country",
+    "area_types": {
+      "commune": "Commune",
+      "neighborhood": "Neighborhood",
+      "state": "State",
+      "province": "Province",
+      "region": "Region",
+      "department": "Department",
+      "area": "Area"
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -72,7 +81,8 @@
     "delete_button": "Delete Account",
     "deleting": "Deleting...",
     "sign_out_error": "Failed to sign out",
-    "delete_error": "Failed to delete account"
+    "delete_error": "Failed to delete account",
+    "staff_desc": "Staff tools and check-in"
   },
   "organizer_profile": {
     "verified": "Verified",
@@ -140,7 +150,8 @@
       "tickets": "My tickets",
       "friends": "Friends",
       "create_event": "Create event",
-      "organizer_settings": "Organizer settings"
+      "organizer_settings": "Organizer settings",
+      "following_desc": "Organizers you follow"
     },
     "help": {
       "title": "Help",
@@ -150,6 +161,53 @@
       "privacy_policy": "Privacy policy",
       "refunds": "Refund policy",
       "instagram": "Follow us on Instagram"
+    },
+    "following": {
+      "title": "Following",
+      "subtitle": "Organizers you follow. Followers stay a count, for privacy.",
+      "empty_title": "Not following anyone yet",
+      "empty_body": "Organizers you follow will show up here.",
+      "unknown": "Organizer",
+      "follow": "Follow",
+      "unfollow": "Unfollow",
+      "follow_name": "Follow {{name}}",
+      "unfollow_name": "Unfollow {{name}}",
+      "unfollowed": "You unfollowed {{name}}",
+      "update_error": "Couldn't update. Try again.",
+      "load_error": "Couldn't load the organizers you follow.",
+      "retry": "Try again",
+      "show_more": "Show more"
     }
+  },
+  "privacy": {
+    "title": "Privacy",
+    "subtitle": "You control who sees your activity. Unless you change it, your friends can see the events you're going to.",
+    "attendance_label": "Who can see events I'm going to",
+    "att_nobody": "Private",
+    "att_nobody_desc": "No one can see the events you're attending",
+    "att_friends": "Friends only",
+    "att_friends_desc": "Only your friends can see you're going",
+    "att_everyone": "Everyone",
+    "att_everyone_desc": "Show me in the public \"Who's going\" list",
+    "attendance_note": "This controls the \"Who's going\" section on events.",
+    "public_profile": "Public profile",
+    "public_profile_desc": "Let anyone view your profile, bio, and social links. When off, only friends can see them.",
+    "find_by_phone": "Find me by phone number",
+    "find_by_phone_desc": "Let people who already have your number find you when they sync contacts. Your number is never shown.",
+    "suggest_me": "Suggest me to people I may know",
+    "suggest_me_desc": "Let people who share friends or events with you see you in friend suggestions, and let friends see that you are going. When off, you stay out of both."
+  },
+  "social": {
+    "title": "Social & Bio",
+    "subtitle": "Let people connect with you off Tikèm",
+    "edit": "Edit",
+    "bio": "Bio",
+    "bio_placeholder": "Tell people a little about yourself",
+    "no_bio": "No bio yet",
+    "no_links": "No social accounts added yet.",
+    "handle_placeholder": "yourhandle",
+    "profile_placeholder": "your.profile",
+    "notice": "These links are shown on your public profile exactly as you enter them. We don't verify account ownership.",
+    "save_error": "Could not save. Please try again."
   }
 }

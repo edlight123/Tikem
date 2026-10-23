@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Lock, Users, Globe, Phone, UserPlus } from 'lucide-react'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import {
@@ -16,30 +17,15 @@ interface PrivacyCardProps {
   onUpdate: (updates: Partial<UserProfile>) => Promise<void>
 }
 
+/** Label and description keys live under profile:privacy. */
 const ATTENDANCE_OPTIONS: Array<{
   value: AttendanceVisibility
-  label: string
-  description: string
+  key: 'att_nobody' | 'att_friends' | 'att_everyone'
   Icon: typeof Lock
 }> = [
-  {
-    value: 'nobody',
-    label: 'Private',
-    description: 'No one can see the events you\'re attending',
-    Icon: Lock,
-  },
-  {
-    value: 'friends',
-    label: 'Friends only',
-    description: 'Only your friends can see you\'re going',
-    Icon: Users,
-  },
-  {
-    value: 'everyone',
-    label: 'Everyone',
-    description: 'Show me in the public "Who\'s going" list',
-    Icon: Globe,
-  },
+  { value: 'nobody', key: 'att_nobody', Icon: Lock },
+  { value: 'friends', key: 'att_friends', Icon: Users },
+  { value: 'everyone', key: 'att_everyone', Icon: Globe },
 ]
 
 /**
@@ -54,6 +40,7 @@ const ATTENDANCE_OPTIONS: Array<{
  * was invisible at both ends of the track.
  */
 export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
+  const { t } = useTranslation('profile')
   // An unset attendance visibility shows as 'Friends', the default.
   const initial = {
     ...DEFAULT_PRIVACY,
@@ -98,14 +85,11 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
   const toggleDiscoverable = () => persist({ ...privacy, discoverable_by_phone: !privacy.discoverable_by_phone })
 
   return (
-    <ProfileSection
-      title="Privacy"
-      description="You control who sees your activity. Unless you change it, your friends can see the events you're going to."
-    >
+    <ProfileSection title={t('privacy.title')} description={t('privacy.subtitle')}>
       {/* Attendance visibility */}
-      <FieldLabel className="mb-2.5">Who can see events I&apos;m going to</FieldLabel>
-      <div className="space-y-2" role="radiogroup" aria-label="Who can see events I'm going to">
-        {ATTENDANCE_OPTIONS.map(({ value, label, description, Icon }) => {
+      <FieldLabel className="mb-2.5">{t('privacy.attendance_label')}</FieldLabel>
+      <div className="space-y-2" role="radiogroup" aria-label={t('privacy.attendance_label')}>
+        {ATTENDANCE_OPTIONS.map(({ value, key, Icon }) => {
           const active = privacy.attendance_visibility === value
           // gap-2.5 / p-3 below, not gap-3 / p-3.5: the description column was
           // 266px on a 402px phone and "No one can see the events you're
@@ -135,9 +119,9 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
                 <Icon className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block !text-[15px] font-semibold text-white">{label}</span>
+                <span className="block !text-[15px] font-semibold text-white">{t(`privacy.${key}`)}</span>
                 <span className="mt-0.5 block !text-[13px] !leading-relaxed text-white/50">
-                  {description}
+                  {t(`privacy.${key}_desc`)}
                 </span>
               </span>
               {/* The marker: a filled teal dot when chosen, a quiet ring when not. */}
@@ -153,16 +137,14 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
           )
         })}
       </div>
-      <p className="mt-2 !text-[12px] text-white/35">
-        This controls the &quot;Who&apos;s going&quot; section on events.
-      </p>
+      <p className="mt-2 !text-[12px] text-white/35">{t('privacy.attendance_note')}</p>
 
       {/* The two switches */}
       <Panel className="mt-4">
         <PanelRows>
           <SwitchRow
-            title="Public profile"
-            description="Let anyone view your profile, bio, and social links. When off, only friends can see them."
+            title={t('privacy.public_profile')}
+            description={t('privacy.public_profile_desc')}
             checked={privacy.profile_visibility === 'public'}
             onChange={() =>
               setProfileVisibility(privacy.profile_visibility === 'public' ? 'private' : 'public')
@@ -170,16 +152,16 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
             disabled={isUpdating}
           />
           <SwitchRow
-            title="Find me by phone number"
-            description="Let people who already have your number find you when they sync contacts. Your number is never shown."
+            title={t('privacy.find_by_phone')}
+            description={t('privacy.find_by_phone_desc')}
             icon={Phone}
             checked={privacy.discoverable_by_phone}
             onChange={toggleDiscoverable}
             disabled={isUpdating}
           />
           <SwitchRow
-            title="Suggest me to people I may know"
-            description="Let people who share friends or events with you see you in friend suggestions, and let friends see that you are going. When off, you stay out of both."
+            title={t('privacy.suggest_me')}
+            description={t('privacy.suggest_me_desc')}
             icon={UserPlus}
             checked={discoverable}
             onChange={toggleSuggestions}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Bell, Briefcase, Heart, Lock, Settings, SlidersHorizontal, Ticket, UserPen, Users } from 'lucide-react'
+import { ArrowLeft, Bell, Briefcase, Heart, Lock, Settings, SlidersHorizontal, Ticket, UserCheck, UserPen, Users } from 'lucide-react'
 import { type UserProfile } from '@/lib/firestore/user-profile'
 import type { ProfileDashboardData } from '@/lib/profile/dashboard-server'
 import { ProfileIdentity } from '@/components/profile/ProfileIdentity'
@@ -15,6 +15,7 @@ import { NotificationsCard } from '@/components/profile/NotificationsCard'
 import { AccountCard } from '@/components/profile/AccountCard'
 import { AttendanceDefaultBanner } from '@/components/profile/AttendanceDefaultBanner'
 import { InviteSummaryCard } from '@/components/profile/InviteSummaryCard'
+import { FollowingCard } from '@/components/profile/FollowingCard'
 import {
   FindFriendsCard,
   OrganizationCard,
@@ -37,7 +38,7 @@ interface ProfileClientProps {
 }
 
 /** The settings panels a row opens. The hash is the address: /profile#privacy. */
-const PANELS = ['edit', 'privacy', 'preferences', 'notifications'] as const
+const PANELS = ['edit', 'privacy', 'preferences', 'notifications', 'following'] as const
 type PanelId = (typeof PANELS)[number]
 
 function panelFromHash(): PanelId | null {
@@ -74,6 +75,8 @@ export default function ProfileClient({
   const { t } = useTranslation('profile')
   const [profile, setProfile] = useState<UserProfile>(initialProfile)
   const [panel, setPanel] = useState<PanelId | null>(null)
+  // The Following numeral tracks unfollows made in the Following panel.
+  const [followingCount, setFollowingCount] = useState(dashboard.stats.following)
   const mainRef = useRef<HTMLDivElement>(null)
   const helpRows = useHelpRows()
 
@@ -140,6 +143,7 @@ export default function ProfileClient({
     { kind: 'panel', id: 'privacy', icon: Lock, label: t('dashboard.settings.privacy'), description: t('dashboard.settings.privacy_desc') },
     { kind: 'panel', id: 'preferences', icon: SlidersHorizontal, label: t('preferences.title'), description: t('dashboard.settings.preferences_desc') },
     { kind: 'panel', id: 'notifications', icon: Bell, label: t('notifications.title'), description: t('dashboard.settings.notifications_desc') },
+    { kind: 'panel', id: 'following', icon: UserCheck, label: t('dashboard.following.title'), description: t('dashboard.settings.following_desc') },
     { kind: 'link', href: '/tickets', icon: Ticket, label: t('dashboard.settings.tickets') },
     { kind: 'link', href: '/favorites', icon: Heart, label: t('dashboard.settings.favorites') },
     { kind: 'link', href: '/connections', icon: Users, label: t('dashboard.settings.friends') },
@@ -165,11 +169,17 @@ export default function ProfileClient({
     privacy: <PrivacyCard profile={profile} onUpdate={handleUpdateProfile} />,
     preferences: <PreferencesCard profile={profile} onUpdate={handleUpdateProfile} />,
     notifications: <NotificationsCard profile={profile} onUpdate={handleUpdateProfile} />,
+    following: <FollowingCard onCountChange={(d) => setFollowingCount((n) => Math.max(0, n + d))} />,
   }
 
   return (
     <>
-      <ProfileIdentity profile={profile} stats={dashboard.stats} onEdit={() => openPanel('edit')} />
+      <ProfileIdentity
+        profile={profile}
+        stats={{ ...dashboard.stats, following: followingCount }}
+        onEdit={() => openPanel('edit')}
+        onOpenFollowing={() => openPanel('following')}
+      />
 
       <AttendanceDefaultBanner
         className="mt-8"

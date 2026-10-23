@@ -41,7 +41,16 @@
     "language_fr": "Français",
     "language_ht": "Kreyòl",
     "timezone": "Zòn orè",
-    "default_country": "Peyi"
+    "default_country": "Peyi",
+    "area_types": {
+      "commune": "Komin",
+      "neighborhood": "Katye",
+      "state": "Eta",
+      "province": "Pwovens",
+      "region": "Rejyon",
+      "department": "Depatman",
+      "area": "Zòn"
+    }
   },
   "notifications": {
     "title": "Notifikasyon",
@@ -72,7 +81,8 @@
     "delete_button": "Efase Kont",
     "deleting": "Ap efase...",
     "sign_out_error": "Pa t kapab dekonekte",
-    "delete_error": "Pa t kapab efase kont"
+    "delete_error": "Pa t kapab efase kont",
+    "staff_desc": "Zouti staff ak kontwòl antre"
   },
   "organizer_profile": {
     "verified": "Verifye",
@@ -140,7 +150,8 @@
       "tickets": "Tikè mwen yo",
       "friends": "Zanmi",
       "create_event": "Kreye evènman",
-      "organizer_settings": "Paramèt òganizatè"
+      "organizer_settings": "Paramèt òganizatè",
+      "following_desc": "Òganizatè ou swiv yo"
     },
     "help": {
       "title": "Èd",
@@ -150,6 +161,53 @@
       "privacy_policy": "Politik konfidansyalite",
       "refunds": "Politik ranbousman",
       "instagram": "Swiv nou sou Instagram"
+    },
+    "following": {
+      "title": "Abònman",
+      "subtitle": "Òganizatè ou swiv yo. Moun ki swiv ou rete yon kantite sèlman, pou respekte vi prive yo.",
+      "empty_title": "Poko gen abònman",
+      "empty_body": "Òganizatè ou swiv yo ap parèt isit la.",
+      "unknown": "Òganizatè",
+      "follow": "Swiv",
+      "unfollow": "Sispann swiv",
+      "follow_name": "Swiv {{name}}",
+      "unfollow_name": "Sispann swiv {{name}}",
+      "unfollowed": "Ou sispann swiv {{name}}",
+      "update_error": "Nou pa t ka mete l ajou. Eseye ankò.",
+      "load_error": "Nou pa t ka chaje òganizatè ou swiv yo.",
+      "retry": "Eseye ankò",
+      "show_more": "Wè plis"
     }
+  },
+  "privacy": {
+    "title": "Konfidansyalite",
+    "subtitle": "Se ou ki deside kiyès ki wè aktivite ou. Toutotan ou pa chanje l, zanmi ou ka wè evènman w ap ale yo.",
+    "attendance_label": "Kiyès ki ka wè evènman m ap ale yo",
+    "att_nobody": "Prive",
+    "att_nobody_desc": "Pèsòn pa ka wè evènman w ap ale yo",
+    "att_friends": "Zanmi sèlman",
+    "att_friends_desc": "Se sèlman zanmi ou ki wè w ap ale",
+    "att_everyone": "Tout moun",
+    "att_everyone_desc": "Mete m nan lis piblik \"Ki moun k ap ale\" a",
+    "attendance_note": "Sa a kontwole seksyon \"Ki moun k ap ale\" sou evènman yo.",
+    "public_profile": "Pwofil piblik",
+    "public_profile_desc": "Tout moun ka wè pwofil ou, bio ou ak rezo sosyal ou. Si l fèmen, se sèlman zanmi ou ki ka wè yo.",
+    "find_by_phone": "Kite moun jwenn mwen ak nimewo telefòn",
+    "find_by_phone_desc": "Moun ki deja gen nimewo ou ka jwenn ou lè yo senkronize kontak yo. Nimewo ou pa janm parèt.",
+    "suggest_me": "Sijere m bay moun mwen ka konnen",
+    "suggest_me_desc": "Moun ki gen menm zanmi oswa menm evènman avè w ka wè w nan sijesyon zanmi yo, epi zanmi ou ka wè w ap ale. Si l fèmen, ou pa parèt ni nan youn ni nan lòt."
+  },
+  "social": {
+    "title": "Rezo sosyal ak bio",
+    "subtitle": "Kite moun jwenn ou andeyò Tikèm",
+    "edit": "Modifye",
+    "bio": "Bio",
+    "bio_placeholder": "Pale yon ti kras sou tèt ou",
+    "no_bio": "Poko gen bio",
+    "no_links": "Poko gen kont rezo sosyal.",
+    "handle_placeholder": "nonitilizatèw",
+    "profile_placeholder": "pwofil.ou",
+    "notice": "Lyen sa yo parèt sou pwofil piblik ou jan ou tape yo a. Nou pa verifye si kont yo se pou ou.",
+    "save_error": "Nou pa t ka anrejistre. Tanpri eseye ankò."
   }
 }
