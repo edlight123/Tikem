@@ -23,7 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { resolvePosterTheme } from '../../lib/posterGradient';
-import { radius } from '../../theme/tokens';
+import { radius, colors as tokenColors } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
 import { artByKey } from '../../lib/artLibrary';
@@ -104,6 +104,24 @@ export default function OrganizerEventsScreen() {
   });
 
   const events = eventTab === 'upcoming' ? upcomingEvents : pastEvents;
+
+  // "Can't take payments" is written per EVENT (`payout_blocked`, set by the
+  // Connect health sweep and the publish gate) but its cause is the
+  // organizer's payout account, checked per (organizer, country) and only for
+  // live paid events. So it is said ONCE, as a banner above the upcoming list,
+  // not on every card. Nuance kept: when only SOME live events are blocked
+  // (one country's account is fine and another's isn't, or free events the
+  // sweep never checks), those cards carry it as their one status.
+  const isLive = (e: OrganizerEvent) =>
+    e.is_published && e.status !== 'cancelled' && (e as any).rejected !== true;
+  const liveUpcoming = upcomingEvents.filter(isLive);
+  const blockedCount = liveUpcoming.filter((e) => Boolean((e as any).payout_blocked)).length;
+  const allLiveBlocked = blockedCount > 0 && blockedCount === liveUpcoming.length;
+  const payoutBannerLabel = allLiveBlocked
+    ? t('organizerEvents.payoutBanner.all')
+    : blockedCount === 1
+      ? t('organizerEvents.payoutBanner.one')
+      : t('organizerEvents.payoutBanner.some', { count: blockedCount });
 
   const getDisplayStatus = (event: OrganizerEvent, isPast: boolean): EventStatus => {
     if ((event as any).rejected === true) return 'rejected';
@@ -225,10 +243,7 @@ export default function OrganizerEventsScreen() {
                   <Skeleton width="80%" height={18} radius={4} style={{ marginTop: 12 }} />
                   <Skeleton width="60%" height={13} radius={4} style={{ marginTop: 8 }} />
                 </View>
-                <View>
-                  <Skeleton width={90} height={11} radius={4} />
-                  <Skeleton width="100%" height={4} radius={4} style={{ marginTop: 8 }} />
-                </View>
+                <Skeleton width="100%" height={2} radius={1} />
               </View>
             </View>
           ))}
@@ -253,6 +268,27 @@ export default function OrganizerEventsScreen() {
           />
         }
       >
+        {/* One slim notice instead of an amber label on every card. Filled
+            surface, amber dot, the fix one tap away. */}
+        {eventTab === 'upcoming' && blockedCount > 0 ? (
+          <TouchableOpacity
+            style={styles.payoutBanner}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('OrganizerPayoutSettings')}
+            accessibilityRole="button"
+            accessibilityLabel={`${payoutBannerLabel}. ${t('organizerEvents.payoutBanner.action')}`}
+          >
+            <View style={styles.payoutBannerDot} />
+            <Text style={styles.payoutBannerText} numberOfLines={1}>
+              {payoutBannerLabel}
+            </Text>
+            <Text style={styles.payoutBannerAction} numberOfLines={1}>
+              {t('organizerEvents.payoutBanner.action')}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.text} />
+          </TouchableOpacity>
+        ) : null}
+
         {events.length === 0 ? (
           <EmptyState
             icon={Calendar}
@@ -305,8 +341,13 @@ export default function OrganizerEventsScreen() {
             const capacity = event.total_tickets || 0;
             const soldRatio = capacity > 0 ? Math.min(1, sold / capacity) : 0;
             const salesLabel = capacity > 0
-              ? `${sold} / ${capacity} ${t('common.sold')}`
+              ? `${sold}/${capacity} ${t('common.sold')}`
               : `${sold} ${t('common.sold')}`;
+            // One line: date · venue · sales.
+            const metaLine = [metaLabel, salesLabel].filter(Boolean).join(' · ');
+            // ONE status per card. The payout problem replaces "On sale" only
+            // when the banner can't speak for every live card (see above).
+            const showBlockedOnCard = payoutBlocked && !allLiveBlocked;
 
             return (
               <TouchableOpacity
@@ -356,35 +397,25 @@ export default function OrganizerEventsScreen() {
                 <View style={styles.eventContent}>
                   <View>
                     <View style={styles.statusRow}>
-                      <View style={styles.statusChips}>
+                      {showBlockedOnCard ? (
+                        <StatusChip status="actionNeeded" label={t('organizerEvents.status.payoutBlocked')} />
+                      ) : (
                         <StatusChip status={getChipStatus(displayStatus)} label={statusLabel} />
-                        {/* A live event whose payout account can no longer
-                            accept a charge (set by the Connect health sweep).
-                            Buyers would fail at checkout, so it always shows. */}
-                        {payoutBlocked ? (
-                          <StatusChip status="actionNeeded" label={t('organizerEvents.status.payoutBlocked')} />
-                        ) : null}
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                      )}
                     </View>
                     <Text style={styles.eventTitle} numberOfLines={2}>
                       {event.title}
                     </Text>
-                    {metaLabel ? (
-                      <Text style={styles.metaText} numberOfLines={1}>
-                        {metaLabel}
-                      </Text>
-                    ) : null}
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {metaLine}
+                    </Text>
                   </View>
 
-                  <View style={styles.salesBlock}>
-                    <Text style={styles.salesText} numberOfLines={1}>{salesLabel}</Text>
-                    {capacity > 0 ? (
-                      <View style={styles.salesTrack}>
-                        <View style={[styles.salesFill, { width: `${soldRatio * 100}%` }]} />
-                      </View>
-                    ) : null}
-                  </View>
+                  {capacity > 0 ? (
+                    <View style={styles.salesTrack}>
+                      <View style={[styles.salesFill, { width: `${soldRatio * 100}%` }]} />
+                    </View>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             );
@@ -493,49 +524,58 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 10,
-  },
-  statusChips: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 12,
-    rowGap: 4,
+    marginBottom: 8,
   },
   eventTitle: {
-    fontSize: 18,
-    lineHeight: 23,
-    fontWeight: '700',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '600',
     letterSpacing: -0.2,
     color: colors.text,
   },
   metaText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
     marginTop: 4,
-  },
-  salesBlock: {
-    marginTop: 14,
-  },
-  salesText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
     fontVariant: ['tabular-nums'],
   },
   salesTrack: {
-    height: 4,
-    borderRadius: 2,
+    height: 2,
+    borderRadius: 1,
     backgroundColor: colors.surfaceRaised,
-    marginTop: 8,
+    marginTop: 12,
     overflow: 'hidden',
   },
   salesFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 1,
     backgroundColor: colors.text,
+  },
+  // Slim filled notice (a fill, not a hairline; 4px corners).
+  payoutBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  payoutBannerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: tokenColors.amber,
+  },
+  payoutBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  payoutBannerAction: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
   },
 });

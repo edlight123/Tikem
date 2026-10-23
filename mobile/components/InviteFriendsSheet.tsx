@@ -397,7 +397,7 @@ export function InviteFriendsSheet({
                   return (
                     <TouchableOpacity
                       key={f.uid}
-                      style={[styles.row, on && styles.rowOn]}
+                      style={styles.row}
                       onPress={() => selectable && toggle(f.uid)}
                       disabled={!selectable}
                       activeOpacity={0.7}
@@ -410,7 +410,7 @@ export function InviteFriendsSheet({
                       </Text>
                       {selectable ? (
                         <View style={[styles.check, on && styles.checkOn]}>
-                          {on ? <Check size={15} color={colors.background} strokeWidth={3} /> : null}
+                          {on ? <Check size={12} color="#000000" strokeWidth={3} /> : null}
                         </View>
                       ) : (
                         // Dot + label, never a filled status pill.
@@ -523,26 +523,38 @@ export function InviteFriendsSheet({
               <View style={{ height: 12 }} />
             </ScrollView>
 
+            {/* Compact footer: a quiet count on the left, a small send button on
+                the right, so it never outshouts the per-contact Invite buttons. */}
             {hasFriends && (
-              <TouchableOpacity
-                style={[styles.submit, selected.size === 0 && !sent && styles.submitDisabled]}
-                onPress={send}
-                disabled={(selected.size === 0 && !sent) || sending}
-                accessibilityRole="button"
-              >
-                {sending ? (
-                  <ActivityIndicator color="#000000" />
-                ) : sent ? (
-                  <View style={styles.sentWrap}>
-                    <Check size={18} color="#000000" strokeWidth={3} />
-                    <Text style={styles.submitText}>{t('invites.sentTitle')}</Text>
-                  </View>
-                ) : (
-                  <Text style={[styles.submitText, selected.size === 0 && styles.submitTextDisabled]}>
-                    {selected.size === 0 ? t('invites.selectFriends') : t('invites.sendCount', { count: selected.size })}
-                  </Text>
-                )}
-              </TouchableOpacity>
+              <View style={styles.footer}>
+                <Text style={styles.footerHint} numberOfLines={1}>
+                  {sent
+                    ? ''
+                    : selected.size === 0
+                      ? t('invites.selectFriends')
+                      : t('invites.selectedCount', { count: selected.size })}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.submit, selected.size === 0 && !sent && styles.submitDisabled]}
+                  onPress={send}
+                  disabled={(selected.size === 0 && !sent) || sending}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: (selected.size === 0 && !sent) || sending }}
+                >
+                  {sending ? (
+                    <ActivityIndicator color="#000000" size="small" />
+                  ) : sent ? (
+                    <View style={styles.sentWrap}>
+                      <Check size={14} color="#000000" strokeWidth={3} />
+                      <Text style={styles.submitText}>{t('invites.sentTitle')}</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.submitText, selected.size === 0 && styles.submitTextDisabled]}>
+                      {selected.size === 0 ? t('invites.invite') : t('invites.sendCount', { count: selected.size })}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </KeyboardAvoidingView>
@@ -701,8 +713,9 @@ const getStyles = (colors: any) =>
       marginBottom: 4,
     },
     empty: { fontSize: 14, color: colors.textSecondary, marginVertical: 14, lineHeight: 20 },
-    // Borderless rows; a selected friend lifts one fill step instead of
-    // getting a divider-boxed card.
+    // Borderless rows. Selection is carried by the check circle alone; the
+    // row itself never changes fill (owner: the highlighted row read as not
+    // premium).
     row: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -712,18 +725,19 @@ const getStyles = (colors: any) =>
       marginHorizontal: -10,
       borderRadius: radius.md,
     },
-    rowOn: { backgroundColor: colors.surfaceRaised },
     name: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
     nameMuted: { color: colors.textTertiary || colors.textSecondary },
+    // Radio-like circle (a true circle, so it stays round): an empty raised
+    // fill when off, a small white fill with a black tick when on.
     check: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    checkOn: { backgroundColor: colors.primary },
+    checkOn: { backgroundColor: colors.white },
     stateWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     dot: { width: 6, height: 6, borderRadius: 3 },
     stateText: { fontSize: 12, color: colors.textSecondary },
@@ -787,18 +801,26 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
     },
     connectBtnText: { color: '#000000', fontSize: 14, fontWeight: '700' },
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 10,
+    },
+    footerHint: { flex: 1, fontSize: 13, color: colors.textSecondary },
     submit: {
-      marginTop: 12,
       backgroundColor: colors.white,
       borderRadius: radius.button,
-      height: 54,
+      height: 40,
+      minWidth: 104,
+      paddingHorizontal: 18,
       alignItems: 'center',
       justifyContent: 'center',
     },
     submitDisabled: { backgroundColor: colors.surfaceRaised },
-    submitText: { color: '#000000', fontSize: 16, fontWeight: '700' },
+    submitText: { color: '#000000', fontSize: 14, fontWeight: '700' },
     submitTextDisabled: { color: colors.textTertiary || colors.textSecondary },
-    sentWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sentWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     entry: {
       flexDirection: 'row',
       alignItems: 'center',
