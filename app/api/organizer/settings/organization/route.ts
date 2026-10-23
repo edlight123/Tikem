@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { safeExternalUrl } from '@/lib/safeUrl';
+import { writeOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 
 const MAX_LINK_LENGTH = 500;
 const HANDLE_RE = /^@?[A-Za-z0-9._-]{1,100}$/;
@@ -96,6 +97,10 @@ export async function PUT(request: NextRequest) {
       social_media: social,
       updated_at: new Date().toISOString(),
     }, { merge: true });
+
+    // The name's canonical home is public_profiles/{uid} (plus the users/{uid}
+    // copy the app and the event pages read): lib/profile/org-brand.ts.
+    await writeOrgBrandAdmin(user.id, { organization_name });
 
     return NextResponse.json({ 
       success: true,

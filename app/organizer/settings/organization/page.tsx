@@ -1,14 +1,20 @@
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { adminDb } from '@/lib/firebase/admin';
+import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 import OrganizationForm from './OrganizationForm';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
 
 export const dynamic = 'force-dynamic';
 
 async function getOrganizerData(userId: string) {
-  const organizerDoc = await adminDb.collection('organizers').doc(userId).get();
-  return organizerDoc.exists ? organizerDoc.data() : null;
+  const [organizerDoc, brand] = await Promise.all([
+    adminDb.collection('organizers').doc(userId).get(),
+    // Name and logo from their canonical home (public_profiles), so a logo set
+    // in the app shows here too: lib/profile/org-brand.ts.
+    readOrgBrandAdmin(userId),
+  ]);
+  return { ...(organizerDoc.exists ? organizerDoc.data() : {}), ...brand } as Record<string, any>;
 }
 
 export default async function OrganizationSettingsPage() {

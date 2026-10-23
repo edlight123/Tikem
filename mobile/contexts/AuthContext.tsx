@@ -2,7 +2,8 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithCredential, signInWithCustomToken, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isDemoMode } from '../config/firebase';
-import { syncPublicProfile } from '../lib/publicProfile';
+import { pickPublicProfileFields, syncPublicProfile } from '../lib/publicProfile';
+import { pickOrgBrandPatch, resolveOrgBrand } from '../lib/orgBrand';
 import { resetWebSessionCookie } from '../lib/api/backend';
 import { unregisterPushTokenOnSignOut } from '../lib/pushNotifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -166,9 +167,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      const [userDoc, publicDoc] = await Promise.all([
+        getDoc(doc(db, 'users', userId)),
+        // The organization name/logo live canonically in public_profiles
+        // (lib/orgBrand.ts): a logo set on the web is only there and in
+        // organizers/{uid}, never in users/{uid}. Fails soft.
+        getDoc(doc(db, 'public_profiles', userId)).catch(() => null),
+      ]);
       if (userDoc.exists()) {
-        setUserProfile({ id: userId, ...(userDoc.data() as Omit<UserProfile, 'id'>) });
+        const data = userDoc.data() as Omit<UserProfile, 'id'>;
+        const pub = publicDoc?.exists() ? (publicDoc.data() as Record<string, unknown>) : null;
+        setUserProfile({ id: userId, ...data, ...resolveOrgBrand(pub, data as Record<string, unknown>) });
       }
     } catch (error) {
       console.error('[Auth] Error refreshing user profile:', error);
@@ -198,8 +207,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     await setDoc(doc(db, 'users', user.uid), trimmed, { merge: true });
-    // H4: keep the cross-user-readable projection in sync (best-effort).
-    await syncPublicProfile(user.uid, trimmed);
+    if (Object.keys(pickOrgBrandPatch(trimmed)).length) {
+      // The organization name/logo's canonical home is public_profiles
+      // (lib/orgBrand.ts), so this write must land rather than be best-effort:
+      // it throws, and the caller shows its error. The rules require the
+      // projection's is_verified to equal users/{uid}'s, so mirror it from the
+      // doc just written (a stale projection would otherwise reject the save).
+      const fresh = await getDoc(doc(db, 'users', user.uid));
+      const freshData = fresh.exists() ? fresh.data() : {};
+      const projection: Record<string, unknown> = {
+        ...pickPublicProfileFields(trimmed),
+        is_verified: freshData?.is_verified === true,
+      };
+      if (freshData?.rating != null) projection.rating = freshData.rating;
+      await setDoc(doc(db, 'public_profiles', user.uid), projection, { merge: true });
+    } else {
+      // H4: keep the cross-user-readable projection in sync (best-effort).
+      await syncPublicProfile(user.uid, trimmed);
+    }
     await refreshUserProfile(user.uid);
   };
 

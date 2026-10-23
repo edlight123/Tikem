@@ -8,8 +8,9 @@
  *  - attended   live tickets (attendee_id OR user_id == uid) -> their events,
  *               counted when the event has ended
  *  - posters    those same events, newest first
- *  - org        organizers/{uid} (what the web organization settings write),
- *               falling back to users/{uid}.organization_* (what mobile writes)
+ *  - org        public_profiles/{uid}.organization_* (canonical, both apps
+ *               write it), falling back to the legacy users/organizers copies
+ *               (lib/profile/org-brand.ts)
  *  - staff      members/{doc} with uid == uid and role == "staff"
  *               (the /staff page's own query)
  *
@@ -19,6 +20,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { serializeData } from '@/lib/utils/serialize'
+import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import { countAttended, liveTicketEventIds, sortPostersNewestFirst } from './dashboard'
 
 /** The poster grid shows this many; the rest are one tap away on /tickets. */
@@ -77,21 +79,8 @@ async function readTicketedEvents(uid: string): Promise<any[]> {
 }
 
 async function readOrganization(uid: string): Promise<{ name: string; logo: string }> {
-  try {
-    const [orgSnap, userSnap] = await Promise.all([
-      adminDb.collection('organizers').doc(uid).get(),
-      adminDb.collection('users').doc(uid).get(),
-    ])
-    const org = orgSnap.exists ? orgSnap.data() || {} : {}
-    const user = userSnap.exists ? userSnap.data() || {} : {}
-    return {
-      name: String(org.organization_name || user.organization_name || '').trim(),
-      logo: String(org.organization_logo || user.organization_logo || ''),
-    }
-  } catch (err) {
-    console.error('[profile-dashboard] organization read failed', err)
-    return { name: '', logo: '' }
-  }
+  const brand = await readOrgBrandAdmin(uid)
+  return { name: brand.organization_name, logo: brand.organization_logo }
 }
 
 async function readHasStaffAssignments(uid: string): Promise<boolean> {

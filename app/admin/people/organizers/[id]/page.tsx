@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
+import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import OrganizerDetailsClient from './OrganizerDetailsClient'
 
 /** How many of an organizer's events the detail page lists inline. */
@@ -59,8 +60,17 @@ async function getOrganizerDetails(organizerId: string) {
     const userData = serializeFirestoreValue(userDoc.data())
 
     // Get organizer profile data
-    const organizerDoc = await adminDb.collection('organizers').doc(organizerId).get()
-    const organizerData = organizerDoc.exists ? serializeFirestoreValue(organizerDoc.data()) : null
+    const [organizerDoc, brand] = await Promise.all([
+      adminDb.collection('organizers').doc(organizerId).get(),
+      // Name + logo from their canonical home, public_profiles, so a brand set
+      // in the app shows here too (lib/profile/org-brand.ts).
+      readOrgBrandAdmin(organizerId),
+    ])
+    const organizerData = organizerDoc.exists
+      ? { ...serializeFirestoreValue(organizerDoc.data()), ...brand }
+      : brand.organization_name || brand.organization_logo
+        ? { ...brand }
+        : null
 
     // Get payout config
     const payoutConfigDoc = await adminDb

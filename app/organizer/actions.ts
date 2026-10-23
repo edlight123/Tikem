@@ -25,14 +25,14 @@ export async function becomeOrganizer(details?: {
   const orgLogo = details?.organizationLogo?.trim()
   if (orgName || orgLogo) {
     try {
-      const { adminDb } = await import('@/lib/firebase/admin')
-      const patch: Record<string, unknown> = { updated_at: new Date() }
+      const patch: Record<string, unknown> = {}
       if (orgName) patch.organization_name = orgName
       if (orgLogo) patch.organization_logo = orgLogo
-      await adminDb.collection('users').doc(user.id).update(patch)
-      // H4: mirror the SAFE organization brand fields into the public projection.
-      const { syncPublicProfileAdmin } = await import('@/lib/firestore/public-profile')
-      await syncPublicProfileAdmin(user.id, patch)
+      // Canonical public_profiles/{uid} + the users/{uid} copy, and
+      // organizers/{uid} so the settings page opens filled in
+      // (lib/profile/org-brand.ts).
+      const { writeOrgBrandAdmin } = await import('@/lib/firestore/org-brand-server')
+      await writeOrgBrandAdmin(user.id, patch, { organizers: true })
     } catch (e) {
       // Non-fatal: the role upgrade already succeeded; details can be set later in settings.
       console.error('Failed to save organization details on upgrade:', e)

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { adminDb, adminStorage } from '@/lib/firebase/admin';
+import { adminStorage } from '@/lib/firebase/admin';
 import { sniffRasterImage } from '@/lib/security/sniffImage';
+import { writeOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,16 +89,11 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
+    // Canonical public_profiles/{uid}, plus the users/{uid} copy the app reads
+    // and organizers/{uid} for the settings page (lib/profile/org-brand.ts).
     // merge, not update: an organizer who set up on mobile may have no
-    // organizers/{uid} doc yet, and update() throws on a missing doc, so the
-    // profile dashboard's "Add logo" failed for exactly those accounts.
-    await adminDb.collection('organizers').doc(user.id).set(
-      {
-        organization_logo: publicUrl,
-        updated_at: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    // organizers/{uid} doc yet, and update() throws on a missing doc.
+    await writeOrgBrandAdmin(user.id, { organization_logo: publicUrl }, { organizers: true });
 
     return NextResponse.json({ 
       success: true,

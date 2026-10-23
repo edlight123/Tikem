@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import { getFriendshipState } from '@/lib/firestore/connections'
 import { DEFAULT_PRIVACY } from '@/types/social'
 import Navbar from '@/components/Navbar'
@@ -40,7 +41,9 @@ export async function generateMetadata({ params }: { params: Promise<{ organizer
     }
   }
 
-  const name = organizerDisplayName(organizer)
+  // The brand name's canonical home is public_profiles (lib/profile/org-brand.ts).
+  const brand = await readOrgBrandAdmin(organizerId)
+  const name = organizerDisplayName({ ...organizer, organization_name: brand.organization_name })
   const title = `${name} | Tikèm Organizer`
   const description = `View all events organized by ${name} on Tikèm`
   return {
@@ -69,9 +72,13 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
     notFound()
   }
 
+  // Name + logo from their canonical home, public_profiles, so a brand set in
+  // either app shows here (lib/profile/org-brand.ts).
+  const brand = await readOrgBrandAdmin(organizerId)
   const organizer = {
     id: String(organizerRow.id || organizerId),
-    name: organizerDisplayName(organizerRow),
+    name: organizerDisplayName({ ...organizerRow, organization_name: brand.organization_name }),
+    logo: brand.organization_logo,
     is_verified: !!organizerRow.is_verified,
     created_at: organizerRow.created_at,
   }

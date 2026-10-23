@@ -46,6 +46,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { db, isDemoMode } from '../config/firebase';
 import { colors as T, radius } from '../theme/tokens';
 import { getStaffEventIds } from '../lib/staffAssignments';
+import { countAttended, liveTicketEventIds, sortPostersNewestFirst, toDateOrNull } from '../lib/profileStats';
 import { getVerificationRequest, type VerificationRequest } from '../lib/verification';
 import { updateSocialProfile } from '../lib/api/social';
 import { ProfileImageError, uploadProfileImage } from '../lib/profileImages';
@@ -171,45 +172,44 @@ export default function ProfileScreen() {
         getDocs(query(followsRef, where('organizer_id', '==', user.uid))),
       ]);
 
-      const ticketsSnap = await getDocs(query(collection(db, 'tickets'), where('user_id', '==', user.uid)));
-      const ticketDocs = ticketsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
-      const eventIds = Array.from(new Set(ticketDocs.map((tk) => String(tk.event_id || '')).filter(Boolean)));
+      // Same rule as the web /profile (../lib/profileStats.ts mirrors the web's
+      // lib/profile/dashboard.ts): tickets carry the
+      // owner as user_id on some rails and attendee_id on others, so read both;
+      // only LIVE tickets count (not refunded / cancelled / transferred away);
+      // one event counts once, and only once it has ended.
+      const ticketsRef = collection(db, 'tickets');
+      const [byUserId, byAttendeeId] = await Promise.all([
+        getDocs(query(ticketsRef, where('user_id', '==', user.uid))),
+        getDocs(query(ticketsRef, where('attendee_id', '==', user.uid))),
+      ]);
+      const ticketsById = new Map<string, any>();
+      for (const d of [...byUserId.docs, ...byAttendeeId.docs]) ticketsById.set(d.id, d.data());
+      const eventIds = liveTicketEventIds(Array.from(ticketsById.values()));
 
       let attended = 0;
       let posterEvents: any[] = [];
       if (eventIds.length) {
-        const now = new Date();
         const eventSnaps = await Promise.all(
           eventIds.map((eventId) => getDocs(query(collection(db, 'events'), where('__name__', '==', eventId))))
         );
 
         // Normalize dates once so downstream cards get real Date objects (guarded).
-        const toDate = (v: any): Date | null =>
-          v?.toDate ? v.toDate() : v ? new Date(v) : null;
-
         const events = eventSnaps
           .map((s) => {
             if (s.empty) return null;
             const raw = { id: s.docs[0].id, ...s.docs[0].data() } as any;
+            // Deleted events drop out, as on the web.
+            if (raw.deleted || raw.deleted_at) return null;
             return {
               ...raw,
-              start_datetime: toDate(raw.start_datetime),
-              end_datetime: toDate(raw.end_datetime),
+              start_datetime: toDateOrNull(raw.start_datetime),
+              end_datetime: toDateOrNull(raw.end_datetime),
             };
           })
           .filter(Boolean) as any[];
 
-        attended = events.filter((e) => {
-          const cutoff = e.end_datetime || e.start_datetime;
-          return cutoff && cutoff < now;
-        }).length;
-
-        // Poster wall: newest first, undated events sink to the bottom.
-        posterEvents = [...events].sort((a, b) => {
-          const at = a.start_datetime ? a.start_datetime.getTime() : 0;
-          const bt = b.start_datetime ? b.start_datetime.getTime() : 0;
-          return bt - at;
-        });
+        attended = countAttended(events);
+        posterEvents = sortPostersNewestFirst(events);
       }
 
       setMyEvents(posterEvents);

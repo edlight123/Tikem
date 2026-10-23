@@ -13,6 +13,7 @@ import { formatEventWhen } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { appUrl } from '@/lib/email-kit/layout'
 import { MIN_PAID_PRICE_ERROR_CODE, publishPriceBelowMinimum } from '@/lib/min-paid-price'
+import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 
 const TIER_LIMIT = 25
 
@@ -258,8 +259,10 @@ export async function POST(
     // Stamp the denormalized organizer display name so event cards render the
     // organizer correctly WITHOUT an extra profile read. The organization brand
     // name wins over the personal full name (falls back to it when unset).
+    // The brand is read from its canonical home (lib/profile/org-brand.ts).
+    const organizerBrand = await readOrgBrandAdmin(organizerId)
     const organizerName = String(
-      organizerData?.organization_name || organizerData?.full_name || ''
+      organizerBrand.organization_name || organizerData?.full_name || ''
     ).trim()
     if (organizerName) updatePayload.organizer_name = organizerName
 
@@ -294,7 +297,7 @@ export async function POST(
               followerId,
               'event_updated',
               `New Event: ${eventData.title}`,
-              `${eventData.organizer_name || 'An organizer you follow'} just published a new event!`,
+              `${organizerName || eventData.organizer_name || 'An organizer you follow'} just published a new event!`,
               `/events/${id}`,
               { eventId: id, organizerId }
             )
@@ -302,7 +305,7 @@ export async function POST(
             // Send push notification
             await sendPushNotification(
               followerId,
-              `📅 New Event from ${eventData.organizer_name || 'Organizer'}`,
+              `📅 New Event from ${organizerName || eventData.organizer_name || 'Organizer'}`,
               eventData.title,
               `/events/${id}`,
               {

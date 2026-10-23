@@ -2,6 +2,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { getEventById, checkIsFavorite, checkIsFollowing } from '@/lib/data/events'
 import { adminDb } from '@/lib/firebase/admin'
+import { readOrgBrandAdmin, readOrgBrandsAdmin } from '@/lib/firestore/org-brand-server'
+import type { OrgBrand } from '@/lib/profile/org-brand'
 import Navbar from '@/components/Navbar'
 import { notFound } from 'next/navigation'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
@@ -114,9 +116,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       }
 
       // Fetch organizer and ticket tiers in parallel
-      const [organizerDoc, tiersSnapshot] = await Promise.all([
+      const [organizerDoc, tiersSnapshot, organizerBrand] = await Promise.all([
         adminDb.collection('users').doc(eventData.organizer_id).get(),
-        adminDb.collection('ticket_tiers').where('event_id', '==', id).get().catch(() => ({ docs: [] }))
+        adminDb.collection('ticket_tiers').where('event_id', '==', id).get().catch(() => ({ docs: [] })),
+        // Name + logo from their canonical home, public_profiles, so a logo set
+        // in the app shows here too (lib/profile/org-brand.ts).
+        readOrgBrandAdmin(eventData.organizer_id),
       ])
       
       const organizerData = organizerDoc.exists ? organizerDoc.data() : null
@@ -147,8 +152,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           full_name: organizerData.full_name || 'Event Organizer',
           // Organization brand overrides the personal name wherever the
           // organizer is displayed (falls back to full_name when unset).
-          organization_name: organizerData.organization_name || '',
-          organization_logo: organizerData.organization_logo || '',
+          organization_name: organizerBrand.organization_name,
+          organization_logo: organizerBrand.organization_logo,
           is_verified: organizerData.is_verified ?? false
         } : {
           full_name: 'Event Organizer',
@@ -213,10 +218,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     const organizerIds = Array.from(new Set(filteredRelated.map((doc: any) => doc.data().organizer_id)))
     const organizersMap = new Map<string, any>()
     
+    let brandsMap = new Map<string, OrgBrand>()
     if (organizerIds.length > 0) {
-      const organizerSnapshots = await Promise.all(
-        organizerIds.map(orgId => adminDb.collection('users').doc(orgId).get())
-      )
+      const [organizerSnapshots, brands] = await Promise.all([
+        Promise.all(organizerIds.map(orgId => adminDb.collection('users').doc(orgId).get())),
+        readOrgBrandsAdmin(organizerIds as string[]),
+      ])
+      brandsMap = brands
       
       organizerSnapshots.forEach((doc: any) => {
         if (doc.exists) {
@@ -229,6 +237,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     relatedEvents = filteredRelated.map((doc: any) => {
       const data = doc.data()
       const organizerData = organizersMap.get(data.organizer_id)
+      const brand = brandsMap.get(data.organizer_id)
       
       return {
         id: doc.id,
@@ -256,8 +265,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           full_name: organizerData.full_name || 'Event Organizer',
           // Organization brand overrides the personal name wherever the
           // organizer is displayed (falls back to full_name when unset).
-          organization_name: organizerData.organization_name || '',
-          organization_logo: organizerData.organization_logo || '',
+          organization_name: brand?.organization_name || '',
+          organization_logo: brand?.organization_logo || '',
           is_verified: organizerData.is_verified ?? false
         } : {
           full_name: 'Event Organizer',

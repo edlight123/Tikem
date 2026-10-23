@@ -19,7 +19,8 @@
  *    and never rendered) becomes "on Tikèm since", and their city appears when
  *    they have set one. Checked against real data first: no organizer doc in
  *    production carries `organization_logo` or a `bio`, so this deliberately
- *    does NOT build the hero around a logo that does not exist.
+ *    does NOT build the hero around a logo that does not exist. The mark
+ *    does show the logo when there is one (organizer.logo).
  *
  * 3. The spacing. `py-10 md:py-16 lg:py-24` plus a 128px avatar plus a
  *    three-deep heading stack put the first event card most of a screen down.
@@ -58,6 +59,8 @@ interface OrganizerProfileClientProps {
   organizer: {
     id: string
     name: string
+    /** organization_logo (lib/profile/org-brand.ts); '' when none is set. */
+    logo?: string
     is_verified: boolean
     created_at: string
   }
@@ -190,7 +193,7 @@ export default function OrganizerProfileClient({
                 the invisible-card mistake). No organizer has uploaded a logo
                 (checked against production), so the mark is an organization
                 glyph, not the name's first letter (owner rule). */}
-            <OrganizerMark className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
+            <OrganizerMark logoUrl={organizer.logo} className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
 
             <div className="min-w-0 flex-1">
               <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-white !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">

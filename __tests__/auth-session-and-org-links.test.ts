@@ -10,6 +10,7 @@ const verifyIdToken = jest.fn()
 const createSessionCookie = jest.fn(async () => 'cookie-value')
 const cookieSet = jest.fn()
 const orgSet = jest.fn(async () => undefined)
+const batchSet = jest.fn()
 let currentUser: any = null
 
 jest.mock('@/lib/firebase/admin', () => ({
@@ -18,7 +19,8 @@ jest.mock('@/lib/firebase/admin', () => ({
     createSessionCookie: (...a: any[]) => (createSessionCookie as any)(...a),
   },
   adminDb: {
-    collection: () => ({ doc: () => ({ set: (...a: any[]) => (orgSet as any)(...a) }) }),
+    collection: (name: string) => ({ doc: () => ({ _col: name, set: (...a: any[]) => (orgSet as any)(...a) }) }),
+    batch: () => ({ set: (...a: any[]) => batchSet(...a), commit: async () => undefined }),
   },
 }))
 jest.mock('next/headers', () => ({
@@ -124,6 +126,9 @@ describe('PUT /api/organizer/settings/organization', () => {
     expect(written.website).toBe('https://example.com/')
     expect(written.social_media.instagram).toBe('@john.doe')
     expect(written.social_media.facebook).toBe('https://facebook.com/x')
+    // The name also lands in its canonical home, public_profiles (lib/profile/org-brand.ts).
+    const canonical = batchSet.mock.calls.find((c: any[]) => c[0]._col === 'public_profiles')
+    expect(canonical?.[1]).toEqual({ organization_name: 'X' })
   })
 
   it('refuses a non-organizer', async () => {
