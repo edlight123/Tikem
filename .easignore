@@ -2,7 +2,8 @@
 # .gitignore. Only the Expo app in mobile/ is built, so upload that alone (plus
 # the root package.json, which Expo checks for monorepo workspaces).
 /*
-!/mobile/
+!/mobile
+!/mobile/**
 !/package.json
 
 # --- mobile/.gitignore, re-applied (keep in sync) ---
