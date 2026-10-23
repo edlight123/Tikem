@@ -63,3 +63,34 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+/**
+ * DELETE { organizerId }: unfollow, and only unfollow. POST toggles, which is
+ * wrong for an "Unfollow" button: a stale list or a double tap would follow the
+ * organizer again. This is idempotent (already not following = success).
+ */
+export async function DELETE(request: Request) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { organizerId } = await request.json().catch(() => ({}))
+    if (!organizerId || typeof organizerId !== 'string') {
+      return Response.json({ error: 'Organizer ID required' }, { status: 400 })
+    }
+
+    const snap = await adminDb
+      .collection('organizer_follows')
+      .where('follower_id', '==', user.id)
+      .where('organizer_id', '==', organizerId)
+      .get()
+    await Promise.all(snap.docs.map((d: any) => d.ref.delete()))
+
+    return Response.json({ isFollowing: false })
+  } catch (error) {
+    console.error('Error unfollowing:', error)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

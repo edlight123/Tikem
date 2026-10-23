@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin, Tag, Globe, ChevronDown } from 'lucide-react'
-import { LOCATION_CONFIG, CATEGORIES, getLocationTypeLabel, getSubdivisions, getCitiesForCountry } from '@/lib/filters/config'
+import { LOCATION_CONFIG, CATEGORIES, getSubdivisions, getCitiesForCountry } from '@/lib/filters/config'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 import { ProfileSection, Panel, FieldLabel } from './ui'
 
@@ -31,6 +31,7 @@ const SELECT =
 
 export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
   const { i18n, t } = useTranslation('profile')
+  const { t: tCommon } = useTranslation('common')
   const [defaultCountry, setDefaultCountry] = useState(profile.defaultCountry || 'HT')
   const [defaultCity, setDefaultCity] = useState(profile.defaultCity || '')
   const [defaultSubarea, setDefaultSubarea] = useState(profile.defaultSubarea || '')
@@ -48,7 +49,12 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
     return defaultCity ? getSubdivisions(defaultCity, defaultCountry) : []
   }, [defaultCity, defaultCountry])
 
-  const subareaLabel = defaultCity ? getLocationTypeLabel(defaultCity, defaultCountry) : 'Area'
+  // The city's subdivision kind (commune, neighborhood, state...), translated.
+  // An unknown kind reads as a generic "area".
+  const subareaType = (defaultCity && LOCATION_CONFIG[defaultCountry]?.cities[defaultCity]?.type) || 'area'
+  const subareaLabel = t(`preferences.area_types.${subareaType}`, {
+    defaultValue: t('preferences.area_types.area'),
+  })
 
   // Reset city and subarea when country changes
   useEffect(() => {
@@ -180,7 +186,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
         {/* Country */}
         <div>
           <FieldLabel htmlFor="pref-country" icon={Globe} className="mb-2">
-            {t('preferences.default_country', { defaultValue: 'Country' })}
+            {t('preferences.default_country')}
           </FieldLabel>
           <div className="relative">
             <select
@@ -265,7 +271,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                       : 'bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white'
                   }`}
                 >
-                  {category}
+                  {tCommon(`categories.${category}`, { defaultValue: category })}
                 </button>
               )
             })}
