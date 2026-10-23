@@ -3661,9 +3661,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     padding: 16,
     gap: 12,
+    // No hairline seam above the sticky bar: the canvas colour already
+    // separates it from the scrolling form (fill, not a hairline).
     backgroundColor: colors.background,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
   },
   // Filled secondary, 56pt to pair with the 56pt white primary. A dark-grey
