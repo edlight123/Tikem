@@ -359,47 +359,6 @@ const inline = StyleSheet.create({
 });
 
 /**
- * A faint graph-paper grid drawn purely with hairline-bordered flex cells — no
- * image asset, no SVG dependency. Used behind the empty flyer state to give it
- * a "design canvas" texture (à la Posh) instead of a floating glow blob.
- */
-function GridCanvas({ lineColor, columns = 5, rows = 8 }: { lineColor: string; columns?: number; rows?: number }) {
-  // INTERIOR lines only: the last column/row draws no border. Painting every
-  // cell's trailing edge left a hairline hugging the panel's right and bottom
-  // edges with no twin on the left/top, which skewed the texture and made the
-  // whole dropzone read as pushed toward the right ("this poster is not
-  // centered"). Interior-only lines are symmetric by construction.
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}>
-        {Array.from({ length: columns }).map((_, i) => (
-          <View
-            key={`c${i}`}
-            style={{
-              flex: 1,
-              borderRightWidth: i < columns - 1 ? StyleSheet.hairlineWidth : 0,
-              borderRightColor: lineColor,
-            }}
-          />
-        ))}
-      </View>
-      <View style={StyleSheet.absoluteFill}>
-        {Array.from({ length: rows }).map((_, i) => (
-          <View
-            key={`r${i}`}
-            style={{
-              flex: 1,
-              borderBottomWidth: i < rows - 1 ? StyleSheet.hairlineWidth : 0,
-              borderBottomColor: lineColor,
-            }}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/**
  * YYYY-MM-DD from the device's LOCAL calendar date. toISOString() is UTC, so an
  * evening event west of UTC (20:00 in Haiti is 00:00Z next day) read back a day
  * late, and a date picked east of UTC (local midnight is the previous day in
@@ -462,7 +421,7 @@ export default function CreateEventFlowRefactored() {
   // load so the preview renders at the flyer's TRUE proportions (posh shows
   // the poster as-is rather than forcing 2:3). Clamped to a sane band so a
   // degenerate panorama can't collapse the hero. null until first load; the
-  // empty state keeps the 2:3 dropzone.
+  // empty state keeps the 4:5 frame.
   const [posterAspect, setPosterAspect] = useState<number | null>(null);
 
   // Date/time picker visibility (ported from Step3ScheduleRefactored).
@@ -762,9 +721,9 @@ export default function CreateEventFlowRefactored() {
     return t(key);
   };
 
-  // Flyer pick (ported from Step1Basics — aspect [2,3]).
-  // Tapping the flyer area opens the posh-style library sheet (stock photos +
-  // upload); the sheet's Upload pill falls through to the OS picker below.
+  // Flyer pick. The empty frame's primary button opens the OS picker directly;
+  // its quiet link (and tapping an uploaded poster) opens the curated library
+  // sheet, whose Upload pill falls through to the same picker.
   const [showFlyerLibrary, setShowFlyerLibrary] = useState(false);
 
   const pickImage = async () => {
@@ -1891,79 +1850,76 @@ export default function CreateEventFlowRefactored() {
             )}
 
             {/* Flyer hero (POSH IMG_1847) */}
-            <TouchableOpacity
-              style={[
-                styles.flyerHero,
-                // Once the poster's real dimensions are known, size the panel to
-                // its true aspect so the image fills edge-to-edge (no letterbox).
-                !!eventDraft.banner_image_url && posterAspect
-                  ? { aspectRatio: posterAspect }
-                  : null,
-              ]}
-              activeOpacity={0.9}
-              onPress={() => setShowFlyerLibrary(true)}
-            >
-              {eventDraft.banner_image_url ? (
-                <>
-                  {/* Contained (never cropped) on the plain canvas — the earlier
-                      blurred-cover backdrop made the poster hard to read
-                      (tester: "remove the overlay background behind the poster"). */}
-                  <Image
-                    source={{ uri: eventDraft.banner_image_url }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="contain"
-                    onLoad={(e) => {
-                      const { width, height } = e.source ?? {};
-                      if (width && height) {
-                        // Clamp to [0.5, 1.6] so an extreme panorama/strip can't
-                        // flatten or blow up the hero panel.
-                        setPosterAspect(Math.min(1.6, Math.max(0.5, width / height)));
-                      }
-                    }}
-                  />
-                  {/* Top-only scrim keeps the Change-flyer pill readable without
-                      dimming the whole poster. */}
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)']}
-                    style={styles.flyerOverlay}
-                  />
-                  <View style={styles.changeFlyerPill}>
-                    <Ionicons name="camera-outline" size={16} color={colors.white} />
-                    <Text style={styles.changeFlyerText}>{t('organizerCreateEventFlow.canvas.changeFlyer')}</Text>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.flyerEmpty}>
-                  {/* A design-canvas base: a light-GREY slab (the elevation
-                      ladder's top steps) + a faint graph-paper grid (Posh-style)
-                      so the empty poster reads as a workspace to fill. It used
-                      to run down to the canvas colour itself, which made the
-                      dropzone near-black and indistinguishable from the page. */}
-                  {/* VERTICAL fade only. The old diagonal ran darker toward the
-                      bottom-right, so the panel's right edge dissolved into the
-                      canvas and the whole dropzone read as off-centre with a
-                      slanted top ("this poster is not centered"). Keeping the
-                      light even left-to-right keeps the edges honest. */}
-                  <LinearGradient
-                    colors={[colors.surfaceRaised, colors.surface]}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <GridCanvas lineColor="rgba(255,255,255,0.05)" />
-
-                  <View style={styles.flyerContent}>
-                    <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
-                    <Text style={styles.flyerTitle}>{t('organizerCreateEventFlow.canvas.flyerTitle')}</Text>
-                    <Text style={styles.flyerSubtitle}>{t('organizerCreateEvent.basics.aspectRatio')}</Text>
-                    <View style={styles.uploadPill}>
-                      <Ionicons name="arrow-up-circle" size={18} color="#000000" />
-                      <Text style={styles.uploadPillText}>{t('organizerCreateEventFlow.canvas.uploadFlyer')}</Text>
-                    </View>
-                  </View>
+            {eventDraft.banner_image_url ? (
+              <TouchableOpacity
+                style={[
+                  styles.flyerHero,
+                  // Once the poster's real dimensions are known, size the panel to
+                  // its true aspect so the image fills edge-to-edge (no letterbox).
+                  posterAspect ? { aspectRatio: posterAspect } : null,
+                ]}
+                activeOpacity={0.9}
+                onPress={() => setShowFlyerLibrary(true)}
+              >
+                {/* Contained (never cropped) on the plain canvas: the earlier
+                    blurred-cover backdrop made the poster hard to read
+                    (tester: "remove the overlay background behind the poster"). */}
+                <Image
+                  source={{ uri: eventDraft.banner_image_url }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="contain"
+                  onLoad={(e) => {
+                    const { width, height } = e.source ?? {};
+                    if (width && height) {
+                      // Clamp to [0.5, 1.6] so an extreme panorama/strip can't
+                      // flatten or blow up the hero panel.
+                      setPosterAspect(Math.min(1.6, Math.max(0.5, width / height)));
+                    }
+                  }}
+                />
+                {/* Top-only scrim keeps the Change-flyer pill readable without
+                    dimming the whole poster. */}
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)']}
+                  style={styles.flyerOverlay}
+                />
+                <View style={styles.changeFlyerPill}>
+                  <Ionicons name="camera-outline" size={16} color={colors.white} />
+                  <Text style={styles.changeFlyerText}>{t('organizerCreateEventFlow.canvas.changeFlyer')}</Text>
                 </View>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            ) : (
+              // Empty poster frame (Stitch screen 251b4979d1f14176a9684c2812beb687):
+              // an unbordered 4:5 slab, the exact crop the event page and every
+              // poster card use, with a poster-caption block anchored bottom-left.
+              // One primary action (upload straight from the phone) and a quiet
+              // text link to the curated flyer library.
+              <View style={[styles.flyerHero, styles.flyerHeroEmpty]}>
+                <View style={styles.flyerContent}>
+                  <Text style={styles.flyerEyebrow}>{t('organizerCreateEventFlow.canvas.flyerEyebrow')}</Text>
+                  <Text style={styles.flyerTitle}>{t('organizerCreateEventFlow.canvas.flyerTitle')}</Text>
+                  <Text style={styles.flyerSubtitle}>{t('organizerCreateEventFlow.canvas.flyerHint')}</Text>
+                  <TouchableOpacity
+                    style={styles.uploadPill}
+                    activeOpacity={0.85}
+                    onPress={pickImage}
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="arrow-up" size={18} color="#000000" />
+                    <Text style={styles.uploadPillText}>{t('organizerCreateEventFlow.canvas.uploadFlyer')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.libraryLink}
+                    activeOpacity={0.6}
+                    onPress={() => setShowFlyerLibrary(true)}
+                    accessibilityRole="button"
+                    hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.libraryLinkText}>{t('organizerCreateEventFlow.canvas.browseLibrary')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             {/* Core inline fields */}
             <View style={styles.canvasPad}>
@@ -3152,47 +3108,56 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
 
   // ── Flyer hero ──
   flyerHero: {
-    // 2:3 portrait dropzone by default; once a poster loads, the container
-    // takes the image's TRUE aspect (see posterAspect) so nothing letterboxes.
-    aspectRatio: 2 / 3,
+    // 4:5 portrait, the crop the event page hero and every poster card use.
+    // Once a poster loads, the container takes the image's TRUE aspect (see
+    // posterAspect) so nothing letterboxes in the preview.
+    aspectRatio: 4 / 5,
     borderRadius: FLYER_RADIUS,
     marginHorizontal: 16,
     marginBottom: 12,
     overflow: 'hidden',
-    // Pure canvas black so a contained (non-2:3) poster letterboxes invisibly
+    // Pure canvas black so a contained (non-4:5) poster letterboxes invisibly
     // instead of sitting in a gray box.
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  flyerEmpty: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Empty frame: one quiet fill step above the canvas, no border, no grid, no
+  // icon. Content sits at the bottom like a poster caption.
+  flyerHeroEmpty: {
+    backgroundColor: colors.surface,
+    alignItems: 'stretch',
+    justifyContent: 'flex-end',
   },
   flyerContent: {
-    // Stretch so the upload pill can run full-width like posh's
-    // "Upload an image" CTA.
     alignSelf: 'stretch',
-    alignItems: 'center',
-    gap: 14,
+    alignItems: 'flex-start',
     paddingHorizontal: 24,
+    paddingBottom: 20,
+  },
+  // The one teal touch on the step.
+  flyerEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.primary,
+    marginBottom: 10,
   },
   flyerTitle: {
-    fontFamily: font.serif,
-    fontSize: 30,
-    lineHeight: 34,
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
     color: colors.text,
-    textAlign: 'center',
   },
   flyerSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: -6,
+    marginTop: 8,
   },
-  // Full-width solid-white pill, 56pt — reads exactly like posh's
-  // "Upload an image" CTA (and matches WhitePillCTA's primary geometry).
+  // Full-width solid-white primary, 56pt (WhitePillCTA geometry).
   uploadPill: {
     alignSelf: 'stretch',
     flexDirection: 'row',
@@ -3203,12 +3168,23 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 22,
     borderRadius: radius.button,
     backgroundColor: colors.white,
-    marginTop: 4,
+    marginTop: 20,
   },
   uploadPillText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#000000',
+  },
+  // Quiet secondary: text only, no box.
+  libraryLink: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  libraryLinkText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   flyerOverlay: {
     position: 'absolute',
@@ -3559,7 +3535,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   tierSplitCell: {
     flex: 1,
   },
-  // Quiet outlined secondary (44pt tertiary-action height).
+  // Quiet filled secondary (44pt tertiary-action height): a fill, not a
+  // hairline ring (house rule, docs/POSH_DESIGN_BRIEF.md "Surfaces").
   addTierRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3568,8 +3545,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     height: 44,
     marginTop: 12,
     borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   addTierText: {
     fontSize: 15,
@@ -3690,16 +3666,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderTopColor: colors.border,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
   },
-  // Quiet outlined secondary — 56pt to pair with the 56pt white primary pill,
-  // outline instead of a fill so it never competes with the CTA.
+  // Filled secondary, 56pt to pair with the 56pt white primary. A dark-grey
+  // fill, never a hairline outline (TestFlight: "doesn't follow the
+  // platform's style"); the white CTA still wins on contrast.
   backButton: {
     alignItems: 'center',
     justifyContent: 'center',
     height: 56,
-    paddingHorizontal: 22,
+    paddingHorizontal: 28,
     borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   backButtonText: {
     fontSize: 16,

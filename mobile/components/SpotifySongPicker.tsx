@@ -154,7 +154,7 @@ export default function SpotifySongPicker({
           {picked?.albumArt ? (
             <Image source={{ uri: picked.albumArt }} style={styles.art} contentFit="cover" />
           ) : (
-            <View style={[styles.art, styles.artFallback, { borderColor: colors.border }]}>
+            <View style={[styles.art, styles.artFallback, { backgroundColor: colors.surfaceRaised }]}>
               <Ionicons name="musical-notes-outline" size={16} color={colors.textSecondary} />
             </View>
           )}
@@ -253,7 +253,7 @@ export default function SpotifySongPicker({
           {track.albumArt ? (
             <Image source={{ uri: track.albumArt }} style={styles.art} contentFit="cover" />
           ) : (
-            <View style={[styles.art, styles.artFallback, { borderColor: colors.border }]}>
+            <View style={[styles.art, styles.artFallback, { backgroundColor: colors.surfaceRaised }]}>
               <Ionicons name="musical-notes-outline" size={16} color={colors.textSecondary} />
             </View>
           )}
@@ -316,7 +316,6 @@ const styles = StyleSheet.create({
   artFallback: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
   },
   selectedText: {
     flex: 1,
