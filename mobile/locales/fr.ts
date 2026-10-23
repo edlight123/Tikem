@@ -2260,10 +2260,10 @@ export default {
     emptyPastBody: 'Vos événements passés apparaîtront ici',
     manage: 'Gérer',
     payoutBanner: {
-      all: "Vos événements ne peuvent pas encaisser",
-      one: "1 événement ne peut pas encaisser",
-      some: "{count} événements ne peuvent pas encaisser",
-      action: "Configurer les versements",
+      all: "Vos événements ne peuvent pas recevoir de paiements",
+      one: "1 événement ne peut pas recevoir de paiements",
+      some: "{count} événements ne peuvent pas recevoir de paiements",
+      action: "Configurer les paiements",
     },
     status: {
       onSale: 'En vente',

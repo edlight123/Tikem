@@ -2229,10 +2229,10 @@ export default {
     emptyPastBody: 'Evènman pase ou yo ap parèt isit la',
     manage: 'Jere',
     payoutBanner: {
-      all: "Evènman ou yo pa ka pran peman",
-      one: "1 evènman pa ka pran peman",
-      some: "{count} evènman pa ka pran peman",
-      action: "Konfigire peman yo",
+      all: "Evènman ou yo poko ka resevwa peman",
+      one: "1 evènman poko ka resevwa peman",
+      some: "{count} evènman poko ka resevwa peman",
+      action: "Konfigire peman",
     },
     status: {
       onSale: 'An vant',
