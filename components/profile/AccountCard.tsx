@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import {
   LogOut,
   Trash2,
-  HelpCircle,
   Briefcase,
   ChevronRight,
   Loader2,
@@ -18,7 +17,8 @@ import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
 
 
 /**
- * Account: three destinations, then the destructive one.
+ * Account: staff tools and sign out, then the destructive one. (Help & Support
+ * moved to the dashboard's help list, as on mobile.)
  *
  * Before: four rows built as four separate boxes, three of them borders around
  * near-white light-theme tints — `border-brand-100` and `bg-brand-100` on the
@@ -26,7 +26,7 @@ import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
  * the support row drew a pale hairline and a pale block, and the icon tiles were
  * brighter than the text they sat beside.
  *
- * Now: staff / sign out / support are rows of ONE filled panel, hairline-divided,
+ * Now: staff / sign out are rows of ONE filled panel, hairline-divided,
  * with monochrome icon tiles and a chevron on the ones that navigate. Delete sits
  * apart under it on a red wash — set off by distance and a red edge over a fill,
  * not by a red box, matching the organizer settings danger row.
@@ -126,29 +126,12 @@ export function AccountCard() {
               </span>
             </button>
 
-            {/* Help & Support */}
-            <Link href="/support" className={rowClass}>
-              <span className={tileClass}>
-                <HelpCircle className="h-[18px] w-[18px]" aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block !text-[15px] font-semibold text-white">
-                  {t('account.help_support')}
-                </span>
-                <span className="mt-0.5 block !text-[13px] !leading-snug text-white/50">
-                  {t('account.help_support_desc')}
-                </span>
-              </span>
-              <ChevronRight
-                className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-white/60"
-                aria-hidden
-              />
-            </Link>
           </PanelRows>
         </Panel>
 
         {/* Delete Account — apart, on a red wash rather than in a red box */}
         <button
+          type="button"
           id="delete-account"
           onClick={() => setShowDeleteModal(true)}
           className="group mt-4 flex w-full items-center gap-3.5 rounded-2xl bg-red-500/[0.05] px-4 py-4 text-left ring-1 ring-inset ring-red-500/20 transition-colors hover:bg-red-500/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 sm:px-5"

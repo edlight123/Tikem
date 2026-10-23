@@ -89,5 +89,67 @@
     "upcoming_count_one": "{{count}} evènman k ap vini",
     "upcoming_count_other": "{{count}} evènman k ap vini",
     "upcoming_count_plural": "{{count}} evènman k ap vini"
+  },
+  "dashboard": {
+    "stats": {
+      "attended": "Evènman ou te ale",
+      "following": "Ou swiv",
+      "followers": "Moun ki swiv ou"
+    },
+    "verification_pending": "Verifikasyon an atant",
+    "edit_profile": "Modifye pwofil",
+    "organization": {
+      "title": "Òganizasyon",
+      "empty_name": "Ajoute non òganizasyon ou",
+      "hint": "Li parèt tout kote ou parèt kòm òganizatè, nan plas non pèsonèl ou.",
+      "add_logo": "Ajoute yon logo",
+      "change_logo": "Chanje logo a",
+      "logo_updated": "Logo a mete ajou",
+      "logo_error": "Nou pa t ka voye logo a. Eseye ankò."
+    },
+    "find_friends": {
+      "eyebrow": "Zanmi",
+      "title": "Jwenn moun pa w yo",
+      "body": "Gade ki moun ou konnen sou Tikèm. Plis zanmi, pi bon rekòmandasyon, epi ou ka envite yo nan evènman.",
+      "cta": "Jwenn zanmi"
+    },
+    "posters": {
+      "title": "Evènman ou yo",
+      "see_all": "Tout tikè yo",
+      "empty_title": "Poko gen evènman",
+      "empty_body": "Evènman ou gen tikè pou yo ap parèt isit la tankou yon mi afich.",
+      "explore": "Dekouvri evènman"
+    },
+    "view_as": {
+      "title": "Gade kòm",
+      "attendee": "Patisipan",
+      "organizer": "Òganizatè",
+      "staff": "Staff",
+      "tip_organizer": "Òganizatè louvri evènman ou yo, lavant ak peman yo.",
+      "tip_staff": "Staff louvri kontwòl antre a."
+    },
+    "settings": {
+      "title": "Paramèt",
+      "back": "Retounen nan pwofil la",
+      "edit_profile_desc": "Non, telefòn, bio ak rezo sosyal",
+      "privacy": "Konfidansyalite",
+      "privacy_desc": "Ki moun ki wè pwofil ou ak evènman ou ale yo",
+      "preferences_desc": "Vil, sa ou renmen ak lang",
+      "notifications_desc": "Rapèl, nouvèl ak mizajou",
+      "favorites": "Favori",
+      "tickets": "Tikè mwen yo",
+      "friends": "Zanmi",
+      "create_event": "Kreye evènman",
+      "organizer_settings": "Paramèt òganizatè"
+    },
+    "help": {
+      "title": "Èd",
+      "help_center": "Sant èd",
+      "guides": "Gid ak resous",
+      "terms": "Tèm",
+      "privacy_policy": "Politik konfidansyalite",
+      "refunds": "Politik ranbousman",
+      "instagram": "Swiv nou sou Instagram"
+    }
   }
 }

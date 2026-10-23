@@ -25,8 +25,14 @@ export const metadata = {
   description: 'Connect with friends and see who\'s going to events.',
 }
 
-export default async function ConnectionsPage() {
+export default async function ConnectionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string | string[] }>
+}) {
   const user = await getCurrentUser()
+  const { tab } = await searchParams
+  const initialTab = tab === 'find' || tab === 'requests' ? tab : 'friends'
 
   if (!user) {
     redirect('/auth/login?redirect=/connections')
@@ -39,7 +45,7 @@ export default async function ConnectionsPage() {
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
       <div className="mx-auto w-full max-w-2xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
-        <ConnectionsClient initialOverview={overview} />
+        <ConnectionsClient initialOverview={overview} initialTab={initialTab} />
       </div>
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />

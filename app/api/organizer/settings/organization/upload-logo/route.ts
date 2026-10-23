@@ -14,6 +14,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Same gate as the organization details PUT next door. Needed now that the
+    // write below can create organizers/{uid} rather than only update it.
+    if (!['organizer', 'admin', 'super_admin'].includes(String(user.role))) {
+      return NextResponse.json(
+        { error: 'Only organizers can update organization details' },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -79,10 +88,16 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-    await adminDb.collection('organizers').doc(user.id).update({
-      organization_logo: publicUrl,
-      updated_at: new Date().toISOString(),
-    });
+    // merge, not update: an organizer who set up on mobile may have no
+    // organizers/{uid} doc yet, and update() throws on a missing doc, so the
+    // profile dashboard's "Add logo" failed for exactly those accounts.
+    await adminDb.collection('organizers').doc(user.id).set(
+      {
+        organization_logo: publicUrl,
+        updated_at: new Date().toISOString(),
+      },
+      { merge: true }
+    );
 
     return NextResponse.json({ 
       success: true,

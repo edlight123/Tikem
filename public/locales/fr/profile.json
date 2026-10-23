@@ -89,5 +89,67 @@
     "upcoming_count_one": "{{count}} événement à venir",
     "upcoming_count_other": "{{count}} événements à venir",
     "upcoming_count_plural": "{{count}} événements à venir"
+  },
+  "dashboard": {
+    "stats": {
+      "attended": "Participations",
+      "following": "Abonnements",
+      "followers": "Abonnés"
+    },
+    "verification_pending": "Vérification en attente",
+    "edit_profile": "Modifier le profil",
+    "organization": {
+      "title": "Organisation",
+      "empty_name": "Ajoutez le nom de votre organisation",
+      "hint": "Affiché partout où vous apparaissez en tant qu’organisateur, à la place de votre nom personnel.",
+      "add_logo": "Ajouter un logo",
+      "change_logo": "Changer le logo",
+      "logo_updated": "Logo mis à jour",
+      "logo_error": "Impossible de téléverser le logo. Réessayez."
+    },
+    "find_friends": {
+      "eyebrow": "Amis",
+      "title": "Retrouvez vos proches",
+      "body": "Voyez qui vous connaissez sur Tikèm. Plus d’amis, de meilleures suggestions, et des invitations aux événements.",
+      "cta": "Trouver des amis"
+    },
+    "posters": {
+      "title": "Vos évènements",
+      "see_all": "Tous les billets",
+      "empty_title": "Aucun évènement",
+      "empty_body": "Les évènements pour lesquels vous avez un billet apparaîtront ici.",
+      "explore": "Explorer les évènements"
+    },
+    "view_as": {
+      "title": "Voir en tant que",
+      "attendee": "Participant",
+      "organizer": "Organisateur",
+      "staff": "Staff",
+      "tip_organizer": "Organisateur ouvre vos évènements, ventes et versements.",
+      "tip_staff": "Staff ouvre le contrôle des entrées."
+    },
+    "settings": {
+      "title": "Réglages",
+      "back": "Retour au profil",
+      "edit_profile_desc": "Nom, téléphone, bio et réseaux sociaux",
+      "privacy": "Confidentialité",
+      "privacy_desc": "Qui voit votre profil et les évènements où vous allez",
+      "preferences_desc": "Ville, centres d’intérêt et langue",
+      "notifications_desc": "Rappels, mises à jour et nouveautés",
+      "favorites": "Favoris",
+      "tickets": "Mes billets",
+      "friends": "Amis",
+      "create_event": "Créer un événement",
+      "organizer_settings": "Réglages organisateur"
+    },
+    "help": {
+      "title": "Aide",
+      "help_center": "Centre d’aide",
+      "guides": "Guides et ressources",
+      "terms": "Conditions",
+      "privacy_policy": "Politique de confidentialité",
+      "refunds": "Politique de remboursement",
+      "instagram": "Suivez-nous sur Instagram"
+    }
   }
 }

@@ -152,9 +152,16 @@ function PersonRow({
   )
 }
 
-export default function ConnectionsClient({ initialOverview }: { initialOverview: Overview }) {
+export default function ConnectionsClient({
+  initialOverview,
+  initialTab = 'friends',
+}: {
+  initialOverview: Overview
+  /** /connections?tab=find opens on Find (the profile's "Find your people" card). */
+  initialTab?: Tab
+}) {
   const { t } = useTranslation('common')
-  const [tab, setTab] = useState<Tab>('friends')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [overview, setOverview] = useState<Overview>(initialOverview)
 
   const refreshOverview = useCallback(async () => {

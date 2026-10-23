@@ -4,6 +4,7 @@ import { isAdmin } from '@/lib/admin'
 import { getUserProfileAdmin, createUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
+import { getProfileDashboardData } from '@/lib/profile/dashboard-server'
 import ProfileClient from './ProfileClient'
 
 export const revalidate = 60 // Cache for 1 minute
@@ -50,6 +51,14 @@ export default async function ProfilePage() {
   }
 
   const isVerifiedOrganizer = profile.verificationStatus === 'approved'
+  // Mirrors mobile: the organization card for organizer/admin roles (the logo
+  // upload is gated on the same roles), and "view as Organizer" also for an
+  // approved verification (mobile's canUseOrganizerMode).
+  const role = String(profile.role || '')
+  const showOrganization = ['organizer', 'admin', 'super_admin'].includes(role)
+  const canOrganize = showOrganization || isVerifiedOrganizer
+
+  const dashboard = await getProfileDashboardData(user.id, { includeOrganization: showOrganization })
 
   // Serialize all data before passing to client component
   const serializeData = (obj: any): any => {
@@ -72,11 +81,14 @@ export default async function ProfilePage() {
     <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-10">
+      <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <ProfileClient 
           initialProfile={serializedProfile} 
           userId={user.id}
           isVerifiedOrganizer={isVerifiedOrganizer}
+          dashboard={dashboard}
+          showOrganization={showOrganization}
+          canOrganize={canOrganize}
         />
       </div>
 

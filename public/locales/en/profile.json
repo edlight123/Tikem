@@ -89,5 +89,67 @@
     "upcoming_count_one": "{{count}} event coming soon",
     "upcoming_count_other": "{{count}} events coming soon",
     "upcoming_count_plural": "{{count}} events coming soon"
+  },
+  "dashboard": {
+    "stats": {
+      "attended": "Attended",
+      "following": "Following",
+      "followers": "Followers"
+    },
+    "verification_pending": "Verification pending",
+    "edit_profile": "Edit profile",
+    "organization": {
+      "title": "Organization",
+      "empty_name": "Add your organization name",
+      "hint": "Shown wherever you appear as the organizer, in place of your personal name.",
+      "add_logo": "Add logo",
+      "change_logo": "Change logo",
+      "logo_updated": "Logo updated",
+      "logo_error": "Couldn't upload the logo. Try again."
+    },
+    "find_friends": {
+      "eyebrow": "Friends",
+      "title": "Find your people",
+      "body": "See who you know on Tikèm. More friends, better picks, and you can invite them to events.",
+      "cta": "Find friends"
+    },
+    "posters": {
+      "title": "Your events",
+      "see_all": "All tickets",
+      "empty_title": "No events yet",
+      "empty_body": "Events you get tickets to will show up here as a poster wall.",
+      "explore": "Explore events"
+    },
+    "view_as": {
+      "title": "View as",
+      "attendee": "Attendee",
+      "organizer": "Organizer",
+      "staff": "Staff",
+      "tip_organizer": "Organizer opens your events, sales and payouts.",
+      "tip_staff": "Staff opens door check-in."
+    },
+    "settings": {
+      "title": "Settings",
+      "back": "Back to profile",
+      "edit_profile_desc": "Name, phone, bio and social links",
+      "privacy": "Privacy",
+      "privacy_desc": "Who sees your profile and the events you go to",
+      "preferences_desc": "City, interests and language",
+      "notifications_desc": "Reminders, updates and news",
+      "favorites": "Favorites",
+      "tickets": "My tickets",
+      "friends": "Friends",
+      "create_event": "Create event",
+      "organizer_settings": "Organizer settings"
+    },
+    "help": {
+      "title": "Help",
+      "help_center": "Help center",
+      "guides": "Guides and resources",
+      "terms": "Terms",
+      "privacy_policy": "Privacy policy",
+      "refunds": "Refund policy",
+      "instagram": "Follow us on Instagram"
+    }
   }
 }
