@@ -483,7 +483,7 @@ export default function ProfileScreen() {
                 ) : (
                   <Skeleton width={32} height={24} radius={4} />
                 )}
-                <Text style={styles.statLabel} numberOfLines={1}>
+                <Text style={styles.statLabel} numberOfLines={2}>
                   {s.label}
                 </Text>
               </TouchableOpacity>
@@ -951,6 +951,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontSize: 10.5,
       letterSpacing: 0.8,
       textTransform: 'uppercase',
+      textAlign: 'center',
       color: colors.textTertiary,
     },
 

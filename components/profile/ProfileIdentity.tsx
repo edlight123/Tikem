@@ -196,7 +196,9 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
                 <span className="text-[26px] font-semibold leading-none tabular-nums text-white sm:text-[32px]">
                   {s.value}
                 </span>
-                <span className="mt-2 truncate text-[11px] uppercase tracking-[0.12em] text-white/45">
+                {/* Wraps to two centred lines rather than truncating: Kreyòl labels
+                    like "Moun ki swiv ou" are wider than a third of a phone. */}
+                <span className="mt-2 text-balance text-center text-[11px] uppercase leading-tight tracking-[0.06em] text-white/45 sm:tracking-[0.12em] lg:text-left">
                   {s.label}
                 </span>
               </>
@@ -212,7 +214,7 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
                 {body}
               </button>
             ) : (
-              <div key={s.key} className="flex flex-col items-center px-1 lg:items-start lg:px-0">
+              <div key={s.key} className="flex min-w-0 flex-col items-center px-1 lg:items-start lg:px-0">
                 {body}
               </div>
             )
