@@ -22,6 +22,17 @@ export function isLiveTicketStatus(status: unknown): boolean {
   return LIVE_TICKET_STATUSES.includes(s);
 }
 
+/**
+ * Mirrors countsTowardAttendance in lib/profile/dashboard.ts: tickets scanned
+ * at the door (older flows set `checked_in` or `used`) also prove attendance.
+ */
+const SCANNED_TICKET_STATUSES = ['checked_in', 'used'];
+
+export function countsTowardAttendance(status: unknown): boolean {
+  const s = String(status ?? '').toLowerCase().trim();
+  return isLiveTicketStatus(status) || SCANNED_TICKET_STATUSES.includes(s);
+}
+
 export interface ProfileTicketLike {
   event_id?: unknown;
   status?: unknown;
@@ -53,7 +64,7 @@ export function toDateOrNull(value: unknown): Date | null {
 export function liveTicketEventIds(tickets: ProfileTicketLike[]): string[] {
   const ids = new Set<string>();
   for (const t of tickets) {
-    if (!isLiveTicketStatus(t.status)) continue;
+    if (!countsTowardAttendance(t.status)) continue;
     const id = String(t.event_id ?? '').trim();
     if (id) ids.add(id);
   }

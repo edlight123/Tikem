@@ -15,6 +15,14 @@ describe('profile stats: mobile matches web', () => {
     }
   })
 
+  it('agrees that scanned tickets count toward attendance, refunds do not', () => {
+    for (const s of ['valid', 'checked_in', 'USED', 'refunded', 'cancelled', 'transferred', '']) {
+      expect(mobile.countsTowardAttendance(s)).toBe(web.countsTowardAttendance(s))
+    }
+    expect(web.countsTowardAttendance('checked_in')).toBe(true)
+    expect(web.countsTowardAttendance('refunded')).toBe(false)
+  })
+
   it('keeps the same live, de-duplicated event ids', () => {
     const tickets = [
       { event_id: 'a', status: 'valid' },

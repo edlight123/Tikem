@@ -38,14 +38,27 @@ export function toDateOrNull(value: unknown): Date | null {
 }
 
 /**
- * The distinct event ids the reader holds a LIVE ticket to. Refunded,
+ * A ticket that was scanned at the door is the clearest proof of attendance,
+ * but older door flows overwrote its status to `checked_in` (or `used`), which
+ * isLiveTicketStatus rejects. Attendance counts those too; nothing else here
+ * (payouts, transfers) should.
+ */
+const SCANNED_TICKET_STATUSES = new Set(['checked_in', 'used'])
+
+export function countsTowardAttendance(status: unknown): boolean {
+  const s = String(status ?? '').toLowerCase().trim()
+  return isLiveTicketStatus(status) || SCANNED_TICKET_STATUSES.has(s)
+}
+
+/**
+ * The distinct event ids the reader holds a LIVE (or scanned) ticket to. Refunded,
  * cancelled and transferred-away tickets don't count (lib/tickets/status.ts:
  * live = valid | confirmed | active, or no status at all on older docs).
  */
 export function liveTicketEventIds(tickets: DashboardTicketLike[]): string[] {
   const ids = new Set<string>()
   for (const t of tickets) {
-    if (!isLiveTicketStatus(t.status)) continue
+    if (!countsTowardAttendance(t.status)) continue
     const id = String(t.event_id ?? '').trim()
     if (id) ids.add(id)
   }
