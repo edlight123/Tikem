@@ -17,6 +17,11 @@
  *                                  categories,agerating,contentrights,review,price,
  *                                  availability,build,screenshots
  *   --allow-todo                   send review notes even if they still contain TODO
+ *   --create-version               when no version is editable (the last one is live), create
+ *                                  metadata.json's versionString (e.g. 1.0.1) and carry on
+ *   --submit                       after every other step, add the version to a review
+ *                                  submission and submit it to App Review (needs --apply
+ *                                  and an attached build)
  *
  * Credentials: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (defaults below). Demo account
  * values come from the environment or store/app-store/demo.env (gitignored):
@@ -47,6 +52,8 @@ const opt = (name, fallback) => {
 }
 const APPLY = flag('--apply')
 const ALLOW_TODO = flag('--allow-todo')
+const CREATE_VERSION = flag('--create-version')
+const SUBMIT = flag('--submit')
 const ATTACH_BUILD = opt('--attach-build', null)
 const SHOTS_DIR = flag('--upload-screenshots')
   ? path.resolve(ROOT, opt('--upload-screenshots', 'store/screenshots/ios-6.9'))
@@ -173,13 +180,78 @@ const step = (name) => !ONLY || ONLY.includes(name)
 const verb = APPLY ? '' : '(dry run) would '
 
 // ---------- steps ----------
+/**
+ * Add the version to a review submission and submit it. Reuses an open
+ * (READY_FOR_REVIEW) submission so a rerun after a partial failure does not
+ * leave a second empty one behind.
+ */
+async function stepSubmit(version) {
+  section('Submit for review')
+  if (!APPLY) {
+    console.log('  (dry run) would add the version to a review submission and submit it')
+    planned.push('POST /v1/reviewSubmissions + reviewSubmissionItems, PATCH submitted=true')
+    return
+  }
+  const build = (await get(`/v1/appStoreVersions/${version.id}/build`)).data
+  if (!build) die('No build attached to the version; pass --attach-build <number> first.')
+  const open = await getAll(
+    `/v1/reviewSubmissions?filter[app]=${APP_ID}&filter[platform]=IOS&filter[state]=READY_FOR_REVIEW`,
+  )
+  const sub =
+    open[0] ||
+    (
+      await api('POST', '/v1/reviewSubmissions', {
+        data: {
+          type: 'reviewSubmissions',
+          attributes: { platform: 'IOS' },
+          relationships: { app: { data: { type: 'apps', id: APP_ID } } },
+        },
+      })
+    ).data
+  const items = await getAll(`/v1/reviewSubmissions/${sub.id}/items`)
+  if (!items.some((i) => i.relationships?.appStoreVersion?.data?.id === version.id)) {
+    await api('POST', '/v1/reviewSubmissionItems', {
+      data: {
+        type: 'reviewSubmissionItems',
+        relationships: {
+          reviewSubmission: { data: { type: 'reviewSubmissions', id: sub.id } },
+          appStoreVersion: { data: { type: 'appStoreVersions', id: version.id } },
+        },
+      },
+    })
+  }
+  await api('PATCH', `/v1/reviewSubmissions/${sub.id}`, {
+    data: { type: 'reviewSubmissions', id: sub.id, attributes: { submitted: true } },
+  })
+  console.log(`  submitted ${version.attributes.versionString} for review (submission ${sub.id})`)
+}
+
 const EDITABLE = ['PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED', 'METADATA_REJECTED', 'INVALID_BINARY']
 
 async function findVersion() {
   const versions = await getAll(`/v1/apps/${APP_ID}/appStoreVersions?filter[platform]=IOS&limit=50`)
   const v = versions.find((x) => EDITABLE.includes(x.attributes.appStoreState))
-  if (!v) die(`No editable iOS version (states: ${versions.map((x) => x.attributes.appStoreState).join(', ')})`)
-  return { version: v, isFirstVersion: versions.length === 1 }
+  if (v) return { version: v, isFirstVersion: versions.length === 1 }
+  const states = versions.map((x) => `${x.attributes.versionString} ${x.attributes.appStoreState}`).join(', ')
+  if (!CREATE_VERSION) die(`No editable iOS version (${states}). Pass --create-version to create ${meta.app.versionString}.`)
+  if (versions.some((x) => x.attributes.versionString === meta.app.versionString)) {
+    die(`Version ${meta.app.versionString} already exists and is not editable (${states}); bump versionString in metadata.json.`)
+  }
+  section(`Create version ${meta.app.versionString}`)
+  const created = await api('POST', '/v1/appStoreVersions', {
+    data: {
+      type: 'appStoreVersions',
+      attributes: { platform: 'IOS', versionString: meta.app.versionString },
+      relationships: { app: { data: { type: 'apps', id: APP_ID } } },
+    },
+  })
+  if (!created.data) {
+    // Dry run: there is no version id to diff against yet.
+    console.log(`  (dry run) would POST appStoreVersions ${meta.app.versionString}; rerun with --apply to see the rest.`)
+    process.exit(0)
+  }
+  console.log(`  created ${created.data.id}`)
+  return { version: created.data, isFirstVersion: false }
 }
 
 async function stepVersion(version) {
@@ -662,6 +734,7 @@ if (step('price')) await stepPrice()
 if (step('availability')) await stepAvailability()
 if (ATTACH_BUILD && step('build')) await stepBuild(version)
 if (SHOTS_DIR && step('screenshots')) await stepScreenshots(version)
+if (SUBMIT) await stepSubmit(version)
 
 section('Summary')
 console.log(`  ${changes} step(s) with differences${APPLY ? ' applied' : ''}`)
@@ -674,5 +747,5 @@ if (warnings.length) {
   for (const w of warnings) console.log(`    ! ${w}`)
 }
 console.log(
-  '\n  Still owner-only in the ASC web UI: App Privacy answers (store/app-store/app-privacy.md), and the final Add for Review / Submit.',
+  '\n  Still owner-only in the ASC web UI: App Privacy answers (store/app-store/app-privacy.md), and the final Add for Review / Submit (or pass --submit).',
 )
