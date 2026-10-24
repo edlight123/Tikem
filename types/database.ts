@@ -48,6 +48,11 @@ export type NotificationType =
   | 'withdrawal_escalated'
   // Admin-only: a user reported an event or organizer (App Store 1.2 moderation queue).
   | 'content_reported'
+  // Approval lists (docs/specs/approval-lists-and-plus-ones.md). Transactional:
+  // a guest asked to join (to the organizer); the host approved / declined it.
+  | 'attend_request'
+  | 'attend_request_approved'
+  | 'attend_request_declined'
 
 export interface Database {
   public: {

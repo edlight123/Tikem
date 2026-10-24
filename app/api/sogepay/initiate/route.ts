@@ -36,6 +36,8 @@ import {
   seatHoldRefusal,
 } from '@/lib/tickets/seatHolds'
 import { freeLinesRefusal } from '@/lib/tickets/free-claim-policy'
+import { freeQuantityOf } from '@/lib/tickets/free-claim-policy'
+import { approvalFreeLinesRefusal } from '@/lib/events/approval'
 import { screenPurchaseAttempt } from '@/lib/tickets/purchase-screens'
 
 export const runtime = 'nodejs'
@@ -287,6 +289,14 @@ export async function POST(request: Request) {
     // (lib/tickets/free-claim-policy): at most 10 free tickets, one free claim per
     // buyer per event. Fulfillment (lib/tickets/fulfillment.ts) re-takes the claim
     // lock atomically, keyed by this order, before issuing.
+    // Approval-list events give their free tickets through the list only.
+    const approvalRefusal = approvalFreeLinesRefusal(
+      event,
+      freeQuantityOf(selections.map((s) => ({ listPrice: s.unitPrice, quantity: s.quantity })))
+    )
+    if (approvalRefusal) {
+      return NextResponse.json({ error: approvalRefusal.error, code: approvalRefusal.code }, { status: approvalRefusal.status })
+    }
     const freeRefusal = await freeLinesRefusal(
       String(eventId),
       identity,

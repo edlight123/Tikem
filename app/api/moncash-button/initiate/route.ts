@@ -36,6 +36,8 @@ import { screenPurchaseAttempt } from '@/lib/tickets/purchase-screens'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { scheduleOpsEvent } from '@/lib/ops/ops-events'
 import { freeLinesRefusal } from '@/lib/tickets/free-claim-policy'
+import { freeQuantityOf } from '@/lib/tickets/free-claim-policy'
+import { approvalFreeLinesRefusal } from '@/lib/events/approval'
 import {
   freeClaimLines,
   loadMonCashPricingDocs,
@@ -304,6 +306,11 @@ export async function POST(request: Request) {
     // free tickets, one free claim per buyer per event. Without this a buyer could
     // attach free tickets to a cheap paid one, again and again. Fulfillment
     // re-takes the claim lock atomically, keyed by this order, before issuing.
+    // Approval-list events give their free tickets through the list only.
+    const approvalRefusal = approvalFreeLinesRefusal(event, freeQuantityOf(freeClaimLines(normalizedSelections)))
+    if (approvalRefusal) {
+      return NextResponse.json({ error: approvalRefusal.error, code: approvalRefusal.code }, { status: approvalRefusal.status })
+    }
     const freeRefusal = await freeLinesRefusal(String(eventId), identity, freeClaimLines(normalizedSelections))
     if (freeRefusal) {
       return NextResponse.json({ error: freeRefusal.error, code: freeRefusal.code }, { status: freeRefusal.status })
