@@ -1213,7 +1213,10 @@
     "payout_updates": "Nouvèl sou peman",
     "push_notifications": "Notifikasyon push",
     "sms_notifications": "Notifikasyon SMS",
-    "ticket_sales": "Vant tikè"
+    "ticket_sales": "Vant tikè",
+    "attendee_messages": "Mesaj patisipan yo",
+    "attendee_messages_email": "Yon imèl lè yon patisipan ekri ou, pa plis pase youn pou chak konvèsasyon chak 30 minit",
+    "attendee_messages_push": "Yon notifikasyon push pou chak mesaj yon patisipan voye"
   },
   "profile_form": {
     "enter_full_name": "Antre non konplè ou",
@@ -1375,7 +1378,25 @@
   "messages": {
     "no_messages_yet": "Poko gen mesaj",
     "reply_privacy_note": "Yo wè repons ou an nan aplikasyon an ak pa imel. Adrès imel ou rete prive.",
-    "your_reply": "Repons ou"
+    "your_reply": "Repons ou",
+    "subtitle_empty": "Kesyon patisipan yo voye sou evènman sa a ap rive isit la",
+    "subtitle_waiting": "Ap tann repons ou: {{count}} sou {{total}} konvèsasyon",
+    "subtitle_total": "Konvèsasyon: {{total}}",
+    "empty_body": "Lè yon moun poze yon kesyon anvan li achte, ou ka reponn li isit la. Yon repons rapid souvan fè yon moun k ap gade vin achte.",
+    "empty_body_named": "Lè yon moun poze yon kesyon sou {{event}} anvan li achte, ou ka reponn li isit la. Yon repons rapid souvan fè yon moun k ap gade vin achte.",
+    "about_event": "Sou evènman an",
+    "about_ticket": "Sou tikè li",
+    "about_other": "Sou yon lòt bagay",
+    "needs_reply": "Pou reponn",
+    "answered": "Reponn",
+    "unread": "pa li",
+    "you": "Ou menm",
+    "conversation": "Konvèsasyon",
+    "reply_placeholder": "Reponn {{name}}",
+    "send": "Voye repons lan",
+    "sending": "N ap voye…",
+    "error_generic": "Nou pa t ka voye repons ou. Eseye ankò.",
+    "error_limit": "Konvèsasyon sa a rive nan limit mesaj li."
   },
   "qr_scanner": {
     "camera_not_available": "Kamera a pa disponib",

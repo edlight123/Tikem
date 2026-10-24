@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Bell, Briefcase, Heart, Lock, Settings, SlidersHorizontal, Ticket, UserCheck, UserPen, Users } from 'lucide-react'
+import { ArrowLeft, Bell, Briefcase, Heart, Lock, MessageCircle, Settings, SlidersHorizontal, Ticket, UserCheck, UserPen, Users } from 'lucide-react'
 import { type UserProfile } from '@/lib/firestore/user-profile'
 import type { ProfileDashboardData } from '@/lib/profile/dashboard-server'
 import { ProfileIdentity } from '@/components/profile/ProfileIdentity'
@@ -16,6 +16,7 @@ import { AccountCard } from '@/components/profile/AccountCard'
 import { AttendanceDefaultBanner } from '@/components/profile/AttendanceDefaultBanner'
 import { InviteSummaryCard } from '@/components/profile/InviteSummaryCard'
 import { FollowingCard } from '@/components/profile/FollowingCard'
+import { MessagesCard } from '@/components/profile/MessagesCard'
 import {
   FindFriendsCard,
   OrganizationCard,
@@ -38,7 +39,7 @@ interface ProfileClientProps {
 }
 
 /** The settings panels a row opens. The hash is the address: /profile#privacy. */
-const PANELS = ['edit', 'privacy', 'preferences', 'notifications', 'following'] as const
+const PANELS = ['edit', 'messages', 'privacy', 'preferences', 'notifications', 'following'] as const
 type PanelId = (typeof PANELS)[number]
 
 function panelFromHash(): PanelId | null {
@@ -106,7 +107,11 @@ export default function ProfileClient({
   const closePanel = useCallback(() => {
     // A new entry rather than history.back(): the panel may have been the
     // landing URL (from the attendance notice), with nothing to go back to.
-    window.history.pushState(null, '', window.location.pathname + window.location.search)
+    // ?thread= belongs to the Messages panel; leaving the panel drops it.
+    const search = new URLSearchParams(window.location.search)
+    search.delete('thread')
+    const qs = search.toString()
+    window.history.pushState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
     setPanel(null)
     scrollToMain()
   }, [])
@@ -140,6 +145,7 @@ export default function ProfileClient({
   const isOrganizerRole = showOrganization || isVerifiedOrganizer
   const settingsRows: SettingsRow[] = [
     { kind: 'panel', id: 'edit', icon: UserPen, label: t('dashboard.edit_profile'), description: t('dashboard.settings.edit_profile_desc') },
+    { kind: 'panel', id: 'messages', icon: MessageCircle, label: t('dashboard.messages.title'), description: t('dashboard.settings.messages_desc') },
     { kind: 'panel', id: 'privacy', icon: Lock, label: t('dashboard.settings.privacy'), description: t('dashboard.settings.privacy_desc') },
     { kind: 'panel', id: 'preferences', icon: SlidersHorizontal, label: t('preferences.title'), description: t('dashboard.settings.preferences_desc') },
     { kind: 'panel', id: 'notifications', icon: Bell, label: t('notifications.title'), description: t('dashboard.settings.notifications_desc') },
@@ -169,6 +175,7 @@ export default function ProfileClient({
     privacy: <PrivacyCard profile={profile} onUpdate={handleUpdateProfile} />,
     preferences: <PreferencesCard profile={profile} onUpdate={handleUpdateProfile} />,
     notifications: <NotificationsCard profile={profile} onUpdate={handleUpdateProfile} />,
+    messages: <MessagesCard />,
     following: <FollowingCard onCountChange={(d) => setFollowingCount((n) => Math.max(0, n + d))} />,
   }
 

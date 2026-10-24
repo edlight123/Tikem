@@ -151,7 +151,8 @@
       "friends": "Zanmi",
       "create_event": "Kreye evènman",
       "organizer_settings": "Paramèt òganizatè",
-      "following_desc": "Òganizatè ou swiv yo"
+      "following_desc": "Òganizatè ou swiv yo",
+      "messages_desc": "Konvèsasyon ou ak òganizatè yo"
     },
     "help": {
       "title": "Èd",
@@ -177,6 +178,31 @@
       "load_error": "Nou pa t ka chaje òganizatè ou swiv yo.",
       "retry": "Eseye ankò",
       "show_more": "Wè plis"
+    },
+    "messages": {
+      "title": "Mesaj",
+      "subtitle": "Kesyon ou poze òganizatè yo ak repons yo",
+      "all": "Tout mesaj yo",
+      "organizer": "Òganizatè a",
+      "you": "Ou menm",
+      "conversation": "Konvèsasyon",
+      "reply_label": "Mesaj ou",
+      "reply_placeholder": "Ekri {{name}}",
+      "privacy": "Adrès imèl ou ak nimewo telefòn ou rete prive.",
+      "send": "Voye",
+      "sending": "N ap voye…",
+      "closed": "Konvèsasyon sa a rive nan limit mesaj li.",
+      "awaiting": "Ou voye plizyè mesaj youn dèyè lòt. Ou ka ekri ankò lè òganizatè a reponn.",
+      "error_awaiting": "Bay òganizatè a tan pou l reponn anvan ou ekri ankò.",
+      "error_limit": "Konvèsasyon sa a rive nan limit mesaj li.",
+      "error_too_long": "Mesaj sa a twò long. Rakousi l yon ti kras.",
+      "error_generic": "Nou pa t ka voye mesaj ou. Eseye ankò.",
+      "load_error": "Nou pa t ka chaje mesaj ou yo.",
+      "thread_error": "Nou pa t ka chaje konvèsasyon sa a.",
+      "retry": "Eseye ankò",
+      "empty_title": "Poko gen mesaj",
+      "empty_body": "Kesyon ou poze yon òganizatè sou paj yon evènman, ak repons li, ap parèt isit la.",
+      "unread": "Nouvo repons"
     }
   },
   "privacy": {

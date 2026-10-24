@@ -18,6 +18,8 @@ interface NotificationsFormProps {
     sms_event_reminders: boolean;
     push_ticket_sales: boolean;
     push_new_reviews: boolean;
+    email_attendee_messages: boolean;
+    push_attendee_messages: boolean;
   };
 }
 
@@ -86,6 +88,12 @@ export default function NotificationsForm({ userId, initialData }: Notifications
             onChange={() => handleToggle('email_new_reviews')}
           />
           <ToggleItem
+            label={t('notifications_form.attendee_messages')}
+            message={t('notifications_form.attendee_messages_email')}
+            checked={formData.email_attendee_messages}
+            onChange={() => handleToggle('email_attendee_messages')}
+          />
+          <ToggleItem
             label={t('notifications_form.payout_updates')}
             message="Get notified about payout status changes"
             checked={formData.email_payout_updates}
@@ -149,6 +157,12 @@ export default function NotificationsForm({ userId, initialData }: Notifications
             message="Get instant push notifications for new reviews"
             checked={formData.push_new_reviews}
             onChange={() => handleToggle('push_new_reviews')}
+          />
+          <ToggleItem
+            label={t('notifications_form.attendee_messages')}
+            message={t('notifications_form.attendee_messages_push')}
+            checked={formData.push_attendee_messages}
+            onChange={() => handleToggle('push_attendee_messages')}
           />
         </div>
         <p className="text-xs text-white/50 mt-3">
