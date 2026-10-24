@@ -17,6 +17,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendEmail, getOrganizerReplyEmail, emailSubjects } from '@/lib/email'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { attendeeThreadPath, pushAttendeeOfReply } from '@/lib/organizer-message-alerts'
 import {
   appendOrganizerReply,
   getThreadForOrganizer,
@@ -94,15 +95,16 @@ export async function POST(
     // The reply is stored. Neither delivery channel may take it back down, so
     // both are best-effort and independently guarded.
     if (attendeeId) {
-      // The answer travels IN the notification. The attendee has no thread view
-      // of their own, so a bare "you have a reply" would be a dead end.
+      // The answer still travels IN the notification (older app builds show it
+      // there), and the link now opens the conversation itself: /profile's
+      // Messages panel on the web, the MessageThread screen in the app.
       try {
         await createNotification(
           attendeeId,
           'organizer_reply',
           `${organizerName} replied about ${eventTitle}`,
           excerpt(message, NOTIFICATION_EXCERPT),
-          eventId ? `/events/${eventId}` : undefined,
+          attendeeThreadPath(threadId),
           // `message` is an excerpt so notification lists stay scannable;
           // replyBody carries the answer in full for the surfaces that show it.
           { eventId, messageId: threadId, replyId: reply.id, replyBody: message }
@@ -114,6 +116,15 @@ export async function POST(
       try {
         const attendeeSnap = await adminDb.collection('users').doc(attendeeId).get()
         const attendee = attendeeSnap.data() || {}
+        await pushAttendeeOfReply({
+          attendeeId,
+          attendee,
+          threadId,
+          eventId,
+          eventTitle,
+          organizerName,
+          reply: message,
+        })
         const to = String(attendee.email || '').trim()
         if (to) {
           // The attendee's profile is already loaded: write in their language.
@@ -132,6 +143,7 @@ export async function POST(
               eventId,
               question: String(thread.data.message || ''),
               reply: message,
+              threadId,
             }),
           })
         }

@@ -1213,7 +1213,10 @@
     "payout_updates": "Mises à jour des versements",
     "push_notifications": "Notifications push",
     "sms_notifications": "Notifications SMS",
-    "ticket_sales": "Ventes de billets"
+    "ticket_sales": "Ventes de billets",
+    "attendee_messages": "Messages des participants",
+    "attendee_messages_email": "Un e-mail quand un participant vous écrit, au plus un par conversation toutes les 30 minutes",
+    "attendee_messages_push": "Une notification push pour chaque message de participant"
   },
   "profile_form": {
     "enter_full_name": "Saisissez votre nom complet",
@@ -1375,7 +1378,25 @@
   "messages": {
     "no_messages_yet": "Aucun message pour l'instant",
     "reply_privacy_note": "Ils voient votre réponse dans l'application et par e-mail. Votre adresse e-mail reste privée.",
-    "your_reply": "Votre réponse"
+    "your_reply": "Votre réponse",
+    "subtitle_empty": "Les questions des participants sur cet événement arrivent ici",
+    "subtitle_waiting": "En attente de votre réponse : {{count}} sur {{total}} conversations",
+    "subtitle_total": "Conversations : {{total}}",
+    "empty_body": "Quand quelqu'un pose une question avant d'acheter, vous pouvez y répondre ici. Une réponse rapide transforme souvent un curieux en acheteur.",
+    "empty_body_named": "Quand quelqu'un pose une question sur {{event}} avant d'acheter, vous pouvez y répondre ici. Une réponse rapide transforme souvent un curieux en acheteur.",
+    "about_event": "À propos de l'événement",
+    "about_ticket": "À propos de son billet",
+    "about_other": "À propos d'autre chose",
+    "needs_reply": "À répondre",
+    "answered": "Répondu",
+    "unread": "non lu",
+    "you": "Vous",
+    "conversation": "Conversation",
+    "reply_placeholder": "Répondre à {{name}}",
+    "send": "Envoyer la réponse",
+    "sending": "Envoi…",
+    "error_generic": "Impossible d'envoyer votre réponse. Réessayez.",
+    "error_limit": "Cette conversation a atteint sa limite de messages."
   },
   "qr_scanner": {
     "camera_not_available": "Caméra indisponible",

@@ -67,6 +67,10 @@ type OrganizerPrefs = {
   sms_event_reminders: boolean;
   push_ticket_sales: boolean;
   push_new_reviews: boolean;
+  // Attendee messages (server: lib/organizer-message-alerts.ts). Older servers
+  // omit them; the rows treat a missing value as on, the server default.
+  email_attendee_messages?: boolean;
+  push_attendee_messages?: boolean;
 };
 
 type PushState = 'granted' | 'denied' | 'undetermined' | 'unknown';
@@ -384,6 +388,13 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                     />
                     <PrefRow
                       divided
+                      title={t('notificationSettings.organizer.attendeeMessages')}
+                      body={t('notificationSettings.organizer.attendeeMessagesEmail')}
+                      value={orgPrefs.email_attendee_messages ?? true}
+                      onChange={(v) => toggleOrgPref('email_attendee_messages', v)}
+                    />
+                    <PrefRow
+                      divided
                       title={t('notificationSettings.organizer.marketing')}
                       body={t('notificationSettings.organizer.marketingBody')}
                       value={orgPrefs.email_marketing}
@@ -416,6 +427,13 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                       body={t('notificationSettings.organizer.reviewsPush')}
                       value={orgPrefs.push_new_reviews}
                       onChange={(v) => toggleOrgPref('push_new_reviews', v)}
+                    />
+                    <PrefRow
+                      divided
+                      title={t('notificationSettings.organizer.attendeeMessages')}
+                      body={t('notificationSettings.organizer.attendeeMessagesPush')}
+                      value={orgPrefs.push_attendee_messages ?? true}
+                      onChange={(v) => toggleOrgPref('push_attendee_messages', v)}
                     />
                     <PrefRow
                       divided

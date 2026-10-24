@@ -2735,6 +2735,27 @@ export default {
 
   // The other half of contactOrganizer: the organizer reading those questions
   // and answering them.
+  attendeeMessages: {
+    title: "Messages",
+    you: "You",
+    organizer: "The organizer",
+    newReply: "New reply",
+    emptyTitle: "No messages yet",
+    emptyBody: "Questions you send to an organizer from an event page, and their answers, show up here.",
+    loadFailed: "Couldn't load your messages.",
+    threadFailed: "Couldn't load this conversation.",
+    retry: "Try again",
+    placeholder: "Write to {name}",
+    replyLabel: "Your message",
+    send: "Send",
+    privacy: "Your email address and phone number stay private.",
+    closed: "This conversation has reached its message limit.",
+    awaiting: "You have sent several messages in a row. You can write again once the organizer answers.",
+    errorAwaiting: "Give the organizer a chance to answer before writing again.",
+    errorLimit: "This conversation has reached its message limit.",
+    errorTooLong: "That message is too long. Trim it a little.",
+    errorGeneric: "Couldn't send your message. Try again.",
+  },
   organizerMessages: {
     title: 'Messages',
     waitingCount: '{count} waiting on you',
@@ -2761,6 +2782,7 @@ export default {
     errorEmpty: 'Write a reply before sending.',
     errorTooLong: 'That reply is too long. Trim it a little.',
     errorReplyLimit: 'This conversation has reached its reply limit.',
+    needsReply: "Needs a reply",
     errorGeneric: "Couldn't send your reply. Try again.",
   },
   purchaseSuccess: {
@@ -3287,6 +3309,9 @@ export default {
       reviews: 'New reviews',
       reviewsEmail: 'An email when your event receives a review.',
       reviewsPush: 'A push notification for every new review.',
+      attendeeMessages: "Attendee messages",
+      attendeeMessagesEmail: "An email when an attendee writes to you, at most one per conversation every 30 minutes.",
+      attendeeMessagesPush: "A push notification for every attendee message.",
       marketing: 'Tips and product news',
       marketingBody: 'Advice for selling more and new Tikèm features.',
       smsNote: 'SMS needs a verified phone number. Standard rates may apply.',

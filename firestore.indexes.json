@@ -777,6 +777,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "sender_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "organizer_messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "organizer_id",
           "order": "ASCENDING"
         },

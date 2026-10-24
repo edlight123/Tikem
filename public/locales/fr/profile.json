@@ -151,7 +151,8 @@
       "friends": "Amis",
       "create_event": "Créer un événement",
       "organizer_settings": "Réglages organisateur",
-      "following_desc": "Les organisateurs que vous suivez"
+      "following_desc": "Les organisateurs que vous suivez",
+      "messages_desc": "Vos conversations avec les organisateurs"
     },
     "help": {
       "title": "Aide",
@@ -177,6 +178,31 @@
       "load_error": "Impossible de charger les organisateurs que vous suivez.",
       "retry": "Réessayer",
       "show_more": "Afficher plus"
+    },
+    "messages": {
+      "title": "Messages",
+      "subtitle": "Vos questions aux organisateurs et leurs réponses",
+      "all": "Tous les messages",
+      "organizer": "L'organisateur",
+      "you": "Vous",
+      "conversation": "Conversation",
+      "reply_label": "Votre message",
+      "reply_placeholder": "Écrire à {{name}}",
+      "privacy": "Votre adresse e-mail et votre numéro de téléphone restent privés.",
+      "send": "Envoyer",
+      "sending": "Envoi…",
+      "closed": "Cette conversation a atteint sa limite de messages.",
+      "awaiting": "Vous avez envoyé plusieurs messages d'affilée. Vous pourrez réécrire quand l'organisateur aura répondu.",
+      "error_awaiting": "Laissez à l'organisateur le temps de répondre avant de réécrire.",
+      "error_limit": "Cette conversation a atteint sa limite de messages.",
+      "error_too_long": "Ce message est trop long. Raccourcissez-le un peu.",
+      "error_generic": "Impossible d'envoyer votre message. Réessayez.",
+      "load_error": "Impossible de charger vos messages.",
+      "thread_error": "Impossible de charger cette conversation.",
+      "retry": "Réessayer",
+      "empty_title": "Aucun message pour l'instant",
+      "empty_body": "Les questions que vous posez à un organisateur depuis la page d'un événement, et ses réponses, apparaissent ici.",
+      "unread": "Nouvelle réponse"
     }
   },
   "privacy": {

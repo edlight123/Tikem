@@ -32,6 +32,8 @@ type RouteParams = {
     /** Omit for the organizer's whole inbox; pass to scope to one event. */
     eventId?: string;
     eventTitle?: string;
+    /** Open this conversation on arrival (the "new message" push and email). */
+    thread?: string;
   } | undefined;
 };
 
@@ -41,6 +43,8 @@ const MAX_REPLY_LENGTH = 2000;
 type Reply = {
   id: string;
   body: string;
+  /** 'attendee' = a follow-up from the person who asked; older replies are all 'organizer'. */
+  author_role?: 'attendee' | 'organizer';
   author_name: string;
   created_at: string | null;
 };
@@ -53,6 +57,8 @@ type Thread = {
   topic: string;
   message: string;
   status: 'open' | 'replied';
+  /** The attendee spoke last (a new question or a follow-up). */
+  needs_reply?: boolean;
   created_at: string | null;
   last_activity_at: string | null;
   reply_count: number;
@@ -60,11 +66,16 @@ type Thread = {
   replies: Reply[];
 };
 
+const needsReply = (th: Thread) =>
+  typeof th.needs_reply === 'boolean' ? th.needs_reply : th.reply_count === 0;
+
 /**
  * The organizer's side of attendee messaging: read the questions people send
  * before buying and answer them. Somebody asking "is this real?" is a sale
- * waiting on a reply, so the unanswered threads sort to the top under their own
- * heading.
+ * waiting on a reply, so the threads waiting on the organizer (a new question,
+ * or a follow-up after their answer) sort to the top under their own heading.
+ * Attendee follow-ups appear in the conversation on the left, the organizer's
+ * own replies on the right.
  *
  * Reads and writes go through our API, never Firestore directly —
  * `organizer_messages` replies are server-only by design (see firestore.rules).
@@ -76,6 +87,8 @@ export default function OrganizerMessagesScreen() {
   const navigation = useNavigation<any>();
   const eventId = route.params?.eventId;
   const eventTitle = route.params?.eventTitle;
+  const initialThread = route.params?.thread;
+  const openedInitial = React.useRef(false);
   const { height: headerH, onHeight } = useOverlayHeaderInset();
   const insets = useSafeAreaInsets();
 
@@ -114,8 +127,8 @@ export default function OrganizerMessagesScreen() {
   };
 
   const open = useMemo(() => threads.find((th) => th.id === openId) ?? null, [threads, openId]);
-  const waiting = useMemo(() => threads.filter((th) => th.reply_count === 0), [threads]);
-  const answered = useMemo(() => threads.filter((th) => th.reply_count > 0), [threads]);
+  const waiting = useMemo(() => threads.filter(needsReply), [threads]);
+  const answered = useMemo(() => threads.filter((th) => !needsReply(th)), [threads]);
 
   const topicLabel = (topic: string) => {
     if (topic === 'event') return t('organizerMessages.aboutEvent');
@@ -143,6 +156,17 @@ export default function OrganizerMessagesScreen() {
     }
   };
 
+  // Arriving from a push or email that names a thread: open it once loaded.
+  useEffect(() => {
+    if (openedInitial.current || loading || !initialThread) return;
+    const target = threads.find((th) => th.id === initialThread);
+    if (target) {
+      openedInitial.current = true;
+      handleOpen(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, threads, initialThread]);
+
   const handleSend = async () => {
     if (!open) return;
     const body = reply.trim();
@@ -161,6 +185,7 @@ export default function OrganizerMessagesScreen() {
         res?.reply ?? {
           id: `local-${Date.now()}`,
           body,
+          author_role: 'organizer',
           author_name: t('organizerMessages.you'),
           created_at: new Date().toISOString(),
         };
@@ -171,6 +196,7 @@ export default function OrganizerMessagesScreen() {
             ? {
                 ...th,
                 status: 'replied',
+                needs_reply: false,
                 unread: false,
                 reply_count: th.reply_count + 1,
                 last_activity_at: saved.created_at,
@@ -270,16 +296,26 @@ export default function OrganizerMessagesScreen() {
             <Text style={styles.bubbleThemText}>{open.message}</Text>
           </View>
 
-          {open.replies.map((r) => (
-            <View key={r.id} style={styles.bubbleMineWrap}>
-              <View style={styles.bubbleMine}>
-                <Text style={styles.bubbleMineText}>{r.body}</Text>
+          {open.replies.map((r) =>
+            r.author_role === 'attendee' ? (
+              // A follow-up from the attendee: their side, with their name.
+              <View key={r.id} style={styles.bubbleThem}>
+                <Text style={styles.bubbleThemText}>{r.body}</Text>
                 <Text style={styles.bubbleMeta}>
-                  {t('organizerMessages.you')} · {when(r.created_at)}
+                  {open.sender_name} · {when(r.created_at)}
                 </Text>
               </View>
-            </View>
-          ))}
+            ) : (
+              <View key={r.id} style={styles.bubbleMineWrap}>
+                <View style={styles.bubbleMine}>
+                  <Text style={styles.bubbleMineText}>{r.body}</Text>
+                  <Text style={styles.bubbleMeta}>
+                    {t('organizerMessages.you')} · {when(r.created_at)}
+                  </Text>
+                </View>
+              </View>
+            )
+          )}
 
           <View style={styles.composer}>
             <SectionHeader title={t('organizerMessages.replyHeading')} />
@@ -318,7 +354,11 @@ export default function OrganizerMessagesScreen() {
   }
 
   // ---- Inbox ----------------------------------------------------------------
-  const renderCard = (thread: Thread) => (
+  const renderCard = (thread: Thread) => {
+    const last = thread.replies[thread.replies.length - 1];
+    const lastText = last ? last.body : thread.message;
+    const lastFromMe = last ? last.author_role !== 'attendee' : false;
+    return (
     <TouchableOpacity
       key={thread.id}
       style={styles.card}
@@ -336,15 +376,26 @@ export default function OrganizerMessagesScreen() {
         <Text style={styles.cardWhen}>{when(thread.last_activity_at)}</Text>
       </View>
       <Text style={styles.cardMessage} numberOfLines={2}>
-        {thread.message}
+        {lastFromMe ? `${t('organizerMessages.you')}: ` : ''}
+        {lastText}
       </Text>
-      <Text style={styles.cardMeta}>
-        {topicLabel(thread.topic)}
-        {!eventId && thread.event_title ? ` · ${thread.event_title}` : ''}
-        {thread.reply_count > 0 ? ` · ${t('organizerMessages.answered')}` : ''}
-      </Text>
+      <View style={styles.cardMetaRow}>
+        {needsReply(thread) ? (
+          // Dot + label, never a filled pill (house rule).
+          <View style={styles.needsReply}>
+            <View style={styles.needsReplyDot} />
+            <Text style={styles.needsReplyText}>{t('organizerMessages.needsReply')}</Text>
+          </View>
+        ) : null}
+        <Text style={[styles.cardMeta, styles.cardMetaFlex]} numberOfLines={1}>
+          {topicLabel(thread.topic)}
+          {!eventId && thread.event_title ? ` · ${thread.event_title}` : ''}
+          {!needsReply(thread) ? ` · ${t('organizerMessages.answered')}` : ''}
+        </Text>
+      </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -404,13 +455,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 8,
       marginBottom: 20,
     },
+    // Fill, not a hairline (house rule).
     card: {
       backgroundColor: colors.surface,
       borderRadius: RADIUS.xl,
       padding: 14,
       marginBottom: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     cardHead: {
       flexDirection: 'row',
@@ -446,18 +496,42 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       lineHeight: 20,
       color: colors.textSecondary,
     },
-    cardMeta: {
+    cardMetaRow: {
       marginTop: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    cardMeta: {
       fontSize: 11,
       letterSpacing: 0.3,
       color: colors.textTertiary,
+    },
+    cardMetaFlex: {
+      flexShrink: 1,
+    },
+    needsReply: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    needsReplyDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.warning,
+    },
+    needsReplyText: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      color: colors.warning,
     },
     bubbleThem: {
       alignSelf: 'flex-start',
       maxWidth: '92%',
       backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
       borderRadius: RADIUS.xl,
       borderTopLeftRadius: radius.sm,
       padding: 14,

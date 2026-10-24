@@ -151,7 +151,8 @@
       "friends": "Friends",
       "create_event": "Create event",
       "organizer_settings": "Organizer settings",
-      "following_desc": "Organizers you follow"
+      "following_desc": "Organizers you follow",
+      "messages_desc": "Your conversations with organizers"
     },
     "help": {
       "title": "Help",
@@ -177,6 +178,31 @@
       "load_error": "Couldn't load the organizers you follow.",
       "retry": "Try again",
       "show_more": "Show more"
+    },
+    "messages": {
+      "title": "Messages",
+      "subtitle": "Your questions to organizers and their answers",
+      "all": "All messages",
+      "organizer": "The organizer",
+      "you": "You",
+      "conversation": "Conversation",
+      "reply_label": "Your message",
+      "reply_placeholder": "Write to {{name}}",
+      "privacy": "Your email address and phone number stay private.",
+      "send": "Send",
+      "sending": "Sending…",
+      "closed": "This conversation has reached its message limit.",
+      "awaiting": "You have sent several messages in a row. You can write again once the organizer answers.",
+      "error_awaiting": "Give the organizer a chance to answer before writing again.",
+      "error_limit": "This conversation has reached its message limit.",
+      "error_too_long": "That message is too long. Trim it a little.",
+      "error_generic": "Could not send your message. Try again.",
+      "load_error": "Could not load your messages.",
+      "thread_error": "Could not load this conversation.",
+      "retry": "Try again",
+      "empty_title": "No messages yet",
+      "empty_body": "Questions you send to an organizer from an event page, and their answers, show up here.",
+      "unread": "New reply"
     }
   },
   "privacy": {

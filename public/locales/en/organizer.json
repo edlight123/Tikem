@@ -1213,7 +1213,10 @@
     "payout_updates": "Payout Updates",
     "push_notifications": "Push Notifications",
     "sms_notifications": "SMS Notifications",
-    "ticket_sales": "Ticket Sales"
+    "ticket_sales": "Ticket Sales",
+    "attendee_messages": "Attendee messages",
+    "attendee_messages_email": "An email when an attendee writes to you, at most one per conversation every 30 minutes",
+    "attendee_messages_push": "A push notification for every attendee message"
   },
   "profile_form": {
     "enter_full_name": "Enter your full name",
@@ -1375,7 +1378,25 @@
   "messages": {
     "no_messages_yet": "No messages yet",
     "reply_privacy_note": "They see your reply in the app and by email. Your email address stays private.",
-    "your_reply": "Your reply"
+    "your_reply": "Your reply",
+    "subtitle_empty": "Questions attendees send about this event land here",
+    "subtitle_waiting": "Waiting on you: {{count}} of {{total}} conversations",
+    "subtitle_total": "Conversations: {{total}}",
+    "empty_body": "When someone asks a question before buying, you can answer it here. A fast reply is often what turns a browser into a buyer.",
+    "empty_body_named": "When someone asks a question about {{event}} before buying, you can answer it here. A fast reply is often what turns a browser into a buyer.",
+    "about_event": "About the event",
+    "about_ticket": "About their ticket",
+    "about_other": "About something else",
+    "needs_reply": "Needs a reply",
+    "answered": "Answered",
+    "unread": "unread",
+    "you": "You",
+    "conversation": "Conversation",
+    "reply_placeholder": "Reply to {{name}}",
+    "send": "Send reply",
+    "sending": "Sending…",
+    "error_generic": "Could not send your reply. Try again.",
+    "error_limit": "This conversation has reached its message limit."
   },
   "qr_scanner": {
     "camera_not_available": "Camera Not Available",

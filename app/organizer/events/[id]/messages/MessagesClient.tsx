@@ -5,19 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
 import { OrgEmptyState } from '@/components/organizer/ui'
-import type { OrganizerMessageThread } from '@/lib/organizer-messages'
+import type { OrganizerMessageReply, OrganizerMessageThread } from '@/lib/organizer-messages'
 
 interface MessagesClientProps {
   eventTitle: string
   threads: OrganizerMessageThread[]
   /** Server-owned cap, passed down so there is one source of truth for it. */
   maxReplyLength: number
-}
-
-const TOPIC_LABEL: Record<string, string> = {
-  event: 'the event',
-  ticket: 'their ticket',
-  other: 'something else',
+  /** Thread to open on arrival (?thread= from the alert email / push). */
+  initialThreadId?: string | null
 }
 
 function formatWhen(iso: string | null): string {
@@ -35,15 +31,27 @@ function formatWhen(iso: string | null): string {
   })
 }
 
+/**
+ * The organizer's inbox for one event. Attendees can now write back, so a
+ * conversation is the opening question followed by replies from BOTH sides:
+ * the attendee's messages sit on the left on a quiet fill, the organizer's own
+ * on the right on a brighter one. A thread whose last word is the attendee's
+ * is marked "Needs a reply" with a dot and a label (house rule: no status
+ * pills).
+ */
 export default function MessagesClient({
   eventTitle,
   threads: initialThreads,
   maxReplyLength,
+  initialThreadId,
 }: MessagesClientProps) {
   const { t: tx } = useTranslation('organizer')
 
   const [threads, setThreads] = useState(initialThreads)
-  const [selectedId, setSelectedId] = useState<string | null>(initialThreads[0]?.id ?? null)
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (initialThreadId && initialThreads.some((th) => th.id === initialThreadId)) return initialThreadId
+    return initialThreads[0]?.id ?? null
+  })
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +63,14 @@ export default function MessagesClient({
     [threads, selectedId]
   )
 
-  const unreadCount = threads.filter((t) => t.unread).length
+  const waitingCount = threads.filter((t) => t.needs_reply).length
+
+  const topicLabel = (topic: string) =>
+    topic === 'event'
+      ? tx('messages.about_event')
+      : topic === 'ticket'
+        ? tx('messages.about_ticket')
+        : tx('messages.about_other')
 
   const markRead = useCallback(async (threadId: string) => {
     if (acknowledged.current.has(threadId)) return
@@ -72,7 +87,7 @@ export default function MessagesClient({
   }, [])
 
   // Whichever thread is on screen has been read, including the one auto-selected
-  // on arrival — its question is fully visible above the composer.
+  // on arrival — its messages are fully visible above the composer.
   useEffect(() => {
     if (selected?.unread) void markRead(selected.id)
   }, [selected, markRead])
@@ -95,15 +110,19 @@ export default function MessagesClient({
         body: JSON.stringify({ message: body }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'Could not send your reply.')
+      if (!res.ok) {
+        throw new Error(
+          data?.code === 'thread_reply_limit' ? tx('messages.error_limit') : tx('messages.error_generic')
+        )
+      }
 
       // The reply is already stored server-side; if the echo is missing for any
       // reason, show what was typed rather than pushing an undefined bubble.
-      const saved = data?.reply ?? {
+      const saved: OrganizerMessageReply = data?.reply ?? {
         id: `local-${Date.now()}`,
         body,
-        author_role: 'organizer' as const,
-        author_name: 'You',
+        author_role: 'organizer',
+        author_name: tx('messages.you'),
         created_at: new Date().toISOString(),
       }
 
@@ -114,6 +133,7 @@ export default function MessagesClient({
             ? {
                 ...t,
                 status: 'replied',
+                needs_reply: false,
                 unread: false,
                 reply_count: t.reply_count + 1,
                 last_activity_at: saved.created_at,
@@ -124,7 +144,7 @@ export default function MessagesClient({
       )
       setReply('')
     } catch (e: any) {
-      setError(e?.message || 'Something went wrong. Please try again.')
+      setError(e?.message || tx('messages.error_generic'))
     } finally {
       setSending(false)
     }
@@ -136,10 +156,10 @@ export default function MessagesClient({
         <h1 className="text-xl font-semibold text-white">{tx('actions.messages')}</h1>
         <p className="mt-0.5 text-sm text-white/50">
           {threads.length === 0
-            ? 'Questions attendees send about this event land here'
-            : unreadCount > 0
-              ? `${unreadCount} unanswered of ${threads.length} conversation${threads.length !== 1 ? 's' : ''}`
-              : `${threads.length} conversation${threads.length !== 1 ? 's' : ''}`}
+            ? tx('messages.subtitle_empty')
+            : waitingCount > 0
+              ? tx('messages.subtitle_waiting', { count: waitingCount, total: threads.length })
+              : tx('messages.subtitle_total', { total: threads.length })}
         </p>
       </div>
 
@@ -149,8 +169,8 @@ export default function MessagesClient({
           title={tx('messages.no_messages_yet')}
           description={
             eventTitle
-              ? `When someone asks a question about ${eventTitle} before buying, you can answer it here. A fast reply is often what turns a browser into a buyer.`
-              : 'When someone asks a question before buying, you can answer it here. A fast reply is often what turns a browser into a buyer.'
+              ? tx('messages.empty_body_named', { event: eventTitle })
+              : tx('messages.empty_body')
           }
         />
       ) : (
@@ -159,16 +179,18 @@ export default function MessagesClient({
           <ul className="space-y-1">
             {threads.map((thread) => {
               const active = thread.id === selectedId
+              const last = thread.replies[thread.replies.length - 1]
+              const previewText = last ? last.body : thread.message
               return (
                 <li key={thread.id}>
                   <button
                     type="button"
                     onClick={() => handleSelect(thread.id)}
                     aria-current={active ? 'true' : undefined}
-                    className={`w-full rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                    className={`w-full rounded px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                       active
-                        ? 'border-brand-600/60 bg-white/[0.04]'
-                        : 'border-white/10 hover:bg-white/[0.02]'
+                        ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-500/60'
+                        : 'bg-white/[0.03] hover:bg-white/[0.055]'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -185,11 +207,22 @@ export default function MessagesClient({
                         {formatWhen(thread.last_activity_at)}
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-white/50">{thread.message}</p>
-                    <p className="mt-1.5 text-[11px] text-white/35">
-                      About {TOPIC_LABEL[thread.topic] ?? 'something else'}
-                      {thread.reply_count > 0 && ' · answered'}
-                      {thread.unread && <span className="sr-only"> · unread</span>}
+                    <p className="mt-1 line-clamp-2 text-xs text-white/50">
+                      {last?.author_role === 'organizer' ? `${tx('messages.you')}: ` : ''}
+                      {previewText}
+                    </p>
+                    <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-white/35">
+                      {thread.needs_reply ? (
+                        <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.08em] text-amber-300/90">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-300/90" aria-hidden />
+                          {tx('messages.needs_reply')}
+                        </span>
+                      ) : (
+                        <span>{tx('messages.answered')}</span>
+                      )}
+                      <span aria-hidden>·</span>
+                      <span className="truncate">{topicLabel(thread.topic)}</span>
+                      {thread.unread && <span className="sr-only"> · {tx('messages.unread')}</span>}
                     </p>
                   </button>
                 </li>
@@ -199,33 +232,39 @@ export default function MessagesClient({
 
           {/* Conversation */}
           {selected && (
-            <div className="rounded-2xl p-5 sm:p-6 bg-white/[0.055]">
-              <div className="border-b border-white/10 pb-4">
-                <p className="text-sm font-medium text-white">{selected.sender_name}</p>
-                <p className="mt-0.5 text-xs text-white/45">
-                  Asked about {TOPIC_LABEL[selected.topic] ?? 'something else'} ·{' '}
-                  {formatWhen(selected.created_at)}
-                </p>
-              </div>
-
-              <div className="space-y-4 py-5">
-                <div className="max-w-prose rounded-2xl rounded-tl-sm bg-white/[0.05] px-4 py-3">
-                  <p className="whitespace-pre-line text-sm text-white/85">{selected.message}</p>
+            <div className="rounded p-5 sm:p-6 bg-white/[0.055]">
+              <div className="flex items-start justify-between gap-4 pb-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white">{selected.sender_name}</p>
+                  <p className="mt-0.5 text-xs text-white/45">
+                    {topicLabel(selected.topic)} · {formatWhen(selected.created_at)}
+                  </p>
                 </div>
-
-                {selected.replies.map((r) => (
-                  <div key={r.id} className="flex justify-end">
-                    <div className="max-w-prose rounded-2xl rounded-tr-sm bg-white/[0.12] px-4 py-3">
-                      <p className="whitespace-pre-line text-sm text-white/90">{r.body}</p>
-                      <p className="mt-1.5 text-[11px] text-white/40">
-                        You · {formatWhen(r.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {selected.needs_reply && (
+                  <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-300/90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-300/90" aria-hidden />
+                    {tx('messages.needs_reply')}
+                  </span>
+                )}
               </div>
 
-              <div className="border-t border-white/10 pt-5">
+              <ol className="space-y-3 py-4" aria-label={tx('messages.conversation')}>
+                <Bubble
+                  mine={false}
+                  body={selected.message}
+                  meta={`${selected.sender_name} · ${formatWhen(selected.created_at)}`}
+                />
+                {selected.replies.map((r) => (
+                  <Bubble
+                    key={r.id}
+                    mine={r.author_role === 'organizer'}
+                    body={r.body}
+                    meta={`${r.author_role === 'organizer' ? tx('messages.you') : selected.sender_name} · ${formatWhen(r.created_at)}`}
+                  />
+                ))}
+              </ol>
+
+              <div className="pt-4">
                 <label htmlFor="organizer-reply" className="sr-only">
                   {tx('messages.your_reply')}
                 </label>
@@ -236,8 +275,8 @@ export default function MessagesClient({
                   onChange={(e) => setReply(e.target.value.slice(0, maxReplyLength))}
                   maxLength={maxReplyLength}
                   disabled={sending}
-                  placeholder={`Reply to ${selected.sender_name}…`}
-                  className="w-full resize-y rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+                  placeholder={tx('messages.reply_placeholder', { name: selected.sender_name })}
+                  className="w-full resize-y rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
                 />
                 <div className="mt-3 flex items-center justify-between gap-4">
                   <p className="text-[11px] text-white/35">
@@ -254,7 +293,7 @@ export default function MessagesClient({
                       className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <Send className="h-4 w-4" />
-                      {sending ? 'Sending…' : 'Send reply'}
+                      {sending ? tx('messages.sending') : tx('messages.send')}
                     </button>
                   </div>
                 </div>
@@ -265,5 +304,21 @@ export default function MessagesClient({
         </div>
       )}
     </>
+  )
+}
+
+/** One message. The attendee's sit left on a quiet fill; yours sit right, brighter. */
+function Bubble({ mine, body, meta }: { mine: boolean; body: string; meta: string }) {
+  return (
+    <li className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`max-w-prose rounded px-4 py-3 ${
+          mine ? 'bg-white/[0.14] text-white/90' : 'bg-black/30 text-white/85'
+        }`}
+      >
+        <p className="whitespace-pre-line text-sm">{body}</p>
+        <p className="mt-1.5 text-[11px] text-white/40">{meta}</p>
+      </div>
+    </li>
   )
 }

@@ -29,6 +29,7 @@ import {
   Instagram,
   LogOut,
   MapPin,
+  MessageCircle,
   Phone,
   RotateCcw,
   Shield,
@@ -627,6 +628,9 @@ export default function ProfileScreen() {
           <View style={styles.listCard}>
             <Row first icon={Heart} label={t('tabs.favorites')} onPress={() => navigation.navigate('Favorites')} />
             <Row icon={Users} label={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
+            {/* The attendee's conversations with organizers (questions sent from
+                an event page and their answers). */}
+            <Row icon={MessageCircle} label={t('attendeeMessages.title')} onPress={() => navigation.navigate('Messages')} />
             {/* Publish-first: anyone can create an event; KYC is deferred to payout. */}
             <Row icon={Briefcase} label={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
             <Row

@@ -56,6 +56,11 @@ describe('linking config', () => {
       // Push notification targets (lib/pushNotifications maps relative URLs to tikem://).
       EventTickets: 'tickets/event/:eventId',
       EventAttendees: 'organizer/events/:eventId/attendees',
+      // Attendee ↔ organizer messages: the organizer's alert push and the
+      // attendee's reply push (deepLink tikem://messages/<id>).
+      OrganizerMessages: 'organizer/events/:eventId/messages',
+      MessageThread: 'messages/:threadId',
+      Messages: 'messages',
       OrganizerEventManagement: 'organizer/events/:eventId',
       OrganizerEarningsHub: 'organizer/payouts',
       OrganizerPayoutSettings: 'organizer/settings/payouts',

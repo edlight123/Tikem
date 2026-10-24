@@ -371,7 +371,17 @@ export default function NotificationsScreen() {
     // public event page — the answer is what the notification is asking for.
     if (notification.type === 'organizer_message') {
       const eventId = notification.eventId || (notification.metadata as any)?.eventId;
-      return { screen: 'OrganizerMessages', params: eventId ? { eventId } : undefined };
+      const thread = (notification.metadata as any)?.messageId;
+      return {
+        screen: 'OrganizerMessages',
+        params: eventId ? { eventId, ...(thread ? { thread } : {}) } : undefined,
+      };
+    }
+    // The organizer answered: open the conversation itself, where the
+    // attendee can read the whole thread and write back.
+    if (notification.type === 'organizer_reply') {
+      const threadId = (notification.metadata as any)?.messageId;
+      if (typeof threadId === 'string' && threadId) return { screen: 'MessageThread', params: { threadId } };
     }
     // "X joined Tikèm from your invite" opens their profile.
     if ((notification.type as string) === 'invite_joined') {
