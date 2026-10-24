@@ -281,7 +281,7 @@
     "claim_sales_ended": "La vente des billets est terminée.",
     "claim_sold_out": "Ces billets sont épuisés.",
     "claim_limited": "Il ne reste pas assez de billets pour cette commande.",
-    "claim_too_many": "Vous pouvez réclamer au maximum 10 billets gratuits à la fois.",
+    "claim_too_many": "Vous pouvez réclamer au maximum 2 billets gratuits par événement.",
     "claim_generic_error": "Impossible de réclamer votre billet. Veuillez réessayer.",
     "claim_failed_title": "Impossible de réclamer votre billet",
     "promo_free_claim_failed_title": "Ce code promo nécessite le paiement",

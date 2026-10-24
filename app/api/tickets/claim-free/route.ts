@@ -182,7 +182,7 @@ export async function POST(request: Request) {
     const selectionsTotal = requestedSelections.reduce((sum, s) => sum + s.quantity, 0)
     if (useSelections && selectionsTotal > MAX_FREE_TICKETS_PER_CLAIM) {
       return fail(
-        `You can claim at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets at a time.`,
+        `You can claim at most ${MAX_FREE_TICKETS_PER_CLAIM} free tickets per event.`,
         'too_many_tickets',
         400
       )

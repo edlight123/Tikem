@@ -92,6 +92,14 @@ export function tierPrice(tier: TierPriceLike | null | undefined): number {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
+/**
+ * Free tickets one person may hold for an event (owner rule, 2026-10-24).
+ * A buyer gets ONE free claim per event (lib/tickets/free-claim-policy.ts),
+ * so capping each claim at this is the per-person cap. The pickers on web
+ * and in the app (mobile/lib/ticketPricing.ts mirrors it) stop at it too.
+ */
+export const MAX_FREE_TICKETS_PER_PERSON = 2
+
 /** A tier is free when its price is exactly zero. */
 export function isFreeTier(tier: TierPriceLike | null | undefined): boolean {
   return tierPrice(tier) === 0

@@ -382,10 +382,10 @@ describe('LEGACY shape {eventId, tierId, quantity} — mobile build 10, must not
     expect(body.message).toBe('1 free ticket claimed successfully!')
   })
 
-  it('clamps quantity to 10 (not an error) exactly as before', async () => {
+  it('clamps quantity to the per-person cap of 2 (not an error), as the legacy shape always clamped', async () => {
     const body = await (await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 99 }))).json()
-    expect(body.count).toBe(10)
-    expect(state.added).toHaveLength(10)
+    expect(body.count).toBe(2)
+    expect(state.added).toHaveLength(2)
   })
 
   it('auto-resolves the free tier when no tierId is sent', async () => {
@@ -445,22 +445,22 @@ describe('NEW shape {eventId, selections}', () => {
   it('issues a multi-tier multi-quantity all-free cart, all-or-nothing in ONE reservation', async () => {
     const res = await POST(req({
       eventId: 'evt1',
-      selections: [{ tierId: 'freeA', quantity: 2 }, { tierId: 'freeB', quantity: 3 }],
+      selections: [{ tierId: 'freeA', quantity: 1 }, { tierId: 'freeB', quantity: 1 }],
     }))
     const body = await res.json()
     expect(res.status).toBe(200)
-    expect(body.count).toBe(5)
+    expect(body.count).toBe(2)
     expect(body.issued).toEqual([
-      { tierId: 'freeA', tierName: 'Free RSVP', quantity: 2 },
-      { tierId: 'freeB', tierName: 'Free Student', quantity: 3 },
+      { tierId: 'freeA', tierName: 'Free RSVP', quantity: 1 },
+      { tierId: 'freeB', tierName: 'Free Student', quantity: 1 },
     ])
-    expect(state.added.map((t: any) => t.tier_id)).toEqual(['freeA', 'freeA', 'freeB', 'freeB', 'freeB'])
+    expect(state.added.map((t: any) => t.tier_id)).toEqual(['freeA', 'freeB'])
     // ONE transaction covering the whole order -> all-or-nothing.
     expect(state.reserveCalls).toHaveLength(1)
     expect(state.reserveCalls[0]).toEqual({
       eventId: 'evt1',
-      quantity: 5,
-      tierIncrements: [{ tierId: 'freeA', quantity: 2 }, { tierId: 'freeB', quantity: 3 }],
+      quantity: 2,
+      tierIncrements: [{ tierId: 'freeA', quantity: 1 }, { tierId: 'freeB', quantity: 1 }],
       logPrefix: '[claim-free]',
     })
   })
@@ -468,10 +468,10 @@ describe('NEW shape {eventId, selections}', () => {
   it('merges duplicate tier lines', async () => {
     const body = await (await POST(req({
       eventId: 'evt1',
-      selections: [{ tierId: 'freeA', quantity: 1 }, { tierId: 'freeA', quantity: 2 }],
+      selections: [{ tierId: 'freeA', quantity: 1 }, { tierId: 'freeA', quantity: 1 }],
     }))).json()
-    expect(body.count).toBe(3)
-    expect(body.issued).toEqual([{ tierId: 'freeA', tierName: 'Free RSVP', quantity: 3 }])
+    expect(body.count).toBe(2)
+    expect(body.issued).toEqual([{ tierId: 'freeA', tierName: 'Free RSVP', quantity: 2 }])
   })
 
   it('refuses the WHOLE claim if any line is a paid tier — nothing is issued', async () => {
@@ -496,13 +496,13 @@ describe('NEW shape {eventId, selections}', () => {
     expect(state.added).toHaveLength(0)
   })
 
-  it('refuses (does not truncate) a cart over the 10-ticket cap', async () => {
+  it('refuses (does not truncate) a cart over the 2-ticket per-person cap, across tiers', async () => {
     const res = await POST(req({
       eventId: 'evt1',
-      selections: [{ tierId: 'freeA', quantity: 6 }, { tierId: 'freeB', quantity: 6 }],
+      selections: [{ tierId: 'freeA', quantity: 2 }, { tierId: 'freeB', quantity: 1 }],
     }))
     expect(res.status).toBe(400)
-    expect((await res.json()).error).toBe('You can claim at most 10 free tickets at a time.')
+    expect((await res.json()).error).toBe('You can claim at most 2 free tickets per event.')
     expect(state.added).toHaveLength(0)
   })
 
@@ -520,7 +520,7 @@ describe('NEW shape {eventId, selections}', () => {
 
   it('issues nothing when the atomic reservation refuses the multi-tier order', async () => {
     state.reserveResult = { ok: false, reason: 'tier_capacity', remaining: 0 }
-    const res = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'freeA', quantity: 2 }, { tierId: 'freeB', quantity: 2 }] }))
+    const res = await POST(req({ eventId: 'evt1', selections: [{ tierId: 'freeA', quantity: 1 }, { tierId: 'freeB', quantity: 1 }] }))
     expect(res.status).toBe(400)
     expect((await res.json()).error).toBe('No tickets available')
     expect(state.added).toHaveLength(0)
@@ -636,17 +636,17 @@ describe('PROMO-ZEROED claims {…, promoCode}', () => {
   })
 
   it('records the redemption EXACTLY once: uses_count += qty and one usage doc', async () => {
-    const res = await POST(req({ eventId: 'evt1', tierId: 'paidA', quantity: 3, promoCode: 'MINUS1500' }))
+    const res = await POST(req({ eventId: 'evt1', tierId: 'paidA', quantity: 2, promoCode: 'MINUS1500' }))
     expect(res.status).toBe(200)
-    expect(state.added).toHaveLength(3)
-    expect(state.promos.promoFixed.uses_count).toBe(3)
+    expect(state.added).toHaveLength(2)
+    expect(state.promos.promoFixed.uses_count).toBe(2)
     expect(state.usageWrites).toHaveLength(1)
     expect(state.usageWrites[0]).toMatchObject({
       promo_code_id: 'promoFixed',
       user_id: 'u1',
       event_id: 'evt1',
-      qty: 3,
-      discount_applied: 4500,
+      qty: 2,
+      discount_applied: 3000,
     })
   })
 

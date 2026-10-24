@@ -21,9 +21,10 @@
 import crypto from 'crypto'
 import { adminDb } from '@/lib/firebase/admin'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 
 /** Hard cap on how many free tickets one claim (or one order) may issue, across all tiers. */
-export const MAX_FREE_TICKETS_PER_CLAIM = 10
+export const MAX_FREE_TICKETS_PER_CLAIM = MAX_FREE_TICKETS_PER_PERSON
 
 export const FREE_CLAIM_LOCKS_COLLECTION = 'free_claim_locks'
 

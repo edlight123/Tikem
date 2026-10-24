@@ -3,7 +3,7 @@
  *
  * Order creation on the MonCash and SogePay rails holds the FREE lines of a paid
  * cart to the free-claim limits, exactly as create-payment-intent does
- * (lib/tickets/free-claim-policy): more than 10 free tickets → 400
+ * (lib/tickets/free-claim-policy): more than the free-ticket cap → 400
  * free_limit_exceeded; a buyer whose free claim is used → 409 already_claimed
  * (a guest gets the neutral message). The MonCash quote applies only the pure
  * cap and takes no lock.
@@ -184,7 +184,7 @@ describe.each(rails)('$name initiate: free lines in a paid cart', ({ post }) => 
     expect(mockState.inserted).toHaveLength(0)
   })
 
-  it('more than 10 free tickets: 400 free_limit_exceeded, no order', async () => {
+  it('more than the free-ticket cap: 400 free_limit_exceeded, no order', async () => {
     const res = await post(req(cart(11)))
     expect(res.status).toBe(400)
     expect((await res.json()).code).toBe('free_limit_exceeded')
@@ -227,7 +227,7 @@ describe.each(rails)('$name initiate: free lines in a paid cart', ({ post }) => 
 })
 
 describe('MonCash quote', () => {
-  it('refuses more than 10 free tickets, but takes no lock and reads no claim', async () => {
+  it('refuses more than the free-ticket cap, but takes no lock and reads no claim', async () => {
     mockFake.write('tickets/old', { attendee_id: 'u1', event_id: EVENT, price_paid: 0, status: 'valid' })
     const over = await moncashQuote(req({ eventId: EVENT, tiers: [{ tierId: 'free', quantity: 11 }, { tierId: 'ga', quantity: 1 }] }))
     expect(over.status).toBe(400)

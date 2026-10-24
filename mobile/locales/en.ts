@@ -2993,7 +2993,7 @@ export default {
       salesNotStarted: 'Ticket sales have not started yet.',
       salesEnded: 'Ticket sales have ended.',
       limited: 'There are not enough tickets left for this order.',
-      tooMany: 'You can claim at most 10 free tickets at a time.',
+      tooMany: 'You can claim at most 2 free tickets per event.',
       accessCode: 'This event needs an access code.',
       alreadyClaimed: "You already claimed tickets for this event. Check your email for them.",
       promoAlreadyUsed: "You have already used this promo code.",

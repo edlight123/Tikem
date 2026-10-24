@@ -2924,7 +2924,7 @@ export default {
       salesNotStarted: 'Vant tikè yo poko kòmanse.',
       salesEnded: 'Vant tikè yo fini.',
       limited: 'Pa gen ase tikè ki rete pou kòmand sa a.',
-      tooMany: 'Ou ka pran maksimòm 10 tikè gratis alafwa.',
+      tooMany: 'Ou ka pran maksimòm 2 tikè gratis pou chak evènman.',
       accessCode: 'Evènman sa a mande yon kòd aksè.',
       alreadyClaimed: "Ou te deja pran tikè pou evènman sa a. Gade nan imèl ou pou jwenn yo.",
       promoAlreadyUsed: "Ou te deja itilize kòd pwomo sa a.",

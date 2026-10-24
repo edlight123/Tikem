@@ -281,7 +281,7 @@
     "claim_sales_ended": "Ticket sales have ended.",
     "claim_sold_out": "These tickets are sold out.",
     "claim_limited": "There are not enough tickets left for this order.",
-    "claim_too_many": "You can claim at most 10 free tickets at a time.",
+    "claim_too_many": "You can claim at most 2 free tickets per event.",
     "claim_generic_error": "Could not claim your ticket. Please try again.",
     "claim_failed_title": "Could not claim your ticket",
     "promo_free_claim_failed_title": "This promo code needs checkout",

@@ -67,6 +67,9 @@ export function tierPrice(tier: TierPriceLike | null | undefined): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+/** Mirrors lib/ticketPricing.ts: free tickets one person may hold for an event. */
+export const MAX_FREE_TICKETS_PER_PERSON = 2;
+
 /** A tier is free when its price is exactly zero. */
 export function isFreeTier(tier: TierPriceLike | null | undefined): boolean {
   return tierPrice(tier) === 0;

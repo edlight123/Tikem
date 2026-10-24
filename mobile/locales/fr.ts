@@ -2956,7 +2956,7 @@ export default {
       salesNotStarted: "La vente des billets n'a pas encore commencé.",
       salesEnded: 'La vente des billets est terminée.',
       limited: 'Il ne reste pas assez de billets pour cette commande.',
-      tooMany: 'Vous pouvez réclamer au maximum 10 billets gratuits à la fois.',
+      tooMany: 'Vous pouvez réclamer au maximum 2 billets gratuits par événement.',
       accessCode: "Cet événement nécessite un code d'accès.",
       alreadyClaimed: "Vous avez déjà réservé des billets pour cet événement. Consultez vos e-mails pour les retrouver.",
       promoAlreadyUsed: "Vous avez déjà utilisé ce code promo.",

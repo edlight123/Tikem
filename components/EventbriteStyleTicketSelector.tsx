@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Minus, Plus } from 'lucide-react'
-import { allSelectionsFree, computeSelectionTotal, isFreeTier } from '@/lib/ticketPricing'
+import { allSelectionsFree, computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 
@@ -161,7 +161,13 @@ export default function EventbriteStyleTicketSelector({
     const tier = tiers.find(t => t.id === tierId)
     if (!tier) return
 
-    const maxAvailable = getAvailableQuantity(tier)
+    // Free tickets are capped per person across every free tier together.
+    const otherFree = isFreeTier(tier)
+      ? tiers.reduce((sum, t) => (t.id !== tierId && isFreeTier(t) ? sum + (quantities[t.id] || 0) : sum), 0)
+      : 0
+    const maxAvailable = isFreeTier(tier)
+      ? Math.min(getAvailableQuantity(tier), Math.max(0, MAX_FREE_TICKETS_PER_PERSON - otherFree))
+      : getAvailableQuantity(tier)
     const newQuantity = Math.max(0, Math.min(maxAvailable, (quantities[tierId] || 0) + delta))
     
     setQuantities(prev => ({

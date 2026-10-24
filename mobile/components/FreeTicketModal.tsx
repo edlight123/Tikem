@@ -14,6 +14,7 @@ import { backendJson } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
 import { radius } from '../theme/tokens';
 import type { Attribution } from '../lib/attribution';
+import { MAX_FREE_TICKETS_PER_PERSON } from '../lib/ticketPricing';
 
 /**
  * Refusals caused by the promo code rather than by the tickets themselves. For
@@ -113,7 +114,7 @@ export default function FreeTicketModal({
   const remainingTickets = isUnlimited
     ? Infinity
     : totalCap - (Number(event.tickets_sold) || 0);
-  const maxQuantity = Math.min(10, remainingTickets);
+  const maxQuantity = Math.min(MAX_FREE_TICKETS_PER_PERSON, remainingTickets);
   // The quantity actually claimed: the upstream selection when locked, else the
   // stepper value.
   const claimQuantity = isLocked ? (lockedQuantity as number) : quantity;

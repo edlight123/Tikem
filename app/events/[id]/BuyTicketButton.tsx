@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { isDemoMode } from '@/lib/demo'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import EventbriteStyleTicketSelector from '@/components/EventbriteStyleTicketSelector'
-import { allSelectionsFree, computeSelectionTotal } from '@/lib/ticketPricing'
+import { allSelectionsFree, computeSelectionTotal, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
 import { priceCart } from '@/lib/checkout/buyer-pricing'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
@@ -271,7 +271,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         })
       case 'too_many_tickets':
         return t('events.claim_too_many', {
-          defaultValue: 'You can claim at most 10 free tickets at a time.',
+          defaultValue: 'You can claim at most 2 free tickets per event.',
         })
       case 'access_code_required':
         return t('events.password_required', { defaultValue: 'Password required' })
@@ -1177,8 +1177,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               </button>
               <span className="w-12 text-center font-semibold text-white">{quantity}</span>
               <button
-                onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                disabled={quantity >= 10 || loading}
+                onClick={() => setQuantity(Math.min(MAX_FREE_TICKETS_PER_PERSON, quantity + 1))}
+                disabled={quantity >= MAX_FREE_TICKETS_PER_PERSON || loading}
                 aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
                 className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
               >
