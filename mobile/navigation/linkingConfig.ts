@@ -32,6 +32,14 @@ export const LINKING_CONFIG = {
     EventTickets: 'tickets/event/:eventId',
     // Organizer sale pushes.
     EventAttendees: 'organizer/events/:eventId/attendees',
+    // "An attendee wrote" pushes (url /organizer/events/<id>/messages?thread=<id>;
+    // the query string lands in params.thread and opens that conversation).
+    OrganizerMessages: 'organizer/events/:eventId/messages',
+    // "The organizer replied" pushes carry deepLink tikem://messages/<threadId>.
+    // App scheme only: the web twin is /profile?thread=<id>#messages, and
+    // /messages is not in the AASA or the Android intent filters.
+    MessageThread: 'messages/:threadId',
+    Messages: 'messages',
     OrganizerEventManagement: 'organizer/events/:eventId',
     // Withdrawal outcome pushes.
     OrganizerEarningsHub: 'organizer/payouts',

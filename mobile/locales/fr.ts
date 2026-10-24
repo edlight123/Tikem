@@ -2699,6 +2699,27 @@ export default {
 
   // L'autre moitié de contactOrganizer : l'organisateur lit ces questions et y
   // répond.
+  attendeeMessages: {
+    title: "Messages",
+    you: "Vous",
+    organizer: "L'organisateur",
+    newReply: "Nouvelle réponse",
+    emptyTitle: "Aucun message pour l'instant",
+    emptyBody: "Les questions que vous posez à un organisateur depuis la page d'un événement, et ses réponses, apparaissent ici.",
+    loadFailed: "Impossible de charger vos messages.",
+    threadFailed: "Impossible de charger cette conversation.",
+    retry: "Réessayer",
+    placeholder: "Écrire à {name}",
+    replyLabel: "Votre message",
+    send: "Envoyer",
+    privacy: "Votre adresse e-mail et votre numéro de téléphone restent privés.",
+    closed: "Cette conversation a atteint sa limite de messages.",
+    awaiting: "Vous avez envoyé plusieurs messages d'affilée. Vous pourrez réécrire quand l'organisateur aura répondu.",
+    errorAwaiting: "Laissez à l'organisateur le temps de répondre avant de réécrire.",
+    errorLimit: "Cette conversation a atteint sa limite de messages.",
+    errorTooLong: "Ce message est trop long. Raccourcissez-le un peu.",
+    errorGeneric: "Impossible d'envoyer votre message. Réessayez.",
+  },
   organizerMessages: {
     title: 'Messages',
     waitingCount: '{count} en attente de vous',
@@ -2725,6 +2746,7 @@ export default {
     errorEmpty: "Écrivez une réponse avant d'envoyer.",
     errorTooLong: 'Cette réponse est trop longue. Raccourcissez-la un peu.',
     errorReplyLimit: 'Cette conversation a atteint sa limite de réponses.',
+    needsReply: "À répondre",
     errorGeneric: "Impossible d'envoyer votre réponse. Réessayez.",
   },
   purchaseSuccess: {
@@ -3307,6 +3329,9 @@ export default {
       reviews: 'Nouveaux avis',
       reviewsEmail: 'Un e-mail quand votre événement reçoit un avis.',
       reviewsPush: 'Une notification push pour chaque nouvel avis.',
+      attendeeMessages: "Messages des participants",
+      attendeeMessagesEmail: "Un e-mail quand un participant vous écrit, au plus un par conversation toutes les 30 minutes.",
+      attendeeMessagesPush: "Une notification push pour chaque message de participant.",
       marketing: 'Conseils et nouveautés',
       marketingBody: 'Des conseils pour vendre plus et les nouvelles fonctionnalités de Tikèm.',
       smsNote: 'Les SMS nécessitent un numéro de téléphone vérifié. Des frais standard peuvent s’appliquer.',

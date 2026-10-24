@@ -56,6 +56,8 @@ import OrganizerPromotersScreen from '../screens/organizer/OrganizerPromotersScr
 import OrganizerGuestListScreen from '../screens/organizer/OrganizerGuestListScreen';
 import OrganizerTrackingLinksScreen from '../screens/organizer/OrganizerTrackingLinksScreen';
 import OrganizerMessagesScreen from '../screens/organizer/OrganizerMessagesScreen';
+import MessagesScreen from '../screens/MessagesScreen';
+import MessageThreadScreen from '../screens/MessageThreadScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
@@ -157,7 +159,13 @@ export type RootStackParamList = {
   OrganizerComps: { eventId: string };
   // Attendee questions. No params = the organizer's whole inbox; an eventId
   // scopes it to one event (how the "new message" notification arrives).
-  OrganizerMessages: { eventId?: string; eventTitle?: string } | undefined;
+  // `thread` opens one conversation on arrival (the "new message" push and
+  // email carry it as ?thread=).
+  OrganizerMessages: { eventId?: string; eventTitle?: string; thread?: string } | undefined;
+  // The attendee's own conversations with organizers (Profile > Messages) and
+  // one conversation (the "organizer replied" notification and push).
+  Messages: undefined;
+  MessageThread: { threadId: string; eventTitle?: string };
   OrganizerVerification: undefined;
   OrganizerInfoForm: { onComplete?: () => void };
   GovernmentIDUpload: { onComplete?: () => void };
@@ -911,6 +919,8 @@ export default function AppNavigator() {
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MessageThread" component={MessageThreadScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
