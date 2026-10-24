@@ -174,6 +174,12 @@ export const emailSubjects = {
       fr: quantity > 1 ? `Vos ${quantity} billets pour ${eventTitle}` : `Votre billet pour ${eventTitle}`,
       ht: quantity > 1 ? `${quantity} tikè ou yo pou ${eventTitle}` : `Tikè ou pou ${eventTitle}`,
     }),
+  requestApproved: (lang: EmailLang | undefined, eventTitle: string) =>
+    L(lang, {
+      en: `You're in: ${eventTitle}`,
+      fr: `C'est confirmé : ${eventTitle}`,
+      ht: `Ou anndan: ${eventTitle}`,
+    }),
   eventCreated: (lang: EmailLang | undefined, eventTitle: string) =>
     L(lang, { en: `${eventTitle} is live`, fr: `${eventTitle} est en ligne`, ht: `${eventTitle} an liy` }),
   refundRequest: (lang: EmailLang | undefined, eventTitle: string) =>
@@ -264,11 +270,15 @@ export function getTicketConfirmationEmail(params: {
   /** Buyer-facing note under the button (e.g. "this link is yours — keep it"). */
   ticketsUrlNote?: string
   walletUrl?: string
+  /** The host approved the guest's request (approval lists): status "Approved" + a line saying so. */
+  approved?: boolean
   lang?: EmailLang
 }) {
   const lang = pickLang(params.lang)
   const t = L(lang, {
     en: {
+      approvedStatus: 'Approved',
+      approvedLine: 'The host approved your request. Your tickets are below.',
       status: 'Confirmed',
       holder: 'Holder',
       ticket: 'Ticket',
@@ -286,6 +296,8 @@ export function getTicketConfirmationEmail(params: {
       guest: 'Guest',
     },
     fr: {
+      approvedStatus: 'Approuvé',
+      approvedLine: "L'organisateur a approuvé votre demande. Vos billets sont ci-dessous.",
       status: 'Confirmé',
       holder: 'Titulaire',
       ticket: 'Billet',
@@ -303,6 +315,8 @@ export function getTicketConfirmationEmail(params: {
       guest: 'Invité',
     },
     ht: {
+      approvedStatus: 'Apwouve',
+      approvedLine: 'Òganizatè a apwouve demann ou. Tikè ou yo anba a.',
       status: 'Konfime',
       holder: 'Pòtè',
       ticket: 'Tikè',
@@ -343,13 +357,15 @@ export function getTicketConfirmationEmail(params: {
     lang,
     title: params.eventTitle,
     preheader: t.preheader(params.eventTitle),
-    status: { label: t.status, tone: 'teal' },
+    status: { label: params.approved ? t.approvedStatus : t.status, tone: 'teal' },
     footer: 'attendee',
     blocks: [
       poster(params.posterUrl, params.eventTitle),
       params.posterUrl ? gap(28) : '',
       title(params.eventTitle),
       metaLine ? meta(metaLine) : '',
+      params.approved ? gap(16) : '',
+      params.approved ? p(t.approvedLine) : '',
       gap(28),
       ticketStub({
         holderLabel: t.holder,
