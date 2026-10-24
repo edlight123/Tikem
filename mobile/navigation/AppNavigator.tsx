@@ -54,6 +54,7 @@ import OrganizerPromoCodesScreen from '../screens/organizer/OrganizerPromoCodesS
 import OrganizerCompsScreen from '../screens/organizer/OrganizerCompsScreen';
 import OrganizerPromotersScreen from '../screens/organizer/OrganizerPromotersScreen';
 import OrganizerGuestListScreen from '../screens/organizer/OrganizerGuestListScreen';
+import EventRequestsScreen from '../screens/organizer/EventRequestsScreen';
 import OrganizerTrackingLinksScreen from '../screens/organizer/OrganizerTrackingLinksScreen';
 import OrganizerMessagesScreen from '../screens/organizer/OrganizerMessagesScreen';
 import MessagesScreen from '../screens/MessagesScreen';
@@ -155,6 +156,8 @@ export type RootStackParamList = {
   OrganizerPromoCodes: { eventId: string };
   OrganizerPromoters: { eventId: string };
   OrganizerGuestList: { eventId: string };
+  // Approval-list requests for one event (docs/specs/approval-lists-and-plus-ones.md).
+  EventRequests: { eventId: string };
   OrganizerTrackingLinks: { eventId: string };
   OrganizerComps: { eventId: string };
   // Attendee questions. No params = the organizer's whole inbox; an eventId
@@ -977,6 +980,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="OrganizerGuestList"
               component={OrganizerGuestListScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="EventRequests"
+              component={EventRequestsScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

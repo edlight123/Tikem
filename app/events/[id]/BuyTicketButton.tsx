@@ -75,9 +75,14 @@ interface BuyTicketButtonProps {
    */
   feeIncidence?: string | null
   isPasswordProtected?: boolean
+  /**
+   * Named plus-ones the event allows on a FREE claim (lib/events/approval
+   * allowedPlusOnes). 0 = the plain quantity claim, unchanged.
+   */
+  plusOnesAllowed?: number
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0 }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -89,6 +94,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [pendingMethod, setPendingMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+  // Optional names for the extra free tickets (plus-ones). Index i names ticket i+2.
+  const [plusOneNames, setPlusOneNames] = useState<Array<{ firstName: string; phone: string }>>([])
+  const plusOneSlots = isFree && plusOnesAllowed > 0 ? Math.min(Math.max(0, quantity - 1), plusOnesAllowed) : 0
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
   const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
@@ -218,6 +226,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
    */
   function localizedClaimError(code: string): string {
     switch (code) {
+      case 'approval_required':
+      case 'too_many_plus_ones':
+      case 'plus_one_name_required':
+        return t(`attend_requests.errors.${code}`)
+      case 'plus_ones_quantity_mismatch':
+        return t('attend_requests.errors.plus_one_name_required')
       case 'promo_invalid':
         return t('events.claim_promo_invalid', {
           defaultValue: 'This promo code is no longer valid for this event.',
@@ -643,6 +657,18 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             : {
                 eventId,
                 quantity,
+                // Named plus-ones ride along only when every extra ticket has a
+                // name; otherwise this stays the plain quantity claim.
+                ...(plusOneSlots > 0 &&
+                plusOneSlots === quantity - 1 &&
+                plusOneNames.slice(0, plusOneSlots).every((p) => p?.firstName?.trim())
+                  ? {
+                      plusOnes: plusOneNames.slice(0, plusOneSlots).map((p) => ({
+                        firstName: p.firstName.trim(),
+                        phone: p.phone.trim() || undefined,
+                      })),
+                    }
+                  : {}),
                 ...(refCode ? { refCode } : {}),
                 ...(attribution ? { attribution } : {}),
                 ...(contact ? { guest: contact } : {}),
@@ -1188,6 +1214,50 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               </button>
             </div>
           </div>
+
+          {plusOneSlots > 0 && (
+            <div className="space-y-2 rounded bg-white/[0.03] p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/50">
+                {t('attend_requests.claim.plus_one_title')}
+              </p>
+              {Array.from({ length: plusOneSlots }).map((_, i) => (
+                <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <input
+                    value={plusOneNames[i]?.firstName || ''}
+                    maxLength={60}
+                    autoComplete="off"
+                    aria-label={t('attend_requests.sheet.first_name')}
+                    placeholder={t('attend_requests.sheet.first_name_placeholder')}
+                    onChange={(e) =>
+                      setPlusOneNames((all) => {
+                        const next = all.slice()
+                        next[i] = { firstName: e.target.value, phone: all[i]?.phone || '' }
+                        return next
+                      })
+                    }
+                    className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
+                  />
+                  <input
+                    value={plusOneNames[i]?.phone || ''}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="off"
+                    aria-label={t('attend_requests.sheet.phone')}
+                    placeholder={t('attend_requests.sheet.phone')}
+                    onChange={(e) =>
+                      setPlusOneNames((all) => {
+                        const next = all.slice()
+                        next[i] = { firstName: all[i]?.firstName || '', phone: e.target.value }
+                        return next
+                      })
+                    }
+                    className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
+                  />
+                </div>
+              ))}
+              <p className="text-xs text-white/45">{t('attend_requests.claim.plus_one_hint')}</p>
+            </div>
+          )}
 
           {isPasswordProtected && hasAccess !== true && (
             <div className="flex items-center gap-2 text-sm text-white/70">

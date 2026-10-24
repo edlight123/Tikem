@@ -3,6 +3,8 @@
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
+import RequestToJoin from './RequestToJoin'
+import { eventAllowedPlusOnes } from '@/lib/events/approval'
 import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
 import ShareIconButton from './ShareIconButton'
@@ -304,18 +306,28 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {t('ticket.sold_out_caps')}
               </div>
             ) : (
-              <BuyTicketButton
-                eventId={event.id}
-                userId={user?.id ?? null}
-                isFree={isFree}
-                ticketPrice={headlinePrice}
-                eventTitle={event.title}
-                currency={event.currency || 'HTG'}
-                country={event.country}
-                feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
-                eventStartsAt={event.start_datetime}
-                isPasswordProtected={!!event.is_password_protected}
-              />
+              (event as any).requires_approval === true ? (
+                <RequestToJoin
+                  eventId={event.id}
+                  userId={user?.id ?? null}
+                  isPasswordProtected={!!event.is_password_protected}
+                  compact
+                />
+              ) : (
+                <BuyTicketButton
+                  eventId={event.id}
+                  userId={user?.id ?? null}
+                  isFree={isFree}
+                  ticketPrice={headlinePrice}
+                  eventTitle={event.title}
+                  currency={event.currency || 'HTG'}
+                  country={event.country}
+                  feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
+                  eventStartsAt={event.start_datetime}
+                  isPasswordProtected={!!event.is_password_protected}
+                  plusOnesAllowed={eventAllowedPlusOnes(event as any)}
+                />
+              )
             )}
           </div>
           {/* Save and share, as a pair, ON the buy row.
@@ -609,19 +621,28 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 </div>
               ) : (
                 <>
-                  <BuyTicketButton
-                    eventId={event.id}
-                    userId={user?.id ?? null}
-                    isFree={isFree}
-                    ticketPrice={headlinePrice}
-                    eventTitle={event.title}
-                    currency={event.currency || 'HTG'}
-                    country={event.country}
-                    feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
-                    eventStartsAt={event.start_datetime}
-                isPasswordProtected={!!event.is_password_protected}
-                  />
-                  {!user && (
+                  {(event as any).requires_approval === true ? (
+                    <RequestToJoin
+                      eventId={event.id}
+                      userId={user?.id ?? null}
+                      isPasswordProtected={!!event.is_password_protected}
+                    />
+                  ) : (
+                    <BuyTicketButton
+                      eventId={event.id}
+                      userId={user?.id ?? null}
+                      isFree={isFree}
+                      ticketPrice={headlinePrice}
+                      eventTitle={event.title}
+                      currency={event.currency || 'HTG'}
+                      country={event.country}
+                      feeIncidence={(event as any).fee_incidence ?? (event as any).feeIncidence ?? null}
+                      eventStartsAt={event.start_datetime}
+                      isPasswordProtected={!!event.is_password_protected}
+                      plusOnesAllowed={eventAllowedPlusOnes(event as any)}
+                    />
+                  )}
+                  {!user && (event as any).requires_approval !== true && (
                     <p className="text-xs text-white/50 text-center mt-3">
                       {t('events.no_account_needed', {
                         defaultValue: 'No account needed. Your ticket is emailed to you.',

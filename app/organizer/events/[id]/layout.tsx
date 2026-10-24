@@ -40,6 +40,22 @@ export default async function EventLayout({
     (d) => (d.data().status || '').toLowerCase() !== 'cancelled'
   ).length
 
+  // Approval lists: a Requests tab with the pending count, only while the
+  // event takes requests (docs/specs/approval-lists-and-plus-ones.md).
+  const requiresApproval = data.requires_approval === true
+  let pendingRequests = 0
+  if (requiresApproval) {
+    try {
+      const reqSnap = await adminDb.collection('attend_requests').where('event_id', '==', id).get()
+      pendingRequests = reqSnap.docs.filter((d: any) => {
+        const st = d.data()?.status
+        return st === 'pending' || st === 'approving'
+      }).length
+    } catch {
+      /* the tab still links; the page loads its own list */
+    }
+  }
+
   const event = {
     id,
     title: String(data.title || ''),
@@ -55,7 +71,12 @@ export default async function EventLayout({
   return (
     <>
       <EventHeader event={event} />
-      <EventTabs eventId={id} ticketCount={ticketCount} />
+      <EventTabs
+        eventId={id}
+        ticketCount={ticketCount}
+        requiresApproval={requiresApproval}
+        pendingRequests={pendingRequests}
+      />
       <main>{children}</main>
     </>
   )

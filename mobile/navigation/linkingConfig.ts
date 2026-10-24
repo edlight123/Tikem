@@ -40,6 +40,8 @@ export const LINKING_CONFIG = {
     // /messages is not in the AASA or the Android intent filters.
     MessageThread: 'messages/:threadId',
     Messages: 'messages',
+    // New approval-list request pushes (lib/notifications/attend-requests).
+    EventRequests: 'organizer/events/:eventId/requests',
     OrganizerEventManagement: 'organizer/events/:eventId',
     // Withdrawal outcome pushes.
     OrganizerEarningsHub: 'organizer/payouts',

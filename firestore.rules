@@ -270,6 +270,9 @@ service cloud.firestore {
         // by the Admin SDK only: a lower count would hide shards from the
         // capacity check.
         && request.resource.data.get('inventory_shards_n', null) == null
+        // Approval lists are for FREE events only (docs/specs/approval-lists-and-plus-ones.md).
+        && !(request.resource.data.get('requires_approval', false) == true
+             && request.resource.data.get('has_paid_tiers', false) == true)
         && isCurrencyAllowedForCountry(request.resource.data.country, request.resource.data.currency);
 
       allow update: if isSignedIn() && (
@@ -281,6 +284,9 @@ service cloud.firestore {
           // account, or let a second account take over door/attendee access.
           request.resource.data.get('organizer_id', null) == resource.data.organizer_id &&
           request.resource.data.get('organizerId', null) == resource.data.get('organizerId', null) &&
+          // Approval lists are for FREE events only (see create above).
+          !(request.resource.data.get('requires_approval', false) == true &&
+            request.resource.data.get('has_paid_tiers', false) == true) &&
           // H3: moderation fields are client-immutable so a rejected/reported
           // organizer can't re-surface their event. Admin SDK still writes them
           // (it bypasses rules). .get() defaults keep legacy docs that predate

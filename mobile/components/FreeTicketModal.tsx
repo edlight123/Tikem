@@ -15,6 +15,7 @@ import { useAppAlert } from './AppAlert';
 import { radius } from '../theme/tokens';
 import type { Attribution } from '../lib/attribution';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../lib/ticketPricing';
+import { PlusOneFields, plusOnesPayload, resizePlusOnes, type PlusOneDraft } from './AttendRequestSheet';
 
 /**
  * Refusals caused by the promo code rather than by the tickets themselves. For
@@ -70,6 +71,12 @@ interface FreeTicketModalProps {
    * checkout instead of being stranded in a sheet that can't succeed.
    */
   onCheckoutFallback?: () => void;
+  /**
+   * Plus-ones the guest may name on this free event (lib/attendRequests,
+   * already capped by the free limit). 0 = no naming; the plain claim is
+   * unchanged. Names are optional here: only a fully named set is sent.
+   */
+  allowedPlusOnes?: number;
 }
 
 export default function FreeTicketModal({
@@ -89,6 +96,7 @@ export default function FreeTicketModal({
   refCode,
   attribution,
   onCheckoutFallback,
+  allowedPlusOnes = 0,
 }: FreeTicketModalProps) {
   const { colors } = useTheme();
   const showAlert = useAppAlert();
@@ -118,11 +126,24 @@ export default function FreeTicketModal({
   // The quantity actually claimed: the upstream selection when locked, else the
   // stepper value.
   const claimQuantity = isLocked ? (lockedQuantity as number) : quantity;
+  // Named plus-ones: the extra tickets of an unlocked claim, when allowed.
+  const namedSlots = !isLocked && allowedPlusOnes > 0 ? Math.min(allowedPlusOnes, Math.max(0, claimQuantity - 1)) : 0;
+  const [plusOnes, setPlusOnes] = useState<PlusOneDraft[]>([]);
+  useEffect(() => {
+    setPlusOnes((prev) => resizePlusOnes(prev, namedSlots));
+  }, [namedSlots]);
+  const namedPlusOnes =
+    namedSlots > 0 && namedSlots === claimQuantity - 1 && plusOnes.length === namedSlots && plusOnes.every((p) => p.firstName.trim())
+      ? plusOnesPayload(plusOnes)
+      : null;
 
   // Reset the stepper whenever the sheet reopens so a previous order's count
   // never carries over into the next claim.
   useEffect(() => {
-    if (visible) setQuantity(1);
+    if (visible) {
+      setQuantity(1);
+      setPlusOnes([]);
+    }
   }, [visible]);
 
   const handleIncrease = () => {
@@ -231,6 +252,8 @@ export default function FreeTicketModal({
             ...(promoCode ? { promoCode } : {}),
             ...(refCode ? { refCode } : {}),
           ...(attribution ? { attribution } : {}),
+            // Only a fully named set; otherwise the plain quantity claim.
+            ...(namedPlusOnes ? { plusOnes: namedPlusOnes } : {}),
           }),
         }
       );
@@ -381,6 +404,14 @@ export default function FreeTicketModal({
               </Text>
             )}
           </View>
+
+          {namedSlots > 0 && (
+            <View style={styles.plusOneSection}>
+              <Text style={styles.sectionLabel}>{t('attendRequests.claimPlusOne.title')}</Text>
+              <Text style={styles.plusOneHint}>{t('attendRequests.claimPlusOne.hint')}</Text>
+              <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!loading} />
+            </View>
+          )}
 
           {/* Summary */}
           <View style={styles.summary}>
@@ -554,6 +585,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 12,
+  },
+  plusOneSection: {
+    marginBottom: 16,
+  },
+  plusOneHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 12,
   },
   summary: {
     backgroundColor: colors.surfaceRaised,

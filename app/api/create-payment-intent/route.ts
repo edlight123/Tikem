@@ -28,6 +28,7 @@ import {
   MAX_FREE_TICKETS_PER_CLAIM,
   freeClaimAlreadyUsed,
 } from '@/lib/tickets/free-claim-policy'
+import { approvalFreeLinesRefusal } from '@/lib/events/approval'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { locationFeesForCountry } from '@/types/platform-settings'
 import { fromCents } from '@/lib/ticketPricing'
@@ -410,6 +411,11 @@ export async function POST(request: Request) {
     // on the LIST price, exactly as claim-free decides it. Fulfillment re-takes
     // the claim lock atomically before issuing.
     const freeQuantity = orderLines.reduce((sum, l) => sum + (Number(l.price) > 0 ? 0 : l.quantity), 0)
+    // Approval-list events give their free tickets through the list only.
+    const approvalRefusal = approvalFreeLinesRefusal(event, freeQuantity)
+    if (approvalRefusal) {
+      return refuse({ error: approvalRefusal.error, code: approvalRefusal.code }, approvalRefusal.status)
+    }
     if (freeQuantity > 0) {
       if (freeQuantity > MAX_FREE_TICKETS_PER_CLAIM) {
         return refuse(

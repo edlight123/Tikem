@@ -61,6 +61,8 @@ describe('linking config', () => {
       OrganizerMessages: 'organizer/events/:eventId/messages',
       MessageThread: 'messages/:threadId',
       Messages: 'messages',
+      // Approval lists: the organizer's 'New request' push opens the Requests screen.
+      EventRequests: 'organizer/events/:eventId/requests',
       OrganizerEventManagement: 'organizer/events/:eventId',
       OrganizerEarningsHub: 'organizer/payouts',
       OrganizerPayoutSettings: 'organizer/settings/payouts',

@@ -250,6 +250,11 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         // the server routes enforce it either way, but without this flag the UI
         // never asks and buyers dead-end on access_code_required.
         is_password_protected: data?.is_password_protected ?? false,
+        // Approval lists (docs/specs/approval-lists-and-plus-ones.md): the page
+        // swaps the claim button for "Request to join", and both flows offer
+        // named plus-ones up to the event's allowance.
+        requires_approval: data?.requires_approval === true,
+        plus_ones_max: Number(data?.plus_ones_max) > 0 ? Number(data.plus_ones_max) : 0,
         // The event's song (rendered by SpotifyEmbed on the event page).
         spotify_url: data?.spotify_url || null,
         // The bill — who is performing (rendered by EventLineup). This object is

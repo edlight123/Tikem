@@ -77,6 +77,8 @@ export async function sendTicketConfirmation(params: {
   currency?: string | null
   /** Raw guest retrieval token — turns every link in the message into their own ticket page. */
   guestToken?: string | null
+  /** The host approved a request for these tickets (approval lists): re-heads the email. */
+  approved?: boolean
   logPrefix?: string
 }): Promise<SendTicketConfirmationResult> {
   const logPrefix = params.logPrefix || '[confirmation]'
@@ -113,7 +115,9 @@ export async function sendTicketConfirmation(params: {
       }[lang]
       const sent = await sendEmail({
         to: params.recipient.email,
-        subject: emailSubjects.ticketConfirmation(lang, eventTitle, quantity),
+        subject: params.approved
+          ? emailSubjects.requestApproved(lang, eventTitle)
+          : emailSubjects.ticketConfirmation(lang, eventTitle, quantity),
         html: getTicketConfirmationEmail({
           lang,
           attendeeName: params.recipient.name || '',
@@ -128,6 +132,7 @@ export async function sendTicketConfirmation(params: {
           quantity,
           posterUrl: poster,
           doorsTime: String(params.event?.doors_open_time || '').trim() || undefined,
+          approved: params.approved === true,
           ...(guestUrl ? { ticketsUrl: guestUrl, ticketsUrlNote: guestNote } : {}),
         }),
         attachments: qrPng
