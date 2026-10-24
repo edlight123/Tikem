@@ -9,6 +9,9 @@ import { ChevronDown } from 'lucide-react'
 interface EventTabsProps {
   eventId: string
   ticketCount?: number
+  /** Approval-list event: show the Requests tab (with its pending count). */
+  requiresApproval?: boolean
+  pendingRequests?: number
 }
 
 /**
@@ -26,7 +29,7 @@ interface EventTabsProps {
  *
  * Active state is derived from the URL; no local state beyond the menu.
  */
-export function EventTabs({ eventId, ticketCount }: EventTabsProps) {
+export function EventTabs({ eventId, ticketCount, requiresApproval = false, pendingRequests }: EventTabsProps) {
   const { t } = useTranslation('common')
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -39,6 +42,9 @@ export function EventTabs({ eventId, ticketCount }: EventTabsProps) {
   const primary = [
     { id: 'overview', label: t('organizer.overview', { defaultValue: 'Overview' }), href: base, exact: true },
     { id: 'attendees', label: t('organizer.attendees', { defaultValue: 'Attendees' }), href: `${base}/attendees`, count: ticketCount },
+    ...(requiresApproval
+      ? [{ id: 'requests', label: t('attend_requests.organizer.tile'), href: `${base}/requests`, count: pendingRequests }]
+      : []),
     { id: 'orders', label: t('organizer.tab_orders', { defaultValue: 'Orders' }), href: `${base}/orders` },
     { id: 'tickets', label: t('organizer.tab_tickets', { defaultValue: 'Tickets' }), href: `${base}/tickets` },
     { id: 'earnings', label: t('organizer.earnings', { defaultValue: 'Earnings' }), href: `${base}/earnings` },

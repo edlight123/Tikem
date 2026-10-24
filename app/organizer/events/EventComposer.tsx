@@ -84,7 +84,8 @@ import {
 import { normalizeSupportedCountry } from '@/lib/country-support'
 import { withStoredMoneyFields } from '@/lib/events/stored-money-fields'
 import { incidenceForEvent, priceOrder } from '@/lib/checkout/buyer-pricing'
-import { fromCents } from '@/lib/ticketPricing'
+import { fromCents, MAX_FREE_TICKETS_PER_PERSON } from '@/lib/ticketPricing'
+import { allowedPlusOnes, PLUS_ONES_SETTING_MAX } from '@/lib/events/approval'
 import { nationalDayForEventDate, nationalDayName } from '@/lib/nationalDays'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
 // The sanctioned editorial section heading (font-display, lowercase, italic).
@@ -113,6 +114,8 @@ import {
   Ticket,
   Trash2,
   Type,
+  UserCheck,
+  UserPlus,
   Users,
   X,
   Youtube,
@@ -350,10 +353,12 @@ function Toggle({
   on,
   onChange,
   label,
+  disabled = false,
 }: {
   on: boolean
   onChange: (v: boolean) => void
   label: string
+  disabled?: boolean
 }) {
   return (
     <button
@@ -361,10 +366,11 @@ function Toggle({
       role="switch"
       aria-checked={on}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!on)}
       // House rule: teal is a sparing ACCENT, never a fill. The on-state is a
       // white track with a dark knob (the reference composer's own treatment).
-      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${on ? 'border-white bg-white' : 'border-white/20 bg-white/15'}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${on ? 'border-white bg-white' : 'border-white/20 bg-white/15'} disabled:cursor-not-allowed disabled:opacity-40`}
     >
       <span
         className={`absolute top-0.5 h-5 w-5 rounded-full shadow transition-all ${on ? 'left-[22px] bg-black' : 'left-0.5 bg-white'}`}
@@ -763,6 +769,16 @@ export default function EventComposer({
   // edit mode (the hash is write-only), so a blank code on save keeps it.
   const [passwordProtected, setPasswordProtected] = useState(!!event?.is_password_protected)
   const [accessCode, setAccessCode] = useState('')
+  // Approval lists (docs/specs/approval-lists-and-plus-ones.md): guests request
+  // and the organizer approves. FREE events only in v1, so it is forced off
+  // (and the toggle disabled) whenever any tier costs money.
+  const [requiresApproval, setRequiresApproval] = useState(!!(event as any)?.requires_approval)
+  // Named plus-ones a guest may bring: 0 (off) to 3. The effective number is
+  // capped by the per-person free-ticket limit (allowedPlusOnes).
+  const [plusOnesMax, setPlusOnesMax] = useState<number>(() => {
+    const n = Math.floor(Number((event as any)?.plus_ones_max ?? 0))
+    return Number.isFinite(n) && n > 0 ? Math.min(n, PLUS_ONES_SETTING_MAX) : 0
+  })
   // "Part of Vertières?": offered only while the start date sits in or near a
   // national day's window (lib/nationalDays). Saved as `national_day`, the
   // day's eventTag, which the Home banners and rails read.
@@ -924,6 +940,8 @@ export default function EventComposer({
     // accessCodeInvalid demand a fresh code before create, instead of silently
     // creating a public event the guest believed was protected.
     if (d.is_password_protected) setPasswordProtected(true)
+    if (d.requires_approval) setRequiresApproval(true)
+    if (Number(d.plus_ones_max) > 0) setPlusOnesMax(Math.min(Math.floor(Number(d.plus_ones_max)), PLUS_ONES_SETTING_MAX))
     if (d.national_day) setNationalDayOn(true)
     if (d.fee_incidence) setPassFeesToBuyer(d.fee_incidence === 'buyer')
     // `enable_waitlist` is now per tier; the event-level value in an older
@@ -1101,6 +1119,11 @@ export default function EventComposer({
     : ''
 
   const isPaid = sellMode === 'tickets' && tiers.some((t) => Number(t.price) > 0)
+  // Approval is for free events only: a paid tier switches it off.
+  useEffect(() => {
+    if (isPaid && requiresApproval) setRequiresApproval(false)
+  }, [isPaid, requiresApproval])
+  const effectivePlusOnes = allowedPlusOnes(plusOnesMax)
 
   // A worked example on the organizer's own cheapest paid ticket, so the toggle
   // is a number rather than a policy statement. Uses the same pricing function
@@ -1249,6 +1272,10 @@ export default function EventComposer({
       show_guestlist: showGuestlistFor(guestlistVisibility),
       show_on_explore: showOnExplore,
       is_password_protected: passwordProtected,
+      // Approval lists: never on an event with a paid tier (rules refuse it too).
+      requires_approval:
+        requiresApproval && !(!isRsvp && cleanTiers.some((t) => Number(t.price || 0) > 0)),
+      plus_ones_max: plusOnesMax,
       // The national day it is tagged for, or null when the toggle is off or
       // the date moved out of every window.
       national_day: nationalDayOn && eligibleNationalDay ? eligibleNationalDay.eventTag : null,
@@ -3175,6 +3202,52 @@ export default function EventComposer({
                     )}
                   </div>
                 )}
+              </div>
+              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-[15px] text-white/80">
+                    <UserCheck className="h-4 w-4 text-white/50" /> {t('attend_requests.composer.require_approval')}
+                  </span>
+                  <Toggle
+                    on={requiresApproval && !isPaid}
+                    onChange={setRequiresApproval}
+                    disabled={isPaid}
+                    label={t('attend_requests.composer.require_approval')}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-white/50">
+                  {isPaid
+                    ? t('attend_requests.composer.paid_disabled')
+                    : t('attend_requests.composer.require_approval_hint')}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white/[0.03] px-4 py-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-[15px] text-white/80">
+                    <UserPlus className="h-4 w-4 text-white/50" /> {t('attend_requests.composer.plus_ones')}
+                  </span>
+                  <div role="radiogroup" aria-label={t('attend_requests.composer.plus_ones')} className="flex gap-1.5">
+                    {[0, 1, 2, 3].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={plusOnesMax === n}
+                        onClick={() => setPlusOnesMax(n)}
+                        className={`min-w-[44px] rounded px-3 py-1.5 text-sm font-semibold transition-colors ${
+                          plusOnesMax === n ? 'bg-white text-black' : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12]'
+                        }`}
+                      >
+                        {n === 0 ? t('attend_requests.composer.plus_ones_off') : `+${n}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-1.5 text-xs text-white/50">
+                  {plusOnesMax > 0 && effectivePlusOnes < plusOnesMax
+                    ? t('attend_requests.composer.plus_ones_capped', { count: effectivePlusOnes, limit: MAX_FREE_TICKETS_PER_PERSON })
+                    : t('attend_requests.composer.plus_ones_hint')}
+                </p>
               </div>
             </div>
           </div>
