@@ -15,6 +15,10 @@ export const ORGANIZER_NOTIFICATION_DEFAULTS = {
   sms_event_reminders: false,
   push_ticket_sales: true,
   push_new_reviews: true,
+  // Attendee messages (lib/organizer-message-alerts.ts). On by default: a
+  // question before buying is a sale waiting on an answer.
+  email_attendee_messages: true,
+  push_attendee_messages: true,
 } as const
 
 export type OrganizerNotificationPreferences = {

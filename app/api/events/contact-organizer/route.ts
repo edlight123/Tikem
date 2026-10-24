@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
-import { createNotification } from '@/lib/notifications/helpers'
+import { alertOrganizerOfMessage } from '@/lib/organizer-message-alerts'
 import { FieldValue } from 'firebase-admin/firestore'
 
 /** The three things an attendee can be writing about. Anything else is rejected. */
@@ -24,12 +24,6 @@ type Topic = (typeof TOPICS)[number]
 const MAX_MESSAGE_LENGTH = 1000
 /** Messages one user may send about ONE event per hour. */
 const MAX_PER_EVENT_PER_HOUR = 3
-
-const TOPIC_LABEL: Record<Topic, string> = {
-  event: 'the event',
-  ticket: 'their ticket',
-  other: 'something else',
-}
 
 function fail(error: string, code: string, status = 400) {
   return NextResponse.json({ error, code }, { status })
@@ -101,13 +95,15 @@ export async function POST(request: Request) {
       )
     }
 
+    const senderName = String((user as any).full_name || '').trim() || 'An attendee'
+    const eventTitle = String(event.title || 'Event')
     const doc = await adminDb.collection('organizer_messages').add({
       event_id: eventId,
-      event_title: String(event.title || 'Event'),
+      event_title: eventTitle,
       organizer_id: organizerId,
       sender_id: user.id,
       // Snapshotted so the organizer still sees who wrote if the profile changes.
-      sender_name: String((user as any).full_name || '').trim() || 'An attendee',
+      sender_name: senderName,
       // The sender's EMAIL is deliberately absent. The organizer can read this
       // document (see firestore.rules), so storing the address here would hand
       // it over — exactly what routing this through the app instead of a
@@ -121,22 +117,31 @@ export async function POST(request: Request) {
       // the organizer's inbox never has to guess. Replies live in the `replies`
       // subcollection of this document — see lib/organizer-messages.ts.
       reply_count: 0,
+      // The opener is the attendee's first message in a row (see
+      // MAX_ATTENDEE_STREAK) and the thread's latest message.
+      attendee_streak: 1,
+      last_message_preview: message.replace(/\s+/g, ' ').trim().slice(0, 160),
+      last_message_role: 'attendee',
+      last_message_at: FieldValue.serverTimestamp(),
       last_activity_at: FieldValue.serverTimestamp(),
     })
 
-    // A failed notification must not lose the message — it is already stored,
-    // and the organizer can still find it in their inbox.
+    // In-app + push + (rate-limited) email, in the organizer's language. Each
+    // channel is guarded inside; a failure must not lose the stored message.
     try {
-      await createNotification(
+      await alertOrganizerOfMessage({
+        threadId: doc.id,
         organizerId,
-        'organizer_message',
-        `New message about ${event.title || 'your event'}`,
-        `${String((user as any).full_name || 'An attendee')} wrote to you about ${TOPIC_LABEL[topic]}.`,
-        `/organizer/events/${eventId}/messages`,
-        { eventId, messageId: doc.id, topic }
-      )
+        eventId,
+        eventTitle,
+        senderName,
+        topic,
+        message,
+        followUp: false,
+        event: { country: event.country, city: event.city, timezone: event.timezone },
+      })
     } catch (error) {
-      console.error('contact-organizer: notification failed', error)
+      console.error('contact-organizer: organizer alert failed', error)
     }
 
     return NextResponse.json({ ok: true, id: doc.id })

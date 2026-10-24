@@ -220,6 +220,23 @@ export const emailSubjects = {
       fr: `${organizerName} a répondu à propos de ${eventTitle}`,
       ht: `${organizerName} reponn ou sou ${eventTitle}`,
     }),
+  organizerNewMessage: (
+    lang: EmailLang | undefined,
+    attendeeFirstName: string,
+    eventTitle: string,
+    followUp = false
+  ) =>
+    L(lang, {
+      en: followUp
+        ? `${attendeeFirstName} wrote again about ${eventTitle}`
+        : `${attendeeFirstName} sent you a message about ${eventTitle}`,
+      fr: followUp
+        ? `${attendeeFirstName} vous a réécrit à propos de ${eventTitle}`
+        : `${attendeeFirstName} vous a écrit à propos de ${eventTitle}`,
+      ht: followUp
+        ? `${attendeeFirstName} ekri ou ankò sou ${eventTitle}`
+        : `${attendeeFirstName} voye yon mesaj ba ou sou ${eventTitle}`,
+    }),
   bankVerification: (lang: EmailLang | undefined, approved: boolean) =>
     L(lang, {
       en: approved ? 'Your bank account is verified' : 'We could not verify your bank account',
@@ -972,13 +989,18 @@ export function getOrganizerReplyEmail(params: {
   question: string
   reply: string
   lang?: EmailLang
+  /** When given, the button opens the conversation (/profile#messages) instead of the event. */
+  threadId?: string
 }) {
   const lang = pickLang(params.lang)
   const t = L(lang, {
-    en: { eyebrow: 'The organizer replied', asked: 'You asked', replied: (o: string) => `${o} replied`, private: 'Reply from the event page. Your email address stays private.' },
-    fr: { eyebrow: "L'organisateur a répondu", asked: 'Votre question', replied: (o: string) => `Réponse de ${o}`, private: "Répondez depuis la page de l'événement. Votre adresse e-mail reste privée." },
-    ht: { eyebrow: 'Òganizatè a reponn', asked: 'Kesyon ou', replied: (o: string) => `${o} reponn`, private: 'Reponn sou paj evènman an. Adrès imèl ou rete prive.' },
+    en: { eyebrow: 'The organizer replied', asked: 'You asked', replied: (o: string) => `${o} replied`, private: 'Reply from the event page. Your email address stays private.', open: 'Open the conversation', privateThread: 'Answer from Messages in your Tikèm profile. Your email address stays private.' },
+    fr: { eyebrow: "L'organisateur a répondu", asked: 'Votre question', replied: (o: string) => `Réponse de ${o}`, private: "Répondez depuis la page de l'événement. Votre adresse e-mail reste privée.", open: 'Ouvrir la conversation', privateThread: 'Répondez depuis Messages, dans votre profil Tikèm. Votre adresse e-mail reste privée.' },
+    ht: { eyebrow: 'Òganizatè a reponn', asked: 'Kesyon ou', replied: (o: string) => `${o} reponn`, private: 'Reponn sou paj evènman an. Adrès imèl ou rete prive.', open: 'Louvri konvèsasyon an', privateThread: 'Reponn nan Mesaj, nan pwofil Tikèm ou. Adrès imèl ou rete prive.' },
   })
+  const cta = params.threadId
+    ? button(t.open, `${appUrl()}/profile?thread=${enc(params.threadId)}#messages`)
+    : button(COMMON[lang].viewEvent, `${appUrl()}/events/${enc(params.eventId)}`)
   return renderEmail({
     lang,
     title: params.eventTitle,
@@ -992,9 +1014,95 @@ export function getOrganizerReplyEmail(params: {
       gap(12),
       quote(t.replied(params.organizerName), params.reply),
       gap(24),
-      button(COMMON[lang].viewEvent, `${appUrl()}/events/${enc(params.eventId)}`),
+      cta,
       gap(14),
-      p(t.private, '#6B6B6B'),
+      p(params.threadId ? t.privateThread : t.private, '#6B6B6B'),
+    ],
+  })
+}
+
+/** Characters of the attendee's message shown in the organizer alert email. */
+export const ORGANIZER_MESSAGE_EMAIL_EXCERPT = 500
+
+/**
+ * Organizer: an attendee wrote (a new thread or a follow-up in one).
+ *
+ * PRIVACY: takes the attendee's FIRST NAME only. There is deliberately no
+ * parameter for an email address or phone number, so no caller can leak one
+ * into the organizer's inbox. Both sides stay inside Tikèm.
+ */
+export function getOrganizerNewMessageEmail(params: {
+  attendeeFirstName: string
+  eventTitle: string
+  eventId: string
+  threadId: string
+  topic: string
+  message: string
+  followUp?: boolean
+  lang?: EmailLang
+}) {
+  const lang = pickLang(params.lang)
+  const t = L(lang, {
+    en: {
+      eyebrow: 'New message',
+      head: (n: string) => `${n} wrote to you`,
+      headAgain: (n: string) => `${n} wrote again`,
+      from: 'From',
+      topic: 'Topic',
+      topics: { event: 'The event', ticket: 'Their ticket', other: 'Something else' } as Record<string, string>,
+      said: 'Their message',
+      cta: 'Reply in your inbox',
+      note: 'Reply on Tikèm: your contact details and theirs stay private. Further messages in this conversation over the next 30 minutes reach you in the app only.',
+    },
+    fr: {
+      eyebrow: 'Nouveau message',
+      head: (n: string) => `${n} vous a écrit`,
+      headAgain: (n: string) => `${n} vous a réécrit`,
+      from: 'De',
+      topic: 'Sujet',
+      topics: { event: "L'événement", ticket: 'Son billet', other: 'Autre chose' } as Record<string, string>,
+      said: 'Son message',
+      cta: 'Répondre depuis votre messagerie',
+      note: "Répondez sur Tikèm : vos coordonnées et les siennes restent privées. Les messages suivants de cette conversation dans les 30 prochaines minutes vous arrivent uniquement dans l'application.",
+    },
+    ht: {
+      eyebrow: 'Nouvo mesaj',
+      head: (n: string) => `${n} ekri ou`,
+      headAgain: (n: string) => `${n} ekri ou ankò`,
+      from: 'Moun ki ekri',
+      topic: 'Sijè',
+      topics: { event: 'Evènman an', ticket: 'Tikè li', other: 'Yon lòt bagay' } as Record<string, string>,
+      said: 'Mesaj li',
+      cta: 'Reponn nan bwat mesaj ou',
+      note: 'Reponn sou Tikèm: enfòmasyon kontak ou ak pa li rete prive. Lòt mesaj nan konvèsasyon sa a nan 30 minit k ap vini yo ap rive sèlman nan aplikasyon an.',
+    },
+  })
+  const name = params.attendeeFirstName
+  const head = params.followUp ? t.headAgain(name) : t.head(name)
+  const flat = params.message.replace(/\s+/g, ' ').trim()
+  const excerpt =
+    flat.length > ORGANIZER_MESSAGE_EMAIL_EXCERPT ? `${flat.slice(0, ORGANIZER_MESSAGE_EMAIL_EXCERPT - 1)}…` : flat
+  const inboxUrl = `${appUrl()}/organizer/events/${enc(params.eventId)}/messages?thread=${enc(params.threadId)}`
+  return renderEmail({
+    lang,
+    title: head,
+    preheader: excerpt.slice(0, 120),
+    footer: 'organizer',
+    blocks: [
+      eyebrow(t.eyebrow, 'teal'),
+      title(head, 34),
+      meta(params.eventTitle),
+      gap(24),
+      facts([
+        { label: t.from, value: name },
+        { label: t.topic, value: t.topics[params.topic] || t.topics.other },
+      ]),
+      gap(12),
+      quote(t.said, excerpt),
+      gap(24),
+      button(t.cta, inboxUrl),
+      gap(14),
+      p(t.note, '#6B6B6B'),
     ],
   })
 }
