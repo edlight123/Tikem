@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Publish a production OTA to every live app version that can run it.
+#
+#   scripts/publish-ota.sh "message"            HEAD of main
+#   scripts/publish-ota.sh "message" <commit>   a specific commit
+#
+# Why both runtimes: runtimeVersion follows appVersion, so an update published
+# from version 1.0.1 never reaches phones still on 1.0.0 (App Store build 46 /
+# older TestFlight installs). Until they have all updated, we publish the same
+# JS twice: once as-is (1.0.1) and once with app.json's version set to 1.0.0.
+#
+# That second publish is only safe while the NATIVE side is identical to build
+# 46: same package.json / package-lock.json. The script refuses the 1.0.0
+# publish if they drifted (a new native module would crash 1.0.0 phones).
+#
+# Always from a clean detached worktree at the commit (never a working tree
+# with uncommitted agent work), and only after checking that the EAS production
+# env carries every EXPO_PUBLIC_* in mobile/.env (memory: eas-update-env-gotcha).
+set -euo pipefail
+
+MSG="${1:?usage: scripts/publish-ota.sh \"message\" [commit]}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COMMIT="$(git -C "$ROOT" rev-parse "${2:-HEAD}")"
+WT="$ROOT/.claude/worktrees/ota-bb449303"
+BUILD_46_COMMIT=6476fd20   # last native change shipped in runtime 1.0.0
+LEGACY_RUNTIME=1.0.0
+
+if [ ! -d "$WT" ]; then
+  git -C "$ROOT" worktree add --detach "$WT" "$COMMIT" >/dev/null
+  cp "$ROOT/mobile/.env" "$WT/mobile/.env"
+  (cd "$WT/mobile" && npm ci --no-audit --no-fund)
+fi
+git -C "$WT" checkout -q --detach "$COMMIT"
+git -C "$WT" checkout -q -- mobile/app.json   # undo any leftover 1.0.0 edit
+
+# Reinstall only when the lockfile differs from the one node_modules was built from.
+LOCK_SHA=$(shasum "$WT/mobile/package-lock.json" | cut -d' ' -f1)
+STAMP="$WT/mobile/node_modules/.tikem-lock-sha"
+if [ "$(cat "$STAMP" 2>/dev/null)" != "$LOCK_SHA" ]; then
+  echo "package-lock changed since the last install: running npm ci"
+  (cd "$WT/mobile" && npm ci --no-audit --no-fund)
+  echo "$LOCK_SHA" > "$STAMP"
+fi
+
+cd "$WT/mobile"
+missing=$(comm -23 <(grep -oE '^EXPO_PUBLIC_[A-Z0-9_]+' "$ROOT/mobile/.env" | sort -u) \
+  <(npx -y eas-cli@latest env:list --environment production 2>/dev/null | grep -oE 'EXPO_PUBLIC_[A-Z0-9_]+' | sort -u))
+if [ -n "$missing" ]; then
+  echo "EAS production env is missing: $missing" >&2
+  exit 1
+fi
+
+npx tsc --noEmit
+
+publish() {
+  npx eas-cli@latest update --channel production --environment production --non-interactive -m "$1" \
+    | grep -E "Published|Runtime|Update group ID|rror"
+}
+
+current=$(node -p "require('./app.json').expo.version")
+echo "== runtime $current"
+publish "$MSG"
+
+if [ "$current" != "$LEGACY_RUNTIME" ]; then
+  if git -C "$ROOT" diff --quiet "$BUILD_46_COMMIT" "$COMMIT" -- mobile/package.json mobile/package-lock.json; then
+    echo "== runtime $LEGACY_RUNTIME (native side unchanged since build 46)"
+    node -e "const f='app.json',j=require('./'+f);j.expo.version='$LEGACY_RUNTIME';require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n')"
+    publish "$MSG"
+    git -C "$WT" checkout -q -- mobile/app.json
+  else
+    echo "== SKIPPED runtime $LEGACY_RUNTIME: native dependencies changed since build 46; those phones need the store update"
+  fi
+fi
