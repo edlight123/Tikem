@@ -65,6 +65,9 @@ export default function PurchaseSuccessSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
+          {/* Paints below the sheet's edge, so the event page's sticky bar can never
+              show through a gap under the sheet (see ContactOrganizerModal). */}
+          <View pointerEvents="none" style={styles.bottomFill} />
           <View style={styles.grabber} />
 
           <View style={styles.headerRow}>
@@ -154,6 +157,14 @@ const getStyles = (colors: any) =>
       paddingHorizontal: spacing.xl,
       paddingBottom: spacing.xxl,
       maxHeight: '88%',
+    },
+    bottomFill: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '100%',
+      height: 400,
+      backgroundColor: colors.surface,
     },
     grabber: {
       alignSelf: 'center',

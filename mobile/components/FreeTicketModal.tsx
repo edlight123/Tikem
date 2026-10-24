@@ -300,6 +300,9 @@ export default function FreeTicketModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
+          {/* Paints below the sheet's edge, so the event page's sticky bar can never
+              show through a gap under the sheet (see ContactOrganizerModal). */}
+          <View pointerEvents="none" style={styles.bottomFill} />
           <View style={styles.handle} />
           {/* Header */}
           <View style={styles.header}>
@@ -427,12 +430,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingTop: 12,
     paddingBottom: 32,
     paddingHorizontal: 20,
     maxHeight: '80%',
+  },
+  bottomFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '100%',
+    height: 400,
+    backgroundColor: colors.surface,
   },
   handle: {
     alignSelf: 'center',

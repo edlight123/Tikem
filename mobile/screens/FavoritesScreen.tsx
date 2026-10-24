@@ -272,7 +272,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   eventsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    columnGap: 12,
+    // Room under each card's caption before the next row's poster, same as the
+    // category grid.
+    rowGap: 24,
     paddingHorizontal: 16,
     paddingTop: 16,
   },

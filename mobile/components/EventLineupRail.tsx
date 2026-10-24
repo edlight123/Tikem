@@ -124,6 +124,9 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
         <Pressable style={styles.backdrop} onPress={() => setOpen(null)} />
         {open && (
           <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
+            {/* Paints below the sheet's edge, so the event page's sticky bar can never
+                show through a gap under the sheet (see ContactOrganizerModal). */}
+            <View pointerEvents="none" style={styles.bottomFill} />
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
               <View style={[styles.portrait, styles.sheetPortrait]}>
@@ -215,6 +218,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderTopRightRadius: radius.xl,
       paddingHorizontal: 20,
       paddingTop: 10,
+    },
+    bottomFill: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '100%',
+      height: 400,
+      backgroundColor: colors.surface,
     },
     handle: {
       alignSelf: 'center',

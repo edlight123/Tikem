@@ -10,8 +10,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { X, Check } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
@@ -49,6 +51,8 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [reason, setReason] = useState<Reason | null>(null);
   const [details, setDetails] = useState('');
@@ -100,7 +104,22 @@ export default function ReportContentModal({ visible, onClose, kind, targetId }:
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-          <View style={styles.sheet}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                // A number, not '90%': a percentage inside the auto-height
+                // KeyboardAvoidingView has nothing to resolve against.
+                maxHeight: windowHeight - insets.top - 24,
+                paddingBottom: Math.max(insets.bottom, 16) + 8,
+              },
+            ]}
+          >
+            {/* Paints below the sheet's edge. On device the sheet stopped short
+                of the screen bottom and the event page's sticky RSVP bar showed
+                through the gap; whatever opens that gap, the fill covers it
+                (same fix as ContactOrganizerModal). */}
+            <View pointerEvents="none" style={styles.bottomFill} />
             <View style={styles.grabber} />
             <View style={styles.header}>
               <Text style={styles.title} numberOfLines={2}>
@@ -194,8 +213,14 @@ const getStyles = (colors: any) =>
       borderTopLeftRadius: radius.xl,
       borderTopRightRadius: radius.xl,
       paddingHorizontal: spacing.xl,
-      paddingBottom: spacing.xxl,
-      maxHeight: '90%',
+    },
+    bottomFill: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '100%',
+      height: 400,
+      backgroundColor: colors.surface,
     },
     grabber: {
       alignSelf: 'center',

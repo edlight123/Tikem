@@ -248,6 +248,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     tier2: {
       color: colors.textSecondary,
       fontSize: 11.5,
+      // Explicit line heights keep the caption block's height fixed, so the
+      // grid's row gap is measured from where the text really ends.
+      lineHeight: 15,
       letterSpacing: 0.3,
       marginTop: 1,
     },
@@ -255,6 +258,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     tier3: {
       color: colors.textTertiary,
       fontSize: 11,
+      lineHeight: 14,
       letterSpacing: 0.4,
     },
     friendsRow: {

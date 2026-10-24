@@ -578,11 +578,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-  // FavoritesScreen grid: wrap, gap 12, page gutter, paddingTop 16.
+  // FavoritesScreen / CategoryEventsScreen grid: wrap, 12pt column gap, 24pt
+  // row gap, page gutter, paddingTop 16.
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    columnGap: 12,
+    rowGap: 24,
     paddingHorizontal: 16,
     paddingTop: 16,
   },

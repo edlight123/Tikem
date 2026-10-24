@@ -526,6 +526,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     gridRow: {
       gap: 12,
       justifyContent: 'flex-start',
+      // The space BETWEEN rows. columnWrapperStyle's gap is horizontal only, so
+      // rows used to stack flush: each card's date line touched (and read as cut
+      // by) the next row's poster. 24pt lets the three-line caption breathe.
+      marginBottom: 24,
     },
     listContent: {
       paddingHorizontal: 16,

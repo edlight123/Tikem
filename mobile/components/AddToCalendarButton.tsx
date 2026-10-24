@@ -127,6 +127,9 @@ export default function AddToCalendarButton({ event, style }: AddToCalendarButto
           onPress={() => setShowModal(false)}
         >
           <View style={styles.modalContent}>
+            {/* Paints below the sheet's edge, so the event page's sticky bar can never
+                show through a gap under the sheet (see ContactOrganizerModal). */}
+            <View pointerEvents="none" style={styles.bottomFill} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('calendar.addToCalendar') || 'Add to Calendar'}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -194,6 +197,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingTop: 20,
     paddingBottom: 40,
     paddingHorizontal: 20,
+  },
+  bottomFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '100%',
+    height: 400,
+    backgroundColor: colors.surface,
   },
   modalHeader: {
     flexDirection: 'row',
