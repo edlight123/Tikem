@@ -56,6 +56,8 @@ describe('linking config', () => {
       // Push notification targets (lib/pushNotifications maps relative URLs to tikem://).
       EventTickets: 'tickets/event/:eventId',
       EventAttendees: 'organizer/events/:eventId/attendees',
+      // Approval lists: the organizer's 'New request' push opens the Requests screen.
+      EventRequests: 'organizer/events/:eventId/requests',
       OrganizerEventManagement: 'organizer/events/:eventId',
       OrganizerEarningsHub: 'organizer/payouts',
       OrganizerPayoutSettings: 'organizer/settings/payouts',

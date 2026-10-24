@@ -80,6 +80,8 @@ import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
 import { AFTER_ALERT_MS } from '../../lib/moderationActions';
+import { allowedPlusOnes, plusOnesSetting } from '../../lib/attendRequests';
+import { MAX_FREE_TICKETS_PER_PERSON } from '../../lib/ticketPricing';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -195,6 +197,11 @@ export interface EventDraft {
   // the private/access subdoc on save and never read back (blank in edit mode).
   is_password_protected: boolean;
   access_code: string;
+
+  // Approval list + plus-ones (docs/specs/approval-lists-and-plus-ones.md).
+  // FREE events only: turned off whenever a tier costs money.
+  requires_approval: boolean;
+  plus_ones_max: number;
 }
 
 const CATEGORIES = [
@@ -497,6 +504,8 @@ export default function CreateEventFlowRefactored() {
     recurrence_end_date: '',
     is_password_protected: false,
     access_code: '',
+    requires_approval: false,
+    plus_ones_max: 0,
     is_online: false,
     fee_incidence: '',
     lineup: [],
@@ -669,6 +678,8 @@ export default function CreateEventFlowRefactored() {
           // stays blank (a blank code on save preserves the existing hash).
           is_password_protected: Boolean((event as any).is_password_protected),
           access_code: '',
+          requires_approval: (event as any).requires_approval === true,
+          plus_ones_max: plusOnesSetting(event as any),
           is_online: Boolean((event as any).is_online),
           // Only an explicit choice counts; anything else follows the country.
           fee_incidence:
@@ -803,6 +814,12 @@ export default function CreateEventFlowRefactored() {
       const price = parseFloat(tier.price);
       return Number.isFinite(price) && price > 0;
     });
+  // Approval is for free events only (v1): a paid tier switches it off.
+  useEffect(() => {
+    if (hasPaidTier && eventDraft.requires_approval) updateDraft({ requires_approval: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasPaidTier, eventDraft.requires_approval]);
+  const effectivePlusOnes = allowedPlusOnes(eventDraft.plus_ones_max);
 
   // ── Region payout-profile nudge (2026-08-12/29 tester feedback) ──
   // An event's country decides WHICH payout profile pays out — Haiti profile
@@ -2750,6 +2767,60 @@ export default function CreateEventFlowRefactored() {
                       )}
                     </>
                   )}
+
+                  {/* Require approval: guests request, the organizer approves.
+                      Disabled (with the reason) while any tier is paid. */}
+                  <View style={styles.settingRow}>
+                    <View style={styles.settingTextCol}>
+                      <Text style={styles.settingLabel}>{t('attendRequests.composer.requireApproval')}</Text>
+                      <Text style={styles.settingHint}>
+                        {hasPaidTier
+                          ? t('attendRequests.composer.requireApprovalPaid')
+                          : t('attendRequests.composer.requireApprovalHint')}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={eventDraft.requires_approval && !hasPaidTier}
+                      onValueChange={(v) => updateDraft({ requires_approval: v })}
+                      disabled={hasPaidTier}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.border}
+                    />
+                  </View>
+
+                  {/* Plus-ones: Off / 1 / 2 / 3, with the number guests really
+                      get under the free-ticket cap (allowedPlusOnes). */}
+                  <View style={styles.chipBlock}>
+                    <Text style={styles.chipLabel}>{t('attendRequests.composer.plusOnes')}</Text>
+                    <Text style={styles.settingHint}>{t('attendRequests.composer.plusOnesHint')}</Text>
+                    <View style={[styles.chipScroll, { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }]}>
+                      {[0, 1, 2, 3].map((n) => {
+                        const selected = eventDraft.plus_ones_max === n;
+                        return (
+                          <TouchableOpacity
+                            key={n}
+                            style={[styles.chip, selected && styles.chipActive]}
+                            onPress={() => updateDraft({ plus_ones_max: n })}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                          >
+                            <Text style={[styles.chipText, selected && styles.chipTextActive]}>
+                              {n === 0 ? t('attendRequests.composer.off') : `+${n}`}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {eventDraft.plus_ones_max > effectivePlusOnes && (
+                      <Text style={styles.settingHint}>
+                        {t('attendRequests.composer.capNote', {
+                          count: effectivePlusOnes,
+                          cap: MAX_FREE_TICKETS_PER_PERSON,
+                        })}
+                      </Text>
+                    )}
+                  </View>
 
                   {/* Poster theme — override the auto-picked gradient. Auto (default)
                       clears the override; a swatch pins that theme everywhere the

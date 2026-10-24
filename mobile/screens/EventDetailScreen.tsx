@@ -72,6 +72,16 @@ import { EventDetailSkeleton } from '../components/Skeleton';
 import EventLineupRail from '../components/EventLineupRail';
 import SpotifyTrackCard from '../components/SpotifyTrackCard';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
+import AttendRequestSheet from '../components/AttendRequestSheet';
+import RequestStatusDot, { requestTone } from '../components/RequestStatusDot';
+import {
+  attendErrorKey,
+  cancelAttendRequest,
+  eventAllowedPlusOnes,
+  eventRequiresApproval,
+  getOwnAttendRequest,
+  type OwnAttendRequest,
+} from '../lib/attendRequests';
 const { width } = Dimensions.get('window');
 const POSTER_W = width * 0.86;
 // The poster is 4:5, so its height follows from its width. The hero adds a
@@ -157,6 +167,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [unlocking, setUnlocking] = useState(false);
   const [accessError, setAccessError] = useState('');
+  // Approval lists (docs/specs/approval-lists-and-plus-ones.md). The guest's own
+  // request on an approval event, read through the API (never Firestore), and
+  // the plus-ones the server says they may name.
+  const [attendRequest, setAttendRequest] = useState<OwnAttendRequest | null>(null);
+  const [attendAllowedPlusOnes, setAttendAllowedPlusOnes] = useState<number | null>(null);
+  const [showRequestSheet, setShowRequestSheet] = useState(false);
+  const [cancellingRequest, setCancellingRequest] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
   const floatingBarAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
@@ -207,6 +224,27 @@ export default function EventDetailScreen({ route, navigation }: any) {
     };
   }, [event, user, eventId]);
 
+  const eventNeedsApproval = eventRequiresApproval(event);
+  const loadAttendRequest = async () => {
+    if (!user || !eventNeedsApproval) {
+      setAttendRequest(null);
+      return;
+    }
+    try {
+      const res = await getOwnAttendRequest(eventId);
+      setAttendRequest(res.request && res.request.status !== 'cancelled' ? res.request : null);
+      setAttendAllowedPlusOnes(res.allowedPlusOnes);
+    } catch (err) {
+      // Not fatal: the CTA still offers "Request to join", and the server
+      // answers a duplicate with the existing request.
+      console.warn('[EventDetail] attend request load failed', (err as any)?.code);
+    }
+  };
+  useEffect(() => {
+    loadAttendRequest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, user?.uid, eventNeedsApproval]);
+
   // Verify the typed code against the web endpoint. On { ok:true } the server
   // has written the access grant; mark unlocked and continue into purchase.
   const handleUnlock = async () => {
@@ -224,7 +262,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
         setShowAccessGate(false);
         setAccessCodeInput('');
         // Grant now exists downstream — proceed to the right purchase flow.
-        if (isFree) {
+        if (requiresApproval) {
+          // The gate is itself a Modal: open the sheet once it has gone.
+          setTimeout(() => setShowRequestSheet(true), AFTER_ALERT_MS);
+        } else if (isFree) {
           setShowFreeTicketModal(true);
         } else {
           setShowTierSelector(true);
@@ -511,7 +552,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   const handlePurchaseTicket = async () => {
     if (!user) {
-      showAlert(t('auth.loginRequiredTitle'), t('eventDetail.purchase.loginBody'));
+      showAlert(
+        t('auth.loginRequiredTitle'),
+        requiresApproval ? t('attendRequests.state.loginBody') : t('eventDetail.purchase.loginBody')
+      );
       return;
     }
 
@@ -536,6 +580,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
     if (event.is_password_protected && accessGranted !== true) {
       setAccessError('');
       setShowAccessGate(true);
+      return;
+    }
+
+    // Approval list: the guest asks, the host issues. No direct claim.
+    if (requiresApproval) {
+      setShowRequestSheet(true);
       return;
     }
 
@@ -627,6 +677,31 @@ export default function EventDetailScreen({ route, navigation }: any) {
     setSuccessQuantity(ticketQuantity || 1);
   };
 
+  const confirmCancelRequest = () => {
+    showAlert(t('attendRequests.state.cancelTitle'), t('attendRequests.state.cancelBody'), [
+      { text: t('attendRequests.state.keep'), style: 'cancel' },
+      {
+        text: t('attendRequests.state.cancel'),
+        style: 'destructive',
+        onPress: async () => {
+          setCancellingRequest(true);
+          try {
+            await cancelAttendRequest(eventId);
+            setAttendRequest(null);
+          } catch (err: any) {
+            setTimeout(
+              () => showAlert(t('common.error'), t(`attendRequests.errors.${attendErrorKey(err?.code)}`)),
+              AFTER_ALERT_MS
+            );
+            loadAttendRequest();
+          } finally {
+            setCancellingRequest(false);
+          }
+        },
+      },
+    ]);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -661,6 +736,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
   // `isFree` now means "there is no paid way in", i.e. tier selection can be
   // skipped. A mixed event is NOT free: the buyer must choose a tier.
   const isFree = pricing.isFreeOnly;
+  // v1 approval lists are free-only; a paid event with a stray flag sells as usual.
+  const requiresApproval = eventNeedsApproval && isFree;
+  const allowedPlusOnesHere = attendAllowedPlusOnes ?? eventAllowedPlusOnes(event);
 
   // Prevent purchase only after the event has ended (not after it has started).
   const purchaseCutoffDate = event.end_datetime || event.start_datetime;
@@ -1092,12 +1170,64 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
             <Text style={styles.ctaDisabledText}>{t('badges.soldout')}</Text>
           </View>
+        ) : requiresApproval && attendRequest ? (
+          // Request states (Stitch 3d94ae23570d41ccb95b15d7888e9f86): a filled
+          // card with a dot + label status, never a pill badge.
+          <View style={styles.requestCard}>
+            <RequestStatusDot
+              tone={requestTone(attendRequest.status)}
+              label={
+                attendRequest.status === 'approved'
+                  ? t('attendRequests.state.approved')
+                  : attendRequest.status === 'declined'
+                    ? t('attendRequests.state.declined')
+                    : t('attendRequests.state.pending')
+              }
+            />
+            <Text style={styles.requestCardBody}>
+              {attendRequest.status === 'approved'
+                ? attendRequest.quantity > 1
+                  ? t('attendRequests.state.approvedBody', { count: attendRequest.quantity })
+                  : t('attendRequests.state.approvedBodyOne')
+                : attendRequest.status === 'declined'
+                  ? t('attendRequests.state.declinedBody')
+                  : attendRequest.quantity > 1
+                    ? t('attendRequests.state.pendingBodyPlus', { count: attendRequest.quantity - 1 })
+                    : t('attendRequests.state.pendingBody')}
+            </Text>
+            {attendRequest.status === 'approved' ? (
+              <WhitePillCTA
+                label={t('attendRequests.state.viewTickets')}
+                onPress={() => navigation.navigate('EventTickets', { eventId })}
+                style={styles.floatingCtaPill}
+              />
+            ) : attendRequest.status !== 'declined' ? (
+              <TouchableOpacity
+                style={[styles.ctaDisabled, styles.floatingCtaPill, cancellingRequest && { opacity: 0.5 }]}
+                onPress={confirmCancelRequest}
+                disabled={cancellingRequest}
+                accessibilityRole="button"
+              >
+                {cancellingRequest ? (
+                  <ActivityIndicator color={colors.text} />
+                ) : (
+                  <Text style={styles.requestCancelText}>{t('attendRequests.state.cancel')}</Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+          </View>
         ) : (
           // Adaptive white-pill primary action (POSH §2.2): free → RSVP,
           // paid → Get Tickets with a muted price sub-label.
           <WhitePillCTA
             variant={isFree ? 'rsvp' : 'paid'}
-            label={isFree ? t('common.rsvp') : t('eventDetail.floating.getTickets')}
+            label={
+              requiresApproval
+                ? t('attendRequests.requestToJoin')
+                : isFree
+                  ? t('common.rsvp')
+                  : t('eventDetail.floating.getTickets')
+            }
             subLabel={isFree ? undefined : priceSubLabel}
             onPress={handlePurchaseTicket}
             loading={purchasing}
@@ -1149,6 +1279,23 @@ export default function EventDetailScreen({ route, navigation }: any) {
         eventTitle={event?.title}
       />
 
+      {/* Request to join (approval lists) */}
+      <AttendRequestSheet
+        visible={showRequestSheet}
+        onClose={() => setShowRequestSheet(false)}
+        eventId={eventId}
+        allowedPlusOnes={allowedPlusOnesHere}
+        onSent={(request) => {
+          // Close the sheet FIRST: two RN modals do not stack on iOS.
+          setShowRequestSheet(false);
+          setAttendRequest(request);
+          setTimeout(
+            () => showAlert(t('attendRequests.state.sentTitle'), t('attendRequests.state.sentBody')),
+            AFTER_ALERT_MS
+          );
+        }}
+      />
+
       {/* Free Ticket Modal */}
       <FreeTicketModal
         visible={showFreeTicketModal}
@@ -1171,6 +1318,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
         // the promoter (with zero commission).
         refCode={refCode}
         attribution={attribution}
+        // Named plus-ones on a free event that allows them (claim-free `plusOnes`).
+        allowedPlusOnes={selectedTierId ? 0 : allowedPlusOnesHere}
         onCheckoutFallback={selectedTierId ? handleClaimCheckoutFallback : undefined}
         onSuccess={handleFreeTicketSuccess}
       />
@@ -1603,6 +1752,23 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   ctaDisabledText: {
     color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  // Request state card: a fill, not a hairline (fill-not-hairline rule).
+  requestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: 16,
+    gap: 10,
+  },
+  requestCardBody: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  requestCancelText: {
+    color: colors.text,
     fontSize: 15,
     fontWeight: '700',
   },

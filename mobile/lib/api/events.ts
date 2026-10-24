@@ -18,6 +18,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as Crypto from 'expo-crypto';
 import { isDeviceOnlyImageUri } from '../localImageUri';
 import { hasPaidTier } from '../ticketPricing';
+import { plusOnesSetting } from '../attendRequests';
 import { backendJson } from './backend';
 import { guestlistVisibilityFrom, showGuestlistFor, type GuestlistVisibility } from '../guestlistVisibility';
 import type { LineupRecord } from '../lineup';
@@ -171,6 +172,14 @@ export interface CreateEventData {
    * existing code on update.
    */
   access_code?: string;
+  /**
+   * Approval list (docs/specs/approval-lists-and-plus-ones.md): guests request a
+   * spot and the organizer approves. FREE events only: never written true while
+   * the event has a paid tier (the Firestore rule refuses that combination).
+   */
+  requires_approval?: boolean;
+  /** Named plus-ones a guest may bring, 0..3 (capped again by the free limit). */
+  plus_ones_max?: number;
 }
 
 /** Hard cap on how many occurrences a single recurring series may generate. */
@@ -412,7 +421,11 @@ function maxPerOrderOf(tier: CreateEventData['ticket_tiers'][number]): number | 
  * that never set them leaves an existing value alone.
  */
 function webParityFields(eventData: CreateEventData) {
+  const paid = !eventData.is_rsvp && hasPaidTier(eventData.ticket_tiers);
   return {
+    // Approval lists are for free events only; the rule refuses approval + paid.
+    requires_approval: !paid && !!eventData.requires_approval,
+    plus_ones_max: plusOnesSetting({ plus_ones_max: eventData.plus_ones_max }),
     is_online: !!eventData.is_online,
     national_day: eventData.national_day || null,
     enable_waitlist: eventData.ticket_tiers.some((t) => !!t.waitlist),

@@ -32,6 +32,8 @@ export const LINKING_CONFIG = {
     EventTickets: 'tickets/event/:eventId',
     // Organizer sale pushes.
     EventAttendees: 'organizer/events/:eventId/attendees',
+    // New approval-list request pushes (lib/notifications/attend-requests).
+    EventRequests: 'organizer/events/:eventId/requests',
     OrganizerEventManagement: 'organizer/events/:eventId',
     // Withdrawal outcome pushes.
     OrganizerEarningsHub: 'organizer/payouts',

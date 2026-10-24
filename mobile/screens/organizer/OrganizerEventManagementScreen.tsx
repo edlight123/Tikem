@@ -41,6 +41,7 @@ import StatTriplet from '../../components/StatTriplet';
 import SectionHeader from '../../components/SectionHeader';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { colors as T, radius } from '../../theme/tokens';
+import { eventRequiresApproval, getEventRequests } from '../../lib/attendRequests';
 
 type RouteParams = {
   OrganizerEventManagement: {
@@ -168,6 +169,28 @@ export default function OrganizerEventManagementScreen() {
 
   const handleGuestList = () => {
     navigation.navigate('OrganizerGuestList', { eventId });
+  };
+
+  // Approval list (docs/specs/approval-lists-and-plus-ones.md): a tile only on
+  // events that take requests, labelled with the pending count.
+  const requiresApproval = eventRequiresApproval(event as any);
+  const [pendingRequests, setPendingRequests] = useState<number | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!requiresApproval) return;
+      let cancelled = false;
+      getEventRequests(eventId)
+        .then((res) => {
+          if (!cancelled) setPendingRequests(res.counts.pending);
+        })
+        .catch(() => undefined);
+      return () => {
+        cancelled = true;
+      };
+    }, [eventId, requiresApproval])
+  );
+  const handleRequests = () => {
+    navigation.navigate('EventRequests', { eventId });
   };
 
   const handleTrackingLinks = () => {
@@ -379,6 +402,18 @@ export default function OrganizerEventManagementScreen() {
       key: 'door',
       label: t('organizerEventManagement.actionGroups.door'),
       tiles: [
+        ...(requiresApproval
+          ? [
+              {
+                key: 'requests',
+                icon: 'hand-left-outline' as const,
+                label: pendingRequests
+                  ? t('attendRequests.organizer.actionCount', { count: pendingRequests })
+                  : t('attendRequests.organizer.action'),
+                onPress: handleRequests,
+              },
+            ]
+          : []),
         { key: 'staff', icon: 'people-outline', label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
         { key: 'attendees', icon: 'people-circle-outline', label: t('organizerEventManagement.actions.viewAttendees'), onPress: handleViewAttendees },
         { key: 'guestList', icon: 'list-outline', label: t('organizerEventManagement.actions.guestList'), onPress: handleGuestList },
