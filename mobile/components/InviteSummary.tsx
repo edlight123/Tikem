@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,8 +12,11 @@ import StatTriplet from './StatTriplet';
  * "Your invites" on Profile (web lib/invites): invites sent, friends who joined
  * from your link, friends who bought. Counts only. Nothing when the invites
  * switch is off, signed out, or the user has never invited anyone.
+ *
+ * Carries no outer margin of its own: the caller passes its block spacing, so
+ * the gap above and below matches every other section on the page.
  */
-export default function InviteSummary() {
+export default function InviteSummary({ style }: { style?: StyleProp<ViewStyle> }) {
   const { t } = useI18n();
   const { user } = useAuth();
   const flags = useSocialFlags();
@@ -38,7 +41,7 @@ export default function InviteSummary() {
 
   if (!on || !summary || summary.sent + summary.joined + summary.purchased === 0) return null;
   return (
-    <View style={{ marginBottom: 20 }}>
+    <View style={style}>
       <SectionHeader title={t('invites.summaryTitle')} />
       <StatTriplet
         items={[

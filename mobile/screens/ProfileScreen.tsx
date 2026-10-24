@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Linking,
   RefreshControl,
   ScrollView,
@@ -58,7 +57,7 @@ import {
 } from '../types/social';
 import VerifiedBadge from '../components/VerifiedBadge';
 import StatusChip from '../components/StatusChip';
-import PosterEventCard from '../components/PosterEventCard';
+import EventRail, { RAIL_CARD_SPACING, RAIL_CARD_WIDTH } from '../components/EventRail';
 import EmptyState from '../components/EmptyState';
 import SectionHeader from '../components/SectionHeader';
 import FindFriendsCard from '../components/FindFriendsCard';
@@ -77,9 +76,10 @@ import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/';
 const EDLIGHT_LABS_URL = 'https://www.edlight.org/labs';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// Two-column poster wall inside the 16px-padded scroll content (12px gutter).
-const PROFILE_POSTER_WIDTH = (SCREEN_WIDTH - 32 - 12) / 2;
+// The poster rail shows the newest few; "view all" opens the Tickets tab,
+// which lists every one (TestFlight 2026-10-24: a heavy user's two-column wall
+// pushed Privacy and Settings far down the page).
+const PROFILE_RAIL_MAX = 6;
 const AVATAR = 112;
 
 /**
@@ -88,7 +88,9 @@ const AVATAR = 112;
  *
  * Top to bottom: the identity (big tappable avatar, name in display type,
  * location; edit is the header pencil or a tap on the name), the stat line, the organization card (organizers),
- * find friends, invites, the poster wall, privacy, then settings and sign out.
+ * find friends, invites, the poster rail, privacy, then settings and sign out.
+ * Every section is a `styles.block` (28pt above, nothing below), so the gaps
+ * stay even whichever optional sections are present.
  * Visual direction: Stitch "Tikèm, Organizer flows (mobile)" profile concept.
  */
 export default function ProfileScreen() {
@@ -119,7 +121,7 @@ export default function ProfileScreen() {
   const [verificationStatus, setVerificationStatus] = useState<VerificationRequest | null>(null);
   const [accountStats, setAccountStats] = useState({ eventsAttended: 0, following: 0, followers: 0 });
   const [statsLoaded, setStatsLoaded] = useState(false);
-  // The poster wall: every event this user holds a ticket to (newest first).
+  // Every event this user holds a ticket to (newest first); the rail shows the head.
   const [myEvents, setMyEvents] = useState<any[]>([]);
   const [staffEventIds, setStaffEventIdsState] = useState<string[]>([]);
 
@@ -535,38 +537,39 @@ export default function ProfileScreen() {
         <FindFriendsCard variant="profile" style={styles.block} />
 
         {/* Friend invite results (config/auth.invites); nothing when off or none sent. */}
-        <InviteSummary />
+        <InviteSummary style={styles.block} />
 
-        {/* Poster wall (POSH §2.1). */}
+        {/* Poster rail (POSH §2.1): one row, the newest few, like the Home rails. */}
         <View style={styles.block}>
-          <SectionHeader title={t('profile.postersTitle')} />
           {!statsLoaded ? (
-            <View style={styles.postersGrid}>
-              {Array.from({ length: 2 }).map((_, i) => (
-                <PosterCardSkeleton key={i} width={PROFILE_POSTER_WIDTH} />
-              ))}
-            </View>
+            <>
+              <SectionHeader title={t('profile.postersTitle')} />
+              <View style={styles.railSkeleton}>
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <PosterCardSkeleton key={i} width={RAIL_CARD_WIDTH} />
+                ))}
+              </View>
+            </>
           ) : myEvents.length > 0 ? (
-            <View style={styles.postersGrid}>
-              {myEvents.map((event) => (
-                <PosterEventCard
-                  key={event.id}
-                  event={event}
-                  width={PROFILE_POSTER_WIDTH}
-                  userCity={userProfile?.default_city}
-                  onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
-                />
-              ))}
-            </View>
-          ) : (
-            <EmptyState
-              icon={Compass}
-              title={t('profile.postersEmptyTitle')}
-              subtitle={t('profile.postersEmptyBody')}
-              actionLabel={t('profile.postersExplore')}
-              onAction={() => openAttendeeTab('Discover')}
-              compact
+            <EventRail
+              title={t('profile.postersTitle')}
+              events={myEvents.slice(0, PROFILE_RAIL_MAX)}
+              userCity={userProfile?.default_city}
+              onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
+              onViewAll={() => openAttendeeTab('Tickets')}
             />
+          ) : (
+            <>
+              <SectionHeader title={t('profile.postersTitle')} />
+              <EmptyState
+                icon={Compass}
+                title={t('profile.postersEmptyTitle')}
+                subtitle={t('profile.postersEmptyBody')}
+                actionLabel={t('profile.postersExplore')}
+                onAction={() => openAttendeeTab('Discover')}
+                compact
+              />
+            </>
           )}
         </View>
 
@@ -943,7 +946,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     locationRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
     locationText: { fontSize: 14, color: colors.textSecondary },
 
-    statsRow: { flexDirection: 'row', marginTop: 20, marginBottom: 8 },
+    statsRow: { flexDirection: 'row', marginTop: 20 },
     statItem: { flex: 1, alignItems: 'center', paddingVertical: 6 },
     statValue: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
     statLabel: {
@@ -981,7 +984,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     orgHint: { marginTop: 2, fontSize: 12, lineHeight: 16, color: colors.textTertiary },
     orgAction: { fontSize: 13, fontWeight: '700', color: colors.text },
 
-    postersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    // Same width and gap as EventRail's cards; overflow is clipped by the page.
+    railSkeleton: { flexDirection: 'row', gap: RAIL_CARD_SPACING, overflow: 'hidden', marginRight: -16 },
 
     privacyCard: { backgroundColor: T.surface, borderRadius: radius.lg, padding: 16, paddingTop: 4 },
     fieldLabel: { marginTop: 12, marginBottom: 8, fontSize: 13, fontWeight: '600', color: colors.text },

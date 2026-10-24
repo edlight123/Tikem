@@ -684,6 +684,7 @@ export default {
     },
   },
   home: {
+    scrollToTop: "Remonter en haut",
     attendanceNotice: {
       eyebrow: "Confidentialité",
       title: "Vos amis voient vos sorties",

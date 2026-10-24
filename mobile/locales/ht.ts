@@ -654,6 +654,7 @@ export default {
     },
   },
   home: {
+    scrollToTop: "Remonte anwo",
     attendanceNotice: {
       eyebrow: "Konfidansyalite",
       title: "Zanmi ou ka wè ki kote w prale",

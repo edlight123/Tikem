@@ -10,6 +10,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useScrollToTop } from '@react-navigation/native';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { filterExploreEvents } from '../lib/api/events';
 import { fetchPublishedEventsForCountry } from '../lib/api/eventFeed';
@@ -328,7 +329,10 @@ export default function HomeScreen({ navigation }: any) {
     // and it also feeds the "near you" rail inside fetchEvents.
   }, [userCountry, countryResolved, activeCity, blockedOrganizers]);
 
-  // Active-tab taps: once = scroll to top, twice (quick) = refresh.
+  // Active-tab taps: once = scroll to top (React Navigation's standard
+  // useScrollToTop, which only acts when Home is already the focused tab),
+  // twice quickly = refresh.
+  useScrollToTop(scrollViewRef);
   useEffect(() => {
     const unsubscribe = navigation.addListener('tabPress', () => {
       const navState = navigation.getState();
@@ -338,13 +342,14 @@ export default function HomeScreen({ navigation }: any) {
       if (now - lastTabPressRef.current < 400) {
         setRefreshing(true);
         fetchEvents();
-      } else {
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
       lastTabPressRef.current = now;
     });
     return unsubscribe;
   }, [navigation]);
+
+  // The wordmark in the header doubles as "back to the top" (TestFlight 2026-10-24).
+  const scrollToTop = () => scrollViewRef.current?.scrollTo({ y: 0, animated: true });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -433,7 +438,18 @@ export default function HomeScreen({ navigation }: any) {
             The bar is ~60pt; keeping it whole costs little and always says
             where you are and lets you change it. */}
         <View style={styles.headerLeft}>
-          <TikemWordmark fontSize={32} />
+          {/* Sized to the wordmark, not the whole flex column, so the empty
+              space up to the location picker isn't a hidden tap target. */}
+          <TouchableOpacity
+            style={styles.wordmarkButton}
+            onPress={scrollToTop}
+            activeOpacity={0.7}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.scrollToTop')}
+          >
+            <TikemWordmark fontSize={32} />
+          </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
@@ -706,6 +722,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   headerLeft: {
     flex: 1,
+  },
+  wordmarkButton: {
+    alignSelf: 'flex-start',
   },
   locationRow: {
     flexDirection: 'row',

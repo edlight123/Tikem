@@ -7,6 +7,9 @@ import type { BadgeStatus } from '../theme/badges';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(248, width * 0.62);
 const CARD_SPACING = 16;
+/** Card width and gap, for callers drawing a skeleton row of the same rail. */
+export const RAIL_CARD_WIDTH = CARD_WIDTH;
+export const RAIL_CARD_SPACING = CARD_SPACING;
 
 interface EventRailProps {
   title: string;
@@ -16,6 +19,8 @@ interface EventRailProps {
   onViewAll?: () => void;
   /** Optional badge override applied to every card in the rail. */
   badge?: BadgeStatus | null;
+  /** The viewer's city, so cards add the city only for out-of-town events. */
+  userCity?: string;
 }
 
 /**
@@ -29,6 +34,7 @@ export default function EventRail({
   onEventPress,
   onViewAll,
   badge,
+  userCity,
 }: EventRailProps) {
   if (!events || events.length === 0) return null;
 
@@ -49,6 +55,7 @@ export default function EventRail({
             event={event}
             width={CARD_WIDTH}
             badge={badge}
+            userCity={userCity}
             onPress={() => onEventPress(event.id)}
           />
         ))}

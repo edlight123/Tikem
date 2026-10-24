@@ -1031,6 +1031,7 @@ export default {
     },
   },
   home: {
+    scrollToTop: "Scroll to top",
     attendanceNotice: {
       eyebrow: "Privacy",
       title: "Your friends can see your plans",
