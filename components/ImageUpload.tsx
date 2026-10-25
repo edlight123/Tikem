@@ -103,7 +103,14 @@ export default function ImageUpload({
 
       // Upload to Firebase Storage
       const fileExt = file.name.split('.').pop()
-      const fileName = `${crypto.randomUUID()}.${fileExt}`
+      // storage.rules only lets a signed-in user write event-images/{uid}_*:
+      // a bare UUID name was refused for everyone ("you don't have
+      // permission"), e.g. the logo on the Create organization step.
+      const uid = (await import('@/lib/firebase/client')).auth.currentUser?.uid
+      if (!uid) {
+        throw Object.assign(new Error('Not signed in'), { code: 'storage/unauthenticated' })
+      }
+      const fileName = `${uid}_${crypto.randomUUID()}.${fileExt}`
       const filePath = `event-images/${fileName}`
 
       console.log('Uploading file:', filePath)

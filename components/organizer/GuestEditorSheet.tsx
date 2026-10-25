@@ -117,7 +117,10 @@ export default function GuestEditorSheet({
         onPatch({ photoUrl: body.url })
       } else {
         const ext = file.name.split('.').pop() || 'jpg'
-        const path = `event-images/${crypto.randomUUID()}.${ext}`
+        // storage.rules: a signed-in write to event-images/ must be named {uid}_*.
+        const uid = (await import('@/lib/firebase/client')).auth.currentUser?.uid
+        if (!uid) throw Object.assign(new Error('Not signed in'), { code: 'storage/unauthenticated' })
+        const path = `event-images/${uid}_${crypto.randomUUID()}.${ext}`
         const storage = await getStorage()
         const { error, data } = await storage
           .from('event-images')
