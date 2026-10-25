@@ -12,16 +12,22 @@
  * unrecognised falls through to the old link, which is the honest outcome for
  * a URL we cannot vouch for.
  *
- * Click-to-load, not an iframe on mount. A cold iframe is ~600KB of
+ * Autoplays MUTED once it is on screen (owner ask 2026-10-25, the way
+ * Instagram does it): browsers refuse sound without a tap, so the preview
+ * loops silently and "Tap for sound" restarts it with sound. Skipped for Data
+ * Saver and reduced motion. It pauses when scrolled away and resumes when it
+ * comes back, through the players' postMessage APIs.
+ *
+ * Still no iframe on mount: only once the card is actually in view. A cold iframe is ~600KB of
  * third-party JavaScript and a set of cookies, paid by every reader of every
  * event page whether or not they ever press play — on the connections this
  * product serves that is the difference between a page that opens and one that
  * hangs. The facade is a still and a button; the frame appears on the tap.
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Play } from 'lucide-react'
+import { Play, Volume2 } from 'lucide-react'
 import { parseVideoEmbed } from '@/lib/videoEmbed'
 import PromoVideoLink from './PromoVideoLink'
 
@@ -33,8 +39,43 @@ export default function PromoVideo({
   className?: string
 }) {
   const { t } = useTranslation('common')
-  const [playing, setPlaying] = useState(false)
+  // idle: the still. muted: the silent in-view preview. sound: the viewer
+  // pressed play or "Tap for sound".
+  const [mode, setMode] = useState<'idle' | 'muted' | 'sound'>('idle')
   const video = parseVideoEmbed(url)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const frameRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || !video || typeof IntersectionObserver === 'undefined') return
+    const saveData = Boolean((navigator as any).connection?.saveData)
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (saveData || reduced) return
+    const post = (cmd: 'play' | 'pause') => {
+      const w = frameRef.current?.contentWindow
+      if (!w) return
+      if (video.provider === 'youtube') {
+        w.postMessage(JSON.stringify({ event: 'command', func: cmd === 'play' ? 'playVideo' : 'pauseVideo', args: '' }), '*')
+      } else {
+        w.postMessage(JSON.stringify({ method: cmd }), '*')
+      }
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMode((m) => (m === 'idle' ? 'muted' : m))
+          post('play')
+        } else {
+          post('pause')
+        }
+      },
+      { threshold: 0.6 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video?.provider, video?.id])
 
   // Not a provider we can frame — keep the link rather than pretend.
   if (!video) return <PromoVideoLink url={url} className={className} />
@@ -46,21 +87,34 @@ export default function PromoVideo({
       {/* 16:9, not the house 4:5. A poster is portrait; a video is not, and
           letterboxing one into the other would put black bars inside a frame
           that is already on a black page. */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-white/[0.05]">
-        {playing ? (
-          <iframe
-            src={video.autoplayUrl}
-            title={label}
-            className="absolute inset-0 h-full w-full"
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            loading="lazy"
-          />
+      <div ref={boxRef} className="relative aspect-video w-full overflow-hidden rounded bg-white/[0.05]">
+        {mode !== 'idle' ? (
+          <>
+            <iframe
+              ref={frameRef}
+              key={mode}
+              src={mode === 'muted' ? video.mutedAutoplayUrl : video.autoplayUrl}
+              title={label}
+              className="absolute inset-0 h-full w-full"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+            {mode === 'muted' && (
+              <button
+                type="button"
+                onClick={() => setMode('sound')}
+                className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded bg-black/70 px-3 py-2 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-black/85"
+              >
+                <Volume2 className="h-4 w-4" aria-hidden />
+                {t('events.tapForSound', { defaultValue: 'Tap for sound' })}
+              </button>
+            )}
+          </>
         ) : (
           <button
             type="button"
-            onClick={() => setPlaying(true)}
+            onClick={() => setMode('sound')}
             aria-label={label}
             className="group absolute inset-0 h-full w-full cursor-pointer text-left"
           >

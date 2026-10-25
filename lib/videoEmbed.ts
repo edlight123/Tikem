@@ -27,6 +27,8 @@ export interface VideoEmbed {
   embedUrl: string
   /** Same, plus autoplay, for the click-to-load swap. */
   autoplayUrl: string
+  /** Muted, looping autoplay for the in-view preview (browsers only autoplay muted). */
+  mutedAutoplayUrl: string
   /** A still to show before playback, when the provider offers a stable one. */
   thumbnailUrl: string | null
   /** For the caption: 'youtube.com' / 'vimeo.com'. */
@@ -103,6 +105,9 @@ export function parseVideoEmbed(raw: string | null | undefined): VideoEmbed | nu
       // taking the video fullscreen the instant it starts.
       embedUrl: `${YT_EMBED}${yt}?rel=0&playsinline=1&modestbranding=1`,
       autoplayUrl: `${YT_EMBED}${yt}?rel=0&playsinline=1&modestbranding=1&autoplay=1`,
+      // Browsers only autoplay MUTED video; loop needs playlist=<id> on YouTube.
+      // enablejsapi lets the page pause it when it scrolls out of view.
+      mutedAutoplayUrl: `${YT_EMBED}${yt}?rel=0&playsinline=1&modestbranding=1&autoplay=1&mute=1&loop=1&playlist=${yt}&enablejsapi=1`,
       // hqdefault exists for every video; maxres does not, and a missing
       // maxres returns a grey 120x90 placeholder rather than a 404, which is
       // impossible to detect and looks broken.
@@ -118,6 +123,7 @@ export function parseVideoEmbed(raw: string | null | undefined): VideoEmbed | nu
       id: vm,
       embedUrl: `${VIMEO_EMBED}${vm}?dnt=1&playsinline=1`,
       autoplayUrl: `${VIMEO_EMBED}${vm}?dnt=1&playsinline=1&autoplay=1`,
+      mutedAutoplayUrl: `${VIMEO_EMBED}${vm}?dnt=1&playsinline=1&autoplay=1&muted=1&loop=1`,
       // Vimeo has no stable thumbnail URL — it needs an oEmbed call per video,
       // and the third-party shortcut services are not on the CSP allowlist. So
       // the facade draws its own card instead of showing a still.

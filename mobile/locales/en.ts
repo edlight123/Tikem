@@ -408,6 +408,8 @@ export default {
       title: 'Sound',
       autoplay: 'Play event songs',
       autoplayHint: "An event's song starts on its own when you open the event. It stays quiet when your phone is on silent.",
+      trailers: "Play trailers automatically",
+      trailersHint: "An event's trailer plays silently on its page. Turn off to save data.",
     },
     social: {
       sectionTitle: 'Social',
@@ -2815,6 +2817,10 @@ export default {
     lineup: {
       title: 'Lineup',
       openLink: 'Open link',
+    },
+    trailer: {
+      tapForSound: "Tap for sound",
+      play: "Play",
     },
     song: {
       title: 'Listen',

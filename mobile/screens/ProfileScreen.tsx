@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { setSongAutoplay, useSongAutoplay } from '../lib/songAutoplay';
+import { setSongAutoplay, setTrailerAutoplay, useSongAutoplay, useTrailerAutoplay } from '../lib/songAutoplay';
 import { defaultAvatar } from '../lib/defaultAvatar';
 import { openTikemInstagram } from '../lib/instagram';
 import {
@@ -794,25 +794,30 @@ function SoundSection() {
   const styles = getStyles(colors);
   const { t } = useI18n();
   const on = useSongAutoplay();
+  const trailers = useTrailerAutoplay();
+  const row = (label: string, hint: string, value: boolean, onPress: () => void) => (
+    <TouchableOpacity
+      style={styles.toggleRow}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={styles.toggleLabel}>{label}</Text>
+        <Text style={styles.toggleHint}>{hint}</Text>
+      </View>
+      <View style={[styles.switchTrack, value && styles.switchTrackOn]}>
+        <View style={[styles.switchThumb, value && styles.switchThumbOn]} />
+      </View>
+    </TouchableOpacity>
+  );
   return (
     <View style={styles.block}>
       <SectionHeader title={t('profile.sound.title')} />
       <View style={styles.privacyCard}>
-        <TouchableOpacity
-          style={styles.toggleRow}
-          onPress={() => setSongAutoplay(!on)}
-          activeOpacity={0.7}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: on }}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={styles.toggleLabel}>{t('profile.sound.autoplay')}</Text>
-            <Text style={styles.toggleHint}>{t('profile.sound.autoplayHint')}</Text>
-          </View>
-          <View style={[styles.switchTrack, on && styles.switchTrackOn]}>
-            <View style={[styles.switchThumb, on && styles.switchThumbOn]} />
-          </View>
-        </TouchableOpacity>
+        {row(t('profile.sound.autoplay'), t('profile.sound.autoplayHint'), on, () => setSongAutoplay(!on))}
+        {row(t('profile.sound.trailers'), t('profile.sound.trailersHint'), trailers, () => setTrailerAutoplay(!trailers))}
       </View>
     </View>
   );

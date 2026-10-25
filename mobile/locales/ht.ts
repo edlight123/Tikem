@@ -407,6 +407,8 @@ export default {
       title: 'Son',
       autoplay: 'Jwe chante evènman yo',
       autoplayHint: "Chante yon evènman kòmanse pou kont li lè ou louvri paj li. Li rete an silans lè telefòn ou an mòd silans.",
+      trailers: "Jwe trelè yo otomatikman",
+      trailersHint: "Trelè yon evènman jwe san son sou paj li. Fèmen l pou ekonomize done ou.",
     },
     social: {
       sectionTitle: 'Rezo sosyal',
@@ -2747,6 +2749,10 @@ export default {
     lineup: {
       title: 'Pwogram',
       openLink: 'Louvri lyen an',
+    },
+    trailer: {
+      tapForSound: "Peze pou son an",
+      play: "Jwe",
     },
     song: {
       title: 'Koute',

@@ -435,6 +435,8 @@ export default {
       title: 'Son',
       autoplay: 'Lire la chanson des événements',
       autoplayHint: "La chanson d'un événement démarre toute seule quand vous ouvrez sa page. Elle reste muette quand votre téléphone est en silencieux.",
+      trailers: "Lire les bandes-annonces automatiquement",
+      trailersHint: "La bande-annonce d'un événement se lit sans le son sur sa page. Désactivez pour économiser vos données.",
     },
     social: {
       sectionTitle: 'Réseaux sociaux',
@@ -2779,6 +2781,10 @@ export default {
     lineup: {
       title: 'Affiche',
       openLink: 'Ouvrir le lien',
+    },
+    trailer: {
+      tapForSound: "Touchez pour le son",
+      play: "Lire",
     },
     song: {
       title: 'Écouter',

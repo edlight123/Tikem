@@ -70,6 +70,7 @@ import { requestPhonePrompt } from '../lib/phonePrompt';
 import { useAppAlert } from '../components/AppAlert';
 import { EventDetailSkeleton } from '../components/Skeleton';
 import EventLineupRail from '../components/EventLineupRail';
+import TrailerCard from '../components/TrailerCard';
 import SpotifyTrackCard from '../components/SpotifyTrackCard';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 import AttendRequestSheet from '../components/AttendRequestSheet';
@@ -995,8 +996,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
             <Text style={styles.description}>{event.description}</Text>
           </View>
 
-          {/* Promo Video — only when a valid URL is provided */}
-          {typeof (event as any).video_url === 'string' && (event as any).video_url.trim() !== '' && (
+          {/* Trailer: plays muted on the page when it is a YouTube/Vimeo link
+              (TrailerCard); any other link keeps the plain row below. */}
+          <TrailerCard url={(event as any).video_url} title={t('organizerCreateEventFlow.canvas.trailer')} />
+          {typeof (event as any).video_url === 'string' && (event as any).video_url.trim() !== '' && !parseVideoEmbed((event as any).video_url) && (
             <TouchableOpacity
               style={styles.promoVideoRow}
               onPress={openPromoVideo}

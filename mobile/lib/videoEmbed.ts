@@ -22,6 +22,10 @@ export interface VideoEmbed {
   id: string;
   /** Built here from a template — never the organizer's string. */
   embedUrl: string;
+  /** Muted, looping, inline: the silent preview on the event page. */
+  mutedEmbedUrl: string;
+  /** A still for the card (YouTube only; Vimeo has no stable one). */
+  thumbnailUrl: string | null;
   host: string;
 }
 
@@ -83,6 +87,8 @@ export function parseVideoEmbed(raw: string | null | undefined): VideoEmbed | nu
           provider: 'vimeo',
           id: segments[i],
           embedUrl: `${VIMEO_EMBED}${segments[i]}?dnt=1&playsinline=1&autoplay=1`,
+          mutedEmbedUrl: `${VIMEO_EMBED}${segments[i]}?dnt=1&playsinline=1&autoplay=1&muted=1&loop=1&background=1`,
+          thumbnailUrl: null,
           host: 'vimeo.com',
         };
       }
@@ -97,6 +103,8 @@ function yt(id: string): VideoEmbed {
     provider: 'youtube',
     id,
     embedUrl: `${YT_EMBED}${id}?rel=0&playsinline=1&modestbranding=1&autoplay=1`,
+    mutedEmbedUrl: `${YT_EMBED}${id}?rel=0&playsinline=1&modestbranding=1&autoplay=1&mute=1&loop=1&playlist=${id}&controls=0`,
+    thumbnailUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     host: 'youtube.com',
   };
 }
