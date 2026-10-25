@@ -41,8 +41,6 @@ const UNAVAILABLE_BODY_KEY = 'addToWallet.unavailableBody';
  */
 const NOT_CONFIGURED_CODES = ['apple_wallet_not_configured', 'google_wallet_not_configured'];
 
-/** Build-time flag (EXPO_PUBLIC_), default off. See platformAllowed below. */
-const GOOGLE_WALLET_ENABLED = process.env.EXPO_PUBLIC_GOOGLE_WALLET_ENABLED === 'true';
 
 export default function AddToWalletButton({
   ticketId,
@@ -64,11 +62,10 @@ export default function AddToWalletButton({
    * not hide a feature that actually works. `false` hides it outright, so the
    * user is never offered a tap that cannot succeed.
    */
-  // Google Wallet is off until the issuer leaves demo mode (only the console
-  // admin can save a pass there). EXPO_PUBLIC_GOOGLE_WALLET_ENABLED=true turns it
-  // on; it is inlined at build time, so it must be in the EAS env too.
-  const platformAllowed = Platform.OS !== 'android' || GOOGLE_WALLET_ENABLED;
-  const [walletAvailable, setWalletAvailable] = useState<boolean | null>(platformAllowed ? null : false);
+  // Google Wallet (Android) stays hidden until the server's capability probe
+  // says it is offered: a live switch flipped when Google approves the issuer
+  // (lib/wallet/config.ts isGoogleWalletOffered), no app update needed.
+  const [walletAvailable, setWalletAvailable] = useState<boolean | null>(Platform.OS === 'android' ? false : null);
   const mounted = useRef(true);
 
   /** `t()` with an English fallback for keys that may not exist yet. */
@@ -96,7 +93,7 @@ export default function AddToWalletButton({
         const capability = await response.json();
         if (cancelled || !mounted.current) return;
         const supported = Platform.OS === 'ios' ? capability?.apple : capability?.google;
-        setWalletAvailable(platformAllowed && Boolean(supported));
+        setWalletAvailable(Boolean(supported));
       } catch {
         // Leave it unknown — the button stays visible and any real failure is
         // explained on tap.

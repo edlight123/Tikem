@@ -156,21 +156,42 @@ export function getGoogleWalletConfig(): GoogleWalletConfig | null {
  * could never work.
  */
 /**
- * Google Wallet is offered to buyers only when NEXT_PUBLIC_GOOGLE_WALLET_ENABLED
- * is 'true' (default off). The issuer account is still in demo mode, where only
- * the console admin can actually save a pass, so offering the button to everyone
- * meant a tap that fails. Flip the flag (and redeploy: NEXT_PUBLIC_ is inlined
- * at build time) once Google approves the issuer for production.
+ * Is Google Wallet offered to buyers? Off until Google approves the issuer for
+ * production: in demo mode only the console admin can save a pass, so the
+ * button would be a tap that fails for everyone else.
+ *
+ * One LIVE switch, no deploy and no app update: Firestore config/wallet
+ * { google_enabled: true }, flipped with `node scripts/set-google-wallet.mjs on`
+ * the day the approval email arrives. Web and app both ask GET
+ * /api/wallet/generate, which reads it (cached a minute here, five at the
+ * edge). NEXT_PUBLIC_GOOGLE_WALLET_ENABLED=true also forces it on.
  */
-export function isGoogleWalletOffered(): boolean {
-  return String(process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED || '').trim().toLowerCase() === 'true'
+let googleOfferedCache: { at: number; value: boolean } | null = null
+
+/** Tests only: forget the cached switch value. */
+export function resetGoogleWalletOfferCache(): void {
+  googleOfferedCache = null
 }
 
-export function getWalletCapability(): { apple: boolean; google: boolean } {
+export async function isGoogleWalletOffered(): Promise<boolean> {
+  if (String(process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED || '').trim().toLowerCase() === 'true') return true
+  if (googleOfferedCache && Date.now() - googleOfferedCache.at < 60_000) return googleOfferedCache.value
+  let value = false
+  try {
+    const { adminDb } = await import('@/lib/firebase/admin')
+    const snap = await adminDb.collection('config').doc('wallet').get()
+    value = snap.exists && snap.data()?.google_enabled === true
+  } catch {
+    value = googleOfferedCache?.value ?? false
+  }
+  googleOfferedCache = { at: Date.now(), value }
+  return value
+}
+
+export async function getWalletCapability(): Promise<{ apple: boolean; google: boolean }> {
   return {
     apple: getAppleWalletConfig() !== null,
-    // Gated here too, so already-installed app builds (which hide the button
-    // when the probe says false) stop offering it without an update.
-    google: isGoogleWalletOffered() && getGoogleWalletConfig() !== null,
+    // The app and the website both hide the button when this says false.
+    google: getGoogleWalletConfig() !== null && (await isGoogleWalletOffered()),
   }
 }

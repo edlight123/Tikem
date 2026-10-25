@@ -23,6 +23,7 @@ const state: any = {
   user: { id: 'u1', email: 'u@x.com', full_name: 'Ura Attendee' } as any,
   tickets: {} as Record<string, any>,
   events: {} as Record<string, any>,
+  config: {} as Record<string, any>,
   /** Props handed to the (mocked) PKPass constructor, for assertions. */
   passProps: null as any,
   passFiles: null as any,
@@ -38,7 +39,8 @@ jest.mock('@/lib/auth', () => ({ getCurrentUser: jest.fn(async () => state.user)
 jest.mock('@/lib/firebase/admin', () => ({
   adminDb: {
     collection(name: string) {
-      const store = name === 'tickets' ? state.tickets : name === 'events' ? state.events : null
+      const store =
+        name === 'tickets' ? state.tickets : name === 'events' ? state.events : name === 'config' ? state.config : null
       if (!store) throw new Error(`unexpected collection ${name}`)
       return {
         doc: (id: string) => ({
@@ -173,6 +175,8 @@ function clearWalletEnv() {
 
 function reset() {
   clearWalletEnv()
+  state.config = {}
+  require('@/lib/wallet/config').resetGoogleWalletOfferCache()
   state.user = { id: 'u1', email: 'u@x.com', full_name: 'Ura Attendee' }
   state.signingThrows = false
   state.passProps = null
@@ -350,6 +354,13 @@ describe('GET /api/wallet/generate — capability probe', () => {
     configureGoogle()
     delete process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED
     expect(await (await CAPABILITY()).json()).toEqual({ apple: false, google: false })
+  })
+
+  it('turns google on live from config/wallet.google_enabled, no env flag or deploy', async () => {
+    configureGoogle()
+    delete process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED
+    state.config.wallet = { google_enabled: true }
+    expect(await (await CAPABILITY()).json()).toEqual({ apple: false, google: true })
   })
 
   it('reports google true once the service account is present and the flag is on', async () => {

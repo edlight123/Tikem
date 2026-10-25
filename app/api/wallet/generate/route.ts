@@ -50,7 +50,7 @@ function fail(error: string, code: string, status = 400) {
  * that always fails.
  */
 export async function GET() {
-  const capability = getWalletCapability()
+  const capability = await getWalletCapability()
   return NextResponse.json(capability, {
     headers: { 'Cache-Control': 'public, max-age=300' },
   })
