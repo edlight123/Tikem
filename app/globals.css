@@ -55,6 +55,15 @@ body {
   background-color: transparent;
   color: inherit;
 }
+/* A select's open list paints its options from the select's own background.
+ * Our fields use translucent fills (bg-white/[0.06]), which Chrome and Firefox
+ * on Windows/Linux composite over white: white text on a white list. Options
+ * get an opaque dark fill of their own. */
+select option,
+select optgroup {
+  background-color: #161616;
+  color: #fff;
+}
 input::placeholder,
 textarea::placeholder {
   color: rgba(255, 255, 255, 0.5);

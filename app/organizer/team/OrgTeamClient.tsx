@@ -32,9 +32,9 @@ interface OrgTeamClientProps {
 
 type Role = 'admin' | 'staff'
 
-const ROLES: { value: Role; label: string; description: string }[] = [
-  { value: 'admin', label: 'Admin', description: 'Full access to all events and settings' },
-  { value: 'staff', label: 'Staff', description: 'Assigned per event for check-in access' },
+const ROLES: { value: Role; labelKey: string; descriptionKey: string }[] = [
+  { value: 'admin', labelKey: 'actions.admin', descriptionKey: 'org_team.full_access' },
+  { value: 'staff', labelKey: 'actions.staff', descriptionKey: 'org_team.assigned_per_event' },
 ]
 
 function roleTone(role: string): 'success' | 'warning' | 'neutral' {
@@ -286,19 +286,39 @@ export default function OrgTeamClient({
               className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
-          <FormField label="Role" htmlFor="team-role">
-            <select
-              id="team-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}, {r.description}
-                </option>
-              ))}
-            </select>
+          {/* Two tiles, not a native <select>: the browser drew its option
+              list white under white text (owner feedback 2026-10-25). The
+              chosen tile is the one pure white fill, like every choice in the app. */}
+          <FormField label={t('org_team.role', 'Role')}>
+            <div role="radiogroup" aria-label={t('org_team.role', 'Role')} className="grid gap-2">
+              {ROLES.map((r) => {
+                const active = role === r.value
+                return (
+                  <button
+                    key={r.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setRole(r.value)}
+                    className={`flex items-start gap-3 rounded px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                      active ? 'bg-white text-black' : 'bg-white/[0.06] text-white hover:bg-white/[0.1]'
+                    }`}
+                  >
+                    {r.value === 'admin' ? (
+                      <ShieldCheck className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-black/70' : 'text-white/60'}`} />
+                    ) : (
+                      <User className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-black/70' : 'text-white/60'}`} />
+                    )}
+                    <span>
+                      <span className="block text-sm font-semibold">{t(r.labelKey)}</span>
+                      <span className={`mt-0.5 block text-xs ${active ? 'text-black/60' : 'text-white/50'}`}>
+                        {t(r.descriptionKey)}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </FormField>
           {error && (
             <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>

@@ -1192,7 +1192,8 @@
     "member_details": "Detay manm nan",
     "no_team_members": "Poko gen manm ekip",
     "optional": "Opsyonèl",
-    "invite_member": "Envite yon manm"
+    "invite_member": "Envite yon manm",
+    "role": "Wòl"
   },
   "defaults_form": {
     "select_a_city": "Chwazi yon vil",

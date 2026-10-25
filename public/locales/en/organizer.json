@@ -1192,7 +1192,8 @@
     "member_details": "Member details",
     "no_team_members": "No team members yet",
     "optional": "Optional",
-    "invite_member": "Invite member"
+    "invite_member": "Invite member",
+    "role": "Role"
   },
   "defaults_form": {
     "select_a_city": "Select a city",

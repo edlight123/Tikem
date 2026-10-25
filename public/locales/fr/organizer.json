@@ -1192,7 +1192,8 @@
     "member_details": "Détails du membre",
     "no_team_members": "Aucun membre d'équipe pour l'instant",
     "optional": "Facultatif",
-    "invite_member": "Inviter un membre"
+    "invite_member": "Inviter un membre",
+    "role": "Rôle"
   },
   "defaults_form": {
     "select_a_city": "Sélectionner une ville",
