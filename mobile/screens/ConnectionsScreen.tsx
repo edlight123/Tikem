@@ -39,28 +39,18 @@ import {
   type UserSearchResult,
 } from '../lib/api/social';
 import { fetchInviteLink } from '../lib/api/invites';
+import { defaultAvatar } from '../lib/defaultAvatar';
 import type { PublicUserSummary, FriendshipState, ContactMatch, FriendSuggestion } from '../types/social';
 
 type Tab = 'friends' | 'requests' | 'find';
 
 function Avatar({ user, colors, size = 44 }: { user: PublicUserSummary; colors: any; size?: number }) {
-  const initial = (user.displayName || 'U').charAt(0).toUpperCase();
-  if (user.photoURL) {
-    return <Image source={{ uri: user.photoURL }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
-  }
+  // No photo: their drawn portrait (lib/defaultAvatar), never an initial.
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: colors.surfaceRaised,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text style={{ color: colors.text, fontWeight: '700', fontSize: size * 0.4 }}>{initial}</Text>
-    </View>
+    <Image
+      source={user.photoURL ? { uri: user.photoURL } : defaultAvatar(String(user.uid || user.displayName || ''))}
+      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surfaceRaised }}
+    />
   );
 }
 

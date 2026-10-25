@@ -28,6 +28,7 @@ import { normalizeSocialHandle } from '../types/social';
 import { composeStoredPhone, PRIMARY_DIALS, readTypedPhone, splitStoredPhone } from '../lib/profilePhone';
 import { ProfileImageError, uploadProfileImage } from '../lib/profileImages';
 import { useImageChooser } from '../hooks/useImageChooser';
+import { defaultAvatar } from '../lib/defaultAvatar';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import SectionHeader from '../components/SectionHeader';
 import SelectField from '../components/organizer/SelectField';
@@ -281,7 +282,7 @@ export default function EditProfileScreen() {
               {userProfile?.photo_url ? (
                 <Image source={{ uri: userProfile.photo_url }} style={styles.avatarImage} contentFit="cover" />
               ) : (
-                <Text style={styles.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text>
+                <Image source={defaultAvatar(user?.uid || displayName || '')} style={styles.avatarImage} contentFit="cover" />
               )}
               {uploadingPhoto ? (
                 <View style={styles.avatarBusy}>

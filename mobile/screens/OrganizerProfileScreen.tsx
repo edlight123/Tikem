@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { defaultAvatar } from '../lib/defaultAvatar';
 import OrgMark from '../components/OrgMark';
 import {
   View,
@@ -564,8 +565,11 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                     source={{ uri: organizer.organization_logo || organizer.avatarUrl || organizer.photo_url }}
                     style={styles.avatarImage}
                   />
-                ) : (
+                ) : organizer.organization_name ? (
                   <OrgMark size={52} color="#000000" />
+                ) : (
+                  // A person, not an organization: their drawn portrait.
+                  <Image source={defaultAvatar(organizerId)} style={styles.avatarImage} />
                 )}
               </View>
 

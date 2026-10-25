@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { BadgeCheck, Camera, Loader2, MapPin, Pencil } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import type { UserProfile } from '@/lib/firestore/user-profile'
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 
 interface ProfileIdentityProps {
   profile: UserProfile
@@ -120,11 +121,14 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
                 className="h-full w-full object-cover transition-opacity group-hover:opacity-80"
               />
             ) : (
-              // The initial, not a generic person glyph: the name is right
-              // beside it, and the circle stays the tap target for a photo.
-              <span className="grid h-full w-full place-items-center font-display text-[36px] text-white/80 sm:text-[46px]">
-                {initial}
-              </span>
+              // No photo yet: their drawn portrait (lib/defaultAvatar), the same
+              // face friends see. The circle stays the tap target for a photo.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={defaultAvatarUrl(profile.uid || name)}
+                alt=""
+                className="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+              />
             )}
           </span>
           {isUploadingPhoto ? (

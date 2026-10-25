@@ -124,6 +124,8 @@ export async function getCurrentUser() {
     full_name: userData?.full_name || '',
     role: effectiveRole,
     phone_number: userData?.phone_number || null,
+    // For the header avatar; the drawn default portrait stands in when unset.
+    photo_url: userData?.photo_url || userData?.photoURL || null,
     is_verified: userData?.is_verified || false,
     verification_status: userData?.verification_status || 'none',
     // The user's saved UI language ('en' | 'fr' | 'ht'). Client i18n persists it

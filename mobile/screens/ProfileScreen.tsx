@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { setSongAutoplay, useSongAutoplay } from '../lib/songAutoplay';
+import { defaultAvatar } from '../lib/defaultAvatar';
 import { openTikemInstagram } from '../lib/instagram';
 import {
   ActivityIndicator,
@@ -423,9 +424,9 @@ export default function ProfileScreen() {
               {userProfile?.photo_url ? (
                 <Image source={{ uri: userProfile.photo_url }} style={styles.avatarImage} contentFit="cover" transition={150} />
               ) : (
-                // The initial, not a generic person glyph: the name is right
-                // below it, and the circle stays the tap target for a photo.
-                <Text style={styles.avatarInitial}>{(displayName || '?').trim().charAt(0).toUpperCase()}</Text>
+                // No photo yet: their drawn portrait (lib/defaultAvatar), the
+                // same face friends see. The circle stays the tap target.
+                <Image source={defaultAvatar(user?.uid || displayName || '')} style={styles.avatarImage} contentFit="cover" />
               )}
               {uploadingPhoto ? (
                 <View style={styles.busyOverlay}>

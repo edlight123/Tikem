@@ -68,6 +68,11 @@ export default function AcceptTeamInviteClient() {
           setState({ kind: 'error', code })
           return
         }
+        // The site menu caches "on a team?" per session (components/Navbar):
+        // forget it so "Organizer" shows up now, not next visit.
+        try {
+          for (const k of Object.keys(sessionStorage)) if (k.startsWith('tikem_on_team_')) sessionStorage.removeItem(k)
+        } catch {}
         setState({ kind: 'joined', orgName: String(body.orgName || ''), role: String(body.role || '') })
       } catch {
         if (!cancelled) setState({ kind: 'error', code: 'generic' })

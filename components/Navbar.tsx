@@ -1,5 +1,6 @@
 'use client'
 
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -52,6 +53,7 @@ interface NavbarProps {
     full_name: string
     email: string
     role: 'attendee' | 'organizer' | 'staff'
+    photo_url?: string | null
   } | null
   isAdmin?: boolean
   /**
@@ -80,7 +82,38 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
-  const isHost = user?.role === 'organizer' || user?.role === 'staff'
+  // A team member of someone's org (lib/organizer/context) is a host too, even
+  // when their own account is an attendee: probed once per browser session.
+  const [onATeam, setOnATeam] = useState(false)
+  useEffect(() => {
+    if (!user || user.role === 'organizer' || user.role === 'staff') return
+    const key = `tikem_on_team_${user.id}`
+    try {
+      const cached = sessionStorage.getItem(key)
+      if (cached !== null) {
+        setOnATeam(cached === '1')
+        return
+      }
+    } catch {
+      // Storage unavailable: fall through to the probe.
+    }
+    let cancelled = false
+    fetch('/api/organizer/orgs')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const has = Array.isArray(d?.memberships) && d.memberships.some((m: any) => m.role === 'admin' || m.role === 'manager')
+        if (!cancelled) setOnATeam(has)
+        try {
+          sessionStorage.setItem(key, has ? '1' : '0')
+        } catch {}
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.role])
+
+  const isHost = user?.role === 'organizer' || user?.role === 'staff' || onATeam
 
   // "Promoter portal" appears only for accounts that have claimed at least one
   // promoter record. Probed once per browser session (sessionStorage cache) so
@@ -199,7 +232,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                   up front, guests build the whole thing at /create and only
                   meet sign-up at publish. Organizers go straight in. */}
               <Link
-                href={user?.role === 'organizer' ? '/organizer/events/new' : '/create'}
+                href={user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   pathname?.startsWith('/create') || pathname?.startsWith('/organizer/events/new')
                     ? 'text-white'
@@ -227,9 +260,12 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                     aria-label={user.full_name}
                     className="flex items-center gap-2 text-sm text-white/80 hover:text-white transition-colors duration-200"
                   >
-                    <div className="w-8 h-8 bg-white/[0.08] rounded-full flex items-center justify-center text-white font-semibold text-xs">
-                      {user.full_name?.charAt(0).toUpperCase() || 'U'}
-                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={user.photo_url || defaultAvatarUrl(user.id)}
+                      alt=""
+                      className="w-8 h-8 rounded-full object-cover bg-white/[0.08]"
+                    />
                     <span className="font-medium">{user.full_name}</span>
                     <svg
                       className={`w-4 h-4 transition-transform duration-200 ${accountMenuOpen ? 'rotate-180' : ''}`}
@@ -396,7 +432,7 @@ export default function Navbar({ user, isAdmin = false, flush = false, solid = f
                 {t('nav.resources', { defaultValue: 'Guides' })}
               </Link>
               <Link
-                href={user?.role === 'organizer' ? '/organizer/events/new' : '/create'}
+                href={user?.role === 'organizer' || onATeam ? '/organizer/events/new' : '/create'}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium ${
                   pathname?.startsWith('/create') ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'

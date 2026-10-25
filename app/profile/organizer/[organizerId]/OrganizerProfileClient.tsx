@@ -48,6 +48,7 @@ import {
   Facebook,
 } from 'lucide-react'
 import OrganizerMark from '@/components/OrganizerMark'
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 import { socialUrlFor, type SocialLinks, type FriendshipState } from '@/types/social'
 
 interface OrganizerProfileClientProps {
@@ -193,7 +194,18 @@ export default function OrganizerProfileClient({
                 the invisible-card mistake). No organizer has uploaded a logo
                 (checked against production), so the mark is an organization
                 glyph, not the name's first letter (owner rule). */}
-            <OrganizerMark logoUrl={organizer.logo} className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
+            {organizer.logo || totalEvents > 0 ? (
+              <OrganizerMark logoUrl={organizer.logo} className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
+            ) : (
+              // A person, not an organization (no logo, never hosted): their
+              // drawn portrait in a circle, like everywhere else they appear.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={defaultAvatarUrl(organizer.id)}
+                alt=""
+                className="h-20 w-20 shrink-0 rounded-full object-cover shadow-lg sm:h-24 sm:w-24"
+              />
+            )}
 
             <div className="min-w-0 flex-1">
               <h1 className="font-grotesk font-bold uppercase tracking-[-0.02em] text-white !text-[clamp(30px,5.5vw,46px)] !leading-[0.98]">
