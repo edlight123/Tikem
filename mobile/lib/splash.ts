@@ -1,4 +1,5 @@
 import * as SplashScreen from 'expo-splash-screen';
+import { launchUpdateGate } from './otaUpdates';
 
 /**
  * Owns the native splash lifecycle.
@@ -31,11 +32,21 @@ const MAX_HOLD_MS = 4000;
 
 let hidden = false;
 
-export function hideSplash() {
+function hideNow() {
   if (hidden) return;
   hidden = true;
   clearTimeout(safetyTimer);
   SplashScreen.hideAsync().catch(() => {});
 }
 
-const safetyTimer = setTimeout(hideSplash, MAX_HOLD_MS);
+/**
+ * Called when the navigator is ready. Also waits for the launch update check
+ * (lib/otaUpdates.ts), so an update that reloads the app does it behind the
+ * splash instead of flashing the old screen first. That check gives up well
+ * inside MAX_HOLD_MS, and the safety timer below still wins regardless.
+ */
+export function hideSplash() {
+  launchUpdateGate.then(hideNow, hideNow);
+}
+
+const safetyTimer = setTimeout(hideNow, MAX_HOLD_MS);
