@@ -18,6 +18,7 @@ import WhosGoing from '@/components/events/WhosGoing'
 import FriendsGoing from '@/components/events/FriendsGoing'
 import InviteFriends from '@/components/events/InviteFriends'
 import PromoVideo from '@/components/events/PromoVideo'
+import ContactOrganizer from '@/components/events/ContactOrganizer'
 import { ticketScarcity, scarcityCopy, isUrgent } from '@/lib/ticketScarcity'
 import { guestlistVisibilityFrom } from '@/lib/guestlistVisibility'
 import SpotifyEmbed from '@/components/events/SpotifyEmbed'
@@ -96,6 +97,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   // Organization brand overrides the personal name wherever the organizer is
   // shown (falls back to full_name, then a generic label).
   const organizerLabel = event.users?.organization_name || event.users?.full_name || 'Event Organizer'
+  // "Message the organizer": shown signed out too (it routes to sign-in), but
+  // never on the organizer's own event, where the server refuses a self-contact.
+  const canContactOrganizer = !!event.organizer_id && user?.id !== event.organizer_id
 
   // The venue map tile opens exactly what the "Google Maps" text link opens —
   // same query, same destination — so a visitor never gets two different places
@@ -381,6 +385,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         organizerLogo={event.users?.organization_logo}
         organizerId={event.organizer_id}
         isVerified={event.users?.is_verified || false}
+        contactOrganizer={
+          canContactOrganizer ? (
+            <ContactOrganizer
+              eventId={event.id}
+              eventTitle={event.title}
+              userId={user?.id ?? null}
+              className="mt-4"
+            />
+          ) : null
+        }
         venueMap={
           <VenueMap
             event={event}
@@ -552,6 +566,14 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   initialIsFollowing={isFollowing}
                 />
               </div>
+              {canContactOrganizer && (
+                <ContactOrganizer
+                  eventId={event.id}
+                  eventTitle={event.title}
+                  userId={user?.id ?? null}
+                  className="mt-4 max-w-sm"
+                />
+              )}
             </div>
           </div>
 

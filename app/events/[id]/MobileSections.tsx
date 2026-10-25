@@ -62,6 +62,8 @@ interface MobileSectionsProps {
    * constructed once, next to the desktop one it must match.
    */
   venueMap?: React.ReactNode
+  /** "Message the organizer" row, built by the caller (null on the organizer's own event). */
+  contactOrganizer?: React.ReactNode
 }
 
 export default function MobileSections({
@@ -80,7 +82,8 @@ export default function MobileSections({
   organizerId,
   isVerified,
   shareButton,
-  venueMap
+  venueMap,
+  contactOrganizer
 }: MobileSectionsProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
@@ -205,6 +208,7 @@ export default function MobileSections({
             )}
           </div>
         </a>
+        {contactOrganizer}
       </Section>
 
       {/* Share */}

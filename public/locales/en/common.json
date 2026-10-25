@@ -2020,5 +2020,33 @@
       "tile": "Requests",
       "tile_desc": "{{count}} pending"
     }
+  },
+  "contactOrganizer": {
+    "open": "Message the organizer",
+    "title": "Message the organizer",
+    "aboutEvent": "About {{event}}",
+    "topicLabel": "What is it about?",
+    "topics": {
+      "event": "The event",
+      "ticket": "My ticket",
+      "other": "Other"
+    },
+    "messagePlaceholder": "Message",
+    "send": "Send message",
+    "sending": "Sending...",
+    "sentTitle": "Message sent",
+    "sentBody": "The organizer has been notified. Their reply will arrive in your notifications and by email.",
+    "sentBodyNamed": "The organizer of {{event}} has been notified. Their reply will arrive in your notifications and by email.",
+    "viewMessages": "View your messages",
+    "done": "Done",
+    "errors": {
+      "generic": "Couldn't send your message. Try again.",
+      "unauthorized": "Sign in to message the organizer.",
+      "rate_limited": "You have sent this organizer several messages already. Give them a little time to reply.",
+      "self_contact": "You are the organizer of this event.",
+      "event_not_found": "Event not found.",
+      "no_organizer": "This event has no organizer to contact.",
+      "message_too_long": "Keep it under 1000 characters."
+    }
   }
 }
