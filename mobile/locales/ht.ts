@@ -403,6 +403,11 @@ export default {
       logoTitle: 'Logo òganizasyon an',
       emptyName: 'Ajoute non òganizasyon ou',
     },
+    sound: {
+      title: 'Son',
+      autoplay: 'Jwe chante evènman yo',
+      autoplayHint: "Chante yon evènman kòmanse pou kont li lè ou louvri paj li. Li rete an silans lè telefòn ou an mòd silans.",
+    },
     social: {
       sectionTitle: 'Rezo sosyal',
       bio: 'Bio',
@@ -2748,6 +2753,8 @@ export default {
       open: 'Jwe l sou Spotify',
       play: 'Jwe',
       fullSong: 'Tout chante a sou Spotify',
+      pause: 'Poz',
+      nowPlaying: 'Y ap jwe yon ekstrè',
     },
     onlineEvent: 'Evènman anliy',
     // Prefiks sèlman — konpoze kòm `${startsIn} 2d 11h` nan CountdownTimer.

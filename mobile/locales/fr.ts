@@ -431,6 +431,11 @@ export default {
       logoTitle: 'Logo de l’organisation',
       emptyName: 'Ajoutez le nom de votre organisation',
     },
+    sound: {
+      title: 'Son',
+      autoplay: 'Lire la chanson des événements',
+      autoplayHint: "La chanson d'un événement démarre toute seule quand vous ouvrez sa page. Elle reste muette quand votre téléphone est en silencieux.",
+    },
     social: {
       sectionTitle: 'Réseaux sociaux',
       bio: 'Bio',
@@ -2780,6 +2785,8 @@ export default {
       open: 'Écouter sur Spotify',
       play: 'Écouter',
       fullSong: 'Titre complet sur Spotify',
+      pause: 'Pause',
+      nowPlaying: 'Extrait en cours',
     },
     onlineEvent: 'Événement en ligne',
     // Préfixe uniquement — composé en `${startsIn} 2d 11h` par CountdownTimer.

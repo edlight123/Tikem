@@ -404,6 +404,11 @@ export default {
       logoTitle: 'Organization logo',
       emptyName: 'Add your organization name',
     },
+    sound: {
+      title: 'Sound',
+      autoplay: 'Play event songs',
+      autoplayHint: "An event's song starts on its own when you open the event. It stays quiet when your phone is on silent.",
+    },
     social: {
       sectionTitle: 'Social',
       bio: 'Bio',
@@ -2816,6 +2821,8 @@ export default {
       open: 'Play on Spotify',
       play: 'Play',
       fullSong: 'Full song on Spotify',
+      pause: 'Pause',
+      nowPlaying: 'Playing a preview',
     },
     onlineEvent: 'Online event',
     // Prefix only — composed as `${startsIn} 2d 11h` by CountdownTimer.

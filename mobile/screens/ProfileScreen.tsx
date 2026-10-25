@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { setSongAutoplay, useSongAutoplay } from '../lib/songAutoplay';
 import { openTikemInstagram } from '../lib/instagram';
 import {
   ActivityIndicator,
@@ -576,6 +577,8 @@ export default function ProfileScreen() {
 
         <PrivacySection />
 
+        <SoundSection />
+
         {/* Role switching: only when the account has more than one hat. */}
         {canUseOrganizerMode || canUseStaffTools ? (
           <View style={styles.block}>
@@ -763,6 +766,36 @@ function Row({ icon: Icon, label, onPress, first, trailing, tone, role }: ListRo
  * put back with an alert if the save fails). These are not part of "Edit
  * profile" because they are decisions, not profile content.
  */
+/** Device-level sound settings: for now, whether event songs start on their own. */
+function SoundSection() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+  const { t } = useI18n();
+  const on = useSongAutoplay();
+  return (
+    <View style={styles.block}>
+      <SectionHeader title={t('profile.sound.title')} />
+      <View style={styles.privacyCard}>
+        <TouchableOpacity
+          style={styles.toggleRow}
+          onPress={() => setSongAutoplay(!on)}
+          activeOpacity={0.7}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: on }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>{t('profile.sound.autoplay')}</Text>
+            <Text style={styles.toggleHint}>{t('profile.sound.autoplayHint')}</Text>
+          </View>
+          <View style={[styles.switchTrack, on && styles.switchTrackOn]}>
+            <View style={[styles.switchThumb, on && styles.switchThumbOn]} />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 function PrivacySection() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
