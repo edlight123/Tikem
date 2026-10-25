@@ -3,34 +3,45 @@
 import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react';
-import { Bell, Mail, MessageSquare, Smartphone, Loader2 } from 'lucide-react';
+import { Mail, Smartphone, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import type { OrganizerNotificationPreferences } from '@/lib/organizer/notificationPreferences';
 
 interface NotificationsFormProps {
   userId: string;
-  initialData: {
-    email_ticket_sales: boolean;
-    email_new_reviews: boolean;
-    email_payout_updates: boolean;
-    email_event_reminders: boolean;
-    email_marketing: boolean;
-    sms_ticket_sales: boolean;
-    sms_event_reminders: boolean;
-    push_ticket_sales: boolean;
-    push_new_reviews: boolean;
-    email_attendee_messages: boolean;
-    push_attendee_messages: boolean;
-  };
+  initialData: OrganizerNotificationPreferences;
 }
 
-export default function NotificationsForm({ userId, initialData }: NotificationsFormProps) {
+/**
+ * Only switches that change a real send.
+ *
+ * This form used to offer eleven, of which the senders read two. Removed,
+ * because Tikèm never sends them: an organizer sale EMAIL, reviews (there are
+ * none), event-reminder and marketing emails to organizers, and every SMS row
+ * (no SMS provider is wired). Payout updates are not a switch: they are about
+ * the organizer's own money and always go out (lib/notifications/policy.ts,
+ * the same "always on" the mobile app shows). The stored values for removed
+ * keys are left as they were; this form only writes the keys it shows.
+ *
+ *   email_attendee_messages → lib/organizer-message-alerts.ts
+ *   push_attendee_messages  → lib/organizer-message-alerts.ts
+ *   push_ticket_sales       → notifyOrganizerTicketSale (lib/notifications/helpers.ts)
+ */
+const SHOWN_KEYS = ['email_attendee_messages', 'push_ticket_sales', 'push_attendee_messages'] as const;
+type ShownKey = (typeof SHOWN_KEYS)[number];
+
+export default function NotificationsForm({ initialData }: NotificationsFormProps) {
   const { t } = useTranslation('organizer')
 
-  const [formData, setFormData] = useState(initialData);
+  const [formData, setFormData] = useState<Record<ShownKey, boolean>>(() => ({
+    email_attendee_messages: initialData.email_attendee_messages,
+    push_ticket_sales: initialData.push_ticket_sales,
+    push_attendee_messages: initialData.push_attendee_messages,
+  }));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
-  const handleToggle = (key: keyof typeof formData) => {
+  const handleToggle = (key: ShownKey) => {
     setFormData((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -50,15 +61,15 @@ export default function NotificationsForm({ userId, initialData }: Notifications
       }
 
       showToast({
-        title: 'Preferences saved',
-        message: 'Your notification preferences have been updated.',
+        title: t('notifications_form.saved_title'),
+        message: t('notifications_form.saved_body'),
         type: 'success',
       });
     } catch (error) {
       console.error('Error updating notifications:', error);
       showToast({
-        title: 'Error',
-        message: 'Failed to update preferences. Please try again.',
+        title: t('notifications_form.save_failed_title'),
+        message: t('notifications_form.save_failed_body'),
         type: 'error',
       });
     } finally {
@@ -68,7 +79,7 @@ export default function NotificationsForm({ userId, initialData }: Notifications
 
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-8">
-      {/* Email Notifications */}
+      {/* Email */}
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-brand-300" />
@@ -76,70 +87,15 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         </div>
         <div className="space-y-4">
           <ToggleItem
-            label={t('notifications_form.ticket_sales')}
-            message="Get notified when someone purchases a ticket"
-            checked={formData.email_ticket_sales}
-            onChange={() => handleToggle('email_ticket_sales')}
-          />
-          <ToggleItem
-            label={t('notifications_form.new_reviews')}
-            message="Get notified when your event receives a review"
-            checked={formData.email_new_reviews}
-            onChange={() => handleToggle('email_new_reviews')}
-          />
-          <ToggleItem
             label={t('notifications_form.attendee_messages')}
             message={t('notifications_form.attendee_messages_email')}
             checked={formData.email_attendee_messages}
             onChange={() => handleToggle('email_attendee_messages')}
           />
-          <ToggleItem
-            label={t('notifications_form.payout_updates')}
-            message="Get notified about payout status changes"
-            checked={formData.email_payout_updates}
-            onChange={() => handleToggle('email_payout_updates')}
-          />
-          <ToggleItem
-            label={t('notifications_form.event_reminders')}
-            message="Get reminders before your events start"
-            checked={formData.email_event_reminders}
-            onChange={() => handleToggle('email_event_reminders')}
-          />
-          <ToggleItem
-            label={t('notifications_form.marketing_updates')}
-            message="Receive tips, feature updates, and promotional content"
-            checked={formData.email_marketing}
-            onChange={() => handleToggle('email_marketing')}
-          />
         </div>
       </div>
 
-      {/* SMS Notifications */}
-      <div className="pt-6 border-t border-white/10">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare className="w-5 h-5 text-brand-300" />
-          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('notifications_form.sms_notifications')}</h3>
-        </div>
-        <div className="space-y-4">
-          <ToggleItem
-            label={t('notifications_form.ticket_sales')}
-            message="Receive SMS when someone purchases a ticket"
-            checked={formData.sms_ticket_sales}
-            onChange={() => handleToggle('sms_ticket_sales')}
-          />
-          <ToggleItem
-            label={t('notifications_form.event_reminders')}
-            message="Receive SMS reminders before your events"
-            checked={formData.sms_event_reminders}
-            onChange={() => handleToggle('sms_event_reminders')}
-          />
-        </div>
-        <p className="text-xs text-white/50 mt-3">
-          SMS notifications require a verified phone number. Standard rates may apply.
-        </p>
-      </div>
-
-      {/* Push Notifications */}
+      {/* Push (mobile app) */}
       <div className="pt-6 border-t border-white/10">
         <div className="flex items-center gap-2 mb-4">
           <Smartphone className="w-5 h-5 text-brand-300" />
@@ -148,15 +104,9 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         <div className="space-y-4">
           <ToggleItem
             label={t('notifications_form.ticket_sales')}
-            message="Get instant push notifications for ticket sales"
+            message={t('notifications_form.ticket_sales_push')}
             checked={formData.push_ticket_sales}
             onChange={() => handleToggle('push_ticket_sales')}
-          />
-          <ToggleItem
-            label={t('notifications_form.new_reviews')}
-            message="Get instant push notifications for new reviews"
-            checked={formData.push_new_reviews}
-            onChange={() => handleToggle('push_new_reviews')}
           />
           <ToggleItem
             label={t('notifications_form.attendee_messages')}
@@ -165,9 +115,13 @@ export default function NotificationsForm({ userId, initialData }: Notifications
             onChange={() => handleToggle('push_attendee_messages')}
           />
         </div>
-        <p className="text-xs text-white/50 mt-3">
-          Push notifications require the Tikèm mobile app.
-        </p>
+        <p className="text-xs text-white/50 mt-3">{t('notifications_form.push_app_note')}</p>
+      </div>
+
+      {/* Always on */}
+      <div className="pt-6 border-t border-white/10">
+        <p className="font-medium text-white">{t('notifications_form.payout_updates')}</p>
+        <p className="text-sm text-white/60">{t('notifications_form.payouts_always')}</p>
       </div>
 
       {/* Submit Button */}
@@ -178,7 +132,7 @@ export default function NotificationsForm({ userId, initialData }: Notifications
           className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting ? 'Saving...' : 'Save Preferences'}
+          {isSubmitting ? t('notifications_form.saving') : t('notifications_form.save')}
         </button>
       </div>
     </form>

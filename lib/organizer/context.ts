@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { isTeamRole, orgCan, type OrgAction, type OrgRole, type TeamRole } from './teamRoles'
+import { canViewFinances, isTeamRole, orgCan, type OrgAction, type OrgRole, type TeamRole } from './teamRoles'
 
 /**
  * "Which organization am I acting for, and as what?" The one answer every
@@ -36,6 +36,8 @@ export interface OrgContext {
   isOwner: boolean
   /** Platform admin (Tikèm staff): may act on any org's events. */
   isPlatformAdmin: boolean
+  /** May see this org's finances read-only (owner, or an admin granted finance_view). */
+  financeView: boolean
 }
 
 export interface OrgMembership {
@@ -78,14 +80,19 @@ async function requestedOrgId(): Promise<string | null> {
   return null
 }
 
-/** The caller's active role in `orgId`, or null. Reads organizers/{orgId}/team/{uid}. */
-export async function teamRoleIn(orgId: string, uid: string): Promise<TeamRole | null> {
+/** The caller's active seat in `orgId` (role + read-only finance grant), or null. */
+export async function teamSeatIn(orgId: string, uid: string): Promise<{ role: TeamRole; financeView: boolean } | null> {
   if (!orgId || !uid || orgId === uid) return null
   const snap = await teamCol(orgId).doc(uid).get()
   if (!snap.exists) return null
   const d = snap.data() || {}
   if (d.status !== 'active' || !isTeamRole(d.role)) return null
-  return d.role
+  return { role: d.role, financeView: canViewFinances(d.role, d.finance_view === true) }
+}
+
+/** The caller's active role in `orgId`, or null. Reads organizers/{orgId}/team/{uid}. */
+export async function teamRoleIn(orgId: string, uid: string): Promise<TeamRole | null> {
+  return (await teamSeatIn(orgId, uid))?.role ?? null
 }
 
 export async function listMemberships(uid: string): Promise<OrgMembership[]> {
@@ -114,19 +121,19 @@ export async function getOrgContext(): Promise<OrgContext | null> {
 
   const requested = await requestedOrgId()
   if (requested && requested !== user.id) {
-    const role = await teamRoleIn(requested, user.id)
-    if (role) return { user, orgId: requested, role, isOwner: false, isPlatformAdmin: admin }
+    const seat = await teamSeatIn(requested, user.id)
+    if (seat) return { user, orgId: requested, role: seat.role, isOwner: false, isPlatformAdmin: admin, financeView: seat.financeView }
   }
 
   if (isOrganizerAccount(user)) {
-    return { user, orgId: user.id, role: 'owner', isOwner: true, isPlatformAdmin: admin }
+    return { user, orgId: user.id, role: 'owner', isOwner: true, isPlatformAdmin: admin, financeView: true }
   }
 
   // Not an organizer themselves: their first org, if they belong to one.
   const memberships = await listMemberships(user.id)
   for (const m of memberships) {
-    const role = await teamRoleIn(m.orgId, user.id)
-    if (role) return { user, orgId: m.orgId, role, isOwner: false, isPlatformAdmin: admin }
+    const seat = await teamSeatIn(m.orgId, user.id)
+    if (seat) return { user, orgId: m.orgId, role: seat.role, isOwner: false, isPlatformAdmin: admin, financeView: seat.financeView }
   }
   return null
 }
@@ -148,6 +155,26 @@ export async function requireOrg(action: OrgAction): Promise<Gate<OrgContext>> {
   }
   if (!orgCan(ctx.role, action)) {
     return { ok: false, response: NextResponse.json({ error: 'Your team role does not allow this' }, { status: 403 }) }
+  }
+  return { ok: true, value: ctx }
+}
+
+/**
+ * API gate for READ-ONLY finance routes (earnings, payout history, revenue
+ * reports, exports): the owner, or an admin with the finance grant. Scope the
+ * data by ctx.orgId, never user.id. Writes and bank details stay owner-only.
+ */
+export async function requireFinanceView(): Promise<Gate<OrgContext>> {
+  const ctx = await getOrgContext()
+  if (!ctx) {
+    const user = await getCurrentUser()
+    return {
+      ok: false,
+      response: NextResponse.json({ error: user ? 'Organizer access required' : 'Unauthorized' }, { status: user ? 403 : 401 }),
+    }
+  }
+  if (!ctx.financeView) {
+    return { ok: false, response: NextResponse.json({ error: 'Your team role does not include finances', code: 'no_finance' }, { status: 403 }) }
   }
   return { ok: true, value: ctx }
 }
@@ -222,8 +249,12 @@ export async function activateMember(params: {
   name?: string | null
   role: TeamRole
   addedBy: string
+  /** Read-only finances; only meaningful for admins. Omitted = keep what is stored. */
+  financeView?: boolean
 }): Promise<void> {
   const { orgId, uid, email, role, addedBy } = params
+  const finance =
+    role !== 'admin' ? { finance_view: false } : params.financeView === undefined ? {} : { finance_view: params.financeView === true }
   const orgName = await orgDisplayName(orgId)
   const batch = adminDb.batch()
   batch.set(
@@ -233,6 +264,7 @@ export async function activateMember(params: {
       email: email.toLowerCase(),
       name: params.name || null,
       role,
+      ...finance,
       status: 'active',
       added_by: addedBy,
       joined_at: FieldValue.serverTimestamp(),
@@ -271,7 +303,7 @@ export async function claimInvitesByVerifiedEmail(user: CurrentUser): Promise<nu
     if (d.accepted_at || d.revoked_at) continue
     if (d.expires_at?.toDate && d.expires_at.toDate() < new Date()) continue
     if (!isTeamRole(d.role) || !d.org_id || d.org_id === user.id) continue
-    await activateMember({ orgId: d.org_id, uid: user.id, email, name: d.name, role: d.role, addedBy: d.invited_by || d.org_id })
+    await activateMember({ orgId: d.org_id, uid: user.id, email, name: d.name, role: d.role, addedBy: d.invited_by || d.org_id, financeView: d.finance_view === true })
     await doc.ref.set({ accepted_at: FieldValue.serverTimestamp(), accepted_by: user.id }, { merge: true })
     claimed++
   }

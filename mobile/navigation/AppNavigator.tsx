@@ -17,7 +17,7 @@ import { LINKING_CONFIG, WEB_LINK_PREFIXES } from './linkingConfig';
 import { withAlpha } from '../theme/tokens';
 import { getVerificationRequest } from '../lib/verification';
 import { useActiveOrg } from '../lib/activeOrg';
-import { withOrgAccess } from '../components/organizer/OrgAccessGate';
+import { withFinanceAccess, withOrgAccess } from '../components/organizer/OrgAccessGate';
 import BootScreen from '../components/BootScreen';
 import { useAppAlert } from '../components/AppAlert';
 import { hideSplash } from '../lib/splash';
@@ -250,8 +250,10 @@ const OrganizerAccessContext = React.createContext(false);
 
 // Screens a team role may not use render a calm notice instead
 // (lib/orgTeamRoles.ts). Money out, payout details and Stripe are the owner's.
-const GatedOrganizerEarningsHub = withOrgAccess(OrganizerEarningsHubScreen, 'owner_only');
-const GatedOrganizerEventEarnings = withOrgAccess(OrganizerEventEarningsScreen, 'owner_only');
+// Earnings: the owner, or an admin granted read-only finances (the screens
+// hide withdraw and payout set-up for them). Payout settings / Stripe: owner only.
+const GatedOrganizerEarningsHub = withFinanceAccess(OrganizerEarningsHubScreen);
+const GatedOrganizerEventEarnings = withFinanceAccess(OrganizerEventEarningsScreen);
 const GatedOrganizerPayoutSettings = withOrgAccess(OrganizerPayoutSettingsScreen, 'owner_only');
 const GatedStripeOnboarding = withOrgAccess(StripeOnboardingScreen, 'owner_only');
 const GatedStripeConnectWebView = withOrgAccess(StripeConnectWebViewScreen, 'owner_only');

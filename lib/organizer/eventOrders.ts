@@ -73,9 +73,19 @@ export interface EventOrder {
   canResend: boolean
 }
 
-/** Live, or a legacy doc whose status was overwritten to `checked_in` at the door. */
+/**
+ * Does this ticket count as SOLD (in totals, revenue, badges)? Live
+ * (valid / confirmed / active, lib/tickets/status), or a legacy doc whose
+ * status was overwritten to `checked_in` at the door. Refunded,
+ * refund_pending and cancelled tickets do not.
+ */
+export function isSoldTicketStatus(status: unknown): boolean {
+  const s = String(status ?? '').toLowerCase().trim()
+  return isLiveTicketStatus(s) || s === 'checked_in'
+}
+
 function counts(status: string): boolean {
-  return isLiveTicketStatus(status) || status === 'checked_in'
+  return isSoldTicketStatus(status)
 }
 
 export function serializeTs(v: unknown): string {

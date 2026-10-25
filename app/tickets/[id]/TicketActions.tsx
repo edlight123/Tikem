@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Share2 } from 'lucide-react'
+import { Share2, Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
 
@@ -25,15 +25,27 @@ const SHEET_FIELD = 'rounded-lg bg-white/[0.06] text-white'
 const PRIMARY_BTN =
   'rounded-lg bg-white font-bold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
 
+/** The holder's own unexpired transfer (lib/tickets/transfers.ts). */
+export interface PendingTransferInfo {
+  id: string
+  toEmail: string
+  token: string
+  expiresAt: string | null
+}
+
 interface TicketActionsProps {
   ticketId: string
   ticketStatus: string
   checkedIn: boolean
   eventTitle: string
+  pendingTransfer?: PendingTransferInfo | null
 }
 
-export default function TicketActions({ ticketId, ticketStatus, checkedIn, eventTitle }: TicketActionsProps) {
-  const { t } = useTranslation('tickets')
+export default function TicketActions({ ticketId, ticketStatus, checkedIn, eventTitle, pendingTransfer = null }: TicketActionsProps) {
+  const { t, i18n } = useTranslation('tickets')
+  const [pending, setPending] = useState<PendingTransferInfo | null>(pendingTransfer)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const router = useRouter()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -99,6 +111,12 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
         const link = `${window.location.origin}/tickets/transfer/${data.transfer.transferToken}`
         setTransferLink(link)
         setShowTransferLink(true)
+        setPending({
+          id: String(data.transfer.id),
+          toEmail: String(data.transfer.toEmail || transferEmail),
+          token: String(data.transfer.transferToken),
+          expiresAt: data.transfer.expiresAt || null,
+        })
       }
 
       setMessage({ type: 'success', text: t('detail.transfer_success') })
@@ -127,6 +145,56 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
   // permission cannot drift apart again.
   const canTransfer = isLiveTicketStatus(ticketStatus) && !checkedIn
 
+  const pendingLink = pending && typeof window !== 'undefined' ? `${window.location.origin}/tickets/transfer/${pending.token}` : ''
+  const pendingWhen = (() => {
+    if (!pending?.expiresAt) return ''
+    const d = new Date(pending.expiresAt)
+    if (Number.isNaN(d.getTime())) return ''
+    try {
+      return d.toLocaleString(i18n.language === 'ht' ? 'fr-HT' : i18n.language, { dateStyle: 'medium', timeStyle: 'short' })
+    } catch {
+      return d.toLocaleString()
+    }
+  })()
+
+  async function copyPendingLink() {
+    if (!pendingLink) return
+    try {
+      await navigator.clipboard.writeText(pendingLink)
+      setMessage({ type: 'success', text: t('detail.transfer_link_copied') })
+      setTimeout(() => setMessage(null), 2000)
+    } catch {
+      // Clipboard blocked: the link is selectable in the field above.
+    }
+  }
+
+  async function cancelPendingTransfer() {
+    if (!pending) return
+    setCancelling(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/tickets/transfer/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transferId: pending.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      // 'expired' also frees the ticket: the server just marked it so.
+      if (res.ok || /expired/i.test(String(data?.error || ''))) {
+        setPending(null)
+        setConfirmingCancel(false)
+        setMessage({ type: 'success', text: t('detail.transfer_cancelled') })
+        router.refresh()
+      } else {
+        setMessage({ type: 'error', text: t('detail.transfer_cancel_failed') })
+      }
+    } catch {
+      setMessage({ type: 'error', text: t('detail.transfer_cancel_failed') })
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
       {/* A banner is a surface: it gets a tinted FILL, not a coloured outline
@@ -144,7 +212,68 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
       {/* Transfer Button. Secondary by design: Add to Wallet is the primary
           action of this stack, and teal is semantic in this app, never a button
           surface — so this is the grey pill, not a teal one. */}
-      {canTransfer && (
+      {/* A transfer in flight: the holder can re-share the link or take it back.
+          A filled surface, not an outline; the clock dot marks the state. */}
+      {pending && !showTransferModal && (
+        <div className="rounded bg-white/[0.055] p-4 text-left">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-amber-300">
+            <Clock className="h-4 w-4" />
+            {t('detail.transfer_pending_title')}
+          </div>
+          <p className="mb-3 text-sm text-white/70">
+            {t('detail.transfer_pending_body', { email: pending.toEmail, when: pendingWhen || '24h' })}
+          </p>
+          <div className="mb-3 flex gap-2">
+            <input
+              type="text"
+              value={pendingLink}
+              readOnly
+              aria-label={t('detail.transfer_link_label')}
+              className={`${SHEET_FIELD} min-w-0 flex-1 px-3 py-2.5 text-[16px] text-white/80`}
+            />
+            <button
+              type="button"
+              onClick={copyPendingLink}
+              className="shrink-0 rounded bg-white/[0.08] px-4 py-2.5 font-medium text-white transition-colors hover:bg-white/[0.14]"
+            >
+              {t('detail.transfer_copy_link')}
+            </button>
+          </div>
+          {confirmingCancel ? (
+            <div className="rounded bg-red-500/10 p-3">
+              <p className="mb-3 text-sm text-red-200">{t('detail.transfer_cancel_confirm')}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingCancel(false)}
+                  disabled={cancelling}
+                  className="flex-1 rounded bg-white/[0.08] px-4 py-2.5 font-medium text-white/80 transition-colors hover:bg-white/[0.14] disabled:opacity-50"
+                >
+                  {t('detail.transfer_cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelPendingTransfer}
+                  disabled={cancelling}
+                  className="flex-1 rounded bg-red-500/20 px-4 py-2.5 font-semibold text-red-100 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+                >
+                  {cancelling ? t('detail.transfer_cancelling') : t('detail.transfer_cancel_transfer')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingCancel(true)}
+              className="w-full rounded bg-white/[0.06] px-4 py-2.5 font-medium text-red-300 transition-colors hover:bg-red-500/10"
+            >
+              {t('detail.transfer_cancel_transfer')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {canTransfer && !pending && (
         <button
           onClick={() => setShowTransferModal(true)}
           className="w-full px-4 py-3 bg-white/[0.08] text-white font-semibold rounded-lg hover:bg-white/[0.14] transition-colors flex items-center justify-center gap-2"
@@ -182,9 +311,9 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
             {!showTransferLink ? (
               <>
                 <p className="text-white/60 mb-6">
-                  Send this ticket to someone else. They&apos;ll receive an email with a link to accept the transfer.
+                  {t('detail.transfer_intro')}
                   <span className="block mt-2 text-sm text-amber-300 font-medium">
-                    ⏰ Transfer links expire in 24 hours
+                    {t('detail.transfer_expiry_note')}
                   </span>
                 </p>
 
@@ -243,7 +372,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                       className={`${PRIMARY_BTN} flex-1 px-4 py-2.5`}
                       disabled={loading || !transferEmail}
                     >
-                      {loading ? 'Sending...' : t('detail.transfer_send')}
+                      {loading ? t('detail.transfer_sending') : t('detail.transfer_send')}
                     </button>
                   </div>
                 </form>
@@ -280,7 +409,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                   {/* Share via WhatsApp */}
                   <button
                     onClick={() => {
-                      const text = `I'm transferring my ticket for ${eventTitle} to you! Click here to accept:`
+                      const text = t('detail.transfer_share_text', { event: eventTitle })
                       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + transferLink)}`
                       window.open(whatsappUrl, '_blank')
                     }}
@@ -289,18 +418,18 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                     </svg>
-                    Share via WhatsApp
+                    {t('detail.transfer_share_whatsapp')}
                   </button>
 
                   {/* Share via SMS */}
                   <button
                     onClick={() => {
-                      const text = `I'm transferring my ticket for ${eventTitle}. Accept it here: ${transferLink}`
+                      const text = `${t('detail.transfer_share_text', { event: eventTitle })} ${transferLink}`
                       window.location.href = `sms:?&body=${encodeURIComponent(text)}`
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white/[0.06] text-white font-medium transition-colors hover:bg-white/[0.12]"
                   >
-                    Share via Text Message
+                    {t('detail.transfer_share_sms')}
                   </button>
                 </div>
 
@@ -308,7 +437,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                     is what makes it read as a warning at a glance. */}
                 <div className="rounded-lg bg-amber-500/10 p-3 mb-4">
                   <p className="text-sm text-amber-300">
-                    <strong>⏰ Reminder:</strong> This transfer link expires in 24 hours. The recipient must accept before then.
+                    {t('detail.transfer_reminder')}
                   </p>
                 </div>
 
@@ -329,7 +458,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                   }}
                   className={`${PRIMARY_BTN} w-full px-4 py-2.5`}
                 >
-                  Done
+                  {t('detail.transfer_done')}
                 </button>
               </>
             )}

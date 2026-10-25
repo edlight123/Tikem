@@ -15,7 +15,9 @@ export const dynamic = 'force-dynamic'
  * A preference only: the organizer picks the country on the form, and the
  * publish gate always runs for the event's own country.
  */
-async function startingLocation(userId: string): Promise<{ country: string; city?: string }> {
+async function startingLocation(
+  userId: string
+): Promise<{ country: string; city?: string; defaults?: Record<string, any> | null }> {
   try {
     const [markets, userSnap, orgSnap] = await Promise.all([
       getDeclaredMarkets(userId).catch(() => [] as string[]),
@@ -31,7 +33,17 @@ async function startingLocation(userId: string): Promise<{ country: string; city
       o?.default_city && pickDefaultComposerCountry(o?.default_country) === country
         ? String(o.default_city)
         : undefined
-    return { country, city }
+    // The rest of Settings > Event defaults (currency, timezone, categories):
+    // the composer checks each against the event's country before using it.
+    const defaults = o
+      ? {
+          default_country: o.default_country ?? null,
+          default_currency: o.default_currency ?? null,
+          default_timezone: o.default_timezone ?? null,
+          default_categories: Array.isArray(o.default_categories) ? o.default_categories.map(String) : [],
+        }
+      : null
+    return { country, city, defaults }
   } catch {
     return { country: 'HT' }
   }
@@ -58,6 +70,7 @@ export default async function NewEventPage() {
       isVerified={verification.isVerified}
       defaultCountry={start.country}
       defaultCity={start.city}
+      orgDefaults={start.defaults || null}
     />
   )
 }

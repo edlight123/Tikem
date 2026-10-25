@@ -11,6 +11,18 @@ import { isBudgetFriendlyTicketPrice, isOverBudgetTicketPrice } from '@/lib/pric
 type Event = any // Will match Database['public']['Tables']['events']['Row']
 
 /**
+ * Is this an online event? `is_online` is authoritative when it is set (both
+ * composers write it). Events saved before the flag existed fall back to the
+ * old guess from the venue name / commune.
+ */
+export function isOnlineEvent(event: any): boolean {
+  if (typeof event?.is_online === 'boolean') return event.is_online
+  if (event?.event_type === 'online') return true
+  const venue = String(event?.venue_name || '').toLowerCase()
+  return venue.includes('online') || venue.includes('virtual') || String(event?.commune || '').toLowerCase() === 'virtual'
+}
+
+/**
  * Filter events based on filter criteria
  */
 export function filterEvents(events: Event[], filters: EventFilters): Event[] {
@@ -125,17 +137,12 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
     }
   }
   
-  // Event type filter
-  // Note: is_online field needs to be added to database schema
-  // For now, we check if venue_name contains "online" or "virtual"
+  // Event type filter: the composers (web + mobile) save `is_online`.
   if (filters.eventType !== 'all') {
     filtered = filtered.filter(event => {
-      const isOnline = event.venue_name?.toLowerCase().includes('online') || 
-                      event.venue_name?.toLowerCase().includes('virtual') ||
-                      event.commune?.toLowerCase() === 'virtual'
-      
-      if (filters.eventType === 'online') return isOnline
-      if (filters.eventType === 'in-person') return !isOnline
+      const online = isOnlineEvent(event)
+      if (filters.eventType === 'online') return online
+      if (filters.eventType === 'in-person') return !online
       return true
     })
   }

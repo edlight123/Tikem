@@ -18,7 +18,7 @@ export default function AnalyticsView({
   totalEvents,
   publishedEvents,
   totalTicketsSold,
-  totalRevenueCents,
+  revenueByCurrencyCents,
   organizerCurrency,
   salesChartData,
   categoryChartData,
@@ -27,13 +27,22 @@ export default function AnalyticsView({
   totalEvents: number
   publishedEvents: number
   totalTicketsSold: number
-  totalRevenueCents: number
+  /** Per currency; never summed across currencies. */
+  revenueByCurrencyCents: Record<string, number>
+  /** The headline currency (most revenue). */
   organizerCurrency: string
   salesChartData: any[]
   categoryChartData: { name: string; value: number }[]
   eventsWithSales: any[]
 }) {
   const { t } = useTranslation('organizer')
+  const money = (cents: number, currency: string) =>
+    formatMoneyFromCents(cents, currency, 'en-US', { currencyDisplay: 'code' })
+  // Headline in the main currency; any other currency is listed beside it,
+  // never converted and added in.
+  const otherCurrencies = Object.entries(revenueByCurrencyCents)
+    .filter(([cur, cents]) => cur !== organizerCurrency && cents > 0)
+    .sort((a, b) => b[1] - a[1])
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -61,8 +70,12 @@ export default function AnalyticsView({
           <MetricCard
             icon={DollarSign}
             label={t('analytics.total_revenue')}
-            value={formatMoneyFromCents(totalRevenueCents, organizerCurrency, 'en-US', { currencyDisplay: 'code' })}
-            sublabel={t('analytics.lifetime_earnings')}
+            value={money(revenueByCurrencyCents[organizerCurrency] || 0, organizerCurrency)}
+            sublabel={
+              otherCurrencies.length > 0
+                ? `+ ${otherCurrencies.map(([cur, cents]) => money(cents, cur)).join(' + ')}`
+                : t('analytics.lifetime_earnings')
+            }
           />
           <MetricCard
             icon={TrendingUp}
@@ -152,7 +165,7 @@ export default function AnalyticsView({
                     <div className="text-right">
                       <p className="label-mono text-[10px] uppercase text-white/40">{t('analytics.revenue')}</p>
                       <p className="font-mono tabular-nums text-xl font-bold text-white">
-                        {formatMoneyFromCents(event.revenueCents, organizerCurrency, 'en-US', { currencyDisplay: 'code' })}
+                        {money(event.revenueCents, event.currency || organizerCurrency)}
                       </p>
                     </div>
                     {!event.is_published && (

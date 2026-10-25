@@ -72,8 +72,24 @@
     "message_placeholder": "Décrivez votre problème ou question en détail...",
     "submit": "Soumettre la demande",
     "submitting": "Envoi en cours...",
-    "success_title": "Demande soumise!",
-    "success_message": "Nous avons reçu votre demande de support et vous répondrons dans les 24 heures. Vérifiez votre email pour confirmation.",
+    "success_title": "Demande envoyée",
+    "success_message": "C'est bien reçu. Votre référence est {{reference}}, et nous avons envoyé une confirmation à {{email}}. Une personne de l'équipe Tikèm vous répondra à cette adresse.",
+    "send_another": "Envoyer une autre demande",
+    "rate_limited": "Vous avez envoyé plusieurs demandes en peu de temps. Patientez un peu, ou écrivez à support@tikem.co.",
+    "details_hint": "Ajoutez des détails comme un numéro de commande, le nom de l'événement ou un message d'erreur.",
+    "honeypot_label": "Laissez ce champ vide",
+    "topics": {
+      "ticket_purchase": "Achat d'un billet",
+      "payment": "Paiement",
+      "refund": "Remboursement",
+      "event_access": "Accès à l'événement",
+      "account": "Mon compte",
+      "event_creation": "Création d'un événement",
+      "payout": "Versements",
+      "check_in": "Contrôle à l'entrée",
+      "verification": "Vérification",
+      "other": "Autre chose"
+    },
     "error_title": "Échec de la soumission",
     "error_message": "Une erreur s'est produite lors de la soumission de votre demande. Veuillez réessayer ou nous envoyer un email directement à support@tikem.co",
     "try_again": "Réessayer",
@@ -111,7 +127,7 @@
           "faqs": [
             {
               "question": "Comment acheter des billets ?",
-              "answer": "Parcourez les événements sur la page d’accueil ou Découvrir, ouvrez un événement, choisissez le type et la quantité de billets, puis cliquez sur \"Obtenir des billets\". Vous terminerez un paiement sécurisé par carte ou MonCash."
+              "answer": "Parcourez les événements sur la page d’accueil ou Découvrir, ouvrez un événement, choisissez le type et la quantité de billets, puis cliquez sur \"Obtenir des billets\". Les événements en Haïti se paient avec MonCash ; ceux aux États-Unis, au Canada et en France se paient par carte."
             },
             {
               "question": "Où puis-je trouver mes billets ?",
@@ -119,7 +135,7 @@
             },
             {
               "question": "Puis-je transférer mon billet à quelqu’un d’autre ?",
-              "answer": "Oui. Ouvrez les détails du billet et cliquez sur \"Transférer le billet\". Saisissez l’email du destinataire : il recevra des instructions pour le réclamer. Le transfert doit être accepté avant le début de l’événement."
+              "answer": "Oui. Ouvrez votre billet, choisissez \"Transférer le billet\" et saisissez l’email du destinataire. Vous pouvez lancer un transfert à tout moment avant le début de l’événement, tant que le billet n’a pas été scanné à l’entrée. Le destinataire a 24 heures pour l’accepter ; passé ce délai, le lien expire et vous pouvez renvoyer le billet ou annuler le transfert depuis la page du billet."
             },
             {
               "question": "Que se passe-t-il si je perds mon billet ?",
@@ -127,7 +143,7 @@
             },
             {
               "question": "Puis-je acheter des billets sans créer de compte ?",
-              "answer": "Un compte Tikèm est nécessaire pour acheter des billets. Cela sécurise vos billets et vous permet de gérer transferts, remboursements et demandes de support. La création de compte prend une minute."
+              "answer": "Oui. Vous pouvez payer en tant qu’invité avec votre nom et votre email (et un numéro de téléphone pour les événements en Haïti). Vos billets arrivent par email, et vous pouvez les retrouver à tout moment sur tikem.co/tickets/find. Un compte garde tous vos billets au même endroit et vous permet de les transférer."
             }
           ]
         },
@@ -163,7 +179,7 @@
           "faqs": [
             {
               "question": "Quels moyens de paiement acceptez-vous ?",
-              "answer": "Nous acceptons Visa, Mastercard, American Express et MonCash (pour les utilisateurs en Haïti). Les paiements sont traités de manière sécurisée via nos partenaires."
+              "answer": "Cela dépend du lieu de l’événement. Les événements en Haïti se paient avec MonCash. Les événements aux États-Unis, au Canada et en France se paient par carte (Visa, Mastercard, American Express), de manière sécurisée via Stripe. Le paiement n’affiche que les moyens disponibles pour cet événement."
             },
             {
               "question": "Pourquoi y a-t-il des frais de service ?",

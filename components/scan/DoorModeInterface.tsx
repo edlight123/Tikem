@@ -8,7 +8,7 @@ import { ScanBottomBar } from '@/components/scan/ScanBottomBar'
 import { ManualLookupSheet } from '@/components/scan/ManualLookupSheet'
 import { useScanController } from '@/lib/scan/useScanController'
 import { performCheckIn, performOverrideCheckIn } from '@/app/organizer/scan/actions'
-import type { CheckInParams } from '@/lib/scan/checkInTicket'
+import type { CheckInParams, CheckInResult } from '@/lib/scan/checkInTicket'
 
 interface DoorModeInterfaceProps {
   eventId: string
@@ -33,23 +33,44 @@ export function DoorModeInterface({
   const currentCodeRef = useRef<string | null>(null)
   const currentMethodRef = useRef<'scan' | 'manual'>('scan')
 
-  // Calculate stats
+  // Who is in, kept locally so the counters move with every admit. Seeded
+  // from the server; each VALID scan or override adds its ticket.
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(
+    () => new Set(tickets.filter((t) => t.checked_in_at || t.checked_in).map((t) => String(t.id)))
+  )
+  const markIn = (ticketId: string) =>
+    setCheckedInIds((prev) => {
+      if (prev.has(ticketId)) return prev
+      const next = new Set(prev)
+      next.add(ticketId)
+      return next
+    })
+
+  // The override's own verdict (re-entry allowed, or refused and why).
+  const [overrideResult, setOverrideResult] = useState<CheckInResult | null>(null)
+  const [overriding, setOverriding] = useState(false)
+  const overrideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (overrideTimerRef.current) clearTimeout(overrideTimerRef.current)
+  }, [])
+
   const stats = useMemo(() => {
-    const checkedInCount = tickets.filter((t) => t.checked_in_at).length
-    const remainingCount = tickets.length - checkedInCount
-    return { checkedInCount, remainingCount }
-  }, [tickets])
+    const ids = new Set(tickets.map((t) => String(t.id)))
+    let checkedInCount = 0
+    for (const id of checkedInIds) if (ids.has(id)) checkedInCount++
+    return { checkedInCount, remainingCount: Math.max(0, tickets.length - checkedInCount) }
+  }, [tickets, checkedInIds])
 
   // Prepare attendee list for manual lookup
   const attendees = useMemo(() => {
     return tickets.map((ticket) => ({
       ticketId: ticket.id,
-      attendeeName: ticket.attendee?.full_name || ticket.attendee?.email || 'Guest',
+      attendeeName: ticket.attendee?.full_name || ticket.attendee_name || ticket.attendee?.email || 'Guest',
       attendeeEmail: ticket.attendee?.email || '',
       ticketType: ticket.ticket_type || 'General Admission',
-      checkedIn: !!ticket.checked_in_at,
+      checkedIn: checkedInIds.has(String(ticket.id)),
     }))
-  }, [tickets])
+  }, [tickets, checkedInIds])
 
   // Scan controller
   const { state, result, handleScan, manualCheckIn, reset } = useScanController({
@@ -65,14 +86,24 @@ export function DoorModeInterface({
         checkInMethod: method,
         code: code ?? null,
       }
-      return await performCheckIn(params)
+      const res = await performCheckIn(params)
+      if (res.success) markIn(ticketId)
+      return res
     },
     cooldownMs: 1200,
     duplicateWindowMs: 3000,
   })
 
+  const closeOverride = () => {
+    if (overrideTimerRef.current) clearTimeout(overrideTimerRef.current)
+    overrideTimerRef.current = null
+    setOverrideResult(null)
+    reset()
+  }
+
   const handleOverride = async () => {
-    if (!currentTicketId) return
+    if (!currentTicketId || overriding) return
+    setOverriding(true)
 
     const params: CheckInParams = {
       ticketId: currentTicketId,
@@ -84,12 +115,20 @@ export function DoorModeInterface({
       code: currentCodeRef.current,
     }
 
-    const overrideResult = await performOverrideCheckIn(params)
-    
-    // Show result and reset after cooldown
-    setTimeout(() => {
-      reset()
-    }, 1200)
+    let res: CheckInResult
+    try {
+      res = await performOverrideCheckIn(params)
+    } catch {
+      res = { success: false, type: 'INVALID', reason: 'NOT_FOUND' }
+    }
+    setOverriding(false)
+    if (res.success) markIn(currentTicketId)
+    // Show what actually happened: re-entry allowed, or refused (refunded,
+    // cancelled, wrong code...) with the reason. A refusal stays until closed.
+    setOverrideResult(res)
+    if (res.success) {
+      overrideTimerRef.current = setTimeout(closeOverride, 1800)
+    }
   }
 
   return (
@@ -112,13 +151,18 @@ export function DoorModeInterface({
       {/* Bottom Bar */}
       <ScanBottomBar onManualLookup={() => setShowManualLookup(true)} />
 
-      {/* Result Overlay */}
-      {result && (
-        <ScanResultOverlay
-          result={result}
-          onClose={reset}
-          onOverride={handleOverride}
-        />
+      {/* Result Overlay: the override's verdict replaces the scan's. */}
+      {overrideResult ? (
+        <ScanResultOverlay result={overrideResult} onClose={closeOverride} reentry />
+      ) : (
+        result && (
+          <ScanResultOverlay
+            result={result}
+            onClose={reset}
+            onOverride={handleOverride}
+            overriding={overriding}
+          />
+        )
       )}
 
       {/* Manual Lookup Sheet */}

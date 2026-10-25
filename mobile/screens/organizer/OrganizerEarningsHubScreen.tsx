@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Wallet } from 'lucide-react-native';
 
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { safeFormatForLanguage } from '../../lib/dates';
 import { formatCurrency } from '../../lib/currency';
@@ -51,10 +51,15 @@ export default function OrganizerEarningsHubScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
-  const { userProfile } = useAuth();
+  const activeOrg = useActiveOrg();
   const { t, language } = useI18n();
   const { height: headerH, onHeight } = useOverlayHeaderInset();
-  const userId = userProfile?.id;
+  // The ACTING org's money (events + payouts are org-scoped server-side via
+  // X-Tikem-Org), cached per org. Not the signed-in uid: a finance admin sees
+  // the org they act for.
+  const userId = activeOrg.orgId;
+  // An admin the owner granted read-only finances: figures, no money-out actions.
+  const readOnly = !activeOrg.isOwner;
 
   const [snap, setSnap] = useState<EarningsHubSnapshot | null>(() =>
     userId ? peekEarningsHub(userId) : null
@@ -272,20 +277,29 @@ export default function OrganizerEarningsHubScreen() {
             <Text style={styles.eyebrow}>{t('organizerEarnings.availableToWithdraw')}</Text>
             {renderBalance()}
 
-            {/* The one white primary action on this screen (POSH §2.2). */}
-            <WhitePillCTA
-              label={t('organizerEarningsHub.withdraw')}
-              onPress={onWithdraw}
-              disabled={!moneyLoaded || withBalance.length === 0}
-            />
+            {readOnly ? (
+              <View style={styles.readOnlyRow}>
+                <View style={styles.readOnlyDot} />
+                <Text style={styles.readOnlyText}>{t('orgTeam.finance.readOnlyHub')}</Text>
+              </View>
+            ) : (
+              <>
+                {/* The one white primary action on this screen (POSH §2.2). */}
+                <WhitePillCTA
+                  label={t('organizerEarningsHub.withdraw')}
+                  onPress={onWithdraw}
+                  disabled={!moneyLoaded || withBalance.length === 0}
+                />
 
-            <TouchableOpacity
-              style={styles.settingsLink}
-              onPress={() => navigation.navigate('OrganizerPayoutSettings')}
-              accessibilityRole="button"
-            >
-              <Text style={styles.settingsLinkText}>{t('organizerEarningsHub.payoutSettings')}</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.settingsLink}
+                  onPress={() => navigation.navigate('OrganizerPayoutSettings')}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.settingsLinkText}>{t('organizerEarningsHub.payoutSettings')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             {moneyLoaded && !moneyFailed ? (
               <View style={styles.statsWrap}>
@@ -415,7 +429,7 @@ export default function OrganizerEarningsHubScreen() {
       {/* Several events hold money: pick which balance to send. Only events with
           something to withdraw are listed, largest first. */}
       <FormSheet
-        visible={pickerOpen}
+        visible={pickerOpen && !readOnly}
         title={t('organizerEarningsHub.pickTitle')}
         onClose={() => setPickerOpen(false)}
         closeLabel={t('common.close')}
@@ -504,6 +518,27 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 8,
       fontSize: 15,
       lineHeight: 21,
+      color: colors.textSecondary,
+    },
+    // Read-only finance admin: status as dot + label (no pill, no button).
+    readOnlyRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+      marginTop: 4,
+      marginBottom: 8,
+    },
+    readOnlyDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginTop: 6,
+      backgroundColor: colors.textSecondary,
+    },
+    readOnlyText: {
+      flex: 1,
+      fontSize: 14,
+      lineHeight: 20,
       color: colors.textSecondary,
     },
     settingsLink: {

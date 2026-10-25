@@ -371,47 +371,19 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 </View>
               ) : (
                 <>
+                  {/* Only what Tikèm actually sends. There is no organizer
+                      sale email, no reviews, no marketing email and no SMS
+                      provider, so those switches are gone (the stored values
+                      are left alone). Payouts are listed above as always on. */}
                   <Text style={styles.groupLabel}>{t('notificationSettings.organizer.email')}</Text>
                   <View style={styles.card}>
                     <PrefRow
-                      title={t('notificationSettings.organizer.ticketSales')}
-                      body={t('notificationSettings.organizer.ticketSalesEmail')}
-                      value={orgPrefs.email_ticket_sales}
-                      onChange={(v) => toggleOrgPref('email_ticket_sales', v)}
-                    />
-                    <PrefRow
-                      divided
-                      title={t('notificationSettings.organizer.reviews')}
-                      body={t('notificationSettings.organizer.reviewsEmail')}
-                      value={orgPrefs.email_new_reviews}
-                      onChange={(v) => toggleOrgPref('email_new_reviews', v)}
-                    />
-                    <PrefRow
-                      divided
                       title={t('notificationSettings.organizer.attendeeMessages')}
                       body={t('notificationSettings.organizer.attendeeMessagesEmail')}
                       value={orgPrefs.email_attendee_messages ?? true}
                       onChange={(v) => toggleOrgPref('email_attendee_messages', v)}
                     />
-                    <PrefRow
-                      divided
-                      title={t('notificationSettings.organizer.marketing')}
-                      body={t('notificationSettings.organizer.marketingBody')}
-                      value={orgPrefs.email_marketing}
-                      onChange={(v) => toggleOrgPref('email_marketing', v)}
-                    />
                   </View>
-
-                  <Text style={styles.groupLabel}>{t('notificationSettings.organizer.sms')}</Text>
-                  <View style={styles.card}>
-                    <PrefRow
-                      title={t('notificationSettings.organizer.ticketSales')}
-                      body={t('notificationSettings.organizer.ticketSalesSms')}
-                      value={orgPrefs.sms_ticket_sales}
-                      onChange={(v) => toggleOrgPref('sms_ticket_sales', v)}
-                    />
-                  </View>
-                  <Text style={styles.footnote}>{t('notificationSettings.organizer.smsNote')}</Text>
 
                   <Text style={styles.groupLabel}>{t('notificationSettings.organizer.push')}</Text>
                   <View style={styles.card}>
@@ -420,13 +392,6 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                       body={t('notificationSettings.organizer.ticketSalesPush')}
                       value={orgPrefs.push_ticket_sales}
                       onChange={(v) => toggleOrgPref('push_ticket_sales', v)}
-                    />
-                    <PrefRow
-                      divided
-                      title={t('notificationSettings.organizer.reviews')}
-                      body={t('notificationSettings.organizer.reviewsPush')}
-                      value={orgPrefs.push_new_reviews}
-                      onChange={(v) => toggleOrgPref('push_new_reviews', v)}
                     />
                     <PrefRow
                       divided

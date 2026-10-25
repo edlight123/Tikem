@@ -3,7 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import crypto from 'crypto'
-import { sendSms } from '@/lib/sms'
+import { isSmsConfigured, sendSms } from '@/lib/sms'
 import { hashPhoneVerificationCode } from '@/lib/phone-verification-code'
 import { consumeRateLimit } from '@/lib/rate-limit'
 import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
@@ -24,6 +24,16 @@ export async function POST(request: NextRequest) {
     if (notOwner) return notOwner
 
     const organizerId = user.id
+
+    // No SMS provider in production yet (audit #18): say so before writing a
+    // code nobody will receive. The payout page hides this action then, and a
+    // MonCash number is confirmed another way (sign-in phone or team review).
+    if (process.env.NODE_ENV === 'production' && !isSmsConfigured()) {
+      return NextResponse.json(
+        { error: 'Text message codes are not available yet.', code: 'sms_not_configured' },
+        { status: 503 }
+      )
+    }
 
     const throttle = await consumeRateLimit({
       key: `phone-verification-send:${organizerId}`,

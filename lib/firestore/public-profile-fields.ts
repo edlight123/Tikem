@@ -24,7 +24,9 @@ export const PUBLIC_PROFILE_FIELDS = [
   'full_name',
   'photo_url',
   'is_verified',
-  'bio',
+  // NOT 'bio': a person's bio is privacy-gated (profile_visibility), and this
+  // doc is readable by every signed-in user. Profiles get it, gated, from
+  // GET /api/profiles/{uid}/public-details (lib/profile/public-details.ts).
   'username',
   'organization_name',
   'organization_logo',
@@ -74,7 +76,6 @@ export function pickPublicProfileFields(
   if (createdAt != null) out.created_at = createdAt
 
   if (data.is_verified != null) out.is_verified = data.is_verified
-  if (data.bio != null) out.bio = data.bio
   if (data.username != null) out.username = data.username
   if (data.organization_name != null) out.organization_name = data.organization_name
   if (data.organization_logo != null) out.organization_logo = data.organization_logo

@@ -4,6 +4,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { readUserNotifyPrefs, sanitizeUserNotifyPrefs, type UserNotifyPrefs } from '@/lib/notifications/userPreferences'
 import { FieldValue } from 'firebase-admin/firestore'
 import { syncPublicProfileAdmin } from './public-profile'
 import {
@@ -41,11 +42,17 @@ export interface UserProfile {
   defaultSubarea?: string
   favoriteCategories?: string[]
   language?: 'en' | 'fr' | 'ht'
+  /** Legacy nested switches. Nothing sends on these; kept so old data still reads. */
   notify?: {
     reminders: boolean
     updates: boolean
     promos: boolean
   }
+  /**
+   * The switches the senders actually read (top-level notify_* on users/{uid},
+   * lib/notifications/userPreferences.ts). Write these, not `notify`.
+   */
+  notifyPrefs?: UserNotifyPrefs
   role?: string
   isVerified?: boolean
   verificationStatus?: string
@@ -88,6 +95,7 @@ export async function getUserProfileAdmin(uid: string): Promise<UserProfile | nu
         updates: data.notify?.updates ?? true,
         promos: data.notify?.promos ?? false
       },
+      notifyPrefs: readUserNotifyPrefs(data),
       role: data.role || 'attendee',
       isVerified: data.is_verified || false,
       verificationStatus: data.verification_status || 'none',
@@ -174,6 +182,7 @@ export async function updateUserProfileAdmin(uid: string, updates: Partial<UserP
     if (updates.favoriteCategories !== undefined) updateData.favorite_categories = updates.favoriteCategories
     if (updates.language !== undefined) updateData.language = updates.language
     if (updates.notify !== undefined) updateData.notify = updates.notify
+    if (updates.notifyPrefs !== undefined) Object.assign(updateData, sanitizeUserNotifyPrefs(updates.notifyPrefs))
 
     await userRef.update(updateData)
 

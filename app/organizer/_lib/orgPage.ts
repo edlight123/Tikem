@@ -34,6 +34,7 @@ export const getPortalOrgContext = cache(async (): Promise<OrgContext | null> =>
       user: ctx.user,
       orgId: ctx.user.id,
       role: 'owner',
+      financeView: true,
       isOwner: true,
       isPlatformAdmin: ctx.user.role === 'admin' || ctx.user.role === 'super_admin',
     }
@@ -90,6 +91,19 @@ export async function requireEventPage(eventId: string, action: OrgAction, path?
     notFound()
   }
   return { user, event, eventId, orgId: String(event.organizer_id || event.organizerId || ''), role }
+}
+
+/**
+ * Read-only finance pages (earnings, payout history, revenue): the owner, or
+ * an admin the owner granted finance_view. Everyone else goes to /organizer.
+ * Callers render read-only (no withdraw, no payout settings) when !isOwner.
+ */
+export async function requireFinancePage(path: string): Promise<OrgContext> {
+  await requireSignedIn(path)
+  const ctx = await getPortalOrgContext()
+  if (!ctx) redirect(`/organizer?redirect=${encodeURIComponent(path)}`)
+  if (!ctx.financeView) redirect('/organizer')
+  return ctx
 }
 
 /**

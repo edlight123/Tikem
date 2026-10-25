@@ -3,10 +3,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-export default function FindTicketsForm() {
+/**
+ * `smsEnabled` comes from the server (lib/sms.ts isSmsConfigured): a phone
+ * lookup is only answered by text when a provider is configured. Otherwise
+ * the link goes to the email address on the order, and the copy says so.
+ */
+export default function FindTicketsForm({ smsEnabled = false }: { smsEnabled?: boolean }) {
   const { t } = useTranslation('common')
   const [contact, setContact] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [sentBy, setSentBy] = useState<'email' | 'phone'>('email')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -16,7 +22,9 @@ export default function FindTicketsForm() {
     setStatus('sending')
     // One field, two meanings: anything with an "@" is an email, anything else is
     // treated as a phone number. The server normalizes both.
-    const payload = value.includes('@') ? { email: value } : { phone: value }
+    const byEmail = value.includes('@')
+    const payload = byEmail ? { email: value } : { phone: value }
+    setSentBy(byEmail ? 'email' : 'phone')
 
     try {
       await fetch('/api/tickets/guest/lookup', {
@@ -37,10 +45,14 @@ export default function FindTicketsForm() {
       <div className="rounded-2xl bg-emerald-500/10 px-5 py-6 text-center">
         <p className="text-emerald-200 font-semibold">{t('find_tickets.success_title', 'Check your messages')}</p>
         <p className="text-sm text-white/70 mt-2 leading-relaxed">
-          {t(
-            'find_tickets.success_desc',
-            'If we have tickets for that email or phone number, the link is on its way to it now.'
-          )}
+          {sentBy === 'email'
+            ? t('find_tickets.success_desc_email', 'If we have tickets for that email address, the link is on its way to it now.')
+            : smsEnabled
+              ? t('find_tickets.success_desc', 'If we have tickets for that email or phone number, the link is on its way to it now.')
+              : t(
+                  'find_tickets.success_desc_phone_email',
+                  "If we have tickets for that phone number, we've emailed the link to the email address used on that order."
+                )}
         </p>
       </div>
     )

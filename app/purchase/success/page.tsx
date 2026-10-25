@@ -3,7 +3,6 @@ import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import { PurchaseSuccessNotificationPrompt } from '@/components/PurchaseSuccessNotificationPrompt'
 import PurchasePopupBridge from '@/components/PurchasePopupBridge'
 import type { Database } from '@/types/database'
 import { generateTicketQRCode } from '@/lib/qrcode'
@@ -113,13 +112,10 @@ export default async function PurchaseSuccessPage({
         qrCodeDataUrl={qrCodeDataUrl}
       />
 
-      {/* Notification Prompt - ONLY on purchase success, NOT on scan/check-in pages */}
-      {user && (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <PurchaseSuccessNotificationPrompt userId={user.id} />
-        </div>
-      )}
-      
+      {/* The "Get notified about your ticket" web-push prompt used to sit here.
+          It saved FCM tokens nothing ever read, so it was removed (2026-10-25).
+          Ticket alerts reach buyers by email, and by push in the mobile app. */}
+
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>
   )

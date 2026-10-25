@@ -1,51 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { adminDb } from '@/lib/firebase/admin';
-import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly';
+import { NextResponse } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
+import { deactivateOrganizerAccount } from '@/lib/account/deactivation'
 
-export async function POST(request: NextRequest) {
+export const dynamic = 'force-dynamic'
+
+/**
+ * Deactivate the organizer account (owner only). Unpublishes the upcoming
+ * published events and records which ones, so reactivation restores exactly
+ * those (lib/account/deactivation.ts). Refused with 409 while an upcoming event
+ * has sold tickets. The client signs out after a 200.
+ */
+export async function POST() {
   try {
-    const user = await getCurrentUser();
-
+    const user = await getCurrentUser()
     if (!user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
-    const notOwner = await denyIfActingForAnotherOrg(user.id);
-    if (notOwner) return notOwner;
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
-    // Mark account as deactivated
-    await adminDb.collection('users').doc(user.id).update({
-      account_status: 'deactivated',
-      deactivated_at: new Date().toISOString(),
-      reactivation_deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-    });
+    const outcome = await deactivateOrganizerAccount(user.id)
+    if (outcome.status === 'refused') {
+      return NextResponse.json(
+        {
+          error: 'Upcoming events have sold tickets',
+          code: 'upcoming_events_with_sales',
+          events: outcome.events,
+        },
+        { status: 409 }
+      )
+    }
 
-    // Hide all events
-    const eventsSnapshot = await adminDb.collection('events')
-      .where('organizer_id', '==', user.id)
-      .get();
-
-    const batch = adminDb.batch();
-    eventsSnapshot.docs.forEach((doc: any) => {
-      batch.update(doc.ref, { status: 'hidden', hidden_reason: 'account_deactivated' });
-    });
-    await batch.commit();
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Account deactivated successfully',
-      reactivation_deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    });
+      unpublishedEvents: outcome.unpublishedEventIds.length,
+    })
   } catch (error) {
-    console.error('Error deactivating account:', error);
-    return NextResponse.json(
-      { error: 'Failed to deactivate account' },
-      { status: 500 }
-    );
+    console.error('Error deactivating account:', error)
+    return NextResponse.json({ error: 'Failed to deactivate account' }, { status: 500 })
   }
 }

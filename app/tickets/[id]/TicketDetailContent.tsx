@@ -7,7 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { StatusChip } from '@/components/ui/kit'
 import QRCodeDisplay from './QRCodeDisplay'
-import TicketActions from './TicketActions'
+import TicketActions, { type PendingTransferInfo } from './TicketActions'
 import AddToWalletButton from '@/components/AddToWalletButton'
 import RefundRequestAction from '@/components/tickets/RefundRequestAction'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
@@ -16,9 +16,10 @@ interface TicketDetailContentProps {
   ticket: any
   event: any
   user: any
+  pendingTransfer?: PendingTransferInfo | null
 }
 
-export default function TicketDetailContent({ ticket, event, user }: TicketDetailContentProps) {
+export default function TicketDetailContent({ ticket, event, user, pendingTransfer = null }: TicketDetailContentProps) {
   const { t } = useTranslation('tickets')
 
   const cleanTitle = (event?.title || '').replace(/^\[[^\]]*\]\s*/, '')
@@ -118,6 +119,7 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
                 ticketStatus={ticket.status}
                 checkedIn={!!ticket.checked_in_at}
                 eventTitle={event.title}
+                pendingTransfer={pendingTransfer}
               />
 
               {/* Low-emphasis by design: a request, reviewed by people. */}

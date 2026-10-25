@@ -5,6 +5,15 @@
  * page and GET /api/organizer/settings/notifications (which the mobile app
  * reads, since client rules do not expose that subcollection).
  */
+/*
+ * Which keys a sender actually reads (2026-10-25):
+ *   email_attendee_messages, push_attendee_messages  lib/organizer-message-alerts.ts
+ *   push_ticket_sales                                notifyOrganizerTicketSale
+ * The rest are kept ONLY so stored data and older mobile builds (which still
+ * render and PUT them) keep working. Nothing sends on them: there is no
+ * organizer sale email, no reviews, no organizer reminder or marketing email,
+ * and no SMS provider. Payout notices are always sent (policy.ts).
+ */
 export const ORGANIZER_NOTIFICATION_DEFAULTS = {
   email_ticket_sales: true,
   email_new_reviews: true,
@@ -31,6 +40,19 @@ export function withOrganizerNotificationDefaults(
   const out = { ...ORGANIZER_NOTIFICATION_DEFAULTS } as OrganizerNotificationPreferences
   for (const key of Object.keys(ORGANIZER_NOTIFICATION_DEFAULTS) as (keyof OrganizerNotificationPreferences)[]) {
     const value = stored?.[key]
+    if (typeof value === 'boolean') out[key] = value
+  }
+  return out
+}
+
+/** Keep only known keys with boolean values: safe to merge into the stored doc. */
+export function sanitizeOrganizerNotificationPreferences(
+  input: unknown
+): Partial<OrganizerNotificationPreferences> {
+  const out: Partial<OrganizerNotificationPreferences> = {}
+  if (!input || typeof input !== 'object') return out
+  for (const key of Object.keys(ORGANIZER_NOTIFICATION_DEFAULTS) as (keyof OrganizerNotificationPreferences)[]) {
+    const value = (input as Record<string, unknown>)[key]
     if (typeof value === 'boolean') out[key] = value
   }
   return out

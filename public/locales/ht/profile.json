@@ -61,6 +61,12 @@
     "event_updates_desc": "Chanjman nan evènman ou ap swiv oswa ou pral ale",
     "promos": "Pwomosyon ak Nouvèl",
     "promos_desc": "Òf espesyal, evènman enpòtan ak mizajou platfòm",
+    "discovery": "Evènman toupre ou",
+    "discovery_desc": "Yon seleksyon nouvo evènman nan vil ou",
+    "filling_fast": "Ap vann vit",
+    "filling_fast_desc": "Lè yon evènman ou anrejistre prèske fin vann",
+    "national_day": "Fèt ayisyen yo",
+    "national_day_desc": "Yon ti mo nan maten yon jou fèt nasyonal",
     "note": "Notifikasyon enpòtan sou kont ak sekirite ou yo ap toujou voye kèlkeswa paramèt sa yo."
   },
   "account": {
@@ -98,7 +104,8 @@
     "since": "Sou Tikèm depi {{date}}",
     "upcoming_count_one": "{{count}} evènman k ap vini",
     "upcoming_count_other": "{{count}} evènman k ap vini",
-    "upcoming_count_plural": "{{count}} evènman k ap vini"
+    "upcoming_count_plural": "{{count}} evènman k ap vini",
+    "private_details": "Se zanmi sèlman ki ka wè biyo ak rezo sosyal yo."
   },
   "dashboard": {
     "stats": {

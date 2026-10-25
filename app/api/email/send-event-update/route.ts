@@ -1,100 +1,92 @@
-import { Resend } from 'resend'
-import { createClient } from '@/lib/firebase-db/server'
+import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { canOnEvent } from '@/lib/organizer/context'
+import { requireEventAccess } from '@/lib/organizer/context'
+import { loadEventTicketRows } from '@/lib/organizer/eventOrdersLoader'
+import { isSoldTicketStatus } from '@/lib/organizer/eventOrders'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { getEventUpdateNoticeEmail } from '@/lib/email-templates/reminder'
+import { sendEmail } from '@/lib/email'
+import { consumeRateLimit } from '@/lib/rate-limit'
 
-const resend = new Resend(process.env.RESEND_API_KEY || '')
+/** Event-update emails one event may send per rolling day. */
+const UPDATES_PER_EVENT_PER_DAY = 5
+const DAY_MS = 24 * 60 * 60 * 1000
+const MAX_MESSAGE = 2000
 
 /**
- * Sends an update notification to all attendees of an event
- * Used when organizers make important changes to event details
+ * Email an update to everyone holding a live ticket for an event (the
+ * Attendees page's "Email attendees" sheet).
+ *
+ * Each attendee gets their OWN email: no attendee ever sees another's address.
+ * Recipients resolve through the shared loader (lib/organizer/eventOrdersLoader),
+ * so guest checkouts, comps and guest-list tickets are included, and only live
+ * tickets count (refunded / cancelled holders are not written to).
  */
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
-    
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { eventId, updateMessage, updateType } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const eventId = String(body?.eventId || '').trim()
+    const updateMessage = String(body?.updateMessage || '').trim()
+    const updateType = String(body?.updateType || 'important').trim() || 'important'
 
     if (!eventId || !updateMessage) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ error: 'Write a message first.' }, { status: 400 })
+    }
+    if (updateMessage.length > MAX_MESSAGE) {
+      return NextResponse.json({ error: `Keep the message under ${MAX_MESSAGE} characters.` }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    // The event's org (owner, admin, manager) or a platform admin.
+    const access = await requireEventAccess(eventId, 'manage_events')
+    if (!access.ok) return access.response
+    const event = { ...(access.value.event as any), id: eventId }
 
-    // Verify the caller runs this event (its org's owner, admin or manager)
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .single()
-
-    if (eventError || !event || !(await canOnEvent(user, event, 'manage_events')).allowed) {
-      return Response.json({ error: 'Event not found or unauthorized' }, { status: 404 })
+    const rows = await loadEventTicketRows(event)
+    const recipients = new Map<string, { email: string; userId: string | null }>()
+    for (const r of rows) {
+      if (!isSoldTicketStatus(r.status)) continue
+      const email = r.buyer.email.trim().toLowerCase()
+      if (!email || recipients.has(email)) continue
+      recipients.set(email, { email, userId: r.isGuest ? null : r.buyerKey || null })
     }
 
-    // Get all attendees for this event
-    const { data: tickets, error: ticketsError } = await supabase
-      .from('tickets')
-      .select('*, users(*)')
-      .eq('event_id', eventId)
-
-    if (ticketsError || !tickets || tickets.length === 0) {
-      return Response.json({ message: 'No attendees to notify' })
+    if (recipients.size === 0) {
+      return NextResponse.json({ success: true, sent: 0, failed: 0, recipients: 0 })
     }
 
-    // Get unique attendees (one email per user even if multiple tickets)
-    const attendeeMap = new Map()
-    tickets.forEach((ticket: any) => {
-      if (ticket.users && ticket.users.email) {
-        attendeeMap.set(ticket.attendee_id, ticket.users)
-      }
+    const limit = await consumeRateLimit({
+      key: `event-update-email:${eventId}`,
+      limit: UPDATES_PER_EVENT_PER_DAY,
+      windowMs: DAY_MS,
     })
+    if (limit.limited) {
+      return NextResponse.json(
+        { error: 'This event has sent its updates for today. Try again tomorrow.', code: 'update_limit' },
+        { status: 429 }
+      )
+    }
 
-    const attendees = Array.from(attendeeMap.values())
-
-    let emailsSent = 0
-    let errors = 0
-
-    // Send email to each attendee
-    for (const attendee of attendees) {
+    let sent = 0
+    let failed = 0
+    for (const recipient of recipients.values()) {
       try {
-        const lang = await resolveEmailLang({ explicit: attendee.language, userId: attendee.id, event })
-        const updateEmail = getEventUpdateNoticeEmail({
-          lang,
-          event: { ...event, id: event.id || eventId },
-          updateType,
-          updateMessage: String(updateMessage),
-        })
-        await resend.emails.send({
-          from: 'Tikem <noreply@tikem.co>',
-          to: attendee.email,
-          subject: updateEmail.subject,
-          html: updateEmail.html,
-        })
-
-        emailsSent++
-      } catch (emailError) {
-        console.error(`Error sending update to ${attendee.email}:`, emailError)
-        errors++
+        const lang = await resolveEmailLang({ userId: recipient.userId, email: recipient.email, event })
+        const mail = getEventUpdateNoticeEmail({ lang, event, updateType, updateMessage })
+        const result = await sendEmail({ to: recipient.email, subject: mail.subject, html: mail.html })
+        if (result?.success) sent++
+        else failed++
+      } catch (err) {
+        console.error('[send-event-update] one recipient failed', (err as any)?.message)
+        failed++
       }
     }
 
-    // Record the update in database (optional - could create an event_updates table)
-    // For now, just return success
-
-    return Response.json({
-      success: true,
-      attendeesNotified: emailsSent,
-      errors
-    })
+    return NextResponse.json({ success: true, sent, failed, recipients: recipients.size })
   } catch (error) {
     console.error('Error in send-event-update:', error)
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong sending the update.' }, { status: 500 })
   }
 }

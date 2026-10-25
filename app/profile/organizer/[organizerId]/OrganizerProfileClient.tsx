@@ -46,10 +46,14 @@ import {
   Music2,
   Twitter,
   Facebook,
+  Linkedin,
+  Globe,
 } from 'lucide-react'
 import OrganizerMark from '@/components/OrganizerMark'
 import { defaultAvatarUrl } from '@/lib/defaultAvatar'
-import { socialUrlFor, type SocialLinks, type FriendshipState } from '@/types/social'
+import { externalUrlLabel } from '@/lib/safeUrl'
+import type { FriendshipState } from '@/types/social'
+import type { PublicProfileDetails } from '@/lib/profile/public-details'
 
 interface OrganizerProfileClientProps {
   /**
@@ -72,8 +76,13 @@ interface OrganizerProfileClientProps {
   totalTicketsSold: number
   isFollowing: boolean
   userId?: string
-  socialLinks?: SocialLinks
-  bio?: string
+  /**
+   * What shows under the name, already privacy-checked on the server
+   * (lib/profile/public-details.ts): an org's description + links, or a
+   * person's bio + socials (null when their privacy hides them). Every link
+   * is a safe absolute href.
+   */
+  details?: PublicProfileDetails
   friendshipState?: FriendshipState
   isAuthenticated?: boolean
   /** Where they organize, when they have set it. Often absent. */
@@ -83,12 +92,31 @@ interface OrganizerProfileClientProps {
   isBlocked?: boolean
 }
 
-const SOCIAL_META: Array<{ key: keyof SocialLinks; Icon: typeof Instagram; label: string }> = [
+type Network = 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'tiktok'
+
+const SOCIAL_META: Array<{ key: Network; Icon: typeof Instagram; label: string }> = [
   { key: 'instagram', Icon: Instagram, label: 'Instagram' },
   { key: 'tiktok', Icon: Music2, label: 'TikTok' },
   { key: 'twitter', Icon: Twitter, label: 'X' },
   { key: 'facebook', Icon: Facebook, label: 'Facebook' },
+  { key: 'linkedin', Icon: Linkedin, label: 'LinkedIn' },
 ]
+
+/** The text and links to show, from whichever kind of profile this is. */
+function aboutFrom(details: PublicProfileDetails | undefined): {
+  text: string
+  website: string
+  links: Partial<Record<Network, string>>
+} {
+  if (details?.kind === 'org' && details.org) {
+    const { description, website, ...links } = details.org
+    return { text: description, website, links }
+  }
+  if (details?.kind === 'person' && details.person) {
+    return { text: details.person.bio, website: '', links: details.person.socials }
+  }
+  return { text: '', website: '', links: {} }
+}
 
 /** A stat: number, then label. No icon-only readings. */
 function Stat({
@@ -130,8 +158,7 @@ export default function OrganizerProfileClient({
   totalTicketsSold,
   isFollowing,
   userId,
-  socialLinks = {},
-  bio = '',
+  details,
   friendshipState = 'none',
   isAuthenticated = false,
   city,
@@ -139,7 +166,9 @@ export default function OrganizerProfileClient({
   isBlocked = false,
 }: OrganizerProfileClientProps) {
   const { t, i18n } = useTranslation('profile')
-  const socialEntries = SOCIAL_META.filter(({ key }) => (socialLinks?.[key] || '').trim())
+  const about = aboutFrom(details)
+  const socialEntries = SOCIAL_META.filter(({ key }) => (about.links[key] || '').trim())
+  const isOrg = details?.kind === 'org'
 
   /**
    * The light behind the hero: their newest poster, upcoming first.
@@ -194,7 +223,7 @@ export default function OrganizerProfileClient({
                 the invisible-card mistake). No organizer has uploaded a logo
                 (checked against production), so the mark is an organization
                 glyph, not the name's first letter (owner rule). */}
-            {organizer.logo || totalEvents > 0 ? (
+            {organizer.logo || isOrg || totalEvents > 0 ? (
               <OrganizerMark logoUrl={organizer.logo} className="h-20 w-20 rounded-2xl shadow-lg sm:h-24 sm:w-24" />
             ) : (
               // A person, not an organization (no logo, never hosted): their
@@ -258,10 +287,30 @@ export default function OrganizerProfileClient({
                 />
               </div>
 
-              {bio.trim() && (
+              {/* An org's description, or a person's bio when their privacy
+                  lets this viewer see it (decided on the server). */}
+              {about.text && (
                 <p className="mt-4 max-w-[60ch] whitespace-pre-line text-[15px] leading-relaxed text-white/70">
-                  {bio}
+                  {about.text}
                 </p>
+              )}
+
+              {details?.kind === 'person' && details.person === null && (
+                <p className="mt-4 text-[13px] text-white/40">
+                  {t('organizer_profile.private_details', 'Bio and socials are visible to friends only.')}
+                </p>
+              )}
+
+              {about.website && (
+                <a
+                  href={about.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex max-w-full items-center gap-1.5 text-[14px] text-brand-300 transition-colors hover:text-white"
+                >
+                  <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{externalUrlLabel(about.website)}</span>
+                </a>
               )}
 
               {/* Actions and socials on ONE row: they were two stacked blocks
@@ -294,7 +343,7 @@ export default function OrganizerProfileClient({
                   {socialEntries.map(({ key, Icon, label }) => (
                     <a
                       key={key}
-                      href={socialUrlFor(key, socialLinks[key] as string)}
+                      href={about.links[key]}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={label}

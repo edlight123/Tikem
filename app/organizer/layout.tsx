@@ -103,7 +103,7 @@ export default async function OrganizerLayout({
   const accountInitial = (user.full_name || user.email || 'U').trim().charAt(0).toUpperCase()
 
   return (
-    <OrgRoleProvider value={{ orgId: ctx.orgId, orgName: activeOrgName, role: ctx.role, isOwner: ctx.isOwner }}>
+    <OrgRoleProvider value={{ orgId: ctx.orgId, orgName: activeOrgName, role: ctx.role, isOwner: ctx.isOwner, financeView: ctx.financeView }}>
       <OrganizerChrome
         chromeTop={
           // Single Posh-style top bar (replaces the global site navbar in /organizer)

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { setOrderProofCookies } from '@/lib/tickets/orderAccess'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { getPaymentProviderForEventCountry, normalizeCountryCode } from '@/lib/payment-provider'
@@ -494,11 +495,15 @@ export async function POST(request: Request) {
       redirectUrl.searchParams.set(key, callbackUrl)
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       redirectUrl: redirectUrl.toString(),
       pendingTransactionId: pending?.id,
       ...(clientHold ? { seatHold: clientHold } : {}),
     })
+    // Proof that THIS browser started the order (HMAC'd, httpOnly). It is what lets
+    // a signed-out guest poll /api/sogepay/status for their own order and nobody else.
+    setOrderProofCookies(response, String(orderId), request.url)
+    return response
   } catch (error: any) {
     console.error('Sogepay initiate error:', error)
     return NextResponse.json({ error: error.message || 'Failed to initiate Sogepay payment' }, { status: 500 })

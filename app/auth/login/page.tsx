@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect, FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { auth, db } from '@/lib/firebase/client'
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { syncPublicProfileClient } from '@/lib/firestore/public-profile-client'
 import Link from 'next/link'
@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resetNotice, setResetNotice] = useState<string | null>(null)
+  const [resetSending, setResetSending] = useState(false)
 
   // Same-origin paths only. The old startsWith('/') && !startsWith('//') check
   // let "/\evil.com" through, which browsers read as protocol-relative.
@@ -90,11 +92,62 @@ export default function LoginPage() {
       }
 
       // Force router refresh and navigate
-      window.location.href = redirectTo
+      window.location.href = await destinationAfterLogin(redirectTo)
     } catch (err: any) {
       setError(err.message || t('errors.login_failed'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  /**
+   * Where to go once the session cookie is set. A deactivated organizer account
+   * is offered "Reactivate" first (app/account/reactivate); everyone else goes
+   * straight on. Any failure here just continues to the normal target.
+   */
+  async function destinationAfterLogin(target: string): Promise<string> {
+    try {
+      const res = await fetch('/api/organizer/settings/danger-zone/reactivate', { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.deactivated) return `/account/reactivate?redirect=${encodeURIComponent(target)}`
+      }
+    } catch {
+      // ignore
+    }
+    return target
+  }
+
+  /**
+   * Firebase password reset, mirroring the mobile login. The confirmation is
+   * deliberately neutral: it never says whether an account exists for the
+   * address, so the form can't be used to probe who has a Tikèm account.
+   */
+  async function handleForgotPassword() {
+    setError(null)
+    setResetNotice(null)
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed) {
+      setError(t('login.forgot_enter_email'))
+      return
+    }
+    setResetSending(true)
+    try {
+      await sendPasswordResetEmail(auth, trimmed)
+      setResetNotice(t('login.reset_sent', { email: trimmed }))
+    } catch (err: any) {
+      const code = String(err?.code || '')
+      if (code === 'auth/user-not-found') {
+        setResetNotice(t('login.reset_sent', { email: trimmed }))
+      } else if (code === 'auth/invalid-email' || code === 'auth/missing-email') {
+        setError(t('login.reset_invalid_email'))
+      } else if (code === 'auth/too-many-requests') {
+        setError(t('login.reset_too_many'))
+      } else {
+        setError(t('login.reset_failed'))
+      }
+    } finally {
+      setResetSending(false)
     }
   }
 
@@ -141,7 +194,7 @@ export default function LoginPage() {
       }
 
       // Redirect to specified page or home
-      window.location.href = redirectTo
+      window.location.href = await destinationAfterLogin(redirectTo)
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         setError(t('errors.signin_cancelled'))
@@ -171,8 +224,13 @@ export default function LoginPage() {
 
         <form className="space-y-5" onSubmit={handleLogin}>
           {error && (
-            <div className="rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
+            <div role="alert" className="rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
               {error}
+            </div>
+          )}
+          {resetNotice && (
+            <div role="status" className="rounded bg-white/[0.06] px-4 py-2.5 text-sm text-white/80">
+              {resetNotice}
             </div>
           )}
 
@@ -196,9 +254,19 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-[13px] font-medium text-white/70 mb-1.5">
-                {t('login.password')}
-              </label>
+              <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                <label htmlFor="password" className="block text-[13px] font-medium text-white/70">
+                  {t('login.password')}
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetSending || loading}
+                  className="text-[13px] font-medium text-white/60 underline-offset-4 hover:text-white hover:underline disabled:opacity-50"
+                >
+                  {resetSending ? t('login.reset_sending') : t('login.forgot_password')}
+                </button>
+              </div>
               <div className="relative">
                 <input
                   id="password"

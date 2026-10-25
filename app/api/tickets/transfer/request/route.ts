@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { findLivePendingTransfer, TRANSFER_TTL_MS } from '@/lib/tickets/transfers'
 
 const transferRequestSchema = z.object({
   ticketId: z.string().min(1),
@@ -89,16 +90,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for existing pending transfers using Firestore
-    const existingTransfers = await adminDb.collection('ticket_transfers')
-      .where('ticket_id', '==', ticketId)
-      .where('status', '==', 'pending')
-      .limit(1)
-      .get()
-
-    if (!existingTransfers.empty) {
+    // A transfer in flight blocks a new one, but only while its link is alive:
+    // an unaccepted transfer past its 24h expiry is not pending (and is marked
+    // expired here), otherwise the ticket would stay locked forever.
+    const pendingTransfer = await findLivePendingTransfer(ticketId)
+    if (pendingTransfer) {
       return NextResponse.json(
-        { error: 'A pending transfer already exists for this ticket' },
+        {
+          error: 'A pending transfer already exists for this ticket',
+          code: 'transfer_pending',
+          transfer: { id: pendingTransfer.id, expiresAt: pendingTransfer.expires_at },
+        },
         { status: 400 }
       )
     }
@@ -121,9 +123,8 @@ export async function POST(request: NextRequest) {
     // Generate unique transfer token using crypto for security
     const transferToken = `transfer_${crypto.randomUUID()}`
     
-    // Set 24-hour expiry
-    const expiresAt = new Date()
-    expiresAt.setHours(expiresAt.getHours() + 24)
+    // 24-hour expiry
+    const expiresAt = new Date(Date.now() + TRANSFER_TTL_MS)
 
     // Create transfer request - use Firestore directly
     const transferId = `transfer_${crypto.randomUUID()}`

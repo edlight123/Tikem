@@ -14,6 +14,8 @@ export interface OrgRoleValue {
   orgName: string
   role: OrgRole
   isOwner: boolean
+  /** May see the org's finances read-only (owner, or an admin granted finance_view). */
+  financeView: boolean
 }
 
 const OrgRoleContext = createContext<OrgRoleValue | null>(null)
@@ -25,6 +27,15 @@ export function OrgRoleProvider({ value, children }: { value: OrgRoleValue | nul
 /** Null outside the organizer portal, or for an account with no org. */
 export function useOrgRole(): OrgRoleValue | null {
   return useContext(OrgRoleContext)
+}
+
+/**
+ * May the viewer see the org's finances (earnings, payout history, revenue)?
+ * Read-only for anyone but the owner; withdrawals and payout settings stay
+ * owner_only. False with no org.
+ */
+export function useOrgFinanceView(): boolean {
+  return useContext(OrgRoleContext)?.financeView === true
 }
 
 /** May the acting role do `action`? False with no org. */

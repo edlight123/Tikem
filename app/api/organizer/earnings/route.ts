@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { requireOrg } from '@/lib/organizer/context'
+import { requireFinanceView } from '@/lib/organizer/context'
 import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
 import { summaryFromAvailability } from '@/lib/payouts/availability'
 
@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // A read-only summary (no bank or payout details), so the whole team that
-    // may view the org sees it; moving money stays owner-only elsewhere.
-    const org = await requireOrg('view')
+    // Read-only finances: the owner, or an admin the owner granted them
+    // (never managers). Moving money stays owner-only elsewhere.
+    const org = await requireFinanceView()
     if (!org.ok) return org.response
     const organizerId = org.value.orgId
 

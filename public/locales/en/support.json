@@ -72,8 +72,24 @@
     "message_placeholder": "Describe your issue or question in detail...",
     "submit": "Submit Request",
     "submitting": "Submitting...",
-    "success_title": "Request Submitted!",
-    "success_message": "We've received your support request and will respond within 24 hours. Check your email for confirmation.",
+    "success_title": "Request sent",
+    "success_message": "We have it. Your reference is {{reference}}, and we sent a confirmation to {{email}}. A person on the Tikèm team will reply to that address.",
+    "send_another": "Send another request",
+    "rate_limited": "You have sent several requests in a short time. Please wait a little, or email support@tikem.co.",
+    "details_hint": "Include details like an order number, the event name or an error message.",
+    "honeypot_label": "Leave this field empty",
+    "topics": {
+      "ticket_purchase": "Buying a ticket",
+      "payment": "Payment",
+      "refund": "Refund",
+      "event_access": "Getting into an event",
+      "account": "My account",
+      "event_creation": "Creating an event",
+      "payout": "Payouts",
+      "check_in": "Door check-in",
+      "verification": "Verification",
+      "other": "Something else"
+    },
     "error_title": "Submission Failed",
     "error_message": "There was an error submitting your request. Please try again or email us directly at support@tikem.co",
     "try_again": "Try Again",
@@ -111,7 +127,7 @@
           "faqs": [
             {
               "question": "How do I purchase tickets?",
-              "answer": "Browse events on the homepage or Discover page, open an event, select your ticket type and quantity, then click \"Get Tickets\". You’ll complete a secure checkout where you can pay by card or MonCash."
+              "answer": "Browse events on the homepage or Discover page, open an event, select your ticket type and quantity, then click \"Get Tickets\". Events in Haiti are paid with MonCash; events in the United States, Canada and France are paid by card."
             },
             {
               "question": "Where can I find my tickets?",
@@ -119,7 +135,7 @@
             },
             {
               "question": "Can I transfer my ticket to someone else?",
-              "answer": "Yes. Open your ticket details and click \"Transfer Ticket\". Enter the recipient’s email and they’ll receive instructions to claim the ticket. Transfers must be accepted before the event starts."
+              "answer": "Yes. Open your ticket, choose \"Transfer Ticket\" and enter the recipient’s email. You can start a transfer any time before the event begins, as long as the ticket has not been scanned at the door. The recipient has 24 hours to accept; if they don’t, the link expires and you can send the ticket again or cancel the transfer from your ticket page."
             },
             {
               "question": "What happens if I lose my ticket?",
@@ -127,7 +143,7 @@
             },
             {
               "question": "Can I buy tickets without creating an account?",
-              "answer": "You need a Tikèm account to purchase tickets. This keeps tickets secure and lets you manage transfers, refunds, and support requests. Creating an account only takes a minute."
+              "answer": "Yes. You can check out as a guest with your name and email (and a phone number for events in Haiti). Your tickets arrive by email, and you can find them again any time at tikem.co/tickets/find. An account keeps all your tickets in one place and lets you transfer them."
             }
           ]
         },
@@ -163,7 +179,7 @@
           "faqs": [
             {
               "question": "What payment methods do you accept?",
-              "answer": "We accept Visa, Mastercard, American Express, and MonCash (for users in Haiti). Payments are processed securely through our partners."
+              "answer": "It depends on where the event takes place. Events in Haiti are paid with MonCash. Events in the United States, Canada and France are paid by card (Visa, Mastercard, American Express), processed securely by Stripe. Checkout only shows the methods available for that event."
             },
             {
               "question": "Why was I charged a service fee?",

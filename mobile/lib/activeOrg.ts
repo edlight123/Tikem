@@ -157,6 +157,11 @@ export interface ActiveOrg {
   loaded: boolean;
   /** Acts for at least one team as admin/manager (opens organizer mode). */
   hasTeamAccess: boolean;
+  /**
+   * May see the acting org's finances: the owner, or an admin the owner
+   * granted read-only finances. Read-only unless isOwner.
+   */
+  financeView: boolean;
   can: (action: OrgAction) => boolean;
   switchTo: (orgId: string) => Promise<void>;
   refresh: () => Promise<void>;
@@ -192,14 +197,16 @@ export function useActiveOrg(): ActiveOrg {
   const chosen = s.chosen;
   const orgId = s.uid ? chosen?.orgId ?? s.uid : null;
   const role: OrgRole | null = s.uid ? chosen?.role ?? 'owner' : null;
+  const isOwner = !!s.uid && orgId === s.uid;
   return {
     orgId,
     role,
     orgName: chosen?.orgName ?? '',
-    isOwner: !!s.uid && orgId === s.uid,
+    isOwner,
     options: s.options,
     loaded: s.loaded,
     hasTeamAccess: s.options.some((o) => o.role === 'admin' || o.role === 'manager'),
+    financeView: isOwner || (role === 'admin' && chosen?.financeView === true),
     can: (action: OrgAction) => orgCan(role, action),
     switchTo: switchActiveOrg,
     refresh: refreshActiveOrgs,

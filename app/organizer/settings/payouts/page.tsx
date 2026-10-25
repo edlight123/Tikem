@@ -6,6 +6,7 @@ import { getDeclaredMarkets } from '@/lib/firestore/organizer-markets'
 import { serializeData } from '@/lib/utils/serialize'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import PayoutsPageNew from './PayoutsPageNew'
+import { isSmsConfigured } from '@/lib/sms'
 import PayoutsPageWrapper from '@/components/organizer/payouts/PayoutsPageWrapper'
 
 export const dynamic = 'force-dynamic'
@@ -80,6 +81,9 @@ export default async function PayoutsSettingsPage({
           organizerId={authUser.uid}
           organizerDefaultCountry={organizerDefaultCountry}
           declaredMarkets={declaredMarkets}
+          // Text-message codes only work with an SMS provider (none in
+          // production yet); local dev logs the code instead.
+          smsAvailable={isSmsConfigured() || process.env.NODE_ENV !== 'production'}
           initialActiveProfile={
             stripeParam
               ? 'stripe_connect'

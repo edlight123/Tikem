@@ -29,6 +29,8 @@ export interface TeamRow {
   role: string
   status: 'active' | 'invited'
   joined_at: string | null
+  /** Admin the owner granted read-only finances (lib/organizer/teamRoles canViewFinances). */
+  finance_view?: boolean
 }
 
 /** The owner renders as the first row; never sent to the API. */
@@ -108,6 +110,41 @@ function RoleTiles({
   )
 }
 
+/**
+ * "Can see finances (read only)": the owner's grant to one admin. A switch row
+ * (the circle is the toggle's own shape), shown only to the owner and only
+ * while Admin is the picked role. Never withdrawals or payout details.
+ */
+function FinanceToggle({ checked, onChange }: { checked: boolean; onChange: (next: boolean) => void }) {
+  const { t } = useTranslation('organizer')
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-start gap-3 rounded bg-white/[0.06] px-4 py-3 text-left transition-colors hover:bg-white/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-white">{t('finance_view.toggle_label')}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-white/50">{t('finance_view.toggle_desc')}</span>
+      </span>
+      <span
+        aria-hidden
+        className={`relative mt-0.5 inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors ${
+          checked ? 'bg-white' : 'bg-white/[0.16]'
+        }`}
+      >
+        <span
+          className={`absolute h-5 w-5 rounded-full transition-transform ${
+            checked ? 'translate-x-[18px] bg-black' : 'translate-x-0.5 bg-white/70'
+          }`}
+        />
+      </span>
+    </button>
+  )
+}
+
 export default function OrgTeamClient({
   ownerName,
   ownerEmail,
@@ -124,6 +161,8 @@ export default function OrgTeamClient({
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<TeamRole>('manager')
+  // Read-only finances for an invited admin (owner only).
+  const [finance, setFinance] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -131,6 +170,7 @@ export default function OrgTeamClient({
   // Role change: the row being edited and the role picked for it.
   const [editing, setEditing] = useState<TeamRow | null>(null)
   const [editRole, setEditRole] = useState<TeamRole>('manager')
+  const [editFinance, setEditFinance] = useState(false)
 
   const roleLabel = (r: string) => t(`team_roles.${r}`, { defaultValue: r })
 
@@ -138,6 +178,7 @@ export default function OrgTeamClient({
     setEmail('')
     setName('')
     setRole('manager')
+    setFinance(false)
     setError(null)
   }
 
@@ -153,7 +194,13 @@ export default function OrgTeamClient({
         const res = await fetch('/api/organizer/team', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), name: name.trim(), role }),
+          body: JSON.stringify({
+            email: email.trim(),
+            name: name.trim(),
+            role,
+            // Only the owner may grant it, and only to an admin (the API checks too).
+            ...(viewerIsOwner ? { finance_view: role === 'admin' && finance } : {}),
+          }),
         })
         const body = (await res.json().catch(() => ({}))) as { error?: string; member?: TeamRow }
         if (!res.ok || !body.member) throw new Error(body.error || t('org_team.invite_failed'))
@@ -202,13 +249,16 @@ export default function OrgTeamClient({
   const openRoleEditor = (m: TeamRow) => {
     setEditing(m)
     setEditRole((['admin', 'manager', 'staff'].includes(m.role) ? m.role : 'staff') as TeamRole)
+    setEditFinance(m.role === 'admin' && m.finance_view === true)
     setError(null)
   }
 
   const handleRoleSave = () => {
     if (!editing) return
     const target = editing
-    if (editRole === target.role) {
+    const nextFinance = editRole === 'admin' && editFinance
+    const financeChanged = viewerIsOwner && nextFinance !== (target.role === 'admin' && target.finance_view === true)
+    if (editRole === target.role && !financeChanged) {
       setEditing(null)
       return
     }
@@ -218,13 +268,23 @@ export default function OrgTeamClient({
         const res = await fetch('/api/organizer/team', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memberId: target.id, role: editRole }),
+          body: JSON.stringify({
+            memberId: target.id,
+            role: editRole,
+            ...(viewerIsOwner ? { finance_view: nextFinance } : {}),
+          }),
         })
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { error?: string }
           throw new Error(body.error || t('org_team.role_failed'))
         }
-        setMembers((prev) => prev.map((x) => (x.id === target.id ? { ...x, role: editRole } : x)))
+        setMembers((prev) =>
+          prev.map((x) =>
+            x.id === target.id
+              ? { ...x, role: editRole, finance_view: viewerIsOwner ? nextFinance : editRole === 'admin' && x.finance_view === true }
+              : x,
+          ),
+        )
         setEditing(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : t('org_team.role_failed'))
@@ -281,6 +341,13 @@ export default function OrgTeamClient({
           >
             {roleLabel(m.role)}
             <ChevronDown className="h-3.5 w-3.5 text-white/40" aria-hidden />
+            {m.role === 'admin' && m.finance_view && (
+              // Dot + label, not a pill (no-status-pills rule).
+              <span className="ml-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-white/55">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+                {t('finance_view.row_marker')}
+              </span>
+            )}
           </button>
         ),
     },
@@ -372,7 +439,12 @@ export default function OrgTeamClient({
               <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/50" aria-hidden />
               <div className="min-w-0 sm:flex sm:flex-1 sm:gap-6">
                 <p className="text-sm font-semibold text-white sm:w-28 sm:shrink-0">{roleLabel(r)}</p>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-white/60 sm:mt-0">{t(`org_team.access_${r}`)}</p>
+                <div className="mt-0.5 sm:mt-0">
+                  <p className="text-[13px] leading-relaxed text-white/60">{t(`org_team.access_${r}`)}</p>
+                  {r === 'admin' && (
+                    <p className="mt-1 text-[13px] leading-relaxed text-white/45">{t('finance_view.access_note')}</p>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -430,6 +502,7 @@ export default function OrgTeamClient({
           <FormField label={t('org_team.role')}>
             <RoleTiles value={role} onChange={setRole} label={t('org_team.role')} />
           </FormField>
+          {viewerIsOwner && role === 'admin' && <FinanceToggle checked={finance} onChange={setFinance} />}
           <p className="text-xs leading-relaxed text-white/45">{t('org_team.invite_note')}</p>
           {error && open && (
             <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
@@ -466,6 +539,7 @@ export default function OrgTeamClient({
         {editing && (
           <FormSection title={editing.name || editing.email}>
             <RoleTiles value={editRole} onChange={setEditRole} label={t('org_team.role')} />
+            {viewerIsOwner && editRole === 'admin' && <FinanceToggle checked={editFinance} onChange={setEditFinance} />}
             {error && !open && (
               <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
             )}

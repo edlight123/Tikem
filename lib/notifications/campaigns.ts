@@ -105,10 +105,17 @@ export async function sendDiscretionary(send: DiscretionarySend): Promise<boolea
   }
 }
 
-/** Everyone who favorited an event. */
+/**
+ * Collection the save (heart) buttons write: web /api/favorites/toggle and the
+ * mobile Discover/EventDetail screens. This used to read `favorites`, which
+ * nothing writes, so "filling fast" reached nobody.
+ */
+export const FAVORITES_COLLECTION = 'event_favorites'
+
+/** Everyone who saved (favorited) an event. */
 export async function favoritedBy(eventId: string): Promise<string[]> {
   try {
-    const snap = await adminDb.collection('favorites').where('event_id', '==', eventId).get()
+    const snap = await adminDb.collection(FAVORITES_COLLECTION).where('event_id', '==', eventId).get()
     const ids = snap.docs
       .map((d: any) => d.data()?.user_id)
       .filter((id: any): id is string => typeof id === 'string' && id.length > 0)

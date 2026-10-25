@@ -129,7 +129,7 @@ export default function WelcomeDashboard({
       {/* Help Link */}
       <div className="text-center pb-4">
         <Link
-          href="/help/organizers"
+          href="/resources"
           className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-brand-300 transition-colors"
         >
           <HelpCircle className="w-4 h-4" />

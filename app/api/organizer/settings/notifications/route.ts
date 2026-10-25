@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { requireOrg } from '@/lib/organizer/context';
-import { withOrganizerNotificationDefaults } from '@/lib/organizer/notificationPreferences';
+import {
+  sanitizeOrganizerNotificationPreferences,
+  withOrganizerNotificationDefaults,
+} from '@/lib/organizer/notificationPreferences';
 
 /**
  * The acting org's preferences (lib/organizer/context.ts), with the same defaults the web
@@ -54,7 +57,10 @@ export async function PUT(request: NextRequest) {
     const org = await requireOrg('manage_settings');
     if (!org.ok) return org.response;
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    // Known boolean switches only. This used to merge the raw body into the
+    // document, so any field a caller sent was stored.
+    const updates = sanitizeOrganizerNotificationPreferences(body);
 
     // Update notification preferences in Firestore
     await adminDb
@@ -63,7 +69,7 @@ export async function PUT(request: NextRequest) {
       .collection('notificationPreferences')
       .doc('main')
       .set({
-        ...body,
+        ...updates,
         updated_at: new Date().toISOString(),
       }, { merge: true });
 

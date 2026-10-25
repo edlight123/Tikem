@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
-import { canOnEvent } from '@/lib/organizer/context'
+import { canViewEventFinances } from '@/lib/organizer/financeAccess'
 import { adminDb } from '@/lib/firebase/admin'
 import { loadEventAvailability } from '@/lib/payouts/availability-server'
 import { toEarningsRow } from '@/lib/payouts/availability'
@@ -22,8 +22,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
 
     const eventData = eventDoc.data() as any
-    // Read-only figures (no bank details): the event's org team may view them.
-    if (!(await canOnEvent(user, eventData, 'view')).allowed) {
+    // Read-only figures (no bank details): the event's owner, an admin of its
+    // org with the finance grant, or a platform admin. Never managers.
+    if (!(await canViewEventFinances(user, eventData))) {
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
     }
 

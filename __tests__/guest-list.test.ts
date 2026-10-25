@@ -1,13 +1,13 @@
 import { parseGuestInput, serializeGuest } from '../lib/guest-list'
 
 describe('guest list input', () => {
-  it('requires name and email on create, lower-cases email, defaults plus_one', () => {
+  it('requires a name on create (email optional), lower-cases email, defaults plus_one', () => {
     expect(parseGuestInput({ name: '  Jane ', email: 'Jane@Example.com ' }, false)).toEqual({
       ok: true,
       value: { name: 'Jane', email: 'jane@example.com', plus_one: false },
     })
     expect(parseGuestInput({ email: 'a@b.co' }, false).ok).toBe(false)
-    expect(parseGuestInput({ name: 'A' }, false).ok).toBe(false)
+    expect(parseGuestInput({ name: 'A' }, false)).toEqual({ ok: true, value: { name: 'A', email: '', plus_one: false } })
     expect(parseGuestInput({ name: 'A', email: 'not-an-email' }, false).ok).toBe(false)
   })
 
@@ -33,6 +33,11 @@ describe('guest serializer', () => {
       plus_one: false,
       invited_at: null,
       checked_in: false,
+      ticket_ids: [],
+      ticket_status: 'none',
+      checked_in_count: 0,
+      email_sent: false,
+      ticket_link: null,
     })
   })
 

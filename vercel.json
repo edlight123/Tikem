@@ -35,7 +35,7 @@
     },
     {
       "path": "/api/cron/favorite-reminders",
-      "schedule": "0 10 * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/cron/update-settlement-status",

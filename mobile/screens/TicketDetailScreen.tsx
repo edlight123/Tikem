@@ -146,15 +146,16 @@ export default function TicketDetailScreen({ route }: any) {
       );
       const transfersSnapshot = await getDocs(transfersQuery);
       
-      if (!transfersSnapshot.empty) {
-        const transferDoc = transfersSnapshot.docs[0];
-        const data = transferDoc.data();
-        setPendingTransfer({
-          id: transferDoc.id,
-          ...data,
-          expires_at: data.expires_at?.toDate ? data.expires_at.toDate() : data.expires_at ? new Date(data.expires_at) : null,
-        });
-      }
+      // A 'pending' row past its 24h expiry is not pending (the server treats it
+      // as expired and allows a new transfer), so don't let it hide the button.
+      const live = transfersSnapshot.docs
+        .map((transferDoc) => {
+          const data = transferDoc.data();
+          const expires = data.expires_at?.toDate ? data.expires_at.toDate() : data.expires_at ? new Date(data.expires_at) : null;
+          return { id: transferDoc.id, ...data, expires_at: expires };
+        })
+        .find((tr: any) => !(tr.expires_at instanceof Date && !isNaN(tr.expires_at.getTime()) && tr.expires_at.getTime() <= Date.now()));
+      setPendingTransfer(live ?? null);
     } catch (error) {
       console.error('Error fetching pending transfer:', error);
     }

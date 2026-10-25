@@ -4,6 +4,7 @@ import { isAdmin } from '@/lib/admin'
 import { EventCommandCenter } from './EventCommandCenter'
 import { normalizeCurrency } from '@/lib/money'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
+import { summarizeEventTickets, ticketCountsAsSold } from '@/lib/organizer/salesSummary'
 
 export const revalidate = 0
 
@@ -14,6 +15,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
 
   // Fetch tickets for this event (supports legacy `eventId` field too)
   const ticketDocs = await loadTicketDocsForEvent(id)
+  const ticketDatas = ticketDocs.map((doc: any) => doc.data() || {})
 
   const tickets = ticketDocs.map((doc: any) => {
     const data = doc.data()
@@ -24,7 +26,9 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
       status: data.status || 'active',
       checked_in_at: data.checked_in_at?.toDate?.()?.toISOString() || data.checked_in_at,
       purchased_at: data.purchased_at?.toDate?.()?.toISOString() || data.purchased_at,
-      tier_id: data.tier_id
+      tier_id: data.tier_id,
+      // Live (valid / confirmed / active): refunded and cancelled never count.
+      sold: ticketCountsAsSold(data),
     }
   })
 
@@ -79,20 +83,13 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
     organizer_id: eventData.organizer_id
   }
 
-  // Calculate stats
-  const ticketsSold = tickets.filter((t: any) => t.status !== 'cancelled').length
-  const checkedIn = tickets.filter((t: any) => t.checked_in_at).length
-
+  // Live tickets only: a refunded or refund-pending ticket is not a sale.
   const eventCurrency = normalizeCurrency(eventData.currency, 'HTG')
-  const revenueByCurrencyCents: Record<string, number> = {}
-  let revenueCents = 0
-  for (const t of tickets) {
-    if (t.status === 'cancelled') continue
-    const currency = normalizeCurrency(t.currency, eventCurrency)
-    const cents = Math.round((Number(t.price_paid || 0) || 0) * 100)
-    revenueByCurrencyCents[currency] = (revenueByCurrencyCents[currency] || 0) + cents
-    revenueCents += cents
-  }
+  const sales = summarizeEventTickets(ticketDatas, eventCurrency)
+  const ticketsSold = sales.ticketsSold
+  const checkedIn = sales.checkedIn
+  const revenueByCurrencyCents = sales.revenueByCurrencyCents
+  const revenueCents = revenueByCurrencyCents[eventCurrency] || 0
 
   const stats = {
     ticketsSold,

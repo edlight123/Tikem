@@ -32,7 +32,8 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
   const { t: tx } = useTranslation('organizer')
 
   const currency = normalizeCurrency(event?.currency, stats?.currency || 'HTG')
-  const liveTickets = tickets.filter((t: any) => (t.status || '').toLowerCase() !== 'cancelled')
+  // `sold` is computed server-side (lib/organizer/salesSummary): live tickets only.
+  const liveTickets = tickets.filter((t: any) => t.sold === true)
 
   const capacity = Number(stats?.capacity || 0)
   const sold = Number(stats?.ticketsSold || 0)

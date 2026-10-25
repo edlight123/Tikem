@@ -165,3 +165,74 @@ export function editorBlocksPaidPublish(params: {
   if (v.retryable) return false
   return missingPublishStep(v) !== null || v.code === 'coming_soon'
 }
+
+/**
+ * The organizer's saved event defaults (organizers/{orgId}, written by
+ * Settings > Event defaults) turned into what a NEW event in `country` starts
+ * with. Every value is checked against the country so a default can never
+ * produce an event the rules refuse:
+ *   - currency only when the country allows it (firestore.rules
+ *     isCurrencyAllowedForCountry: CA→CAD, US→USD, HT→USD|HTG, FR→EUR);
+ *   - timezone only when the defaults are for this same country and the zone
+ *     is a real IANA name; the composer still derives it from the city when
+ *     the event is somewhere else;
+ *   - category: the first saved category the composer offers (the defaults
+ *     page has a few the composer names differently, e.g. Music → Concert).
+ */
+export interface ComposerSeed {
+  currency?: EventCurrency
+  timezone?: string
+  category?: string
+}
+
+const DEFAULTS_CATEGORY_ALIASES: Record<string, string> = {
+  music: 'Concert',
+  'arts & culture': 'Theater',
+  sports: 'Sports',
+  education: 'Workshop',
+  business: 'Conference',
+  technology: 'Conference',
+}
+
+function isIanaZone(zone: string): boolean {
+  if (!zone || !zone.includes('/')) return false
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function composerSeedFromDefaults(
+  defaults: Record<string, any> | null | undefined,
+  country: unknown,
+  composerCategories: readonly string[]
+): ComposerSeed {
+  if (!defaults) return {}
+  const seed: ComposerSeed = {}
+  const code = resolveComposerCountry(country)
+
+  const currency = String(defaults.default_currency || '').trim().toUpperCase()
+  if (currency && getAllowedEventCurrencies(code).includes(currency as EventCurrency)) {
+    seed.currency = currency as EventCurrency
+  }
+
+  const zone = String(defaults.default_timezone || '').trim()
+  const defaultsCountry = normalizeSupportedCountry(defaults.default_country)
+  if (zone && defaultsCountry === code && isIanaZone(zone)) seed.timezone = zone
+
+  const cats: unknown[] = Array.isArray(defaults.default_categories) ? defaults.default_categories : []
+  for (const raw of cats) {
+    const name = String(raw || '').trim()
+    if (!name) continue
+    const direct = composerCategories.find((c) => c.toLowerCase() === name.toLowerCase())
+    const alias = DEFAULTS_CATEGORY_ALIASES[name.toLowerCase()]
+    const pick = direct || (alias && composerCategories.includes(alias) ? alias : undefined)
+    if (pick) {
+      seed.category = pick
+      break
+    }
+  }
+  return seed
+}

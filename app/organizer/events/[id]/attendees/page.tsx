@@ -1,7 +1,9 @@
-import { adminDb } from '@/lib/firebase/admin'
 import { requireEventPage } from '../../../_lib/orgPage'
 import { AttendeesManager } from './AttendeesManager'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
+import { loadProfiles } from '@/lib/organizer/eventOrdersLoader'
+import { buyerIdOf, isGuestTicket, toTicketRow } from '@/lib/organizer/eventOrders'
+import { normalizeCurrency } from '@/lib/money'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -31,60 +33,44 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
     ticketDocs = []
   }
 
-  // Batch fetch all attendee users (instead of N+1 queries)
-  const attendeeIds = Array.from(new Set(
-    ticketDocs
-      .map((doc: any) => doc.data().attendee_id)
-      .filter((id: string) => id)
-  ))
-  
-  const attendeesMap = new Map<string, any>()
-  
-  if (attendeeIds.length > 0) {
-    // Resolve users by document reference (getAll) rather than a
-    // `where('__name__', 'in', chunk)` query: filtering on the documentId
-    // requires Key values, not bare id strings, so passing plain ids throws
-    // "__key__ filter value must be a Key" — which previously left this map
-    // empty so every attendee name fell back to blank. getAll takes plain refs,
-    // has no 30-item cap, and returns missing docs with `exists === false`.
-    const refs = attendeeIds.map((id: any) => adminDb.collection('users').doc(id))
-    const userDocs = await adminDb.getAll(...refs)
+  // Buyer details: the account's profile when there is one, else what the
+  // ticket itself carries. Guest checkouts (attendee_id guest_…) and comps or
+  // guest-list tickets have no users doc: their name and contact live on the
+  // ticket (attendee_name / recipient_name, guest_email / recipient_email,
+  // guest_phone), so they no longer show as "Unknown".
+  const eventCurrency = normalizeCurrency(eventData.currency, 'HTG')
+  const datas = ticketDocs.map((doc: any) => ({ id: doc.id as string, data: (doc.data() || {}) as Record<string, any> }))
+  const profiles = await loadProfiles(
+    datas.filter(({ data }) => !isGuestTicket(data)).map(({ data }) => buyerIdOf(data))
+  )
 
-    userDocs.forEach((doc: any) => {
-      if (!doc.exists) return
-      const userData = doc.data()
-      attendeesMap.set(doc.id, {
-        id: doc.id,
-        email: userData.email || '',
-        full_name: userData.full_name || '',
-        phone_number: userData.phone_number || ''
-      })
-    })
-  }
-
-  // Map tickets with pre-fetched attendee data (no more N+1)
-  const tickets = ticketDocs.map((doc: any) => {
-    const ticketData = doc.data()
-    const attendee = ticketData.attendee_id ? attendeesMap.get(ticketData.attendee_id) || null : null
+  const tickets = datas.map(({ id, data: ticketData }) => {
+    const profile = isGuestTicket(ticketData) ? null : profiles.get(buyerIdOf(ticketData)) || null
+    const row = toTicketRow(id, ticketData, profile, eventCurrency)
+    const phone = String((profile && profile.phone_number) || ticketData.guest_phone || '').trim()
+    const attendee =
+      row.buyer.name || row.buyer.email || phone
+        ? { id: buyerIdOf(ticketData), full_name: row.buyer.name, email: row.buyer.email, phone_number: phone }
+        : null
 
     return {
-      id: doc.id,
+      id,
       event_id: ticketData.event_id || ticketData.eventId || '',
       attendee_id: ticketData.attendee_id || '',
-      status: ticketData.status || 'confirmed',
-      ticket_type: ticketData.ticket_type || 'General Admission',
-      ticket_tier_id: ticketData.ticket_tier_id || '',
+      status: String(ticketData.status || 'confirmed').toLowerCase(),
+      ticket_type: row.tierName || 'General Admission',
+      ticket_tier_id: ticketData.tier_id || ticketData.ticket_tier_id || '',
       price_paid: ticketData.price_paid || 0,
-      currency: ticketData.currency || null,
+      currency: ticketData.original_currency || ticketData.currency || null,
       quantity: ticketData.quantity || 1,
-      checked_in: ticketData.checked_in || false,
+      checked_in: row.checkedIn,
+      source: String(ticketData.source || ''),
+      is_guest: row.isGuest,
       qr_code: ticketData.qr_code || ticketData.qr_code_data || '',
       qr_code_data: ticketData.qr_code_data || ticketData.qr_code || '',
       attendee,
-      purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at || new Date().toISOString(),
-      checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at || null,
-      created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at || new Date().toISOString(),
-      updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at || new Date().toISOString(),
+      purchased_at: row.purchasedAt || new Date().toISOString(),
+      checked_in_at: row.checkedInAt || null,
     }
   })
 

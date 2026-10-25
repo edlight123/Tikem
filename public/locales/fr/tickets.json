@@ -56,7 +56,22 @@
     "transfer_link_label": "Lien de transfert",
     "transfer_copy_link": "Copier le lien",
     "transfer_link_copied": "Lien copié!",
-    "transfer_share": "Partagez ce lien avec le destinataire pour compléter le transfert."
+    "transfer_share": "Partagez ce lien avec le destinataire pour compléter le transfert.",
+    "transfer_intro": "Envoyez ce billet à quelqu'un d'autre. Il recevra un e-mail avec un lien pour l'accepter.",
+    "transfer_expiry_note": "Les liens de transfert expirent après 24 heures.",
+    "transfer_reminder": "Ce lien expire dans 24 heures. Le destinataire doit l'accepter avant.",
+    "transfer_sending": "Envoi...",
+    "transfer_done": "Terminé",
+    "transfer_share_whatsapp": "Partager sur WhatsApp",
+    "transfer_share_sms": "Partager par SMS",
+    "transfer_share_text": "Je te transfère mon billet pour {{event}}. Accepte-le ici :",
+    "transfer_pending_title": "Transfert en attente",
+    "transfer_pending_body": "Envoyé à {{email}}. Il a jusqu'au {{when}} pour l'accepter. D'ici là, le billet reste à vous.",
+    "transfer_cancel_transfer": "Annuler le transfert",
+    "transfer_cancel_confirm": "Annuler ce transfert ? Le lien cesse de fonctionner immédiatement.",
+    "transfer_cancelling": "Annulation...",
+    "transfer_cancelled": "Transfert annulé. Le billet est à vous : utilisez-le ou envoyez-le de nouveau.",
+    "transfer_cancel_failed": "Impossible d'annuler le transfert. Réessayez."
   },
   "event_tickets": {
     "ready": "Vos billets sont prêts à être utilisés",

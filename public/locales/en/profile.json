@@ -61,6 +61,12 @@
     "event_updates_desc": "Changes to events you're attending or following",
     "promos": "Promotions & News",
     "promos_desc": "Special offers, featured events, and platform updates",
+    "discovery": "Events near you",
+    "discovery_desc": "A pick of new events in your city",
+    "filling_fast": "Selling fast",
+    "filling_fast_desc": "When an event you saved is close to selling out",
+    "national_day": "Haitian holidays",
+    "national_day_desc": "A short note on the morning of a national day",
     "note": "Important account and security notifications will always be sent regardless of these settings."
   },
   "account": {
@@ -98,7 +104,8 @@
     "since": "On Tikèm since {{date}}",
     "upcoming_count_one": "{{count}} event coming soon",
     "upcoming_count_other": "{{count}} events coming soon",
-    "upcoming_count_plural": "{{count}} events coming soon"
+    "upcoming_count_plural": "{{count}} events coming soon",
+    "private_details": "Bio and socials are visible to friends only."
   },
   "dashboard": {
     "stats": {

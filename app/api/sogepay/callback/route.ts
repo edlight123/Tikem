@@ -10,6 +10,8 @@ import {
 import { fulfillPaidOrder } from '@/lib/tickets/fulfillment'
 import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { getCurrentUser } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { callerHoldsOrder, orderIdsFromCookies } from '@/lib/tickets/orderAccess'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -221,8 +223,15 @@ export async function GET(request: Request) {
     if (pendingTx.status === 'completed' && pendingTx.ticket_id) {
       // The order id is in the URL, so it proves nothing: only the signed-in buyer
       // is sent on to their ticket (and its QR). Anyone else gets the generic page.
+      // The signed-in buyer, or (for a guest) the browser holding the order-proof
+      // cookie set by /api/sogepay/initiate.
       const sessionUser = await getCurrentUser().catch(() => null)
-      const isBuyer = Boolean(sessionUser?.id && String(pendingTx.user_id || '') === String(sessionUser.id))
+      const isBuyer = callerHoldsOrder({
+        orderId: String(orderId),
+        order: pendingTx,
+        cookieOrderIds: orderIdsFromCookies(await cookies()),
+        sessionUid: sessionUser?.id || null,
+      })
       return NextResponse.redirect(
         new URL(
           isBuyer ? `/purchase/success?ticketId=${encodeURIComponent(String(pendingTx.ticket_id))}` : '/purchase/success',

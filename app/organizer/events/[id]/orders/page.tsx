@@ -1,19 +1,11 @@
 import { requireEventPage } from '../../../_lib/orgPage'
-import { adminDb } from '@/lib/firebase/admin'
+import { loadProfiles } from '@/lib/organizer/eventOrdersLoader'
+import { buyerIdOf, isGuestTicket, toTicketRow } from '@/lib/organizer/eventOrders'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
-import { normalizeCurrency } from '@/lib/money'
-import { formatMoneyFromCents } from '@/lib/money'
-import { ShoppingBag } from 'lucide-react'
+import { normalizeCurrency, formatMoneyFromCents } from '@/lib/money'
 import EventOrdersClient from './EventOrdersClient'
 
 export const revalidate = 0
-
-function serializeTs(v: unknown): string {
-  if (!v) return ''
-  if (typeof v === 'string') return v
-  if (typeof (v as any).toDate === 'function') return (v as any).toDate().toISOString()
-  return String(v)
-}
 
 export default async function EventOrdersPage({
   params,
@@ -28,46 +20,28 @@ export default async function EventOrdersPage({
 
   const ticketDocs = await loadTicketDocsForEvent(eventId)
 
-  // Batch fetch attendees
-  const attendeeIds = Array.from(
-    new Set(ticketDocs.map((doc) => doc.data().attendee_id).filter(Boolean))
+  // Buyer names: the account profile, else the ticket's own details (guest
+  // checkout, comps and guest-list tickets carry attendee_name / guest_email /
+  // recipient_name / recipient_email), the same resolution the mobile orders
+  // view uses (lib/organizer/eventOrders toTicketRow).
+  const datas = ticketDocs.map((doc) => ({ id: doc.id, data: (doc.data() || {}) as Record<string, any> }))
+  const profiles = await loadProfiles(
+    datas.filter(({ data }) => !isGuestTicket(data)).map(({ data }) => buyerIdOf(data))
   )
-  const attendeesMap = new Map<string, { name: string; email: string }>()
 
-  if (attendeeIds.length > 0) {
-    // Resolve users by document reference (getAll) rather than a
-    // `where('__name__', 'in', chunk)` query: filtering on the documentId
-    // requires Key values, not bare id strings, so passing plain ids throws
-    // "__key__ filter value must be a Key" — which previously left this map
-    // empty so every attendee name fell back to "Unknown". getAll takes plain
-    // refs, has no 30-item cap, and returns missing docs with `exists === false`.
-    const refs = (attendeeIds as string[]).map((id) => adminDb.collection('users').doc(id))
-    const docs = await adminDb.getAll(...refs)
-    docs.forEach((doc: any) => {
-      if (!doc.exists) return
-      const d = doc.data() as any
-      attendeesMap.set(doc.id, {
-        name: d.full_name || d.name || d.email || 'Unknown',
-        email: d.email || '',
-      })
-    })
-  }
-
-  const orders = ticketDocs.map((doc) => {
-    const d = doc.data()
-    const attendeeId = String(d.attendee_id || '')
-    const attendee = attendeesMap.get(attendeeId)
-    const currency = normalizeCurrency(d.currency, eventCurrency)
+  const orders = datas.map(({ id, data: d }) => {
+    const row = toTicketRow(id, d, isGuestTicket(d) ? null : profiles.get(buyerIdOf(d)) || null, eventCurrency)
+    const currency = normalizeCurrency(d.original_currency || d.currency, eventCurrency)
     const cents = Math.round(Number(d.price_paid || 0) * 100)
     return {
-      id: doc.id,
-      attendeeName: attendee?.name || 'Unknown',
-      attendeeEmail: attendee?.email || '',
-      tierName: String(d.tier_name || 'General Admission'),
+      id,
+      attendeeName: row.buyer.name || row.buyer.email || 'Guest',
+      attendeeEmail: row.buyer.name ? row.buyer.email : '',
+      tierName: row.tierName || 'General Admission',
       amount: cents > 0 ? formatMoneyFromCents(cents, currency, 'en-US', { currencyDisplay: 'code' }) : 'Free',
       status: String(d.status || 'active'),
-      purchasedAt: serializeTs(d.purchased_at),
-      checkedInAt: serializeTs(d.checked_in_at),
+      purchasedAt: row.purchasedAt,
+      checkedInAt: row.checkedInAt,
     }
   })
 

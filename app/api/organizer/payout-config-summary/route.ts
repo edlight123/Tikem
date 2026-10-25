@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase/admin'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
-import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
+import { requireFinanceView } from '@/lib/organizer/context'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
-    const notOwner = await denyIfActingForAnotherOrg(user.id)
-    if (notOwner) return notOwner
+    // Masked summary only (method kind and statuses: no account or phone
+    // numbers), so read-only finance admins may see it too. Changing any of it
+    // stays owner-only (payout-profiles, payout-destinations).
+    const gate = await requireFinanceView()
+    if (!gate.ok) return gate.response
+    const orgId = gate.value.orgId
 
     const [haitiProfile, stripeProfile] = await Promise.all([
-      getPayoutProfile(user.id, 'haiti'),
-      getPayoutProfile(user.id, 'stripe_connect'),
+      getPayoutProfile(orgId, 'haiti'),
+      getPayoutProfile(orgId, 'stripe_connect'),
     ])
     const data = haitiProfile as any
     const stripe = stripeProfile as any

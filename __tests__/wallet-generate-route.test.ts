@@ -346,9 +346,20 @@ describe('GET /api/wallet/generate — capability probe', () => {
     expect(await (await CAPABILITY()).json()).toEqual({ apple: true, google: false })
   })
 
-  it('reports google true once the service account is present', async () => {
+  it('keeps google false while NEXT_PUBLIC_GOOGLE_WALLET_ENABLED is off (issuer in demo mode)', async () => {
     configureGoogle()
-    expect(await (await CAPABILITY()).json()).toEqual({ apple: false, google: true })
+    delete process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED
+    expect(await (await CAPABILITY()).json()).toEqual({ apple: false, google: false })
+  })
+
+  it('reports google true once the service account is present and the flag is on', async () => {
+    configureGoogle()
+    process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED = 'true'
+    try {
+      expect(await (await CAPABILITY()).json()).toEqual({ apple: false, google: true })
+    } finally {
+      delete process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED
+    }
   })
 })
 

@@ -10,9 +10,13 @@ interface ScanResultOverlayProps {
   result: CheckInResult
   onClose: () => void
   onOverride?: () => void
+  /** This verdict is the answer to an override tap (re-entry), not a first scan. */
+  reentry?: boolean
+  /** The override request is in flight. */
+  overriding?: boolean
 }
 
-export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOverlayProps) {
+export function ScanResultOverlay({ result, onClose, onOverride, reentry = false, overriding = false }: ScanResultOverlayProps) {
   // The door reads this under pressure, in Haiti — it speaks the staff's language.
   const { t, i18n } = useTranslation('organizer')
   useEffect(() => {
@@ -33,15 +37,17 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
   if (result.success && result.type === 'VALID') {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-emerald-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="bg-emerald-900 rounded p-8 max-w-md w-full mx-4 shadow-2xl">
           <div className="text-center">
             <div className="w-20 h-20 bg-emerald-500 rounded flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
               <CheckCircle className="w-12 h-12 text-white" strokeWidth={3} />
             </div>
             
-            <h2 className="text-3xl font-bold text-white mb-2">{t('door.valid', { defaultValue: 'VALID' })}</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">
+              {reentry ? t('event_tools.door_reentry_allowed') : t('door.valid', { defaultValue: 'VALID' })}
+            </h2>
             
-            <div className="bg-black/20 rounded-xl p-4 mb-4 text-left">
+            <div className="bg-black/20 rounded p-4 mb-4 text-left">
               <div className="text-emerald-100 space-y-2">
                 <div>
                   <div className="text-xs text-emerald-300 uppercase tracking-wide">{t('door.attendee', { defaultValue: 'Attendee' })}</div>
@@ -64,7 +70,9 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
               </div>
             </div>
             
-            <p className="text-emerald-200 font-medium text-lg">{t('door.checked_in_now', { defaultValue: 'Checked in now' })}</p>
+            <p className="text-emerald-200 font-medium text-lg">
+              {reentry ? t('event_tools.door_readmitted') : t('door.checked_in_now', { defaultValue: 'Checked in now' })}
+            </p>
           </div>
         </div>
       </div>
@@ -74,7 +82,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
   if (result.type === 'ALREADY_CHECKED_IN') {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-amber-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="bg-amber-900 rounded p-8 max-w-md w-full mx-4 shadow-2xl">
           <div className="text-center">
             <div className="w-20 h-20 bg-amber-500 rounded flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
               <AlertTriangle className="w-12 h-12 text-white" strokeWidth={3} />
@@ -82,7 +90,7 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
             
             <h2 className="text-3xl font-bold text-white mb-2">{t('door.already_checked_in', { defaultValue: 'ALREADY CHECKED-IN' })}</h2>
             
-            <div className="bg-black/20 rounded-xl p-4 mb-4 text-left">
+            <div className="bg-black/20 rounded p-4 mb-4 text-left">
               <div className="text-amber-100 space-y-2">
                 <div>
                   <div className="text-xs text-amber-300 uppercase tracking-wide">{t('door.attendee', { defaultValue: 'Attendee' })}</div>
@@ -108,14 +116,25 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
             
             {result.allowReentry ? (
               <button
+                type="button"
                 onClick={onOverride}
-                className="w-full px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors mb-2"
+                disabled={overriding}
+                className="w-full px-6 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded transition-colors mb-2 disabled:opacity-60"
               >
-                {t('door.override_allow_reentry', { defaultValue: 'Override / Allow Re-entry' })}
+                {overriding
+                  ? t('event_tools.door_overriding')
+                  : t('door.override_allow_reentry', { defaultValue: 'Override / Allow Re-entry' })}
               </button>
             ) : (
               <p className="text-amber-200 font-medium">{t('door.reentry_not_allowed', { defaultValue: 'Re-entry not allowed' })}</p>
             )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full px-6 py-3 bg-black/25 hover:bg-black/40 text-white font-semibold rounded transition-colors"
+            >
+              {t('event_tools.door_scan_next')}
+            </button>
           </div>
         </div>
       </div>
@@ -139,22 +158,31 @@ export function ScanResultOverlay({ result, onClose, onOverride }: ScanResultOve
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-red-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+      <div className="bg-red-900 rounded p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="text-center">
           <div className="w-20 h-20 bg-red-500 rounded flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
             <XCircle className="w-12 h-12 text-white" strokeWidth={3} />
           </div>
           
-          <h2 className="text-3xl font-bold text-white mb-2">{t('door.invalid', { defaultValue: 'INVALID' })}</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">
+            {reentry ? t('event_tools.door_reentry_refused') : t('door.invalid', { defaultValue: 'INVALID' })}
+          </h2>
           
-          <div className="bg-black/20 rounded-xl p-4 mb-4">
+          <div className="bg-black/20 rounded p-4 mb-4">
             <div className="text-red-100">
               <div className="text-xs text-red-300 uppercase tracking-wide mb-1">{t('door.reason', { defaultValue: 'Reason' })}</div>
               <div className="text-xl font-bold">{reasonText}</div>
             </div>
           </div>
           
-          <p className="text-red-200 font-medium">{t('door.cannot_check_in', { defaultValue: 'Cannot check in' })}</p>
+          <p className="text-red-200 font-medium mb-4">{t('door.cannot_check_in', { defaultValue: 'Cannot check in' })}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full px-6 py-3 bg-black/25 hover:bg-black/40 text-white font-semibold rounded transition-colors"
+          >
+            {t('event_tools.door_scan_next')}
+          </button>
         </div>
       </div>
     </div>

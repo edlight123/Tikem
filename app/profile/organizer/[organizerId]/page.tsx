@@ -2,8 +2,8 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
-import { getFriendshipState } from '@/lib/firestore/connections'
-import { DEFAULT_PRIVACY } from '@/types/social'
+import { loadPublicProfileDetails } from '@/lib/profile/public-details'
+import type { FriendshipState } from '@/types/social'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { notFound } from 'next/navigation'
@@ -158,27 +158,23 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
     isFollowing = !!followData
   }
 
-  // Social profile + friendship state (privacy-gated).
-  const userDoc = await adminDb.collection('users').doc(organizerId).get()
-  const userData = userDoc.exists ? userDoc.data() : {}
-  const privacy = { ...DEFAULT_PRIVACY, ...(userData?.privacy || {}) }
+  // What shows under the name (org details for an organization; a person's
+  // bio + socials only when their privacy allows), one rule shared with the
+  // app's GET /api/profiles/{uid}/public-details: lib/profile/public-details.ts.
+  const loaded = await loadPublicProfileDetails(organizerId, user?.id ?? null, {
+    hasPublishedEvents: publishedEvents.length > 0,
+  }).catch((err) => {
+    console.error('[organizer-profile] public details failed', err?.message)
+    return null
+  })
+  const details = loaded?.details ?? { kind: 'person' as const, person: null }
+  const friendshipState: FriendshipState = loaded?.friendship ?? (user?.id === organizerId ? 'self' : 'none')
   const isSelf = !!user && user.id === organizerId
 
-  let friendshipState: string = 'none'
-  if (user && !isSelf) {
-    try {
-      friendshipState = await getFriendshipState(user.id, organizerId)
-    } catch {
-      friendshipState = 'none'
-    }
-  } else if (isSelf) {
-    friendshipState = 'self'
-  }
-
-  const canViewSocial =
-    privacy.profile_visibility === 'public' || friendshipState === 'friends' || isSelf
-  const socialLinks = canViewSocial ? userData?.social_links || {} : {}
-  const bio = canViewSocial ? userData?.bio || '' : ''
+  // Location only: the hero shows where they work. Nothing else from the
+  // owner-only users doc reaches the page.
+  const userDoc = await adminDb.collection('users').doc(organizerId).get()
+  const userData = userDoc.exists ? userDoc.data() : {}
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
@@ -193,9 +189,8 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
         totalTicketsSold={totalTicketsSold}
         isFollowing={isFollowing}
         userId={user?.id}
-        socialLinks={socialLinks}
-        bio={bio}
-        friendshipState={friendshipState as any}
+        details={details}
+        friendshipState={friendshipState}
         isAuthenticated={!!user}
         // Already in `userData` from the fetch above — the hero shows where an
         // organizer works when they have set it. Roughly half of production

@@ -1,26 +1,21 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
 import { getPayoutHistory } from '@/lib/firestore/payout'
-import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
+import { requireFinanceView } from '@/lib/organizer/context'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Return the current organizer's recent payouts for the mobile Payout Settings
- * history view. Read-only.
+ * The acting org's recent payouts (amount, method, status, dates; never the
+ * destination's details). Read-only, so the owner and any admin the owner
+ * granted read-only finances may see it (requireFinanceView). Scoped by the
+ * org, not the caller: a finance admin sees the org's payouts, not their own.
  */
 export async function GET() {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const gate = await requireFinanceView()
+    if (!gate.ok) return gate.response
 
-    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
-    const notOwner = await denyIfActingForAnotherOrg(user.id)
-    if (notOwner) return notOwner
-
-    const payouts = await getPayoutHistory(user.id, 50)
+    const payouts = await getPayoutHistory(gate.value.orgId, 50)
     return NextResponse.json({ payouts })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Failed to load payout history' }, { status: 500 })

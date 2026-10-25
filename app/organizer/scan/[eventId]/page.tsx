@@ -135,7 +135,10 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       event_id: ticketData.event_id || ticketData.eventId || '',
       attendee_id: ticketData.attendee_id || '',
       status: ticketData.status || 'confirmed',
-      ticket_type: ticketData.ticket_type || 'General Admission',
+      ticket_type: ticketData.ticket_type || ticketData.tier_name || 'General Admission',
+      // A name only (door staff may lack viewAttendees): guest, comp and
+      // guest-list tickets carry it on the ticket, with no users doc behind them.
+      attendee_name: String(ticketData.attendee_name || ticketData.recipient_name || ''),
       price_paid: ticketData.price_paid || 0,
       checked_in: ticketData.checked_in || false,
       qr_code: ticketData.qr_code || ticketData.qr_code_data || '',

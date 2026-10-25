@@ -83,6 +83,7 @@ export default function OrganizerDashboardScreen() {
   const activeOrg = useActiveOrg();
   const orgId = activeOrg.orgId;
   const isOwner = activeOrg.isOwner;
+  const financeView = activeOrg.financeView;
   const { roleLabel } = useOrgLabel();
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [teamBrand, setTeamBrand] = useState<{ name: string; logo: string } | null>(null);
@@ -112,8 +113,9 @@ export default function OrganizerDashboardScreen() {
 
   const loadData = useCallback(async () => {
     if (!orgId) return;
-    // Warm Earnings in the background so it opens on fresh numbers (owner only).
-    if (isOwner) prefetchEarningsHub(orgId);
+    // Warm Earnings in the background so it opens on fresh numbers (anyone who
+    // may see the org's finances).
+    if (financeView) prefetchEarningsHub(orgId);
 
     try {
       const [eventsData, statsData, organizerEvents] = await Promise.all([
@@ -131,7 +133,7 @@ export default function OrganizerDashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [orgId, isOwner]);
+  }, [orgId, financeView]);
 
   useEffect(() => {
     loadData();
@@ -217,9 +219,9 @@ export default function OrganizerDashboardScreen() {
     </View>
   );
 
-  const allActions: Array<ActionTile & { ownerOnly?: boolean }> = [
+  const allActions: Array<ActionTile & { ownerOnly?: boolean; finance?: boolean }> = [
     {
-      ownerOnly: true,
+      finance: true,
       key: 'earnings',
       label: t('organizerDashboard.earnings') || 'Earnings',
       icon: 'cash-outline',
@@ -259,10 +261,11 @@ export default function OrganizerDashboardScreen() {
     // No Create tile here (per beta feedback): Create already lives in My
     // Events' header button.
   ];
-  // Money out (earnings balances, payouts) is the owner's alone.
+  // Payouts (money out) are the owner's alone; Earnings also show to an admin
+  // the owner granted read-only finances.
   const quickActions: ActionTile[] = allActions
-    .filter((a) => !a.ownerOnly || activeOrg.can('owner_only'))
-    .map(({ ownerOnly: _ownerOnly, ...tile }) => tile);
+    .filter((a) => (!a.ownerOnly || activeOrg.can('owner_only')) && (!a.finance || financeView))
+    .map(({ ownerOnly: _ownerOnly, finance: _finance, ...tile }) => tile);
 
   const renderPoster = (
     id: string,

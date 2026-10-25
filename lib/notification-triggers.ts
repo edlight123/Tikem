@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import type { NotificationType } from '@/types/database'
 import { sendExpoPushNotificationToUser } from '@/lib/push/expo'
+import { readUserNotifyPref } from '@/lib/notifications/userPreferences'
 
 /**
  * SERVER-SIDE notification triggers
@@ -28,8 +29,8 @@ export async function getNotificationPreferences(userId: string) {
     const data = userDoc.data()
     return {
       notifyTicketPurchase: data?.notify_ticket_purchase ?? true,
-      notifyEventUpdates: data?.notify_event_updates ?? true,
-      notifyReminders: data?.notify_reminders ?? true
+      notifyEventUpdates: readUserNotifyPref(data, 'notify_event_updates'),
+      notifyReminders: readUserNotifyPref(data, 'notify_reminders')
     }
   } catch (error) {
     console.error('Error getting notification preferences:', error)
@@ -42,8 +43,14 @@ export async function getNotificationPreferences(userId: string) {
 }
 
 /**
- * Send a web push notification to a user (server-side only)
- * Uses our working web-push API instead of FCM
+ * Push a notification to the user's MOBILE devices (Expo), server-side only.
+ *
+ * This used to also POST to /api/push/send-user for web push. That route is
+ * admin-only and this call carried no session, so every request came back 401
+ * and no web push was ever delivered (no service worker is registered either).
+ * Web push offers were removed from the site (2026-10-25); the app's Expo push
+ * is the one push channel, called directly as a library function, never over
+ * HTTP.
  */
 export async function sendPushNotification(
   userId: string,
@@ -53,28 +60,7 @@ export async function sendPushNotification(
   data?: Record<string, any>
 ): Promise<void> {
   try {
-    // 1) Mobile push via Expo (best-effort)
     await sendExpoPushNotificationToUser(userId, title, body, url, data)
-
-    // 2) Web push via VAPID (best-effort)
-    if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_APP_URL) {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send-user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          title,
-          body,
-          url,
-          data,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.text()
-        console.error('Failed to send web push notification:', error)
-      }
-    }
   } catch (error) {
     console.error('Error sending push notification:', error)
   }

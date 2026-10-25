@@ -308,7 +308,7 @@ export default function SupportContent() {
 
             {/* WhatsApp */}
             <a
-              href="https://wa.me/50938675309"
+              href="https://wa.me/17542768676"
               target="_blank"
               rel="noopener noreferrer"
               className={`${NESTED_CARD} group block`}

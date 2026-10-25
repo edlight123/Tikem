@@ -61,6 +61,12 @@
     "event_updates_desc": "Modifications des événements que vous suivez ou auxquels vous assistez",
     "promos": "Promotions et actualités",
     "promos_desc": "Offres spéciales, événements vedettes et mises à jour de la plateforme",
+    "discovery": "Événements près de chez vous",
+    "discovery_desc": "Une sélection de nouveaux événements dans votre ville",
+    "filling_fast": "Bientôt complet",
+    "filling_fast_desc": "Quand un événement que vous avez enregistré est presque complet",
+    "national_day": "Fêtes haïtiennes",
+    "national_day_desc": "Un petit mot le matin d'une fête nationale",
     "note": "Les notifications importantes de compte et de sécurité seront toujours envoyées indépendamment de ces paramètres."
   },
   "account": {
@@ -98,7 +104,8 @@
     "since": "Sur Tikèm depuis {{date}}",
     "upcoming_count_one": "{{count}} événement à venir",
     "upcoming_count_other": "{{count}} événements à venir",
-    "upcoming_count_plural": "{{count}} événements à venir"
+    "upcoming_count_plural": "{{count}} événements à venir",
+    "private_details": "La bio et les réseaux ne sont visibles que par les amis."
   },
   "dashboard": {
     "stats": {

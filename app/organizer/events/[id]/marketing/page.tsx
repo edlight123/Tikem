@@ -40,7 +40,8 @@ export default async function EventMarketingPage({
         code: String(d.code || ''),
         discount_type: String(d.discount_type || 'percentage'),
         discount_value: Number(d.discount_value || 0),
-        uses: Number(d.uses || 0),
+        // Redemptions are counted in uses_count (lib/promo-codes.ts); `uses` is legacy.
+        uses: Number(d.uses_count ?? d.uses ?? 0),
         max_uses: d.max_uses != null ? Number(d.max_uses) : null,
         is_active: Boolean(d.is_active ?? true),
       }

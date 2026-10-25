@@ -56,7 +56,22 @@
     "transfer_link_label": "Lyen transfè",
     "transfer_copy_link": "Kopye lyen",
     "transfer_link_copied": "Lyen kopye!",
-    "transfer_share": "Pataje lyen sa a ak moun k ap resevwa a pou konplete transfè a."
+    "transfer_share": "Pataje lyen sa a ak moun k ap resevwa a pou konplete transfè a.",
+    "transfer_intro": "Voye tikè sa a bay yon lòt moun. L ap resevwa yon imèl ak yon lyen pou l aksepte l.",
+    "transfer_expiry_note": "Lyen transfè yo ekspire apre 24 èdtan.",
+    "transfer_reminder": "Lyen sa a ap ekspire nan 24 èdtan. Moun nan dwe aksepte l anvan sa.",
+    "transfer_sending": "Ap voye...",
+    "transfer_done": "Fini",
+    "transfer_share_whatsapp": "Pataje sou WhatsApp",
+    "transfer_share_sms": "Pataje pa tèks",
+    "transfer_share_text": "M ap transfere tikè m pou {{event}} ba ou. Aksepte l la a:",
+    "transfer_pending_title": "Transfè an atant",
+    "transfer_pending_body": "Voye bay {{email}}. Li gen jiska {{when}} pou l aksepte. Pandan tan sa a, tikè a toujou pou ou.",
+    "transfer_cancel_transfer": "Anile transfè a",
+    "transfer_cancel_confirm": "Anile transfè sa a? Lyen an ap sispann mache touswit.",
+    "transfer_cancelling": "Ap anile...",
+    "transfer_cancelled": "Transfè a anile. Tikè a pou ou: sèvi avè l oswa voye l ankò.",
+    "transfer_cancel_failed": "Nou pa t ka anile transfè a. Eseye ankò."
   },
   "event_tickets": {
     "ready": "Tikè ou yo pare pou itilize",

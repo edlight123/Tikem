@@ -4,7 +4,8 @@ import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useState, useTransition } from 'react'
-import { Gift, Ticket, CheckCircle2, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Gift, Ticket } from 'lucide-react'
 import {
   OrgDataTable,
   OrgEmptyState,
@@ -13,7 +14,10 @@ import {
   Drawer,
   FormSection,
   FormField,
+  SectionHeader,
 } from '@/components/organizer/ui'
+import { CopyTicketLink } from '@/components/organizer/CopyTicketLink'
+import { ticketDisplayKey, ticketDisplayLabelKey, ticketDisplayTone } from '@/lib/organizer/ticketStatusDisplay'
 
 interface Comp {
   id: string
@@ -23,6 +27,7 @@ interface Comp {
   quantity: number
   note: string
   status: string
+  checked_in: boolean
   created_at: string | null
 }
 
@@ -33,52 +38,45 @@ interface CompsClientProps {
   tiers: Array<{ id: string; name: string }>
 }
 
-function statusTone(status: string): 'success' | 'danger' | 'neutral' {
-  if (status === 'issued') return 'success'
-  if (status === 'revoked') return 'danger'
-  return 'neutral'
-}
+type Outcome = { count: number; email: string; emailed: boolean; emailLimited: boolean; link: string | null }
 
-const columns: OrgColumn<Comp>[] = [
+const buildColumns = (tx: (k: string, o?: any) => string): OrgColumn<Comp>[] => [
   {
     key: 'recipient_name',
-    header: 'Recipient',
+    header: tx('comps.recipient'),
     sortable: true,
     render: (c) => (
-      <div>
-        <p className="font-medium text-white">{c.recipient_name || EMPTY_VALUE}</p>
-        <p className="text-xs text-white/50">{c.recipient_email}</p>
+      <div className="min-w-0">
+        <p className="truncate font-medium text-white">{c.recipient_name || EMPTY_VALUE}</p>
+        <p className="truncate text-xs text-white/50">{c.recipient_email || tx('event_tools.gl_no_email_short')}</p>
       </div>
     ),
   },
   {
     key: 'ticket_type',
-    header: 'Ticket type',
+    header: tx('comps.ticket_type'),
     render: (c) => <span className="text-sm text-white/70">{c.ticket_type}</span>,
   },
   {
-    key: 'quantity',
-    header: 'Qty',
-    render: (c) => <span className="font-mono tabular-nums text-sm text-white/70">{c.quantity}</span>,
-  },
-  {
     key: 'status',
-    header: 'Status',
-    render: (c) => (
-      <StatusChip tone={statusTone(c.status)}>
-        {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-      </StatusChip>
-    ),
+    header: tx('event_tools.col_status'),
+    render: (c) => {
+      const key = ticketDisplayKey(c.status, c.checked_in)
+      return <StatusChip className="!normal-case" tone={ticketDisplayTone(key)}>{tx(ticketDisplayLabelKey(key))}</StatusChip>
+    },
   },
   {
     key: 'note',
-    header: 'Note',
-    render: (c) => <span className="text-sm text-white/40 italic">{c.note || EMPTY_VALUE}</span>,
+    header: tx('comps.internal_note'),
+    hideOnMobile: true,
+    render: (c) => <span className="text-sm text-white/50">{c.note || EMPTY_VALUE}</span>,
   },
 ]
 
-export default function CompsClient({ eventId, eventTitle, comps, tiers }: CompsClientProps) {
+export default function CompsClient({ eventId, comps, tiers }: CompsClientProps) {
   const { t: tx } = useTranslation('organizer')
+  const router = useRouter()
+  const [outcome, setOutcome] = useState<Outcome | null>(null)
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -96,15 +94,21 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
     setQuantity(1)
     setNote('')
     setError(null)
+    setOutcome(null)
+  }
+
+  const close = () => {
+    setOpen(false)
+    reset()
   }
 
   const handleIssue = () => {
-    if (!name.trim() || !email.trim()) {
-      setError('Recipient name and email are required.')
+    if (!name.trim()) {
+      setError(tx('event_tools.comp_name_required'))
       return
     }
     if (quantity < 1 || quantity > 20) {
-      setError('Quantity must be between 1 and 20.')
+      setError(tx('event_tools.comp_quantity_range'))
       return
     }
     setError(null)
@@ -122,70 +126,94 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
             note: note.trim(),
           }),
         })
-        if (!res.ok) throw new Error('Failed to issue comp')
-        setOpen(false)
-        reset()
-        window.location.reload()
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setError(String(data?.error || tx('event_tools.generic_error')))
+          return
+        }
+        setOutcome({
+          count: Number(data?.count) || quantity,
+          email: email.trim(),
+          emailed: data?.emailed === true,
+          emailLimited: data?.emailLimited === true,
+          link: typeof data?.ticketLink === 'string' ? data.ticketLink : null,
+        })
+        router.refresh()
       } catch {
-        setError('Something went wrong. Please try again.')
+        setError(tx('event_tools.generic_error'))
       }
     })
   }
 
+  // Live comps only: a cancelled or refunded comp no longer holds a seat.
+  const issuedCount = comps
+    .filter((c) => ['valid', 'checked_in'].includes(ticketDisplayKey(c.status, c.checked_in)))
+    .reduce((s, c) => s + c.quantity, 0)
+
+  const issueButton = (primary: boolean) => (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+        primary ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+      }`}
+    >
+      <Gift className="h-4 w-4" />
+      {tx('comps.issue_comp')}
+    </button>
+  )
+
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">{tx('comps.complimentary_tickets')}</h1>
-          <p className="mt-0.5 text-sm text-white/50">
-            {comps.length > 0
-              ? `${comps.reduce((s, c) => s + c.quantity, 0)} comp ticket${comps.reduce((s, c) => s + c.quantity, 0) !== 1 ? 's' : ''} issued`
-              : 'Issue free tickets to guests'}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-            // The empty state below carries the white pill while the list is empty.
-            comps.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
-          }`}
-        >
-          <Gift className="h-4 w-4" />
-          {tx('comps.issue_comp')}
-        </button>
-      </div>
+      <SectionHeader
+        className="mb-6"
+        title={tx('comps.complimentary_tickets')}
+        description={
+          comps.length > 0 ? tx('event_tools.comp_summary', { count: issuedCount }) : tx('event_tools.comp_intro')
+        }
+        // The empty state below carries the white button while the list is empty.
+        actions={issueButton(comps.length > 0)}
+      />
 
       {comps.length === 0 ? (
         <OrgEmptyState
           icon={Ticket}
           title={tx('comps.no_comps_issued')}
           description={tx('comps.issue_comps_desc')}
-          action={
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-            >
-              <Gift className="h-4 w-4" />
-              {tx('comps.issue_comp_ticket')}
-            </button>
-          }
+          action={issueButton(true)}
         />
       ) : (
-        <OrgDataTable rows={comps} columns={columns} rowKey={(c) => c.id} />
+        <OrgDataTable rows={comps} columns={buildColumns(tx)} rowKey={(c) => c.id} />
       )}
 
       <Drawer
         open={open}
-        onClose={() => { setOpen(false); reset() }}
+        onClose={close}
         title={tx('comps.issue_comp_ticket')}
         size="sm"
         footer={
+          outcome ? (
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={reset}
+                className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                {tx('event_tools.comp_issue_another')}
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                {tx('event_tools.done')}
+              </button>
+            </div>
+          ) : (
           <div className="flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => { setOpen(false); reset() }}
+              onClick={close}
               className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {tx('actions.cancel')}
@@ -197,11 +225,30 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Gift className="h-4 w-4" />
-              {isPending ? 'Issuing…' : 'Issue ticket'}
+              {isPending ? tx('event_tools.issuing') : tx('event_tools.comp_submit')}
             </button>
           </div>
+          )
         }
       >
+        {outcome ? (
+          <div className="space-y-4 p-6">
+            <StatusChip className="!normal-case" tone={outcome.emailed ? 'success' : 'warning'}>
+              {outcome.emailed ? tx('event_tools.ticket_issued') : tx('event_tools.ticket_issued_not_sent')}
+            </StatusChip>
+            <p className="text-sm text-white/80">
+              {outcome.emailed
+                ? tx('event_tools.comp_result_emailed', { count: outcome.count, email: outcome.email })
+                : outcome.emailLimited
+                  ? tx('event_tools.result_email_limited')
+                  : outcome.email
+                    ? tx('event_tools.result_email_failed')
+                    : tx('event_tools.comp_result_no_email')}
+            </p>
+            {!outcome.emailed && outcome.link && <CopyTicketLink url={outcome.link} full />}
+          </div>
+        ) : (
+        <>
         <FormSection title={tx('comps.recipient')}>
           <FormField label={tx('comps.full_name')} required>
             <input
@@ -209,16 +256,16 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
-          <FormField label={tx('comps.email_address')} required>
+          <FormField label={tx('event_tools.email_optional')} hint={tx('event_tools.comp_email_hint')}>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jane@example.com"
-              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
         </FormSection>
@@ -230,7 +277,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
                 id="comp-tier"
                 value={tierId}
                 onChange={(e) => setTierId(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+                className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
               >
                 {tiers.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -248,7 +295,7 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               max={20}
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
           <FormField label={tx('comps.internal_note')}>
@@ -256,14 +303,14 @@ export default function CompsClient({ eventId, eventTitle, comps, tiers }: Comps
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Press pass, sponsor, VIP"
-              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              placeholder={tx('event_tools.comp_note_placeholder')}
+              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
             />
           </FormField>
-          {error && (
-            <p className="rounded-lg px-3 py-2 text-sm text-red-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-300">{error}</p>}
         </FormSection>
+        </>
+        )}
       </Drawer>
     </>
   )

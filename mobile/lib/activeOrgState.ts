@@ -27,13 +27,18 @@ export interface OrgOption {
   orgId: string;
   orgName: string;
   role: OrgRole;
+  /**
+   * May see this org's finances read-only (owner, or an admin the owner
+   * granted it). Never withdrawals or payout details: those stay owner_only.
+   */
+  financeView?: boolean;
 }
 
 /** The GET /api/organizer/orgs body. */
 export interface OrgsResponse {
-  own?: { orgId: string; orgName?: string; role?: string } | null;
-  memberships?: Array<{ orgId: string; role: string; orgName?: string }>;
-  active?: { orgId: string; role: string } | null;
+  own?: { orgId: string; orgName?: string; role?: string; financeView?: boolean } | null;
+  memberships?: Array<{ orgId: string; role: string; orgName?: string; financeView?: boolean }>;
+  active?: { orgId: string; role: string; financeView?: boolean } | null;
 }
 
 /**
@@ -44,12 +49,18 @@ export interface OrgsResponse {
 export function orgOptionsFrom(res: OrgsResponse | null | undefined): OrgOption[] {
   const out: OrgOption[] = [];
   if (res?.own?.orgId) {
-    out.push({ orgId: String(res.own.orgId), orgName: String(res.own.orgName || ''), role: 'owner' });
+    out.push({ orgId: String(res.own.orgId), orgName: String(res.own.orgName || ''), role: 'owner', financeView: true });
   }
   for (const m of res?.memberships || []) {
     if (!m?.orgId || !isTeamRole(m.role) || m.role === 'staff') continue;
     if (out.some((o) => o.orgId === m.orgId)) continue;
-    out.push({ orgId: String(m.orgId), orgName: String(m.orgName || ''), role: m.role as TeamRole });
+    out.push({
+      orgId: String(m.orgId),
+      orgName: String(m.orgName || ''),
+      role: m.role as TeamRole,
+      // Only an admin can hold the grant (the server says the same).
+      financeView: m.role === 'admin' && m.financeView === true,
+    });
   }
   return out;
 }

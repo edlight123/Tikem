@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -37,6 +37,8 @@ type TeamMember = {
   role: TeamRole
   status: MemberStatus
   joined_at?: string | null
+  /** Admin the owner granted read-only finances. */
+  finance_view?: boolean
 }
 
 type OrgTask = {
@@ -90,10 +92,13 @@ export default function OrganizerOrgTeamScreen() {
   const [newEmail, setNewEmail] = useState('')
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState<TeamRole>('manager')
+  // Read-only finances for an admin: only the owner may grant it.
+  const [newFinance, setNewFinance] = useState(false)
 
   // Member sheet.
   const [activeMember, setActiveMember] = useState<TeamMember | null>(null)
   const [memberRole, setMemberRole] = useState<TeamRole>('manager')
+  const [memberFinance, setMemberFinance] = useState(false)
 
   // Task sheets.
   const [showNewTask, setShowNewTask] = useState(false)
@@ -167,6 +172,7 @@ export default function OrganizerOrgTeamScreen() {
     setNewEmail('')
     setNewName('')
     setNewRole('manager')
+    setNewFinance(false)
     setShowInvite(true)
   }
 
@@ -177,7 +183,13 @@ export default function OrganizerOrgTeamScreen() {
     try {
       const res = await backendJson<{ member?: TeamMember }>(`/api/organizer/team`, {
         method: 'POST',
-        body: JSON.stringify({ email, name: newName.trim() || undefined, role: newRole }),
+        body: JSON.stringify({
+          email,
+          name: newName.trim() || undefined,
+          role: newRole,
+          // Owner only, admins only (the server refuses anything else).
+          ...(activeOrg.isOwner ? { finance_view: newRole === 'admin' && newFinance } : {}),
+        }),
       })
       setShowInvite(false)
       await refresh()
@@ -195,12 +207,19 @@ export default function OrganizerOrgTeamScreen() {
 
   const openMember = (m: TeamMember) => {
     setMemberRole(m.role)
+    setMemberFinance(m.role === 'admin' && m.finance_view === true)
     setActiveMember(m)
   }
 
+  const nextMemberFinance = memberRole === 'admin' && memberFinance
+  const memberChanged =
+    !!activeMember &&
+    (memberRole !== activeMember.role ||
+      (activeOrg.isOwner && nextMemberFinance !== (activeMember.role === 'admin' && activeMember.finance_view === true)))
+
   const saveMemberRole = async () => {
     const member = activeMember
-    if (!member || memberRole === member.role) {
+    if (!member || !memberChanged) {
       setActiveMember(null)
       return
     }
@@ -208,7 +227,11 @@ export default function OrganizerOrgTeamScreen() {
     try {
       await backendJson(`/api/organizer/team`, {
         method: 'PATCH',
-        body: JSON.stringify({ memberId: member.id, role: memberRole }),
+        body: JSON.stringify({
+          memberId: member.id,
+          role: memberRole,
+          ...(activeOrg.isOwner ? { finance_view: nextMemberFinance } : {}),
+        }),
       })
       setActiveMember(null)
       await refresh()
@@ -430,7 +453,10 @@ export default function OrganizerOrgTeamScreen() {
                 key: m.id,
                 name: memberDisplay(m),
                 email: m.email,
-                roleText: roleLabel(m.role),
+                roleText:
+                  m.role === 'admin' && m.finance_view
+                    ? `${roleLabel(m.role)} · ${t('orgTeam.finance.rowMarker')}`
+                    : roleLabel(m.role),
                 you: isSelf(m),
                 status: m.status,
                 onPress: isSelf(m) ? undefined : () => openMember(m),
@@ -456,6 +482,9 @@ export default function OrganizerOrgTeamScreen() {
                 <View key={r} style={styles.roleExplain}>
                   <Text style={styles.roleExplainName}>{roleLabel(r)}</Text>
                   <Text style={styles.roleExplainBody}>{roleBlurb(r)}</Text>
+                  {r === 'admin' ? (
+                    <Text style={[styles.roleExplainBody, styles.roleExplainNote]}>{t('orgTeam.finance.accessNote')}</Text>
+                  ) : null}
                 </View>
               ))}
             </View>
@@ -525,6 +554,9 @@ export default function OrganizerOrgTeamScreen() {
         <SheetInput value={newName} onChangeText={setNewName} placeholder={t('organizerOrgTeam.memberNamePlaceholder')} />
         <SheetLabel>{t('organizerOrgTeam.role')}</SheetLabel>
         <RolePicker value={newRole} onChange={setNewRole} label={roleLabel} blurb={roleBlurb} />
+        {activeOrg.isOwner && newRole === 'admin' ? (
+          <FinanceSwitch value={newFinance} onChange={setNewFinance} />
+        ) : null}
         <Text style={styles.sheetNote}>{t('orgTeam.team.inviteNote')}</Text>
       </FormSheet>
 
@@ -540,7 +572,7 @@ export default function OrganizerOrgTeamScreen() {
             <WhitePillCTA
               label={t('orgTeam.save')}
               onPress={saveMemberRole}
-              disabled={submitting || !activeMember || memberRole === activeMember.role}
+              disabled={submitting || !memberChanged}
               loading={submitting}
             />
             <TouchableOpacity
@@ -568,6 +600,9 @@ export default function OrganizerOrgTeamScreen() {
         ) : null}
         <SheetLabel>{t('organizerOrgTeam.role')}</SheetLabel>
         <RolePicker value={memberRole} onChange={setMemberRole} label={roleLabel} blurb={roleBlurb} />
+        {activeOrg.isOwner && memberRole === 'admin' ? (
+          <FinanceSwitch value={memberFinance} onChange={setMemberFinance} />
+        ) : null}
       </FormSheet>
 
       {/* New task */}
@@ -640,6 +675,39 @@ export default function OrganizerOrgTeamScreen() {
         </View>
       </FormSheet>
     </View>
+  )
+}
+
+/**
+ * "Can see finances (read only)": the owner's grant to one admin. Earnings,
+ * payout history and revenue; never withdrawals or payout details.
+ */
+function FinanceSwitch({ value, onChange }: { value: boolean; onChange: (next: boolean) => void }) {
+  const { colors } = useTheme()
+  const styles = getStyles(colors)
+  const { t } = useI18n()
+  return (
+    <TouchableOpacity
+      style={styles.financeRow}
+      onPress={() => onChange(!value)}
+      activeOpacity={0.8}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={`${t('orgTeam.finance.toggleLabel')}. ${t('orgTeam.finance.toggleBody')}`}
+    >
+      <View style={styles.roleOptionBody}>
+        <Text style={styles.roleOptionName}>{t('orgTeam.finance.toggleLabel')}</Text>
+        <Text style={styles.roleOptionBlurb}>{t('orgTeam.finance.toggleBody')}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        // Off track one step lighter than the row it sits on, so it reads.
+        trackColor={{ false: 'rgba(255,255,255,0.18)', true: '#FFFFFF' }}
+        thumbColor={value ? '#000000' : '#D4D4D4'}
+        ios_backgroundColor="rgba(255,255,255,0.18)"
+      />
+    </TouchableOpacity>
   )
 }
 
@@ -728,6 +796,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
 
     rolesBlock: { marginTop: 28 },
     roleExplain: { marginBottom: 14 },
+    roleExplainNote: { marginTop: 4, color: colors.textTertiary },
+    financeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: radius.md,
+      backgroundColor: T.surfaceRaised,
+    },
     roleExplainName: { fontSize: 14, fontWeight: '700', color: colors.text },
     roleExplainBody: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
 

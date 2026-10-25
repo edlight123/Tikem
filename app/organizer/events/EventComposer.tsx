@@ -79,6 +79,8 @@ import {
   pickDefaultComposerCountry,
   publishRequiresServerGate,
   timezoneForEvent,
+  composerSeedFromDefaults,
+  type ComposerSeed,
   type PublishEligibility,
 } from '@/lib/events/composer-country'
 import { normalizeSupportedCountry } from '@/lib/country-support'
@@ -114,7 +116,6 @@ import {
   Tag,
   Ticket,
   Trash2,
-  Type,
   UserCheck,
   UserPlus,
   Users,
@@ -207,6 +208,12 @@ interface EventComposerProps {
   defaultCountry?: string
   /** CREATE only: the organizer's default city, used when it belongs to `defaultCountry`. */
   defaultCity?: string
+  /**
+   * CREATE only: Settings > Event defaults (default_currency, default_timezone,
+   * default_categories, default_country). Each is validated against the
+   * event's country (composerSeedFromDefaults) before it prefills anything.
+   */
+  orgDefaults?: Record<string, any> | null
 }
 
 /** Where a signed-out composition survives the trip through sign-up. */
@@ -535,6 +542,7 @@ export default function EventComposer({
   authed = false,
   defaultCountry,
   defaultCity,
+  orgDefaults,
 }: EventComposerProps) {
   // Payout and verification links are the org owner's to follow (owner_only);
   // a team member sees the notice without a link to a page that would bounce them.
@@ -578,7 +586,15 @@ export default function EventComposer({
   const [description, setDescription] = useState(event?.description || '')
   const [address, setAddress] = useState(event?.address || '')
   const [venueName, setVenueName] = useState(event?.venue_name || '')
-  const [category, setCategory] = useState(event?.category || 'Concert')
+  // Saved event defaults, for a NEW event in its starting country only.
+  // Computed once: the defaults seed the first render and never re-apply.
+  const [seed] = useState<ComposerSeed>(() =>
+    isEdit || guest
+      ? {}
+      : composerSeedFromDefaults(orgDefaults, pickDefaultComposerCountry(defaultCountry), CATEGORIES)
+  )
+  const seedCountry = pickDefaultComposerCountry(defaultCountry)
+  const [category, setCategory] = useState(event?.category || seed.category || 'Concert')
   const [isOnline, setIsOnline] = useState(!!event?.is_online)
 
   // Country — decides the currency, the default fee incidence, the timezone
@@ -606,7 +622,7 @@ export default function EventComposer({
   const [currency, setCurrency] = useState<EventCurrency>(() =>
     isEdit
       ? normalizeEventCurrencyForCountry(country, event?.currency || defaultComposerCurrency(country))
-      : defaultComposerCurrency(country)
+      : normalizeEventCurrencyForCountry(country, seed.currency || defaultComposerCurrency(country))
   )
 
   // Tickets — multiple tiers.
@@ -827,7 +843,6 @@ export default function EventComposer({
   // unrelated edit made on the web. Dropping it from the payload would erase it,
   // which is the exact failure this file has already shipped twice.
   const [themeKey, setThemeKey] = useState<string>(event?.theme_key || '')
-  const [titleFont, setTitleFont] = useState<'Default' | 'Serif' | 'Sans'>(event?.title_font || 'Default')
   const [accentColor, setAccentColor] = useState(event?.accent_color || '#14B8A6')
 
   /* ------------------------------------------------------------------------
@@ -958,7 +973,6 @@ export default function EventComposer({
     if (d.spotify_url) setSpotifyUrl(d.spotify_url)
     if (d.video_url) setVideoUrl(d.video_url)
     if (d.theme_key) setThemeKey(d.theme_key)
-    if (d.title_font) setTitleFont(d.title_font)
     if (d.accent_color) setAccentColor(d.accent_color)
     // The recurrence plan survives the round trip too (create-only controls).
     if (d.recurrence && d.recurrence !== 'none') {
@@ -1295,14 +1309,20 @@ export default function EventComposer({
       video_url: videoUrl.trim(),
       theme_key: themeKey || '',
       spotify_url: spotifyUrl.trim() || null,
-      title_font: titleFont,
       accent_color: accentColor,
     }
     // The zone the event happens in, by city then country — the same rule the
     // event page already falls back to (lib/home/feed eventZone), now stored so
     // every reader agrees. Create only: an edit leaves a stored zone (the
     // mobile composer writes its own) untouched.
-    if (!isEdit) data.timezone = timezoneForEvent(country, isOnline ? '' : city)
+    // The organizer's saved default zone wins while the event is still in its
+    // starting country and default city; anywhere else the city decides.
+    if (!isEdit) {
+      const atDefaultPlace =
+        country === seedCountry &&
+        (isOnline || !city.trim() || !defaultCity || city.trim().toLowerCase() === defaultCity.trim().toLowerCase())
+      data.timezone = seed.timezone && atDefaultPlace ? seed.timezone : timezoneForEvent(country, isOnline ? '' : city)
+    }
     return { data, cleanTiers, isRsvp }
   }
 
@@ -3307,22 +3327,10 @@ export default function EventComposer({
                 paste-a-URL input when the search route has no credentials. */}
             <SpotifySongPicker value={spotifyUrl} onChange={setSpotifyUrl} />
 
-            {/* Font + accent */}
+            {/* Accent. The "Title Font" picker that sat here is gone: it saved
+                title_font and nothing on the event page or poster card ever
+                read it. Event titles use the house display face. */}
             <div className="space-y-3 rounded-xl bg-white/[0.025] p-4">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-white/80">
-                  <Type className="h-4 w-4 text-white/50" /> {t('composer.titleFont', { defaultValue: 'Title Font' })}
-                </span>
-                <select
-                  value={titleFont}
-                  onChange={(e) => setTitleFont(e.target.value as any)}
-                  className={inset}
-                >
-                  <option value="Default">{t('composer.fonts.Default', { defaultValue: 'Default' })}</option>
-                  <option value="Serif">{t('composer.fonts.Serif', { defaultValue: 'Serif' })}</option>
-                  <option value="Sans">{t('composer.fonts.Sans', { defaultValue: 'Sans' })}</option>
-                </select>
-              </div>
               {/* The accent is TAKEN FROM THE POSTER, not chosen.
                   A seven-swatch picker used to sit here. It was dead: the
                   chosen hex was written to `accent_color` and read by nothing

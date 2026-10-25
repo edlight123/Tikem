@@ -9,7 +9,7 @@ import { toEarningsRow } from '@/lib/payouts/availability'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
 import { isAdmin } from '@/lib/admin'
-import { canOnEvent } from '@/lib/organizer/context'
+import { canViewEventFinances } from '@/lib/organizer/financeAccess'
 import { getUsdToHtgBaseRate } from '@/lib/fx/usd-htg'
 import { moncashMinimumInfo, type MoncashMinimumInfo } from '@/lib/payouts/moncash-withdrawal-minimum'
 
@@ -53,12 +53,14 @@ export default async function EventEarningsPage({
 
   const eventData = eventDoc.data()
 
-  // Earnings and withdrawals are the org owner's alone (owner_only); team
-  // members go back to the event overview.
-  const { allowed } = await canOnEvent(user, eventData, 'owner_only')
-  if (!allowed) {
+  // Figures: the owner, an admin the owner granted read-only finances, or a
+  // platform admin. Withdrawals stay the owner's (the withdraw routes enforce
+  // it too); everyone else goes back to the event overview.
+  if (!(await canViewEventFinances(user, eventData))) {
     redirect(`/organizer/events/${eventId}`)
   }
+  const ownerOrgId = String(eventData?.organizer_id || eventData?.organizerId || '')
+  const readOnly = ownerOrgId !== user.id
 
   // Fetch earnings
   // The money figures come from the shared availability function — the same
@@ -112,6 +114,7 @@ export default async function EventEarningsPage({
       organizerId={String(eventData?.organizer_id || user.id)}
       tierBreakdown={tierBreakdown}
       moncashMinimum={moncashMinimum}
+      readOnly={readOnly}
     />
   )
 }

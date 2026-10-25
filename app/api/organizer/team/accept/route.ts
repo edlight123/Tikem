@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     name: d.name || user.full_name || null,
     role: d.role,
     addedBy: d.invited_by || d.org_id,
+    financeView: d.finance_view === true,
   })
 
   const res = NextResponse.json({ success: true, orgId: d.org_id, orgName: await orgDisplayName(d.org_id), role: d.role })

@@ -179,7 +179,8 @@ describe('money stays with the owner', () => {
     orgHeader = 'owner1'
     const res = await payoutHistoryGET()
     expect(res.status).toBe(403)
-    expect((await res.json()).code).toBe('owner_only')
+    // Payout history is read-only finances now (requireFinanceView): managers never.
+    expect((await res.json()).code).toBe('no_finance')
   })
 
   it('a manager acting for the org cannot withdraw (403, before any money logic)', async () => {

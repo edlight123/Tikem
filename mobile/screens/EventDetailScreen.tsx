@@ -977,7 +977,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
               }}
               style={styles.quickActionButton}
             />
-            {isSoldOut && (
+            {/* Only when the organizer turned the waitlist on: the server
+                refuses to join anything else. */}
+            {isSoldOut && (event as any).enable_waitlist === true && (
               <JoinWaitlistButton
                 eventId={eventId}
                 eventTitle={event.title}

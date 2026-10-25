@@ -12,8 +12,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendFetch } from '../lib/api/backend';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
 import { useAppAlert } from './AppAlert';
 import { radius } from '../theme/tokens';
 
@@ -54,15 +52,12 @@ export default function JoinWaitlistButton({
     }
 
     try {
-      const waitlistQuery = query(
-        collection(db, 'event_waitlist'),
-        where('user_id', '==', user.uid),
-        where('event_id', '==', eventId)
-      );
-      const snapshot = await getDocs(waitlistQuery);
-      
-      if (!snapshot.empty) {
-        const data = snapshot.docs[0].data();
+      // Server read: client rules do not expose event_waitlist, so the old
+      // direct Firestore query always failed and the button never knew you
+      // had joined.
+      const response = await backendFetch(`/api/waitlist/join?eventId=${encodeURIComponent(eventId)}`);
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.onWaitlist) {
         setIsOnWaitlist(true);
         setPosition(data.position || null);
       }

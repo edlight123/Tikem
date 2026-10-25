@@ -19,6 +19,7 @@ import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
+import { useActiveOrg } from '../../lib/activeOrg'
 import { getEventById } from '../../lib/api/organizer'
 import { getVerificationRequest } from '../../lib/verification'
 import { getRequiredPayoutProfileIdForEventCountry, normalizeCountryCode } from '../../lib/payment-provider'
@@ -70,6 +71,10 @@ export default function OrganizerEventEarningsScreen() {
   const { eventId, autoWithdraw } = route.params
 
   const { user } = useAuth()
+  // An admin the owner granted read-only finances: figures only. The payout
+  // rail, identity and payout-method reads below are the OWNER's own records
+  // (and owner-only routes), so they are skipped, and no withdraw action shows.
+  const readOnly = !useActiveOrg().isOwner
   const { t, language } = useI18n()
   const insets = useSafeAreaInsets()
   const showAlert = useAppAlert()
@@ -236,7 +241,7 @@ export default function OrganizerEventEarningsScreen() {
   const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.tikem.co'
 
   const loadPayoutRail = useCallback(async () => {
-    if (!user?.uid) {
+    if (!user?.uid || readOnly) {
       setIsStripeConnectAccount(false)
       setAccountLocation('')
       return
@@ -276,10 +281,10 @@ export default function OrganizerEventEarningsScreen() {
       setIsStripeConnectAccount(false)
       setAccountLocation('')
     }
-  }, [user?.uid])
+  }, [user?.uid, readOnly])
 
   const loadIdentityStatus = useCallback(async () => {
-    if (!user?.uid) {
+    if (!user?.uid || readOnly) {
       setIdentityVerified(false)
       return
     }
@@ -289,13 +294,14 @@ export default function OrganizerEventEarningsScreen() {
     } catch {
       setIdentityVerified(false)
     }
-  }, [user?.uid])
+  }, [user?.uid, readOnly])
 
   // Whether a payout method exists (Haiti profile). Drives the "set up payouts"
   // guidance so users don't hit the raw "Haiti payout profile required" error.
   const loadPayoutMethod = useCallback(async () => {
-    if (!user?.uid) {
+    if (!user?.uid || readOnly) {
       setHasPayoutMethod(null)
+      setPayoutMethodChecked(true)
       return
     }
     try {
@@ -308,7 +314,7 @@ export default function OrganizerEventEarningsScreen() {
     } finally {
       setPayoutMethodChecked(true)
     }
-  }, [user?.uid])
+  }, [user?.uid, readOnly])
 
   const loadEarnings = useCallback(async () => {
     setLoading(true)
@@ -799,7 +805,7 @@ export default function OrganizerEventEarningsScreen() {
    */
   const autoWithdrawFiredRef = React.useRef(false)
   useEffect(() => {
-    if (!autoWithdraw || autoWithdrawFiredRef.current) return
+    if (readOnly || !autoWithdraw || autoWithdrawFiredRef.current) return
     if (loading || !earnings || identityVerified === null || !payoutMethodChecked) return
     autoWithdrawFiredRef.current = true
     openWithdraw(String(payoutMethod || '').includes('bank') ? 'bank' : 'moncash')
@@ -886,7 +892,12 @@ export default function OrganizerEventEarningsScreen() {
           payout rail ourselves and are the party that must know who we are
           paying. Testing identity first sent US organizers into the Haitian flow.
         */}
-        {requiresStripeConnect ? (
+        {readOnly ? (
+          // Read-only finance admin: no withdraw, no payout set-up or ID prompts.
+          <View style={styles.noticeStack}>
+            <InfoNotice icon="eye-outline" text={t('orgTeam.finance.readOnlyEvent')} />
+          </View>
+        ) : requiresStripeConnect ? (
           <View style={styles.noticeStack}>
             <InfoNotice icon="card-outline" text={t('organizerEarnings.stripeNotice')} />
             <SecondaryPill

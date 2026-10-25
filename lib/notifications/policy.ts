@@ -12,12 +12,15 @@
  * an app teaches people to turn notifications off, after which the transactional
  * ones stop arriving too.
  */
+import { readUserNotifyPref } from './userPreferences'
+
 export type NotificationCategory =
   | 'purchase' // your ticket is confirmed
   | 'reminder' // your event starts soon
   | 'event_change' // time/venue changed
   | 'payout' // your withdrawal was paid / failed / is being confirmed — your own money
   | 'filling_fast' // an event you follow is nearly sold out
+  | 'saved_event' // an event you saved (no ticket yet) is coming up
   | 'discovery' // new events in your city
   | 'organizer_sale' // you sold a ticket
   | 'organizer_milestone' // 50% sold, sold out
@@ -48,6 +51,8 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   // No opt-out: a payout outcome is about the recipient's own money.
   payout: null,
   filling_fast: 'notify_filling_fast',
+  // A nudge about an event the person saved; they turn it off with reminders.
+  saved_event: 'notify_reminders',
   discovery: 'notify_discovery',
   organizer_sale: 'notify_ticket_purchase',
   organizer_milestone: 'notify_organizer_milestones',
@@ -62,7 +67,9 @@ export function isCategoryEnabled(
 ): boolean {
   const field = PREFERENCE_FIELD[category]
   if (!field) return true
-  return user?.[field] ?? true
+  // Top-level field, then the old web card's nested `notify.reminders` /
+  // `notify.updates` (lib/notifications/userPreferences.ts), then on.
+  return readUserNotifyPref(user, field)
 }
 
 /** Quiet hours in the recipient's local time: nothing discretionary 21:00–08:59. */

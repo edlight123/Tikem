@@ -148,7 +148,8 @@ export default function OrganizerEventManagementScreen() {
     navigation.navigate('EventAnalytics', { eventId, eventTitle: event?.title });
   };
 
-  const canSeeEarnings = useActiveOrg().can('owner_only');
+  // Owner, or an admin granted read-only finances (the screen is read-only for them).
+  const canSeeEarnings = useActiveOrg().financeView;
 
   const handleViewEarnings = () => {
     navigation.navigate('OrganizerEventEarnings', { eventId });
@@ -428,7 +429,7 @@ export default function OrganizerEventManagementScreen() {
       label: t('organizerEventManagement.actionGroups.sales'),
       tiles: [
         { key: 'orders', icon: 'receipt-outline', label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
-        // Earnings carry balances and withdrawals: the org owner's only.
+        // Earnings: owner, or a finance-granted admin (read-only). Never managers.
         ...(canSeeEarnings
           ? [{ key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings }]
           : []),

@@ -44,3 +44,13 @@ export function isTeamRole(value: unknown): value is TeamRole {
 export function orgCan(role: OrgRole | null | undefined, action: OrgAction): boolean {
   return !!role && ALLOWED[action].includes(role)
 }
+
+/**
+ * Read-only finances (earnings, payout history, revenue reports, exports) for a
+ * team member: only an ADMIN the owner explicitly granted it to (team doc
+ * finance_view). Never withdrawals, never bank/MonCash/Stripe details: whoever
+ * can change where money goes can take it, so that stays owner-only.
+ */
+export function canViewFinances(role: OrgRole | null | undefined, financeView: boolean | undefined): boolean {
+  return role === 'owner' || (role === 'admin' && financeView === true)
+}

@@ -9,9 +9,11 @@ import type { OrgAction } from '../../lib/orgTeamRoles';
 import EmptyState from '../EmptyState';
 import OrganizerScreenHeader from './OrganizerScreenHeader';
 
-/** The calm "not for your role" line for each gated action. */
-function noticeKeys(action: OrgAction): { title: string; body: string } {
+/** The calm "not for your role" line for each gated action ('finance' = read-only finances). */
+function noticeKeys(action: OrgAction | 'finance'): { title: string; body: string } {
   switch (action) {
+    case 'finance':
+      return { title: 'orgTeam.gate.financeTitle', body: 'orgTeam.gate.financeBody' };
     case 'owner_only':
       return { title: 'orgTeam.gate.ownerOnlyTitle', body: 'orgTeam.gate.ownerOnlyBody' };
     case 'manage_team':
@@ -28,7 +30,7 @@ function noticeKeys(action: OrgAction): { title: string; body: string } {
  * reaches Payouts through a deep link, say). Never an error: a header with a
  * back button and one quiet line saying who can do this.
  */
-export function OrgAccessNotice({ action }: { action: OrgAction }) {
+export function OrgAccessNotice({ action }: { action: OrgAction | 'finance' }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const navigation = useNavigation<any>();
@@ -59,6 +61,21 @@ export function withOrgAccess<P extends object>(Screen: React.ComponentType<P>, 
     return <Screen {...props} />;
   }
   Gated.displayName = `withOrgAccess(${Screen.displayName || Screen.name || 'Screen'})`;
+  return Gated;
+}
+
+/**
+ * Wrap a finance screen (earnings, payout history): the owner, or an admin
+ * the owner granted read-only finances. The screen itself drops every
+ * money-out action when the viewer is not the owner; the server enforces both.
+ */
+export function withFinanceAccess<P extends object>(Screen: React.ComponentType<P>) {
+  function Gated(props: P) {
+    const { financeView } = useActiveOrg();
+    if (!financeView) return <OrgAccessNotice action="finance" />;
+    return <Screen {...props} />;
+  }
+  Gated.displayName = `withFinanceAccess(${Screen.displayName || Screen.name || 'Screen'})`;
   return Gated;
 }
 

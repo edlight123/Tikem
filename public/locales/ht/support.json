@@ -72,8 +72,24 @@
     "message_placeholder": "Dekri pwoblèm oswa kesyon ou an detay...",
     "submit": "Soumèt demann",
     "submitting": "Ap soumèt...",
-    "success_title": "Demann soumèt!",
-    "success_message": "Nou resevwa demann sipò ou epi n ap reponn nan 24 èdtan. Gade email ou pou konfimasyon.",
+    "success_title": "Demann lan ale",
+    "success_message": "Nou resevwa l. Referans ou se {{reference}}, epi nou voye yon konfimasyon bay {{email}}. Yon moun nan ekip Tikèm nan ap reponn ou nan adrès sa a.",
+    "send_another": "Voye yon lòt demann",
+    "rate_limited": "Ou voye plizyè demann nan yon ti tan. Tanpri tann yon ti moman, oswa ekri support@tikem.co.",
+    "details_hint": "Mete detay tankou yon nimewo kòmand, non evènman an oswa yon mesaj erè.",
+    "honeypot_label": "Kite chan sa a vid",
+    "topics": {
+      "ticket_purchase": "Achte yon tikè",
+      "payment": "Peman",
+      "refund": "Ranbousman",
+      "event_access": "Antre nan yon evènman",
+      "account": "Kont mwen",
+      "event_creation": "Kreye yon evènman",
+      "payout": "Peman òganizatè",
+      "check_in": "Kontwòl nan pòt la",
+      "verification": "Verifikasyon",
+      "other": "Yon lòt bagay"
+    },
     "error_title": "Echèk nan soumisyon",
     "error_message": "Te gen yon erè nan soumèt demann ou. Tanpri eseye ankò oswa voye nou yon email dirèkteman nan support@tikem.co",
     "try_again": "Eseye ankò",
@@ -111,7 +127,7 @@
           "faqs": [
             {
               "question": "Kijan pou mwen achte tikè?",
-              "answer": "Gade evènman yo sou paj dakèy la oswa Dekouvri, ouvri evènman an, chwazi kalite tikè ak kantite a, epi klike \"Pran Tikè\". W ap fini ak yon peman an sekirite pa kat oswa MonCash."
+              "answer": "Gade evènman yo sou paj dakèy la oswa Dekouvri, ouvri evènman an, chwazi kalite tikè ak kantite a, epi klike \"Pran Tikè\". Evènman ann Ayiti yo peye ak MonCash; evènman Etazini, Kanada ak Lafrans yo peye ak kat."
             },
             {
               "question": "Ki kote mwen ka jwenn tikè mwen yo?",
@@ -119,7 +135,7 @@
             },
             {
               "question": "Èske mwen ka transfere tikè mwen bay yon lòt moun?",
-              "answer": "Wi. Louvri detay tikè a epi klike \"Transfere Tikè\". Mete imel moun nan, li ap resevwa etap pou reklame tikè a. Li dwe aksepte anvan evènman an kòmanse."
+              "answer": "Wi. Louvri tikè w la, chwazi \"Transfere Tikè\" epi mete imèl moun nan. Ou ka kòmanse yon transfè nenpòt lè anvan evènman an kòmanse, toutotan yo poko eskane tikè a nan pòt la. Moun nan gen 24 èdtan pou l aksepte; si l pa fè l, lyen an ekspire epi ou ka voye tikè a ankò oswa anile transfè a sou paj tikè a."
             },
             {
               "question": "Kisa k ap pase si mwen pèdi tikè mwen?",
@@ -127,7 +143,7 @@
             },
             {
               "question": "Èske mwen ka achte tikè san mwen pa kreye kont?",
-              "answer": "Ou bezwen yon kont Tikèm pou achte tikè. Sa kenbe tikè yo an sekirite epi li pèmèt ou jere transfè, ranbousman, ak demann sipò. Kreye kont lan pran yon minit."
+              "answer": "Wi. Ou ka peye kòm envite ak non w ak imèl ou (ak yon nimewo telefòn pou evènman ann Ayiti). Tikè yo rive pa imèl, epi ou ka jwenn yo ankò nenpòt lè sou tikem.co/tickets/find. Yon kont kenbe tout tikè w yo yon sèl kote epi li pèmèt ou transfere yo."
             }
           ]
         },
@@ -163,7 +179,7 @@
           "faqs": [
             {
               "question": "Ki metòd peman nou aksepte?",
-              "answer": "Nou aksepte Visa, Mastercard, American Express, ak MonCash (pou itilizatè an Ayiti). Peman yo trete an sekirite atravè patnè nou yo."
+              "answer": "Sa depann de kote evènman an ap fèt. Evènman ann Ayiti yo peye ak MonCash. Evènman Etazini, Kanada ak Lafrans yo peye ak kat (Visa, Mastercard, American Express), an sekirite atravè Stripe. Peman an montre sèlman metòd ki disponib pou evènman sa a."
             },
             {
               "question": "Poukisa yo chaje m frè sèvis?",

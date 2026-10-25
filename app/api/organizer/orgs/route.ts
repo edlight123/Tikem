@@ -7,6 +7,7 @@ import {
   listMemberships,
   orgDisplayName,
   teamRoleIn,
+  teamSeatIn,
 } from '@/lib/organizer/context'
 
 export const runtime = 'nodejs'
@@ -33,10 +34,14 @@ export async function GET() {
     getOrgContext(),
     isOrganizer ? orgDisplayName(user.id) : Promise.resolve(''),
   ])
+  // financeView per org: read-only finances (owner, or an admin the owner granted it).
+  const withFinance = await Promise.all(
+    memberships.map(async (m) => ({ ...m, financeView: Boolean((await teamSeatIn(m.orgId, user.id))?.financeView) })),
+  )
   return NextResponse.json({
-    own: isOrganizer ? { orgId: user.id, orgName: ownName || user.full_name || '', role: 'owner' } : null,
-    memberships,
-    active: ctx ? { orgId: ctx.orgId, role: ctx.role } : null,
+    own: isOrganizer ? { orgId: user.id, orgName: ownName || user.full_name || '', role: 'owner', financeView: true } : null,
+    memberships: withFinance,
+    active: ctx ? { orgId: ctx.orgId, role: ctx.role, financeView: ctx.financeView } : null,
   })
 }
 

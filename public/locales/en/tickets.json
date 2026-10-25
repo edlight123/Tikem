@@ -56,7 +56,22 @@
     "transfer_link_label": "Transfer Link",
     "transfer_copy_link": "Copy Link",
     "transfer_link_copied": "Link copied!",
-    "transfer_share": "Share this link with the recipient to complete the transfer."
+    "transfer_share": "Share this link with the recipient to complete the transfer.",
+    "transfer_intro": "Send this ticket to someone else. They'll get an email with a link to accept it.",
+    "transfer_expiry_note": "Transfer links expire after 24 hours.",
+    "transfer_reminder": "This link expires in 24 hours. The recipient must accept before then.",
+    "transfer_sending": "Sending...",
+    "transfer_done": "Done",
+    "transfer_share_whatsapp": "Share via WhatsApp",
+    "transfer_share_sms": "Share via text message",
+    "transfer_share_text": "I'm transferring my ticket for {{event}} to you. Accept it here:",
+    "transfer_pending_title": "Transfer pending",
+    "transfer_pending_body": "Sent to {{email}}. They have until {{when}} to accept. Until then, the ticket stays yours.",
+    "transfer_cancel_transfer": "Cancel transfer",
+    "transfer_cancel_confirm": "Cancel this transfer? The link stops working right away.",
+    "transfer_cancelling": "Cancelling...",
+    "transfer_cancelled": "Transfer cancelled. The ticket is yours to use or send again.",
+    "transfer_cancel_failed": "We couldn't cancel the transfer. Try again."
   },
   "event_tickets": {
     "ready": "Your tickets are ready to use",

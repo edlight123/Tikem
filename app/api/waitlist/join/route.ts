@@ -1,10 +1,11 @@
-import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
 import { renderEmail, appUrl, poster, title, meta, serifEyebrow, serifHeading, metric, steps, gap, button } from '@/lib/email-kit/layout'
 import { formatEventWhen, type EmailLang } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { eventInstantIso } from '@/lib/email-templates/reminder'
+import { WAITLIST_COLLECTION, isEventClosedForWaitlist, isWaitlistEnabled, seatsLeftNow } from '@/lib/waitlist'
 
 const WAITLIST_COPY = {
   en: {
@@ -80,68 +81,108 @@ function waitlistJoinedEmail(lang: EmailLang, event: Record<string, any>, positi
   return { subject: t.subject(eventTitle), html }
 }
 
+async function myEntry(eventId: string, userId: string) {
+  const snap = await adminDb
+    .collection(WAITLIST_COLLECTION)
+    .where('event_id', '==', eventId)
+    .where('user_id', '==', userId)
+    .limit(1)
+    .get()
+  return snap.empty ? null : snap.docs[0]
+}
+
+/**
+ * Am I on this event's waitlist? The web button reads this (client rules do
+ * not expose event_waitlist).
+ */
+export async function GET(request: Request) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return Response.json({ onWaitlist: false })
+    const eventId = new URL(request.url).searchParams.get('eventId')
+    if (!eventId) return Response.json({ error: 'Event ID required' }, { status: 400 })
+    const entry = await myEntry(eventId, user.id)
+    const data = entry?.data() || null
+    const live = !!data && String(data.status || 'waiting') === 'waiting'
+    return Response.json({ onWaitlist: live, position: live ? Number(data?.position || 0) || null : null })
+  } catch (error) {
+    console.error('Error reading waitlist status:', error)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
-    
+
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventId } = await request.json()
+    const { eventId } = await request.json().catch(() => ({}))
 
     if (!eventId || typeof eventId !== 'string') {
       return Response.json({ error: 'Event ID required' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
-    // Check if event exists and is sold out
-    const { data: event } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .single()
-
-    if (!event) {
+    const eventSnap = await adminDb.collection('events').doc(eventId).get()
+    if (!eventSnap.exists) {
       return Response.json({ error: 'Event not found' }, { status: 404 })
     }
+    const event = { id: eventId, ...(eventSnap.data() || {}) } as Record<string, any>
 
-    const availableTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
-    
-    // Check if already on waitlist
-    const { data: existing } = await supabase
-      .from('event_waitlist')
-      .select('id, position')
-      .eq('event_id', eventId)
-      .eq('user_id', user.id)
-      .single()
+    // The organizer must have turned the waitlist on. This route used to
+    // accept anyone for any event, so people joined lists nobody would ever
+    // act on.
+    if (!isWaitlistEnabled(event)) {
+      return Response.json(
+        { error: 'This event does not have a waitlist.', code: 'waitlist_disabled' },
+        { status: 409 }
+      )
+    }
+    if (isEventClosedForWaitlist(event, Date.now())) {
+      return Response.json(
+        { error: 'This event is no longer taking a waitlist.', code: 'event_closed' },
+        { status: 409 }
+      )
+    }
+    // Only a sold-out event has a waitlist: if a seat can be bought, buy it.
+    const left = await seatsLeftNow(eventId, event)
+    if (left == null || left > 0) {
+      return Response.json(
+        { error: 'Tickets are still available for this event.', code: 'tickets_available' },
+        { status: 409 }
+      )
+    }
 
+    const existing = await myEntry(eventId, user.id)
     if (existing) {
-      return Response.json({ 
+      const data = existing.data() || {}
+      if (String(data.status || 'waiting') !== 'waiting') {
+        // Rejoining after a closed/purchased entry: back in line.
+        await existing.ref.update({ status: 'waiting', email: user.email || data.email || null })
+      }
+      return Response.json({
         message: 'Already on waitlist',
-        position: existing.position 
+        position: data.position,
       })
     }
 
-    // Get current waitlist count for this event
-    const { data: waitlistEntries } = await supabase
-      .from('event_waitlist')
-      .select('id')
-      .eq('event_id', eventId)
+    const waitlistEntries = await adminDb.collection(WAITLIST_COLLECTION).where('event_id', '==', eventId).get()
+    const position = (waitlistEntries.size || 0) + 1
 
-    const position = (waitlistEntries?.length || 0) + 1
-
-    // Add to waitlist
-    const { error: insertError } = await supabase
-      .from('event_waitlist')
-      .insert({
+    try {
+      await adminDb.collection(WAITLIST_COLLECTION).add({
         event_id: eventId,
         user_id: user.id,
-        position
+        // Firebase Auth address (never the client-writable profile copy), so
+        // the "tickets are available" email (lib/waitlist.ts) has somewhere to go.
+        email: user.email || null,
+        position,
+        status: 'waiting',
+        created_at: new Date().toISOString(),
       })
-
-    if (insertError) {
+    } catch (insertError) {
       console.error('Error adding to waitlist:', insertError)
       return Response.json({ error: 'Failed to join waitlist' }, { status: 500 })
     }
@@ -151,7 +192,7 @@ export async function POST(request: Request) {
     // skipped by sendEmail's null guard. Every organizer-typed value is escaped.
     try {
       const lang = await resolveEmailLang({ userId: user.id, email: user.email || null, event })
-      const email = waitlistJoinedEmail(lang, { ...event, id: event.id || eventId }, position)
+      const email = waitlistJoinedEmail(lang, event, position)
       await sendEmail({
         to: user.email || null,
         subject: email.subject,
@@ -162,7 +203,7 @@ export async function POST(request: Request) {
       // Don't fail the request if email fails
     }
 
-    return Response.json({ 
+    return Response.json({
       success: true,
       position,
       message: `You're #${position} on the waitlist`
@@ -177,7 +218,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await getCurrentUser()
-    
+
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -189,33 +230,21 @@ export async function DELETE(request: Request) {
       return Response.json({ error: 'Event ID required' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
-    // Remove from waitlist
-    const { error } = await supabase
-      .from('event_waitlist')
-      .delete()
-      .eq('event_id', eventId)
-      .eq('user_id', user.id)
-
-    if (error) {
-      console.error('Error leaving waitlist:', error)
-      return Response.json({ error: 'Failed to leave waitlist' }, { status: 500 })
-    }
+    const mine = await adminDb
+      .collection(WAITLIST_COLLECTION)
+      .where('event_id', '==', eventId)
+      .where('user_id', '==', user.id)
+      .get()
+    await Promise.all(mine.docs.map((d: any) => d.ref.delete()))
 
     // Reorder remaining waitlist positions
-    const { data: remaining } = await supabase
-      .from('event_waitlist')
-      .select('id')
-      .eq('event_id', eventId)
-      .order('position', { ascending: true })
-
-    if (remaining) {
-      for (let i = 0; i < remaining.length; i++) {
-        await supabase
-          .from('event_waitlist')
-          .update({ position: i + 1 })
-          .eq('id', remaining[i].id)
+    const remaining = await adminDb.collection(WAITLIST_COLLECTION).where('event_id', '==', eventId).get()
+    const ordered = [...remaining.docs].sort(
+      (a: any, b: any) => Number(a.data()?.position || 0) - Number(b.data()?.position || 0)
+    )
+    for (let i = 0; i < ordered.length; i++) {
+      if (Number(ordered[i].data()?.position || 0) !== i + 1) {
+        await ordered[i].ref.update({ position: i + 1 })
       }
     }
 

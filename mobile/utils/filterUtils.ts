@@ -160,19 +160,14 @@ export function applyFilters(events: any[], filters: EventFilters): any[] {
   }
 
   // Event type filter
+  // `is_online` (saved by both composers) is authoritative; legacy events
+  // without it fall back to the old venue-name guess. Mirrors the web's
+  // isOnlineEvent (lib/filters/apply.ts).
   if (filters.eventType !== 'all') {
     if (filters.eventType === 'online') {
-      filtered = filtered.filter(event => 
-        event.event_type === 'online' || 
-        event.venue_name?.toLowerCase().includes('online') ||
-        event.venue_name?.toLowerCase().includes('virtual')
-      );
+      filtered = filtered.filter(event => isOnlineEvent(event));
     } else if (filters.eventType === 'in-person') {
-      filtered = filtered.filter(event => 
-        event.event_type !== 'online' && 
-        !event.venue_name?.toLowerCase().includes('online') &&
-        !event.venue_name?.toLowerCase().includes('virtual')
-      );
+      filtered = filtered.filter(event => !isOnlineEvent(event));
     }
   }
 
@@ -204,4 +199,12 @@ export function countActiveFilters(filters: EventFilters): number {
   if (filters.eventType !== 'all') count++;
   
   return count;
+}
+
+/** Is this an online event? See the filter above. */
+export function isOnlineEvent(event: any): boolean {
+  if (typeof event?.is_online === 'boolean') return event.is_online;
+  if (event?.event_type === 'online') return true;
+  const venue = String(event?.venue_name || '').toLowerCase();
+  return venue.includes('online') || venue.includes('virtual') || String(event?.commune || '').toLowerCase() === 'virtual';
 }

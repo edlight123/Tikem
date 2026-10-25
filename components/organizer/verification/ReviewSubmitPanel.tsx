@@ -181,11 +181,11 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
       {!isReadOnly && canSubmit && (
         <div className="mt-4 text-xs md:text-sm text-white/60 text-center">
           By submitting, you agree to our{' '}
-          <a href="/terms" className="text-brand-300 hover:text-brand-300 underline">
+          <a href="/legal/terms" className="text-brand-300 hover:text-brand-300 underline">
             {t('verification_review.terms_of_service')}
           </a>{' '}
           and{' '}
-          <a href="/privacy" className="text-brand-300 hover:text-brand-300 underline">
+          <a href="/legal/privacy" className="text-brand-300 hover:text-brand-300 underline">
             {t('verification_review.privacy_policy')}
           </a>
         </div>

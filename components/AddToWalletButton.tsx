@@ -6,6 +6,10 @@ import { format } from 'date-fns'
 import { escapeHtml } from '@/lib/html'
 import { useToast } from '@/components/ui/Toast'
 
+// Google Wallet stays hidden until the issuer leaves demo mode (lib/wallet/config.ts
+// isGoogleWalletOffered). Build-time flag, default off. Apple Wallet is unaffected.
+const GOOGLE_WALLET_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED === 'true'
+
 interface AddToWalletButtonProps {
   ticket: any
   event: any
@@ -410,7 +414,7 @@ export default function AddToWalletButton({ ticket, event, qrElementId = 'ticket
             </button>
           )}
 
-          {walletCapability?.google !== false && (
+          {GOOGLE_WALLET_ENABLED && walletCapability?.google !== false && (
             <button
               onClick={handleAddToGooglePay}
               disabled={isAddingToWallet !== null}

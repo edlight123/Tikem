@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { assertEventOwnedByUser } from '@/lib/tracking-links'
-import { requireOrg } from '@/lib/organizer/context'
+import { requireFinanceView } from '@/lib/organizer/context'
+import { requireEventFinance } from '@/lib/organizer/financeAccess'
 import { getOrganizerRevenueBreakdown, getEventRevenueBreakdown } from '@/lib/analytics/revenue'
 
 export const dynamic = 'force-dynamic'
@@ -22,15 +22,14 @@ export async function GET(request: Request) {
     let breakdown
 
     if (eventId) {
-      // Get breakdown for specific event: the event's org team (view) or an admin.
-      if (user.role !== 'admin') {
-        const owned = await assertEventOwnedByUser(eventId, user, 'view')
-        if (!owned.ok) return NextResponse.json({ error: owned.error }, { status: owned.status })
-      }
+      // One event's revenue: whoever may see that event's org finances
+      // (owner, finance-granted admin, platform admin).
+      const gate = await requireEventFinance(user, eventId)
+      if (!gate.ok) return gate.response
       breakdown = await getEventRevenueBreakdown(eventId)
     } else {
-      // Get breakdown for all of the acting org's events (no bank details: 'view').
-      const org = await requireOrg('view')
+      // All of the acting org's events: read-only finances.
+      const org = await requireFinanceView()
       if (!org.ok) return org.response
       const options: any = {}
       if (startDate) options.startDate = new Date(startDate)

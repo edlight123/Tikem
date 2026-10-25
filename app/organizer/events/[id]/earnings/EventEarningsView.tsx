@@ -27,9 +27,14 @@ interface EventEarningsViewProps {
   tierBreakdown?: EventTierSalesBreakdownRow[]
   /** The MonCash 1,000 HTG floor in this event's currency, from the server. */
   moncashMinimum?: MoncashMinimumInfo | null
+  /**
+   * An admin the owner granted read-only finances: figures only. No withdraw
+   * actions, no payout set-up or verification prompts (those are the owner's).
+   */
+  readOnly?: boolean
 }
 
-export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown, moncashMinimum }: EventEarningsViewProps) {
+export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown, moncashMinimum, readOnly = false }: EventEarningsViewProps) {
   const { t } = useTranslation('organizer')
   const router = useRouter()
   const { showToast } = useToast()
@@ -96,6 +101,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
   // undefined = still loading / unknown (show the buttons, the server decides).
   const [haitiProfileStatus, setHaitiProfileStatus] = useState<string | null | undefined>(undefined)
   useEffect(() => {
+    // Read-only viewers never withdraw, so the payout profile is not needed.
+    if (readOnly) return
     let cancelled = false
     fetch('/api/organizer/payout-config-summary', { cache: 'no-store' as any })
       .then((res) => (res.ok ? res.json() : null))
@@ -107,7 +114,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [readOnly])
   // Only Haiti-rail events withdraw through MonCash / bank here; Stripe Connect
   // markets (US/CA/FR) pay out through Stripe, so the Haiti profile is moot.
   const isHaitiRailEvent = countrySupport(event?.country)?.requiredProfile !== 'stripe_connect'
@@ -589,7 +596,17 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         </div>
       )}
 
-      {!withdrawalBlocked && (needsIdentityToWithdraw || needsPayoutMethodToWithdraw) && (
+      {readOnly && (
+        <div className="mb-6 flex items-start gap-3 rounded bg-white/[0.055] p-5">
+          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-white/50" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-white">{t('finance_view.read_only_title')}</p>
+            <p className="mt-1 text-sm text-white/60">{t('finance_view.read_only_event_body')}</p>
+          </div>
+        </div>
+      )}
+
+      {!readOnly && !withdrawalBlocked && (needsIdentityToWithdraw || needsPayoutMethodToWithdraw) && (
         <div className="rounded-xl bg-amber-500/10 p-5 mb-6">
           <h2 className="font-semibold text-amber-100">
             {t('verify_to_withdraw.title', { defaultValue: 'Verify your identity to withdraw' })}
@@ -618,7 +635,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         </div>
       )}
 
-      {!withdrawalBlocked && !needsIdentityToWithdraw && !needsPayoutMethodToWithdraw && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
+      {!readOnly && !withdrawalBlocked && !needsIdentityToWithdraw && !needsPayoutMethodToWithdraw && earnings.settlementStatus === 'ready' && availableToWithdraw > 0 && (
         <div className="rounded-2xl bg-white/[0.055] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -712,7 +729,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
       )}
 
       {/* Withdrawal Modal */}
-      {showWithdrawModal && withdrawMethod && (
+      {!readOnly && showWithdrawModal && withdrawMethod && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="rounded-2xl bg-[#1c1c1c] max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-4">

@@ -1,4 +1,5 @@
 import { syncPublicProfileClient } from './public-profile-client'
+import { readUserNotifyPrefs, sanitizeUserNotifyPrefs, type UserNotifyPrefs } from '@/lib/notifications/userPreferences'
 import {
   type SocialLinks,
   type PrivacySettings,
@@ -66,11 +67,17 @@ export interface UserProfile {
   defaultSubarea?: string
   favoriteCategories?: string[]
   language?: 'en' | 'fr' | 'ht'
+  /** Legacy nested switches. Nothing sends on these; kept so old data still reads. */
   notify?: {
     reminders: boolean
     updates: boolean
     promos: boolean
   }
+  /**
+   * The switches the senders actually read (top-level notify_* on users/{uid},
+   * lib/notifications/userPreferences.ts). Write these, not `notify`.
+   */
+  notifyPrefs?: UserNotifyPrefs
   role?: string
   isVerified?: boolean
   verificationStatus?: string
@@ -114,6 +121,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
         updates: data.notify?.updates ?? true,
         promos: data.notify?.promos ?? false
       },
+      notifyPrefs: readUserNotifyPrefs(data),
       role: data.role || 'attendee',
       isVerified: data.is_verified || false,
       verificationStatus: data.verification_status || 'none',
@@ -198,6 +206,7 @@ export async function updateUserProfile(uid: string, updates: Partial<UserProfil
     if (updates.favoriteCategories !== undefined) updateData.favorite_categories = updates.favoriteCategories
     if (updates.language !== undefined) updateData.language = updates.language
     if (updates.notify !== undefined) updateData.notify = updates.notify
+    if (updates.notifyPrefs !== undefined) Object.assign(updateData, sanitizeUserNotifyPrefs(updates.notifyPrefs))
 
     await fs.updateDoc(userRef, updateData)
 

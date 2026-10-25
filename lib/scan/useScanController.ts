@@ -84,8 +84,11 @@ export function useScanController(options: UseScanControllerOptions) {
         setState('RESULT')
       }
 
-      // Auto-return to scanning after cooldown
+      // Auto-return to scanning after cooldown. An "already in" verdict that
+      // allows re-entry stays up until staff decide (override or close): it
+      // used to vanish after the cooldown, before the override could be tapped.
       if (cooldownTimeoutRef.current) clearTimeout(cooldownTimeoutRef.current)
+      if (checkInResult.type === 'ALREADY_CHECKED_IN' && checkInResult.allowReentry) return
       cooldownTimeoutRef.current = setTimeout(() => {
         if (!mountedRef.current) return
         setState('SCANNING')

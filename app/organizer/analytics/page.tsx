@@ -1,14 +1,10 @@
 import AnalyticsView from './AnalyticsView'
-import { createClient } from '@/lib/firebase-db/server'
-import Link from 'next/link'
 import { requireOrgPage } from '../_lib/orgPage'
-import SalesChart from '@/components/charts/SalesChart'
-import CategoryChart from '@/components/charts/CategoryChart'
-import { TrendingUp, DollarSign, Ticket, Calendar } from 'lucide-react'
+import { adminDb } from '@/lib/firebase/admin'
+import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
+import { summarizeOrgSales } from '@/lib/organizer/salesSummary'
 import { revalidatePath } from 'next/cache'
-import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
-import { PageHeader, MetricCard, SectionHeader, OrgEmptyState } from '@/components/organizer/ui'
-import { TranslatedPageHeader } from '@/components/organizer/ui/TranslatedPageHeader'
+import { normalizeCurrency } from '@/lib/money'
 
 export const revalidate = 120 // Cache for 2 minutes
 
@@ -18,135 +14,66 @@ export const dynamic = 'force-dynamic'
 export default async function AnalyticsPage() {
   const { orgId } = await requireOrgPage('view', '/organizer/analytics')
 
-  const supabase = await createClient()
-
-  // Fetch organizer's events only.
-  const eventsQuery = await supabase
-    .from('events')
-    .select('id,title,start_datetime,is_published,category,organizer_id,currency')
-    .eq('organizer_id', orgId)
-
-  const allOrganizerEvents = eventsQuery.data || []
-
-  // Organizer-facing analytics should be shown in the event currency (no FX conversion).
-  // If an organizer has mixed currencies (unexpected), prefer USD and scope analytics to that currency.
-  const eventCurrencies = new Set<string>(
-    allOrganizerEvents.map((e: any) => normalizeCurrency(e?.currency, 'HTG'))
-  )
-
-  const organizerCurrency: string = (() => {
-    const values = Array.from(eventCurrencies)
-    if (values.length === 1) return values[0]
-    if (eventCurrencies.has('USD')) return 'USD'
-    return values[0] || 'HTG'
-  })()
-
-  const eventsData = allOrganizerEvents.filter(
-    (e: any) => normalizeCurrency(e?.currency, 'HTG') === organizerCurrency
-  )
-
-  // Fetch tickets for organizer's events in the chosen currency.
-  // Join through events to avoid large `IN (...)` lists as event count grows.
-  const ticketsQuery = eventsData.length
-    ? await supabase
-        .from('tickets')
-        .select('event_id,price_paid,created_at,status,events!inner(organizer_id,currency)')
-        .eq('events.organizer_id', orgId)
-        .eq('events.currency', organizerCurrency)
-    : { data: [] as any[] }
-
-  const allTickets = (ticketsQuery as any).data || []
-
-  const isValidTicketStatus = (raw: unknown) => {
-    const status = String(raw || '').toLowerCase()
-    // Legacy + current accepted values.
-    if (!status) return true
-    return status === 'valid' || status === 'confirmed'
+  // The org's events (organizer_id = the org, docs/specs/org-teams.md).
+  const eventsSnap = await adminDb.collection('events').where('organizer_id', '==', orgId).get()
+  type OrgEventRow = {
+    id: string
+    title: string
+    start_datetime: any
+    is_published: boolean
+    category: string
+    currency: string
   }
-  
-  // Group tickets by event
-  const ticketsByEvent = new Map<string, { ticketCount: number; revenueCents: number }>()
-
-  allTickets.forEach((ticket: any) => {
-    if (!isValidTicketStatus(ticket?.status)) return
-    const eventId = String(ticket?.event_id || '')
-    if (!eventId) return
-
-    const pricePaid = Number(ticket?.price_paid || 0)
-    const revenueCents = Math.round(pricePaid * 100)
-    if (!Number.isFinite(revenueCents) || revenueCents <= 0) {
-      // Free tickets still count as tickets sold.
-      const existing = ticketsByEvent.get(eventId) || { ticketCount: 0, revenueCents: 0 }
-      ticketsByEvent.set(eventId, { ticketCount: existing.ticketCount + 1, revenueCents: existing.revenueCents })
-      return
-    }
-
-    const existing = ticketsByEvent.get(eventId) || { ticketCount: 0, revenueCents: 0 }
-    ticketsByEvent.set(eventId, {
-      ticketCount: existing.ticketCount + 1,
-      revenueCents: existing.revenueCents + revenueCents,
-    })
-  })
-
-  // Calculate analytics
-  const totalEvents = eventsData.length
-  let totalTicketsSold = 0
-  let totalRevenueCents = 0
-  
-  eventsData.forEach((event: any) => {
-    const stats = ticketsByEvent.get(String(event.id)) || { ticketCount: 0, revenueCents: 0 }
-    totalTicketsSold += stats.ticketCount
-    totalRevenueCents += stats.revenueCents
-  })
-  
-  const publishedEvents = eventsData.filter((e: any) => e.is_published).length
-
-  // Events with ticket sales
-  const eventsWithSales = eventsData.map((event: any) => {
-    const stats = ticketsByEvent.get(String(event.id)) || { ticketCount: 0, revenueCents: 0 }
+  const eventsData: OrgEventRow[] = eventsSnap.docs.map((d: any) => {
+    const e = d.data() || {}
     return {
-      ...event,
-      ticketCount: stats.ticketCount,
-      revenueCents: stats.revenueCents,
+      id: d.id,
+      title: String(e.title || ''),
+      start_datetime: e.start_datetime?.toDate?.()?.toISOString?.() ?? e.start_datetime ?? null,
+      is_published: Boolean(e.is_published),
+      category: String(e.category || 'Other'),
+      currency: normalizeCurrency(e.currency, 'HTG'),
     }
-  }).sort((a: any, b: any) => b.ticketCount - a.ticketCount)
+  })
 
-  // Prepare chart data - Sales over time (last 7 days)
-  const salesByDay: Record<string, { sales: number; revenueCents: number }> = {}
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const startOfWindow = new Date(today)
-  startOfWindow.setDate(startOfWindow.getDate() - 6)
-
-  for (const t of allTickets) {
-    if (!isValidTicketStatus(t?.status)) continue
-    const createdAt = new Date(t?.created_at)
-    if (isNaN(createdAt.getTime())) continue
-    if (createdAt < startOfWindow) continue
-
-    const key = createdAt.toISOString().split('T')[0]
-    const existing = salesByDay[key] || { sales: 0, revenueCents: 0 }
-    const cents = Math.round(Number(t?.price_paid || 0) * 100)
-
-    salesByDay[key] = {
-      sales: existing.sales + 1,
-      revenueCents: existing.revenueCents + (Number.isFinite(cents) ? Math.max(0, cents) : 0),
-    }
-  }
-
-  const salesChartData = []
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split('T')[0]
-    const day = salesByDay[dateStr] || { sales: 0, revenueCents: 0 }
-
-    salesChartData.push({
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      sales: day.sales,
-      revenue: day.revenueCents / 100,
+  // Then each event's tickets (both event_id and the legacy eventId field), a
+  // few events at a time. The old version joined tickets to events with
+  // Supabase syntax the Firestore shim does not support, so every total was 0.
+  const ticketsByEvent = new Map<string, Record<string, any>[]>()
+  for (let i = 0; i < eventsData.length; i += 10) {
+    const chunk = eventsData.slice(i, i + 10)
+    const results = await Promise.all(
+      chunk.map((e) => loadTicketDocsForEvent(e.id).catch(() => [] as any[]))
+    )
+    chunk.forEach((e, idx) => {
+      ticketsByEvent.set(e.id, results[idx].map((doc: any) => doc.data() || {}))
     })
   }
+
+  // Live tickets only; money per currency, each event in its own currency.
+  const summary = summarizeOrgSales(eventsData, ticketsByEvent)
+  const salesByEvent = new Map(summary.events.map((e) => [e.id, e]))
+
+  const totalEvents = eventsData.length
+  const totalTicketsSold = summary.totalTicketsSold
+  const publishedEvents = eventsData.filter((e) => e.is_published).length
+
+  const eventsWithSales = eventsData
+    .map((event) => {
+      const stats = salesByEvent.get(event.id)
+      return {
+        ...event,
+        ticketCount: stats?.ticketCount || 0,
+        revenueCents: stats?.revenueCents || 0,
+      }
+    })
+    .sort((a, b) => b.ticketCount - a.ticketCount)
+
+  const salesChartData = summary.last7Days.map((day) => ({
+    date: new Date(`${day.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    sales: day.sales,
+    revenue: day.revenueCents / 100,
+  }))
 
   // Category distribution
   const categoryData: Record<string, number> = {}
@@ -165,8 +92,8 @@ export default async function AnalyticsPage() {
       totalEvents={totalEvents}
       publishedEvents={publishedEvents}
       totalTicketsSold={totalTicketsSold}
-      totalRevenueCents={totalRevenueCents}
-      organizerCurrency={organizerCurrency}
+      revenueByCurrencyCents={summary.revenueByCurrencyCents}
+      organizerCurrency={summary.primaryCurrency}
       salesChartData={salesChartData}
       categoryChartData={categoryChartData}
       eventsWithSales={eventsWithSales}

@@ -397,6 +397,8 @@ const readPublishedEvents = unstable_cache(
         city: data.city,
         commune: data.commune,
         address: data.address,
+        // The Discover "online events" filter reads this (lib/filters/apply isOnlineEvent).
+        is_online: typeof data.is_online === 'boolean' ? data.is_online : undefined,
         country: data.country || 'HT', // Default to Haiti for events without country
         // The zone cards print times in (lib/home/feed eventZone).
         timezone: typeof data.timezone === 'string' ? data.timezone : undefined,

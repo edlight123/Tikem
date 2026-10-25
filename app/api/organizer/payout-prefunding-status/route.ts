@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
+import { requireFinanceView } from '@/lib/organizer/context'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
-    const notOwner = await denyIfActingForAnotherOrg(user.id)
-    if (notOwner) return notOwner
+    // Platform-wide flag, read-only: anyone who may see the org's finances.
+    const gate = await requireFinanceView()
+    if (!gate.ok) return gate.response
 
     const snap = await adminDb.collection('config').doc('payouts').get()
     const data = snap.exists ? snap.data() : null

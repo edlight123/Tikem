@@ -22,7 +22,6 @@ import {
   Globe,
   MessageCircle,
   ChevronDown,
-  ExternalLink,
   MoreHorizontal,
 } from 'lucide-react-native';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
@@ -37,6 +36,7 @@ import VerifiedBadge from '../components/VerifiedBadge';
 import EmptyState from '../components/EmptyState';
 import { OrganizerProfileSkeleton } from '../components/Skeleton';
 import { fetchConnections } from '../lib/api/social';
+import { fetchPublicProfileDetails, type PublicProfileDetails } from '../lib/api/publicDetails';
 import { goBackOrHome } from '../lib/goBackOrHome';
 import { type FriendshipState } from '../types/social';
 import ReportContentModal from '../components/ReportContentModal';
@@ -73,12 +73,23 @@ const timeOf = (d: Date | null | undefined) => {
   return Number.isFinite(ms) ? ms : 0;
 };
 
+type SocialType = 'website' | 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'tiktok';
+
 interface SocialLink {
-  type: 'website' | 'instagram' | 'facebook' | 'tiktok' | 'whatsapp' | 'email';
+  type: SocialType;
   url: string;
-  icon: any;
-  color: string;
 }
+
+// The existing icon row, with each network's own glyph (it was one generic
+// "external link" arrow for all of them) on a quiet fill.
+const SOCIAL_ICON: Record<SocialType, { name: React.ComponentProps<typeof Ionicons>['name']; label: string }> = {
+  website: { name: 'globe-outline', label: 'Website' },
+  instagram: { name: 'logo-instagram', label: 'Instagram' },
+  facebook: { name: 'logo-facebook', label: 'Facebook' },
+  twitter: { name: 'logo-x', label: 'X' },
+  linkedin: { name: 'logo-linkedin', label: 'LinkedIn' },
+  tiktok: { name: 'logo-tiktok', label: 'TikTok' },
+};
 
 export default function OrganizerProfileScreen({ route, navigation }: any) {
   const { colors } = useTheme();
@@ -90,6 +101,9 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   const scrollViewRef = React.useRef<ScrollView>(null);
   
   const [organizer, setOrganizer] = useState<any>(null);
+  // Org details or a person's privacy-gated bio + socials, from the server
+  // (lib/api/publicDetails.ts). null until loaded, or when the call fails.
+  const [details, setDetails] = useState<PublicProfileDetails | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [pastEvents, setPastEvents] = useState<any[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -153,8 +167,12 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
   const fetchOrganizerProfile = async () => {
     try {
+      // What shows under the name, privacy-checked server-side. In parallel
+      // with the reads below; a failure leaves the legacy brand fields.
+      fetchPublicProfileDetails(organizerId).then(setDetails);
+
       // H4: cross-user read of the organizer's SAFE public projection (name,
-      // photo, is_verified, bio, organization_name/logo) instead of users/{uid}.
+      // photo, is_verified, organization_name/logo) instead of users/{uid}.
       // If the projection isn't backfilled yet, fall back to a name/avatar
       // placeholder so the screen still renders (events below still load).
       const organizerDoc = await getDoc(doc(db, 'public_profiles', organizerId));
@@ -341,48 +359,44 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     }
   };
 
+  /**
+   * The links under the profile, from the server's one rule
+   * (lib/profile/public-details.ts): an org's settings links, or a person's
+   * socials when their privacy lets this viewer see them. Every url is
+   * already an absolute http(s) href. Until it loads (or if it fails), an
+   * org falls back to the brand fields on its public_profiles projection.
+   */
   const getSocialLinks = (): SocialLink[] => {
     const links: SocialLink[] = [];
-    
-    if (organizer?.website) {
-      links.push({
-        type: 'website',
-        url: organizer.website,
-        icon: Globe,
-        color: '#6B7280',
-      });
+    const add = (type: SocialType, url: string | undefined) => {
+      if (url && url.trim()) links.push({ type, url: url.trim() });
+    };
+
+    if (details?.kind === 'org' && details.org) {
+      const o = details.org;
+      add('website', o.website);
+      add('instagram', o.instagram);
+      add('facebook', o.facebook);
+      add('twitter', o.twitter);
+      add('linkedin', o.linkedin);
+      add('tiktok', o.tiktok);
+      return links;
     }
-    
-    if (organizer?.instagram) {
-      links.push({
-        type: 'instagram',
-        url: `https://instagram.com/${organizer.instagram.replace('@', '')}`,
-        icon: ExternalLink,
-        color: '#E4405F',
-      });
-    }
-    
-    if (organizer?.facebook) {
-      links.push({
-        type: 'facebook',
-        url: `https://facebook.com/${organizer.facebook}`,
-        icon: ExternalLink,
-        color: '#1877F2',
-      });
-    }
-    
-    if (organizer?.tiktok) {
-      links.push({
-        type: 'tiktok',
-        url: `https://tiktok.com/@${organizer.tiktok.replace('@', '')}`,
-        icon: ExternalLink,
-        color: '#000000',
-      });
+    if (details?.kind === 'person') {
+      const p = details.person?.socials;
+      add('instagram', p?.instagram);
+      add('facebook', p?.facebook);
+      add('twitter', p?.twitter);
+      add('tiktok', p?.tiktok);
+      return links;
     }
 
-    // H4: whatsapp/email are contact PII and are NOT part of the public
-    // projection, so they are intentionally no longer surfaced here.
-
+    // Legacy fallback (details not loaded): the projection's brand fields.
+    add('website', organizer?.website);
+    if (organizer?.instagram) add('instagram', `https://instagram.com/${organizer.instagram.replace('@', '')}`);
+    if (organizer?.facebook) add('facebook', `https://facebook.com/${organizer.facebook}`);
+    if (organizer?.tiktok) add('tiktok', `https://tiktok.com/@${organizer.tiktok.replace('@', '')}`);
+    // H4: whatsapp/email are contact PII and are never surfaced here.
     return links;
   };
 
@@ -463,11 +477,18 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     : null;
   const subtitle = getSubtitle();
 
+  // Org description, or a person's bio when the server says this viewer may
+  // see it. Before details load, the projection's legacy description.
+  const aboutText =
+    details?.kind === 'org'
+      ? details.org?.description || ''
+      : details?.kind === 'person'
+        ? details.person?.bio || ''
+        : organizer.description || '';
+  const personHidden = details?.kind === 'person' && details.person === null;
+  const isOrgProfile = !!organizer.organization_name || details?.kind === 'org';
+
   // Connect (friend-request) action still sits inline next to the stats.
-  // H4: the former "personal bio + social handles" card was gated by the
-  // owner's privacy settings and read the personal `social_links` object —
-  // neither is part of the public projection, so that card has been removed
-  // (email/whatsapp/personal socials can't be exposed publicly).
   const isSelf = !!user && user.uid === organizerId;
   const showConnect = friendshipLoaded && !isSelf && friendship !== 'self';
 
@@ -565,7 +586,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                     source={{ uri: organizer.organization_logo || organizer.avatarUrl || organizer.photo_url }}
                     style={styles.avatarImage}
                   />
-                ) : organizer.organization_name ? (
+                ) : isOrgProfile ? (
                   <OrgMark size={52} color="#000000" />
                 ) : (
                   // A person, not an organization: their drawn portrait.
@@ -713,8 +734,9 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('organizerProfile.aboutTitle')}</Text>
             
-            {organizer.description && (
-              <Text style={styles.aboutText}>{organizer.description}</Text>
+            {!!aboutText && <Text style={styles.aboutText}>{aboutText}</Text>}
+            {personHidden && !isSelf && (
+              <Text style={styles.privateNote}>{t('organizerProfile.privateDetails')}</Text>
             )}
 
             <View style={styles.aboutDetails}>
@@ -753,13 +775,17 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('organizerProfile.connectTitle')}</Text>
               <View style={styles.socialLinks}>
-                {socialLinks.map((link, idx) => (
+                {socialLinks.map((link) => (
                   <TouchableOpacity
-                    key={idx}
-                    style={[styles.socialButton, { backgroundColor: link.color + '15' }]}
+                    key={link.type}
+                    style={styles.socialButton}
                     onPress={() => openLink(link.url)}
+                    accessibilityRole="link"
+                    accessibilityLabel={
+                      link.type === 'website' ? t('organizerProfile.websiteLabel') : SOCIAL_ICON[link.type].label
+                    }
                   >
-                    <link.icon size={22} color={link.color} />
+                    <Ionicons name={SOCIAL_ICON[link.type].name} size={22} color={colors.text} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -1091,14 +1117,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexWrap: 'wrap',
     gap: 12,
   },
+  // A fill, not a hairline around a tinted box (house rule).
   socialButton: {
     width: 56,
     height: 56,
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+  },
+  privateNote: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginBottom: 16,
   },
 
 });

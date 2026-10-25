@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
     const email = String(body?.email || '').trim().toLowerCase()
     const name = String(body?.name || '').trim().slice(0, 120) || null
     const role = String(body?.role || 'staff')
+    // Read-only finances: granted by the OWNER only, and only to admins.
+    const wantsFinance = body?.finance_view === true
+    if (wantsFinance && (!gate.value.isOwner || role !== 'admin')) {
+      return NextResponse.json({ error: 'Only the owner can give an admin access to finances' }, { status: 403 })
+    }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'A valid email is required' }, { status: 400 })
     }
@@ -82,8 +87,26 @@ export async function POST(request: NextRequest) {
     const existing = await teamCol(orgId).where('email', '==', email).limit(5).get()
     const activeRow = existing.docs.find((d: FirebaseFirestore.QueryDocumentSnapshot) => d.data()?.status === 'active' && d.data()?.uid === d.id)
     if (activeRow) {
-      await activateMember({ orgId, uid: activeRow.id, email, name: name || activeRow.data()?.name, role, addedBy: user.id })
-      const row: RosterRow = { id: activeRow.id, uid: activeRow.id, email, name, role, status: 'active', joined_at: iso(activeRow.data()?.joined_at) }
+      await activateMember({
+        orgId,
+        uid: activeRow.id,
+        email,
+        name: name || activeRow.data()?.name,
+        role,
+        addedBy: user.id,
+        // Only the owner may change the finance grant.
+        financeView: gate.value.isOwner ? wantsFinance : undefined,
+      })
+      const row: RosterRow = {
+        id: activeRow.id,
+        uid: activeRow.id,
+        email,
+        name,
+        role,
+        status: 'active',
+        joined_at: iso(activeRow.data()?.joined_at),
+        finance_view: role === 'admin' && (gate.value.isOwner ? wantsFinance : activeRow.data()?.finance_view === true),
+      }
       return NextResponse.json({ success: true, member: row })
     }
 
@@ -100,6 +123,7 @@ export async function POST(request: NextRequest) {
       email,
       name,
       role,
+      finance_view: wantsFinance,
       token_hash: sha256Hex(token),
       invited_by: user.id,
       created_at: FieldValue.serverTimestamp(),
@@ -122,7 +146,16 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const row: RosterRow = { id: `${INVITE_PREFIX}${ref.id}`, uid: null, email, name, role, status: 'invited', joined_at: new Date().toISOString() }
+    const row: RosterRow = {
+      id: `${INVITE_PREFIX}${ref.id}`,
+      uid: null,
+      email,
+      name,
+      role,
+      status: 'invited',
+      joined_at: new Date().toISOString(),
+      finance_view: wantsFinance,
+    }
     return NextResponse.json({ success: true, member: row })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to invite' }, { status: 500 })
@@ -137,14 +170,22 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const memberId = String(body?.memberId || '')
     const role = String(body?.role || '')
+    // finance_view: true/false to change the grant (owner only), absent = keep.
+    const finance = typeof body?.finance_view === 'boolean' ? (body.finance_view as boolean) : undefined
     if (!memberId) return NextResponse.json({ error: 'memberId is required' }, { status: 400 })
     if (!isTeamRole(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    if (finance !== undefined && !gate.value.isOwner) {
+      return NextResponse.json({ error: 'Only the owner can change access to finances' }, { status: 403 })
+    }
+    if (finance === true && role !== 'admin') {
+      return NextResponse.json({ error: 'Only admins can be given access to finances' }, { status: 400 })
+    }
 
     if (memberId.startsWith(INVITE_PREFIX)) {
       const ref = adminDb.collection(ORG_INVITES).doc(memberId.slice(INVITE_PREFIX.length))
       const snap = await ref.get()
       if (!snap.exists || snap.data()?.org_id !== orgId) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
-      await ref.set({ role }, { merge: true })
+      await ref.set({ role, ...(role !== 'admin' ? { finance_view: false } : finance !== undefined ? { finance_view: finance } : {}) }, { merge: true })
       return NextResponse.json({ success: true })
     }
 
@@ -152,7 +193,7 @@ export async function PATCH(request: NextRequest) {
     if (!snap.exists) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     const d = snap.data() || {}
     if (d.status === 'active' && d.uid === memberId) {
-      await activateMember({ orgId, uid: memberId, email: String(d.email || ''), name: d.name, role, addedBy: user.id })
+      await activateMember({ orgId, uid: memberId, email: String(d.email || ''), name: d.name, role, addedBy: user.id, financeView: finance })
     } else {
       await snap.ref.set({ role, updated_at: FieldValue.serverTimestamp() }, { merge: true })
     }

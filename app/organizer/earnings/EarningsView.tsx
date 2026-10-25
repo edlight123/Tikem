@@ -29,6 +29,8 @@ interface EarningsViewProps {
   withdrawable: {
     totals: Array<{ currency: string; availableNowMinor: number; pendingMinor: number; withdrawnMinor: number; nextAvailableAt?: string | null }>
   }
+  /** An admin with read-only finances: figures only, no withdraw call to action. */
+  readOnly?: boolean
 }
 
 
@@ -66,7 +68,7 @@ function StatCard({
   )
 }
 
-export default function EarningsView({ summary, organizerId, withdrawable }: EarningsViewProps) {
+export default function EarningsView({ summary, organizerId, withdrawable, readOnly = false }: EarningsViewProps) {
   const { t: tx } = useTranslation('organizer')
 
   const [filter, setFilter] = useState<'all' | 'ready' | 'pending' | 'locked'>('all')
@@ -207,6 +209,11 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
               from each event's earnings page. The batch "Request payout" was
               retired (owner decision 2026-10-05): it duplicated that flow on a
               second ledger. */}
+          {readOnly ? (
+            <p className="max-w-[18rem] shrink-0 text-xs text-white/55 lg:text-right">
+              {tx('finance_view.read_only_hub_body')}
+            </p>
+          ) : (
           <div className="shrink-0">
             <a
               href="#events-earnings"
@@ -226,6 +233,7 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
                   })}
             </p>
           </div>
+          )}
         </div>
       </section>
 
@@ -280,12 +288,14 @@ export default function EarningsView({ summary, organizerId, withdrawable }: Ear
             out of Tikèm&rsquo;s fee, never out of your money. When the fee is passed to buyers it
             is added to what they pay, so you receive your full ticket price; when you absorb
             it, the fee is deducted from your proceeds and nothing else.{' '}
-            <a
-              href="/organizer/settings/payouts/fees"
-              className="text-brand-300 underline underline-offset-2"
-            >
-              Fees &amp; rules
-            </a>
+            {!readOnly && (
+              <a
+                href="/organizer/settings/payouts/fees"
+                className="text-brand-300 underline underline-offset-2"
+              >
+                Fees &amp; rules
+              </a>
+            )}
           </p>
         </div>
       </details>

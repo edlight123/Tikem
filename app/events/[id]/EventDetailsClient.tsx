@@ -4,6 +4,7 @@ import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
 import RequestToJoin from './RequestToJoin'
+import JoinWaitlistButton from '@/components/events/JoinWaitlistButton'
 import { eventAllowedPlusOnes } from '@/lib/events/approval'
 import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
@@ -53,6 +54,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   const zone = eventZone(event)
   const startDate = new Date(event.start_datetime)
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
+  // The organizer turned the waitlist on (lib/waitlist.ts emails it when seats free up).
+  const waitlistOpen = isSoldOut && (event as any).enable_waitlist === true
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
   // Freeness comes from the TIER SET, never from `event.ticket_price` (which is the
   // lowest tier price, hence 0 whenever a free tier sits next to a paid one — that
@@ -306,9 +309,13 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {t('events.event_ended', { defaultValue: 'Event ended' })}
               </div>
             ) : isSoldOut ? (
-              <div className="block w-full rounded-xl bg-white/[0.06] py-3 text-center font-semibold text-white/70">
-                {t('ticket.sold_out_caps')}
-              </div>
+              waitlistOpen ? (
+                <JoinWaitlistButton eventId={event.id} userId={user?.id ?? null} compact />
+              ) : (
+                <div className="block w-full rounded-xl bg-white/[0.06] py-3 text-center font-semibold text-white/70">
+                  {t('ticket.sold_out_caps')}
+                </div>
+              )
             ) : (
               (event as any).requires_approval === true ? (
                 <RequestToJoin
@@ -640,6 +647,11 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     {t('ticket.sold_out')}
                   </p>
                   <p className="mt-1.5 text-sm text-white/60">{t('events.event_reached_capacity')}</p>
+                  {waitlistOpen && (
+                    <div className="mt-4">
+                      <JoinWaitlistButton eventId={event.id} userId={user?.id ?? null} />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>

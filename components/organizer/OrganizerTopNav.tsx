@@ -41,11 +41,13 @@ export function OrganizerTopNav({
 
   const pathname = usePathname()
 
-  // Role-aware: money (finance) is the owner's alone; Team and Settings are
-  // for owners and admins (lib/organizer/teamRoles.ts). The pages redirect too.
+  // Role-aware: finance shows for the owner and for admins the owner granted
+  // read-only finances (the page drops every money-out action for them); Team
+  // and Settings are for owners and admins (lib/organizer/teamRoles.ts). The
+  // pages redirect too.
   const org = useOrgRole()
   const role = org?.role ?? 'owner'
-  const showFinance = orgCan(role, 'owner_only')
+  const showFinance = org ? org.financeView : true
   const showTeam = orgCan(role, 'manage_team')
   const showSettings = orgCan(role, 'manage_settings')
 

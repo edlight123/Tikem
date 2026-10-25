@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Download, Mail, User, CreditCard, Calendar, Check, AlertCircle, QrCode, AlertTriangle } from 'lucide-react'
+import { Download, Mail, User, CreditCard, Calendar, Check, AlertCircle, QrCode, AlertTriangle, Send } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 import { useToast } from '@/components/ui/Toast'
@@ -20,6 +20,12 @@ import {
 import type { OrgColumn } from '@/components/organizer/ui'
 import { toCsv } from '@/lib/csv'
 import { EMPTY_VALUE } from '@/lib/format'
+import {
+  ticketDisplayKey,
+  ticketDisplayLabelKey,
+  ticketDisplayTone,
+  ticketIsActionable,
+} from '@/lib/organizer/ticketStatusDisplay'
 
 interface Ticket {
   id: string
@@ -31,7 +37,11 @@ interface Ticket {
   price_paid: number
   currency?: string | null
   quantity: number
+  checked_in?: boolean
   checked_in_at?: string | null
+  ticket_type?: string
+  source?: string
+  is_guest?: boolean
   purchased_at: string
   attendee?: {
     id: string
@@ -48,21 +58,39 @@ interface AttendeesManagerProps {
   ticketsError?: boolean
 }
 
-type FilterStatus = 'all' | 'checked-in' | 'not-checked-in' | 'cancelled'
+type FilterStatus = 'all' | 'checked-in' | 'not-checked-in' | 'refunded' | 'cancelled'
 
-const STATUS_FILTERS: { value: FilterStatus; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'checked-in', label: 'Checked In' },
-  { value: 'not-checked-in', label: 'Pending' },
-  { value: 'cancelled', label: 'Cancelled' },
+const STATUS_FILTERS: { value: FilterStatus; labelKey: string }[] = [
+  { value: 'all', labelKey: 'event_tools.filter_all' },
+  { value: 'checked-in', labelKey: 'event_tools.status_checked_in' },
+  { value: 'not-checked-in', labelKey: 'event_tools.filter_not_in' },
+  { value: 'refunded', labelKey: 'event_tools.filter_refunds' },
+  { value: 'cancelled', labelKey: 'event_tools.status_cancelled' },
 ]
+
+const isIn = (t: Ticket) => Boolean(t.checked_in_at) || t.checked_in === true
+const keyOf = (t: Ticket) => ticketDisplayKey(t.status, isIn(t))
+
+function matchesFilter(t: Ticket, f: FilterStatus): boolean {
+  const k = keyOf(t)
+  if (f === 'checked-in') return k === 'checked_in'
+  if (f === 'not-checked-in') return k === 'valid'
+  if (f === 'refunded') return k === 'refunded' || k === 'refund_pending'
+  if (f === 'cancelled') return k === 'cancelled' || k === 'not_valid'
+  return true
+}
+
+function TicketStatus({ t, tx }: { t: Ticket; tx: (k: string) => string }) {
+  const k = keyOf(t)
+  return <StatusChip className="!normal-case" tone={ticketDisplayTone(k)}>{tx(ticketDisplayLabelKey(k))}</StatusChip>
+}
 
 // Built per render rather than defined once: the status cells are translated,
 // and a module-level constant has no hook to read them from.
 const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
   {
     key: 'attendee',
-    header: 'Attendee',
+    header: tx('event_tools.col_attendee'),
     sortable: true,
     sortAccessor: (t: Ticket) => t.attendee?.full_name || '',
     render: (t: Ticket) => (
@@ -71,15 +99,15 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
           <User className="h-4 w-4 text-brand-300" />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-medium text-white">{t.attendee?.full_name || 'Unknown'}</p>
-          <p className="truncate text-xs text-white/70 sm:hidden">{t.attendee?.email || ''}</p>
+          <p className="truncate font-medium text-white">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
+          <p className="truncate text-xs text-white/70 sm:hidden">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
         </div>
       </div>
     ),
   },
   {
     key: 'email',
-    header: 'Email',
+    header: tx('actions.email'),
     sortable: true,
     sortAccessor: (t: Ticket) => t.attendee?.email || '',
     render: (t: Ticket) => (
@@ -90,25 +118,21 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
   },
   {
     key: 'status',
-    header: 'Status',
-    render: (t: Ticket) => {
-      if (t.checked_in_at) {
-        return (
-          <div>
-            <StatusChip tone="success">{tx('attendees.checked_in')}</StatusChip>
-            <p className="mt-0.5 font-mono tabular-nums text-xs text-white/70">
-              {format(new Date(t.checked_in_at), 'MMM d, h:mm a')}
-            </p>
-          </div>
-        )
-      }
-      if (t.status === 'cancelled') return <StatusChip tone="danger">{tx('attendees.cancelled')}</StatusChip>
-      return <StatusChip tone="warning">{tx('attendees.pending')}</StatusChip>
-    },
+    header: tx('event_tools.col_status'),
+    render: (t: Ticket) => (
+      <div>
+        <TicketStatus t={t} tx={tx} />
+        {t.checked_in_at && keyOf(t) === 'checked_in' && (
+          <p className="mt-0.5 font-mono tabular-nums text-xs text-white/70">
+            {format(new Date(t.checked_in_at), 'MMM d, h:mm a')}
+          </p>
+        )}
+      </div>
+    ),
   },
   {
     key: 'purchased_at',
-    header: 'Purchased',
+    header: tx('attendees.purchased'),
     sortable: true,
     sortAccessor: (t: Ticket) => t.purchased_at,
     render: (t: Ticket) => (
@@ -130,27 +154,19 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
 
   const stats = useMemo(() => {
-    const total = tickets.length
-    const checkedIn = tickets.filter((t) => t.checked_in_at).length
-    const notCheckedIn = tickets.filter((t) => !t.checked_in_at && t.status !== 'cancelled').length
-    const cancelled = tickets.filter((t) => t.status === 'cancelled').length
-    return { total, checkedIn, notCheckedIn, cancelled }
+    const count = (f: FilterStatus) => tickets.filter((t) => matchesFilter(t, f)).length
+    return {
+      all: tickets.length,
+      'checked-in': count('checked-in'),
+      'not-checked-in': count('not-checked-in'),
+      refunded: count('refunded'),
+      cancelled: count('cancelled'),
+    } as Record<FilterStatus, number>
   }, [tickets])
-
-  const statusCount: Record<FilterStatus, number> = {
-    all: stats.total,
-    'checked-in': stats.checkedIn,
-    'not-checked-in': stats.notCheckedIn,
-    cancelled: stats.cancelled,
-  }
+  const liveCount = stats['checked-in'] + stats['not-checked-in']
 
   const filteredTickets = useMemo(() => {
-    let filtered = tickets
-
-    if (filterStatus === 'checked-in') filtered = filtered.filter((t) => t.checked_in_at)
-    else if (filterStatus === 'not-checked-in')
-      filtered = filtered.filter((t) => !t.checked_in_at && t.status !== 'cancelled')
-    else if (filterStatus === 'cancelled') filtered = filtered.filter((t) => t.status === 'cancelled')
+    let filtered = tickets.filter((t) => matchesFilter(t, filterStatus))
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
@@ -166,6 +182,18 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
     return filtered
   }, [tickets, filterStatus, searchQuery])
 
+  // Who an update reaches: one email per address, live tickets only.
+  const updateRecipients = useMemo(() => {
+    const emails = new Set<string>()
+    for (const t of tickets) {
+      if (!ticketIsActionable(t.status)) continue
+      const e = (t.attendee?.email || '').trim().toLowerCase()
+      if (e) emails.add(e)
+    }
+    return emails.size
+  }, [tickets])
+  const [composeOpen, setComposeOpen] = useState(false)
+
   const handleExportCSV = () => {
     const csv = toCsv([
       ['Name', 'Email', 'Phone', 'Ticket ID', 'Status', 'Checked In', 'Purchase Date'],
@@ -174,7 +202,7 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         t.attendee?.email || 'N/A',
         t.attendee?.phone_number || 'N/A',
         t.id,
-        t.status,
+        tx(ticketDisplayLabelKey(keyOf(t))),
         t.checked_in_at
           ? format(new Date(t.checked_in_at), 'MMM d, yyyy h:mm a')
           : 'Not checked in',
@@ -193,14 +221,6 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
     window.URL.revokeObjectURL(url)
   }
 
-  const handleEmailAttendees = () => {
-    const emails = filteredTickets
-      .map((t) => t.attendee?.email)
-      .filter(Boolean)
-      .join(',')
-    window.location.href = `mailto:${emails}?subject=${encodeURIComponent(`Update: ${eventTitle}`)}`
-  }
-
   const mobileCard = (t: Ticket) => (
     <button
       key={t.id}
@@ -212,17 +232,11 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         <User className="h-5 w-5 text-brand-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-white">{t.attendee?.full_name || 'Unknown'}</p>
-        <p className="truncate text-xs text-white/70">{t.attendee?.email || ''}</p>
+        <p className="truncate font-medium text-white">{t.attendee?.full_name || t.attendee?.email || tx('event_tools.guest')}</p>
+        <p className="truncate text-xs text-white/70">{t.attendee?.full_name ? t.attendee?.email || '' : ''}</p>
       </div>
       <div>
-        {t.checked_in_at ? (
-          <StatusChip tone="success">In</StatusChip>
-        ) : t.status === 'cancelled' ? (
-          <StatusChip tone="danger">{tx('attendees.cancelled')}</StatusChip>
-        ) : (
-          <StatusChip tone="warning">{tx('attendees.pending')}</StatusChip>
-        )}
+        <TicketStatus t={t} tx={tx} />
       </div>
     </button>
   )
@@ -248,15 +262,15 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         </div>
       )}
 
-      {/* KPI row */}
+      {/* KPI row: live tickets only; refunds are counted apart, never as attendees. */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: 'Total', value: stats.total, color: 'text-white', bg: 'border-white/10' },
-          { label: 'Checked In', value: stats.checkedIn, color: 'text-emerald-300', bg: 'border-emerald-500/30' },
-          { label: 'Pending', value: stats.notCheckedIn, color: 'text-amber-300', bg: 'border-amber-500/30' },
-          { label: 'Cancelled', value: stats.cancelled, color: 'text-red-300', bg: 'border-red-500/30' },
+          { label: tx('event_tools.kpi_valid'), value: liveCount, color: 'text-white' },
+          { label: tx('event_tools.status_checked_in'), value: stats['checked-in'], color: 'text-emerald-300' },
+          { label: tx('event_tools.filter_not_in'), value: stats['not-checked-in'], color: 'text-white/80' },
+          { label: tx('event_tools.kpi_refunded_cancelled'), value: stats.refunded + stats.cancelled, color: 'text-red-300' },
         ].map((k) => (
-          <div key={k.label} className={`rounded-xl border bg-white/[0.03] p-4 ${k.bg}`}>
+          <div key={k.label} className="rounded bg-white/[0.055] p-4">
             <p className="label-mono uppercase text-white/70">{k.label}</p>
             <p className={`mt-1 font-mono tabular-nums text-2xl font-bold ${k.color}`}>{k.value}</p>
           </div>
@@ -282,11 +296,12 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
           </button>
           <button
             type="button"
-            onClick={handleEmailAttendees}
-            className="inline-flex h-11 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            onClick={() => setComposeOpen(true)}
+            disabled={updateRecipients === 0}
+            className="inline-flex h-11 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Mail className="h-4 w-4" />
-            <span className="hidden sm:inline">{tx('attendees.email_all')}</span>
+            <span className="hidden sm:inline">{tx('event_tools.email_attendees')}</span>
           </button>
         </div>
       </div>
@@ -298,9 +313,9 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
             key={f.value}
             active={filterStatus === f.value}
             onClick={() => setFilterStatus(f.value)}
-            count={statusCount[f.value]}
+            count={stats[f.value]}
           >
-            {f.label}
+            {tx(f.labelKey)}
           </FilterChip>
         ))}
       </FilterBar>
@@ -315,11 +330,11 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         empty={
           <OrgEmptyState
             icon={User}
-            title={searchQuery || filterStatus !== 'all' ? 'No attendees match' : 'No attendees yet'}
+            title={searchQuery || filterStatus !== 'all' ? tx('event_tools.no_match') : tx('event_tools.no_attendees')}
             description={
               searchQuery || filterStatus !== 'all'
-                ? 'Try adjusting your search or filters.'
-                : 'No tickets have been sold for this event yet.'
+                ? tx('event_tools.no_match_desc')
+                : tx('event_tools.no_attendees_desc')
             }
           />
         }
@@ -332,13 +347,24 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         title={tx('attendees.attendee_details')}
         size="md"
         footer={
-          selectedTicket && selectedTicket.status !== 'cancelled' ? (
-            <AttendeeActions ticket={selectedTicket} eventId={eventId} />
+          selectedTicket ? (
+            ticketIsActionable(selectedTicket.status) ? (
+              <AttendeeActions ticket={selectedTicket} eventId={eventId} />
+            ) : (
+              <p className="text-sm text-white/60">{tx('event_tools.no_actions_for_status')}</p>
+            )
           ) : undefined
         }
       >
         {selectedTicket && <AttendeeDetail ticket={selectedTicket} />}
       </Drawer>
+
+      <EmailAttendeesSheet
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        eventId={eventId}
+        recipients={updateRecipients}
+      />
     </>
   )
 }
@@ -354,7 +380,7 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
           {tx('attendees.attendee_information')}
         </p>
         <div className="space-y-3">
-          <InfoRow icon={<User className="h-4 w-4" />} label="Name">
+          <InfoRow icon={<User className="h-4 w-4" />} label={tx('event_tools.name')}>
             {ticket.attendee?.full_name || EMPTY_VALUE}
           </InfoRow>
           <InfoRow icon={<Mail className="h-4 w-4" />} label={tx('actions.email')}>
@@ -381,6 +407,9 @@ function AttendeeDetail({ ticket }: { ticket: Ticket }) {
         <div className="space-y-3">
           <InfoRow icon={<QrCode className="h-4 w-4" />} label={tx('attendees.ticket_id')}>
             <span className="font-mono text-sm">{ticket.id}</span>
+          </InfoRow>
+          <InfoRow icon={<Check className="h-4 w-4" />} label={tx('event_tools.col_status')}>
+            <TicketStatus t={ticket} tx={tx} />
           </InfoRow>
           <InfoRow icon={<Calendar className="h-4 w-4" />} label={tx('attendees.purchased')}>
             <span className="font-mono tabular-nums">{format(new Date(ticket.purchased_at), 'MMMM d, yyyy h:mm a')}</span>
@@ -451,10 +480,13 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticketId: ticket.id }),
       })
-      if (!res.ok) throw new Error()
-      showToast({ type: 'success', title: 'Ticket resent', message: 'The ticket email is on its way.' })
-    } catch {
-      showToast({ type: 'error', title: 'Failed to resend', message: 'Please try again.' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(String(data?.error || '') || tx('event_tools.generic_error'))
+      }
+      showToast({ type: 'success', title: tx('event_tools.resent_title'), message: tx('event_tools.resent_body') })
+    } catch (err: any) {
+      showToast({ type: 'error', title: tx('event_tools.resend_failed'), message: err?.message || tx('event_tools.generic_error') })
     } finally {
       setLoading(false)
     }
@@ -469,7 +501,17 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticketId: ticket.id }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        // The route says why (not refundable, already refunded, balance, ...).
+        const data = await res.json().catch(() => ({}))
+        const skip = String(data?.skipped?.[0]?.reason || '')
+        const why =
+          String(data?.failed?.[0]?.reason || '') ||
+          (skip === 'checked_in' ? tx('event_tools.refund_skip_checked_in') : '') ||
+          (skip ? `${data?.error || ''} (${skip.replace(/_/g, ' ')})` : '') ||
+          String(data?.error || data?.message || '')
+        throw new Error(why || tx('event_tools.generic_error'))
+      }
       if (res.status === 202) {
         // Not covered by the remaining balance, or a Haiti event (every refund
         // is approved by Tikèm): a Tikèm admin decides.
@@ -483,11 +525,11 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
               : tx('attendees.refund_review_body'),
         })
       } else {
-        showToast({ type: 'success', title: 'Refund processed', message: 'The ticket has been refunded.' })
+        showToast({ type: 'success', title: tx('event_tools.refund_done_title'), message: tx('event_tools.refund_done_body') })
       }
       router.refresh()
-    } catch {
-      showToast({ type: 'error', title: 'Refund failed', message: 'Please try again.' })
+    } catch (err: any) {
+      showToast({ type: 'error', title: tx('event_tools.refund_failed'), message: err?.message || tx('event_tools.generic_error') })
     } finally {
       setLoading(false)
     }
@@ -506,7 +548,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
       </button>
 
       {confirmingRefund ? (
-        <div className="rounded-xl bg-red-500/[0.14] p-3">
+        <div className="rounded bg-red-500/[0.14] p-3">
           <p className="text-sm text-white">{tx('attendees.refund_confirm')}</p>
           <div className="mt-3 flex gap-2">
             <button
@@ -523,7 +565,7 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
               disabled={loading}
               className="h-11 flex-1 rounded bg-red-600 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
-              {loading ? 'Refunding…' : 'Confirm refund'}
+              {loading ? tx('event_tools.refunding') : tx('event_tools.confirm_refund')}
             </button>
           </div>
         </div>
@@ -532,12 +574,121 @@ function AttendeeActions({ ticket, eventId }: { ticket: Ticket; eventId: string 
           type="button"
           onClick={() => setConfirmingRefund(true)}
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded bg-red-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
         >
           <CreditCard className="h-4 w-4" />
           {tx('attendees.process_refund')}
         </button>
       )}
     </div>
+  )
+}
+
+/**
+ * "Email attendees": a message sent by Tikèm to every live ticket holder, one
+ * email each (POST /api/email/send-event-update). It used to open a mailto:
+ * with every buyer in To:, which showed each buyer everyone else's address and
+ * broke on long lists.
+ */
+function EmailAttendeesSheet({
+  open,
+  onClose,
+  eventId,
+  recipients,
+}: {
+  open: boolean
+  onClose: () => void
+  eventId: string
+  recipients: number
+}) {
+  const { t: tx } = useTranslation('organizer')
+  const { showToast } = useToast()
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const close = () => {
+    if (sending) return
+    setError(null)
+    onClose()
+  }
+
+  const send = async () => {
+    const text = message.trim()
+    if (!text) {
+      setError(tx('event_tools.compose_empty'))
+      return
+    }
+    setSending(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/email/send-event-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, updateMessage: text, updateType: 'important' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(String(data?.error || tx('event_tools.generic_error')))
+        return
+      }
+      showToast({
+        type: Number(data?.failed) > 0 ? 'info' : 'success',
+        title: tx('event_tools.compose_sent_title'),
+        message: tx('event_tools.compose_sent_body', { sent: Number(data?.sent) || 0, failed: Number(data?.failed) || 0 }),
+      })
+      setMessage('')
+      onClose()
+    } catch {
+      setError(tx('event_tools.generic_error'))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <Drawer
+      open={open}
+      onClose={close}
+      title={tx('event_tools.email_attendees')}
+      size="md"
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={close}
+            className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            {tx('actions.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={send}
+            disabled={sending || recipients === 0}
+            className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <Send className="h-4 w-4" />
+            {sending ? tx('event_tools.compose_sending') : tx('event_tools.compose_send', { count: recipients })}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4 p-6">
+        <p className="text-sm text-white/70">{tx('event_tools.compose_intro', { count: recipients })}</p>
+        <label htmlFor="attendee-update" className="block text-xs text-white/70">
+          {tx('event_tools.compose_label')}
+        </label>
+        <textarea
+          id="attendee-update"
+          value={message}
+          onChange={(e) => setMessage(e.target.value.slice(0, 2000))}
+          rows={8}
+          placeholder={tx('event_tools.compose_placeholder')}
+          className="w-full rounded bg-white/[0.06] px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60"
+        />
+        <p className="text-right font-mono text-xs tabular-nums text-white/40">{message.length} / 2000</p>
+        {error && <p className="text-sm text-red-300">{error}</p>}
+      </div>
+    </Drawer>
   )
 }

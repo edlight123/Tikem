@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { EditorialHeader, EditorialSectionHeading } from '@/components/ui/EditorialHeader'
 import { StatusChip } from '@/components/ui/kit'
 import { DeleteAccountDialog } from '@/components/account/DeleteAccountDialog'
+import { ChangePasswordPanel } from '@/components/auth/ChangePasswordPanel'
 
 interface SettingsPageClientProps {
   user: {
@@ -155,13 +156,14 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
             {/* Kept: a rule BETWEEN two blocks of one card is the legitimate
                 border — it separates, it does not draw a box. */}
             <div className="pt-4 border-t border-white/10">
-              <Link
-                href="/api/auth/logout"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-red-500/10 text-red-400 font-medium transition-colors"
-              >
+              {/* Was a link to /api/auth/logout, a route that never existed.
+                  Now the real change-password form (or, for Google / Apple
+                  accounts, a sentence saying there is no Tikèm password). */}
+              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white/70">
                 <Lock className="w-4 h-4" />
                 {t('security.change_password')}
-              </Link>
+              </div>
+              <ChangePasswordPanel />
             </div>
           </div>
         </div>

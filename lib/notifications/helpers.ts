@@ -1,3 +1,4 @@
+import { withOrganizerNotificationDefaults } from '@/lib/organizer/notificationPreferences'
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import type { NotificationType } from '@/types/database'
@@ -195,11 +196,11 @@ export async function notifyOrganizerTicketSale(
   // Push only — same reason as the buyer path above: the trigger wrapper would
   // write a SECOND in-app notification on top of the one just created.
   try {
-    const { sendPushNotification, getNotificationPreferences } = await import(
-      '@/lib/notification-triggers'
-    )
-    const prefs = await getNotificationPreferences(organizerId)
-    if (prefs.notifyTicketPurchase) {
+    const { sendPushNotification } = await import('@/lib/notification-triggers')
+    // The organizer's "Ticket sales" push switch (organizer settings, web and
+    // mobile). This used to read the BUYER-side users.notify_ticket_purchase,
+    // so the switch the organizer could see did nothing.
+    if (await organizerWantsSalePush(organizerId)) {
       await sendPushNotification(
         organizerId,
         `${free ? '🎟️ Free RSVP' : '🎫 New Sale'}: ${eventTitle}`,
@@ -210,6 +211,23 @@ export async function notifyOrganizerTicketSale(
     }
   } catch (error) {
     console.error('Failed to send push notification:', error)
+  }
+}
+
+/** organizers/{id}/notificationPreferences/main → push_ticket_sales (default on). */
+export async function organizerWantsSalePush(organizerId: string): Promise<boolean> {
+  try {
+    const snap = await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('notificationPreferences')
+      .doc('main')
+      .get()
+    return withOrganizerNotificationDefaults(snap.exists ? snap.data() : null).push_ticket_sales
+  } catch (error) {
+    // Unreadable: the default (on). A missed sale alert is the worse failure.
+    console.error('organizerWantsSalePush: preferences unreadable', error)
+    return true
   }
 }
 

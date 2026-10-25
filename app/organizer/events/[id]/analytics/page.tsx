@@ -3,6 +3,7 @@ import { DaysWithSalesCaption } from './DaysWithSalesCaption'
 import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
+import { summarizeEventTickets, ticketCountsAsSold } from '@/lib/organizer/salesSummary'
 import { normalizeCurrency } from '@/lib/money'
 import { formatPrimaryMoneyFromCentsByCurrency } from '@/lib/money'
 import { BarChart2, Ticket, Users, CheckCircle, TrendingUp } from 'lucide-react'
@@ -34,9 +35,10 @@ export default async function EventAnalyticsPage({
   // Fetch all tickets
   const ticketDocs = await loadTicketDocsForEvent(eventId)
 
-  const tickets = ticketDocs.map((doc) => {
-    const d = doc.data()
+  const ticketDatas = ticketDocs.map((doc) => doc.data() || {})
+  const tickets = ticketDatas.map((d) => {
     return {
+      sold: ticketCountsAsSold(d),
       status: String(d.status || 'active'),
       currency: String(d.currency || eventCurrency),
       price_paid: Number(d.price_paid || 0),
@@ -47,19 +49,16 @@ export default async function EventAnalyticsPage({
     }
   })
 
-  const active = tickets.filter((t) => t.status !== 'cancelled')
-  const ticketsSold = active.length
-  const checkedIn = active.filter((t) => t.checked_in_at).length
+  // Live tickets only (valid / confirmed / active): refunds are not sales.
+  const active = tickets.filter((t) => t.sold)
+  const sales = summarizeEventTickets(ticketDatas, eventCurrency)
+  const ticketsSold = sales.ticketsSold
+  const checkedIn = sales.checkedIn
   const checkInRate = ticketsSold > 0 ? (checkedIn / ticketsSold) * 100 : 0
   const capacityRate = capacity > 0 ? (ticketsSold / capacity) * 100 : 0
 
-  // Revenue by currency
-  const revenueByCurrencyCents: Record<string, number> = {}
-  for (const t of active) {
-    const currency = normalizeCurrency(t.currency, eventCurrency)
-    const cents = Math.round(t.price_paid * 100)
-    revenueByCurrencyCents[currency] = (revenueByCurrencyCents[currency] || 0) + cents
-  }
+  // Revenue by currency (listed currency, as earnings counts it)
+  const revenueByCurrencyCents = sales.revenueByCurrencyCents
   const revenueLabel =
     Object.keys(revenueByCurrencyCents).length > 0
       ? formatPrimaryMoneyFromCentsByCurrency(revenueByCurrencyCents, eventCurrency, 'en-US', {

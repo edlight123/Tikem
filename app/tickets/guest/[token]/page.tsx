@@ -20,6 +20,7 @@ import { StatusChip } from '@/components/ui/kit'
 import { Ticket } from 'lucide-react'
 import { resolveServerLanguage, tServer } from '@/lib/serverT'
 import { intlLocaleFor } from '@/lib/dateLocale'
+import { isSmsConfigured } from '@/lib/sms'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -102,6 +103,10 @@ export default async function GuestTicketsPage({
     })
   )
 
+  // What the confirmation step can actually have sent (lib/tickets/confirmation.ts).
+  const emailed = Boolean(order.email)
+  const texted = Boolean(order.phone) && isSmsConfigured()
+
   const startIso = toIso(event?.start_datetime)
   const dateFallback = t('guest_tickets.date_tba', 'Date to be announced')
 
@@ -114,15 +119,25 @@ export default async function GuestTicketsPage({
           <div className="mb-6 rounded-2xl bg-emerald-500/10 px-5 py-4">
             <p className="text-emerald-200 font-semibold">{t('guest_tickets.payment_confirmed', 'Payment confirmed')}</p>
             <p className="text-sm text-white/70 mt-1">
-              {t('guest_tickets.also_sent_prefix', 'We also sent')}{' '}
-              {order.email ? (
-                <strong className="text-white/90">{order.email}</strong>
-              ) : (
-                t('guest_tickets.also_sent_you', 'you')
-              )}{' '}
-              {order.phone
-                ? t('guest_tickets.also_sent_copy_and_text', 'a copy and a text message.')
-                : t('guest_tickets.also_sent_copy', 'a copy.')}{' '}
+              {/* Say only what can have gone out: an email when the order has an
+                  address, a text only when an SMS provider is configured
+                  (lib/sms.ts). This used to promise "a copy and a text message"
+                  with no SMS provider, and "sent you a copy" with no address. */}
+              {emailed && (
+                <>
+                  {t('guest_tickets.also_sent_prefix', 'We also sent')}{' '}
+                  <strong className="text-white/90">{order.email}</strong>{' '}
+                  {texted
+                    ? t('guest_tickets.also_sent_copy_and_text', 'a copy and a text message.')
+                    : t('guest_tickets.also_sent_copy', 'a copy.')}{' '}
+                </>
+              )}
+              {!emailed && texted && (
+                <>
+                  {t('guest_tickets.also_texted_prefix', 'We also texted this link to')}{' '}
+                  <strong className="text-white/90">{order.phone}</strong>.{' '}
+                </>
+              )}
               {t('guest_tickets.keep_link', 'Keep this link. It is your ticket.')}
             </p>
           </div>

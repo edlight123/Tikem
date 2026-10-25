@@ -155,9 +155,22 @@ export function getGoogleWalletConfig(): GoogleWalletConfig | null {
  * before rendering an "Add to Wallet" button and simply not show a button that
  * could never work.
  */
+/**
+ * Google Wallet is offered to buyers only when NEXT_PUBLIC_GOOGLE_WALLET_ENABLED
+ * is 'true' (default off). The issuer account is still in demo mode, where only
+ * the console admin can actually save a pass, so offering the button to everyone
+ * meant a tap that fails. Flip the flag (and redeploy: NEXT_PUBLIC_ is inlined
+ * at build time) once Google approves the issuer for production.
+ */
+export function isGoogleWalletOffered(): boolean {
+  return String(process.env.NEXT_PUBLIC_GOOGLE_WALLET_ENABLED || '').trim().toLowerCase() === 'true'
+}
+
 export function getWalletCapability(): { apple: boolean; google: boolean } {
   return {
     apple: getAppleWalletConfig() !== null,
-    google: getGoogleWalletConfig() !== null,
+    // Gated here too, so already-installed app builds (which hide the button
+    // when the probe says false) stop offering it without an update.
+    google: isGoogleWalletOffered() && getGoogleWalletConfig() !== null,
   }
 }

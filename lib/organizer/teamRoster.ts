@@ -13,6 +13,8 @@ export type RosterRow = {
   role: string
   status: 'active' | 'invited'
   joined_at: string | null
+  /** Admin granted read-only finances by the owner. */
+  finance_view: boolean
 }
 
 export function iso(v: any): string | null {
@@ -37,6 +39,7 @@ export async function roster(orgId: string): Promise<RosterRow[]> {
       role: String(x.role || 'staff'),
       status: x.status === 'active' && x.uid === d.id ? 'active' : 'invited',
       joined_at: iso(x.joined_at),
+      finance_view: x.role === 'admin' && x.finance_view === true,
     })
   }
   const now = Date.now()
@@ -52,6 +55,7 @@ export async function roster(orgId: string): Promise<RosterRow[]> {
       role: String(x.role || 'staff'),
       status: 'invited',
       joined_at: iso(x.created_at),
+      finance_view: x.role === 'admin' && x.finance_view === true,
     })
   }
   // Active members show their CURRENT profile name, not the one typed at invite.

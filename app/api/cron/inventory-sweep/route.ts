@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sweepInventory } from '@/lib/tickets/inventoryShards'
+import { sweepWaitlists } from '@/lib/waitlist'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,6 +16,11 @@ export const maxDuration = 120
  *    shards for every event with a sale or release the inline rollup skipped
  *    (it is throttled), so the counters pages read catch up within minutes.
  *
+ *  - Waitlists (lib/waitlist.ts): every event with people waiting is asked
+ *    "can someone buy right now?", and if so its waiting list is emailed,
+ *    once per person per release burst. Runs after the hold expiry above, so
+ *    seats an expired hold just returned count.
+ *
  * Correctness never depends on this job: if it stops, nothing oversells; the
  * display counters just lag until the next sale on that event.
  *
@@ -27,8 +33,10 @@ export async function GET(request: Request) {
   }
   try {
     const result = await sweepInventory({ logPrefix: '[inventory_sweep]' })
-    console.info('[inventory_sweep] run complete', result)
-    return NextResponse.json({ ok: true, ...result })
+    // Never lets a waitlist problem fail the inventory sweep (it does not throw).
+    const waitlist = await sweepWaitlists()
+    console.info('[inventory_sweep] run complete', { ...result, waitlist })
+    return NextResponse.json({ ok: true, ...result, waitlist })
   } catch (error: any) {
     console.error('[inventory_sweep] failed', { message: error?.message })
     return NextResponse.json({ error: 'Sweep failed' }, { status: 500 })

@@ -10,6 +10,7 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 import Image from 'next/image'
 import TicketDetailContent from './TicketDetailContent'
+import { findLivePendingTransfer } from '@/lib/tickets/transfers'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 60 // Cache for 1 minute
@@ -105,6 +106,20 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
     events: serializedEvent,
   }
   
+  // The holder's own transfer in flight (unexpired), so the page can offer
+  // "copy link / cancel transfer" instead of a dead Transfer button.
+  let pendingTransfer: { id: string; toEmail: string; token: string; expiresAt: string | null } | null = null
+  if (!isDemoMode()) {
+    try {
+      const live = await findLivePendingTransfer(String(ticket.id))
+      if (live && live.from_user_id === user.id) {
+        pendingTransfer = { id: live.id, toEmail: live.to_email, token: live.transfer_token, expiresAt: live.expires_at }
+      }
+    } catch (e: any) {
+      console.warn('[ticket-page] pending transfer lookup failed', e?.message)
+    }
+  }
+
   const eventPassed = isPast(new Date(serializedEvent.end_datetime || serializedEvent.start_datetime || serializedEvent.date))
 
   return (
@@ -116,6 +131,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           ticket={serializedTicket}
           event={serializedEvent}
           user={user}
+          pendingTransfer={pendingTransfer}
         />
 
         {/* Review Form for Past Events */}
