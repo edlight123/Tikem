@@ -82,15 +82,17 @@ export default function BottomSheet({
         <div className="bg-[#1c1c1c] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[85vh] flex flex-col">
           {/* Header */}
           {(title || showCloseButton) && (
-            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10 flex-shrink-0">
+            // Same header as the app's sheets: an editorial serif lowercase title
+            // and a filled close tile, no hairline divider (fill, not a hairline).
+            <div className="flex items-center justify-between gap-4 px-4 sm:px-6 pt-5 pb-2 flex-shrink-0">
               {title && (
-                <h3 className="text-lg font-bold text-white">{title}</h3>
+                <h3 className="font-display lowercase italic !text-[26px] !leading-snug text-white">{title}</h3>
               )}
               {showCloseButton && (
                 <button
                   onClick={onClose}
                   aria-label={t('common.close', { defaultValue: 'Close' })}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-lg hover:bg-white/[0.04] transition-colors ml-auto sm:h-9 sm:w-9"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded bg-white/[0.06] hover:bg-white/[0.1] transition-colors ml-auto sm:h-9 sm:w-9"
                 >
                   <X className="w-5 h-5 text-white/50" />
                 </button>
