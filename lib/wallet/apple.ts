@@ -42,6 +42,35 @@ function passDateValue(iso: string | null): string | null {
 }
 
 /**
+ * Turn a logo drawn on solid black into one on transparency. The wordmark
+ * asset in APPLE_PASS_LOGO_PNG_BASE64 is white/teal on an opaque black square,
+ * which showed as a black box over the poster background (owner feedback
+ * 2026-10-25). Each pixel's alpha becomes its brightest channel and its colour
+ * is un-premultiplied, so white stays white, teal stays teal, black vanishes,
+ * and anti-aliased edges stay smooth. A logo that is already transparent is
+ * left as it is.
+ */
+async function blackToTransparent(png: Buffer): Promise<Buffer> {
+  const { default: sharp } = await import('sharp')
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  let transparentPixels = 0
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 250) transparentPixels++
+  if (transparentPixels > (data.length / 4) * 0.05) return png
+  for (let i = 0; i < data.length; i += 4) {
+    const a = Math.max(data[i], data[i + 1], data[i + 2])
+    if (a === 0) {
+      data[i + 3] = 0
+      continue
+    }
+    data[i] = Math.min(255, Math.round((data[i] * 255) / a))
+    data[i + 1] = Math.min(255, Math.round((data[i + 1] * 255) / a))
+    data[i + 2] = Math.min(255, Math.round((data[i + 2] * 255) / a))
+    data[i + 3] = a
+  }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer()
+}
+
+/**
  * Strip transparent padding from a PNG (the wordmark asset ships with baked-in
  * whitespace). sharp is imported lazily for the same build-OOM reason PKPass
  * is; any failure returns the buffer untouched — artwork must never block a
@@ -50,7 +79,7 @@ function passDateValue(iso: string | null): string | null {
 async function trimTransparentPadding(png: Buffer): Promise<Buffer> {
   try {
     const { default: sharp } = await import('sharp')
-    return await sharp(png).trim().png().toBuffer()
+    return await sharp(await blackToTransparent(png)).trim().png().toBuffer()
   } catch (error) {
     console.warn('[wallet] logo trim failed; using original', {
       message: (error as any)?.message,
@@ -86,8 +115,15 @@ async function buildPassBackground(
     if (source.length > 15 * 1024 * 1024) return {}
 
     const { default: sharp } = await import('sharp')
+    // Darkened before iOS blurs it: white text and the QR panel must read on
+    // ANY poster, and a light flyer made the field text vanish (owner
+    // feedback 2026-10-25). Colour survives as a deep tint of the poster.
     const resize = (w: number, h: number) =>
-      sharp(source).resize(w, h, { fit: 'cover', position: 'attention' }).png().toBuffer()
+      sharp(source)
+        .resize(w, h, { fit: 'cover', position: 'attention' })
+        .modulate({ brightness: 0.42, saturation: 0.9 })
+        .png()
+        .toBuffer()
     const [x1, x2] = await Promise.all([resize(180, 220), resize(360, 440)])
     return { 'background.png': x1, 'background@2x.png': x2 }
   } catch (error) {
@@ -173,7 +209,9 @@ export async function buildApplePkpass(
       // printed "tikèm" as art and "Tikèm" as text side by side in the header.
       backgroundColor: 'rgb(10, 10, 10)',
       foregroundColor: 'rgb(255, 255, 255)',
-      labelColor: 'rgb(13, 148, 136)',
+      // A light teal: the poster background is darkened but tinted, and the
+      // brand teal (13,148,136) was too dim on it for field labels.
+      labelColor: 'rgb(94, 234, 212)',
       sharingProhibited: true,
     }
   )

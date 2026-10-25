@@ -104,6 +104,8 @@ export async function reactivateOrganizerAccount(uid: string, now = new Date()):
   const nowIso = now.toISOString()
   const rec = await getDeactivation(uid)
   const restored: string[] = []
+  const owner = (await adminDb.collection('users').doc(uid).get()).data() || {}
+  const banned = owner.status === 'banned' || owner.banned === true || owner.account_status === 'banned'
 
   for (const id of rec?.unpublished_event_ids || []) {
     const ref = adminDb.collection('events').doc(id)
@@ -113,6 +115,20 @@ export async function reactivateOrganizerAccount(uid: string, now = new Date()):
     if (e.organizer_id !== uid) continue
     if (e.unpublished_by_deactivation !== true) continue
     if (String(e.status || '').toLowerCase() === 'cancelled') continue
+    // Never undo moderation: an event rejected, held for review, frozen or
+    // cancelled by an admin while the account was away stays down.
+    if (
+      e.rejected === true ||
+      e.hidden_pending_review === true ||
+      e.payouts_frozen === true ||
+      e.cancelled_by_admin ||
+      e.moderation_status === 'rejected' ||
+      e.moderation_status === 'removed'
+    ) {
+      continue
+    }
+    // Banned or suspended accounts do not get their events back by reactivating.
+    if (banned) continue
     await ref.update({
       is_published: true,
       unpublished_by_deactivation: false,

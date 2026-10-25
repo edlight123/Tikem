@@ -26,9 +26,9 @@ export const dynamic = 'force-dynamic'
 
 const HOUR_MS = 60 * 60 * 1000
 /** Per IP: generous, because Haitian mobile data sits behind carrier-grade NAT. */
-export const SUPPORT_IP_LIMIT_PER_HOUR = 10
+const SUPPORT_IP_LIMIT_PER_HOUR = 10
 /** Per requester email: a genuine follow-up or two, not a flood. */
-export const SUPPORT_EMAIL_LIMIT_PER_HOUR = 3
+const SUPPORT_EMAIL_LIMIT_PER_HOUR = 3
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),

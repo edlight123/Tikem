@@ -17,6 +17,19 @@ import crypto from 'node:crypto'
 import type { GoogleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
 
+const POSTER_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com'])
+
+/** The poster URL when it is an https link on our storage, else null. */
+function posterUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'https:' && POSTER_HOSTS.has(url.hostname.toLowerCase()) ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
 /** Google ids allow only `[a-zA-Z0-9._-]` after the issuer prefix. */
 function sanitizeIdSuffix(value: string): string {
   return String(value).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'unknown'
@@ -50,6 +63,16 @@ function buildEventTicketClass(ticket: WalletTicket, config: GoogleWalletConfig)
     reviewStatus: 'UNDER_REVIEW',
     eventName: localized(ticket.eventTitle),
     hexBackgroundColor: '#0a0a0a',
+  }
+
+  // The event's poster as the pass's hero banner, like the Apple pass uses it
+  // as its background. Google fetches it itself; only our storage hosts.
+  const hero = posterUrl(ticket.bannerImageUrl)
+  if (hero) {
+    eventClass.heroImage = {
+      sourceUri: { uri: hero },
+      contentDescription: localized(ticket.eventTitle),
+    }
   }
 
   if (ticket.venueName || ticket.city) {
