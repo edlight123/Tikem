@@ -65,3 +65,4 @@ store/app-store/demo.env
 *.p8
 *.key
 *.mobileprovision
+store/digicel/
