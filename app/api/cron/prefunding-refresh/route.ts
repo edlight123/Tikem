@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { moncashPrefundedBalance } from '@/lib/moncash'
+import { autoConfirmSentRequests, maybeSendLowBalanceAlert } from '@/lib/payouts/prefunding-alerts-server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -79,6 +80,27 @@ export async function GET(request: Request) {
       { merge: true }
     )
 
+    // Prefunding planner side effects (lib/payouts/prefunding-alerts-server.ts):
+    // confirm 'sent' Digicel requests once the pool rises, and email ops at most
+    // once a day when the pool is below the 2-business-day need. Neither moves
+    // money or contacts Digicel, and neither may fail the refresh itself.
+    const planner: Record<string, any> = {}
+    if (Number.isFinite(balance)) {
+      const reading = { balanceHtg: balance, checkedAt: now.toISOString(), error: null }
+      try {
+        planner.requestsConfirmed = await autoConfirmSentRequests({ now, balanceHtg: balance })
+      } catch (e: any) {
+        console.error('prefunding-refresh: request auto-confirm failed', e?.message || e)
+        planner.requestsConfirmedError = String(e?.message || e)
+      }
+      try {
+        planner.lowBalanceAlert = await maybeSendLowBalanceAlert({ now, balance: reading })
+      } catch (e: any) {
+        console.error('prefunding-refresh: low-balance alert failed', e?.message || e)
+        planner.lowBalanceAlertError = String(e?.message || e)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       prefunding: {
@@ -88,6 +110,7 @@ export async function GET(request: Request) {
         minBalance: minBalanceSafe,
         lastCheckedAt: now.toISOString(),
       },
+      planner,
     })
   } catch (error: any) {
     console.error('prefunding-refresh cron error:', error)

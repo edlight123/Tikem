@@ -1,5 +1,5 @@
 /**
- * The Money hub's tab strip — one array, six screens.
+ * The Money hub's tab strip — one array, seven screens.
  *
  * The rail bundles `payoutReview`, `disbursements` and `withdrawals` into a
  * single `payouts` group but can only link to ONE href, so two of those three
@@ -16,5 +16,6 @@ export const MONEY_TABS: { href: string; label: string }[] = [
   { href: '/admin/money/withdrawals', label: 'Withdrawals' },
   { href: '/admin/money/disputes', label: 'Disputes' },
   { href: '/admin/money/refunds', label: 'Refunds' },
+  { href: '/admin/money/moncash-funding', label: 'MonCash funding' },
   { href: '/admin/money/release-rules', label: 'Release rules' },
 ]

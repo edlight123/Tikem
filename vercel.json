@@ -54,6 +54,10 @@
       "schedule": "30 5 * * *"
     },
     {
+      "path": "/api/cron/prefunding-brief",
+      "schedule": "0 12,13 * * 1"
+    },
+    {
       "path": "/api/cron/purge-liveness",
       "schedule": "30 3 * * *"
     },

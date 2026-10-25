@@ -39,6 +39,8 @@ export type AuditAction =
   | 'payout.receipt.upload'
   | 'payout.receipt.delete'
   | 'moncash.prefunded.transfer'
+  | 'moncash.prefunding_request.generate'
+  | 'moncash.prefunding_request.update'
   | 'suspicious_activity.review'
   | 'withdrawal.approve'
   | 'withdrawal.reject'
