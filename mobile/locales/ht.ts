@@ -2726,6 +2726,7 @@ export default {
     ticketMany: '{count} tikè',
     viewTicket: 'Gade tikè a',
     share: 'Pataje',
+    instagram: 'Swiv Tikèm sou Instagram',
     goToTickets: 'Ale nan tikè m yo',
   },
   flyerLibrary: {

@@ -2758,6 +2758,7 @@ export default {
     ticketMany: '{count} billets',
     viewTicket: 'Voir le billet',
     share: 'Partager',
+    instagram: 'Suivre Tikèm sur Instagram',
     goToTickets: 'Voir mes billets',
   },
   flyerLibrary: {

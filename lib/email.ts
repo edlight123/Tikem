@@ -23,6 +23,7 @@ import {
   button,
   textLink,
   rowsBlock,
+  followCard,
   facts,
   metric,
   bigFigure,
@@ -311,6 +312,8 @@ export function getTicketConfirmationEmail(params: {
       total: 'Total',
       preheader: (e: string) => `Your ticket for ${e}. Show the QR code at the door.`,
       guest: 'Guest',
+      followLine: 'New events, lineups and ticket drops, first on Instagram.',
+      follow: 'Follow on Instagram',
     },
     fr: {
       approvedStatus: 'Approuvé',
@@ -330,6 +333,8 @@ export function getTicketConfirmationEmail(params: {
       total: 'Total',
       preheader: (e: string) => `Votre billet pour ${e}. Présentez le QR code à l'entrée.`,
       guest: 'Invité',
+      followLine: 'Nouveaux événements, line-ups et billets en avant-première sur Instagram.',
+      follow: 'Suivre sur Instagram',
     },
     ht: {
       approvedStatus: 'Apwouve',
@@ -349,6 +354,8 @@ export function getTicketConfirmationEmail(params: {
       total: 'Total',
       preheader: (e: string) => `Tikè ou pou ${e}. Montre QR kòd la nan pòtay la.`,
       guest: 'Envite',
+      followLine: 'Nouvo evènman, lineup ak tikè yo, an premye sou Instagram.',
+      follow: 'Swiv nou sou Instagram',
     },
   })
   const base = appUrl()
@@ -403,6 +410,8 @@ export function getTicketConfirmationEmail(params: {
       receiptRows.length ? gap(24) : '',
       receiptRows.length ? rowsBlock(receiptRows, params.paidWith) : '',
       !receiptRows.length ? gap(4) : '',
+      gap(24),
+      followCard(t.followLine, t.follow),
     ],
   })
 }

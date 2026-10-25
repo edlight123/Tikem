@@ -6,7 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Linking,
 } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { X, Ticket, Share2 } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -15,6 +17,8 @@ import { safeFormatForLanguage } from '../lib/dates';
 import { shareEvent } from '../lib/share';
 import FollowButton from './FollowButton';
 import AddToCalendarButton from './AddToCalendarButton';
+
+const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/';
 
 interface PurchaseSuccessSheetProps {
   visible: boolean;
@@ -121,6 +125,18 @@ export default function PurchaseSuccessSheet({
                 <Share2 size={20} color={colors.text} />
                 <Text style={styles.actionLabel}>{t('purchaseSuccess.share')}</Text>
               </TouchableOpacity>
+
+              {/* Tikèm's own Instagram: the moment someone has a ticket is
+                  when they are most likely to follow for the next one. */}
+              <TouchableOpacity
+                style={styles.action}
+                onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => {})}
+                accessibilityRole="link"
+                accessibilityLabel={t('purchaseSuccess.instagram')}
+              >
+                <FontAwesome5 name="instagram" size={19} color={colors.text} />
+                <Text style={styles.actionLabel} numberOfLines={1}>@tikem.co</Text>
+              </TouchableOpacity>
             </View>
 
             {/* The existing calendar control, so the sheet cannot drift from
@@ -207,8 +223,7 @@ const getStyles = (colors: any) =>
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: radius.chip,
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: colors.surfaceRaised,
     },
     countChipText: {
       fontSize: 12,
@@ -230,8 +245,8 @@ const getStyles = (colors: any) =>
       gap: 6,
       paddingVertical: 16,
       borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
+      // A fill one step up from the sheet, not an outline (house rule).
+      backgroundColor: colors.surfaceRaised,
     },
     actionLabel: {
       fontSize: 13,

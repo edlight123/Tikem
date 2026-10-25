@@ -35,8 +35,11 @@ export function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || 'https://www.tikem.co').replace(/\/+$/, '')
 }
 
+export const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/'
+export const INSTAGRAM_HANDLE = '@tikem.co'
+
 export const SOCIALS = [
-  { label: 'Instagram', url: 'https://www.instagram.com/tikem.co/' },
+  { label: 'Instagram', url: INSTAGRAM_URL },
   { label: 'Facebook', url: 'https://www.facebook.com/tikem.co' },
   { label: 'TikTok', url: 'https://www.tiktok.com/@tikem.co' },
 ]
@@ -203,6 +206,19 @@ export function eventRow(posterUrl: string | null | undefined, name: string, sub
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${img}<td valign="middle">
 <div style="font-family:${FONT.sans};font-size:17px;font-weight:700;color:${C.text};line-height:1.3;">${esc(name)}</div>
 ${sub ? `<div style="margin-top:4px;font-family:${FONT.sans};font-size:14px;color:${C.text2};">${esc(sub)}</div>` : ''}
+</td></tr></table>`
+}
+
+/**
+ * "Follow @tikem.co": a filled card with the handle, one line of why, and a
+ * secondary button to the profile. Sits after the useful content of an
+ * attendee email, never above the ticket.
+ */
+export function followCard(line: string, cta: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:22px 22px 20px;">
+<div style="font-family:${FONT.serif};font-style:italic;font-size:26px;line-height:1.15;color:${C.text};">${esc(INSTAGRAM_HANDLE)}</div>
+<div style="margin:6px 0 18px;font-family:${FONT.sans};font-size:14px;line-height:1.6;color:${C.text2};">${esc(line)}</div>
+${button(cta, INSTAGRAM_URL, 'secondary')}
 </td></tr></table>`
 }
 

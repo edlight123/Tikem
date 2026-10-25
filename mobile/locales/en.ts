@@ -2794,6 +2794,7 @@ export default {
     ticketMany: '{count} tickets',
     viewTicket: 'View ticket',
     share: 'Share',
+    instagram: 'Follow Tikèm on Instagram',
     goToTickets: 'Go to my tickets',
   },
   flyerLibrary: {
