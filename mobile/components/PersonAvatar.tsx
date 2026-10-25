@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { useTheme } from '../contexts/ThemeContext';
 import type { PublicUserSummary } from '../types/social';
+import { defaultAvatar } from '../lib/defaultAvatar';
 
 interface Props {
   user: Pick<PublicUserSummary, 'uid' | 'displayName' | 'photoURL'>;
@@ -11,7 +11,7 @@ interface Props {
   ring?: boolean;
 }
 
-/** Round avatar: the photo, or the initial on a raised fill (never a hairline box). */
+/** Round avatar: the photo, or a drawn portrait (lib/defaultAvatar) for someone without one. */
 export default function PersonAvatar({ user, size = 44, ring = false }: Props) {
   const { colors } = useTheme();
   const ringStyle = ring ? { borderWidth: 2, borderColor: colors.background } : null;
@@ -28,22 +28,12 @@ export default function PersonAvatar({ user, size = 44, ring = false }: Props) {
       />
     );
   }
-  const initial = (user.displayName || 'U').trim().charAt(0).toUpperCase() || 'U';
   return (
-    <View
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: colors.surfaceRaised,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        ringStyle,
-      ]}
-    >
-      <Text style={{ color: colors.text, fontWeight: '700', fontSize: size * 0.4 }}>{initial}</Text>
-    </View>
+    <Image
+      source={defaultAvatar(user.uid || user.displayName || '')}
+      style={[{ width: size, height: size, borderRadius: size / 2 }, ringStyle]}
+      contentFit="cover"
+      accessibilityIgnoresInvertColors
+    />
   );
 }

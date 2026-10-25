@@ -11,6 +11,7 @@ import SectionHeader from './SectionHeader';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
 import { shouldShowGoingCount } from '../lib/socialProof';
+import { DEFAULT_AVATAR_COUNT, defaultAvatar, defaultAvatarAt, defaultAvatarIndex } from '../lib/defaultAvatar';
 
 interface WhosGoingProps {
   eventId: string;
@@ -30,24 +31,16 @@ interface WhosGoingProps {
 /** Faces sit in a ring of the canvas colour, so the pile reads as cut-outs
  *  on the page rather than white-outlined stickers. */
 function Avatar({ user, size = 44, ring }: { user: PublicUserSummary; size?: number; ring: string }) {
-  const initial = (user.displayName || 'U').charAt(0).toUpperCase();
   const frame = { width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: ring };
-  if (user.photoURL) {
-    return (
-      <Image
-        source={{ uri: user.photoURL }}
-        style={frame}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        transition={150}
-        recyclingKey={user.uid ? String(user.uid) : undefined}
-      />
-    );
-  }
   return (
-    <View style={[frame, { backgroundColor: T.surfaceRaised, alignItems: 'center', justifyContent: 'center' }]}>
-      <Text style={{ color: T.textPrimary, fontWeight: '700', fontSize: size * 0.38 }}>{initial}</Text>
-    </View>
+    <Image
+      source={user.photoURL ? { uri: user.photoURL } : defaultAvatar(String(user.uid || user.displayName || ''))}
+      style={frame}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      transition={user.photoURL ? 150 : 0}
+      recyclingKey={user.uid ? String(user.uid) : undefined}
+    />
   );
 }
 
@@ -169,6 +162,16 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
               : t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 });
 
   const faces = [...friendsGoing, ...pile].slice(0, 5);
+  // Everyone else going keeps their privacy but still counts as a face: an
+  // unnamed drawn portrait per person, up to five faces in all, so a crowd
+  // reads as a crowd (owner feedback 2026-10-25). Not tappable, and seeded by
+  // the event so they stay put between visits.
+  const others = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - faces.length);
+  const anonCount = Math.min(others, 5 - faces.length);
+  const anonBase = defaultAvatarIndex(eventId);
+  const anon = Array.from({ length: anonCount }, (_, i) => (anonBase + i * 5) % DEFAULT_AVATAR_COUNT);
+  const pileSize = faces.length + anon.length;
+  const extra = Math.max(0, remaining - anon.length);
 
   return (
     <View style={styles.section}>
@@ -179,15 +182,29 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
           <TouchableOpacity
             key={u.uid}
             onPress={() => goToProfile(u.uid)}
-            style={{ marginLeft: i === 0 ? 0 : -12, zIndex: faces.length - i }}
+            style={{ marginLeft: i === 0 ? 0 : -12, zIndex: pileSize - i }}
             activeOpacity={0.8}
           >
             <Avatar user={u} size={48} ring={colors.background} />
           </TouchableOpacity>
         ))}
-        {remaining > 0 && (
-          <View style={[styles.moreBubble, { marginLeft: faces.length ? -12 : 0 }]}>
-            <Text style={styles.moreText}>+{remaining}</Text>
+        {anon.map((idx, i) => (
+          <View
+            key={`anon-${i}`}
+            style={{ marginLeft: faces.length + i === 0 ? 0 : -12, zIndex: pileSize - faces.length - i }}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Image
+              source={defaultAvatarAt(idx)}
+              style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: colors.background }}
+              contentFit="cover"
+            />
+          </View>
+        ))}
+        {extra > 0 && (
+          <View style={[styles.moreBubble, { marginLeft: pileSize ? -12 : 0 }]}>
+            <Text style={styles.moreText}>+{extra}</Text>
           </View>
         )}
       </View>

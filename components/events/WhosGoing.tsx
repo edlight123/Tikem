@@ -7,6 +7,7 @@ import { Lock } from 'lucide-react'
 import type { PublicUserSummary } from '@/types/social'
 import type { GuestlistVisibility } from '@/lib/guestlistVisibility'
 import { shouldShowGoingCount } from '@/lib/socialProof'
+import { defaultAvatarAt, defaultAvatarIndex, defaultAvatarUrl } from '@/lib/defaultAvatar'
 
 interface WhosGoingProps {
   eventId: string
@@ -38,19 +39,19 @@ interface SocialData {
 }
 
 function Avatar({ user, size = 40 }: { user: PublicUserSummary; size?: number }) {
-  const initial = (user.displayName || 'U').charAt(0).toUpperCase()
+  // No photo: a drawn portrait (lib/defaultAvatar), not an initial.
   return (
     <div
-      className="rounded-full overflow-hidden bg-white/[0.08] flex items-center justify-center text-white font-semibold ring-2 ring-black"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      className="rounded-full overflow-hidden bg-white/[0.08] ring-2 ring-black shrink-0"
+      style={{ width: size, height: size }}
       title={user.displayName}
     >
-      {user.photoURL ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
-      ) : (
-        initial
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={user.photoURL || defaultAvatarUrl(String(user.uid || user.displayName || ''))}
+        alt={user.displayName}
+        className="w-full h-full object-cover"
+      />
     </div>
   )
 }
@@ -143,7 +144,14 @@ export default function WhosGoing({
 
   const pile = publicGoing.slice(0, 8)
   const namedCount = friendsGoing.length + pile.length
-  const remaining = showCount ? Math.max(0, totalGoing - namedCount - (viewerIsGoing ? 1 : 0)) : 0
+  // Everyone else going keeps their privacy but still counts as a face: an
+  // unnamed drawn portrait each, so the pile holds up to five faces and a
+  // crowd reads as a crowd. Seeded by the event so they stay put.
+  const others = Math.max(0, totalGoing - namedCount - (viewerIsGoing ? 1 : 0))
+  const anonCount = Math.min(others, Math.max(0, 5 - pile.length - (viewerIsGoing ? 1 : 0)))
+  const anonBase = defaultAvatarIndex(eventId)
+  const anon = Array.from({ length: anonCount }, (_, i) => defaultAvatarAt(anonBase + i * 5))
+  const remaining = showCount ? Math.max(0, others - anonCount) : 0
   // Nothing to show: no faces, not the viewer, and the number held back.
   if (!showCount && !viewerIsGoing && friendsGoing.length === 0 && pile.length === 0) return null
 
@@ -188,7 +196,7 @@ export default function WhosGoing({
       )}
 
       {/* Public face pile */}
-      {(pile.length > 0 || viewerIsGoing) && (
+      {(pile.length > 0 || viewerIsGoing || anon.length > 0) && (
         <div className="flex items-center gap-3">
           <div className="flex -space-x-3">
             {viewerIsGoing && (
@@ -201,6 +209,10 @@ export default function WhosGoing({
             )}
             {pile.map((u) => (
               <Avatar key={u.uid} user={u} size={40} />
+            ))}
+            {anon.map((src, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={`anon-${i}`} src={src} alt="" aria-hidden="true" className="rounded-full w-10 h-10 ring-2 ring-black" />
             ))}
             {remaining > 0 && (
               <div className="rounded-full w-10 h-10 bg-white/[0.08] flex items-center justify-center text-white/70 text-xs font-semibold ring-2 ring-black">
