@@ -2,6 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { adminDb } from '@/lib/firebase/admin'
 import { loadPrefundingPlan, PREFUNDING_REQUESTS_COLLECTION } from '@/lib/payouts/prefunding-plan-server'
+import { DEFAULT_DIGICEL_PREFUNDING_CONTACTS, letterSettingsFromContacts } from '@/lib/payouts/prefunding-config'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,9 @@ export async function GET() {
         reference: r.reference || null,
         amountHtg: Number(r.amountHtg) || 0,
         choice: r.choice || null,
+        letterType: r.letterType === 'bank_transfer' ? 'bank_transfer' : 'merchant_transfer',
+        bankName: r.bank?.bank || null,
+        transactionNumber: r.transactionNumber || null,
         status: r.status || 'generated',
         createdAt: r.createdAt || null,
         createdByEmail: r.createdByEmail || null,
@@ -41,6 +45,8 @@ export async function GET() {
       plan,
       balance,
       contacts: { to: config.digicel.to, cc: config.digicel.cc, from: config.digicel.fromEmail },
+      letterSettings: letterSettingsFromContacts(config.digicel),
+      letterDefaults: letterSettingsFromContacts(DEFAULT_DIGICEL_PREFUNDING_CONTACTS),
       requests,
     })
   } catch (e: any) {

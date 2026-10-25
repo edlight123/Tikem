@@ -524,7 +524,7 @@ export function computePrefundingPlan(input: PrefundingPlanInput): PrefundingPla
     warnings.push({
       code: 'account_numbers_missing',
       severity: 'warning',
-      message: `The ${missingAccounts.join(' and ')} ${missingAccounts.length > 1 ? 'are' : 'is'} not set in config/payouts.prefundingPlan.digicel; the letter will say "[à compléter]" until it is.`,
+      message: `The ${missingAccounts.join(' and ')} ${missingAccounts.length > 1 ? 'are' : 'is'} not set (Letter settings below); the letter prints a blank line in its place until it is.`,
     })
   }
 

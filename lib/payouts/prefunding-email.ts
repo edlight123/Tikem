@@ -1,14 +1,13 @@
 /**
- * The French transfer request Tikèm emails Digicel to move money from the
- * MonCash merchant account into the PREFUNDED pool.
+ * French helpers for the Digicel prefunding request: amounts in words, dates,
+ * the request reference and Gmail / mailto compose links. The letter and its
+ * cover email are built in lib/payouts/prefunding-letter.ts.
  *
- * Built here, shown to an admin, and NEVER sent by the server: the admin copies
- * it or opens it in Gmail (compose link) and sends it from the configured
- * mailbox themselves. Pure, so the wording is unit-tested.
+ * NEVER sends anything: the admin opens the compose link and sends it from the
+ * configured mailbox themselves. Pure, so the wording is unit-tested.
  */
 
 import { HAITI_TZ } from '@/lib/payouts/haiti-business-time'
-import type { DigicelPrefundingContacts } from '@/lib/payouts/prefunding-config'
 
 // ── Amount in French words ──────────────────────────────────────────────────
 
@@ -77,78 +76,7 @@ export function frenchLongDate(at: Date): string {
   return new Intl.DateTimeFormat('fr-FR', { timeZone: HAITI_TZ, day: 'numeric', month: 'long', year: 'numeric' }).format(at)
 }
 
-// ── The letter ──────────────────────────────────────────────────────────────
-
-export type DigicelRequestEmail = {
-  to: string[]
-  cc: string[]
-  from: string
-  subject: string
-  body: string
-  /** Gmail web compose, opened in the sender's account. Nothing is sent until the admin clicks Send. */
-  gmailUrl: string
-  mailtoUrl: string
-}
-
-const MISSING = '[à compléter]'
-
-export function buildDigicelRequestEmail(args: {
-  amountHtg: number
-  at: Date
-  reference: string
-  contacts: DigicelPrefundingContacts
-}): DigicelRequestEmail {
-  const { amountHtg, at, reference, contacts } = args
-  const figures = `${formatHtgFigures(amountHtg)} HTG`
-  const words = `${numberToFrenchWords(amountHtg)} gourdes`
-  const date = frenchLongDate(at)
-  const merchantNo = contacts.merchantAccountNumber || MISSING
-  const prefundedNo = contacts.prefundedAccountNumber || MISSING
-
-  const subject = `Demande de transfert – Compte marchand MonCash vers ${contacts.prefundedAccountName} – ${figures}`
-
-  const signatureBlocks = contacts.signatories.map((s) =>
-    [s.name, s.title, contacts.companyName, s.email].filter((x) => x && String(x).trim()).join('\n')
-  )
-  const signatoryNames = contacts.signatories.map((s) => s.name).join(', ')
-
-  const body = [
-    `Port-au-Prince, le ${date}`,
-    '',
-    "À l’attention de l’équipe Digicel MonCash – Services financiers mobiles",
-    '',
-    `Objet : Demande de transfert de fonds du compte marchand MonCash vers le compte prépayé « ${contacts.prefundedAccountName} »`,
-    '',
-    'Madame, Monsieur,',
-    '',
-    `Par la présente, ${contacts.companyName} vous prie de bien vouloir procéder au transfert de la somme de ${figures} (${words}) de son compte marchand MonCash vers son compte prépayé (prefunded), selon les références ci-dessous :`,
-    '',
-    `- Compte à débiter (compte marchand MonCash) : ${contacts.merchantAccountName} – n° ${merchantNo}`,
-    `- Compte à créditer (compte prépayé) : ${contacts.prefundedAccountName} – n° ${prefundedNo}`,
-    `- Montant : ${figures} (${words})`,
-    `- Date de la demande : ${date}`,
-    `- Référence : ${reference}`,
-    `- Signataire${contacts.signatories.length > 1 ? 's' : ''} autorisé${contacts.signatories.length > 1 ? 's' : ''} : ${signatoryNames}`,
-    '',
-    "Ces fonds sont destinés au paiement des organisateurs d’événements par MonCash via la plateforme Tikèm.",
-    '',
-    'Nous vous remercions de bien vouloir nous confirmer l’exécution de ce transfert par retour de courriel.',
-    '',
-    'Veuillez agréer, Madame, Monsieur, l’expression de nos salutations distinguées.',
-    '',
-    signatureBlocks.join('\n\n'),
-  ].join('\n')
-
-  return {
-    to: contacts.to,
-    cc: contacts.cc,
-    from: contacts.fromEmail,
-    subject,
-    body,
-    gmailUrl: gmailComposeUrl({ to: contacts.to, cc: contacts.cc, subject, body, from: contacts.fromEmail }),
-    mailtoUrl: mailtoUrl({ to: contacts.to, cc: contacts.cc, subject, body }),
-  }
-}
+// ── Compose links ──────────────────────────────────────────────────────────
 
 export function gmailComposeUrl(m: { to: string[]; cc: string[]; subject: string; body: string; from?: string }): string {
   const params = new URLSearchParams()

@@ -343,7 +343,7 @@ describe('computePrefundingPlan', () => {
     expect(c.digicel.to).toEqual(['Hai_MFS_Request@digicelgroup.com'])
     expect(c.digicel.cc).toEqual([])
     expect(c.digicel.prefundedAccountName).toBe('PANTHEON SERVICES PREFUNDED')
-    expect(c.digicel.signatories[0].name).toBe('Stéphane Lainé')
+    expect(c.digicel.signatories[0].name).toBe('Stéphane LAINÉ')
   })
 })
 

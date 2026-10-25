@@ -41,6 +41,8 @@ export type AuditAction =
   | 'moncash.prefunded.transfer'
   | 'moncash.prefunding_request.generate'
   | 'moncash.prefunding_request.update'
+  | 'moncash.prefunding_letter.download'
+  | 'moncash.prefunding_settings.update'
   | 'suspicious_activity.review'
   | 'withdrawal.approve'
   | 'withdrawal.reject'

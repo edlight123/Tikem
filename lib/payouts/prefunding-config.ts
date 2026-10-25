@@ -24,8 +24,14 @@ export type DigicelPrefundingContacts = {
   cc: string[]
   /** The Gmail account the compose link opens in (the sender). */
   fromEmail: string
-  /** The legal entity named in the letter. */
+  /** The legal entity named in the letter (and the letterhead wordmark). */
   companyName: string
+  /** Registered office, one line, printed under the letterhead wordmark. */
+  companyAddress: string
+  /** Company identification / patente numbers (never a person's national ID). */
+  companyIds: string[]
+  /** Optional https PNG/JPEG logo for the letterhead. Empty = text letterhead only. */
+  logoUrl: string
   /** The MonCash merchant (collections) account the money leaves. */
   merchantAccountName: string
   /** Its account number / merchant id. Empty = "[à compléter]" in the letter, and a warning. */
@@ -61,14 +67,20 @@ export type PrefundingPlanConfig = {
 
 export const DEFAULT_DIGICEL_PREFUNDING_CONTACTS: DigicelPrefundingContacts = {
   to: ['Hai_MFS_Request@digicelgroup.com'],
-  cc: ['hai_mfs_b2b_team@digicelgroup.com'],
+  // hai_mfs_b2b_team: contract §3.2. MFS_B.Services: Digicel's notice of 1 March 2024.
+  cc: ['hai_mfs_b2b_team@digicelgroup.com', 'MFS_B.Services@digicelgroup.com'],
+  // The address Digicel knows PANTHEON SERVICES by.
   fromEmail: 'info@edlight.org',
   companyName: 'PANTHEON SERVICES',
+  companyAddress: 'N° 2, rue Corlette, route de Frères, Pétion-Ville, Haïti',
+  companyIds: ['000-284-278-2', '2607188721'],
+  logoUrl: '',
   merchantAccountName: 'PANTHEON SERVICES',
+  // Unknown until the owner supplies it: the letter prints a blank line and the page warns.
   merchantAccountNumber: '',
   prefundedAccountName: 'PANTHEON SERVICES PREFUNDED',
-  prefundedAccountNumber: '',
-  signatories: [{ name: 'Stéphane Lainé', email: 'stephane.laine@edlight.org' }],
+  prefundedAccountNumber: '188721',
+  signatories: [{ name: 'Stéphane LAINÉ', title: 'Représentant', email: 'stephane.laine@edlight.org' }],
 }
 
 export const DEFAULT_PREFUNDING_PLAN_CONFIG: PrefundingPlanConfig = {
@@ -96,6 +108,14 @@ function emails(value: unknown, fallback: string[]): string[] {
   if (!Array.isArray(value)) return fallback
   const list = value.map((v) => String(v || '').trim()).filter((v) => /^[^@\s]+@[^@\s]+$/.test(v))
   return list.length ? list : fallback
+}
+
+export function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 /** Stored (possibly partial or corrupt) settings → a complete, sane config. */
@@ -129,12 +149,145 @@ export function resolvePrefundingPlanConfig(stored?: any): PrefundingPlanConfig 
       cc: Array.isArray(dg.cc) ? emails(dg.cc, []) : dd.cc,
       fromEmail: str(dg.fromEmail, dd.fromEmail),
       companyName: str(dg.companyName, dd.companyName),
+      companyAddress: str(dg.companyAddress, dd.companyAddress),
+      companyIds: Array.isArray(dg.companyIds)
+        ? dg.companyIds.map((v: unknown) => String(v ?? '').trim()).filter(Boolean)
+        : dd.companyIds,
+      logoUrl: typeof dg.logoUrl === 'string' && isHttpsUrl(dg.logoUrl.trim()) ? dg.logoUrl.trim() : dd.logoUrl,
       merchantAccountName: str(dg.merchantAccountName, dd.merchantAccountName),
       merchantAccountNumber: typeof dg.merchantAccountNumber === 'string' ? dg.merchantAccountNumber.trim() : dd.merchantAccountNumber,
       prefundedAccountName: str(dg.prefundedAccountName, dd.prefundedAccountName),
-      prefundedAccountNumber:
-        typeof dg.prefundedAccountNumber === 'string' ? dg.prefundedAccountNumber.trim() : dd.prefundedAccountNumber,
+      // Known (the contract), so an empty stored value falls back to it.
+      prefundedAccountNumber: str(dg.prefundedAccountNumber, dd.prefundedAccountNumber),
       signatories: signatories.length ? signatories : dd.signatories,
     },
+  }
+}
+
+// ── The admin settings form (letterhead + Digicel fields) ───────────────────
+
+/** What the admin settings form edits: the letterhead and Digicel fields of `digicel`. */
+export type PrefundingLetterSettings = {
+  companyName: string
+  companyAddress: string
+  companyIds: string[]
+  logoUrl: string
+  merchantAccountNumber: string
+  prefundedAccountNumber: string
+  signatoryName: string
+  signatoryTitle: string
+  to: string[]
+  cc: string[]
+  fromEmail: string
+}
+
+export function letterSettingsFromContacts(c: DigicelPrefundingContacts): PrefundingLetterSettings {
+  const s = c.signatories[0] || { name: '' }
+  return {
+    companyName: c.companyName,
+    companyAddress: c.companyAddress,
+    companyIds: c.companyIds,
+    logoUrl: c.logoUrl,
+    merchantAccountNumber: c.merchantAccountNumber,
+    prefundedAccountNumber: c.prefundedAccountNumber,
+    signatoryName: s.name,
+    signatoryTitle: s.title || '',
+    to: c.to,
+    cc: c.cc,
+    fromEmail: c.fromEmail,
+  }
+}
+
+const EMAIL_RE = /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/
+const ACCOUNT_RE = /^[0-9A-Za-z][0-9A-Za-z .\-/]{1,38}[0-9A-Za-z]$/
+const ID_RE = /^[0-9A-Za-z][0-9A-Za-z .\-/]{1,28}[0-9A-Za-z]$/
+
+/**
+ * Validate the settings form. Strict (unlike resolvePrefundingPlanConfig, which
+ * repairs what is stored): every problem is reported so the admin can fix it,
+ * and nothing is saved unless all of it is valid.
+ */
+export function parseLetterSettingsInput(
+  input: unknown
+): { ok: true; value: PrefundingLetterSettings } | { ok: false; errors: Record<string, string> } {
+  const errors: Record<string, string> = {}
+  const o = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+  const text = (k: string) => (typeof o[k] === 'string' ? (o[k] as string).replace(/\s+/g, ' ').trim() : '')
+  const list = (k: string) =>
+    (Array.isArray(o[k]) ? (o[k] as unknown[]) : typeof o[k] === 'string' ? String(o[k]).split(/[,;\n]/) : [])
+      .map((v) => String(v ?? '').trim())
+      .filter(Boolean)
+
+  const companyName = text('companyName')
+  if (companyName.length < 2 || companyName.length > 80) errors.companyName = 'Company name: 2 to 80 characters.'
+  const companyAddress = text('companyAddress')
+  if (companyAddress.length < 5 || companyAddress.length > 160) errors.companyAddress = 'Address: 5 to 160 characters, one line.'
+  const companyIds = list('companyIds')
+  if (companyIds.length > 4 || companyIds.some((v) => !ID_RE.test(v)))
+    errors.companyIds = 'Company IDs: up to 4 patente / identification numbers (digits, letters, dashes).'
+  const logoUrl = text('logoUrl')
+  if (logoUrl && !isHttpsUrl(logoUrl)) errors.logoUrl = 'Logo URL must start with https:// (PNG or JPEG), or be empty.'
+  const merchantAccountNumber = text('merchantAccountNumber')
+  if (merchantAccountNumber && !ACCOUNT_RE.test(merchantAccountNumber))
+    errors.merchantAccountNumber = 'Merchant account number: 3 to 40 digits, letters or dashes (or leave empty until known).'
+  const prefundedAccountNumber = text('prefundedAccountNumber')
+  if (!ACCOUNT_RE.test(prefundedAccountNumber))
+    errors.prefundedAccountNumber = 'Prefunded account number is required (3 to 40 digits, letters or dashes).'
+  const signatoryName = text('signatoryName')
+  if (signatoryName.length < 2 || signatoryName.length > 80) errors.signatoryName = 'Signatory name: 2 to 80 characters.'
+  const signatoryTitle = text('signatoryTitle')
+  if (signatoryTitle.length > 80) errors.signatoryTitle = 'Signatory title: at most 80 characters.'
+  const to = list('to')
+  if (!to.length || to.length > 5 || to.some((e) => !EMAIL_RE.test(e))) errors.to = 'To: one to five valid email addresses.'
+  const cc = list('cc')
+  if (cc.length > 10 || cc.some((e) => !EMAIL_RE.test(e))) errors.cc = 'Cc: up to ten valid email addresses.'
+  const fromEmail = text('fromEmail')
+  if (!EMAIL_RE.test(fromEmail)) errors.fromEmail = 'From must be one valid email address.'
+
+  if (Object.keys(errors).length) return { ok: false, errors }
+  return {
+    ok: true,
+    value: {
+      companyName,
+      companyAddress,
+      companyIds,
+      logoUrl,
+      merchantAccountNumber,
+      prefundedAccountNumber,
+      signatoryName,
+      signatoryTitle,
+      to,
+      cc,
+      fromEmail,
+    },
+  }
+}
+
+/**
+ * The `digicel` patch a saved form writes into config/payouts.prefundingPlan.
+ * The signatory's email (used only in the cover email) is carried over.
+ */
+export function letterSettingsToDigicelPatch(
+  s: PrefundingLetterSettings,
+  current: DigicelPrefundingContacts
+): Partial<DigicelPrefundingContacts> {
+  const keepEmail = current.signatories[0]?.email
+  return {
+    companyName: s.companyName,
+    companyAddress: s.companyAddress,
+    companyIds: s.companyIds,
+    logoUrl: s.logoUrl,
+    merchantAccountNumber: s.merchantAccountNumber,
+    prefundedAccountNumber: s.prefundedAccountNumber,
+    signatories: [
+      {
+        name: s.signatoryName,
+        ...(s.signatoryTitle ? { title: s.signatoryTitle } : {}),
+        ...(keepEmail ? { email: keepEmail } : {}),
+      },
+    ],
+    to: s.to,
+    cc: s.cc,
+    fromEmail: s.fromEmail,
   }
 }

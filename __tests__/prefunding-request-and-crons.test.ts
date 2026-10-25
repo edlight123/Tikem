@@ -35,12 +35,10 @@ jest.mock('@/lib/payouts/prefunding-alerts-server', () => ({
 }))
 
 import {
-  buildDigicelRequestEmail,
   formatHtgFigures,
   numberToFrenchWords,
   prefundingRequestReference,
 } from '@/lib/payouts/prefunding-email'
-import { DEFAULT_DIGICEL_PREFUNDING_CONTACTS } from '@/lib/payouts/prefunding-config'
 import { transitionPrefundingRequest } from '@/lib/payouts/prefunding-requests'
 import { buildBriefEmail, isBriefHour } from '@/lib/payouts/prefunding-notify'
 import { computePrefundingPlan } from '@/lib/payouts/prefunding-plan'
@@ -81,40 +79,9 @@ describe('numberToFrenchWords', () => {
   })
 })
 
-describe('buildDigicelRequestEmail', () => {
-  const at = new Date('2026-10-26T14:00:00Z') // Monday 10 AM Haiti
-  const email = buildDigicelRequestEmail({
-    amountHtg: 50_000,
-    at,
-    reference: prefundingRequestReference(at, 'abCD9xyz'),
-    contacts: DEFAULT_DIGICEL_PREFUNDING_CONTACTS,
-  })
-
-  it('addresses Digicel from config', () => {
-    expect(email.to).toEqual(['Hai_MFS_Request@digicelgroup.com'])
-    expect(email.cc).toEqual(['hai_mfs_b2b_team@digicelgroup.com'])
-    expect(email.from).toBe('info@edlight.org')
-  })
-
-  it('states the amount in figures and words, the date, the accounts and the signatory', () => {
-    expect(email.subject).toContain('PANTHEON SERVICES PREFUNDED')
-    expect(email.subject).toContain('50 000 HTG')
-    expect(email.body).toContain('50 000 HTG (cinquante mille gourdes)')
-    expect(email.body).toContain('Port-au-Prince, le 26 octobre 2026')
-    expect(email.body).toContain('« PANTHEON SERVICES PREFUNDED »')
-    expect(email.body).toContain('n° [à compléter]')
-    expect(email.body).toContain('Stéphane Lainé')
-    expect(email.body).toContain('stephane.laine@edlight.org')
-    expect(email.body).toContain('TKM-PF-20261026-ABCD')
-  })
-
-  it('builds compose links without sending anything', () => {
-    expect(email.gmailUrl.startsWith('https://mail.google.com/mail/?authuser=info%40edlight.org&view=cm')).toBe(true)
-    expect(email.gmailUrl).toContain('to=Hai_MFS_Request%40digicelgroup.com')
-    expect(email.gmailUrl).toContain('cc=hai_mfs_b2b_team%40digicelgroup.com')
-    expect(email.gmailUrl).not.toContain('+')
-    expect(decodeURIComponent(email.gmailUrl)).toContain('cinquante mille gourdes')
-    expect(email.mailtoUrl.startsWith('mailto:Hai_MFS_Request%40digicelgroup.com?cc=')).toBe(true)
+describe('prefundingRequestReference', () => {
+  it('is the Haiti day plus 4 characters of the doc id', () => {
+    expect(prefundingRequestReference(new Date('2026-10-26T14:00:00Z'), 'abCD9xyz')).toBe('TKM-PF-20261026-ABCD')
   })
 })
 

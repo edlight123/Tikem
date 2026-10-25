@@ -15,8 +15,9 @@ export default function AdminMoncashFundingPage() {
       <ConsoleTabs tabs={MONEY_TABS} />
       <ConsoleCaption>
         Organizer MonCash payouts are sent from the prefunded pool (PANTHEON SERVICES PREFUNDED). This
-        page works out how much to ask Digicel to move into it from the merchant account, and drafts
-        the request. Nothing here moves money or emails Digicel: you send the request yourself.
+        page works out how much to top it up by, and produces the formal letter on company letterhead
+        (PDF) and its cover email. Nothing here moves money or emails Digicel: you sign, attach and
+        send it yourself, from the address Digicel recognises.
       </ConsoleCaption>
       <MoncashFundingClient />
     </ConsolePage>

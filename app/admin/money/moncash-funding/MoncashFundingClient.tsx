@@ -18,11 +18,23 @@ import {
   type PrefundingPlan,
 } from '@/lib/payouts/prefunding-plan'
 import { HAITI_TZ } from '@/lib/payouts/haiti-business-time'
+import {
+  DIGICEL_BANK_ACCOUNTS,
+  PREFUNDING_LETTER_KINDS,
+  bankTransferDescription,
+  isValidTransactionNumber,
+  type PrefundingLetterKind,
+} from '@/lib/payouts/prefunding-letter'
+import type { PrefundingLetterSettings } from '@/lib/payouts/prefunding-config'
+import { LetterSettingsForm } from './LetterSettingsForm'
 
 /**
  * MonCash prefunding planner (admin). Reads GET /api/admin/moncash-funding/plan,
- * generates a Digicel request via POST …/requests (logged, never sent), and
- * marks logged requests sent / completed / cancelled via PATCH …/requests/:id.
+ * generates a Digicel request via POST …/requests (logged, never sent) as one of
+ * two formal letters (merchant → prefunded, or bank transfer), downloads the
+ * letter PDF from GET …/requests/:id/letter, opens the cover email in Gmail,
+ * marks logged requests sent / completed / cancelled via PATCH …/requests/:id,
+ * and edits the letterhead / Digicel settings via PUT …/settings.
  */
 
 type BalanceReading = { balanceHtg: number | null; checkedAt: string; error: string | null }
@@ -31,6 +43,9 @@ type LoggedRequest = {
   reference: string | null
   amountHtg: number
   choice: string | null
+  letterType: PrefundingLetterKind
+  bankName: string | null
+  transactionNumber: string | null
   status: 'generated' | 'sent' | 'completed' | 'cancelled'
   createdAt: string | null
   createdByEmail: string | null
@@ -44,6 +59,8 @@ type PlanResponse = {
   plan: PrefundingPlan
   balance: BalanceReading
   contacts: { to: string[]; cc: string[]; from: string }
+  letterSettings: PrefundingLetterSettings
+  letterDefaults: PrefundingLetterSettings
   requests: LoggedRequest[]
 }
 type GeneratedEmail = {
@@ -52,8 +69,19 @@ type GeneratedEmail = {
   from: string
   subject: string
   body: string
+  attachments: string[]
   gmailUrl: string
   mailtoUrl: string
+}
+type GeneratedRequest = {
+  id: string
+  reference: string
+  amountHtg: number
+  letterType: PrefundingLetterKind
+  bankName: string | null
+  transactionNumber: string | null
+  email: GeneratedEmail
+  letter: { fileName: string; missing: string[]; url: string }
 }
 
 const BUCKET_LABEL: Record<PlanBucket, string> = {
@@ -98,11 +126,14 @@ export function MoncashFundingClient() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  const [letterType, setLetterType] = useState<PrefundingLetterKind>('merchant_transfer')
+  const [bankId, setBankId] = useState<string>('')
+  const [txn, setTxn] = useState('')
   const [choice, setChoice] = useState<'minimum' | 'recommended' | 'custom'>('recommended')
   const [custom, setCustom] = useState('')
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
-  const [generated, setGenerated] = useState<{ id: string; reference: string; amountHtg: number; email: GeneratedEmail } | null>(null)
+  const [generated, setGenerated] = useState<GeneratedRequest | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [rowBusy, setRowBusy] = useState<string | null>(null)
   const [rowError, setRowError] = useState<string | null>(null)
@@ -137,19 +168,26 @@ export function MoncashFundingClient() {
     return Number(custom.replace(/[\s,]/g, ''))
   }, [plan, choice, custom])
 
+  const isBank = letterType === 'bank_transfer'
+
   const amountError = useMemo(() => {
     if (!plan) return null
     if (choice === 'custom') {
       if (!custom.trim()) return null
+      if (isBank) {
+        return Number.isInteger(chosenAmount) && chosenAmount > 0 ? null : 'Enter the amount wired, in whole gourdes.'
+      }
       const v = validateRequestAmount(chosenAmount, plan)
       return v.ok ? null : v.error
     }
-    if (choice === 'minimum' && minOverMax) return 'The minimum is more than can safely be moved now. Use a custom amount up to the maximum.'
+    if (choice === 'minimum' && minOverMax && !isBank) return 'The minimum is more than can safely be moved now. Use a custom amount up to the maximum.'
     if (!(chosenAmount > 0)) return 'Nothing to request.'
     return null
-  }, [plan, choice, custom, chosenAmount, minOverMax])
+  }, [plan, choice, custom, chosenAmount, minOverMax, isBank])
 
-  const canGenerate = !!plan && !blocking && !generating && chosenAmount > 0 && !amountError
+  const bankError = isBank ? (!bankId ? 'Choose the Digicel bank account you wired to.' : !isValidTransactionNumber(txn.trim()) ? 'Enter the transaction number from the bank receipt.' : null) : null
+
+  const canGenerate = !!plan && !blocking && !generating && chosenAmount > 0 && !amountError && !bankError
 
   async function generate() {
     if (!plan || !canGenerate) return
@@ -160,11 +198,25 @@ export function MoncashFundingClient() {
       const res = await fetch('/api/admin/moncash-funding/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(choice === 'custom' ? { choice, amountHtg: chosenAmount } : { choice }),
+        body: JSON.stringify({
+          choice,
+          ...(choice === 'custom' ? { amountHtg: chosenAmount } : {}),
+          letterType,
+          ...(isBank ? { bankId, transactionNumber: txn.trim() } : {}),
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json?.ok) throw new Error(json?.error || `HTTP ${res.status}`)
-      setGenerated({ id: json.request.id, reference: json.request.reference, amountHtg: json.request.amountHtg, email: json.email })
+      setGenerated({
+        id: json.request.id,
+        reference: json.request.reference,
+        amountHtg: json.request.amountHtg,
+        letterType: json.request.letterType,
+        bankName: json.request.bankName,
+        transactionNumber: json.request.transactionNumber,
+        email: json.email,
+        letter: json.letter,
+      })
       load()
     } catch (e: any) {
       setGenerateError(String(e?.message || e))
@@ -306,13 +358,81 @@ export function MoncashFundingClient() {
         </>
       )}
 
-      {/* ── Request ── */}
-      {!plan.nothingDue && (
+      {/* ── Request: shown even when nothing is due (a bank top-up is still possible) ── */}
         <>
-      <ConsoleSection>Request a transfer from Digicel</ConsoleSection>
+      <ConsoleSection>Request a top-up from Digicel</ConsoleSection>
       <ConsolePanel className="px-5 py-4">
-        <fieldset className="space-y-2">
-          <legend className="sr-only">Amount</legend>
+        {/* 1. Letter type */}
+        <fieldset>
+          <legend className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Letter</legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {(['merchant_transfer', 'bank_transfer'] as const).map((k) => (
+              <label
+                key={k}
+                className={`flex cursor-pointer gap-3 rounded px-4 py-3 text-[13px] ${letterType === k ? 'bg-console-raise text-console-text' : 'bg-console-ground text-console-mut hover:text-console-text'}`}
+              >
+                <input
+                  type="radio"
+                  name="letter-type"
+                  value={k}
+                  checked={letterType === k}
+                  onChange={() => setLetterType(k)}
+                  className="mt-0.5 accent-white"
+                />
+                <span>
+                  <span className="block font-semibold">{PREFUNDING_LETTER_KINDS[k].label}</span>
+                  <span className="mt-0.5 block text-[12px] leading-relaxed text-console-faint">
+                    {k === 'merchant_transfer'
+                      ? `Digicel debits the MonCash merchant account and credits ${data.letterSettings.companyName} PREFUNDED No. ${data.letterSettings.prefundedAccountNumber}.`
+                      : 'You already wired the money to a Digicel bank account; Digicel credits the prefunded account. The receipt goes with the letter.'}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {letterType === 'merchant_transfer' && !data.letterSettings.merchantAccountNumber && (
+          <p className="mt-3 text-[12px] text-console-amber">
+            The merchant account number is not set, so the letter prints a blank line where it goes. Fill it in by hand, or
+            set it in Letter settings below before downloading.
+          </p>
+        )}
+
+        {isBank && (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <label className="block text-[12px] text-console-mut">
+              Digicel account you wired to
+              <select
+                value={bankId}
+                onChange={(e) => setBankId(e.target.value)}
+                className="mt-1 w-full rounded bg-console-ground px-3 py-2 text-[13.5px] text-console-text focus:outline-none focus:ring-2 focus:ring-console-mut"
+              >
+                <option value="">Choose a bank…</option>
+                {DIGICEL_BANK_ACCOUNTS.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.bank} · {b.accountNumber} · {b.accountName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-[12px] text-console-mut">
+              Transaction number (from the receipt)
+              <ConsoleInput className="mt-1" value={txn} onChange={(e) => setTxn(e.target.value)} placeholder="e.g. FT26299ABC12" />
+            </label>
+            <div className="rounded bg-console-ground px-4 py-3 text-[12px] leading-relaxed text-console-mut md:col-span-2">
+              <span className="font-semibold text-console-text">Before you send:</span> the wire&apos;s description must end with{' '}
+              <span className="label-mono text-console-text">{bankTransferDescription(data.letterSettings.companyName)}</span>, and the
+              bank receipt must be attached to the email with the letter. Otherwise Digicel reverses the deposit at your cost.
+            </div>
+          </div>
+        )}
+
+        {/* 2. Amount */}
+        <fieldset className="mt-5 space-y-2">
+          <legend className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+            {isBank ? 'Amount wired' : 'Amount'}
+          </legend>
           {(['minimum', 'recommended', 'custom'] as const).map((c) => (
             <label key={c} className="flex cursor-pointer items-center gap-3 text-[13px] text-console-text">
               <input
@@ -327,7 +447,11 @@ export function MoncashFundingClient() {
               {c === 'custom' ? (
                 <ConsoleInput
                   inputMode="numeric"
-                  placeholder={`${Math.min(plan.minimum.amountHtg, plan.maximum.amountHtg).toLocaleString('en-US')} – ${plan.maximum.amountHtg.toLocaleString('en-US')}`}
+                  placeholder={
+                    isBank
+                      ? 'Amount on the receipt'
+                      : `${Math.min(plan.minimum.amountHtg, plan.maximum.amountHtg).toLocaleString('en-US')} – ${plan.maximum.amountHtg.toLocaleString('en-US')}`
+                  }
                   value={custom}
                   onFocus={() => setChoice('custom')}
                   onChange={(e) => setCustom(e.target.value)}
@@ -343,24 +467,42 @@ export function MoncashFundingClient() {
           ))}
         </fieldset>
         {amountError && <p className="mt-2 text-[12px] text-console-amber">{amountError}</p>}
+        {bankError && (bankId || txn) && <p className="mt-2 text-[12px] text-console-amber">{bankError}</p>}
         <p className="mt-3 text-[12px] text-console-faint">
-          Custom amounts must be a multiple of {plan.settings.roundingStepHtg.toLocaleString('en-US')} HTG, at least the
-          minimum and at most the maximum. Sent to {data.contacts.to.join(', ')}
-          {data.contacts.cc.length ? `, cc ${data.contacts.cc.join(', ')}` : ''}, from {data.contacts.from}.
+          {isBank
+            ? 'For a bank transfer, use the exact amount on the receipt, in whole gourdes.'
+            : `Custom amounts must be a multiple of ${plan.settings.roundingStepHtg.toLocaleString('en-US')} HTG, at least the minimum and at most the maximum.`}{' '}
+          Sent to {data.contacts.to.join(', ')}
+          {data.contacts.cc.length ? `, cc ${data.contacts.cc.join(', ')}` : ''}, from {data.contacts.from}. Send before{' '}
+          {plan.settings.cutoffHourHaiti > 12 ? plan.settings.cutoffHourHaiti - 12 : plan.settings.cutoffHourHaiti} PM Haiti time.
         </p>
-        <ConsoleButton variant="primary" className="mt-4" onClick={generate} disabled={!canGenerate}>
-          {generating ? 'Generating…' : `Generate request${chosenAmount > 0 && !amountError ? ` for ${formatHtg(chosenAmount)}` : ''}`}
+        {/* Once generated, Download is the one loud action; Generate steps back. */}
+        <ConsoleButton variant={generated ? 'quiet' : 'primary'} className="mt-4" onClick={generate} disabled={!canGenerate}>
+          {generating ? 'Generating…' : `Generate letter${chosenAmount > 0 && !amountError ? ` for ${formatHtg(chosenAmount)}` : ''}`}
         </ConsoleButton>
         {blocking && <p className="mt-2 text-[12px] text-console-red">{blocking.message}</p>}
         {generateError && <p className="mt-2 text-[12px] text-console-red">{generateError}</p>}
 
         {generated && (
           <div className="mt-5 rounded bg-console-ground px-4 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="label-mono text-[12px] text-console-mut">
-                {generated.reference} · {formatHtg(generated.amountHtg)} · logged, not sent
-              </span>
-              <div className="flex flex-wrap gap-2">
+            <span className="label-mono text-[12px] text-console-mut">
+              {generated.reference} · {formatHtg(generated.amountHtg)} · {PREFUNDING_LETTER_KINDS[generated.letterType].short} · logged, not sent
+            </span>
+
+            <ol className="mt-3 space-y-3 text-[13px] text-console-text">
+              <li className="flex flex-wrap items-center gap-3">
+                <span className="label-mono w-5 text-console-faint">1</span>
+                <a
+                  href={generated.letter.url}
+                  download={generated.letter.fileName}
+                  className="rounded bg-console-text px-4 py-2 text-[13px] font-bold text-console-ground hover:opacity-90"
+                >
+                  Download letter (PDF)
+                </a>
+                <span className="text-[12px] text-console-faint">Print, sign, put the seal in its own box (never on the signature), scan.</span>
+              </li>
+              <li className="flex flex-wrap items-center gap-3">
+                <span className="label-mono w-5 text-console-faint">2</span>
                 <a
                   href={generated.email.gmailUrl}
                   target="_blank"
@@ -372,18 +514,31 @@ export function MoncashFundingClient() {
                 <a href={generated.email.mailtoUrl} className="rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-mut hover:text-console-text">
                   Mail app
                 </a>
-                <ConsoleButton onClick={() => copy('all', `Objet : ${generated.email.subject}\n\n${generated.email.body}`)}>
-                  {copied === 'all' ? 'Copied' : 'Copy all'}
-                </ConsoleButton>
-              </div>
-            </div>
-            <dl className="mt-3 space-y-1 text-[12.5px]">
+                <span className="text-[12px] text-console-faint">Opens as {generated.email.from}; nothing is sent until you press Send.</span>
+              </li>
+              <li className="flex items-baseline gap-3">
+                <span className="label-mono w-5 shrink-0 text-console-faint">3</span>
+                <span className="min-w-0 break-words">
+                  Attach {generated.email.attachments.length > 1 ? 'both' : 'the signed letter'}:{' '}
+                  <span className="text-console-mut">{generated.email.attachments.join(' + ')}</span>
+                </span>
+              </li>
+            </ol>
+
+            {generated.letter.missing.includes('merchantAccountNumber') && (
+              <p className="mt-3 text-[12px] text-console-amber">
+                This letter has a blank line for the merchant account number. Write it in before signing, or set it in Letter
+                settings and download again.
+              </p>
+            )}
+
+            <dl className="mt-4 space-y-1 text-[12.5px]">
               <Row label="To" value={generated.email.to.join(', ')} />
               <Row label="Cc" value={generated.email.cc.join(', ') || '—'} />
               <Row label="From" value={generated.email.from} />
               <Row label="Subject" value={generated.email.subject} onCopy={() => copy('subject', generated.email.subject)} copied={copied === 'subject'} />
             </dl>
-            <pre className="mt-3 max-h-[420px] overflow-auto whitespace-pre-wrap rounded bg-console-panel px-4 py-3 font-sans text-[13px] leading-relaxed text-console-text">
+            <pre className="mt-3 max-h-[320px] overflow-auto whitespace-pre-wrap rounded bg-console-panel px-4 py-3 font-sans text-[13px] leading-relaxed text-console-text">
               {generated.email.body}
             </pre>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -393,14 +548,13 @@ export function MoncashFundingClient() {
               </ConsoleButton>
             </div>
             <p className="mt-2 text-[12px] text-console-faint">
-              Tikèm does not send this email. Check the account numbers and signatories before sending; the request is
-              confirmed completed when the pool balance rises.
+              Tikèm does not send this email. The letter is dated the day you download it; the request is confirmed completed
+              when the pool balance rises.
             </p>
           </div>
         )}
       </ConsolePanel>
         </>
-      )}
 
       {/* Deadlines and breakdown say nothing new when nothing is due. */}
       {!plan.nothingDue && (
@@ -508,11 +662,12 @@ export function MoncashFundingClient() {
         <EmptyPanel title="No requests" line="No Digicel request has been generated yet." />
       ) : (
         <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-[13px]">
+          <table className="w-full min-w-[900px] text-left text-[13px]">
             <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
               <tr>
                 <th className="px-4 py-3 font-normal">Reference</th>
                 <th className="px-4 py-3 text-right font-normal">Amount</th>
+                <th className="px-4 py-3 font-normal">Letter</th>
                 <th className="px-4 py-3 font-normal">Generated</th>
                 <th className="px-4 py-3 font-normal">Status</th>
                 <th className="px-4 py-3 font-normal" />
@@ -523,6 +678,14 @@ export function MoncashFundingClient() {
                 <tr key={r.id} className="align-top hover:bg-console-raise">
                   <td className="label-mono px-4 py-2 text-[12px] text-console-text">{r.reference || r.id}</td>
                   <td className="label-mono px-4 py-2 text-right tabular-nums">{formatHtg(r.amountHtg)}</td>
+                  <td className="px-4 py-2 text-console-text">
+                    {PREFUNDING_LETTER_KINDS[r.letterType]?.short || PREFUNDING_LETTER_KINDS.merchant_transfer.short}
+                    {r.letterType === 'bank_transfer' && (
+                      <div className="label-mono text-[11px] text-console-faint">
+                        {r.bankName || '—'} · txn {r.transactionNumber || '—'}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2 text-console-mut">
                     {haitiDateTime(r.createdAt)}
                     <div className="text-[11px] text-console-faint">{r.createdByEmail || ''}</div>
@@ -538,6 +701,14 @@ export function MoncashFundingClient() {
                   </td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
+                      {r.status !== 'cancelled' && (
+                        <a
+                          href={`/api/admin/moncash-funding/requests/${r.id}/letter`}
+                          className="rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-mut hover:text-console-text"
+                        >
+                          PDF
+                        </a>
+                      )}
                       {r.status === 'generated' && (
                         <ConsoleButton onClick={() => mark(r.id, 'sent')} disabled={rowBusy === r.id}>
                           Mark sent
@@ -561,6 +732,10 @@ export function MoncashFundingClient() {
           </table></div>
         </ConsolePanel>
       )}
+
+      {/* ── Letter settings ── */}
+      <ConsoleSection>Letter settings</ConsoleSection>
+      <LetterSettingsForm initial={data.letterSettings} defaults={data.letterDefaults} onSaved={load} />
     </div>
   )
 }
