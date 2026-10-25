@@ -1921,5 +1921,33 @@
     "summaryJoined": "Inscrits",
     "summaryBought": "Ont acheté",
     "close": "Fermer"
+  },
+  "contactOrganizer": {
+    "open": "Écrire à l'organisateur",
+    "title": "Écrire à l'organisateur",
+    "aboutEvent": "À propos de {{event}}",
+    "topicLabel": "C’est à quel sujet ?",
+    "topics": {
+      "event": "L'événement",
+      "ticket": "Mon billet",
+      "other": "Autre"
+    },
+    "messagePlaceholder": "Message",
+    "send": "Envoyer le message",
+    "sending": "Envoi...",
+    "sentTitle": "Message envoyé",
+    "sentBody": "L'organisateur a été prévenu. Sa réponse arrivera dans vos notifications et par e-mail.",
+    "sentBodyNamed": "L'organisateur de {{event}} a été prévenu. Sa réponse arrivera dans vos notifications et par e-mail.",
+    "viewMessages": "Voir vos messages",
+    "done": "Terminé",
+    "errors": {
+      "generic": "Impossible d'envoyer votre message. Réessayez.",
+      "unauthorized": "Connectez-vous pour écrire à l'organisateur.",
+      "rate_limited": "Vous avez déjà envoyé plusieurs messages à cet organisateur. Laissez-lui un peu de temps pour répondre.",
+      "self_contact": "Vous êtes l'organisateur de cet événement.",
+      "event_not_found": "Événement introuvable.",
+      "no_organizer": "Cet événement n'a pas d'organisateur à contacter.",
+      "message_too_long": "Restez sous 1000 caractères."
+    }
   }
 }

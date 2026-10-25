@@ -1921,5 +1921,33 @@
     "summaryJoined": "Antre",
     "summaryBought": "Achte tikè",
     "close": "Fèmen"
+  },
+  "contactOrganizer": {
+    "open": "Ekri òganizatè a",
+    "title": "Ekri òganizatè a",
+    "aboutEvent": "Konsènan {{event}}",
+    "topicLabel": "Se sou ki sa?",
+    "topics": {
+      "event": "Evènman an",
+      "ticket": "Tikè mwen",
+      "other": "Lòt"
+    },
+    "messagePlaceholder": "Mesaj",
+    "send": "Voye mesaj la",
+    "sending": "N ap voye...",
+    "sentTitle": "Mesaj voye",
+    "sentBody": "Òganizatè a resevwa avi a. Repons li ap rive nan notifikasyon ou yo ak pa imèl.",
+    "sentBodyNamed": "Òganizatè {{event}} resevwa avi a. Repons li ap rive nan notifikasyon ou yo ak pa imèl.",
+    "viewMessages": "Wè mesaj ou yo",
+    "done": "Fini",
+    "errors": {
+      "generic": "Nou pa t ka voye mesaj ou a. Eseye ankò.",
+      "unauthorized": "Konekte pou ekri òganizatè a.",
+      "rate_limited": "Ou deja voye plizyè mesaj bay òganizatè sa a. Ba li yon ti tan pou l reponn.",
+      "self_contact": "Se ou ki òganizatè evènman sa a.",
+      "event_not_found": "Nou pa jwenn evènman an.",
+      "no_organizer": "Evènman sa a pa gen òganizatè pou kontakte.",
+      "message_too_long": "Pa depase 1000 karaktè."
+    }
   }
 }
