@@ -1562,7 +1562,11 @@
     "privacy_note_other": "{{count}} people are going. Attendees keep their attendance private.",
     "person_plural": "{{count}} people",
     "friend_going_plural": "{{count}} friends going",
-    "privacy_note_plural": "{{count}} people are going. Attendees keep their attendance private."
+    "privacy_note_plural": "{{count}} people are going. Attendees keep their attendance private.",
+    "lead_only": "{{name}} is going",
+    "lead_and_one": "{{name}} and 1 other going",
+    "lead_and_others_vague": "{{name}} and others are going",
+    "privacy_note_vague": "Attendees keep their attendance private."
   },
   "follow": {
     "loading": "Loading...",

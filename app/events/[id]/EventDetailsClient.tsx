@@ -696,6 +696,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           eventId={event.id}
           currentUserId={user?.id || null}
           visibility={guestlistVisibilityFrom(event as any)}
+          capacity={(event as any).total_tickets}
           className="mt-8"
         />
 

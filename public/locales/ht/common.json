@@ -1562,7 +1562,11 @@
     "privacy_note_other": "{{count}} moun ap ale. Moun k ap patisipe yo kenbe patisipasyon yo prive.",
     "person_plural": "{{count}} moun",
     "friend_going_plural": "{{count}} zanmi ap ale",
-    "privacy_note_plural": "{{count}} moun ap ale. Moun k ap patisipe yo kenbe patisipasyon yo prive."
+    "privacy_note_plural": "{{count}} moun ap ale. Moun k ap patisipe yo kenbe patisipasyon yo prive.",
+    "lead_only": "{{name}} ap vini",
+    "lead_and_one": "{{name}} ak 1 lòt moun ap vini",
+    "lead_and_others_vague": "{{name}} ak lòt moun ap vini",
+    "privacy_note_vague": "Moun k ap patisipe yo kenbe patisipasyon yo prive."
   },
   "follow": {
     "loading": "Chajman...",

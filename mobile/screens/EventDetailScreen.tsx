@@ -1123,7 +1123,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* Who's Going: faces, a count, or nothing, per the organizer's
               guest-list setting (same resolver as the web event page). */}
-          <WhosGoing eventId={eventId} visibility={guestlistVisibilityFrom(event as any)} />
+          <WhosGoing
+            eventId={eventId}
+            visibility={guestlistVisibilityFrom(event as any)}
+            capacity={event.total_tickets}
+          />
 
           {/* Bottom padding so the floating CTA never overlaps page content */}
           <View style={{ height: 160 }} />

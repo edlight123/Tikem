@@ -114,6 +114,9 @@ export default {
     goingCount: '{count} moun ap ale',
     youBadge: 'Ou',
     leadAndOthers: '{name} ak {count} lòt moun ap vini',
+    leadAndOne: '{name} ak 1 lòt moun ap vini',
+    leadAndOthersVague: '{name} ak lòt moun ap vini',
+    leadOnly: '{name} ap vini',
     privacyNoteOne: '{count} moun ap ale. Moun k ap patisipe yo kenbe patisipasyon yo prive.',
     privacyNoteOther: '{count} moun ap ale. Moun k ap patisipe yo kenbe patisipasyon yo prive.',
   },
@@ -2742,6 +2745,8 @@ export default {
       fallbackTitle: 'Koute sou Spotify',
       onSpotify: 'Sou Spotify',
       open: 'Jwe l sou Spotify',
+      play: 'Jwe',
+      fullSong: 'Tout chante a sou Spotify',
     },
     onlineEvent: 'Evènman anliy',
     // Prefiks sèlman — konpoze kòm `${startsIn} 2d 11h` nan CountdownTimer.

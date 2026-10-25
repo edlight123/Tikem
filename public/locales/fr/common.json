@@ -1562,7 +1562,11 @@
     "privacy_note_other": "{{count}} personnes y vont. Les participants gardent leur présence privée.",
     "person_plural": "{{count}} personnes",
     "friend_going_plural": "{{count}} amis y vont",
-    "privacy_note_plural": "{{count}} personnes y vont. Les participants gardent leur présence privée."
+    "privacy_note_plural": "{{count}} personnes y vont. Les participants gardent leur présence privée.",
+    "lead_only": "{{name}} y va",
+    "lead_and_one": "{{name}} et 1 autre y vont",
+    "lead_and_others_vague": "{{name}} et d'autres y vont",
+    "privacy_note_vague": "Les participants gardent leur présence privée."
   },
   "follow": {
     "loading": "Chargement...",

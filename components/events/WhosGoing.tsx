@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'
 import type { PublicUserSummary } from '@/types/social'
 import type { GuestlistVisibility } from '@/lib/guestlistVisibility'
+import { shouldShowGoingCount } from '@/lib/socialProof'
 
 interface WhosGoingProps {
   eventId: string
@@ -24,6 +25,9 @@ interface WhosGoingProps {
    * above the footer on every quiet event page. Same trap the venue map hit.
    */
   className?: string
+  /** Ticket capacity: the count only prints once half of it is taken
+   *  (shouldShowGoingCount). Unset means faces and names, no number. */
+  capacity?: number | null
 }
 
 interface SocialData {
@@ -56,6 +60,7 @@ export default function WhosGoing({
   currentUserId,
   visibility = 'faces',
   className = '',
+  capacity,
 }: WhosGoingProps) {
   const { t } = useTranslation('common')
   const [data, setData] = useState<SocialData | null>(null)
@@ -105,10 +110,23 @@ export default function WhosGoing({
   }
 
   const { totalGoing, viewerIsGoing, friendsGoing, publicGoing } = data
+  // A small number talks people out of going, so it only prints once the
+  // event is at least half full (same rule as the app).
+  const showCount = shouldShowGoingCount(totalGoing, capacity)
 
   // 'count' — the number, and nothing that identifies anyone. No avatars, no
   // names, no friend row: those are exactly what this mode exists to withhold.
   if (visibility === 'count') {
+    if (!showCount && !viewerIsGoing) return null
+    if (!showCount) {
+      return (
+        <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
+          <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
+            {t('whos_going.youre_going', "You're going")}
+          </h2>
+        </div>
+      )
+    }
     return (
       <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
         <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
@@ -125,7 +143,9 @@ export default function WhosGoing({
 
   const pile = publicGoing.slice(0, 8)
   const namedCount = friendsGoing.length + pile.length
-  const remaining = Math.max(0, totalGoing - namedCount - (viewerIsGoing ? 1 : 0))
+  const remaining = showCount ? Math.max(0, totalGoing - namedCount - (viewerIsGoing ? 1 : 0)) : 0
+  // Nothing to show: no faces, not the viewer, and the number held back.
+  if (!showCount && !viewerIsGoing && friendsGoing.length === 0 && pile.length === 0) return null
 
   return (
     <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
@@ -133,12 +153,14 @@ export default function WhosGoing({
         <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
           {t('whos_going.title', "Who's going")}
         </h2>
-        <span className="text-sm font-semibold text-white/50">
-          {t(totalGoing === 1 ? 'whos_going.person' : 'whos_going.person_plural', {
-            count: totalGoing,
-            defaultValue: totalGoing === 1 ? '{{count}} person' : '{{count}} people',
-          })}
-        </span>
+        {showCount && (
+          <span className="text-sm font-semibold text-white/50">
+            {t(totalGoing === 1 ? 'whos_going.person' : 'whos_going.person_plural', {
+              count: totalGoing,
+              defaultValue: totalGoing === 1 ? '{{count}} person' : '{{count}} people',
+            })}
+          </span>
+        )}
       </div>
 
       {/* Friends going */}
@@ -195,12 +217,25 @@ export default function WhosGoing({
               const lead = friendsGoing[0]?.displayName || pile[0]?.displayName
               const others = Math.max(0, totalGoing - 1)
               if (viewerIsGoing) return t('whos_going.youre_going', "You're going")
+              if (lead && others === 0)
+                return t('whos_going.lead_only', { name: lead.split(' ')[0], defaultValue: '{{name}} is going' })
+              if (lead && !showCount)
+                return t('whos_going.lead_and_others_vague', {
+                  name: lead.split(' ')[0],
+                  defaultValue: '{{name}} and others are going',
+                })
+              if (lead && others === 1)
+                return t('whos_going.lead_and_one', {
+                  name: lead.split(' ')[0],
+                  defaultValue: '{{name}} and 1 other going',
+                })
               if (lead && others > 0)
                 return t('whos_going.lead_and_others', {
                   name: lead.split(' ')[0],
                   count: others,
                   defaultValue: '{{name}} and {{count}} others going',
                 })
+              if (!showCount) return null
               return t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' })
             })()}
           </p>
@@ -212,13 +247,15 @@ export default function WhosGoing({
         <div className="flex items-start gap-2 text-sm text-white/50">
           <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <p>
-            {t(totalGoing === 1 ? 'whos_going.privacy_note' : 'whos_going.privacy_note_plural', {
-              count: totalGoing,
-              defaultValue:
-                totalGoing === 1
-                  ? '{{count}} person is going. Attendees keep their attendance private.'
-                  : '{{count}} people are going. Attendees keep their attendance private.',
-            })}{' '}
+            {showCount
+              ? t(totalGoing === 1 ? 'whos_going.privacy_note' : 'whos_going.privacy_note_plural', {
+                  count: totalGoing,
+                  defaultValue:
+                    totalGoing === 1
+                      ? '{{count}} person is going. Attendees keep their attendance private.'
+                      : '{{count}} people are going. Attendees keep their attendance private.',
+                })
+              : t('whos_going.privacy_note_vague', 'Attendees keep their attendance private.')}{' '}
             {currentUserId && (
               <Link href="/profile" className="text-brand-300 hover:underline font-medium">
                 {t('whos_going.show_going_cta', "Show that you're going")}

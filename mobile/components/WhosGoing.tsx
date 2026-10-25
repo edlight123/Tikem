@@ -10,6 +10,7 @@ import { useI18n } from '../contexts/I18nContext';
 import SectionHeader from './SectionHeader';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
 import type { EventSocialAttendance, PublicUserSummary } from '../types/social';
+import { shouldShowGoingCount } from '../lib/socialProof';
 
 interface WhosGoingProps {
   eventId: string;
@@ -21,6 +22,9 @@ interface WhosGoingProps {
    * endpoint returns who is attending).
    */
   visibility?: GuestlistVisibility;
+  /** The event's ticket capacity: the count only prints once half of it is
+   *  taken (shouldShowGoingCount). Unset means no count, faces only. */
+  capacity?: number | null;
 }
 
 /** Faces sit in a ring of the canvas colour, so the pile reads as cut-outs
@@ -47,7 +51,7 @@ function Avatar({ user, size = 44, ring }: { user: PublicUserSummary; size?: num
   );
 }
 
-export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingProps) {
+export default function WhosGoing({ eventId, visibility = 'faces', capacity }: WhosGoingProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
@@ -94,13 +98,19 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
 
   const { totalGoing, viewerIsGoing, friendsGoing, publicGoing } = data;
 
-  // The headline number, set large in the serif: the count IS the social proof.
-  const headline = (
-    <Text style={styles.headline}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>
-  );
+  // A small number talks people out of going, so it only prints once the
+  // event is at least half full. Below that: faces and names, no number.
+  const showCount = shouldShowGoingCount(totalGoing, capacity);
 
-  // 'count': the number and nothing that identifies anyone.
+  // The headline number, set large in the serif: the count IS the social proof.
+  const headline = showCount ? (
+    <Text style={styles.headline}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>
+  ) : null;
+
+  // 'count': the number and nothing that identifies anyone. With the number
+  // held back there is nothing left to show but the viewer's own RSVP.
   if (visibility === 'count') {
+    if (!showCount && !viewerIsGoing) return null;
     return (
       <View style={styles.section}>
         {heading}
@@ -112,11 +122,12 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
 
   const pile = publicGoing.slice(0, 5);
   const named = friendsGoing.length + pile.length + (viewerIsGoing ? 1 : 0);
-  const remaining = Math.max(0, totalGoing - named);
+  const remaining = showCount ? Math.max(0, totalGoing - named) : 0;
 
   // Nobody shows a face: a private list. One quiet filled row, not a box with
   // a lonely "You" bubble in it.
   if (friendsGoing.length === 0 && pile.length === 0) {
+    if (!showCount && !viewerIsGoing) return null;
     return (
       <View style={styles.section}>
         {heading}
@@ -126,9 +137,11 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.privateTitle}>
-              {viewerIsGoing
+              {viewerIsGoing && showCount
                 ? `${t('whosGoing.youreGoing')} · ${t('whosGoing.goingCount', { count: totalGoing })}`
-                : t('whosGoing.goingCount', { count: totalGoing })}
+                : viewerIsGoing
+                  ? t('whosGoing.youreGoing')
+                  : t('whosGoing.goingCount', { count: totalGoing })}
             </Text>
             <Text style={styles.privateSub}>{t('whosGoing.privateSub')}</Text>
           </View>
@@ -145,9 +158,15 @@ export default function WhosGoing({ eventId, visibility = 'faces' }: WhosGoingPr
       ? t(friendsGoing.length === 1 ? 'whosGoing.friendGoingOne' : 'whosGoing.friendGoingOther', {
           count: friendsGoing.length,
         })
-      : lead && totalGoing > 1
-        ? t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 })
-        : null;
+      : !lead
+        ? null
+        : totalGoing <= 1
+          ? t('whosGoing.leadOnly', { name: lead })
+          : !showCount
+            ? t('whosGoing.leadAndOthersVague', { name: lead })
+            : totalGoing === 2
+              ? t('whosGoing.leadAndOne', { name: lead })
+              : t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 });
 
   const faces = [...friendsGoing, ...pile].slice(0, 5);
 

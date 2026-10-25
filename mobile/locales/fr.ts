@@ -142,6 +142,9 @@ export default {
     goingCount: '{count} y vont',
     youBadge: 'Vous',
     leadAndOthers: '{name} et {count} autres y vont',
+    leadAndOne: '{name} et 1 autre y vont',
+    leadAndOthersVague: "{name} et d'autres y vont",
+    leadOnly: '{name} y va',
     privacyNoteOne: '{count} personne y va. Les participants gardent leur présence privée.',
     privacyNoteOther: '{count} personnes y vont. Les participants gardent leur présence privée.',
   },
@@ -2774,6 +2777,8 @@ export default {
       fallbackTitle: 'Écouter sur Spotify',
       onSpotify: 'Sur Spotify',
       open: 'Écouter sur Spotify',
+      play: 'Écouter',
+      fullSong: 'Titre complet sur Spotify',
     },
     onlineEvent: 'Événement en ligne',
     // Préfixe uniquement — composé en `${startsIn} 2d 11h` par CountdownTimer.
