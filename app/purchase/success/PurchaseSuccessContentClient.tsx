@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, QrCode } from 'lucide-react'
+import { CheckCircle2, Instagram, QrCode } from 'lucide-react'
 import { StatusChip } from '@/components/ui/kit'
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL, openInstagram } from '@/lib/instagram'
 
 type Props = {
   hasTicket: boolean
@@ -172,6 +173,25 @@ export default function PurchaseSuccessContentClient(props: Props) {
             {t('tickets:purchase_success.next_steps.arrive_early')}
           </li>
         </ul>
+      </div>
+
+      {/* Follow Tikèm: right after a ticket is when people are most likely to
+          follow for the next one. Opens the Instagram app on a phone. */}
+      <div className="mt-4 bg-white/[0.055] rounded p-4 md:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="font-display italic !text-[24px] !leading-snug text-white">{INSTAGRAM_HANDLE}</h3>
+          <p className="mt-1 text-[13px] md:text-sm text-white/60">{t('tickets:purchase_success.follow_line')}</p>
+        </div>
+        <a
+          href={INSTAGRAM_URL}
+          onClick={openInstagram}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 px-6 rounded bg-white/[0.08] text-white text-base font-semibold hover:bg-white/[0.12] transition-colors"
+        >
+          <Instagram className="h-5 w-5" aria-hidden="true" />
+          {t('tickets:purchase_success.follow_cta')}
+        </a>
       </div>
     </div>
   )

@@ -9,7 +9,7 @@ import { Instagram } from 'lucide-react'
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company.
-const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/'
+import { INSTAGRAM_URL, openInstagram } from '@/lib/instagram'
 const EDLIGHT_LABS_URL = 'https://www.edlight.org/labs'
 
 interface FooterLink {
@@ -122,6 +122,7 @@ export default function Footer() {
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-white/40">
             <a
               href={INSTAGRAM_URL}
+              onClick={openInstagram}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t('footer.instagram', { defaultValue: 'Tikèm on Instagram' })}

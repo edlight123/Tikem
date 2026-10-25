@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { openTikemInstagram } from '../lib/instagram';
 import {
   ActivityIndicator,
   Linking,
@@ -74,7 +75,6 @@ import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 // technology division of EdLight Initiative, not a separate company. The
 // https Instagram URL is a universal link, so it opens the Instagram app when
 // it is installed and the browser when it is not.
-const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/';
 const EDLIGHT_LABS_URL = 'https://www.edlight.org/labs';
 
 // The poster rail shows the newest few; "view all" opens the Tickets tab,
@@ -680,7 +680,7 @@ export default function ProfileScreen() {
               icon={Instagram}
               label={t('profile.instagram')}
               role="link"
-              onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => {})}
+              onPress={openTikemInstagram}
               trailing={
                 <View style={styles.rowLeft}>
                   <Text style={styles.aboutHandle}>@tikem.co</Text>

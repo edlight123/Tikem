@@ -141,7 +141,9 @@
       "check_email": "Check your email for ticket confirmation and event details",
       "save_ticket": "Save your ticket to your phone for easy access at the event",
       "arrive_early": "Arrive early and present your QR code at the entrance"
-    }
+    },
+    "follow_line": "New events, lineups and ticket drops, first on Instagram.",
+    "follow_cta": "Follow on Instagram"
   },
   "refund_request": {
     "action": "Request a refund",

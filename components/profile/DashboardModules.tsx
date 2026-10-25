@@ -30,7 +30,7 @@ import { ProfileSection, Panel, PanelRows } from './ui'
  * help. ProfileClient decides where each one sits at each width.
  */
 
-const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/'
+import { INSTAGRAM_URL, openInstagram } from '@/lib/instagram'
 
 /* ------------------------------------------------------------------ */
 /* Organization                                                        */
@@ -335,7 +335,14 @@ export function RowList({
               <ChevronRight className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-white/60" aria-hidden />
             )
             return row.external ? (
-              <a key={row.href} href={row.href} target="_blank" rel="noopener noreferrer" className={ROW}>
+              <a
+                key={row.href}
+                href={row.href}
+                onClick={row.href === INSTAGRAM_URL ? openInstagram : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={ROW}
+              >
                 <RowBody icon={row.icon} label={row.label} description={row.description} />
                 {trailing}
               </a>

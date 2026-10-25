@@ -141,7 +141,9 @@
       "check_email": "Tcheke imel ou pou konfimasyon biyè a ak detay evènman an",
       "save_ticket": "Sove biyè ou sou telefòn ou pou ou jwenn li fasil jou evènman an",
       "arrive_early": "Rive bonè epi montre kòd QR ou nan antre a"
-    }
+    },
+    "follow_line": "Nouvo evènman, lineup ak tikè yo, an premye sou Instagram.",
+    "follow_cta": "Swiv nou sou Instagram"
   },
   "refund_request": {
     "action": "Mande yon ranbousman",

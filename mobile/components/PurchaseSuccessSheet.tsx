@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Linking,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { X, Ticket, Share2 } from 'lucide-react-native';
@@ -17,8 +16,7 @@ import { safeFormatForLanguage } from '../lib/dates';
 import { shareEvent } from '../lib/share';
 import FollowButton from './FollowButton';
 import AddToCalendarButton from './AddToCalendarButton';
-
-const INSTAGRAM_URL = 'https://www.instagram.com/tikem.co/';
+import { openTikemInstagram } from '../lib/instagram';
 
 interface PurchaseSuccessSheetProps {
   visible: boolean;
@@ -130,7 +128,7 @@ export default function PurchaseSuccessSheet({
                   when they are most likely to follow for the next one. */}
               <TouchableOpacity
                 style={styles.action}
-                onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => {})}
+                onPress={openTikemInstagram}
                 accessibilityRole="link"
                 accessibilityLabel={t('purchaseSuccess.instagram')}
               >

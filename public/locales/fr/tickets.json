@@ -141,7 +141,9 @@
       "check_email": "Vérifiez votre e-mail pour la confirmation du billet et les détails de l'événement",
       "save_ticket": "Enregistrez votre billet sur votre téléphone pour un accès facile le jour de l'événement",
       "arrive_early": "Arrivez tôt et présentez votre code QR à l'entrée"
-    }
+    },
+    "follow_line": "Nouveaux événements, line-ups et billets en avant-première sur Instagram.",
+    "follow_cta": "Suivre sur Instagram"
   },
   "refund_request": {
     "action": "Demander un remboursement",
