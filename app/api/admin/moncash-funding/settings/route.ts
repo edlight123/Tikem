@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, requireSuperAdmin } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
+import { sendOpsEmail } from '@/lib/payouts/prefunding-alerts-server'
 import { loadPrefundingSettings } from '@/lib/payouts/prefunding-plan-server'
 import {
   DEFAULT_DIGICEL_PREFUNDING_CONTACTS,
@@ -31,12 +32,34 @@ export async function GET() {
 }
 
 /**
+ * Fields printed on a money-movement letter or deciding where it is sent.
+ * Changing one could redirect a transfer, so saves are super-admin only, the
+ * audit log keeps before/after, and the ops list is emailed.
+ */
+const SENSITIVE_FIELDS = new Set([
+  'merchantAccountNumber',
+  'prefundedAccountNumber',
+  'prefundedAccountName',
+  'merchantAccountName',
+  'to',
+  'cc',
+  'fromEmail',
+  'signatoryName',
+  'signatoryTitle',
+  'companyName',
+])
+
+const escapeHtml = (v: unknown) =>
+  String(Array.isArray(v) ? v.join(', ') : v ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+
+/**
  * PUT the settings form. Validated in full (nothing saved unless every field
  * is valid), then merged into config/payouts.prefundingPlan.digicel; the rest
  * of config/payouts (prefunding, release rules…) is left untouched.
  */
 export async function PUT(request: NextRequest) {
-  const { user, error } = await requireAdmin()
+  // Super admin only: these values are printed on letters that move money.
+  const { user, error } = await requireSuperAdmin()
   if (error || !user) return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
 
   const parsed = parseLetterSettingsInput(await request.json().catch(() => null))
@@ -62,8 +85,23 @@ export async function PUT(request: NextRequest) {
       adminEmail: user.email || '',
       resourceId: 'config/payouts.prefundingPlan.digicel',
       resourceType: 'config',
-      details: { changed },
+      details: {
+        changed,
+        // Before/after for every changed field, so a redirected account is traceable.
+        diff: Object.fromEntries(changed.map((k) => [k, { before: before[k], after: parsed.value[k] }])),
+      },
     })
+
+    const sensitive = changed.filter((k) => SENSITIVE_FIELDS.has(String(k)))
+    if (sensitive.length) {
+      const rows = sensitive
+        .map((k) => `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(before[k])}</td><td>${escapeHtml(parsed.value[k])}</td></tr>`)
+        .join('')
+      await sendOpsEmail(
+        `MonCash funding letter settings changed by ${user.email || user.id}`,
+        `<p>${escapeHtml(user.email || user.id)} changed fields printed on Digicel funding letters. If this wasn't expected, check before sending any letter.</p><table border="1" cellpadding="6" style="border-collapse:collapse"><tr><th>Field</th><th>Before</th><th>After</th></tr>${rows}</table>`
+      ).catch((e) => console.error('[admin/moncash-funding/settings] alert failed', e))
+    }
 
     return adminOk({ settings: parsed.value, changed })
   } catch (e: any) {

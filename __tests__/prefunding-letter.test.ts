@@ -13,7 +13,15 @@ import fs from 'fs'
 import path from 'path'
 
 let authResult: { user: any; error: string | null } = { user: { id: 'admin1', email: 'a@x.co' }, error: null }
-jest.mock('@/lib/auth', () => ({ requireAdmin: async () => authResult }))
+let superResult: { user: any; error: string | null } = { user: { id: 'admin1', email: 'a@x.co' }, error: null }
+jest.mock('@/lib/auth', () => ({ requireAdmin: async () => authResult, requireSuperAdmin: async () => superResult }))
+const opsEmails: Array<{ subject: string; html: string }> = []
+jest.mock('@/lib/payouts/prefunding-alerts-server', () => ({
+  sendOpsEmail: async (subject: string, html: string) => {
+    opsEmails.push({ subject, html })
+    return { sent: 1, recipients: ['ops@x.co'] }
+  },
+}))
 
 const docs: Record<string, any> = {}
 const sets: Array<{ path: string; data: any; opts: any }> = []
@@ -316,15 +324,25 @@ describe('letter settings', () => {
     beforeEach(() => {
       sets.length = 0
       authResult = { user: { id: 'admin1', email: 'a@x.co' }, error: null }
+      superResult = { user: { id: 'admin1', email: 'a@x.co' }, error: null }
+      opsEmails.length = 0
       delete docs['config/payouts']
     })
 
-    it('is admin only', async () => {
+    it('reads are admin only; saves are super-admin only', async () => {
       authResult = { user: null, error: 'Not authenticated' }
       expect((await settingsGET()).status).toBe(401)
-      authResult = { user: null, error: 'Admin access required' }
+      // A regular admin cannot change what a money letter says or where it goes.
+      superResult = { user: null, error: 'Super admin access required' }
       expect((await put(valid)).status).toBe(403)
       expect(sets).toHaveLength(0)
+    })
+
+    it('emails the ops list with before/after when an account number changes', async () => {
+      await put({ ...valid, merchantAccountNumber: '50912345' })
+      expect(opsEmails).toHaveLength(1)
+      expect(opsEmails[0].html).toContain('merchantAccountNumber')
+      expect(opsEmails[0].html).toContain('50912345')
     })
 
     it('rejects invalid input with per-field errors and writes nothing', async () => {
