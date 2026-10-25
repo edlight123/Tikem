@@ -263,15 +263,12 @@ export function MoncashFundingClient() {
       {/* ── The three numbers ── */}
       <ConsoleSection>How much to move</ConsoleSection>
       {plan.nothingDue ? (
-        <ConsolePanel className="px-5 py-5">
-          <ConsoleState tone="good">Nothing due</ConsoleState>
-          <p className="mt-2 text-[13px] text-console-mut">
-            No organizer money is owed to MonCash in the next {plan.settings.recommendedHorizonDays} days, no MonCash
-            withdrawal is waiting to be sent, and nothing is movable. There is no request to make.
-          </p>
-        </ConsolePanel>
-      ) : null}
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <EmptyPanel
+          title="Nothing due"
+          line={`No organizer money is owed to MonCash in the next ${plan.settings.recommendedHorizonDays} days, no MonCash withdrawal is waiting to be sent, and nothing is movable. There is no request to make.`}
+        />
+      ) : (
+      <div className="grid gap-3 md:grid-cols-3">
         <NumberPanel
           label="Minimum"
           value={plan.minimum.amountHtg}
@@ -288,25 +285,30 @@ export function MoncashFundingClient() {
           explain={`Organizer money for events that have ended and passed their release hold, plus requested withdrawals, minus what is already in the pool (${htgMinor(plan.maximum.movableMinor)} owed, ${htgMinor(plan.maximum.poolEquivalentMinor)} with the transfer fee). Excludes Tikèm's fees, upcoming or ongoing events (kept for refunds), refunds under review and held events.`}
         />
       </div>
+      )}
 
       {/* ── Warnings ── */}
       {plan.warnings.length > 0 && (
         <>
           <ConsoleSection>Warnings</ConsoleSection>
-          <div className="space-y-2">
+          <ConsolePanel className="divide-y divide-console-ground overflow-hidden">
             {plan.warnings.map((w) => (
-              <ConsolePanel key={w.code} className="px-5 py-3">
-                <ConsoleState tone={w.severity === 'critical' ? 'bad' : w.severity === 'warning' ? 'warn' : 'neutral'}>
-                  {w.severity === 'critical' ? 'Critical' : w.severity === 'warning' ? 'Warning' : 'Note'}
-                </ConsoleState>
-                <p className="mt-1 text-[13px] text-console-text">{w.message}</p>
-              </ConsolePanel>
+              <div key={w.code} className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-baseline sm:gap-4">
+                <span className="w-20 shrink-0">
+                  <ConsoleState tone={w.severity === 'critical' ? 'bad' : w.severity === 'warning' ? 'warn' : 'neutral'}>
+                    {w.severity === 'critical' ? 'Critical' : w.severity === 'warning' ? 'Warning' : 'Note'}
+                  </ConsoleState>
+                </span>
+                <p className="text-[13px] leading-relaxed text-console-text">{w.message}</p>
+              </div>
             ))}
-          </div>
+          </ConsolePanel>
         </>
       )}
 
       {/* ── Request ── */}
+      {!plan.nothingDue && (
+        <>
       <ConsoleSection>Request a transfer from Digicel</ConsoleSection>
       <ConsolePanel className="px-5 py-4">
         <fieldset className="space-y-2">
@@ -353,7 +355,7 @@ export function MoncashFundingClient() {
         {generateError && <p className="mt-2 text-[12px] text-console-red">{generateError}</p>}
 
         {generated && (
-          <div className="mt-5 rounded-md bg-console-ground px-4 py-4">
+          <div className="mt-5 rounded bg-console-ground px-4 py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="label-mono text-[12px] text-console-mut">
                 {generated.reference} · {formatHtg(generated.amountHtg)} · logged, not sent
@@ -397,26 +399,31 @@ export function MoncashFundingClient() {
           </div>
         )}
       </ConsolePanel>
+        </>
+      )}
 
+      {/* Deadlines and breakdown say nothing new when nothing is due. */}
+      {!plan.nothingDue && (
+        <>
       {/* ── Deadlines ── */}
       <ConsoleSection>Next payout deadlines</ConsoleSection>
       {plan.deadlines.length === 0 ? (
-        <ConsolePanel className="px-5 py-4 text-[13px] text-console-mut">Nothing due in the next {plan.settings.recommendedHorizonDays} days.</ConsolePanel>
+        <EmptyPanel title="No deadlines" line={`Nothing becomes withdrawable to MonCash in the next ${plan.settings.recommendedHorizonDays} days.`} />
       ) : (
-        <ConsolePanel className="overflow-x-auto">
+        <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-[13px]">
-            <thead className="label-mono text-[10px] uppercase tracking-[0.14em] text-console-faint">
+            <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
               <tr>
-                <th className="px-4 py-2 font-normal">Withdrawable from</th>
-                <th className="px-4 py-2 text-right font-normal">Amount</th>
-                <th className="px-4 py-2 text-right font-normal">Pool needed (cumulative)</th>
-                <th className="px-4 py-2 font-normal">Send request by</th>
-                <th className="px-4 py-2 font-normal">Covered</th>
+                <th className="px-4 py-3 font-normal">Withdrawable from</th>
+                <th className="px-4 py-3 text-right font-normal">Amount</th>
+                <th className="px-4 py-3 text-right font-normal">Pool needed (cumulative)</th>
+                <th className="px-4 py-3 font-normal">Send request by</th>
+                <th className="px-4 py-3 font-normal">Covered</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-console-ground">
               {plan.deadlines.map((d) => (
-                <tr key={d.day + d.dueAt} className="border-t border-console-line">
+                <tr key={d.day + d.dueAt} className="hover:bg-console-raise">
                   <td className="px-4 py-2 text-console-text">{d.sendBy ? haitiDateTime(d.dueAt) : 'Now'}</td>
                   <td className="label-mono px-4 py-2 text-right tabular-nums">{htgMinor(d.owedMinor)}</td>
                   <td className="label-mono px-4 py-2 text-right tabular-nums text-console-mut">{htgMinor(d.cumulativePoolNeedMinor)}</td>
@@ -427,32 +434,30 @@ export function MoncashFundingClient() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </ConsolePanel>
       )}
 
       {/* ── Breakdown ── */}
       <ConsoleSection>Breakdown by event</ConsoleSection>
       {plan.rows.length === 0 && plan.withdrawals.length === 0 ? (
-        <ConsolePanel className="px-5 py-4 text-[13px] text-console-mut">
-          Nothing due: no Haiti event has organizer money waiting, and no MonCash withdrawal is waiting to be sent.
-        </ConsolePanel>
+        <EmptyPanel title="Nothing due" line="No Haiti event has organizer money waiting, and no MonCash withdrawal is waiting to be sent." />
       ) : (
-        <ConsolePanel className="overflow-x-auto">
+        <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-[13px]">
-            <thead className="label-mono text-[10px] uppercase tracking-[0.14em] text-console-faint">
+            <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
               <tr>
-                <th className="px-4 py-2 font-normal">Event</th>
-                <th className="px-4 py-2 font-normal">Organizer</th>
-                <th className="px-4 py-2 font-normal">Release</th>
-                <th className="px-4 py-2 text-right font-normal">Amount</th>
-                <th className="px-4 py-2 font-normal">Bucket</th>
-                <th className="px-4 py-2 font-normal">Counts in</th>
+                <th className="px-4 py-3 font-normal">Event</th>
+                <th className="px-4 py-3 font-normal">Organizer</th>
+                <th className="px-4 py-3 font-normal">Release</th>
+                <th className="px-4 py-3 text-right font-normal">Amount</th>
+                <th className="px-4 py-3 font-normal">Bucket</th>
+                <th className="px-4 py-3 font-normal">Counts in</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-console-ground">
               {plan.rows.map((r) => (
-                <tr key={r.eventId} className="border-t border-console-line">
+                <tr key={r.eventId} className="hover:bg-console-raise">
                   <td className="px-4 py-2">
                     <Link href={`/events/${r.eventId}`} className="text-console-text hover:underline">
                       {r.title}
@@ -471,7 +476,7 @@ export function MoncashFundingClient() {
                 </tr>
               ))}
               {plan.withdrawals.map((w) => (
-                <tr key={w.id} className="border-t border-console-line">
+                <tr key={w.id} className="hover:bg-console-raise">
                   <td className="px-4 py-2 text-console-text">
                     <Link href="/admin/money/withdrawals" className="hover:underline">
                       MonCash withdrawal {w.id.slice(0, 6)}
@@ -490,30 +495,32 @@ export function MoncashFundingClient() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </ConsolePanel>
+      )}
+        </>
       )}
 
       {/* ── Request log ── */}
       <ConsoleSection>Requests to Digicel</ConsoleSection>
       {rowError && <p className="mb-2 text-[12px] text-console-red">{rowError}</p>}
       {data.requests.length === 0 ? (
-        <ConsolePanel className="px-5 py-4 text-[13px] text-console-mut">No request has been generated yet.</ConsolePanel>
+        <EmptyPanel title="No requests" line="No Digicel request has been generated yet." />
       ) : (
-        <ConsolePanel className="overflow-x-auto">
+        <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-[13px]">
-            <thead className="label-mono text-[10px] uppercase tracking-[0.14em] text-console-faint">
+            <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
               <tr>
-                <th className="px-4 py-2 font-normal">Reference</th>
-                <th className="px-4 py-2 text-right font-normal">Amount</th>
-                <th className="px-4 py-2 font-normal">Generated</th>
-                <th className="px-4 py-2 font-normal">Status</th>
-                <th className="px-4 py-2 font-normal" />
+                <th className="px-4 py-3 font-normal">Reference</th>
+                <th className="px-4 py-3 text-right font-normal">Amount</th>
+                <th className="px-4 py-3 font-normal">Generated</th>
+                <th className="px-4 py-3 font-normal">Status</th>
+                <th className="px-4 py-3 font-normal" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-console-ground">
               {data.requests.map((r) => (
-                <tr key={r.id} className="border-t border-console-line align-top">
+                <tr key={r.id} className="align-top hover:bg-console-raise">
                   <td className="label-mono px-4 py-2 text-[12px] text-console-text">{r.reference || r.id}</td>
                   <td className="label-mono px-4 py-2 text-right tabular-nums">{formatHtg(r.amountHtg)}</td>
                   <td className="px-4 py-2 text-console-mut">
@@ -551,10 +558,20 @@ export function MoncashFundingClient() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </ConsolePanel>
       )}
     </div>
+  )
+}
+
+/** The console's empty state: mono caps title over one faint line (as in Withdrawals). */
+function EmptyPanel({ title, line }: { title: string; line: string }) {
+  return (
+    <ConsolePanel className="px-5 py-10 text-center sm:p-12">
+      <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">{title}</p>
+      <p className="mt-1 text-[13px] text-console-faint">{line}</p>
+    </ConsolePanel>
   )
 }
 

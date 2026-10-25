@@ -47,6 +47,7 @@ import {
   endOfHaitiDayAfter,
   endOfNthBusinessDayAfter,
   haitiDay,
+  HAITI_TZ,
   nextDigicelCutoff,
   sendByFor,
   type DigicelCutoff,
@@ -257,6 +258,18 @@ export function formatHtg(minorOrMajor: number, unit: 'minor' | 'major' = 'major
   return `${rounded.toLocaleString('en-US')} HTG`
 }
 
+/** "Fri, Oct 23, 4:00 PM" in Haiti time, for warning text. */
+function haitiLabel(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: HAITI_TZ,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
 function dateOrNull(iso: string | null | undefined): Date | null {
   if (!iso) return null
   const d = new Date(iso)
@@ -460,7 +473,7 @@ export function computePrefundingPlan(input: PrefundingPlanInput): PrefundingPla
     warnings.push({
       code: 'deadline_passed',
       severity: 'critical',
-      message: `${fmt(missed.owedMinor)} becomes withdrawable on ${missed.day}; the last Digicel cutoff to fund it in time was ${missed.sendBy}. A request now lands ${cutoff.label}.`,
+      message: `${fmt(missed.owedMinor)} becomes withdrawable ${haitiLabel(missed.dueAt)}; the last Digicel cutoff to fund it in time was ${haitiLabel(missed.sendBy as string)} (Haiti). A request now lands ${cutoff.label}.`,
     })
   }
 

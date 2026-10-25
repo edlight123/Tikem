@@ -311,7 +311,9 @@ describe('computePrefundingPlan', () => {
     })
     const plan = computePrefundingPlan({ now: sat, events: [e], unsentWithdrawals: [], poolBalanceHtg: 0, config: cfg })
     expect(plan.deadlines[0].sendBy).toBe(haitiWallTime('2026-10-23', 16).toISOString())
-    expect(plan.warnings.map((w) => w.code)).toContain('deadline_passed')
+    const passed = plan.warnings.find((w) => w.code === 'deadline_passed')!
+    expect(passed.message).toContain('Fri, Oct 23, 4:00 PM')
+    expect(passed.message).not.toMatch(/\dT\d/) // no raw ISO timestamps in admin copy
     expect(plan.cutoff.label).toBe('Monday 4 PM')
   })
 
