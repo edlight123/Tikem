@@ -6,11 +6,17 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { DollarSign, Settings } from 'lucide-react'
 import { TikemWordmark } from '@/components/ui/TikemLogo'
+import { orgCan } from '@/lib/organizer/teamRoles'
+import { useOrgRole } from './OrgRoleProvider'
+import { OrgSwitcher, type SwitchableOrg } from './OrgSwitcher'
 
 interface OrganizerTopNavProps {
   draftEvents?: number
   pendingPayouts?: number
   accountInitial?: string
+  /** Orgs this account can act for (own + admin/manager seats). */
+  orgs?: SwitchableOrg[]
+  staleOrgCookie?: boolean
 }
 
 interface Tab {
@@ -24,17 +30,31 @@ interface Tab {
  * primary tabs, then finance / settings / account on the right. This replaces
  * the global site navbar inside /organizer so there's only one bar.
  */
-export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountInitial = 'U' }: OrganizerTopNavProps) {
+export function OrganizerTopNav({
+  draftEvents = 0,
+  pendingPayouts = 0,
+  accountInitial = 'U',
+  orgs = [],
+  staleOrgCookie = false,
+}: OrganizerTopNavProps) {
   const { t } = useTranslation('organizer')
 
   const pathname = usePathname()
+
+  // Role-aware: money (finance) is the owner's alone; Team and Settings are
+  // for owners and admins (lib/organizer/teamRoles.ts). The pages redirect too.
+  const org = useOrgRole()
+  const role = org?.role ?? 'owner'
+  const showFinance = orgCan(role, 'owner_only')
+  const showTeam = orgCan(role, 'manage_team')
+  const showSettings = orgCan(role, 'manage_settings')
 
   const tabs: Tab[] = [
     { label: 'Home', href: '/organizer' },
     { label: 'Events', href: '/organizer/events', badge: draftEvents },
     { label: 'Marketing', href: '/organizer/marketing' },
     { label: 'Orders', href: '/organizer/orders' },
-    { label: 'Team', href: '/organizer/team' },
+    ...(showTeam ? [{ label: 'Team', href: '/organizer/team' }] : []),
   ]
 
   const isActive = (href: string) =>
@@ -77,6 +97,8 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
 
         {/* Right: finance, settings, account */}
         <div className="flex shrink-0 items-center gap-1">
+          <OrgSwitcher orgs={orgs} staleOrgCookie={staleOrgCookie} />
+          {showFinance && (
           <Link
             href="/organizer/finance"
             aria-label={t('actions.finance')}
@@ -91,6 +113,8 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
               </span>
             )}
           </Link>
+          )}
+          {showSettings && (
           <Link
             href="/organizer/settings"
             aria-label={t('actions.settings')}
@@ -100,6 +124,7 @@ export function OrganizerTopNav({ draftEvents = 0, pendingPayouts = 0, accountIn
           >
             <Settings className="h-[18px] w-[18px]" />
           </Link>
+          )}
           <Link
             href="/profile"
             aria-label={t('actions.account')}

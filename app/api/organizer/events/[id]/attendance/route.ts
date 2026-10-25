@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
+import { requireEventAccess } from '@/lib/organizer/context'
 
 export async function GET(
   request: Request,
@@ -14,14 +15,9 @@ export async function GET(
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user is the organizer
-    const { data: event } = await supabase
-      .from('events')
-      .select('organizer_id')
-      .eq('id', eventId)
-      .single()
-
-    if (!event || event.organizer_id !== user.id) {
+    // The event's org team (owner, admin, manager) or a platform admin.
+    const access = await requireEventAccess(eventId, 'view')
+    if (!access.ok) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

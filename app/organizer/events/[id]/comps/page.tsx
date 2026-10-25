@@ -1,7 +1,6 @@
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
-import { notFound, redirect } from 'next/navigation'
 import CompsClient from './CompsClient'
 
 export const dynamic = 'force-dynamic'
@@ -9,21 +8,12 @@ export const revalidate = 0
 
 export default async function CompsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params
-  const { user, error } = await requireAuth('organizer')
-
-  if (error || !user) {
-    redirect(`/auth/login?redirect=/organizer/events/${eventId}/comps`)
-  }
-
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-  if (!eventDoc.exists) notFound()
-
-  const eventData = eventDoc.data() as {
+  const { event: __event } = await requireEventPage(eventId, 'manage_events', `/organizer/events/${eventId}/comps`)
+  const eventData = __event as {
     organizer_id?: string
     title?: string
     ticket_tiers?: Array<{ id: string; name: string; price: number }>
   }
-  if (eventData?.organizer_id !== user.id) notFound()
 
   // Fetch comp tickets: tickets with price_paid = 0 and source = 'comp'
   const compsSnap = await adminDb

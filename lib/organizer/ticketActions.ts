@@ -5,7 +5,7 @@ import { authorizeEventOwner, type EventAccess } from '@/lib/organizer/eventOrde
  * Body + ownership handling shared by the organizer's per-ticket actions
  * (/api/resend-ticket, /api/refund-ticket). Accepts the web's `{ ticketId }`
  * and the mobile order view's `{ ticketIds }`; every ticket must belong to ONE
- * event the caller owns.
+ * event the caller may manage (its org's owner, admin or manager).
  */
 export type LoadedTickets =
   | {
@@ -37,7 +37,7 @@ export async function loadOwnedTickets(ids: string[]): Promise<LoadedTickets> {
     return { ok: false, status: 400, error: 'Tickets must belong to one event' }
   }
 
-  const access = await authorizeEventOwner(Array.from(eventIds)[0])
+  const access = await authorizeEventOwner(Array.from(eventIds)[0], 'manage_events')
   if (!access.ok) return access
   return { ok: true, access, tickets }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { requireOrg } from '@/lib/organizer/context';
 
 export async function PUT(request: NextRequest) {
   try {
@@ -13,6 +14,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // The acting org's defaults: its owner or a team admin.
+    const org = await requireOrg('manage_settings');
+    if (!org.ok) return org.response;
+
     const body = await request.json();
     const {
       default_city,
@@ -23,7 +28,7 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     // Update organizer defaults in Firestore
-    await adminDb.collection('organizers').doc(user.id).set({
+    await adminDb.collection('organizers').doc(org.value.orgId).set({
       default_city: default_city || '',
       default_country: default_country || 'Haiti',
       default_timezone: default_timezone || 'America/Port-au-Prince',

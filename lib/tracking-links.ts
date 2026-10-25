@@ -20,6 +20,8 @@
 import crypto from 'crypto'
 import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
+import type { CurrentUser } from '@/lib/organizer/context'
+import type { OrgAction } from '@/lib/organizer/teamRoles'
 import {
   type Attribution,
   normalizePromoterRef,
@@ -101,16 +103,22 @@ export function serializeTrackingLink(id: string, data: Partial<TrackingLinkDoc>
   }
 }
 
-/** Ownership gate for the organizer CRUD routes — same rule as promoters. */
+/**
+ * Access gate for the organizer CRUD routes: the event's org owner, or a team
+ * member whose role allows `action` (lib/organizer/teamRoles.ts).
+ */
 export async function assertEventOwnedByUser(
   eventId: string,
-  userId: string
+  user: CurrentUser,
+  action: OrgAction = 'manage_events'
 ): Promise<{ ok: true; event: any } | { ok: false; status: number; error: string }> {
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
   if (!eventDoc.exists) return { ok: false, status: 404, error: 'Event not found' }
   const eventData = eventDoc.data() as any
-  const organizerId = eventData?.organizer_id ?? eventData?.organizerId
-  if (organizerId !== userId) return { ok: false, status: 403, error: 'Unauthorized' }
+  // Loaded lazily: the sale-time bookkeeping above runs in webhooks that have
+  // no session, and should not pull the auth/session stack in with it.
+  const { canOnEvent } = await import('@/lib/organizer/context')
+  if (!(await canOnEvent(user, eventData, action)).allowed) return { ok: false, status: 403, error: 'Unauthorized' }
   return { ok: true, event: eventData }
 }
 

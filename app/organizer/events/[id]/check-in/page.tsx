@@ -1,8 +1,4 @@
-import { T } from '@/components/organizer/ui/TranslatedText'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { CheckInInterface } from '@/components/check-in/CheckInInterface'
 import { checkInTicket } from './actions'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
@@ -17,47 +13,8 @@ interface PageProps {
 export default async function CheckInPage({ params }: PageProps) {
   const { id: eventId } = await params
   
-  // Verify authentication
-  const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')?.value
-
-  if (!sessionCookie) {
-    redirect(`/auth/login?redirect=${encodeURIComponent(`/organizer/events/${eventId}/check-in`)}`)
-  }
-
-  let authUser
-  try {
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    authUser = decodedClaims
-  } catch (error) {
-    console.error('Error verifying session:', error)
-    redirect(`/auth/login?redirect=${encodeURIComponent(`/organizer/events/${eventId}/check-in`)}`)
-  }
-
-  // Fetch event details
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-
-  if (!eventDoc.exists) {
-    redirect('/organizer/events')
-  }
-
-  const eventData = eventDoc.data()
-
-  // Verify organizer access
-  if (eventData?.organizer_id !== authUser.uid) {
-    return (
-      <div className="mx-auto flex min-h-[60vh] max-w-md items-center justify-center px-4 py-16">
-        <div className="w-full rounded-2xl bg-white/[0.055] p-8 text-center">
-          <h2 className="font-display text-2xl text-white mb-3"><T k="server_bits.unauthorized" /></h2>
-          <p className="text-sm text-white/70">You don&apos;t have permission to run check-in for this event.</p>
-          <Link
-            href="/organizer/events"
-            className="mt-6 inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          ><T k="server_bits.back_to_events" /></Link>
-        </div>
-      </div>
-    )
-  }
+  // Owner, org admin/manager, or platform admin (manage_events covers check-in).
+  const { event: eventData } = await requireEventPage(eventId, 'manage_events', `/organizer/events/${eventId}/check-in`)
 
   // Fetch all tickets for this event (supports legacy `eventId` field too)
   const ticketDocs = await loadTicketDocsForEvent(eventId)
@@ -83,7 +40,7 @@ export default async function CheckInPage({ params }: PageProps) {
   })
 
   const event = {
-    id: eventDoc.id,
+    id: eventId,
     title: eventData?.title || '',
     start_datetime: eventData?.start_datetime?.toDate?.()?.toISOString() || eventData?.start_datetime || '',
     organizer_id: eventData?.organizer_id || '',

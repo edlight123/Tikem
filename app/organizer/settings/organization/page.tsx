@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireOrgPage } from '@/app/organizer/_lib/orgPage';
 import { adminDb } from '@/lib/firebase/admin';
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 import OrganizationForm from './OrganizationForm';
@@ -18,17 +17,10 @@ async function getOrganizerData(userId: string) {
 }
 
 export default async function OrganizationSettingsPage() {
-  const user = await getCurrentUser();
+  const ctx = await requireOrgPage('manage_settings', '/organizer/settings/organization');
+  const orgId = ctx.orgId;
 
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/organization');
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/organization');
-  }
-
-  const organizerData = await getOrganizerData(user.id);
+  const organizerData = await getOrganizerData(orgId);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] py-8">
@@ -38,7 +30,7 @@ export default async function OrganizationSettingsPage() {
         {/* Organization Form */}
         <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
           <OrganizationForm 
-            userId={user.id}
+            userId={orgId}
             initialData={{
               organization_name: organizerData?.organization_name || '',
               organization_type: organizerData?.organization_type || '',

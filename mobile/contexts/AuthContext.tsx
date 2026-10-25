@@ -97,6 +97,8 @@ const USER_SCOPED_PREFIXES = [
   'door_list_',
   // "Add your number" re-ask counter, per account (lib/phonePromptPolicy.ts).
   'tikem_phone_prompt_',
+  // The org chosen in organizer mode, per account (lib/activeOrg.ts).
+  'tikem_active_org_',
 ];
 
 /** The `sub` claim of a JWT, or null if it cannot be read (no verification: a pre-check only). */

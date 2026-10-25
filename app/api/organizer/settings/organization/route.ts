@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { requireOrg } from '@/lib/organizer/context';
 import { safeExternalUrl } from '@/lib/safeUrl';
 import { writeOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 
@@ -24,6 +25,44 @@ function cleanSocial(raw: unknown): string | null {
   return safeExternalUrl(s);
 }
 
+function storageBucketName(): string {
+  const raw = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '';
+  return raw.startsWith('gs://') ? raw.slice('gs://'.length) : raw;
+}
+
+/**
+ * A logo must be an https URL in OUR Firebase Storage bucket (what
+ * upload-logo and the app's uploader produce), never an arbitrary host.
+ * Returns '' to clear, the URL, or null when invalid.
+ */
+function cleanLogoUrl(raw: unknown): string | null {
+  if (raw == null || raw === '') return '';
+  if (typeof raw !== 'string' || raw.length > 2048) return null;
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  const bucket = storageBucketName();
+  if (url.protocol !== 'https:' || !bucket || url.username || url.password) return null;
+  const ok =
+    (url.hostname === 'storage.googleapis.com' && url.pathname.startsWith(`/${bucket}/`)) ||
+    (url.hostname === 'firebasestorage.googleapis.com' && url.pathname.startsWith(`/v0/b/${bucket}/o/`));
+  return ok ? url.toString() : null;
+}
+
+/**
+ * Update the ACTING org's profile (lib/organizer/context.ts): its owner, or a
+ * team admin (manage_settings). Mobile sends X-Tikem-Org for a non-owner admin.
+ *
+ * Body (JSON), every key optional except as noted; only keys present are
+ * written, so a partial body never blanks the rest:
+ *   organization_name         required unless the body only sets the logo
+ *   organization_logo         https URL in our Storage bucket, or '' to clear
+ *   organization_type, organization_description, website,
+ *   facebook, instagram, twitter, linkedin
+ */
 export async function PUT(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -35,7 +74,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const org = await requireOrg('manage_settings');
+    if (!org.ok) return org.response;
+    const orgId = org.value.orgId;
+
+    const body = (await request.json().catch(() => null)) || {};
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
     const {
       organization_name,
       organization_type,
@@ -45,14 +89,8 @@ export async function PUT(request: NextRequest) {
       instagram,
       twitter,
       linkedin,
+      organization_logo,
     } = body;
-
-    if (!['organizer', 'admin', 'super_admin'].includes(String(user.role))) {
-      return NextResponse.json(
-        { error: 'Only organizers can update organization details' },
-        { status: 403 }
-      );
-    }
 
     // Every link here is rendered as an href (admin console, public profile,
     // mobile). Reject anything that is not http(s) instead of storing it.
@@ -68,7 +106,8 @@ export async function PUT(request: NextRequest) {
     }
 
     const social: Record<string, string> = {};
-    for (const [key, value] of Object.entries({ facebook, instagram, twitter, linkedin })) {
+    const socialInput = Object.entries({ facebook, instagram, twitter, linkedin }).filter(([key]) => has(key));
+    for (const [key, value] of socialInput) {
       const cleaned = cleanSocial(value);
       if (cleaned === null) {
         return NextResponse.json(
@@ -79,28 +118,45 @@ export async function PUT(request: NextRequest) {
       social[key] = cleaned;
     }
 
-    // Validate required fields
-    if (typeof organization_name !== 'string' || organization_name.trim().length === 0) {
+    let cleanLogo: string | null = null;
+    if (has('organization_logo')) {
+      cleanLogo = cleanLogoUrl(organization_logo);
+      if (cleanLogo === null) {
+        return NextResponse.json(
+          { error: 'Logo must be an https URL from Tikem storage' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate required fields (a logo-only update may leave the name alone).
+    const logoOnly = has('organization_logo') && !has('organization_name');
+    if (!logoOnly && (typeof organization_name !== 'string' || organization_name.trim().length === 0)) {
       return NextResponse.json(
         { error: 'Organization name is required' },
         { status: 400 }
       );
     }
 
-    // Update organizer data in Firestore
-    await adminDb.collection('organizers').doc(user.id).set({
-      organization_name: organization_name.trim(),
-      organization_type: typeof organization_type === 'string' ? organization_type : '',
-      organization_description:
-        typeof organization_description === 'string' ? organization_description.trim() : '',
-      website: cleanWebsite,
-      social_media: social,
-      updated_at: new Date().toISOString(),
-    }, { merge: true });
+    // Update the org's data in Firestore: only the keys the caller sent.
+    const details: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (!logoOnly) details.organization_name = organization_name.trim();
+    if (has('organization_type')) details.organization_type = typeof organization_type === 'string' ? organization_type : '';
+    if (has('organization_description')) {
+      details.organization_description =
+        typeof organization_description === 'string' ? organization_description.trim() : '';
+    }
+    if (has('website')) details.website = cleanWebsite;
+    // merge: true deep-merges the map, so only the networks sent are touched.
+    if (socialInput.length) details.social_media = social;
+    await adminDb.collection('organizers').doc(orgId).set(details, { merge: true });
 
-    // The name's canonical home is public_profiles/{uid} (plus the users/{uid}
-    // copy the app and the event pages read): lib/profile/org-brand.ts.
-    await writeOrgBrandAdmin(user.id, { organization_name });
+    // The brand's canonical home is public_profiles/{orgId} (plus the
+    // users/{orgId} copy the app and the event pages read): lib/profile/org-brand.ts.
+    const brand: Record<string, unknown> = {};
+    if (!logoOnly) brand.organization_name = organization_name.trim();
+    if (cleanLogo !== null) brand.organization_logo = cleanLogo;
+    await writeOrgBrandAdmin(orgId, brand, { organizers: true });
 
     return NextResponse.json({ 
       success: true,
@@ -114,3 +170,6 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+// The app sends partial updates as PATCH ({ organization_name? , organization_logo? }); same handler.
+export const PATCH = PUT

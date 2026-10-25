@@ -39,6 +39,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import GuestlistVisibilityPicker from '../../components/GuestlistVisibilityPicker';
 import { guestlistVisibilityFrom, type GuestlistVisibility } from '../../lib/guestlistVisibility';
@@ -388,6 +389,13 @@ export default function CreateEventFlowRefactored() {
   // carries no safe-area inset (the SafeAreaView above already does).
   const { height: headerH, onHeight } = useOverlayHeaderInset(48);
   const { user, userProfile } = useAuth();
+  // New events belong to the org being acted for (own, or a team the person
+  // runs as admin/manager); created_by stays the person (lib/api/events.ts).
+  const activeOrg = useActiveOrg();
+  const eventOrgId =
+    activeOrg.orgId && activeOrg.can('manage_events') ? activeOrg.orgId : userProfile?.id || null;
+  // Payout setup is the org owner's alone.
+  const canManagePayouts = activeOrg.can('owner_only');
   const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const [saving, setSaving] = useState(false);
@@ -781,7 +789,7 @@ export default function CreateEventFlowRefactored() {
   // stated default country and the device-region guess behind it. With nothing
   // declared, `orderCountriesByMarkets` falls straight through to the old
   // organizerCountry-first ordering.
-  const { markets: declaredMarkets } = useDeclaredMarkets(user?.uid);
+  const { markets: declaredMarkets } = useDeclaredMarkets(eventOrgId);
   const orderedCountries = useMemo(
     () => orderCountriesByMarkets(COUNTRIES, declaredMarkets, organizerCountry),
     [declaredMarkets, organizerCountry]
@@ -1506,13 +1514,16 @@ export default function CreateEventFlowRefactored() {
         showAlert(
           t('organizerEarnings.stripeConnectRequired.title'),
           eligibility.reason || t('organizerEarnings.stripeConnectRequired.body'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('organizerEarnings.openPayoutSettings'),
-              onPress: () => (navigation as any).navigate('OrganizerPayoutSettings'),
-            },
-          ]
+          canManagePayouts
+            ? [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('organizerEarnings.openPayoutSettings'),
+                  onPress: () => (navigation as any).navigate('OrganizerPayoutSettings'),
+                },
+              ]
+            : // A team member cannot fix this; the owner sets up payouts.
+              [{ text: t('common.ok') }]
         );
         return;
       }
@@ -1522,7 +1533,8 @@ export default function CreateEventFlowRefactored() {
     try {
       if (isEditMode && eventId) {
         // Update existing event
-        await updateEvent(eventId, userProfile.id, eventData, options);
+        // organizer_id never changes on edit; the id here only names uploads.
+        await updateEvent(eventId, eventOrgId || userProfile.id, eventData, options);
         console.log('Event updated with ID:', eventId);
 
         setConfirmVisible(false);
@@ -1533,7 +1545,7 @@ export default function CreateEventFlowRefactored() {
         );
       } else {
         // Create new event
-        const newEventId = await createEvent(userProfile.id, eventData, options);
+        const newEventId = await createEvent(eventOrgId || userProfile.id, eventData, options);
         console.log('Event created with ID:', newEventId);
 
         setConfirmVisible(false);
@@ -2236,14 +2248,18 @@ export default function CreateEventFlowRefactored() {
                           : 'organizerCreateEventFlow.canvas.haitiPayoutNotice'
                       )}
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => (navigation as any).navigate('OrganizerPayoutSettings')}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Text style={styles.stripeNoticeCta}>
-                        {t('organizerCreateEventFlow.canvas.stripePayoutCta')}
-                      </Text>
-                    </TouchableOpacity>
+                    {canManagePayouts ? (
+                      <TouchableOpacity
+                        onPress={() => (navigation as any).navigate('OrganizerPayoutSettings')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.stripeNoticeCta}>
+                          {t('organizerCreateEventFlow.canvas.stripePayoutCta')}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.stripeNoticeText}>{t('orgTeam.ownerSetsUpPayouts')}</Text>
+                    )}
                   </View>
                 </View>
               )}
@@ -3012,6 +3028,15 @@ export default function CreateEventFlowRefactored() {
                 ? t('organizerCreateEventFlow.canvas.repeatHint').replace('{n}', String(eventDraft.recurrence_count))
                 : t('organizerCreateEventFlow.confirm.body')}
             </Text>
+            {/* A team member publishes for the org: say which one. */}
+            {!isEditMode && !activeOrg.isOwner && eventOrgId === activeOrg.orgId ? (
+              <Text style={styles.sheetBody}>
+                {t('orgTeam.publishingAs', {
+                  org: activeOrg.orgName || t('orgTeam.unnamedOrg'),
+                  role: t(`orgTeam.roles.${activeOrg.role}` as any),
+                })}
+              </Text>
+            ) : null}
 
             <WhitePillCTA
               label={t('organizerCreateEventFlow.confirm.publish')}

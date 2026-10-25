@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireOrgPage } from '@/app/organizer/_lib/orgPage';
 import { adminDb } from '@/lib/firebase/admin';
 import NotificationsForm from './NotificationsForm';
 import { withOrganizerNotificationDefaults } from '@/lib/organizer/notificationPreferences';
@@ -19,17 +18,10 @@ async function getNotificationPreferences(userId: string) {
 }
 
 export default async function NotificationsSettingsPage() {
-  const user = await getCurrentUser();
+  const ctx = await requireOrgPage('manage_settings', '/organizer/settings/notifications');
+  const orgId = ctx.orgId;
 
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/notifications');
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/notifications');
-  }
-
-  const preferences = await getNotificationPreferences(user.id);
+  const preferences = await getNotificationPreferences(orgId);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] py-8">
@@ -39,7 +31,7 @@ export default async function NotificationsSettingsPage() {
         {/* Notifications Form */}
         <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
           <NotificationsForm 
-            userId={user.id}
+            userId={orgId}
             initialData={withOrganizerNotificationDefaults(preferences)}
           />
         </div>

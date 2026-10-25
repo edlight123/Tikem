@@ -225,7 +225,9 @@ export default function OrganizerPromoCodesScreen() {
       await addDoc(promoCodesCollection, {
         code: trimmedCode,
         event_id: eventId,
-        organizer_id: userProfile?.id || null,
+        // The event's org (a team member creates codes for the org, not themselves).
+        organizer_id: (eventData as any)?.organizer_id || userProfile?.id || null,
+        created_by: userProfile?.id || null,
         discount_type: discountType,
         discount_value: discount,
         max_uses: finalMaxUses,

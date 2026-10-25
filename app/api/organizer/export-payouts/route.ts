@@ -3,6 +3,7 @@ import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { getPayoutHistory } from '@/lib/firestore/payout'
 import { toCsv } from '@/lib/csv'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,10 @@ export async function GET(request: NextRequest) {
 
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(organizerId)
+    if (notOwner) return notOwner
 
     // Get format from query params
     const { searchParams } = new URL(request.url)

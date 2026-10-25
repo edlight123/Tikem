@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { getCurrentUser } from '@/lib/auth'
+import { requireOrgPage } from '../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
 import SettingsContent from '@/components/organizer/settings/SettingsContent'
-import { redirect } from 'next/navigation'
 
 export const revalidate = 0
 
@@ -30,17 +29,11 @@ async function getOrganizerData(userId: string) {
 }
 
 export default async function OrganizerSettingsHubPage() {
-  const user = await getCurrentUser()
+  // Owners and org admins (manage_settings); managers go to /organizer.
+  const ctx = await requireOrgPage('manage_settings', '/organizer/settings')
+  const user = ctx.user
 
-  if (!user) {
-    redirect('/auth/login?redirect=/organizer/settings')
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings')
-  }
-
-  const { organizerData, payoutConfig } = await getOrganizerData(user.id)
+  const { organizerData, payoutConfig } = await getOrganizerData(ctx.orgId)
 
   // Calculate verification status
   const verificationStatus = organizerData?.verification_status || user.verification_status || 'none'
@@ -63,6 +56,7 @@ export default async function OrganizerSettingsHubPage() {
           hasPayoutSetup={hasPayoutSetup}
           defaultLocation={defaultLocation}
           payoutStatusText={payoutStatus}
+          isOwner={ctx.isOwner}
         />
       </div>    </div>
   )

@@ -11,9 +11,10 @@ import {
   assertEventOwnedByUser,
   serializeTrackingLink,
 } from '@/lib/tracking-links'
+import type { CurrentUser } from '@/lib/organizer/context'
 
-async function loadOwnedLink(eventId: string, linkId: string, userId: string) {
-  const ownership = await assertEventOwnedByUser(eventId, userId)
+async function loadOwnedLink(eventId: string, linkId: string, user: CurrentUser) {
+  const ownership = await assertEventOwnedByUser(eventId, user, 'manage_events')
   if (!ownership.ok) return ownership
   const ref = adminDb.collection(TRACKING_LINKS_COLLECTION).doc(linkId)
   const snap = await ref.get()
@@ -32,7 +33,7 @@ export async function PATCH(
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const loaded = await loadOwnedLink(id, linkId, user.id)
+    const loaded = await loadOwnedLink(id, linkId, user)
     if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
 
     const body = await request.json().catch(() => ({}))
@@ -57,7 +58,7 @@ export async function DELETE(
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const loaded = await loadOwnedLink(id, linkId, user.id)
+    const loaded = await loadOwnedLink(id, linkId, user)
     if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
 
     await loaded.ref.delete()

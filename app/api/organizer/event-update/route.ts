@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic'
  * directly with the Firebase client SDK). Doing that client-side required the
  * notifications rule to allow cross-user writes — a spam/phishing hole (audit
  * M4). This route does the same work server-side (Admin SDK) after verifying
- * the caller owns the event, so the notifications create rule can be locked to
+ * the caller may run the event (its org's owner, admin or manager), so the notifications create rule can be locked to
  * the feed owner.
  */
 export async function POST(request: NextRequest) {
@@ -34,13 +35,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'eventId, title and message are required' }, { status: 400 })
     }
 
-    // Verify event ownership.
+    // Verify the caller may run this event.
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     if (!eventDoc.exists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
     const eventData = eventDoc.data()!
-    if (eventData.organizer_id !== user.id) {
+    if (!(await canOnEvent(user, eventData, 'manage_events')).allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

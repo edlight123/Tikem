@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { assertEventOwnedByUser } from '@/lib/tracking-links'
+import { requireOrg } from '@/lib/organizer/context'
 import { getOrganizerRevenueBreakdown, getEventRevenueBreakdown } from '@/lib/analytics/revenue'
 
 export const dynamic = 'force-dynamic'
@@ -21,19 +22,21 @@ export async function GET(request: Request) {
     let breakdown
 
     if (eventId) {
-      // Get breakdown for specific event — only the event's organizer (or an admin).
+      // Get breakdown for specific event: the event's org team (view) or an admin.
       if (user.role !== 'admin') {
-        const owned = await assertEventOwnedByUser(eventId, user.id)
+        const owned = await assertEventOwnedByUser(eventId, user, 'view')
         if (!owned.ok) return NextResponse.json({ error: owned.error }, { status: owned.status })
       }
       breakdown = await getEventRevenueBreakdown(eventId)
     } else {
-      // Get breakdown for organizer's all events
+      // Get breakdown for all of the acting org's events (no bank details: 'view').
+      const org = await requireOrg('view')
+      if (!org.ok) return org.response
       const options: any = {}
       if (startDate) options.startDate = new Date(startDate)
       if (endDate) options.endDate = new Date(endDate)
       
-      breakdown = await getOrganizerRevenueBreakdown(user.id, options)
+      breakdown = await getOrganizerRevenueBreakdown(org.value.orgId, options)
     }
 
     return NextResponse.json(breakdown)

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { requireOrg } from '@/lib/organizer/context'
+import type { OrgAction } from '@/lib/organizer/teamRoles'
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 
 /**
- * Organization task board (organizers/{orgId}/tasks). The org owner creates
- * tasks, assigns them to a team member, and tracks status. Owner-scoped v1:
- * all access requires the caller to be the org owner (organizerId === uid).
+ * Organization task board (organizers/{orgId}/tasks) for the acting org
+ * (lib/organizer/context.ts). Anyone who may view the org reads the board;
+ * owners, admins and managers create, update and delete tasks.
  * Server-only (Admin SDK); not client-writable.
  */
 
@@ -16,21 +17,18 @@ function tasksCol(orgId: string) {
   return adminDb.collection('organizers').doc(orgId).collection('tasks')
 }
 
-async function requireOrganizer() {
-  const { user, error } = await requireAuth()
-  if (error || !user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  if (user.role !== 'organizer' && user.role !== 'admin') {
-    return { error: NextResponse.json({ error: 'Organizer access required' }, { status: 403 }) }
-  }
-  return { user }
+async function requireOrganizer(action: OrgAction) {
+  const org = await requireOrg(action)
+  if (!org.ok) return { error: org.response }
+  return { user: org.value.user, orgId: org.value.orgId }
 }
 
 const iso = (v: any) => v?.toDate?.()?.toISOString?.() ?? v ?? null
 
 export async function GET() {
-  const auth = await requireOrganizer()
+  const auth = await requireOrganizer('view')
   if (auth.error) return auth.error
-  const orgId = auth.user!.id
+  const orgId = auth.orgId!
   try {
     const snap = await tasksCol(orgId).get()
     const tasks = snap.docs
@@ -43,9 +41,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireOrganizer()
+  const auth = await requireOrganizer('manage_events')
   if (auth.error) return auth.error
-  const orgId = auth.user!.id
+  const orgId = auth.orgId!
   try {
     const body = await request.json().catch(() => ({}))
     const title = String(body?.title || '').trim()
@@ -58,7 +56,7 @@ export async function POST(request: NextRequest) {
       assignee_name: body?.assignee_name ? String(body.assignee_name) : null,
       status,
       due: body?.due ? String(body.due) : null,
-      created_by: orgId,
+      created_by: auth.user!.id,
       created_at: FieldValue.serverTimestamp(),
     })
     return NextResponse.json({ success: true, id: ref.id })
@@ -68,9 +66,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireOrganizer()
+  const auth = await requireOrganizer('manage_events')
   if (auth.error) return auth.error
-  const orgId = auth.user!.id
+  const orgId = auth.orgId!
   try {
     const body = await request.json().catch(() => ({}))
     const taskId = String(body?.taskId || '')
@@ -97,9 +95,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = await requireOrganizer()
+  const auth = await requireOrganizer('manage_events')
   if (auth.error) return auth.error
-  const orgId = auth.user!.id
+  const orgId = auth.orgId!
   try {
     const taskId = new URL(request.url).searchParams.get('taskId') || ''
     if (!taskId) return NextResponse.json({ error: 'taskId is required' }, { status: 400 })

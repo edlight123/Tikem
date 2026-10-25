@@ -10,15 +10,16 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { parseGuestInput, serializeGuest } from '@/lib/guest-list'
+import { canOnEvent, type CurrentUser } from '@/lib/organizer/context'
+import type { OrgAction } from '@/lib/organizer/teamRoles'
 
-async function assertEventOwnedByUser(eventId: string, userId: string): Promise<
+async function assertEventOwnedByUser(eventId: string, user: CurrentUser, action: OrgAction): Promise<
   { ok: true } | { ok: false; status: number; error: string }
 > {
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
   if (!eventDoc.exists) return { ok: false, status: 404, error: 'Event not found' }
   const eventData = eventDoc.data() as any
-  const organizerId = eventData?.organizer_id ?? eventData?.organizerId
-  if (organizerId !== userId) return { ok: false, status: 403, error: 'Unauthorized' }
+  if (!(await canOnEvent(user, eventData, action)).allowed) return { ok: false, status: 403, error: 'Unauthorized' }
   return { ok: true }
 }
 
@@ -28,7 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const ownership = await assertEventOwnedByUser(id, user.id)
+    const ownership = await assertEventOwnedByUser(id, user, 'view')
     if (!ownership.ok) {
       return NextResponse.json({ error: ownership.error }, { status: ownership.status })
     }
@@ -55,11 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { id } = await params
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (user.role !== 'organizer' && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const ownership = await assertEventOwnedByUser(id, user.id)
+    const ownership = await assertEventOwnedByUser(id, user, 'manage_events')
     if (!ownership.ok) {
       return NextResponse.json({ error: ownership.error }, { status: ownership.status })
     }

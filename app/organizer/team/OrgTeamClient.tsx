@@ -4,7 +4,8 @@ import { EMPTY_VALUE } from '@/lib/format'
 import { useTranslation } from 'react-i18next'
 
 import { useState, useTransition } from 'react'
-import { UserPlus, Users, Trash2, ShieldCheck, User } from 'lucide-react'
+import { UserPlus, Users, Trash2, ShieldCheck, User, Briefcase, Crown, ChevronDown } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import {
   OrgDataTable,
   OrgEmptyState,
@@ -13,175 +14,325 @@ import {
   Drawer,
   FormSection,
   FormField,
+  SectionHeader,
 } from '@/components/organizer/ui'
+import { useConfirm } from '@/components/ui/ConfirmProvider'
+import type { TeamRole } from '@/lib/organizer/teamRoles'
 
-interface Member {
+/** One roster row, as GET /api/organizer/team returns it. */
+export interface TeamRow {
+  /** Team doc id (the member's uid) or "invite:<inviteId>" for an open invite. */
   id: string
+  uid: string | null
   email: string
-  name: string
+  name: string | null
   role: string
+  status: 'active' | 'invited'
   joined_at: string | null
 }
 
+/** The owner renders as the first row; never sent to the API. */
+type Row = TeamRow & { isOwner?: boolean }
+
 interface OrgTeamClientProps {
-  organizerId: string
   ownerName: string
   ownerEmail: string
-  members: Member[]
+  /** The signed-in account is the org owner (vs. an org admin). */
+  viewerIsOwner: boolean
+  viewerId: string
+  members: TeamRow[]
+  loadError?: boolean
 }
 
-type Role = 'admin' | 'staff'
-
-const ROLES: { value: Role; labelKey: string; descriptionKey: string }[] = [
-  { value: 'admin', labelKey: 'actions.admin', descriptionKey: 'org_team.full_access' },
-  { value: 'staff', labelKey: 'actions.staff', descriptionKey: 'org_team.assigned_per_event' },
+// The three roles a team member can hold (lib/organizer/teamRoles.ts).
+const ROLES: { value: TeamRole; icon: LucideIcon }[] = [
+  { value: 'admin', icon: ShieldCheck },
+  { value: 'manager', icon: Briefcase },
+  { value: 'staff', icon: User },
 ]
 
-function roleTone(role: string): 'success' | 'warning' | 'neutral' {
-  if (role === 'admin') return 'warning'
-  return 'neutral'
+// The access explainer: what each role can really do (docs/specs/org-teams.md).
+const ACCESS: { role: 'owner' | TeamRole; icon: LucideIcon }[] = [
+  { role: 'owner', icon: Crown },
+  { role: 'admin', icon: ShieldCheck },
+  { role: 'manager', icon: Briefcase },
+  { role: 'staff', icon: User },
+]
+
+const OWNER_ROW_ID = '__owner__'
+
+function initialOf(s: string): string {
+  return (s || '?').trim().charAt(0).toUpperCase() || '?'
 }
 
-const columns: OrgColumn<Member>[] = [
-  {
-    key: 'name',
-    header: 'Member',
-    sortable: true,
-    render: (m) => (
-      <div>
-        <p className="font-medium text-white">{m.name || m.email}</p>
-        {m.name && <p className="text-xs text-white/50">{m.email}</p>}
-      </div>
-    ),
-  },
-  {
-    key: 'role',
-    header: 'Role',
-    render: (m) => (
-      <StatusChip tone={roleTone(m.role)}>
-        {m.role.charAt(0).toUpperCase() + m.role.slice(1)}
-      </StatusChip>
-    ),
-  },
-  {
-    key: 'joined_at',
-    header: 'Added',
-    render: (m) => (
-      <span className="font-mono tabular-nums text-sm text-white/40">
-        {m.joined_at
-          ? new Date(m.joined_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-          : EMPTY_VALUE}
-      </span>
-    ),
-  },
-]
+function RoleTiles({
+  value,
+  onChange,
+  label,
+}: {
+  value: TeamRole
+  onChange: (role: TeamRole) => void
+  label: string
+}) {
+  const { t } = useTranslation('organizer')
+  return (
+    // Tiles, not a native <select>: the browser drew its option list white
+    // under white text (owner feedback 2026-10-25). The chosen tile is the one
+    // pure white fill, like every choice in the app.
+    <div role="radiogroup" aria-label={label} className="grid gap-2">
+      {ROLES.map((r) => {
+        const active = value === r.value
+        const Icon = r.icon
+        return (
+          <button
+            key={r.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(r.value)}
+            className={`flex items-start gap-3 rounded px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              active ? 'bg-white text-black' : 'bg-white/[0.06] text-white hover:bg-white/[0.1]'
+            }`}
+          >
+            <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-black/70' : 'text-white/60'}`} />
+            <span>
+              <span className="block text-sm font-semibold">{t(`team_roles.${r.value}`)}</span>
+              <span className={`mt-0.5 block text-xs ${active ? 'text-black/60' : 'text-white/50'}`}>
+                {t(`org_team.tile_${r.value}`)}
+              </span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function OrgTeamClient({
-  organizerId,
   ownerName,
   ownerEmail,
+  viewerIsOwner,
+  viewerId,
   members: initialMembers,
+  loadError = false,
 }: OrgTeamClientProps) {
   const { t } = useTranslation('organizer')
+  const confirm = useConfirm()
 
-  const [members, setMembers] = useState<Member[]>(initialMembers)
+  const [members, setMembers] = useState<TeamRow[]>(initialMembers)
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState<Role>('staff')
+  const [role, setRole] = useState<TeamRole>('manager')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [removing, setRemoving] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<string | null>(null)
+  // Role change: the row being edited and the role picked for it.
+  const [editing, setEditing] = useState<TeamRow | null>(null)
+  const [editRole, setEditRole] = useState<TeamRole>('manager')
 
-  const ownerInitial = (ownerName || ownerEmail || 'O').trim().charAt(0).toUpperCase()
+  const roleLabel = (r: string) => t(`team_roles.${r}`, { defaultValue: r })
 
   const reset = () => {
     setEmail('')
     setName('')
-    setRole('staff')
+    setRole('manager')
     setError(null)
   }
 
   const handleInvite = () => {
     if (!email.trim()) {
-      setError('Email address is required.')
+      setError(t('org_team.email_required'))
       return
     }
     setError(null)
 
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/organizer/team`, {
+        const res = await fetch('/api/organizer/team', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            name: name.trim(),
-            role,
-          }),
+          body: JSON.stringify({ email: email.trim(), name: name.trim(), role }),
         })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}))
-          throw new Error((body as { error?: string }).error || 'Failed to invite member')
-        }
-        const { member } = (await res.json()) as { member: Member }
-        setMembers((prev) => [member, ...prev])
+        const body = (await res.json().catch(() => ({}))) as { error?: string; member?: TeamRow }
+        if (!res.ok || !body.member) throw new Error(body.error || t('org_team.invite_failed'))
+        const member = body.member
+        // Re-inviting an address replaces its row (the API revokes the older invite
+        // or just re-roles an existing member).
+        setMembers((prev) => [member, ...prev.filter((m) => m.id !== member.id && m.email !== member.email)])
         setOpen(false)
         reset()
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong.')
+        setError(err instanceof Error ? err.message : t('org_team.something_wrong'))
       }
     })
   }
 
-  const handleRemove = (id: string) => {
-    setRemoving(id)
+  const handleRemove = async (m: TeamRow) => {
+    const who = m.name || m.email
+    const ok = await confirm({
+      title: m.status === 'invited' ? t('org_team.revoke_title', { who }) : t('org_team.remove_title', { who }),
+      description: m.status === 'invited' ? t('org_team.revoke_desc') : t('org_team.remove_desc'),
+      confirmLabel: m.status === 'invited' ? t('org_team.revoke_cta') : t('org_team.remove_cta'),
+      cancelLabel: t('actions.cancel'),
+      variant: 'danger',
+    })
+    if (!ok) return
+    setBusyId(m.id)
+    setRowError(null)
     startTransition(async () => {
       try {
-        await fetch(`/api/organizer/team/${id}`, { method: 'DELETE' })
-        setMembers((prev) => prev.filter((m) => m.id !== id))
+        const res = await fetch(`/api/organizer/team?memberId=${encodeURIComponent(m.id)}`, { method: 'DELETE' })
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string }
+          throw new Error(body.error || t('org_team.remove_failed'))
+        }
+        setMembers((prev) => prev.filter((x) => x.id !== m.id))
+        // Removing yourself ends your access to this org.
+        if (m.uid && m.uid === viewerId) window.location.assign('/organizer')
+      } catch (err) {
+        setRowError(err instanceof Error ? err.message : t('org_team.remove_failed'))
       } finally {
-        setRemoving(null)
+        setBusyId(null)
       }
     })
   }
 
-  const columnsWithActions: OrgColumn<Member>[] = [
-    ...columns,
+  const openRoleEditor = (m: TeamRow) => {
+    setEditing(m)
+    setEditRole((['admin', 'manager', 'staff'].includes(m.role) ? m.role : 'staff') as TeamRole)
+    setError(null)
+  }
+
+  const handleRoleSave = () => {
+    if (!editing) return
+    const target = editing
+    if (editRole === target.role) {
+      setEditing(null)
+      return
+    }
+    setError(null)
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/organizer/team', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memberId: target.id, role: editRole }),
+        })
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string }
+          throw new Error(body.error || t('org_team.role_failed'))
+        }
+        setMembers((prev) => prev.map((x) => (x.id === target.id ? { ...x, role: editRole } : x)))
+        setEditing(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('org_team.role_failed'))
+      }
+    })
+  }
+
+  const ownerRow: Row = {
+    id: OWNER_ROW_ID,
+    uid: null,
+    email: ownerEmail,
+    name: ownerName || null,
+    role: 'owner',
+    status: 'active',
+    joined_at: null,
+    isOwner: true,
+  }
+  const rows: Row[] = [ownerRow, ...members]
+
+  const columns: OrgColumn<Row>[] = [
+    {
+      key: 'name',
+      header: t('org_team.col_member'),
+      render: (m) => {
+        const you = m.isOwner ? viewerIsOwner : !!m.uid && m.uid === viewerId
+        return (
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
+              {initialOf(m.name || m.email)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-white">
+                {m.name || m.email || EMPTY_VALUE}
+                {you && <span className="ml-2 text-xs font-normal text-white/40">{t('org_team.you')}</span>}
+              </p>
+              {m.name && m.email && <p className="truncate text-xs text-white/50">{m.email}</p>}
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'role',
+      header: t('org_team.role'),
+      render: (m) =>
+        m.isOwner ? (
+          <span className="text-sm font-semibold text-white">{roleLabel('owner')}</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openRoleEditor(m)}
+            aria-label={t('org_team.change_role_for', { who: m.name || m.email })}
+            className="-mx-2 inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            {roleLabel(m.role)}
+            <ChevronDown className="h-3.5 w-3.5 text-white/40" aria-hidden />
+          </button>
+        ),
+    },
+    {
+      key: 'status',
+      header: t('actions.status'),
+      render: (m) =>
+        m.status === 'active' ? (
+          <StatusChip tone="success" className="normal-case">{t('org_team.status_active')}</StatusChip>
+        ) : (
+          <StatusChip tone="warning" className="normal-case">{t('org_team.status_invited')}</StatusChip>
+        ),
+    },
+    {
+      key: 'joined_at',
+      header: t('org_team.col_added'),
+      hideOnMobile: true,
+      render: (m) => m.isOwner ? null : (
+        <span className="font-mono tabular-nums text-sm text-white/40">
+          {m.joined_at
+            ? new Date(m.joined_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+            : EMPTY_VALUE}
+        </span>
+      ),
+    },
     {
       key: 'id',
       header: '',
       align: 'right',
-      render: (m) => (
-        <button
-          type="button"
-          onClick={() => handleRemove(m.id)}
-          disabled={removing === m.id}
-          aria-label={`Remove ${m.name || m.email} from team`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg  text-white/40 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      ),
+      render: (m) =>
+        m.isOwner ? null : (
+          <button
+            type="button"
+            onClick={() => handleRemove(m)}
+            disabled={busyId === m.id}
+            aria-label={
+              m.status === 'invited'
+                ? t('org_team.revoke_title', { who: m.name || m.email })
+                : t('org_team.remove_title', { who: m.name || m.email })
+            }
+            className="inline-flex h-8 w-8 items-center justify-center rounded text-white/40 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        ),
     },
   ]
 
   return (
     <>
-      {/* Owner card */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.12] font-semibold text-white">
-            {ownerInitial}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-white">{ownerName}</p>
-              <StatusChip tone="success">{t('actions.owner')}</StatusChip>
-            </div>
-            <p className="text-sm text-white/50">{ownerEmail}</p>
-          </div>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader title={t('org_team.people')} />
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -192,51 +343,41 @@ export default function OrgTeamClient({
         </button>
       </div>
 
-      {/* Members table */}
-      {members.length === 0 ? (
-        <OrgEmptyState
-          icon={Users}
-          title={t('org_team.no_team_members')}
-          description={t('org_team.invite_desc')}
-          action={
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded bg-white/[0.07] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-            >
-              <UserPlus className="h-4 w-4" />
-              {t('org_team.invite_team_member')}
-            </button>
-          }
-        />
-      ) : (
-        <OrgDataTable
-          rows={members}
-          columns={columnsWithActions}
-          rowKey={(m) => m.id}
-        />
+      {loadError && (
+        <p className="mb-4 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{t('org_team.load_failed')}</p>
+      )}
+      {rowError && <p className="mb-4 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{rowError}</p>}
+
+      <OrgDataTable rows={rows} columns={columns} rowKey={(m) => m.id} />
+
+      {members.length === 0 && !loadError && (
+        <div className="mt-4">
+          <OrgEmptyState
+            icon={Users}
+            title={t('org_team.no_team_members')}
+            description={t('org_team.invite_desc')}
+          />
+        </div>
       )}
 
-      {/* Guidelines */}
-      <div className="mt-8 rounded-2xl bg-white/[0.055] p-5">
-        <h3 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">{t('org_team.access_levels')}</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex items-start gap-3 rounded-xl bg-white/[0.06] p-4">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-white/60" />
-            <div>
-              <p className="text-sm font-semibold text-white">{t('actions.admin')}</p>
-              <p className="mt-0.5 text-xs text-white/50">{t('org_team.full_access')}</p>
+      {/* What each role can really do: the same table as lib/organizer/teamRoles.ts. */}
+      <section className="mt-10">
+        <SectionHeader title={t('org_team.access_levels')} className="mb-3" />
+        <div className="overflow-hidden rounded bg-white/[0.055]">
+          {ACCESS.map(({ role: r, icon: Icon }, i) => (
+            <div
+              key={r}
+              className={`flex items-start gap-3 px-4 py-4 sm:px-5 ${i > 0 ? 'border-t border-white/[0.06]' : ''}`}
+            >
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/50" aria-hidden />
+              <div className="min-w-0 sm:flex sm:flex-1 sm:gap-6">
+                <p className="text-sm font-semibold text-white sm:w-28 sm:shrink-0">{roleLabel(r)}</p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-white/60 sm:mt-0">{t(`org_team.access_${r}`)}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-xl bg-white/[0.06] p-4">
-            <User className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
-            <div>
-              <p className="text-sm font-semibold text-white">{t('actions.staff')}</p>
-              <p className="mt-0.5 text-xs text-white/50">{t('org_team.assigned_per_event')}</p>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
 
       {/* Invite drawer */}
       <Drawer
@@ -260,7 +401,7 @@ export default function OrgTeamClient({
               className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <UserPlus className="h-4 w-4" />
-              {isPending ? 'Inviting…' : 'Send invite'}
+              {isPending ? t('org_team.inviting') : t('org_team.send_invite')}
             </button>
           </div>
         }
@@ -273,57 +414,63 @@ export default function OrgTeamClient({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="colleague@example.com"
-              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-white/[0.06] w-full rounded px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
-          <FormField label="Name" htmlFor="team-name">
+          <FormField label={t('org_team.name')} htmlFor="team-name">
             <input
               id="team-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('org_team.optional')}
-              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="bg-white/[0.06] w-full rounded px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </FormField>
-          {/* Two tiles, not a native <select>: the browser drew its option
-              list white under white text (owner feedback 2026-10-25). The
-              chosen tile is the one pure white fill, like every choice in the app. */}
-          <FormField label={t('org_team.role', 'Role')}>
-            <div role="radiogroup" aria-label={t('org_team.role', 'Role')} className="grid gap-2">
-              {ROLES.map((r) => {
-                const active = role === r.value
-                return (
-                  <button
-                    key={r.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setRole(r.value)}
-                    className={`flex items-start gap-3 rounded px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                      active ? 'bg-white text-black' : 'bg-white/[0.06] text-white hover:bg-white/[0.1]'
-                    }`}
-                  >
-                    {r.value === 'admin' ? (
-                      <ShieldCheck className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-black/70' : 'text-white/60'}`} />
-                    ) : (
-                      <User className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-black/70' : 'text-white/60'}`} />
-                    )}
-                    <span>
-                      <span className="block text-sm font-semibold">{t(r.labelKey)}</span>
-                      <span className={`mt-0.5 block text-xs ${active ? 'text-black/60' : 'text-white/50'}`}>
-                        {t(r.descriptionKey)}
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+          <FormField label={t('org_team.role')}>
+            <RoleTiles value={role} onChange={setRole} label={t('org_team.role')} />
           </FormField>
-          {error && (
-            <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+          <p className="text-xs leading-relaxed text-white/45">{t('org_team.invite_note')}</p>
+          {error && open && (
+            <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
           )}
         </FormSection>
+      </Drawer>
+
+      {/* Role change drawer */}
+      <Drawer
+        open={editing !== null}
+        onClose={() => { setEditing(null); setError(null) }}
+        title={t('org_team.change_role')}
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => { setEditing(null); setError(null) }}
+              className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              {t('actions.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleRoleSave}
+              disabled={isPending}
+              className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              {isPending ? t('org_team.saving') : t('org_team.save_role')}
+            </button>
+          </div>
+        }
+      >
+        {editing && (
+          <FormSection title={editing.name || editing.email}>
+            <RoleTiles value={editRole} onChange={setEditRole} label={t('org_team.role')} />
+            {error && !open && (
+              <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+            )}
+          </FormSection>
+        )}
       </Drawer>
     </>
   )

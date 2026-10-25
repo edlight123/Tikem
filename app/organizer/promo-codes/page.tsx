@@ -1,7 +1,6 @@
 import { T } from '@/components/organizer/ui/TranslatedText'
 import { createClient } from '@/lib/firebase-db/server'
-import { getCurrentUser } from '@/lib/auth'
-import { redirect } from 'next/navigation'
+import { requireOrgPage } from '../_lib/orgPage'
 import PromoCodeManager from './PromoCodeManager'
 import { adminDb } from '@/lib/firebase/admin'
 import { PageHeader, MetricCard } from '@/components/organizer/ui'
@@ -15,15 +14,7 @@ export default async function PromoCodesPage({
 }: {
   searchParams: Promise<{ event?: string }>
 }) {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    redirect('/auth/login?redirect=/organizer/promo-codes')
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/promo-codes')
-  }
+  const { orgId } = await requireOrgPage('manage_events', '/organizer/promo-codes')
 
   const supabase = await createClient()
   const params = await searchParams
@@ -33,7 +24,7 @@ export default async function PromoCodesPage({
   try {
     const eventsSnapshot = await adminDb
       .collection('events')
-      .where('organizer_id', '==', user.id)
+      .where('organizer_id', '==', orgId)
       .orderBy('created_at', 'desc')
       .get()
     
@@ -122,7 +113,7 @@ export default async function PromoCodesPage({
           <PromoCodeManager
             events={eventsData}
             promoCodes={promoCodesData}
-            organizerId={user.id}
+            organizerId={orgId}
           />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { requireOrg } from '@/lib/organizer/context'
 import { getOrganizerEvents, getOrganizerTickets } from '@/lib/firestore/organizer'
 import { format, subDays, startOfDay } from 'date-fns'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
@@ -39,13 +40,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // The acting org's numbers: its owner, or an admin/manager on its team.
+    const org = await requireOrg('view')
+    if (!org.ok) return org.response
+    const orgId = org.value.orgId
+
     const { searchParams } = new URL(request.url)
     const rangeParam = String(searchParams.get('range') || '7d').toLowerCase()
     const range: Range = rangeParam === '30d' ? '30d' : rangeParam === 'all' || rangeParam === 'lifetime' ? 'all' : '7d'
 
     const [events, tickets] = await Promise.all([
-      getOrganizerEvents(user.id),
-      getOrganizerTickets(user.id),
+      getOrganizerEvents(orgId),
+      getOrganizerTickets(orgId),
     ])
 
     const now = new Date()

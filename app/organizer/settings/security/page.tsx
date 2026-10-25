@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireOrgPage } from '@/app/organizer/_lib/orgPage';
 import { adminDb } from '@/lib/firebase/admin';
 import SecurityForm from './SecurityForm';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
@@ -22,15 +21,8 @@ async function getLoginHistory(userId: string) {
 }
 
 export default async function SecuritySettingsPage() {
-  const user = await getCurrentUser();
-
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/security');
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/security');
-  }
+  const ctx = await requireOrgPage('view', '/organizer/settings/security');
+  const user = ctx.user;
 
   const loginHistory = await getLoginHistory(user.id);
 

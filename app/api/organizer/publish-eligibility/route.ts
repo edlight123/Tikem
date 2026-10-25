@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
+import { getOrgContext } from '@/lib/organizer/context'
+import { orgCan } from '@/lib/organizer/teamRoles'
 import { checkPaidPublishGate } from '@/lib/events/publish-gate'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +32,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'country is required' }, { status: 400 })
     }
 
-    const gate = await checkPaidPublishGate({ organizerId: user.id, country })
+    // The org the event is published for decides payouts: the acting org when
+    // the caller may run its events, else (as before) the caller's own account.
+    const ctx = await getOrgContext()
+    const organizerId = ctx && orgCan(ctx.role, 'manage_events') ? ctx.orgId : user.id
+    const gate = await checkPaidPublishGate({ organizerId, country })
 
     // Always 200: this is a question about eligibility, not an attempt to act.
     // The caller branches on `allowed`.

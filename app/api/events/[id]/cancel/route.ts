@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin as isAdminEmail } from '@/lib/admin'
+import { canOnEvent } from '@/lib/organizer/context'
+import { orgCan } from '@/lib/organizer/teamRoles'
 import { cancelEventWithRefunds, organizerSelfCancelBlock } from '@/lib/events/cancel'
 import { logAdminAction } from '@/lib/admin/audit-log'
 
@@ -38,7 +40,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       (user as any).role === 'admin' ||
       (user as any).role === 'super_admin' ||
       isAdminEmail(((user as any).email_verified) ? user.email : null)
-    const owner = event?.organizer_id === user.id
+    // "owner" here means the event's own org: its owner, or a team admin/manager.
+    const team = await canOnEvent(user, event, 'manage_events')
+    const owner = team.allowed && orgCan(team.role, 'manage_events')
 
     if (!owner && !admin) {
       return NextResponse.json({ error: 'Not allowed to cancel this event' }, { status: 403 })

@@ -1,5 +1,4 @@
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
 import { Megaphone } from 'lucide-react'
 import EventMarketingClient from './EventMarketingClient'
@@ -12,14 +11,8 @@ export default async function EventMarketingPage({
   params: Promise<{ id: string }>
 }) {
   const { id: eventId } = await params
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect(`/auth/login?redirect=/organizer/events/${eventId}/marketing`)
-  if (user.role !== 'organizer') redirect('/organizer')
-
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-  if (!eventDoc.exists) notFound()
-  const eventData = eventDoc.data()!
-  if (eventData.organizer_id !== user.id && !user.isAdmin) notFound()
+  const { event: __event } = await requireEventPage(eventId, 'view', `/organizer/events/${eventId}/marketing`)
+  const eventData = __event
 
   // Fetch promo codes for this event
   let promoCodes: Array<{

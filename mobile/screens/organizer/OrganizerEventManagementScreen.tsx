@@ -28,6 +28,7 @@ import {
   cancelEvent,
 } from '../../lib/api/events';
 import { useI18n } from '../../contexts/I18nContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useLocaleFormat } from '../../lib/format';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -146,6 +147,8 @@ export default function OrganizerEventManagementScreen() {
   const handleViewAnalytics = () => {
     navigation.navigate('EventAnalytics', { eventId, eventTitle: event?.title });
   };
+
+  const canSeeEarnings = useActiveOrg().can('owner_only');
 
   const handleViewEarnings = () => {
     navigation.navigate('OrganizerEventEarnings', { eventId });
@@ -425,7 +428,10 @@ export default function OrganizerEventManagementScreen() {
       label: t('organizerEventManagement.actionGroups.sales'),
       tiles: [
         { key: 'orders', icon: 'receipt-outline', label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
-        { key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings },
+        // Earnings carry balances and withdrawals: the org owner's only.
+        ...(canSeeEarnings
+          ? [{ key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings }]
+          : []),
         { key: 'analytics', icon: 'bar-chart-outline', label: t('organizerEventManagement.actions.analytics'), onPress: handleViewAnalytics },
         { key: 'public', icon: 'eye-outline', label: t('organizerEventManagement.actions.viewPublicPage'), onPress: handleViewPublicPage },
       ],

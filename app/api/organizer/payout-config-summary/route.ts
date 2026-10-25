@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,10 @@ export async function GET(_req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const [haitiProfile, stripeProfile] = await Promise.all([
       getPayoutProfile(user.id, 'haiti'),

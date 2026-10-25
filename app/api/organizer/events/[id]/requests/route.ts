@@ -1,5 +1,6 @@
 // The organizer's approval list for one event
-// (docs/specs/approval-lists-and-plus-ones.md). Owner or admin only; every read
+// (docs/specs/approval-lists-and-plus-ones.md). The event's org team (owner,
+// admin, manager) or a platform admin; every read
 // and write goes through the Admin SDK (attend_requests has no client rules).
 
 import { NextResponse } from 'next/server'
@@ -12,6 +13,8 @@ import {
   declineRequest,
   listEventRequests,
 } from '@/lib/attend-requests/server'
+import { canOnEvent } from '@/lib/organizer/context'
+import type { OrgAction } from '@/lib/organizer/teamRoles'
 import { eventAllowedPlusOnes, eventRequiresApproval } from '@/lib/events/approval'
 
 export const dynamic = 'force-dynamic'
@@ -23,13 +26,13 @@ function json(body: any, status = 200) {
 }
 
 /** The event, when the caller may manage its list; otherwise the response to send. */
-async function authorize(eventId: string) {
+async function authorize(eventId: string, action: OrgAction) {
   const user = await getCurrentUser()
   if (!user) return { response: json({ error: 'Not authenticated', code: 'auth_required' }, 401) }
   const snap = await adminDb.collection('events').doc(eventId).get()
   if (!snap.exists) return { response: json({ error: 'Event not found', code: 'event_not_found' }, 404) }
   const event = { id: snap.id, ...snap.data() } as any
-  if (!canManageEvent(user, event)) {
+  if (!canManageEvent(user, event) && !(await canOnEvent(user, event, action)).allowed) {
     return { response: json({ error: 'You do not own this event', code: 'not_event_owner' }, 403) }
   }
   return { user, event }
@@ -38,7 +41,7 @@ async function authorize(eventId: string) {
 export async function GET(_request: Request, { params }: Ctx) {
   try {
     const { id } = await params
-    const auth = await authorize(String(id))
+    const auth = await authorize(String(id), 'view')
     if ('response' in auth) return auth.response
     const { requests, counts } = await listEventRequests(String(id))
     return json({
@@ -57,7 +60,7 @@ export async function POST(request: Request, { params }: Ctx) {
   try {
     const { id } = await params
     const eventId = String(id)
-    const auth = await authorize(eventId)
+    const auth = await authorize(eventId, 'manage_events')
     if ('response' in auth) return auth.response
     const body = await request.json().catch(() => ({}))
     const action = String(body?.action || '')

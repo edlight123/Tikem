@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from '@/lib/min-paid-price'
+import { canOnEvent } from '@/lib/organizer/context'
 
 /**
  * Create ticket tier for an event
@@ -23,10 +24,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify event belongs to user using direct Firestore
+    // Verify the caller may run this event (its org team) using direct Firestore
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     
-    if (!eventDoc.exists || eventDoc.data()?.organizer_id !== user.id) {
+    if (!eventDoc.exists || !(await canOnEvent(user, eventDoc.data(), 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Event not found or unauthorized' },
         { status: 404 }
@@ -188,7 +189,7 @@ export async function PATCH(req: NextRequest) {
       .eq('id', tierId)
       .single()
 
-    if (!tier || tier.events?.organizer_id !== user.id) {
+    if (!tier || !(await canOnEvent(user, tier.events, 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Ticket tier not found or unauthorized' },
         { status: 404 }
@@ -280,7 +281,7 @@ export async function DELETE(req: NextRequest) {
     const tierData = tierDoc.data()
     const eventDoc = await adminDb.collection('events').doc(tierData?.event_id).get()
     
-    if (!eventDoc.exists || eventDoc.data()?.organizer_id !== user.id) {
+    if (!eventDoc.exists || !(await canOnEvent(user, eventDoc.data(), 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }

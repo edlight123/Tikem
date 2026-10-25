@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { DoorModeInterface } from '@/components/scan/DoorModeInterface'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { teamRoleIn } from '@/lib/organizer/context'
+import { orgCan } from '@/lib/organizer/teamRoles'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -50,7 +52,11 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     entry_points: eventData.entry_points
   }
 
-  const isEventOrganizerOwner = event.organizer_id === authUser.uid
+  // The event's org runs the door: its owner and its admins/managers
+  // (manage_events). Org staff get door access per event, below.
+  const isEventOrganizerOwner =
+    event.organizer_id === authUser.uid ||
+    (Boolean(event.organizer_id) && orgCan(await teamRoleIn(String(event.organizer_id), authUser.uid), 'manage_events'))
 
   let isEventStaff = false
   let canViewAttendees = false

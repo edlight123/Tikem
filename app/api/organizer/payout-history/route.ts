@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutHistory } from '@/lib/firestore/payout'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,10 @@ export async function GET() {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const payouts = await getPayoutHistory(user.id, 50)
     return NextResponse.json({ payouts })

@@ -14,6 +14,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { useLocaleFormat } from '../../lib/format';
 import { backendFetch } from '../../lib/api/backend';
@@ -65,6 +66,8 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { userProfile } = useAuth();
+  // Acting org (own or a team's), not the signed-in uid: lib/activeOrg.ts.
+  const { orgId } = useActiveOrg();
   const { t, language } = useI18n();
   const { formatMoney: fmtMoney } = useLocaleFormat();
   const { height: headerH, onHeight } = useOverlayHeaderInset();
@@ -85,10 +88,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
   useEffect(() => {
     loadData();
-  }, [userProfile?.id, timeRange]);
+  }, [orgId, timeRange]);
 
   const loadData = async () => {
-    if (!userProfile?.id) return;
+    if (!orgId) return;
 
     try {
       // Fetch analytics from the web API (same endpoint the web uses)
@@ -135,7 +138,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
       // Get organizer events
       const eventsQuery = query(
         collection(db, 'events'),
-        where('organizer_id', '==', userProfile?.id)
+        where('organizer_id', '==', orgId)
       );
       const eventsSnapshot = await getDocs(eventsQuery);
       const events = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

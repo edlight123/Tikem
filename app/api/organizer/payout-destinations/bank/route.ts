@@ -13,6 +13,7 @@ import {
 } from '@/lib/firestore/payout'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { holderMatchesKyc, loadKycLegalNames } from '@/lib/payouts/payee-identity'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export async function GET(_req: NextRequest) {
   try {
@@ -20,6 +21,10 @@ export async function GET(_req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const haitiProfile = await getPayoutProfile(user.id, 'haiti')
     if (!haitiProfile) {
@@ -91,6 +96,10 @@ export async function POST(req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const haitiProfile = await getPayoutProfile(user.id, 'haiti')
     if (!haitiProfile) {

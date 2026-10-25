@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { resolvePosterTheme } from '../../lib/posterGradient';
@@ -59,11 +60,20 @@ export default function OrganizerEventsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // The acting org's events (lib/activeOrg.ts), not the signed-in uid's.
+  const { orgId, can } = useActiveOrg();
+  const canSetUpPayouts = can('owner_only');
+
+  useEffect(() => {
+    setLoading(true);
+    setAllEvents([]);
+  }, [orgId]);
+
   const loadEvents = useCallback(async () => {
-    if (!userProfile?.id) return;
+    if (!orgId) return;
 
     try {
-      const eventsData = await getOrganizerEvents(userProfile.id, 100);
+      const eventsData = await getOrganizerEvents(orgId, 100);
       setAllEvents(eventsData);
     } catch (error) {
       console.error('Error loading organizer events:', error);
@@ -71,7 +81,7 @@ export default function OrganizerEventsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userProfile?.id]);
+  }, [orgId]);
 
   useEffect(() => {
     loadEvents();
@@ -274,18 +284,24 @@ export default function OrganizerEventsScreen() {
           <TouchableOpacity
             style={styles.payoutBanner}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('OrganizerPayoutSettings')}
-            accessibilityRole="button"
-            accessibilityLabel={`${payoutBannerLabel}. ${t('organizerEvents.payoutBanner.action')}`}
+            // Payout setup is the org owner's; a team member just sees the notice.
+            onPress={canSetUpPayouts ? () => navigation.navigate('OrganizerPayoutSettings') : undefined}
+            disabled={!canSetUpPayouts}
+            accessibilityRole={canSetUpPayouts ? 'button' : 'text'}
+            accessibilityLabel={
+              canSetUpPayouts
+                ? `${payoutBannerLabel}. ${t('organizerEvents.payoutBanner.action')}`
+                : `${payoutBannerLabel}. ${t('orgTeam.ownerSetsUpPayouts')}`
+            }
           >
             <View style={styles.payoutBannerDot} />
             <Text style={styles.payoutBannerText} numberOfLines={1}>
               {payoutBannerLabel}
             </Text>
             <Text style={styles.payoutBannerAction} numberOfLines={1}>
-              {t('organizerEvents.payoutBanner.action')}
+              {canSetUpPayouts ? t('organizerEvents.payoutBanner.action') : t('orgTeam.ownerSetsUpPayouts')}
             </Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.text} />
+            {canSetUpPayouts ? <Ionicons name="chevron-forward" size={14} color={colors.text} /> : null}
           </TouchableOpacity>
         ) : null}
 

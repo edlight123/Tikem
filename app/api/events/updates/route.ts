@@ -5,6 +5,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { notifyEventUpdate } from '@/lib/notifications/helpers'
+import { canOnEvent, orgDisplayName } from '@/lib/organizer/context'
 
 const updateSchema = z.object({
   eventId: z.string().uuid(),
@@ -40,15 +41,14 @@ export async function POST(request: NextRequest) {
 
     const { eventId, title, message, sendEmail, sendSms, sendNow } = validation.data
 
-    // Verify organizer owns this event
+    // Verify the caller runs this event (its org's owner, admin or manager)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('id, title, organizer_id, organizer_name, banner_image_url, country, city, timezone')
       .eq('id', eventId)
-      .eq('organizer_id', user.id)
       .single()
 
-    if (eventError || !event) {
+    if (eventError || !event || !(await canOnEvent(user as any, event, 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Event not found or you are not the organizer' },
         { status: 404 }
@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
       .from('event_updates')
       .insert({
         event_id: eventId,
-        organizer_id: user.id,
+        // The event's org; created_by is the team member who wrote it.
+        organizer_id: (event as any).organizer_id || user.id,
+        created_by: user.id,
         title,
         message,
         send_email: sendEmail,
@@ -157,10 +159,10 @@ export async function POST(request: NextRequest) {
 
         const ev = event as any
         const posterUrl = String(ev.banner_image_url || '').trim() || null
-        // The users list above is already in memory, so the organizer's name costs nothing.
-        const organizerProfile = (attendeesList || []).find((u: any) => u.id === user.id) as any
+        // From the ORG (its brand), never the team member who pressed send.
         const organizerName =
-          String(ev.organizer_name || organizerProfile?.full_name || user.user_metadata?.full_name || '').trim() ||
+          String(ev.organizer_name || '').trim() ||
+          (ev.organizer_id ? await orgDisplayName(String(ev.organizer_id)) : '') ||
           undefined
 
         for (const attendee of attendees) {

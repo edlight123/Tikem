@@ -1,8 +1,7 @@
 import AnalyticsView from './AnalyticsView'
 import { createClient } from '@/lib/firebase-db/server'
-import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { requireOrgPage } from '../_lib/orgPage'
 import SalesChart from '@/components/charts/SalesChart'
 import CategoryChart from '@/components/charts/CategoryChart'
 import { TrendingUp, DollarSign, Ticket, Calendar } from 'lucide-react'
@@ -17,15 +16,7 @@ export const revalidate = 120 // Cache for 2 minutes
 export const dynamic = 'force-dynamic'
 
 export default async function AnalyticsPage() {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    redirect('/auth/login?redirect=/organizer/analytics')
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/analytics')
-  }
+  const { orgId } = await requireOrgPage('view', '/organizer/analytics')
 
   const supabase = await createClient()
 
@@ -33,7 +24,7 @@ export default async function AnalyticsPage() {
   const eventsQuery = await supabase
     .from('events')
     .select('id,title,start_datetime,is_published,category,organizer_id,currency')
-    .eq('organizer_id', user.id)
+    .eq('organizer_id', orgId)
 
   const allOrganizerEvents = eventsQuery.data || []
 
@@ -60,7 +51,7 @@ export default async function AnalyticsPage() {
     ? await supabase
         .from('tickets')
         .select('event_id,price_paid,created_at,status,events!inner(organizer_id,currency)')
-        .eq('events.organizer_id', user.id)
+        .eq('events.organizer_id', orgId)
         .eq('events.currency', organizerCurrency)
     : { data: [] as any[] }
 

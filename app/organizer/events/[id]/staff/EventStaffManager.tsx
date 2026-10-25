@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { useToast } from '@/components/ui/Toast'
-import { useOrganizerClientGuard } from '@/lib/hooks/useOrganizerClientGuard'
+import { useOrgClientAuth } from '@/lib/organizer/useOrgClientAuth'
 
 type InviteMethod = 'link' | 'email' | 'phone'
 
@@ -39,10 +39,9 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const { t: tx } = useTranslation('organizer')
 
   const { showToast } = useToast()
-  const { firebaseUser, loading: authLoading } = useOrganizerClientGuard({
-    loginRedirectPath: `/auth/login?redirect=/organizer/events/${eventId}/staff`,
-    upgradeRedirectPath: `/organizer?redirect=/organizer/events/${eventId}/staff`,
-  })
+  // The page (server) already checked this account may manage the event's
+  // org; here we only wait for the browser session.
+  const { firebaseUser, loading: authLoading } = useOrgClientAuth(`/organizer/events/${eventId}/staff`)
 
   const authReady = !authLoading
   const authUid = firebaseUser?.uid || null

@@ -1,6 +1,5 @@
 import { T } from '@/components/organizer/ui/TranslatedText'
-import { getCurrentUser } from '@/lib/auth'
-import { redirect } from 'next/navigation'
+import { requireOrgPage } from '../../_lib/orgPage'
 import Link from 'next/link'
 import { ChevronLeft, CalendarDays, ShieldCheck, Users } from 'lucide-react'
 import { createClient } from '@/lib/firebase-db/server'
@@ -49,17 +48,10 @@ export default async function TeamSettingsPage({
   searchParams?: Promise<{ eventId?: string }>
 }) {
   const resolvedSearchParams = await searchParams
-  const user = await getCurrentUser()
+  // Per-event door staff is event work (manage_events) for the acting org.
+  const { orgId } = await requireOrgPage('manage_events', '/organizer/settings/team')
 
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/team')
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/team')
-  }
-
-  const { events, error: eventsError } = await getOrganizerEvents(user.id)
+  const { events, error: eventsError } = await getOrganizerEvents(orgId)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">

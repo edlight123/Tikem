@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Calendar, Image as ImageIcon, ScanQrCode, UserSearch } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { getTodayEvents, TodayEvent } from '../../lib/api/organizer';
 import { colors as T, radius } from '../../theme/tokens';
@@ -23,6 +24,8 @@ export default function OrganizerScanScreen() {
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile } = useAuth();
+  // Acting org (own or a team's), not the signed-in uid: lib/activeOrg.ts.
+  const { orgId } = useActiveOrg();
   const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
@@ -38,16 +41,17 @@ export default function OrganizerScanScreen() {
 
   useEffect(() => {
     loadEvents();
-  }, [userProfile?.id]);
+  }, [orgId]);
 
   const loadEvents = async () => {
-    if (!userProfile?.id) return;
+    if (!orgId) return;
 
     try {
-      const events = await getTodayEvents(userProfile.id);
+      const events = await getTodayEvents(orgId);
       setLoadFailed(false);
       setTodayEvents(events);
-      if (events.length > 0) setSelectedEvent(events[0]);
+      // A different org (or a new day) must not keep the old selection.
+      setSelectedEvent(events[0] ?? null);
     } catch (error) {
       console.error('Error loading events:', error);
       // Otherwise a failed load reads exactly like "no events today".

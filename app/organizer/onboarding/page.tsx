@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import OnboardingClient from './OnboardingClient'
+import { getPortalOrgContext } from '../_lib/orgPage'
 
 /**
  * /organizer/onboarding — Stripe Connect EMBEDDED onboarding.
@@ -21,6 +22,12 @@ export default async function OrganizerOnboardingPage() {
   if (!user) {
     redirect(`/auth/login?redirect=${encodeURIComponent('/organizer/onboarding')}`)
   }
+
+  // Stripe Connect is the org owner's (owner_only). A team member acting for
+  // someone else's org goes back to the dashboard; an account with no org yet
+  // keeps today's flow.
+  const ctx = await getPortalOrgContext()
+  if (ctx && !ctx.isOwner) redirect('/organizer')
 
   const headerStore = await headers()
   const authHeader = headerStore.get('authorization') || ''

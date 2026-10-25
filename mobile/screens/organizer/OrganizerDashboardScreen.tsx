@@ -36,6 +36,9 @@ import { TikemWordmark } from '../../components/TikemWordmark';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { formatPrice } from '../../lib/currency';
 import { prefetchEarningsHub } from '../../lib/earningsHubCache';
+import { useActiveOrg } from '../../lib/activeOrg';
+import { loadOrgBrand } from '../../lib/api/orgSettings';
+import { OrgSwitcherSheet, useOrgLabel } from '../../components/organizer/OrgSwitcher';
 
 /** How many upcoming events the rail shows before "view all" takes over. */
 const UPCOMING_RAIL_MAX = 10;
@@ -75,16 +78,48 @@ export default function OrganizerDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // The org this dashboard is for: the person's own, or a team they run
+  // (lib/activeOrg.ts). Every query below is keyed on it, not on the uid.
+  const activeOrg = useActiveOrg();
+  const orgId = activeOrg.orgId;
+  const isOwner = activeOrg.isOwner;
+  const { roleLabel } = useOrgLabel();
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [teamBrand, setTeamBrand] = useState<{ name: string; logo: string } | null>(null);
+
+  // Acting for someone else's org: greet with THAT org's name and logo.
+  useEffect(() => {
+    setTeamBrand(null);
+    if (!orgId || isOwner) return;
+    let cancelled = false;
+    loadOrgBrand(orgId)
+      .then((b) => {
+        if (!cancelled) setTeamBrand({ name: b.organization_name, logo: b.organization_logo });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, isOwner]);
+
+  // A different org: drop the previous org's numbers before loading.
+  useEffect(() => {
+    setLoading(true);
+    setTodayEvents([]);
+    setAllEvents([]);
+    setStats(null);
+  }, [orgId]);
+
   const loadData = useCallback(async () => {
-    if (!userProfile?.id) return;
-    // Warm Earnings in the background so it opens on fresh numbers.
-    prefetchEarningsHub(userProfile.id);
+    if (!orgId) return;
+    // Warm Earnings in the background so it opens on fresh numbers (owner only).
+    if (isOwner) prefetchEarningsHub(orgId);
 
     try {
       const [eventsData, statsData, organizerEvents] = await Promise.all([
-        getTodayEvents(userProfile.id),
-        getOrganizerStats(userProfile.id, '7d'),
-        getOrganizerEvents(userProfile.id, 200),
+        getTodayEvents(orgId),
+        getOrganizerStats(orgId, '7d'),
+        getOrganizerEvents(orgId, 200),
       ]);
 
       setTodayEvents(eventsData);
@@ -96,7 +131,7 @@ export default function OrganizerDashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userProfile?.id]);
+  }, [orgId, isOwner]);
 
   useEffect(() => {
     loadData();
@@ -130,9 +165,15 @@ export default function OrganizerDashboardScreen() {
       .slice(0, UPCOMING_RAIL_MAX);
   }, [allEvents, todayEvents]);
 
-  const displayName =
-    userProfile?.organization_name || userProfile?.full_name || t('organizerDashboard.organizerFallback');
-  const avatarUri = userProfile?.organization_logo || userProfile?.photo_url || null;
+  const displayName = isOwner
+    ? userProfile?.organization_name || userProfile?.full_name || t('organizerDashboard.organizerFallback')
+    : teamBrand?.name || activeOrg.orgName || t('orgTeam.unnamedOrg');
+  const avatarUri = isOwner
+    ? userProfile?.organization_logo || userProfile?.photo_url || null
+    : teamBrand?.logo || null;
+  // "Admin" / "Manager" under a team org's name; a switch when there is a choice.
+  const canSwitch = activeOrg.options.length > 1;
+  const showRoleLine = !isOwner || canSwitch;
 
   const greeting = (
     <View style={[styles.greetingRow, { paddingTop: insets.top + 16 }]}>
@@ -143,6 +184,22 @@ export default function OrganizerDashboardScreen() {
         <Text style={styles.screenTitle} numberOfLines={2}>
           {displayName}
         </Text>
+        {showRoleLine ? (
+          <TouchableOpacity
+            style={styles.roleLine}
+            onPress={canSwitch ? () => setShowSwitcher(true) : undefined}
+            disabled={!canSwitch}
+            activeOpacity={0.7}
+            accessibilityRole={canSwitch ? 'button' : 'text'}
+            accessibilityLabel={canSwitch ? t('orgTeam.switcher.title') : roleLabel(activeOrg.role)}
+          >
+            <Text style={styles.roleLineText} numberOfLines={1}>
+              {roleLabel(activeOrg.role)}
+              {canSwitch ? ` · ${t('orgTeam.switcher.switch')}` : ''}
+            </Text>
+            {canSwitch ? <Ionicons name="chevron-down" size={14} color={colors.textSecondary} /> : null}
+          </TouchableOpacity>
+        ) : null}
       </View>
       <View style={styles.avatar}>
         {avatarUri ? (
@@ -160,8 +217,9 @@ export default function OrganizerDashboardScreen() {
     </View>
   );
 
-  const quickActions: ActionTile[] = [
+  const allActions: Array<ActionTile & { ownerOnly?: boolean }> = [
     {
+      ownerOnly: true,
       key: 'earnings',
       label: t('organizerDashboard.earnings') || 'Earnings',
       icon: 'cash-outline',
@@ -174,6 +232,7 @@ export default function OrganizerDashboardScreen() {
       onPress: () => navigation.navigate('OrganizerAnalytics'),
     },
     {
+      ownerOnly: true,
       key: 'payouts',
       label: t('organizerDashboard.payouts') || 'Payouts',
       icon: 'wallet-outline',
@@ -200,6 +259,10 @@ export default function OrganizerDashboardScreen() {
     // No Create tile here (per beta feedback): Create already lives in My
     // Events' header button.
   ];
+  // Money out (earnings balances, payouts) is the owner's alone.
+  const quickActions: ActionTile[] = allActions
+    .filter((a) => !a.ownerOnly || activeOrg.can('owner_only'))
+    .map(({ ownerOnly: _ownerOnly, ...tile }) => tile);
 
   const renderPoster = (
     id: string,
@@ -364,6 +427,7 @@ export default function OrganizerDashboardScreen() {
 
   return (
     <View style={styles.container}>
+      <OrgSwitcherSheet visible={showSwitcher} onClose={() => setShowSwitcher(false)} />
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
@@ -378,8 +442,9 @@ export default function OrganizerDashboardScreen() {
       >
         {greeting}
 
-        {/* Activation checklist — only renders while steps remain (new organizers). */}
-        <GettingStartedCard />
+        {/* Activation checklist — only renders while steps remain (new organizers).
+            It is the owner's setup (payouts, verification), so not for a team. */}
+        {isOwner ? <GettingStartedCard /> : null}
 
         {/* Tonight: only when something is on today. */}
         {heroEvent && (
@@ -488,6 +553,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     textTransform: 'uppercase',
     color: colors.textSecondary,
     marginBottom: 6,
+  },
+  roleLine: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  roleLineText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   screenTitle: {
     fontSize: 36,

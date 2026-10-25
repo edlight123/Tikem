@@ -58,6 +58,7 @@ import {
   readDebtInTransaction,
   syncOrganizerDebt,
 } from '@/lib/payouts/organizer-debt'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -80,6 +81,10 @@ export async function POST(req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     // A banned organizer, or one whose payouts an admin froze, withdraws
     // nothing — including money already earned and released (owner decision).

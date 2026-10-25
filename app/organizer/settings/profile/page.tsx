@@ -1,5 +1,5 @@
-import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { requireOrgPage } from '@/app/organizer/_lib/orgPage';
 import { adminDb } from '@/lib/firebase/admin';
 import ProfileForm from './ProfileForm';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
@@ -12,15 +12,8 @@ async function getUserProfile(userId: string) {
 }
 
 export default async function ProfileSettingsPage() {
-  const user = await getCurrentUser();
-
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/profile');
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/profile');
-  }
+  const ctx = await requireOrgPage('view', '/organizer/settings/profile');
+  const user = ctx.user;
 
   const userProfile = await getUserProfile(user.id);
 

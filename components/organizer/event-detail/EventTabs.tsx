@@ -12,6 +12,8 @@ interface EventTabsProps {
   /** Approval-list event: show the Requests tab (with its pending count). */
   requiresApproval?: boolean
   pendingRequests?: number
+  /** Earnings (payouts, withdrawals) is owner-only; hidden for team members. */
+  showEarnings?: boolean
 }
 
 /**
@@ -29,7 +31,7 @@ interface EventTabsProps {
  *
  * Active state is derived from the URL; no local state beyond the menu.
  */
-export function EventTabs({ eventId, ticketCount, requiresApproval = false, pendingRequests }: EventTabsProps) {
+export function EventTabs({ eventId, ticketCount, requiresApproval = false, pendingRequests, showEarnings = true }: EventTabsProps) {
   const { t } = useTranslation('common')
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -47,7 +49,7 @@ export function EventTabs({ eventId, ticketCount, requiresApproval = false, pend
       : []),
     { id: 'orders', label: t('organizer.tab_orders', { defaultValue: 'Orders' }), href: `${base}/orders` },
     { id: 'tickets', label: t('organizer.tab_tickets', { defaultValue: 'Tickets' }), href: `${base}/tickets` },
-    { id: 'earnings', label: t('organizer.earnings', { defaultValue: 'Earnings' }), href: `${base}/earnings` },
+    ...(showEarnings ? [{ id: 'earnings', label: t('organizer.earnings', { defaultValue: 'Earnings' }), href: `${base}/earnings` }] : []),
     { id: 'check-in', label: t('organizer.check_in', { defaultValue: 'Check-in' }), href: `/organizer/scan/${eventId}` },
   ]
 

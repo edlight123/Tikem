@@ -4,6 +4,8 @@ import { isAdmin as isAdminEmail } from '@/lib/admin'
 import { normalizeCurrency } from '@/lib/money'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { buyerIdOf, isGuestTicket, toTicketRow, type EventTicketRow } from '@/lib/organizer/eventOrders'
+import { canOnEvent } from '@/lib/organizer/context'
+import type { OrgAction } from '@/lib/organizer/teamRoles'
 
 export type EventAccess =
   | { ok: true; user: { id: string; email?: string; role?: string }; isAdmin: boolean; event: Record<string, any> & { id: string } }
@@ -11,9 +13,11 @@ export type EventAccess =
 
 /**
  * The same gate the web's per-event organizer pages apply: signed in, and
- * either the event's organizer or a platform admin.
+ * either a team member of the event's org whose role allows `action` (the
+ * owner always does) or a platform admin. Reads pass 'view'; anything that
+ * changes a ticket passes 'manage_events'.
  */
-export async function authorizeEventOwner(eventId: string): Promise<EventAccess> {
+export async function authorizeEventOwner(eventId: string, action: OrgAction = 'view'): Promise<EventAccess> {
   if (!eventId) return { ok: false, status: 400, error: 'Event ID is required' }
   const user = await getCurrentUser()
   if (!user) return { ok: false, status: 401, error: 'Not authenticated' }
@@ -22,7 +26,7 @@ export async function authorizeEventOwner(eventId: string): Promise<EventAccess>
   const snap = await adminDb.collection('events').doc(eventId).get()
   if (!snap.exists) return { ok: false, status: 404, error: 'Event not found' }
   const event = { id: snap.id, ...(snap.data() as any) }
-  if (event.organizer_id !== user.id && !isAdmin) {
+  if (!isAdmin && !(await canOnEvent(user, event, action)).allowed) {
     return { ok: false, status: 403, error: 'You do not own this event' }
   }
   return { ok: true, user, isAdmin, event }

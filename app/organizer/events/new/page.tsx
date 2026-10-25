@@ -1,5 +1,4 @@
-import { requireAuth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
+import { requireOrgPage } from '../../_lib/orgPage'
 import EventComposer from '../EventComposer'
 import { createClient } from '@/lib/firebase-db/server'
 import { getOrganizerVerificationStatus } from '@/lib/organizerVerification'
@@ -39,27 +38,23 @@ async function startingLocation(userId: string): Promise<{ country: string; city
 }
 
 export default async function NewEventPage() {
-  const { user, error } = await requireAuth()
-
-  if (error || !user) {
-    redirect('/auth/login?redirect=/organizer/events/new')
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/events/new')
-  }
+  // Owner, or an admin/manager of the acting org: the new event belongs to
+  // the org (organizer_id = orgId) and records who made it (created_by).
+  const ctx = await requireOrgPage('manage_events', '/organizer/events/new')
+  const orgId = ctx.orgId
 
   // Drafts are allowed for everyone; paid publishing is enforced later in the
   // full editor + API. Keep this first screen light and fast.
   await createClient() // Ensure server db is initialized for this request
   const [verification, start] = await Promise.all([
-    getOrganizerVerificationStatus(user.id),
-    startingLocation(user.id),
+    getOrganizerVerificationStatus(orgId),
+    startingLocation(orgId),
   ])
 
   return (
     <EventComposer
-      userId={user.id}
+      userId={orgId}
+      actorId={ctx.user.id}
       isVerified={verification.isVerified}
       defaultCountry={start.country}
       defaultCity={start.city}

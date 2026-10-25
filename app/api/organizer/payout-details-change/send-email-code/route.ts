@@ -6,6 +6,7 @@ import { renderEmail, title, p, gap, codeBlock } from '@/lib/email-kit/layout'
 import type { EmailLang } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import crypto from 'crypto'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 const DOC_ID = 'payoutDetailsChangeVerification'
 const CODE_TTL_MS = 10 * 60 * 1000
@@ -87,6 +88,10 @@ export async function POST(_request: NextRequest) {
 
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(organizerId)
+    if (notOwner) return notOwner
 
     const userDoc = await adminDb.collection('users').doc(organizerId).get()
     // The step-up code goes to the sign-in email, never the client-writable

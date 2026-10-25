@@ -12,6 +12,7 @@ import {
   meetsMoncashWithdrawalMinimum,
   moncashMinimumInfo,
 } from '@/lib/payouts/moncash-withdrawal-minimum'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 const QuerySchema = z.object({
   eventId: z.string().min(1),
@@ -26,6 +27,10 @@ export async function GET(request: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const url = new URL(request.url)
     const parsed = QuerySchema.safeParse({ eventId: url.searchParams.get('eventId') })

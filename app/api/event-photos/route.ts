@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminStorage } from '@/lib/firebase/admin'
 import { createClient } from '@/lib/firebase-db/server'
+import { canOnEvent } from '@/lib/organizer/context'
 
 /**
  * Get photos for an event
@@ -80,7 +81,7 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    const isOrganizer = photo.events?.organizer_id === user.id
+    const isOrganizer = (await canOnEvent(user, photo.events, 'manage_events')).allowed
     const isUploader = photo.uploaded_by === user.id
 
     if (!isOrganizer && !isUploader) {

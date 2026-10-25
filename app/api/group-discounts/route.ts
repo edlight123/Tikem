@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { canOnEvent } from '@/lib/organizer/context'
 
 /**
  * Create group discount for an event
@@ -21,10 +22,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify event belongs to user
+    // Verify the caller may run this event (its org team)
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     
-    if (!eventDoc.exists || eventDoc.data()?.organizer_id !== user.id) {
+    if (!eventDoc.exists || !(await canOnEvent(user, eventDoc.data(), 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Event not found or unauthorized' },
         { status: 404 }
@@ -136,7 +137,7 @@ export async function DELETE(req: NextRequest) {
     const discountData = discountDoc.data()
     const eventDoc = await adminDb.collection('events').doc(discountData?.event_id).get()
     
-    if (!eventDoc.exists || eventDoc.data()?.organizer_id !== user.id) {
+    if (!eventDoc.exists || !(await canOnEvent(user, eventDoc.data(), 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }

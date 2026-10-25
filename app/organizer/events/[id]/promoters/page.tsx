@@ -1,5 +1,4 @@
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
 import PromotersClient from './PromotersClient'
 
@@ -11,14 +10,8 @@ export default async function EventPromotersPage({
   params: Promise<{ id: string }>
 }) {
   const { id: eventId } = await params
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect(`/auth/login?redirect=/organizer/events/${eventId}/promoters`)
-  if (user.role !== 'organizer') redirect('/organizer')
-
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-  if (!eventDoc.exists) notFound()
-  const eventData = eventDoc.data()!
-  if (eventData.organizer_id !== user.id && !user.isAdmin) notFound()
+  const { event: __event } = await requireEventPage(eventId, 'manage_events', `/organizer/events/${eventId}/promoters`)
+  const eventData = __event
 
   return (
     <PromotersClient

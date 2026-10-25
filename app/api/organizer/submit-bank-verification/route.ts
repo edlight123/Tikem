@@ -4,6 +4,7 @@ import { adminStorage } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { notifyAdminsOfVerificationSubmission } from '@/lib/notifications/payout-verification'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 function normalizeBucketName(bucket: string): string {
   if (bucket.startsWith('gs://')) return bucket.slice('gs://'.length)
@@ -55,6 +56,10 @@ export async function POST(request: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const organizerId = user.id
 

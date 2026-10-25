@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getCurrentUser } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { adminDb } from '@/lib/firebase/admin'
 import { safeExternalUrl } from '@/lib/safeUrl'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
@@ -43,7 +44,7 @@ export async function PATCH(req: NextRequest) {
     const eventRef = adminDb.collection('events').doc(eventId)
     const snap = await eventRef.get()
     const event = snap.exists ? (snap.data() as any) : null
-    if (!event || (event.organizer_id ?? event.organizerId) !== user.id) {
+    if (!event || !(await canOnEvent(user, event, 'manage_events')).allowed) {
       return NextResponse.json({ error: 'Event not found or unauthorized' }, { status: 404 })
     }
 
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
     const event = eventSnap.data() as any
-    const isOrganizer = (event.organizer_id ?? event.organizerId) === user.id
+    const isOrganizer = (await canOnEvent(user, event, 'view')).allowed
 
     if (!isOrganizer && user.role !== 'admin') {
       const tickets = await adminDb

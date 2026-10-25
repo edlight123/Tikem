@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { adminDb } from '@/lib/firebase/admin'
 
 type ApiInvite = {
@@ -43,17 +44,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (user.role !== 'organizer' && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     if (!eventDoc.exists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
     const eventData = eventDoc.data() as any
-    if (eventData?.organizer_id !== user.id) {
+    if (!(await canOnEvent(user, eventData, 'view')).allowed) {
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
     }
 

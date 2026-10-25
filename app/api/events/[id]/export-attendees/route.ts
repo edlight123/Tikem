@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { toCsv } from '@/lib/csv'
+import { canOnEvent } from '@/lib/organizer/context'
 
 export async function GET(
   request: NextRequest,
@@ -15,11 +16,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user owns this event (direct doc get — no full-collection scan)
+    // The event's org team may export (direct doc get, no full-collection scan)
     const eventDoc = await adminDb.collection('events').doc(id).get()
     const event = eventDoc.exists ? { id: eventDoc.id, ...(eventDoc.data() as any) } : null
 
-    if (!event || event.organizer_id !== user.id) {
+    if (!event || !(await canOnEvent(user, event, 'view')).allowed) {
       return NextResponse.json({ error: 'Event not found or unauthorized' }, { status: 404 })
     }
 

@@ -30,6 +30,7 @@ import { payoutProfileInactiveReason } from '@/lib/payouts/profile-readiness'
 import { holderMatchesKyc, loadKycLegalNames, type KycLegalNames } from '@/lib/payouts/payee-identity'
 import { syncOrganizerDebt } from '@/lib/payouts/organizer-debt'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 /** 5,000 minor units of the event's own currency (50.00 HTG / 50.00 USD). */
 const BANK_MIN_WITHDRAWAL_MINOR = 5000
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     // Banned or admin-frozen: nothing leaves, including earned money.
     const freeze = await payoutFreezeStatus(user.id)

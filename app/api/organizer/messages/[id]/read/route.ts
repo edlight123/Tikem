@@ -10,6 +10,7 @@
  */
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { requireOrg } from '@/lib/organizer/context'
 import { getThreadForOrganizer, markThreadRead } from '@/lib/organizer-messages'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +36,10 @@ export async function POST(
       )
     }
 
-    const thread = await getThreadForOrganizer(threadId, user.id)
+    const org = await requireOrg('view')
+    if (!org.ok) return org.response
+
+    const thread = await getThreadForOrganizer(threadId, org.value.orgId)
     if (!thread) {
       return NextResponse.json(
         { error: 'Message not found.', code: 'thread_not_found' },

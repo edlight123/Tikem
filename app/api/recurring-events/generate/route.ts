@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
+import { canOnEvent } from '@/lib/organizer/context'
 import { generateEventInstances, RecurrenceRule } from '@/lib/recurring-events'
 
 /**
@@ -28,15 +29,14 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verify event belongs to user
+    // Verify the caller may run this event (its org team)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('*')
       .eq('id', eventId)
-      .eq('organizer_id', user.id)
       .single()
 
-    if (eventError || !event) {
+    if (eventError || !event || !(await canOnEvent(user, event, 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Event not found or unauthorized' },
         { status: 404 }

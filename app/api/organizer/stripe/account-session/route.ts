@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { requireAuth } from '@/lib/auth'
 import { isStaleStripeAccountError, reconnectNeededBody } from '@/lib/stripe-connect-account'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const runtime = 'nodejs'
 
@@ -32,6 +33,10 @@ export async function POST() {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized', code: 'unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const profile = await getPayoutProfile(user.id, 'stripe_connect')
     const stripeAccountId = (profile as any)?.stripeAccountId

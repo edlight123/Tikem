@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireOrgPage } from '@/app/organizer/_lib/orgPage';
 import { adminDb } from '@/lib/firebase/admin';
 import DefaultsForm from './DefaultsForm';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
@@ -12,17 +11,10 @@ async function getOrganizerData(userId: string) {
 }
 
 export default async function DefaultsSettingsPage() {
-  const user = await getCurrentUser();
+  const ctx = await requireOrgPage('manage_settings', '/organizer/settings/defaults');
+  const orgId = ctx.orgId;
 
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/defaults');
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/defaults');
-  }
-
-  const organizerData = await getOrganizerData(user.id);
+  const organizerData = await getOrganizerData(orgId);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] py-8">
@@ -32,7 +24,7 @@ export default async function DefaultsSettingsPage() {
         {/* Defaults Form */}
         <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
           <DefaultsForm 
-            userId={user.id}
+            userId={orgId}
             initialData={{
               default_city: organizerData?.default_city || '',
               default_country: organizerData?.default_country || 'HT',

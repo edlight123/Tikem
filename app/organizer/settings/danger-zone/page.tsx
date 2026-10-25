@@ -1,6 +1,5 @@
 import { T } from '@/components/organizer/ui/TranslatedText'
-import { getCurrentUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import { requireOrgPage } from '@/app/organizer/_lib/orgPage';
 import DangerZone from './DangerZone';
 import { ChevronLeft, AlertTriangle } from 'lucide-react';
 import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome';
@@ -8,15 +7,8 @@ import { SettingsPageChrome } from '@/components/organizer/ui/SettingsPageChrome
 export const dynamic = 'force-dynamic';
 
 export default async function DangerZoneSettingsPage() {
-  const user = await getCurrentUser();
-
-  if (!user?.id) {
-    redirect('/auth/login?redirect=/organizer/settings/danger-zone');
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/settings/danger-zone');
-  }
+  const ctx = await requireOrgPage('owner_only', '/organizer/settings/danger-zone');
+  const user = ctx.user;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] py-8">

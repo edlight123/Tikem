@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { requireOrg } from '@/lib/organizer/context'
 import { adminDb } from '@/lib/firebase/admin'
 import { getDeclaredMarkets, setDeclaredMarkets } from '@/lib/firestore/organizer-markets'
 import { normalizeSupportedCountry } from '@/lib/country-support'
@@ -30,18 +30,17 @@ async function statedDefaultCountry(userId: string): Promise<string> {
 
 export async function GET(_request: NextRequest) {
   try {
-    const { user, error } = await requireAuth('organizer')
-    if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const org = await requireOrg('view')
+    if (!org.ok) return org.response
+    const orgId = org.value.orgId
 
-    const markets = await getDeclaredMarkets(user.id)
+    const markets = await getDeclaredMarkets(orgId)
 
     return NextResponse.json({
       markets,
       // Fallback signal for callers that need SOME ordering hint when nothing
       // has been declared. Never a substitute for a declaration.
-      defaultCountry: (await statedDefaultCountry(user.id)) || null,
+      defaultCountry: (await statedDefaultCountry(orgId)) || null,
       rails: railsForMarkets(markets),
       options: DECLARABLE_MARKETS,
     })
@@ -55,10 +54,9 @@ export async function GET(_request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth('organizer')
-    if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // The org's markets are an org setting: owner or team admin.
+    const org = await requireOrg('manage_settings')
+    if (!org.ok) return org.response
 
     const body = await request.json().catch(() => ({}))
     const submitted = Array.isArray(body?.markets) ? body.markets : null
@@ -69,7 +67,7 @@ export async function PUT(request: NextRequest) {
 
     // An empty list is valid and means "clear my declaration" — the organizer
     // goes back to seeing every rail. Never treated as "allow nothing".
-    const markets = await setDeclaredMarkets(user.id, submitted)
+    const markets = await setDeclaredMarkets(org.value.orgId, submitted)
 
     return NextResponse.json({ success: true, markets, rails: railsForMarkets(markets) })
   } catch (e: any) {

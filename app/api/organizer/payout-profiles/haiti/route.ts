@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { updatePayoutProfileConfig } from '@/lib/firestore/payout'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const runtime = 'nodejs'
 
@@ -11,6 +12,10 @@ export async function GET(_req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const profile = await getPayoutProfile(user.id, 'haiti')
     return NextResponse.json({ profile })
@@ -28,6 +33,10 @@ export async function POST(req: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const body = await req.json().catch(() => ({}))
 

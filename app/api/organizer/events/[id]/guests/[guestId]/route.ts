@@ -7,16 +7,16 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { parseGuestInput, serializeGuest } from '@/lib/guest-list'
+import { canOnEvent, type CurrentUser } from '@/lib/organizer/context'
 
-async function loadOwnedGuest(eventId: string, guestId: string, userId: string): Promise<
+async function loadOwnedGuest(eventId: string, guestId: string, user: CurrentUser): Promise<
   | { ok: true; ref: FirebaseFirestore.DocumentReference; data: any }
   | { ok: false; status: number; error: string }
 > {
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
   if (!eventDoc.exists) return { ok: false, status: 404, error: 'Event not found' }
   const eventData = eventDoc.data() as any
-  const organizerId = eventData?.organizer_id ?? eventData?.organizerId
-  if (organizerId !== userId) return { ok: false, status: 403, error: 'Unauthorized' }
+  if (!(await canOnEvent(user, eventData, 'manage_events')).allowed) return { ok: false, status: 403, error: 'Unauthorized' }
 
   const ref = adminDb.collection('events').doc(eventId).collection('guests').doc(guestId)
   const snap = await ref.get()
@@ -33,7 +33,7 @@ export async function PATCH(
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const loaded = await loadOwnedGuest(id, guestId, user.id)
+    const loaded = await loadOwnedGuest(id, guestId, user)
     if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
 
     const body = await request.json().catch(() => ({}))
@@ -75,7 +75,7 @@ export async function DELETE(
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const loaded = await loadOwnedGuest(id, guestId, user.id)
+    const loaded = await loadOwnedGuest(id, guestId, user)
     if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
 
     await loaded.ref.delete()

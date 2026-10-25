@@ -1,6 +1,5 @@
-import { requireAuth } from '@/lib/auth'
+import { requireOrgPage } from '../_lib/orgPage'
 import ScanPageHeader from '@/components/organizer/scan/ScanPageHeader'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/firebase-db/server'
 import EventSelector from './EventSelector'
 import { QrCode, Sparkles } from 'lucide-react'
@@ -8,22 +7,15 @@ import { QrCode, Sparkles } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 export default async function ScanTicketPage() {
-  const { user, error } = await requireAuth()
-
-  if (error || !user) {
-    redirect('/auth/login?redirect=/organizer/scan')
-  }
-
-  if (user.role !== 'organizer') {
-    redirect('/organizer?redirect=/organizer/scan')
-  }
+  // Check-in is event work (manage_events): owner, org admins and managers.
+  const { orgId } = await requireOrgPage('manage_events', '/organizer/scan')
 
   // Fetch organizer's events
   const supabase = await createClient()
   const userEventsQuery = await supabase
     .from('events')
     .select('id,title,start_datetime,venue_name,city,tickets_sold,organizer_id,banner_image_url,category')
-    .eq('organizer_id', user.id)
+    .eq('organizer_id', orgId)
 
   const userEvents = userEventsQuery.data || []
   
@@ -68,7 +60,7 @@ export default async function ScanTicketPage() {
           <ScanPageHeader />
         </div>
 
-        <EventSelector events={events} organizerId={user.id} />
+        <EventSelector events={events} organizerId={orgId} />
       </div>
     </div>
   )

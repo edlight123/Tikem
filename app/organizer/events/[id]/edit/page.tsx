@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { requireOrgPage, requireEventPage } from '../../../_lib/orgPage'
 import EventComposer from '../../EventComposer'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { getOrganizerVerificationStatus } from '@/lib/organizerVerification'
@@ -9,22 +9,16 @@ export const dynamic = 'force-dynamic'
 
 export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { user, error } = await requireAuth()
-
-  if (error || !user) {
-    redirect(`/auth/login?redirect=/organizer/events/${id}/edit`)
-  }
-
-  if (user.role !== 'organizer') {
-    redirect(`/organizer?redirect=/organizer/events/${id}/edit`)
-  }
-
   // Demo mode — render the composer with the in-memory demo event.
   if (isDemoMode()) {
+    const ctx = await requireOrgPage('manage_events', `/organizer/events/${id}/edit`)
     const event = DEMO_EVENTS.find((e) => e.id === id)
     if (!event) notFound()
-    return <EventComposer userId={user.id} event={event} isVerified />
+    return <EventComposer userId={ctx.orgId} actorId={ctx.user.id} event={event} isVerified />
   }
+
+  // The event's org decides: owner, its admins/managers, or a platform admin.
+  const { user, orgId } = await requireEventPage(id, 'manage_events', `/organizer/events/${id}/edit`)
 
   const supabase = await createClient()
 
@@ -32,7 +26,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     .from('events')
     .select('*')
     .eq('id', id)
-    .eq('organizer_id', user.id)
+    .eq('organizer_id', orgId)
     .single()
 
   if (!event) notFound()
@@ -76,11 +70,13 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
       enable_waitlist: t.enable_waitlist ?? null,
     }))
 
-  const verification = await getOrganizerVerificationStatus(user.id)
+  // Publishing rides on the org owner's verification, not the editor's.
+  const verification = await getOrganizerVerificationStatus(orgId)
 
   return (
     <EventComposer
-      userId={user.id}
+      userId={orgId}
+      actorId={user.id}
       event={event}
       initialTiers={initialTiers.length > 0 ? initialTiers : undefined}
       isVerified={verification.isVerified}

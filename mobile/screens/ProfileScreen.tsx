@@ -71,6 +71,9 @@ import PhoneLinkSheet from '../components/auth/PhoneLinkSheet';
 import InviteSummary from '../components/InviteSummary';
 import { usePhoneAuthEnabled } from '../lib/phoneAuth';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
+import { useActiveOrg } from '../lib/activeOrg';
+import { OrgSwitcherList } from '../components/organizer/OrgSwitcher';
+import TeamOrgBrandCard from '../components/organizer/TeamOrgBrandCard';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -127,10 +130,15 @@ export default function ProfileScreen() {
   const [myEvents, setMyEvents] = useState<any[]>([]);
   const [staffEventIds, setStaffEventIdsState] = useState<string[]>([]);
 
-  const canUseOrganizerMode =
+  const activeOrg = useActiveOrg();
+  // An organizer in their own right (their own org, brand and payouts).
+  const isOwnOrganizer =
     userProfile?.role === 'organizer' ||
     userProfile?.role === 'admin' ||
     verificationStatus?.status === 'approved';
+  // Organizer mode also opens for admins and managers of someone else's org
+  // (docs/specs/org-teams.md). Staff-only members keep the staff tools.
+  const canUseOrganizerMode = isOwnOrganizer || activeOrg.hasTeamAccess;
   const canUseStaffTools = staffEventIds.length > 0;
 
   const displayName = useMemo(() => {
@@ -239,11 +247,13 @@ export default function ProfileScreen() {
         loadVerificationStatus(),
         loadAccountStats(),
         loadStaffIds(),
+        // Also picks up team invites sent to a verified email.
+        activeOrg.refresh().catch(() => {}),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [loadAccountStats, loadStaffIds, loadVerificationStatus, refreshUserProfile, user?.uid]);
+  }, [activeOrg.refresh, loadAccountStats, loadStaffIds, loadVerificationStatus, refreshUserProfile, user?.uid]);
 
   useEffect(() => {
     loadVerificationStatus();
@@ -322,7 +332,8 @@ export default function ProfileScreen() {
     });
   }, [chooseImage, showAlert, showUploadError, t, updateUserProfile, user?.uid, userProfile?.organization_logo]);
 
-  const openEdit = () => navigation.navigate('EditProfile', { organizer: canUseOrganizerMode });
+  // EditProfile's organization fields write the person's OWN brand.
+  const openEdit = () => navigation.navigate('EditProfile', { organizer: isOwnOrganizer });
 
   const confirmSignOut = useCallback(() => {
     showAlert(t('profile.signOutTitle'), t('profile.signOutBody'), [
@@ -497,7 +508,10 @@ export default function ProfileScreen() {
 
         {/* Organization (organizers): the brand shown in place of the
             personal name, with the logo changeable right here. */}
-        {canUseOrganizerMode ? (
+        {/* Acting for someone else's org: that org's card (admins edit it). */}
+        {!activeOrg.isOwner && canUseOrganizerMode ? <TeamOrgBrandCard style={styles.block} /> : null}
+
+        {isOwnOrganizer && activeOrg.isOwner ? (
           <View style={styles.block}>
             <SectionHeader title={t('profile.organization.sectionTitle')} />
             <View style={styles.orgCard}>
@@ -606,6 +620,13 @@ export default function ProfileScreen() {
                 })}
             </View>
             {canUseOrganizerMode ? <Text style={styles.caption}>{t('profile.modeSwitchTip')}</Text> : null}
+            {/* Someone who runs more than one org picks which one organizer mode acts for. */}
+            {canUseOrganizerMode && activeOrg.options.length > 1 ? (
+              <>
+                <Text style={styles.subLabel}>{t('orgTeam.switcher.label')}</Text>
+                <OrgSwitcherList />
+              </>
+            ) : null}
           </View>
         ) : null}
 
@@ -1027,6 +1048,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     privacyCard: { backgroundColor: T.surface, borderRadius: radius.lg, padding: 16, paddingTop: 4 },
     fieldLabel: { marginTop: 12, marginBottom: 8, fontSize: 13, fontWeight: '600', color: colors.text },
     caption: { marginTop: 8, fontSize: 12, lineHeight: 17, color: colors.textTertiary },
+    subLabel: {
+      marginTop: 20,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: colors.textTertiary,
+    },
     chipRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
     chip: {
       paddingHorizontal: 14,

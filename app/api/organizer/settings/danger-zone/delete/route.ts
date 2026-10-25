@@ -1,4 +1,6 @@
 import { handleAccountDeletionRequest } from '@/lib/account/deletion'
+import { getCurrentUser } from '@/lib/auth'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,5 +12,11 @@ export const dynamic = 'force-dynamic'
  * balances remain (409 organizer_has_active_obligations).
  */
 export async function POST(request: Request) {
+  // Never while acting for someone else's org (owner-only, lib/organizer/ownerOnly.ts).
+  const user = await getCurrentUser()
+  if (user) {
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
+  }
   return handleAccountDeletionRequest(request)
 }

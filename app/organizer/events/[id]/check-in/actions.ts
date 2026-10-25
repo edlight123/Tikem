@@ -2,6 +2,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { revalidatePath } from 'next/cache'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { parseTicketCode } from '@/lib/scan/doorRules'
@@ -17,18 +18,12 @@ export async function checkInTicket(
   const user = await getCurrentUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
-  if (user.role !== 'organizer' && user.role !== 'admin' && user.role !== 'super_admin') {
-    return { success: false, error: 'Organizer access required' }
-  }
-
-  // Organizers must own the event; admins may act on any event.
-  if (user.role === 'organizer') {
-    const eventDoc = await adminDb.collection('events').doc(eventId).get()
-    if (!eventDoc.exists) return { success: false, error: 'Event not found' }
-    if (eventDoc.data()?.organizer_id !== user.id) {
-      return { success: false, error: 'You do not own this event' }
-    }
-  }
+  // The event's owner, its org admins/managers (manage_events covers
+  // check-in), or a platform admin.
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  if (!eventDoc.exists) return { success: false, error: 'Event not found' }
+  const { allowed } = await canOnEvent(user, eventDoc.data(), 'manage_events')
+  if (!allowed) return { success: false, error: 'You do not have access to this event' }
   // ─────────────────────────────────────────────────────────────────────────
 
   try {

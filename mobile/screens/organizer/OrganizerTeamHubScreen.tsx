@@ -9,6 +9,7 @@ import { collection, getCountFromServer } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { useLocaleFormat } from '../../lib/format';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
@@ -53,6 +54,10 @@ export default function OrganizerTeamHubScreen() {
   const styles = getStyles(colors);
   const navigation = useNavigation<NavigationProp>();
   const { userProfile } = useAuth();
+  // Acting org (own or a team's), not the signed-in uid: lib/activeOrg.ts.
+  const { orgId, can } = useActiveOrg();
+  // The org roster is for the owner and admins; managers see event staffing only.
+  const canManageTeam = can('manage_team');
   const { t } = useI18n();
   const { formatDate } = useLocaleFormat();
   const insets = useSafeAreaInsets();
@@ -84,15 +89,17 @@ export default function OrganizerTeamHubScreen() {
   }, []);
 
   const load = useCallback(async () => {
-    if (!userProfile?.id) {
+    if (!orgId) {
       setLoading(false);
       setRefreshing(false);
       return;
     }
     try {
       const [eventsData, teamData] = await Promise.all([
-        getOrganizerEvents(userProfile.id, 100),
-        backendJson<{ members: TeamMember[] }>(`/api/organizer/team`).catch(() => ({ members: [] })),
+        getOrganizerEvents(orgId, 100),
+        canManageTeam
+          ? backendJson<{ members: TeamMember[] }>(`/api/organizer/team`).catch(() => ({ members: [] }))
+          : Promise.resolve({ members: [] as TeamMember[] }),
       ]);
       setEvents(eventsData);
       setMembers(teamData?.members || []);
@@ -104,7 +111,7 @@ export default function OrganizerTeamHubScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userProfile?.id, loadStaffCounts]);
+  }, [orgId, canManageTeam, loadStaffCounts]);
 
   useEffect(() => {
     load();
@@ -189,7 +196,7 @@ export default function OrganizerTeamHubScreen() {
         contentContainerStyle={[styles.content, { paddingTop: headerH + 8, paddingBottom: 32 + insets.bottom }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {teamEmpty ? (
+        {!canManageTeam ? null : teamEmpty ? (
           // The premium empty state: a crew of monograms, one line that
           // separates team from event staff, and the screen's one white pill.
           <View style={styles.empty}>

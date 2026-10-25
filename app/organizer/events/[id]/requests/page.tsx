@@ -1,6 +1,5 @@
-import { requireAuth } from '@/lib/auth'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
-import { notFound, redirect } from 'next/navigation'
 import RequestsClient from './RequestsClient'
 
 export const dynamic = 'force-dynamic'
@@ -13,13 +12,8 @@ export const revalidate = 0
  */
 export default async function RequestsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect(`/auth/login?redirect=/organizer/events/${eventId}/requests`)
-
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-  if (!eventDoc.exists) notFound()
-  const data = eventDoc.data() as { organizer_id?: string; requires_approval?: boolean }
-  if (data?.organizer_id !== user.id && !(user as any).isAdmin) notFound()
+  const { event: __event } = await requireEventPage(eventId, 'manage_events', `/organizer/events/${eventId}/requests`)
+  const data = __event as { organizer_id?: string; requires_approval?: boolean }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">

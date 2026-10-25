@@ -28,7 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const ownership = await assertEventOwnedByUser(id, user.id)
+    const ownership = await assertEventOwnedByUser(id, user, 'view')
     if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: ownership.status })
 
     // Equality-only query (no composite index); newest first, sorted here.
@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const ownership = await assertEventOwnedByUser(id, user.id)
+    const ownership = await assertEventOwnedByUser(id, user, 'manage_events')
     if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: ownership.status })
 
     const body = await request.json().catch(() => ({}))
@@ -99,7 +99,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         : now
     const data = {
       event_id: id,
-      organizer_id: user.id,
+      // The event's org, not the member creating the link.
+      organizer_id: String(ownership.event?.organizer_id || ownership.event?.organizerId || user.id),
       label,
       source,
       medium,

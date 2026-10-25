@@ -1,41 +1,34 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native'
-import { useAppAlert } from '../../components/AppAlert'
+import React, { useCallback, useMemo, useState } from 'react'
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { Users, ClipboardList } from 'lucide-react-native'
 
+import { useAppAlert } from '../../components/AppAlert'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import { backendJson } from '../../lib/api/backend'
-import { SPACING, RADIUS } from '../../config/brand'
+import { useActiveOrg } from '../../lib/activeOrg'
+import { TEAM_ROLES, type TeamRole } from '../../lib/orgTeamRoles'
+import { colors as T, radius, spacing } from '../../theme/tokens'
 import { Skeleton } from '../../components/Skeleton'
 import EmptyState from '../../components/EmptyState'
+import SectionHeader from '../../components/SectionHeader'
+import StatusChip from '../../components/StatusChip'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
 import { useOverlayHeaderInset } from '../../components/OverlayHeader'
-import StaffEventCard from '../../components/organizer/StaffEventCard'
-import StatusChip from '../../components/StatusChip'
-import InfoNotice from '../../components/organizer/InfoNotice'
 import SegmentedTabs from '../../components/organizer/SegmentedTabs'
 import SelectField from '../../components/organizer/SelectField'
+import FormSheet, { SheetInput, SheetLabel } from '../../components/organizer/FormSheet'
 import WhitePillCTA from '../../components/WhitePillCTA'
-import { SecondaryPill } from '../../components/auth/SecondaryPill'
+import { useOrgLabel } from '../../components/organizer/OrgSwitcher'
 
-type TeamRole = 'admin' | 'manager' | 'staff'
 type MemberStatus = 'active' | 'invited'
 type TaskStatus = 'todo' | 'in_progress' | 'done'
 
+/** A row from GET /api/organizer/team. Invites carry ids like "invite:<id>". */
 type TeamMember = {
   id: string
   uid?: string | null
@@ -57,19 +50,23 @@ type OrgTask = {
   created_at?: string | null
 }
 
-const ROLE_KEYS: TeamRole[] = ['admin', 'manager', 'staff']
 const TASK_STATUS_KEYS: TaskStatus[] = ['todo', 'in_progress', 'done']
 
-// Role → semantic StatusChip status (never a teal fill; see StatusChip map):
-//   admin → live · manager → pending · staff → neutral.
-const roleChipStatus = (role: TeamRole): string =>
-  role === 'admin' ? 'live' : role === 'manager' ? 'pending' : 'neutral'
-
-// Task status → semantic StatusChip status:
-//   todo → neutral · in_progress → pending · done → success.
+// Task status → semantic StatusChip (dot + label): todo neutral, in progress amber, done emerald.
 const taskChipStatus = (status: TaskStatus): string =>
   status === 'done' ? 'success' : status === 'in_progress' ? 'pending' : 'neutral'
 
+/**
+ * The org's team (docs/specs/org-teams.md): who runs it with you, and as what.
+ *
+ *   admin    everything but money out, payout details and deleting the org; manages the team
+ *   manager  runs events
+ *   staff    nothing org-wide; door access per event
+ *
+ * Invites go out by email with an accept link (7 days); a Google or Apple
+ * account with that email joins on its next visit without the link. Reached
+ * only by the owner and admins (withOrgAccess 'manage_team' in AppNavigator).
+ */
 export default function OrganizerOrgTeamScreen() {
   const { colors } = useTheme()
   const styles = getStyles(colors)
@@ -77,8 +74,10 @@ export default function OrganizerOrgTeamScreen() {
   const insets = useSafeAreaInsets()
   const { height: headerH, onHeight } = useOverlayHeaderInset()
   const { t } = useI18n()
-  const showAlert = useAppAlert();
+  const showAlert = useAppAlert()
   const { user, userProfile } = useAuth()
+  const activeOrg = useActiveOrg()
+  const { orgLabel } = useOrgLabel()
 
   const [tab, setTab] = useState<'team' | 'tasks'>('team')
   const [loading, setLoading] = useState(true)
@@ -86,51 +85,68 @@ export default function OrganizerOrgTeamScreen() {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [tasks, setTasks] = useState<OrgTask[]>([])
 
-  // Add-member form state.
-  const [showAddMember, setShowAddMember] = useState(false)
+  // Invite sheet.
+  const [showInvite, setShowInvite] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [newName, setNewName] = useState('')
-  const [newRole, setNewRole] = useState<TeamRole>('staff')
+  const [newRole, setNewRole] = useState<TeamRole>('manager')
 
-  // Member-actions sheet state.
+  // Member sheet.
   const [activeMember, setActiveMember] = useState<TeamMember | null>(null)
+  const [memberRole, setMemberRole] = useState<TeamRole>('manager')
 
-  // New-task form state.
+  // Task sheets.
   const [showNewTask, setShowNewTask] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
   const [taskNotes, setTaskNotes] = useState('')
   const [taskAssigneeId, setTaskAssigneeId] = useState<string>('')
   const [taskDue, setTaskDue] = useState('')
-
-  // Task-actions sheet state.
   const [activeTask, setActiveTask] = useState<OrgTask | null>(null)
 
   const [submitting, setSubmitting] = useState(false)
+
+  const roleLabel = useCallback((role: string) => t(`orgTeam.roles.${role}` as any), [t])
+  const roleBlurb = useCallback((role: TeamRole) => t(`orgTeam.roleBlurbs.${role}` as any), [t])
+  const taskStatusLabel = useCallback(
+    (status: TaskStatus) =>
+      t(`organizerOrgTeam.status.${status === 'in_progress' ? 'inProgress' : status}` as any),
+    [t]
+  )
+
+  /** Server errors are English; show our own words, keyed off the status. */
+  const errorText = useCallback(
+    (e: any, fallbackKey: string) => {
+      const msg = String(e?.payload?.error || '')
+      if (e?.status === 429) return t('orgTeam.team.errors.tooMany')
+      if (e?.status === 403) return t('orgTeam.gate.teamBody')
+      if (/already runs/i.test(msg)) return t('orgTeam.team.errors.alreadyOwner')
+      if (/valid email/i.test(msg)) return t('orgTeam.team.errors.invalidEmail')
+      return t(fallbackKey as any)
+    },
+    [t]
+  )
 
   const refresh = useCallback(async () => {
     try {
       const [teamRes, tasksRes] = await Promise.all([
         backendJson<{ members: TeamMember[] }>(`/api/organizer/team`),
-        backendJson<{ tasks: OrgTask[] }>(`/api/organizer/tasks`),
+        backendJson<{ tasks: OrgTask[] }>(`/api/organizer/tasks`).catch(() => ({ tasks: [] as OrgTask[] })),
       ])
       setMembers(Array.isArray(teamRes?.members) ? teamRes.members : [])
       setTasks(Array.isArray(tasksRes?.tasks) ? tasksRes.tasks : [])
     } catch (e: any) {
-      showAlert(t('common.error'), e?.message || t('organizerOrgTeam.errors.loadFailed'))
+      showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.loadFailed'))
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [t])
+  }, [t, showAlert, errorText])
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
-
+  // Loads on focus, and again whenever the acting org changes.
   useFocusEffect(
     useCallback(() => {
       refresh()
-    }, [refresh])
+    }, [refresh, activeOrg.orgId])
   )
 
   const onRefresh = useCallback(() => {
@@ -138,82 +154,80 @@ export default function OrganizerOrgTeamScreen() {
     refresh()
   }, [refresh])
 
-  const roleLabel = useCallback((role: TeamRole) => t(`organizerOrgTeam.roles.${role}` as any), [t])
-  const taskStatusLabel = useCallback(
-    (status: TaskStatus) =>
-      t(`organizerOrgTeam.status.${status === 'in_progress' ? 'inProgress' : status}` as any),
-    [t]
-  )
+  const memberDisplay = useCallback((m: TeamMember) => (m.name && m.name.trim()) || m.email || m.id, [])
 
-  const roleFromLabel = useCallback(
-    (label: string): TeamRole => ROLE_KEYS.find((k) => roleLabel(k) === label) || 'staff',
-    [roleLabel]
-  )
-
-  const memberDisplay = useCallback(
-    (m: TeamMember) => (m.name && m.name.trim()) || m.email || m.id,
-    []
-  )
-
-  // The current signed-in user's own row is not editable.
   const currentEmail = (userProfile?.email || user?.email || '').toLowerCase()
   const isSelf = useCallback(
     (m: TeamMember) =>
-      Boolean(currentEmail) &&
-      (m.email?.toLowerCase() === currentEmail || (!!m.uid && m.uid === user?.uid)),
+      (!!m.uid && m.uid === user?.uid) || (!!currentEmail && m.email?.toLowerCase() === currentEmail),
     [currentEmail, user?.uid]
   )
 
-  const openAddMember = () => {
+  const openInvite = () => {
     setNewEmail('')
     setNewName('')
-    setNewRole('staff')
-    setShowAddMember(true)
+    setNewRole('manager')
+    setShowInvite(true)
   }
 
-  const submitAddMember = async () => {
+  const submitInvite = async () => {
     const email = newEmail.trim()
     if (!email) return
     setSubmitting(true)
     try {
-      await backendJson(`/api/organizer/team`, {
+      const res = await backendJson<{ member?: TeamMember }>(`/api/organizer/team`, {
         method: 'POST',
         body: JSON.stringify({ email, name: newName.trim() || undefined, role: newRole }),
       })
-      setShowAddMember(false)
+      setShowInvite(false)
       await refresh()
+      if (res?.member?.status === 'active') {
+        showAlert(t('orgTeam.team.roleUpdatedTitle'), t('orgTeam.team.roleUpdatedBody', { email }))
+      } else {
+        showAlert(t('orgTeam.team.inviteSentTitle'), t('orgTeam.team.inviteSentBody', { email }))
+      }
     } catch (e: any) {
-      showAlert(t('common.error'), e?.message || t('organizerOrgTeam.errors.addMemberFailed'))
+      showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.addMemberFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
-  const changeMemberRole = async (member: TeamMember, role: TeamRole) => {
-    if (role === member.role) return
+  const openMember = (m: TeamMember) => {
+    setMemberRole(m.role)
+    setActiveMember(m)
+  }
+
+  const saveMemberRole = async () => {
+    const member = activeMember
+    if (!member || memberRole === member.role) {
+      setActiveMember(null)
+      return
+    }
     setSubmitting(true)
     try {
       await backendJson(`/api/organizer/team`, {
         method: 'PATCH',
-        body: JSON.stringify({ memberId: member.id, role }),
+        body: JSON.stringify({ memberId: member.id, role: memberRole }),
       })
-      setActiveMember((prev) => (prev && prev.id === member.id ? { ...prev, role } : prev))
+      setActiveMember(null)
       await refresh()
     } catch (e: any) {
-      showAlert(t('common.error'), e?.message || t('organizerOrgTeam.errors.updateMemberFailed'))
+      showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.updateMemberFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
   const removeMember = (member: TeamMember) => {
+    const invite = member.status === 'invited'
     showAlert(
-      t('organizerOrgTeam.removeMember'),
-      t('organizerOrgTeam.removeMemberConfirm'),
+      invite ? t('orgTeam.team.cancelInvite') : t('organizerOrgTeam.removeMember'),
+      invite ? t('orgTeam.team.cancelInviteConfirm') : t('orgTeam.team.removeConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('common.remove'),
+          text: invite ? t('orgTeam.team.cancelInvite') : t('common.remove'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -223,10 +237,7 @@ export default function OrganizerOrgTeamScreen() {
               setActiveMember(null)
               await refresh()
             } catch (e: any) {
-              showAlert(
-                t('common.error'),
-                e?.message || t('organizerOrgTeam.errors.removeMemberFailed')
-              )
+              showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.removeMemberFailed'))
             }
           },
         },
@@ -262,7 +273,7 @@ export default function OrganizerOrgTeamScreen() {
       setShowNewTask(false)
       await refresh()
     } catch (e: any) {
-      showAlert(t('common.error'), e?.message || t('organizerOrgTeam.errors.addTaskFailed'))
+      showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.addTaskFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -270,7 +281,6 @@ export default function OrganizerOrgTeamScreen() {
 
   const changeTaskStatus = async (task: OrgTask, status: TaskStatus) => {
     if (status === task.status) return
-    // Optimistic: the status flip is trivial to revert on failure.
     const previous = task.status
     setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, status } : x)))
     setActiveTask((prev) => (prev && prev.id === task.id ? { ...prev, status } : prev))
@@ -282,7 +292,7 @@ export default function OrganizerOrgTeamScreen() {
     } catch (e: any) {
       setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, status: previous } : x)))
       setActiveTask((prev) => (prev && prev.id === task.id ? { ...prev, status: previous } : prev))
-      showAlert(t('common.error'), e?.message || t('organizerOrgTeam.errors.updateTaskFailed'))
+      showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.updateTaskFailed'))
     }
   }
 
@@ -294,35 +304,16 @@ export default function OrganizerOrgTeamScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await backendJson(`/api/organizer/tasks?taskId=${encodeURIComponent(task.id)}`, {
-              method: 'DELETE',
-            })
+            await backendJson(`/api/organizer/tasks?taskId=${encodeURIComponent(task.id)}`, { method: 'DELETE' })
             setActiveTask(null)
             await refresh()
           } catch (e: any) {
-            showAlert(
-              t('common.error'),
-              e?.message || t('organizerOrgTeam.errors.removeTaskFailed')
-            )
+            showAlert(t('common.error'), errorText(e, 'organizerOrgTeam.errors.removeTaskFailed'))
           }
         },
       },
     ])
   }
-
-  const addButton = (
-    <TouchableOpacity
-      style={styles.addButton}
-      onPress={tab === 'team' ? openAddMember : openNewTask}
-      accessibilityRole="button"
-      accessibilityLabel={tab === 'team' ? t('organizerOrgTeam.addMember') : t('organizerOrgTeam.newTask')}
-    >
-      <Ionicons name="add" size={18} color={colors.text} />
-      <Text style={styles.addButtonText}>
-        {tab === 'team' ? t('organizerOrgTeam.addMember') : t('organizerOrgTeam.newTask')}
-      </Text>
-    </TouchableOpacity>
-  )
 
   const tabs = useMemo(
     () => [
@@ -332,385 +323,362 @@ export default function OrganizerOrgTeamScreen() {
     [t, members.length, tasks.length]
   )
 
+  const addButton = (
+    <TouchableOpacity
+      style={styles.addButton}
+      onPress={tab === 'team' ? openInvite : openNewTask}
+      accessibilityRole="button"
+      accessibilityLabel={tab === 'team' ? t('orgTeam.team.invite') : t('organizerOrgTeam.newTask')}
+    >
+      <Ionicons name="add" size={18} color={colors.text} />
+      <Text style={styles.addButtonText}>
+        {tab === 'team' ? t('orgTeam.team.invite') : t('organizerOrgTeam.newTask')}
+      </Text>
+    </TouchableOpacity>
+  )
+
+  const title = orgLabel({ orgName: activeOrg.orgName, role: activeOrg.role || 'owner' })
+  const header = (
+    <OrganizerScreenHeader
+      title={t('orgTeam.team.title')}
+      subtitle={activeOrg.isOwner ? undefined : title}
+      onBack={() => navigation.goBack()}
+      right={loading ? undefined : addButton}
+      overlay
+      onHeight={onHeight}
+    />
+  )
+
   if (loading) {
     return (
       <View style={styles.container}>
-        {/* Identical header to the loaded branch — no in-flow -> overlay flash. */}
-        <OrganizerScreenHeader
-          title={t('organizerOrgTeam.title')}
-          onBack={() => navigation.goBack()}
-          overlay
-          onHeight={onHeight}
-        />
+        {header}
         <View style={[styles.content, { marginTop: headerH }]}>
-          <Skeleton width="100%" height={56} radius={RADIUS.md} style={{ marginBottom: 20 }} />
+          <Skeleton width="100%" height={44} radius={radius.md} style={{ marginBottom: 20 }} />
           {[0, 1, 2].map((i) => (
-            <Skeleton
-              key={i}
-              width="100%"
-              height={72}
-              radius={RADIUS.lg}
-              style={{ marginBottom: SPACING.md }}
-            />
+            <Skeleton key={i} width="100%" height={68} radius={radius.md} style={{ marginBottom: 8 }} />
           ))}
         </View>
       </View>
     )
   }
 
+  const ownerName = activeOrg.isOwner
+    ? (userProfile?.full_name || userProfile?.email || '').trim()
+    : orgLabel({ orgName: activeOrg.orgName, role: 'owner' })
+
+  const renderPerson = (opts: {
+    key: string
+    name: string
+    email?: string
+    roleText: string
+    you?: boolean
+    status?: MemberStatus
+    onPress?: () => void
+  }) => (
+    <TouchableOpacity
+      key={opts.key}
+      style={styles.personRow}
+      onPress={opts.onPress}
+      disabled={!opts.onPress}
+      activeOpacity={0.75}
+      accessibilityRole={opts.onPress ? 'button' : 'text'}
+    >
+      <View style={styles.monogram}>
+        <Text style={styles.monogramText}>{(opts.name || '?').trim().charAt(0).toUpperCase()}</Text>
+      </View>
+      <View style={styles.personBody}>
+        <Text style={styles.personName} numberOfLines={1}>
+          {opts.name}
+          {opts.you ? <Text style={styles.personYou}>{`  ${t('organizerOrgTeam.you')}`}</Text> : null}
+        </Text>
+        <Text style={styles.personMeta} numberOfLines={1}>
+          {[opts.roleText, opts.email && opts.email !== opts.name ? opts.email : null].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      {opts.status ? (
+        <StatusChip
+          status={opts.status === 'active' ? 'active' : 'pending'}
+          label={opts.status === 'active' ? t('orgTeam.status.active') : t('orgTeam.status.invited')}
+        />
+      ) : null}
+      {opts.onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} /> : null}
+    </TouchableOpacity>
+  )
+
   return (
     <View style={styles.container}>
-      <OrganizerScreenHeader
-        title={t('organizerOrgTeam.title')}
-        onBack={() => navigation.goBack()}
-        right={addButton}
-        overlay
-        onHeight={onHeight}
-      />
-
-      {/* The tabs sit statically between the floating header and the list, so
-          they reserve the header's height instead of the scroll view. */}
+      {header}
       <View style={[styles.tabsWrap, { marginTop: headerH }]}>
         <SegmentedTabs tabs={tabs} value={tab} onChange={(k) => setTab(k as 'team' | 'tasks')} />
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {tab === 'team' ? (
           <>
-            <View style={styles.notice}>
-              <InfoNotice icon="people-outline" text={t('organizerOrgTeam.infoNotice')} />
-            </View>
+            {renderPerson({
+              key: 'owner',
+              name: ownerName || t('orgTeam.roles.owner'),
+              roleText: t('orgTeam.roles.owner'),
+              you: activeOrg.isOwner,
+            })}
+            {members.map((m) =>
+              renderPerson({
+                key: m.id,
+                name: memberDisplay(m),
+                email: m.email,
+                roleText: roleLabel(m.role),
+                you: isSelf(m),
+                status: m.status,
+                onPress: isSelf(m) ? undefined : () => openMember(m),
+              })
+            )}
 
             {members.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title={t('organizerOrgTeam.emptyTeamTitle')}
-                subtitle={t('organizerOrgTeam.emptyTeamSubtitle')}
-                actionLabel={t('organizerOrgTeam.addMember')}
-                onAction={openAddMember}
-              />
-            ) : (
-              members.map((m) => {
-                const self = isSelf(m)
-                const email = m.email || ''
-                const name = memberDisplay(m)
-                const subtitle = email && email !== name ? email : undefined
-                return (
-                  <View key={m.id} style={styles.cardWrap}>
-                    <StaffEventCard
-                      title={name}
-                      subtitle={subtitle}
-                      meta={self ? t('organizerOrgTeam.you') : undefined}
-                      onPress={self ? undefined : () => setActiveMember(m)}
-                      right={
-                        <View style={styles.rightCol}>
-                          <StatusChip status={roleChipStatus(m.role)} label={roleLabel(m.role)} />
-                          {m.status === 'invited' ? (
-                            <StatusChip status="pending" label={t('organizerOrgTeam.invited')} />
-                          ) : null}
-                        </View>
-                      }
-                    />
-                  </View>
-                )
-              })
-            )}
-          </>
-        ) : (
-          <>
-            <View style={styles.notice}>
-              <InfoNotice icon="checkmark-done-outline" text={t('organizerOrgTeam.tasksInfoNotice')} />
-            </View>
+              <View style={styles.emptyWrap}>
+                <EmptyState
+                  icon={Users}
+                  title={t('organizerOrgTeam.emptyTeamTitle')}
+                  subtitle={t('orgTeam.team.emptyBody')}
+                  actionLabel={t('orgTeam.team.invite')}
+                  onAction={openInvite}
+                  compact
+                />
+              </View>
+            ) : null}
 
-            {tasks.length === 0 ? (
-              <EmptyState
-                icon={ClipboardList}
-                title={t('organizerOrgTeam.emptyTasksTitle')}
-                subtitle={t('organizerOrgTeam.emptyTasksSubtitle')}
-                actionLabel={t('organizerOrgTeam.newTask')}
-                onAction={openNewTask}
-              />
-            ) : (
-              tasks.map((task) => {
-                const metaParts = [
-                  task.assignee_name || t('organizerOrgTeam.unassigned'),
-                  task.due ? `${t('organizerOrgTeam.due')}: ${task.due}` : null,
-                ].filter(Boolean)
-                return (
-                  <View key={task.id} style={styles.cardWrap}>
-                    <StaffEventCard
-                      title={task.title}
-                      subtitle={task.notes || undefined}
-                      meta={metaParts.join('  ·  ')}
-                      onPress={() => setActiveTask(task)}
-                      right={
-                        <StatusChip
-                          status={taskChipStatus(task.status)}
-                          label={taskStatusLabel(task.status)}
-                        />
-                      }
-                    />
-                  </View>
-                )
-              })
-            )}
+            <View style={styles.rolesBlock}>
+              <SectionHeader title={t('orgTeam.team.rolesTitle')} />
+              {TEAM_ROLES.map((r) => (
+                <View key={r} style={styles.roleExplain}>
+                  <Text style={styles.roleExplainName}>{roleLabel(r)}</Text>
+                  <Text style={styles.roleExplainBody}>{roleBlurb(r)}</Text>
+                </View>
+              ))}
+            </View>
           </>
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title={t('organizerOrgTeam.emptyTasksTitle')}
+            subtitle={t('organizerOrgTeam.emptyTasksSubtitle')}
+            actionLabel={t('organizerOrgTeam.newTask')}
+            onAction={openNewTask}
+          />
+        ) : (
+          tasks.map((task) => (
+            <TouchableOpacity
+              key={task.id}
+              style={styles.personRow}
+              onPress={() => setActiveTask(task)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+            >
+              <View style={styles.personBody}>
+                <Text style={styles.personName} numberOfLines={2}>
+                  {task.title}
+                </Text>
+                <Text style={styles.personMeta} numberOfLines={1}>
+                  {[
+                    task.assignee_name || t('organizerOrgTeam.unassigned'),
+                    task.due ? `${t('organizerOrgTeam.due')}: ${task.due}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              <StatusChip status={taskChipStatus(task.status)} label={taskStatusLabel(task.status)} />
+            </TouchableOpacity>
+          ))
         )}
       </ScrollView>
 
-      {/* Add-member form */}
-      <Modal
-        visible={showAddMember}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowAddMember(false)}
+      {/* Invite */}
+      <FormSheet
+        visible={showInvite}
+        title={t('orgTeam.team.inviteTitle')}
+        onClose={() => setShowInvite(false)}
+        closeLabel={t('common.close')}
+        busy={submitting}
+        footer={
+          <WhitePillCTA
+            label={t('orgTeam.team.sendInvite')}
+            onPress={submitInvite}
+            disabled={!newEmail.trim() || submitting}
+            loading={submitting}
+          />
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('organizerOrgTeam.addMember')}</Text>
-              <TouchableOpacity
-                onPress={() => setShowAddMember(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.close')}
-              >
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+        <SheetLabel>{t('organizerOrgTeam.memberEmail')}</SheetLabel>
+        <SheetInput
+          value={newEmail}
+          onChangeText={setNewEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          placeholder={t('organizerOrgTeam.memberEmailPlaceholder')}
+        />
+        <SheetLabel>{t('organizerOrgTeam.memberName')}</SheetLabel>
+        <SheetInput value={newName} onChangeText={setNewName} placeholder={t('organizerOrgTeam.memberNamePlaceholder')} />
+        <SheetLabel>{t('organizerOrgTeam.role')}</SheetLabel>
+        <RolePicker value={newRole} onChange={setNewRole} label={roleLabel} blurb={roleBlurb} />
+        <Text style={styles.sheetNote}>{t('orgTeam.team.inviteNote')}</Text>
+      </FormSheet>
 
-            <Text style={styles.label}>{t('organizerOrgTeam.memberEmail')}</Text>
-            <TextInput
-              style={styles.input}
-              value={newEmail}
-              onChangeText={setNewEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder={t('organizerOrgTeam.memberEmailPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <Text style={styles.label}>{t('organizerOrgTeam.memberName')}</Text>
-            <TextInput
-              style={styles.input}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder={t('organizerOrgTeam.memberNamePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <SelectField
-              label={t('organizerOrgTeam.role')}
-              value={roleLabel(newRole)}
-              options={ROLE_KEYS.map(roleLabel)}
-              onSelect={(label) => setNewRole(roleFromLabel(label))}
-              sheetTitle={t('organizerOrgTeam.role')}
-            />
-
-            <View style={styles.modalActions}>
-              <WhitePillCTA
-                label={t('organizerOrgTeam.addMember')}
-                onPress={submitAddMember}
-                disabled={!newEmail.trim() || submitting}
-                loading={submitting}
-              />
-              <SecondaryPill label={t('common.cancel')} onPress={() => setShowAddMember(false)} />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Member actions */}
-      <Modal
+      {/* One member: change role, remove / cancel the invite */}
+      <FormSheet
         visible={!!activeMember}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setActiveMember(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                {activeMember ? memberDisplay(activeMember) : ''}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setActiveMember(null)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.close')}
-              >
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {activeMember?.email ? (
-              <Text style={styles.modalSubtitle}>{activeMember.email}</Text>
-            ) : null}
-
-            <SelectField
-              label={t('organizerOrgTeam.role')}
-              value={activeMember ? roleLabel(activeMember.role) : ''}
-              options={ROLE_KEYS.map(roleLabel)}
-              onSelect={(label) =>
-                activeMember && changeMemberRole(activeMember, roleFromLabel(label))
-              }
-              sheetTitle={t('organizerOrgTeam.role')}
+        title={activeMember ? memberDisplay(activeMember) : ''}
+        onClose={() => setActiveMember(null)}
+        closeLabel={t('common.close')}
+        busy={submitting}
+        footer={
+          <>
+            <WhitePillCTA
+              label={t('orgTeam.save')}
+              onPress={saveMemberRole}
+              disabled={submitting || !activeMember || memberRole === activeMember.role}
+              loading={submitting}
             />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.dangerRow}
-                onPress={() => activeMember && removeMember(activeMember)}
-                accessibilityRole="button"
-                accessibilityLabel={t('organizerOrgTeam.removeMember')}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.error} />
-                <Text style={styles.dangerRowText}>{t('organizerOrgTeam.removeMember')}</Text>
-              </TouchableOpacity>
-              <SecondaryPill label={t('common.done')} onPress={() => setActiveMember(null)} />
-            </View>
+            <TouchableOpacity
+              style={styles.textAction}
+              onPress={() => activeMember && removeMember(activeMember)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.textActionDanger}>
+                {activeMember?.status === 'invited' ? t('orgTeam.team.cancelInvite') : t('organizerOrgTeam.removeMember')}
+              </Text>
+            </TouchableOpacity>
+          </>
+        }
+      >
+        {activeMember ? (
+          <View style={styles.memberHead}>
+            <Text style={styles.personMeta} numberOfLines={1}>
+              {activeMember.email}
+            </Text>
+            <StatusChip
+              status={activeMember.status === 'active' ? 'active' : 'pending'}
+              label={activeMember.status === 'active' ? t('orgTeam.status.active') : t('orgTeam.status.invited')}
+            />
           </View>
-        </View>
-      </Modal>
+        ) : null}
+        <SheetLabel>{t('organizerOrgTeam.role')}</SheetLabel>
+        <RolePicker value={memberRole} onChange={setMemberRole} label={roleLabel} blurb={roleBlurb} />
+      </FormSheet>
 
-      {/* New-task form */}
-      <Modal
+      {/* New task */}
+      <FormSheet
         visible={showNewTask}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowNewTask(false)}
+        title={t('organizerOrgTeam.newTask')}
+        onClose={() => setShowNewTask(false)}
+        closeLabel={t('common.close')}
+        busy={submitting}
+        footer={
+          <WhitePillCTA
+            label={t('organizerOrgTeam.newTask')}
+            onPress={submitNewTask}
+            disabled={!taskTitle.trim() || submitting}
+            loading={submitting}
+          />
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('organizerOrgTeam.newTask')}</Text>
-              <TouchableOpacity
-                onPress={() => setShowNewTask(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.close')}
-              >
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+        <SheetLabel>{t('organizerOrgTeam.taskTitle')}</SheetLabel>
+        <SheetInput value={taskTitle} onChangeText={setTaskTitle} placeholder={t('organizerOrgTeam.taskTitlePlaceholder')} />
+        <SheetLabel>{t('organizerOrgTeam.taskNotes')}</SheetLabel>
+        <SheetInput
+          value={taskNotes}
+          onChangeText={setTaskNotes}
+          multiline
+          style={styles.multiline}
+          placeholder={t('organizerOrgTeam.taskNotesPlaceholder')}
+        />
+        <SelectField
+          label={t('organizerOrgTeam.assignee')}
+          labelStyle={styles.selectLabel}
+          fieldStyle={styles.selectField}
+          value={
+            members.find((m) => m.id === taskAssigneeId)
+              ? memberDisplay(members.find((m) => m.id === taskAssigneeId)!)
+              : t('organizerOrgTeam.unassigned')
+          }
+          options={[t('organizerOrgTeam.unassigned'), ...members.map(memberDisplay)]}
+          onSelect={(label) => setTaskAssigneeId(members.find((m) => memberDisplay(m) === label)?.id || '')}
+          sheetTitle={t('organizerOrgTeam.assignee')}
+        />
+        <SheetLabel>{t('organizerOrgTeam.due')}</SheetLabel>
+        <SheetInput value={taskDue} onChangeText={setTaskDue} placeholder={t('organizerOrgTeam.duePlaceholder')} />
+      </FormSheet>
 
-            <Text style={styles.label}>{t('organizerOrgTeam.taskTitle')}</Text>
-            <TextInput
-              style={styles.input}
-              value={taskTitle}
-              onChangeText={setTaskTitle}
-              placeholder={t('organizerOrgTeam.taskTitlePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <Text style={styles.label}>{t('organizerOrgTeam.taskNotes')}</Text>
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
-              value={taskNotes}
-              onChangeText={setTaskNotes}
-              multiline
-              placeholder={t('organizerOrgTeam.taskNotesPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <SelectField
-              label={t('organizerOrgTeam.assignee')}
-              value={
-                members.find((m) => m.id === taskAssigneeId)
-                  ? memberDisplay(members.find((m) => m.id === taskAssigneeId)!)
-                  : t('organizerOrgTeam.unassigned')
-              }
-              options={[t('organizerOrgTeam.unassigned'), ...members.map(memberDisplay)]}
-              onSelect={(label) => {
-                const match = members.find((m) => memberDisplay(m) === label)
-                setTaskAssigneeId(match?.id || '')
-              }}
-              sheetTitle={t('organizerOrgTeam.assignee')}
-            />
-
-            <Text style={styles.label}>{t('organizerOrgTeam.due')}</Text>
-            <TextInput
-              style={styles.input}
-              value={taskDue}
-              onChangeText={setTaskDue}
-              placeholder={t('organizerOrgTeam.duePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <View style={styles.modalActions}>
-              <WhitePillCTA
-                label={t('organizerOrgTeam.newTask')}
-                onPress={submitNewTask}
-                disabled={!taskTitle.trim() || submitting}
-                loading={submitting}
-              />
-              <SecondaryPill label={t('common.cancel')} onPress={() => setShowNewTask(false)} />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Task actions */}
-      <Modal
+      {/* One task */}
+      <FormSheet
         visible={!!activeTask}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setActiveTask(null)}
+        title={activeTask?.title || ''}
+        onClose={() => setActiveTask(null)}
+        closeLabel={t('common.close')}
+        footer={
+          <TouchableOpacity
+            style={styles.textAction}
+            onPress={() => activeTask && removeTask(activeTask)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.textActionDanger}>{t('organizerOrgTeam.removeTask')}</Text>
+          </TouchableOpacity>
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle} numberOfLines={2}>
-                {activeTask?.title || ''}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setActiveTask(null)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.close')}
-              >
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {activeTask?.assignee_name ? (
-              <Text style={styles.modalSubtitle}>{activeTask.assignee_name}</Text>
-            ) : null}
-
-            <Text style={styles.label}>{t('organizerOrgTeam.taskStatusLabel')}</Text>
-            <View style={styles.statusTabs}>
-              <SegmentedTabs
-                tabs={TASK_STATUS_KEYS.map((s) => ({ key: s, label: taskStatusLabel(s) }))}
-                value={activeTask?.status || 'todo'}
-                onChange={(k) => activeTask && changeTaskStatus(activeTask, k as TaskStatus)}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.dangerRow}
-                onPress={() => activeTask && removeTask(activeTask)}
-                accessibilityRole="button"
-                accessibilityLabel={t('organizerOrgTeam.removeTask')}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.error} />
-                <Text style={styles.dangerRowText}>{t('organizerOrgTeam.removeTask')}</Text>
-              </TouchableOpacity>
-              <SecondaryPill label={t('common.done')} onPress={() => setActiveTask(null)} />
-            </View>
-          </View>
+        {activeTask?.assignee_name ? <Text style={styles.personMeta}>{activeTask.assignee_name}</Text> : null}
+        <SheetLabel>{t('organizerOrgTeam.taskStatusLabel')}</SheetLabel>
+        <View style={styles.statusTabs}>
+          <SegmentedTabs
+            tabs={TASK_STATUS_KEYS.map((s) => ({ key: s, label: taskStatusLabel(s) }))}
+            value={activeTask?.status || 'todo'}
+            onChange={(k) => activeTask && changeTaskStatus(activeTask, k as TaskStatus)}
+          />
         </View>
-      </Modal>
+      </FormSheet>
+    </View>
+  )
+}
+
+/** Admin / Manager / Staff, each with its one-line meaning. Radios, on a sheet. */
+function RolePicker({
+  value,
+  onChange,
+  label,
+  blurb,
+}: {
+  value: TeamRole
+  onChange: (role: TeamRole) => void
+  label: (role: TeamRole) => string
+  blurb: (role: TeamRole) => string
+}) {
+  const { colors } = useTheme()
+  const styles = getStyles(colors)
+  return (
+    <View style={styles.rolePicker}>
+      {TEAM_ROLES.map((r) => {
+        const on = r === value
+        return (
+          <TouchableOpacity
+            key={r}
+            style={styles.roleOption}
+            onPress={() => onChange(r)}
+            activeOpacity={0.8}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={`${label(r)}. ${blurb(r)}`}
+          >
+            <View style={[styles.radio, on && styles.radioOn]}>{on ? <View style={styles.radioDot} /> : null}</View>
+            <View style={styles.roleOptionBody}>
+              <Text style={styles.roleOptionName}>{label(r)}</Text>
+              <Text style={styles.roleOptionBlurb}>{blurb(r)}</Text>
+            </View>
+          </TouchableOpacity>
+        )
+      })}
     </View>
   )
 }
@@ -719,74 +687,89 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16 },
-
-    tabsWrap: {
-      marginHorizontal: -16,
-      paddingTop: 8,
-      paddingBottom: 2,
-    },
+    tabsWrap: { marginHorizontal: -16, paddingTop: 8, paddingBottom: 2 },
 
     addButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.surfaceRaised,
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: T.surfaceRaised,
       paddingHorizontal: 14,
       paddingVertical: 9,
-      borderRadius: RADIUS.md,
+      borderRadius: radius.md,
       gap: 6,
     },
     addButtonText: { color: colors.text, fontWeight: '700', fontSize: 13 },
 
-    notice: { marginBottom: SPACING.md },
-    cardWrap: { marginBottom: SPACING.md },
-    rightCol: { alignItems: 'flex-end', gap: 8 },
-
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-    },
-    modalCard: {
-      width: '100%',
-      maxWidth: 520,
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.xl,
-      padding: SPACING.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-    modalTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.text },
-    modalSubtitle: { marginTop: 6, fontSize: 13, color: colors.textSecondary },
-
-    label: { marginTop: 14, marginBottom: 6, fontWeight: '700', color: colors.text },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: RADIUS.md,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      color: colors.text,
-      backgroundColor: colors.surfaceMuted,
-    },
-    inputMultiline: { minHeight: 72, textAlignVertical: 'top' },
-
-    // SegmentedTabs pads itself horizontally; pull it back to the card edge.
-    statusTabs: { marginHorizontal: -16, marginTop: 2 },
-
-    modalActions: { gap: 10, marginTop: 16 },
-    dangerRow: {
+    personRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
+      gap: 12,
+      paddingHorizontal: 14,
       paddingVertical: 12,
-      borderRadius: RADIUS.md,
-      backgroundColor: colors.errorLight,
+      marginBottom: 8,
+      borderRadius: radius.md,
+      backgroundColor: T.surface,
     },
-    dangerRowText: { color: colors.error, fontWeight: '700', fontSize: 14 },
+    monogram: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: T.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    monogramText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+    personBody: { flex: 1, minWidth: 0 },
+    personName: { fontSize: 15, fontWeight: '700', color: colors.text },
+    personYou: { fontSize: 12, fontWeight: '600', color: colors.textTertiary },
+    personMeta: { marginTop: 2, fontSize: 12, color: colors.textSecondary },
+
+    emptyWrap: { marginTop: spacing.lg },
+
+    rolesBlock: { marginTop: 28 },
+    roleExplain: { marginBottom: 14 },
+    roleExplainName: { fontSize: 14, fontWeight: '700', color: colors.text },
+    roleExplainBody: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
+
+    rolePicker: { gap: 8 },
+    roleOption: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      padding: 14,
+      borderRadius: radius.md,
+      backgroundColor: T.surfaceRaised,
+    },
+    roleOptionBody: { flex: 1 },
+    roleOptionName: { fontSize: 15, fontWeight: '700', color: colors.text },
+    roleOptionBlurb: { marginTop: 2, fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+    radio: {
+      marginTop: 1,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.14)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radioOn: { backgroundColor: T.white },
+    radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: T.onWhite },
+
+    sheetNote: { marginTop: 14, fontSize: 12, lineHeight: 17, color: colors.textTertiary },
+    memberHead: { marginTop: 6, gap: 8 },
+    multiline: { minHeight: 72, textAlignVertical: 'top' },
+    selectLabel: {
+      marginTop: 18,
+      marginBottom: 8,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: colors.textTertiary,
+    },
+    selectField: { backgroundColor: T.surfaceRaised, borderWidth: 0 },
+    statusTabs: { marginHorizontal: -16 },
+
+    textAction: { alignItems: 'center', paddingVertical: 10 },
+    textActionDanger: { color: colors.error, fontWeight: '700', fontSize: 14 },
   })

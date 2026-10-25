@@ -60,8 +60,9 @@ export default function FormSheet({
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
           <View style={styles.handle} />
           <View style={styles.header}>
+            {/* Sheet titles are editorial, like SectionHeader: serif, lowercase. */}
             <Text style={styles.title} numberOfLines={2}>
-              {title}
+              {title.toLowerCase()}
             </Text>
             <TouchableOpacity
               style={styles.closeBtn}
@@ -138,7 +139,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: spacing.md,
       marginBottom: 4,
     },
-    title: { flex: 1, fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+    title: { flex: 1, fontFamily: 'InstrumentSerif_400Regular', fontSize: 26, color: colors.text },
     closeBtn: {
       width: 36,
       height: 36,

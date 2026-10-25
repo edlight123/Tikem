@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { requireOrg } from '@/lib/organizer/context';
 import { withOrganizerNotificationDefaults } from '@/lib/organizer/notificationPreferences';
 
 /**
- * The signed-in organizer's preferences, with the same defaults the web
+ * The acting org's preferences (lib/organizer/context.ts), with the same defaults the web
  * settings page applies. The mobile app reads them here because client rules
  * do not expose the notificationPreferences subcollection.
  */
@@ -16,9 +17,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const org = await requireOrg('view');
+    if (!org.ok) return org.response;
+
     const prefsDoc = await adminDb
       .collection('organizers')
-      .doc(user.id)
+      .doc(org.value.orgId)
       .collection('notificationPreferences')
       .doc('main')
       .get();
@@ -46,12 +50,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Org settings: the owner or a team admin.
+    const org = await requireOrg('manage_settings');
+    if (!org.ok) return org.response;
+
     const body = await request.json();
 
     // Update notification preferences in Firestore
     await adminDb
       .collection('organizers')
-      .doc(user.id)
+      .doc(org.value.orgId)
       .collection('notificationPreferences')
       .doc('main')
       .set({

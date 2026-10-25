@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { adminReviewMessage, refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { adminDb } from '@/lib/firebase/admin'
+import { canOnEvent } from '@/lib/organizer/context'
 
 export async function POST(request: Request) {
   try {
@@ -41,8 +42,8 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Verify user is the organizer
-    if (event.organizer_id !== user.id) {
+    // Verify the caller runs this event: its org's owner, admin or manager.
+    if (!(await canOnEvent(user as any, event, 'manage_events')).allowed) {
       return Response.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

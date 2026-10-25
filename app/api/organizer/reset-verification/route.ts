@@ -18,6 +18,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminDb, adminStorage } from '@/lib/firebase/admin'
 import { isOwnedVerificationPath } from '@/lib/kyc/identity'
 import { blankVerificationSteps, RESTARTABLE_STATUSES } from '@/lib/kyc/request-template'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 function storedPaths(files: any): string[] {
   const out = [
@@ -37,6 +38,10 @@ export async function POST(_request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
     const userId = user.id
 
     const ref = adminDb.collection('verification_requests').doc(userId)

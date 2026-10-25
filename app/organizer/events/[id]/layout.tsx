@@ -1,6 +1,6 @@
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
+import { canOnEvent } from '@/lib/organizer/context'
+import { requireEventPage } from '../../_lib/orgPage'
 import { EventHeader } from '@/components/organizer/event-detail/EventHeader'
 import { EventTabs } from '@/components/organizer/event-detail/EventTabs'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
@@ -24,15 +24,10 @@ export default async function EventLayout({
 }) {
   const { id } = await params
 
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect(`/auth/login?redirect=/organizer/events/${id}`)
-  if (user.role !== 'organizer') redirect(`/organizer?redirect=/organizer/events/${id}`)
-
-  const eventDoc = await adminDb.collection('events').doc(id).get()
-  if (!eventDoc.exists) notFound()
-
-  const data = eventDoc.data()!
-  if (data.organizer_id !== user.id && !user.isAdmin) notFound()
+  // The event's own org decides: its owner, its admins/managers, or a
+  // platform admin (lib/organizer/context canOnEvent). Others get a 404.
+  const { user, event: data } = await requireEventPage(id, 'view')
+  const { allowed: showEarnings } = await canOnEvent(user, data, 'owner_only')
 
   // Lightweight ticket count for the Attendees tab badge.
   const ticketDocs = await loadTicketDocsForEvent(id)
@@ -76,6 +71,7 @@ export default async function EventLayout({
         ticketCount={ticketCount}
         requiresApproval={requiresApproval}
         pendingRequests={pendingRequests}
+        showEarnings={showEarnings}
       />
       <main>{children}</main>
     </>

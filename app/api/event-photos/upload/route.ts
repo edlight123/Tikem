@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb, adminStorage } from '@/lib/firebase/admin'
 import { sniffRasterImage } from '@/lib/security/sniffImage'
+import { canOnEvent } from '@/lib/organizer/context'
 
 const MAX_BYTES = 10 * 1024 * 1024
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
     const event = eventSnap.data() as any
-    if ((event?.organizer_id ?? event?.organizerId) !== user.id && user.role !== 'admin') {
+    if (user.role !== 'admin' && !(await canOnEvent(user, event, 'manage_events')).allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

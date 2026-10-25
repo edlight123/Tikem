@@ -7,16 +7,16 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { maxFlatCommissionCents, maxTierPriceCentsForEvent, normalizePromoterCode } from '@/lib/promoters'
+import { canOnEvent, type CurrentUser } from '@/lib/organizer/context'
 
-async function loadOwnedPromoter(eventId: string, promoterId: string, userId: string): Promise<
+async function loadOwnedPromoter(eventId: string, promoterId: string, user: CurrentUser): Promise<
   | { ok: true; ref: FirebaseFirestore.DocumentReference; data: any; event: any }
   | { ok: false; status: number; error: string }
 > {
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
   if (!eventDoc.exists) return { ok: false, status: 404, error: 'Event not found' }
   const eventData = eventDoc.data() as any
-  const organizerId = eventData?.organizer_id ?? eventData?.organizerId
-  if (organizerId !== userId) return { ok: false, status: 403, error: 'Unauthorized' }
+  if (!(await canOnEvent(user, eventData, 'manage_events')).allowed) return { ok: false, status: 403, error: 'Unauthorized' }
 
   const ref = adminDb.collection('event_promoters').doc(promoterId)
   const snap = await ref.get()
@@ -37,7 +37,7 @@ export async function PATCH(
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const loaded = await loadOwnedPromoter(id, promoterId, user.id)
+    const loaded = await loadOwnedPromoter(id, promoterId, user)
     if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
 
     const body = await request.json().catch(() => ({}))
@@ -139,7 +139,7 @@ export async function DELETE(
     const { user, error } = await requireAuth()
     if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const loaded = await loadOwnedPromoter(id, promoterId, user.id)
+    const loaded = await loadOwnedPromoter(id, promoterId, user)
     if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status })
 
     if ((Number(loaded.data.orders_count) || 0) > 0) {

@@ -1,5 +1,6 @@
 import { auth } from '../../config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { ORG_HEADER, actingOrgHeader } from '../activeOrgState'
 
 // `tikem.co` now resolves and points at prod, so it is the default fallback.
 // Override per-environment with EXPO_PUBLIC_API_URL (or EXPO_PUBLIC_WEB_URL),
@@ -116,6 +117,14 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
     if (DEBUG_API) {
       console.warn('[backendFetch] attaching session cookie', { url, cookieLen: sessionCookieValue.length })
     }
+  }
+
+  // Acting for someone else's org (team member): tell the server which one.
+  // It validates membership and ignores an org the caller is not part of
+  // (lib/organizer/context.ts). Never set for the person's own org.
+  const actingOrg = actingOrgHeader()
+  if (actingOrg && currentUser && actingOrg !== currentUser.uid && !headers[ORG_HEADER]) {
+    headers[ORG_HEADER] = actingOrg
   }
 
   // Only set JSON content-type for JSON-ish payloads.

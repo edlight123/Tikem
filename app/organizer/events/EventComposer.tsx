@@ -91,6 +91,7 @@ import { isBelowMinPaidPrice, MIN_PAID_PRICE_ERROR_CODE, minPaidPriceFor } from 
 // The sanctioned editorial section heading (font-display, lowercase, italic).
 // Hand-rolled bold sans headings read as off-brand — see EditorialRails.
 import { SectionHeader } from '@/components/ui/EditorialRails'
+import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 import {
   CalendarDays,
   ChevronDown,
@@ -179,7 +180,10 @@ async function sha256Hex(text: string): Promise<string> {
 }
 
 interface EventComposerProps {
+  /** The org the event belongs to (organizer_id): the owner's uid. */
   userId: string
+  /** The signed-in member doing the work, stamped as created_by on new events. Defaults to userId. */
+  actorId?: string
   isVerified?: boolean
   verificationStatus?: string
   /** When provided, the composer runs in EDIT mode (prefilled + updates this event). */
@@ -523,6 +527,7 @@ function SectionTitle({
  */
 export default function EventComposer({
   userId,
+  actorId,
   isVerified = false,
   event,
   initialTiers,
@@ -531,6 +536,10 @@ export default function EventComposer({
   defaultCountry,
   defaultCity,
 }: EventComposerProps) {
+  // Payout and verification links are the org owner's to follow (owner_only);
+  // a team member sees the notice without a link to a page that would bounce them.
+  // Outside the organizer portal (guest composer) there is no org context: treat as owner.
+  const isOrgOwner = useOrgRole()?.isOwner ?? true
   const { t: tx } = useTranslation('organizer')
   const router = useRouter()
   const { showToast } = useToast()
@@ -1232,7 +1241,8 @@ export default function EventComposer({
     // as well as on the next edit — `guestFromRecord` reads it back.
     const cleanGuests = guests.map(lineupEntryToRecord)
     const data: Record<string, any> = {
-      organizer_id: userId,
+      // Edit never moves an event between orgs; create files it under the acting org.
+      organizer_id: isEdit ? String(event?.organizer_id || userId) : userId,
       title: title.trim(),
       description: description.trim() || summary.trim(),
       summary: summary.trim(),
@@ -1722,7 +1732,15 @@ export default function EventComposer({
       // Seed the moderation fields the admin Events console filters on. Firestore
       // drops docs missing a filtered field, so without these a new draft would be
       // invisible in the admin "Pending" tab (is_published==false && rejected==false).
-      const createData = { ...data, tags: [] as string[], is_published: false, rejected: false, reports_count: 0, status: 'draft' }
+      const createData = {
+        ...data,
+        created_by: actorId || userId,
+        tags: [] as string[],
+        is_published: false,
+        rejected: false,
+        reports_count: 0,
+        status: 'draft',
+      }
       if (isDemoMode()) {
         await new Promise((r) => setTimeout(r, 600))
         try {
@@ -2011,6 +2029,7 @@ export default function EventComposer({
               'Your Stripe payout account could not be found. Reconnect Stripe to publish paid events in {{country}}.',
             country: countryName,
           })}{' '}
+      {isOrgOwner && (
       <a
         href={missingStep === 'identity' ? '/organizer/verify' : '/organizer/settings/payouts'}
         className={`${linkCls} hover:text-amber-200`}
@@ -2019,6 +2038,7 @@ export default function EventComposer({
           ? t('composer.publishGate.verifyCta', { defaultValue: 'Verify identity' })
           : t('composer.publishGate.stripeCta', { defaultValue: 'Set up Stripe' })}
       </a>
+      )}
     </p>
   ) : paidPublishingBlocked && eligibility && !eligibility.allowed && eligibility.reason ? (
     // A block with no organizer step (e.g. a coming-soon market): the server's words.
@@ -2028,9 +2048,11 @@ export default function EventComposer({
       {t('composer.publishGate.haitiVerifyLater', {
         defaultValue: 'You can publish now. Verify your identity before you withdraw your earnings.',
       })}{' '}
+      {isOrgOwner && (
       <a href="/organizer/verify" className={`${linkCls} text-brand-300 hover:text-brand-200`}>
         {t('composer.publishGate.verifyCta', { defaultValue: 'Verify identity' })}
       </a>
+      )}
     </p>
   ) : null
 
@@ -2065,12 +2087,14 @@ export default function EventComposer({
                       defaultValue:
                         'Events in Haiti pay out through your Haiti profile (MonCash or bank). You can publish now; set it up before you withdraw your earnings.',
                     })}{' '}
+                {isOrgOwner && (
                 <a
                   href="/organizer/settings/payouts"
                   className="font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200"
                 >
                   {t('composer.payoutGap.cta', { defaultValue: 'Set up payouts' })}
                 </a>
+                )}
               </p>
             </div>
           )}

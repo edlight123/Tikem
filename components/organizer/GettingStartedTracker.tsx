@@ -3,6 +3,7 @@
 import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
+import { useOrgRole } from './OrgRoleProvider';
 
 interface Step {
   id: string;
@@ -25,8 +26,11 @@ export default function GettingStartedTracker({
   hasPayoutSetup,
 }: GettingStartedTrackerProps) {
   const { t } = useTranslation();
+  // Verification and payouts are the org owner's (owner_only); a team member
+  // only sees the step they can do.
+  const isOwner = useOrgRole()?.isOwner ?? true;
 
-  const steps: Step[] = [
+  const allSteps: Step[] = [
     {
       id: 'create-event',
       title: t('organizer.gettingStarted.createEvent', 'Create Your First Event'),
@@ -61,6 +65,7 @@ export default function GettingStartedTracker({
       ctaLabel: t('organizer.gettingStarted.setupPayoutsCta', 'Add Payout Method'),
     },
   ];
+  const steps = isOwner ? allSteps : allSteps.filter((s) => s.id === 'create-event');
 
   const completedCount = steps.filter((s) => s.completed).length;
   const progressPercent = (completedCount / steps.length) * 100;

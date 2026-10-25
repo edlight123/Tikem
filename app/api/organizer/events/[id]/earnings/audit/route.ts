@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { csvCell } from '@/lib/csv'
 
 type AuditTicketRow = {
@@ -62,7 +63,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const event = eventDoc.data() || {}
-    if (String(event.organizer_id || '') !== String(user.id)) {
+    if (!(await canOnEvent(user, event, 'view')).allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

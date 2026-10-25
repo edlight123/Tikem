@@ -112,9 +112,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (user.role !== 'organizer' && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    // No account-role gate: an admin/manager of the event's org may be any
+    // account. assertEventOwner below decides (lib/organizer/teamRoles.ts).
 
     const body = await request.json().catch(() => ({}))
     const eventId = String(body?.eventId || '')

@@ -6,9 +6,8 @@
  * Admin SDK — `organizer_messages` replies are deliberately unreadable by
  * clients, so there is no Firestore listener here by design.
  */
-import { requireAuth } from '@/lib/auth'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
-import { notFound, redirect } from 'next/navigation'
 import { listThreadsForOrganizer, MAX_REPLY_LENGTH } from '@/lib/organizer-messages'
 import MessagesClient from './MessagesClient'
 
@@ -26,22 +25,10 @@ export default async function EventMessagesPage({
   // ?thread= comes from the "new message" email and push: open that thread.
   const rawThread = (await searchParams)?.thread
   const initialThreadId = (Array.isArray(rawThread) ? rawThread[0] : rawThread) || null
-  const { user, error } = await requireAuth('organizer')
+  const { event: __event, orgId } = await requireEventPage(eventId, 'view', `/organizer/events/${eventId}/messages`)
+  const eventData = __event as { organizer_id?: string; title?: string }
 
-  if (error || !user) {
-    const back = `/organizer/events/${eventId}/messages${
-      initialThreadId ? `?thread=${encodeURIComponent(initialThreadId)}` : ''
-    }`
-    redirect(`/auth/login?redirect=${encodeURIComponent(back)}`)
-  }
-
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-  if (!eventDoc.exists) notFound()
-
-  const eventData = eventDoc.data() as { organizer_id?: string; title?: string }
-  if (eventData?.organizer_id !== user.id) notFound()
-
-  const threads = await listThreadsForOrganizer({ organizerId: user.id, eventId })
+  const threads = await listThreadsForOrganizer({ organizerId: orgId, eventId })
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">

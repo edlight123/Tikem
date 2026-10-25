@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendEmail, getTicketConfirmationEmail, emailSubjects, TICKET_QR_CID } from '@/lib/email'
 import { formatEventWhen } from '@/lib/email-kit/i18n'
@@ -29,16 +30,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    if (user.role !== 'organizer' && user.role !== 'admin' && user.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Organizer access required' }, { status: 403 })
-    }
-
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
     if (!eventDoc.exists) return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     const event = eventDoc.data() as any
 
-    // Organizers must own the event; admins may act on any event.
-    if (user.role === 'organizer' && event?.organizer_id !== user.id) {
+    // The event's org (owner, admin, manager) may comp; platform admins may act on any event.
+    if (!(await canOnEvent(user, event, 'manage_events')).allowed) {
       return NextResponse.json({ error: 'You do not own this event' }, { status: 403 })
     }
 

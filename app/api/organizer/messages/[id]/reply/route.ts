@@ -5,7 +5,7 @@
  * missing: until now a message could be written but never answered, so a buyer
  * asking "is this real?" got silence.
  *
- * Only the organizer who owns the event the thread belongs to may reply, and the
+ * Only the event's org (its owner, admin or manager) may reply, and the
  * reply is delivered two ways — an in-app notification carrying the answer text,
  * and an email to the address we resolve OURSELVES from the thread's sender_id.
  * The organizer supplies words, never a recipient: there is no code path here
@@ -14,6 +14,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
+import { orgDisplayName, requireOrg } from '@/lib/organizer/context'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendEmail, getOrganizerReplyEmail, emailSubjects } from '@/lib/email'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
@@ -66,7 +67,9 @@ export async function POST(
     // A thread that does not exist and a thread belonging to another organizer
     // return the same 404 — replying must not double as a way to discover which
     // message ids are real.
-    const thread = await getThreadForOrganizer(threadId, user.id)
+    const org = await requireOrg('manage_events')
+    if (!org.ok) return org.response
+    const thread = await getThreadForOrganizer(threadId, org.value.orgId)
     if (!thread) return fail('Message not found.', 'thread_not_found', 404)
 
     const replyCount =
@@ -79,13 +82,19 @@ export async function POST(
       )
     }
 
-    const organizerName = String((user as any).full_name || '').trim() || 'The organizer'
+    // The attendee hears from the ORG, whoever on its team typed the answer.
+    // A member's personal name is never the fallback: only the owner's is.
+    const orgName =
+      (await orgDisplayName(org.value.orgId)) ||
+      (org.value.isOwner ? String((user as any).full_name || '').trim() : '')
+    const organizerName = orgName || 'The organizer'
     const attendeeId = String(thread.data.sender_id || '')
     const eventId = String(thread.data.event_id || '')
     const eventTitle = String(thread.data.event_title || 'your event')
 
     const reply = await appendOrganizerReply({
       threadId,
+      // The reply's author is the person who wrote it, even for a team member.
       organizerId: user.id,
       authorName: organizerName,
       body: message,
@@ -130,7 +139,7 @@ export async function POST(
           // The attendee's profile is already loaded: write in their language.
           const lang = await resolveEmailLang({ explicit: (attendee as any).language })
           const namedOrganizer =
-            String((user as any).full_name || '').trim() ||
+            orgName ||
             { en: 'The organizer', fr: "L'organisateur", ht: 'Òganizatè a' }[lang]
           await sendEmail({
             to,

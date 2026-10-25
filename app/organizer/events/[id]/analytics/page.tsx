@@ -1,7 +1,6 @@
 import { T } from '@/components/organizer/ui/TranslatedText'
 import { DaysWithSalesCaption } from './DaysWithSalesCaption'
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 import { normalizeCurrency } from '@/lib/money'
@@ -26,14 +25,8 @@ export default async function EventAnalyticsPage({
   params: Promise<{ id: string }>
 }) {
   const { id: eventId } = await params
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect(`/auth/login?redirect=/organizer/events/${eventId}/analytics`)
-  if (user.role !== 'organizer') redirect('/organizer')
-
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
-  if (!eventDoc.exists) notFound()
-  const eventData = eventDoc.data()!
-  if (eventData.organizer_id !== user.id && !user.isAdmin) notFound()
+  const { event: __event } = await requireEventPage(eventId, 'view', `/organizer/events/${eventId}/analytics`)
+  const eventData = __event
 
   const eventCurrency = normalizeCurrency(eventData.currency, 'HTG')
   const capacity = Number(eventData.total_tickets || 0)

@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { adminStorage } from '@/lib/firebase/admin';
 import { sniffRasterImage } from '@/lib/security/sniffImage';
 import { writeOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
+import { requireOrg } from '@/lib/organizer/context';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,14 +16,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Same gate as the organization details PUT next door. Needed now that the
-    // write below can create organizers/{uid} rather than only update it.
-    if (!['organizer', 'admin', 'super_admin'].includes(String(user.role))) {
-      return NextResponse.json(
-        { error: 'Only organizers can update organization details' },
-        { status: 403 }
-      );
-    }
+    // Same gate as the organization details PUT next door: the acting org's
+    // owner or a team admin. The logo belongs to the org, not the uploader.
+    const org = await requireOrg('manage_settings');
+    if (!org.ok) return org.response;
+    const orgId = org.value.orgId;
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -74,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const fileExtension = sniffed.ext;
-    const fileName = `organization-logos/${user.id}/${Date.now()}.${fileExtension}`;
+    const fileName = `organization-logos/${orgId}/${Date.now()}.${fileExtension}`;
 
     const bucket = adminStorage.bucket();
     const fileRef = bucket.file(fileName);
@@ -89,11 +87,11 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-    // Canonical public_profiles/{uid}, plus the users/{uid} copy the app reads
-    // and organizers/{uid} for the settings page (lib/profile/org-brand.ts).
+    // Canonical public_profiles/{orgId}, plus the users/{orgId} copy the app reads
+    // and organizers/{orgId} for the settings page (lib/profile/org-brand.ts).
     // merge, not update: an organizer who set up on mobile may have no
-    // organizers/{uid} doc yet, and update() throws on a missing doc.
-    await writeOrgBrandAdmin(user.id, { organization_logo: publicUrl }, { organizers: true });
+    // organizers/{orgId} doc yet, and update() throws on a missing doc.
+    await writeOrgBrandAdmin(orgId, { organization_logo: publicUrl }, { organizers: true });
 
     return NextResponse.json({ 
       success: true,

@@ -16,6 +16,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { backendFetch } from '../../lib/api/backend';
 import { useLocaleFormat } from '../../lib/format';
@@ -47,6 +48,8 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { userProfile } = useAuth();
+  // Acting org (own or a team's), not the signed-in uid: lib/activeOrg.ts.
+  const { orgId } = useActiveOrg();
   const { t, language } = useI18n();
   const showAlert = useAppAlert();
   const { formatMoney } = useLocaleFormat();
@@ -59,7 +62,7 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'processed'>('pending');
 
   const loadData = useCallback(async () => {
-    if (!userProfile?.id) return;
+    if (!orgId) return;
 
     try {
       const response = await backendFetch('/api/organizer/refunds');
@@ -78,14 +81,14 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userProfile?.id]);
+  }, [orgId]);
 
   const loadFromFirebase = async () => {
     try {
       // Get organizer's events
       const eventsQuery = query(
         collection(db, 'events'),
-        where('organizer_id', '==', userProfile?.id)
+        where('organizer_id', '==', orgId)
       );
       const eventsSnapshot = await getDocs(eventsQuery);
       const eventIds = eventsSnapshot.docs.map(doc => doc.id);

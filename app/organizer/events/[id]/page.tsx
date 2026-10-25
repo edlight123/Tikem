@@ -1,5 +1,4 @@
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
+import { requireEventPage } from '../../_lib/orgPage'
 import { adminDb } from '@/lib/firebase/admin'
 import { isAdmin } from '@/lib/admin'
 import { EventCommandCenter } from './EventCommandCenter'
@@ -10,29 +9,8 @@ export const revalidate = 0
 
 export default async function EventCommandCenterPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { user, error } = await requireAuth()
-
-  if (error || !user) {
-    redirect(`/auth/login?redirect=/organizer/events/${id}`)
-  }
-
-  if (user.role !== 'organizer') {
-    redirect(`/organizer?redirect=/organizer/events/${id}`)
-  }
-
-  // Fetch event
-  const eventDoc = await adminDb.collection('events').doc(id).get()
-  
-  if (!eventDoc.exists) {
-    notFound()
-  }
-
-  const eventData = eventDoc.data()!
-
-  // Verify organizer owns this event
-  if (eventData.organizer_id !== user.id) {
-    notFound()
-  }
+  // Owner, org admin/manager, or platform admin (layout already 404s others).
+  const { event: eventData } = await requireEventPage(id, 'view')
 
   // Fetch tickets for this event (supports legacy `eventId` field too)
   const ticketDocs = await loadTicketDocsForEvent(id)
@@ -80,7 +58,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
   }
 
   const event = {
-    id: eventDoc.id,
+    id,
     title: eventData.title,
     description: eventData.description,
     start_datetime: convertTimestamp(eventData.start_datetime),

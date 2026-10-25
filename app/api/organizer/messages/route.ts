@@ -10,12 +10,13 @@
  *   limit   — 1..100, default 30
  *   unread  — 'true' to return only unacknowledged threads
  *
- * Scoping is by `organizer_id == <session user>` and nothing else. There is no
- * way to ask for somebody else's inbox because the caller never supplies the
- * organizer id.
+ * Scoping is by `organizer_id == <acting org>` and nothing else: the caller's
+ * own org, or one they are an admin/manager of (lib/organizer/context.ts). The
+ * caller never supplies an organizer id, only an org they belong to.
  */
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { requireOrg } from '@/lib/organizer/context'
 import {
   listThreadsForOrganizer,
   countUnread,
@@ -34,13 +35,16 @@ export async function GET(request: Request) {
       )
     }
 
+    const org = await requireOrg('view')
+    if (!org.ok) return org.response
+
     const url = new URL(request.url)
     const eventId = url.searchParams.get('eventId')?.trim() || undefined
     const unreadOnly = url.searchParams.get('unread') === 'true'
     const rawLimit = parseInt(url.searchParams.get('limit') || '', 10)
 
     const all = await listThreadsForOrganizer({
-      organizerId: user.id,
+      organizerId: org.value.orgId,
       eventId,
       limit: Number.isFinite(rawLimit) ? rawLimit : DEFAULT_THREADS_PER_PAGE,
     })

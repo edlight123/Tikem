@@ -1,6 +1,5 @@
 import { T } from '@/components/organizer/ui/TranslatedText'
-import { requireAuth } from '@/lib/auth'
-import { redirect, notFound } from 'next/navigation'
+import { requireEventPage } from '../../../_lib/orgPage'
 import Link from 'next/link'
 import { adminDb } from '@/lib/firebase/admin'
 import { Pencil, Ticket } from 'lucide-react'
@@ -21,14 +20,7 @@ interface Tier {
 
 export default async function EventTicketsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect(`/auth/login?redirect=/organizer/events/${id}/tickets`)
-  if (user.role !== 'organizer') redirect(`/organizer?redirect=/organizer/events/${id}/tickets`)
-
-  const eventDoc = await adminDb.collection('events').doc(id).get()
-  if (!eventDoc.exists) notFound()
-  const eventData = eventDoc.data()!
-  if (eventData.organizer_id !== user.id && !(user as any).isAdmin) notFound()
+  const { event: eventData } = await requireEventPage(id, 'view', `/organizer/events/${id}/tickets`)
 
   const currency = String(eventData.currency || 'HTG')
 

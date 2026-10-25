@@ -34,10 +34,26 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/events/$(eventId));
     }
 
+    // Organization teams (lib/organizer/teamRoles.ts). organizers/{orgId}/team/{uid}
+    // is server-written; an active admin or manager there runs the org's events
+    // like the owner does. Payout/bank data below stays isOwner only.
+    function isOrgTeam(orgId, roles) {
+      return isSignedIn() && orgId is string && orgId != '' &&
+        exists(/databases/$(database)/documents/organizers/$(orgId)/team/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/organizers/$(orgId)/team/$(request.auth.uid)).data.status == 'active' &&
+        get(/databases/$(database)/documents/organizers/$(orgId)/team/$(request.auth.uid)).data.role in roles;
+    }
+
+    // The org's owner, or a team member allowed to run its events.
+    function managesOrg(orgId) {
+      return isSignedIn() && (orgId == request.auth.uid || isOrgTeam(orgId, ['admin', 'manager']));
+    }
+
     function isEventOrganizer(eventId) {
       return isSignedIn() && (
         eventDoc(eventId).data.organizer_id == request.auth.uid ||
-        eventDoc(eventId).data.organizerId == request.auth.uid
+        eventDoc(eventId).data.organizerId == request.auth.uid ||
+        isOrgTeam(eventDoc(eventId).data.get('organizer_id', ''), ['admin', 'manager'])
       );
     }
 
@@ -164,6 +180,13 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow write: if false;
       }
+
+      // Orgs this user is on the team of (mirror of organizers/{org}/team/{uid},
+      // written by the server). Drives the org switcher.
+      match /org_memberships/{orgId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
     }
 
     // Public profiles (H4) - a minimal, read-only projection of a user's SAFE
@@ -251,7 +274,7 @@ service cloud.firestore {
       // draft and publish as a second, server-side step; this makes that the
       // only possible order rather than a convention a client can skip.
       allow create: if isSignedIn()
-        && request.resource.data.organizer_id == request.auth.uid
+        && managesOrg(request.resource.data.organizer_id)
         && request.resource.data.get('is_published', false) == false
         // status 'published' is also honoured as published by some readers, so
         // only the publish route (Admin SDK) may set it. Same for curation flags.
@@ -277,7 +300,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn() && (
         (
-          resource.data.organizer_id == request.auth.uid &&
+          managesOrg(resource.data.organizer_id) &&
           // Ownership is fixed at create. Re-pointing organizer_id (or the
           // legacy organizerId that isEventOrganizer also honours) would hand
           // the event — and its sales and payout attribution — to another
@@ -362,7 +385,7 @@ service cloud.firestore {
       // An event that has sold, been cancelled or had its payouts frozen keeps
       // its record: deleting it and re-creating the same id as a clean draft
       // would shed the cancellation, the freeze and the sales counter.
-      allow delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid
+      allow delete: if isSignedIn() && managesOrg(resource.data.organizer_id)
         && resource.data.get('tickets_sold', 0) == 0
         && resource.data.get('status', '') != 'cancelled'
         && resource.data.get('payouts_frozen', false) != true;
@@ -384,7 +407,7 @@ service cloud.firestore {
         allow read: if true; // Anyone can read event updates
         allow write: if isSignedIn() && (
           exists(/databases/$(database)/documents/events/$(eventId)) &&
-          get(/databases/$(database)/documents/events/$(eventId)).data.organizer_id == request.auth.uid
+          managesOrg(get(/databases/$(database)/documents/events/$(eventId)).data.organizer_id)
         );
       }
 
@@ -416,9 +439,9 @@ service cloud.firestore {
       // M9: only the event's organizer may write, mirroring the in-event
       // /events/{eventId}/updates subcollection gating.
       allow create: if isSignedIn() &&
-        get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid;
+        managesOrg(get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id);
       allow update, delete: if isSignedIn() &&
-        get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+        managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
     }
     
     // Tickets collection - users can access their own tickets, organizers can access all tickets
@@ -484,25 +507,25 @@ service cloud.firestore {
     match /ticket_tiers/{tierId} {
       allow read: if true; // Public read for event browsing
       // H1: only the parent event's organizer may create tiers.
-      allow create: if isSignedIn() && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid
+      allow create: if isSignedIn() && managesOrg(get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id)
         && request.resource.data.get('sold_quantity', 0) == 0;
       // A tier can never be moved to another event (checkout trusts
       // tier.event_id, so moving a free tier onto someone else's event minted
       // tickets to it), and its sales counter is server-owned.
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+      allow update: if isSignedIn() && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id)
         && request.resource.data.event_id == resource.data.event_id
         && request.resource.data.get('sold_quantity', 0) == resource.data.get('sold_quantity', 0);
-      allow delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+      allow delete: if isSignedIn() && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
     }
 
     // Group discounts - public read, organizers can manage their event's discounts
     match /group_discounts/{discountId} {
       allow read: if true; // Public read for event browsing
       // H1: only the parent event's organizer may create discounts.
-      allow create: if isSignedIn() && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid;
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+      allow create: if isSignedIn() && managesOrg(get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id);
+      allow update: if isSignedIn() && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id)
         && request.resource.data.event_id == resource.data.event_id;
-      allow delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+      allow delete: if isSignedIn() && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
     }
     
     // Promo codes - organizers manage their own event's promo codes. The redemption
@@ -525,20 +548,20 @@ service cloud.firestore {
       // active discounts. create validates the INCOMING event_id; read/update/delete
       // validate the STORED doc's event_id.
       allow read: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+        && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
 
       allow create: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id == request.auth.uid;
+        && managesOrg(get(/databases/$(database)/documents/events/$(request.resource.data.event_id)).data.organizer_id);
 
       // Organizers may edit discount/expiry/active flags, but uses_count and event_id
       // are immutable from the client (.get defaults keep legacy docs updatable).
       allow update: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+        && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id)
         && request.resource.data.get('uses_count', 0) == resource.data.get('uses_count', 0)
         && request.resource.data.event_id == resource.data.event_id;
 
       allow delete: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+        && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
     }
 
     // Promo code redemptions - append-only ledger of who redeemed which promo,
@@ -560,7 +583,7 @@ service cloud.firestore {
     match /event_promoters/{promoterId} {
       allow read: if isSignedIn()
         && (
-          get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+          managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id)
           || resource.data.get('claimed_by_uid', '') == request.auth.uid
         );
 
@@ -569,7 +592,7 @@ service cloud.firestore {
       allow create: if false;
 
       allow update: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+        && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id)
         && request.resource.data.event_id == resource.data.event_id
         // `clicks` is bumped only by /api/track/click (Admin SDK).
         && request.resource.data.get('clicks', 0) == resource.data.get('clicks', 0)
@@ -581,7 +604,7 @@ service cloud.firestore {
         && request.resource.data.get('stats_key', '') == resource.data.get('stats_key', '');
 
       allow delete: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+        && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
     }
 
     // Promoter sales — append-only commission ledger, written EXCLUSIVELY by the
@@ -600,7 +623,7 @@ service cloud.firestore {
     // event's links and can never write one, so no counter is client-forgeable.
     match /tracking_links/{linkId} {
       allow read: if isSignedIn()
-        && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+        && managesOrg(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id);
       allow write: if false;
     }
 
@@ -684,6 +707,13 @@ service cloud.firestore {
     match /organizers/{organizerId} {
       allow read: if isSignedIn();
       allow write: if false;
+
+      // Org team (server-written via /api/organizer/team). The owner and the
+      // org's admins see the roster; a member sees their own entry.
+      match /team/{memberId} {
+        allow read: if isOwner(organizerId) || isOwner(memberId) || isOrgTeam(organizerId, ['admin']);
+        allow write: if false;
+      }
       
       // Legacy payout config (payoutConfig/main). Read by the owner (mobile
       // OrganizerEventEarningsScreen falls back to it); written only by the
@@ -776,7 +806,7 @@ service cloud.firestore {
     // them without also moving the authorization checks out of those routes.
     match /organizer_messages/{messageId} {
       allow read: if isSignedIn() && (
-        resource.data.organizer_id == request.auth.uid ||
+        managesOrg(resource.data.organizer_id) ||
         resource.data.sender_id == request.auth.uid
       );
       allow create, update, delete: if false;

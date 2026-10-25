@@ -25,6 +25,7 @@ import {
   type ScannedCodeCheck,
 } from '@/lib/scan/doorRules'
 import { verifyScannedTicketCode } from '@/lib/tickets/qr'
+import { eventOrgId, teamRoleIn } from '@/lib/organizer/context'
 
 export type DoorAccess =
   | {
@@ -36,7 +37,7 @@ export type DoorAccess =
     }
   | { ok: false; status: number; error: string }
 
-/** Owner, admin, or staff with permissions.checkin === true. */
+/** Owner (or org admin/manager), platform admin, or staff with permissions.checkin === true. */
 export async function authorizeDoorAccess(eventId: string): Promise<DoorAccess> {
   if (!eventId) return { ok: false, status: 400, error: 'Event ID is required' }
   const user: any = await getCurrentUser()
@@ -48,12 +49,16 @@ export async function authorizeDoorAccess(eventId: string): Promise<DoorAccess> 
     eventRef.collection('members').doc(String(user.id)).get(),
   ])
   const event = eventSnap.exists ? { id: eventSnap.id, ...(eventSnap.data() as any) } : null
-  const decision = evaluateDoorAccess({
-    uid: user.id,
-    isAdmin: user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(((user as any).email_verified) ? user.email : null),
-    event,
-    member: memberSnap.exists ? ((memberSnap.data() as any) ?? {}) : null,
-  })
+  const member = memberSnap.exists ? ((memberSnap.data() as any) ?? {}) : null
+  const isAdmin =
+    user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(((user as any).email_verified) ? user.email : null)
+  // The org-team read is only needed when nothing cheaper already decides it.
+  const orgId = eventOrgId(event)
+  let orgRole: string | null = null
+  if (event && orgId && orgId !== String(user.id) && String(member?.role || '') !== 'owner' && !isAdmin) {
+    orgRole = await teamRoleIn(orgId, String(user.id)).catch(() => null)
+  }
+  const decision = evaluateDoorAccess({ uid: user.id, isAdmin, event, member, orgRole })
   if (!decision.allowed) return { ok: false, status: decision.status, error: decision.error }
   return { ok: true, uid: String(user.id), role: decision.role, canViewAttendees: decision.canViewAttendees, event: event! }
 }

@@ -14,18 +14,19 @@ import {
   recordFailedPromoValidation,
   recordPromoValidationAttempt,
 } from '@/lib/promo-codes'
+import { canOnEvent, type CurrentUser } from '@/lib/organizer/context'
 
 // Promo codes are stored in Firestore `promo_codes` (the same store the mobile app
 // writes to and the checkout path reads). All routes here use the Admin SDK.
 
-async function assertEventOwnedByUser(eventId: string, userId: string): Promise<
+/** The event's org team (owner, admin, manager) runs its promo codes. */
+async function assertEventOwnedByUser(eventId: string, user: CurrentUser): Promise<
   { ok: true } | { ok: false; status: number; error: string }
 > {
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
   if (!eventDoc.exists) return { ok: false, status: 404, error: 'Event not found' }
   const eventData = eventDoc.data() as any
-  const organizerId = eventData?.organizer_id ?? eventData?.organizerId
-  if (organizerId !== userId) return { ok: false, status: 403, error: 'Unauthorized' }
+  if (!(await canOnEvent(user, eventData, 'manage_events')).allowed) return { ok: false, status: 403, error: 'Unauthorized' }
   return { ok: true }
 }
 
@@ -39,18 +40,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (user.role !== 'organizer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const { eventId, code, discountType, discountValue, maxUses, validFrom, validUntil } = await req.json()
 
     if (!eventId || !code || !discountType || discountValue === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Verify event belongs to user.
-    const ownership = await assertEventOwnedByUser(String(eventId), user.id)
+    // Verify the caller may run this event.
+    const ownership = await assertEventOwnedByUser(String(eventId), user)
     if (!ownership.ok) {
       return NextResponse.json({ error: ownership.error }, { status: ownership.status })
     }
@@ -114,10 +111,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (user.role !== 'organizer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const { promoId, isActive } = await req.json()
     if (!promoId || typeof isActive !== 'boolean') {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -130,7 +123,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const promo = promoSnap.data() as any
-    const ownership = await assertEventOwnedByUser(String(promo.event_id), user.id)
+    const ownership = await assertEventOwnedByUser(String(promo.event_id), user)
     if (!ownership.ok) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
@@ -256,10 +249,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (user.role !== 'organizer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const { searchParams } = new URL(req.url)
     const promoId = searchParams.get('promoId')
 
@@ -274,7 +263,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const promo = promoSnap.data() as any
-    const ownership = await assertEventOwnedByUser(String(promo.event_id), user.id)
+    const ownership = await assertEventOwnedByUser(String(promo.event_id), user)
     if (!ownership.ok) {
       return NextResponse.json({ error: 'Promo code not found or unauthorized' }, { status: 404 })
     }

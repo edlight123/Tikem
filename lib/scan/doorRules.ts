@@ -27,6 +27,13 @@ export type DoorAccessInput = {
   event: Record<string, any> | null
   /** events/{eventId}/members/{uid}, or null when the user is not a member. */
   member: Record<string, any> | null
+  /**
+   * The caller's role on the event's ORGANIZATION team
+   * (organizers/{orgId}/team/{uid}), when known. An org admin or manager runs
+   * the door like the owner; org 'staff' gets nothing from it (door access
+   * stays per event, via `member`).
+   */
+  orgRole?: string | null
 }
 
 export type DoorAccessDecision =
@@ -35,7 +42,8 @@ export type DoorAccessDecision =
 
 /**
  * Same predicates as firestore.rules isEventOwner / canCheckin: the event's
- * organizer, a member with role 'owner', or a member whose
+ * organizer, an admin or manager of the event's org, a member with role
+ * 'owner', or a member whose
  * permissions.checkin is exactly true. Platform admins are also allowed, as on
  * every other organizer API.
  */
@@ -46,7 +54,8 @@ export function evaluateDoorAccess(input: DoorAccessInput): DoorAccessDecision {
 
   const organizerId = String(input.event.organizer_id || input.event.organizerId || '')
   const member = input.member
-  if (organizerId === uid || String(member?.role || '') === 'owner') {
+  const orgRole = String(input.orgRole || '')
+  if (organizerId === uid || String(member?.role || '') === 'owner' || orgRole === 'admin' || orgRole === 'manager') {
     return { allowed: true, role: 'owner', canViewAttendees: true }
   }
   if (input.isAdmin) return { allowed: true, role: 'admin', canViewAttendees: true }

@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { getEventUpdateNoticeEmail } from '@/lib/email-templates/reminder'
 
@@ -26,15 +27,14 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Verify user owns this event
+    // Verify the caller runs this event (its org's owner, admin or manager)
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('*')
       .eq('id', eventId)
-      .eq('organizer_id', user.id)
       .single()
 
-    if (eventError || !event) {
+    if (eventError || !event || !(await canOnEvent(user, event, 'manage_events')).allowed) {
       return Response.json({ error: 'Event not found or unauthorized' }, { status: 404 })
     }
 

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import crypto from 'crypto'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 const DOC_ID = 'payoutDetailsChangeVerification'
 const CODE_TTL_MS = 10 * 60 * 1000
@@ -46,6 +47,10 @@ export async function POST(request: NextRequest) {
 
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(organizerId)
+    if (notOwner) return notOwner
 
     const { code } = await request.json().catch(() => ({} as any))
 

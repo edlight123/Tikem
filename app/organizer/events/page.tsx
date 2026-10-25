@@ -12,17 +12,24 @@ import { useTranslation } from 'react-i18next'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { getOrganizerEventsClient } from '@/lib/data/events.client'
 import Link from 'next/link'
-import { useOrganizerClientGuard } from '@/lib/hooks/useOrganizerClientGuard'
+import { useRouter } from 'next/navigation'
+import { useOrgClientAuth } from '@/lib/organizer/useOrgClientAuth'
+import { useOrgRole } from '@/components/organizer/OrgRoleProvider'
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'past'
 
 export default function OrganizerEventsPage() {
   const { t } = useTranslation('organizer')
 
-  const { firebaseUser, loading: authLoading } = useOrganizerClientGuard({
-    loginRedirectPath: '/organizer/events',
-    upgradeRedirectPath: '/organizer/events',
-  })
+  const { firebaseUser, loading: authLoading } = useOrgClientAuth('/organizer/events')
+  // The acting org (own, or one this account runs as admin/manager), from the layout.
+  const org = useOrgRole()
+  const orgId = org?.orgId || ''
+  const router = useRouter()
+  // No org at all (attendee, or staff-only seats): the upgrade prompt, as before.
+  useEffect(() => {
+    if (!org) router.replace('/organizer?redirect=/organizer/events')
+  }, [org, router])
   
   // State
   const [events, setEvents] = useState<any[]>([])
@@ -47,7 +54,7 @@ export default function OrganizerEventsPage() {
   // Fetch first page of events once authenticated.
   useEffect(() => {
     if (authLoading) return
-    if (!firebaseUser) return
+    if (!firebaseUser || !orgId) return
 
     let cancelled = false
 
@@ -63,7 +70,7 @@ export default function OrganizerEventsPage() {
           return
         }
 
-        const result = await getOrganizerEventsClient(firebaseUser.uid, 50)
+        const result = await getOrganizerEventsClient(orgId, 50)
         if (cancelled) return
 
         setEvents(result.data)
@@ -86,7 +93,7 @@ export default function OrganizerEventsPage() {
     return () => {
       cancelled = true
     }
-  }, [authLoading, firebaseUser])
+  }, [authLoading, firebaseUser, orgId])
 
   const handleLoadMore = async () => {
     if (!firebaseUser) return
@@ -95,7 +102,7 @@ export default function OrganizerEventsPage() {
 
     try {
       setLoadingMore(true)
-      const result = await getOrganizerEventsClient(firebaseUser.uid, 50, lastDoc)
+      const result = await getOrganizerEventsClient(orgId, 50, lastDoc)
       const next = result.data || []
 
       setEvents((prev) => {

@@ -1,4 +1,4 @@
-import { db, storage } from '../../config/firebase';
+import { auth, db, storage } from '../../config/firebase';
 import {
   collection,
   addDoc,
@@ -638,6 +638,9 @@ export async function createEvent(
         tickets_sold: 0,
         tickets_available: totalCapacity,
         organizer_id: organizerId,
+        // Who made it. organizer_id is the ORG (a team member creates events
+        // for the org they act for: docs/specs/org-teams.md); this is the person.
+        created_by: auth.currentUser?.uid || organizerId,
         // Denormalized organizer display name (org brand preferred). See above.
         organizer_name: organizerName,
         is_rsvp: eventData.is_rsvp || false,
@@ -929,7 +932,11 @@ async function uploadEventImage(
     const response = await fetch(localUri);
     const blob = await response.blob();
     
-    const filename = `${organizerId}_${Date.now()}.jpg`;
+    // storage.rules only accept files named after the UPLOADER's uid. For a
+    // team member acting for someone else's org that is their own uid, not
+    // the org's (the image URL is what the event stores either way).
+    const uploaderUid = auth.currentUser?.uid || organizerId;
+    const filename = `${uploaderUid}_${Date.now()}.jpg`;
     const storageRef = ref(storage, `event-images/${filename}`);
     
     await uploadBytes(storageRef, blob);

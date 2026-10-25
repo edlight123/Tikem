@@ -7,6 +7,7 @@ import { resolveEventCountry } from '@/lib/event-country'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import { checkPaidPublishGate } from '@/lib/events/publish-gate'
 import { isAdmin as isAdminEmail } from '@/lib/admin'
+import { canOnEvent } from '@/lib/organizer/context'
 import { isEventCancelled, publishBlockReason, PUBLISH_BLOCK_MESSAGES } from '@/lib/events/publishGuard'
 import { sendEmail, getEventCreatedEmail, emailSubjects } from '@/lib/email'
 import { formatEventWhen } from '@/lib/email-kit/i18n'
@@ -155,7 +156,8 @@ export async function POST(
       (user as any).role === 'super_admin' ||
       isAdminEmail((user as any).email_verified ? user.email : null)
 
-    if (eventData.organizer_id !== user.id && !admin) {
+    // The event's org team (owner, admin, manager) or a platform admin.
+    if (!admin && !(await canOnEvent(user, eventData, 'manage_events')).allowed) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id);
+    if (notOwner) return notOwner;
 
     // Mark account as deactivated
     await adminDb.collection('users').doc(user.id).update({

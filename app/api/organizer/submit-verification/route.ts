@@ -9,6 +9,7 @@ import { renderEmail, title, eyebrow, p, gap, button, timeline, rowsBlock, appUr
 import type { EmailLang } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { validateStoredSubmission } from '@/lib/kyc/submission'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -34,6 +35,10 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const body = await request.json().catch(() => ({} as any))
     const userId: string = user.id

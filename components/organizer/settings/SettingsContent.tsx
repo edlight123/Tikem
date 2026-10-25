@@ -119,6 +119,8 @@ interface SettingsContentProps {
   hasPayoutSetup: boolean
   defaultLocation: string
   payoutStatusText: string
+  /** Payouts, verification and the danger zone are the org owner's alone; an org admin never sees them. */
+  isOwner?: boolean
 }
 
 export default function SettingsContent({
@@ -126,6 +128,7 @@ export default function SettingsContent({
   isPending,
   hasPayoutSetup,
   defaultLocation,
+  isOwner = true,
 }: SettingsContentProps) {
   const { t } = useTranslation('organizer')
 
@@ -143,6 +146,8 @@ export default function SettingsContent({
           answer "is my account actually ready", these answer it without
           spending four cards on it. */}
       <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-y border-white/10 py-4">
+        {isOwner && (
+        <>
         <StateReadout
           label={t('settings.verification')}
           value={
@@ -159,6 +164,8 @@ export default function SettingsContent({
           value={hasPayoutSetup ? t('settings.configured') : t('settings.not_setup')}
           tone={hasPayoutSetup ? 'good' : 'idle'}
         />
+        </>
+        )}
         <StateReadout
           label={t('settings.location')}
           value={locationSet ? defaultLocation : t('settings.not_set')}
@@ -169,7 +176,7 @@ export default function SettingsContent({
       {/* Verification is not really a setting — it is the gate on selling paid
           tickets. Unfinished, it leads; finished, it disappears entirely rather
           than sitting there as a green trophy. */}
-      {!isVerified && (
+      {isOwner && !isVerified && (
         <div className="mt-6 overflow-hidden rounded-2xl bg-amber-500/10">
           <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3.5">
@@ -230,6 +237,7 @@ export default function SettingsContent({
           ]}
         />
 
+        {isOwner && (
         <SettingsGroup
           title={t('settings.group_money', { defaultValue: 'getting paid' })}
           rows={[
@@ -249,6 +257,7 @@ export default function SettingsContent({
             },
           ]}
         />
+        )}
 
         <SettingsGroup
           title={t('settings.group_events', { defaultValue: 'running your events' })}
@@ -289,6 +298,7 @@ export default function SettingsContent({
 
       {/* Danger zone: set apart by distance and a red edge rather than a full
           red box, which read as an error the organizer had already caused. */}
+      {isOwner && (
       <Link
         href="/organizer/settings/danger-zone"
         className="group mt-8 flex items-center gap-4 rounded-2xl bg-red-500/[0.04] px-4 py-4 ring-1 ring-red-500/20 transition-colors hover:bg-red-500/[0.09] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 sm:px-5"
@@ -309,6 +319,7 @@ export default function SettingsContent({
           aria-hidden
         />
       </Link>
+      )}
 
       {/* Support is not a status and not a setting — it belongs at the end, the
           way a footer answers "and if none of this helped". */}

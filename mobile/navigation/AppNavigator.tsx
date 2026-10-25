@@ -16,6 +16,8 @@ import { COLORS } from '../config/brand';
 import { LINKING_CONFIG, WEB_LINK_PREFIXES } from './linkingConfig';
 import { withAlpha } from '../theme/tokens';
 import { getVerificationRequest } from '../lib/verification';
+import { useActiveOrg } from '../lib/activeOrg';
+import { withOrgAccess } from '../components/organizer/OrgAccessGate';
 import BootScreen from '../components/BootScreen';
 import { useAppAlert } from '../components/AppAlert';
 import { hideSplash } from '../lib/splash';
@@ -245,6 +247,15 @@ interface TabBarProps {
 // AppNavigator (role/verification) and provided here so CustomTabBar can gate
 // the double-tap-Profile-to-switch gesture without re-running that query.
 const OrganizerAccessContext = React.createContext(false);
+
+// Screens a team role may not use render a calm notice instead
+// (lib/orgTeamRoles.ts). Money out, payout details and Stripe are the owner's.
+const GatedOrganizerEarningsHub = withOrgAccess(OrganizerEarningsHubScreen, 'owner_only');
+const GatedOrganizerEventEarnings = withOrgAccess(OrganizerEventEarningsScreen, 'owner_only');
+const GatedOrganizerPayoutSettings = withOrgAccess(OrganizerPayoutSettingsScreen, 'owner_only');
+const GatedStripeOnboarding = withOrgAccess(StripeOnboardingScreen, 'owner_only');
+const GatedStripeConnectWebView = withOrgAccess(StripeConnectWebViewScreen, 'owner_only');
+const GatedOrganizerOrgTeam = withOrgAccess(OrganizerOrgTeamScreen, 'manage_team');
 
 function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
   const { colors, isDark } = useTheme();
@@ -624,6 +635,7 @@ export default function AppNavigator() {
   // effect below does not need it in its dependency array.
   const showAlert = useAppAlert();
   const [isVerified, setIsVerified] = useState(false);
+  const activeOrg = useActiveOrg();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const prevModeRef = useRef<string | null>(null);
   // Current mode for long-lived listeners that must not re-subscribe on a switch.
@@ -820,7 +832,9 @@ export default function AppNavigator() {
   const canUseOrganizerMode =
     userProfile?.role === 'organizer' ||
     userProfile?.role === 'admin' ||
-    isVerified;
+    isVerified ||
+    // Admin or manager on someone else's org team (staff use the staff tools).
+    activeOrg.hasTeamAccess;
 
   // When the mode changes (via Account actions), always jump to the first tab.
   useEffect(() => {
@@ -906,8 +920,8 @@ export default function AppNavigator() {
               component={PaymentWebViewScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen name="StripeConnectWebView" component={StripeConnectWebViewScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="StripeOnboarding" component={StripeOnboardingScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="StripeConnectWebView" component={GatedStripeConnectWebView} options={{ headerShown: false }} />
+            <Stack.Screen name="StripeOnboarding" component={GatedStripeOnboarding} options={{ headerShown: false }} />
             <Stack.Screen
               name="InAppWebView"
               component={InAppWebViewScreen}
@@ -956,12 +970,12 @@ export default function AppNavigator() {
               options={{ headerShown: false }} 
             />
             <Stack.Screen name="OrganizerEventManagement" component={OrganizerEventManagementScreen} options={{ headerShown: true, headerTitle: 'Manage Event' }} />
-            <Stack.Screen name="OrganizerEventEarnings" component={OrganizerEventEarningsScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OrganizerEarningsHub" component={OrganizerEarningsHubScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OrganizerPayoutSettings" component={OrganizerPayoutSettingsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerEventEarnings" component={GatedOrganizerEventEarnings} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerEarningsHub" component={GatedOrganizerEarningsHub} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerPayoutSettings" component={GatedOrganizerPayoutSettings} options={{ headerShown: false }} />
             <Stack.Screen name="OrganizerEventStaff" component={OrganizerEventStaffScreen} options={{ headerShown: true }} />
             <Stack.Screen name="OrganizerTeamHub" component={OrganizerTeamHubScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OrganizerOrgTeam" component={OrganizerOrgTeamScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerOrgTeam" component={GatedOrganizerOrgTeam} options={{ headerShown: false }} />
             <Stack.Screen
               name="OrganizerPromoCodes"
               component={OrganizerPromoCodesScreen}

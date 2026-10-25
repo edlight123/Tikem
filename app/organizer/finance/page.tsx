@@ -1,6 +1,4 @@
-import { redirect } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase/admin'
+import { requireOrgPage } from '../_lib/orgPage'
 import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
 import { summaryFromAvailability } from '@/lib/payouts/availability'
 import { PageHeader } from '@/components/organizer/ui'
@@ -16,12 +14,8 @@ export const metadata = {
 }
 
 export default async function FinancePage() {
-  const { user, error } = await requireAuth()
-  if (error || !user) redirect('/auth/login?redirect=/organizer/finance')
-
-  const userDoc = await adminDb.collection('users').doc(user.id).get()
-  const role = userDoc.exists ? userDoc.data()?.role : null
-  if (role !== 'organizer') redirect('/organizer?redirect=/organizer/finance')
+  // Money is the org owner's alone (owner_only): team members go to /organizer.
+  const { orgId } = await requireOrgPage('owner_only', '/organizer/finance')
 
   // ONE source of truth for every money figure on this page: the shared
   // availability function (lib/payouts/availability.ts) that
@@ -31,7 +25,7 @@ export default async function FinancePage() {
   // tickets-based engine — and showed 2,250.00 HTG available while every
   // withdrawal was refused. Totals stay per currency; HTG and USD are never
   // added together.
-  const availability = await loadOrganizerAvailability(user.id)
+  const availability = await loadOrganizerAvailability(orgId)
   const summary = summaryFromAvailability(availability.events)
 
   return (
@@ -54,7 +48,7 @@ export default async function FinancePage() {
         <div className="mt-8">
           <EarningsView
             summary={summary}
-            organizerId={user.id}
+            organizerId={orgId}
             withdrawable={{ totals: availability.totals }}
           />
         </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { canOnEvent } from '@/lib/organizer/context'
 
 /**
  * Get event instances for a recurring event
@@ -89,7 +90,7 @@ export async function PATCH(req: NextRequest) {
       .eq('id', instanceId)
       .single()
 
-    if (!instance || instance.events?.organizer_id !== user.id) {
+    if (!instance || !(await canOnEvent(user, instance.events, 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Unauthorized to modify this instance' },
         { status: 403 }
@@ -159,7 +160,7 @@ export async function DELETE(req: NextRequest) {
       .eq('id', instanceId)
       .single()
 
-    if (!instance || instance.events?.organizer_id !== user.id) {
+    if (!instance || !(await canOnEvent(user, instance.events, 'manage_events')).allowed) {
       return NextResponse.json(
         { error: 'Unauthorized to delete this instance' },
         { status: 403 }

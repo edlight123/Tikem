@@ -1,61 +1,52 @@
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
-import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { redirect } from 'next/navigation'
-import { PageHeader } from '@/components/organizer/ui'
-import OrgTeamClient from './OrgTeamClient'
+import { roster } from '@/lib/organizer/teamRoster'
+import { TranslatedPageHeader } from '@/components/organizer/ui/TranslatedPageHeader'
+import { requireOrgPage } from '../_lib/orgPage'
+import OrgTeamClient, { type TeamRow } from './OrgTeamClient'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function OrganizerTeamPage() {
-  const user = await getCurrentUser()
-  if (!user) redirect('/auth/login?redirect=/organizer/team')
+  // Owners and org admins manage the team (manage_team); everyone else goes to /organizer.
+  const ctx = await requireOrgPage('manage_team', '/organizer/team')
 
-  // Fetch org-level team members from organizers/{uid}/team
-  let members: Array<{
-    id: string
-    email: string
-    name: string
-    role: string
-    joined_at: string | null
-  }> = []
-
+  let members: TeamRow[] = []
+  let loadError = false
   try {
-    const teamSnap = await adminDb
-      .collection('organizers')
-      .doc(user.id)
-      .collection('team')
-      .orderBy('joined_at', 'desc')
-      .get()
+    members = await roster(ctx.orgId)
+  } catch (e) {
+    console.error('Team roster failed to load:', e)
+    loadError = true
+  }
 
-    members = teamSnap.docs.map((doc: QueryDocumentSnapshot) => {
-      const d = doc.data()
-      return {
-        id: doc.id,
-        email: (d.email as string) || '',
-        name: (d.name as string) || '',
-        role: (d.role as string) || 'staff',
-        joined_at: d.joined_at?.toDate?.()?.toISOString() ?? null,
-      }
-    })
-  } catch {
-    // Collection may not exist yet for new organizers; treat as empty
+  // The owner is never a team row: it is the account the org belongs to.
+  let ownerName = ''
+  let ownerEmail = ''
+  if (ctx.isOwner) {
+    ownerName = ctx.user.full_name || ''
+    ownerEmail = ctx.user.email || ''
+  } else {
+    try {
+      const owner = (await adminDb.collection('users').doc(ctx.orgId).get()).data() || {}
+      ownerName = String(owner.full_name || owner.organization_name || '')
+      ownerEmail = String(owner.email || '')
+    } catch {
+      /* the row still renders with the role */
+    }
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 md:py-10">
-      <PageHeader
-        eyebrow="Organization"
-        title="Team"
-        subtitle="Invite administrators and staff. Assign event-level check-in access from each event's Staff tab."
-      />
+      <TranslatedPageHeader eyebrowKey="organization" titleKey="org_team_title" subtitleKey="org_team_subtitle" />
       <div className="mt-8">
         <OrgTeamClient
-          organizerId={user.id}
-          ownerName={user.full_name || user.email || 'You'}
-          ownerEmail={user.email || ''}
+          ownerName={ownerName || ownerEmail}
+          ownerEmail={ownerEmail}
+          viewerIsOwner={ctx.isOwner}
+          viewerId={ctx.user.id}
           members={members}
+          loadError={loadError}
         />
       </div>
     </div>

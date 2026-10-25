@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/firebase-db/server'
+import { requireEventAccess } from '@/lib/organizer/context'
 import { toCsv } from '@/lib/csv'
 
 export async function GET(
@@ -15,16 +16,12 @@ export async function GET(
       return new Response('Unauthorized', { status: 401 })
     }
 
-    // Verify user is the organizer
-    const { data: event } = await supabase
-      .from('events')
-      .select('organizer_id, title')
-      .eq('id', eventId)
-      .single()
-
-    if (!event || event.organizer_id !== user.id) {
+    // The event's org team (owner, admin, manager) or a platform admin.
+    const access = await requireEventAccess(eventId, 'view')
+    if (!access.ok) {
       return new Response('Forbidden', { status: 403 })
     }
+    const event = access.value.event
 
     // Fetch all tickets with user information
     const { data: tickets } = await supabase
@@ -79,7 +76,7 @@ export async function GET(
     return new Response(csvContent, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${event.title.replace(/[^a-z0-9]/gi, '_')}_attendees.csv"`
+        'Content-Disposition': `attachment; filename="${String(event.title || "event").replace(/[^a-z0-9]/gi, '_')}_attendees.csv"`
       }
     })
   } catch (error) {

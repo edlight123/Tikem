@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import { sendSms } from '@/lib/sms'
 import { hashPhoneVerificationCode } from '@/lib/phone-verification-code'
 import { consumeRateLimit } from '@/lib/rate-limit'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 /** Codes one organizer may request per hour (each one is a paid SMS). */
 const SEND_LIMIT_PER_HOUR = 5
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const organizerId = user.id
 

@@ -1,8 +1,5 @@
-import { T } from '@/components/organizer/ui/TranslatedText'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { redirect, notFound } from 'next/navigation'
-import { cookies } from 'next/headers'
-import Link from 'next/link'
+import { adminDb } from '@/lib/firebase/admin'
+import { requireEventPage } from '../../../_lib/orgPage'
 import { AttendeesManager } from './AttendeesManager'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 
@@ -12,60 +9,15 @@ export const revalidate = 0
 export default async function AttendeesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params
 
-  // Verify authentication
-  const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')?.value
-
-  if (!sessionCookie) {
-    redirect(`/auth/login?redirect=${encodeURIComponent(`/organizer/events/${eventId}/attendees`)}`)
-  }
-
-  let authUser
-  try {
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    authUser = decodedClaims
-  } catch (error) {
-    console.error('Error verifying session:', error)
-    redirect(`/auth/login?redirect=${encodeURIComponent(`/organizer/events/${eventId}/attendees`)}`)
-  }
-
-  // Fetch event
-  let eventDoc
-  try {
-    eventDoc = await adminDb.collection('events').doc(eventId).get()
-  } catch (error) {
-    console.error('Error fetching event:', error)
-    notFound()
-  }
-  
-  if (!eventDoc.exists) {
-    notFound()
-  }
-
-  const eventData = eventDoc.data()
+  // Owner, org admin/manager, or platform admin; others 404 (the layout too).
+  const { event: eventData } = await requireEventPage(eventId, 'view', `/organizer/events/${eventId}/attendees`)
   const event = {
-    id: eventDoc.id,
+    id: eventId,
     title: eventData.title,
     organizer_id: eventData.organizer_id,
     start_datetime: eventData.start_datetime?.toDate?.()?.toISOString() || eventData.start_datetime,
     total_tickets: eventData.total_tickets,
     tickets_sold: eventData.tickets_sold
-  }
-
-  // Verify organizer
-  if (event.organizer_id !== authUser.uid) {
-    return (
-      <div className="mx-auto flex min-h-[60vh] max-w-md items-center justify-center px-4 py-16">
-        <div className="w-full rounded-2xl bg-white/[0.055] p-8 text-center">
-          <h2 className="font-display text-2xl text-white mb-3"><T k="server_bits.unauthorized" /></h2>
-          <p className="text-sm text-white/70">You don&apos;t have permission to manage this event&apos;s attendees.</p>
-          <Link
-            href="/organizer/events"
-            className="mt-6 inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          ><T k="server_bits.back_to_events" /></Link>
-        </div>
-      </div>
-    )
   }
 
   // Fetch all tickets for this event (supports legacy `eventId` field too)

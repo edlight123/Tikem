@@ -19,7 +19,17 @@ jest.mock('@/lib/firebase/admin', () => ({
     createSessionCookie: (...a: any[]) => (createSessionCookie as any)(...a),
   },
   adminDb: {
-    collection: (name: string) => ({ doc: () => ({ _col: name, set: (...a: any[]) => (orgSet as any)(...a) }) }),
+    collection: (name: string) => ({
+      doc: () => ({
+        _col: name,
+        set: (...a: any[]) => (orgSet as any)(...a),
+        // Org-team lookups (lib/organizer/context.ts): no memberships here.
+        collection: () => ({
+          get: async () => ({ docs: [] }),
+          doc: () => ({ get: async () => ({ exists: false, data: () => undefined }) }),
+        }),
+      }),
+    }),
     batch: () => ({ set: (...a: any[]) => batchSet(...a), commit: async () => undefined }),
   },
 }))

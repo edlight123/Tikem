@@ -7,6 +7,7 @@ import {
   phoneVerificationCodeMatches,
 } from '@/lib/phone-verification-code'
 import { notifyOrganizerVerificationApproved } from '@/lib/notifications/payout-verification'
+import { denyIfActingForAnotherOrg } from '@/lib/organizer/ownerOnly'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,10 @@ export async function POST(request: NextRequest) {
     if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
+
+    // Money and identity stay with the org owner (lib/organizer/ownerOnly.ts).
+    const notOwner = await denyIfActingForAnotherOrg(user.id)
+    if (notOwner) return notOwner
 
     const organizerId = user.id
 

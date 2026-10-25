@@ -13,6 +13,7 @@ import { loadOrganizerAvailability } from '@/lib/payouts/availability-server'
 import OrganizerDashboardClient from './OrganizerDashboardClient'
 import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
 import { safeSameOriginPath } from '@/lib/safeUrl'
+import { getPortalOrgContext } from './_lib/orgPage'
 
 export const revalidate = 30 // Cache for 30 seconds
 
@@ -40,11 +41,18 @@ export default async function OrganizerDashboard({
     redirect('/auth/login?redirect=/organizer')
   }
 
-  if (user.role !== 'organizer') {
+  // The org this request acts for: the account's own, or one it runs as an
+  // admin/manager. None (attendee, or staff-only seats): the upgrade prompt.
+  const ctx = await getPortalOrgContext()
+  if (!ctx) {
     const redirectTo = sanitizeRedirectTarget((await searchParams)?.redirect)
 
     return <OrganizerUpgradePrompt redirectTo={redirectTo} />
   }
+  const orgId = ctx.orgId
+  // Payout and verification state belong to the owner (owner_only); members
+  // never see money-out prompts they could not act on.
+  const isOwner = ctx.isOwner
 
   // Safe empty defaults so a partial Firestore failure renders a recoverable
   // error state instead of masquerading as a brand-new (empty) organizer.
@@ -73,23 +81,31 @@ export default async function OrganizerDashboard({
 
   try {
     ;[nextEvent, stats7d, stats30d, statsLifetime, haitiProfile, stripeProfile, balanceData, identityStatus] = await Promise.all([
-      getNextEvent(user.id),
-      getOrganizerStats(user.id, '7d'),
-      getOrganizerStats(user.id, '30d'),
-      getOrganizerStats(user.id, 'lifetime'),
-      getPayoutProfile(user.id, 'haiti'),
-      getPayoutProfile(user.id, 'stripe_connect'),
+      getNextEvent(orgId),
+      getOrganizerStats(orgId, '7d'),
+      getOrganizerStats(orgId, '30d'),
+      getOrganizerStats(orgId, 'lifetime'),
+      isOwner ? getPayoutProfile(orgId, 'haiti') : Promise.resolve(null),
+      isOwner ? getPayoutProfile(orgId, 'stripe_connect') : Promise.resolve(null),
       // The shared availability (lib/payouts/availability.ts), reduced to ONE
       // currency's figure for the widget — never a sum across currencies.
-      loadOrganizerAvailability(user.id).then(({ totals, events }) => {
-        const primary = totals.find((t) => t.pendingMinor + t.availableNowMinor > 0) || totals[0]
-        return { pending: primary?.pendingMinor ?? 0, currency: primary?.currency ?? events[0]?.currency ?? 'HTG' }
-      }),
-      getOrganizerIdentityVerificationStatus(user.id),
+      isOwner
+        ? loadOrganizerAvailability(orgId).then(({ totals, events }) => {
+            const primary = totals.find((t) => t.pendingMinor + t.availableNowMinor > 0) || totals[0]
+            return { pending: primary?.pendingMinor ?? 0, currency: primary?.currency ?? events[0]?.currency ?? 'HTG' }
+          })
+        : Promise.resolve({ pending: 0, currency: 'HTG' }),
+      isOwner ? getOrganizerIdentityVerificationStatus(orgId) : Promise.resolve('verified'),
     ])
   } catch (err) {
     console.error('Organizer dashboard failed to load:', err)
     loadError = true
+  }
+
+  if (!isOwner) {
+    // No balance read for members; show sales in the org's own event currency.
+    const firstEvent: any = statsLifetime.events?.[0]
+    balanceData = { pending: 0, currency: normalizeCurrency(firstEvent?.currency, 'HTG') }
   }
 
   // Default to 7d stats
@@ -146,7 +162,9 @@ export default async function OrganizerDashboard({
     })
   }
 
-  if (!hasPayoutSetup) {
+  if (!isOwner) {
+    // Payout/verification alerts are the owner's to act on.
+  } else if (!hasPayoutSetup) {
     alerts.push({
       id: 'payout-setup',
       type: 'payout',
@@ -166,7 +184,7 @@ export default async function OrganizerDashboard({
     })
   }
 
-  if (!isVerified) {
+  if (isOwner && !isVerified) {
     alerts.push({
       id: 'verification',
       type: 'verification',

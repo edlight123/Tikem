@@ -198,7 +198,7 @@ const ATTENDEE = {
   email: 'marie.private@example.com',
   phone_number: '+50937000000',
 }
-const ORGANIZER = { id: 'org1', full_name: 'Kompa Nights', email: 'org@example.com' }
+const ORGANIZER = { id: 'org1', role: 'organizer', full_name: 'Kompa Nights', email: 'org@example.com' }
 const STRANGER = { id: 'nobody', full_name: 'Eve', email: 'eve@example.com' }
 
 function seed() {
