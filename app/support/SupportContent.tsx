@@ -134,7 +134,7 @@ export default function SupportContent() {
           the navbar's own border and read as a crack across the page; the bar is
           opaque page colour, so the content scrolling under it is separation
           enough. `shadow-sm` was a black shadow on a black page. */}
-      <div className="bg-[#0a0a0a] sticky top-0 z-10">
+      <div className="bg-[#0a0a0a] sticky top-14 sm:top-16 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-center gap-2">
             <button

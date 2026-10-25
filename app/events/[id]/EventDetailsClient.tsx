@@ -301,18 +301,20 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           together read as a crack across the page rather than as two bars.
           The blur plus the page colour separate it from content scrolling
           underneath. */}
-      <div className="md:hidden sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur px-4 py-3">
+      {/* top-14 = the navbar's phone height (h-14): pinned UNDER the navbar,
+          which is itself sticky. At top-0 it slid behind it while scrolling. */}
+      <div className="md:hidden sticky top-14 z-40 bg-[#0a0a0a]/95 backdrop-blur px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
             {isPastEvent ? (
-              <div className="block w-full rounded-xl bg-white/[0.06] py-3 text-center font-semibold text-white/70">
+              <div className="block w-full rounded bg-white/[0.06] py-3 text-center font-semibold text-white/70">
                 {t('events.event_ended', { defaultValue: 'Event ended' })}
               </div>
             ) : isSoldOut ? (
               waitlistOpen ? (
                 <JoinWaitlistButton eventId={event.id} userId={user?.id ?? null} compact />
               ) : (
-                <div className="block w-full rounded-xl bg-white/[0.06] py-3 text-center font-semibold text-white/70">
+                <div className="block w-full rounded bg-white/[0.06] py-3 text-center font-semibold text-white/70">
                   {t('ticket.sold_out_caps')}
                 </div>
               )
@@ -435,7 +437,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             still laid out ~80px of empty black between Share and the footer.
             The breakpoint is the exact complement of MobileSections' md:hidden,
             so nothing is dropped at any width. */}
-        <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 px-4 md:px-0">
+        {/* Tablet (md) gets the ticket card as a right column too: there is no
+            sticky buy bar at that width, and a single column put the only way
+            to buy at the bottom of a long page. */}
+        <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_288px] lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 px-4 md:px-0">
           
           {/* Left Column - Event Details. No boxes: sections separated by
               hairlines, headings in the editorial serif voice. */}
@@ -586,7 +591,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
 
           {/* Right Column - Ticket Purchase Sidebar */}
           <div className="lg:col-span-1">
-            <div className="hidden md:block sticky top-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+            {/* top-24 = navbar (h-16) + 32px: the card stops below the sticky
+                navbar instead of sliding behind it. Capped to the viewport so
+                a tall card (several tiers) on a short laptop screen scrolls
+                inside itself rather than running off the bottom. A fill, not
+                an outline, and the one 4px radius. */}
+            <div className="hidden md:block sticky top-24 max-h-[calc(100dvh-7.5rem)] overflow-y-auto overscroll-contain rounded bg-white/[0.055] p-5 lg:p-6 [scrollbar-width:thin]">
               <div className="mb-6">
                 {isFree ? (
                   <div>
