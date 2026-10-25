@@ -440,3 +440,34 @@ describe('validateRequestAmount', () => {
     expect(validateRequestAmount(60_000, p).ok).toBe(false)
   })
 })
+
+describe('Haitian public holidays in the business-day count', () => {
+  const { easterSunday, haitiPublicHolidays, isBusinessDay, nextBusinessDay } =
+    require('../lib/payouts/haiti-business-time') as typeof import('../lib/payouts/haiti-business-time')
+
+  it('computes Easter correctly', () => {
+    expect(easterSunday(2026)).toBe('2026-04-05')
+    expect(easterSunday(2027)).toBe('2027-03-28')
+    expect(easterSunday(2028)).toBe('2028-04-16')
+  })
+
+  it('lists the fixed and Easter-based jours fériés', () => {
+    expect(haitiPublicHolidays(2027)).toEqual([
+      '2027-01-01', '2027-01-02',
+      '2027-02-08', '2027-02-09', // Carnival Monday/Tuesday
+      '2027-03-26', // Good Friday
+      '2027-05-01', '2027-05-18',
+      '2027-05-27', // Corpus Christi
+      '2027-08-15', '2027-10-17', '2027-11-01', '2027-11-02', '2027-11-18', '2027-12-25',
+    ])
+  })
+
+  it('skips them like weekends', () => {
+    expect(isBusinessDay('2026-11-18')).toBe(false) // Vertières, a Wednesday
+    expect(isBusinessDay('2026-11-19')).toBe(true)
+    // Fri Jan 1 2027 and Sat Jan 2: the next business day is Mon Jan 4.
+    expect(nextBusinessDay('2027-01-01')).toBe('2027-01-04')
+    // Carnival Mon/Tue 2027: Monday's request is processed Wednesday.
+    expect(nextBusinessDay('2027-02-08')).toBe('2027-02-10')
+  })
+})
