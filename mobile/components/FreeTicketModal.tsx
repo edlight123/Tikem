@@ -5,14 +5,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
-import { Ticket, X, Plus, Minus } from 'lucide-react-native';
+import { X, Plus, Minus } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
-import { radius } from '../theme/tokens';
+import { colors as T, radius, spacing } from '../theme/tokens';
+import WhitePillCTA from './WhitePillCTA';
 import type { Attribution } from '../lib/attribution';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../lib/ticketPricing';
 import { PlusOneFields, plusOnesPayload, resizePlusOnes, type PlusOneDraft } from './AttendRequestSheet';
@@ -77,6 +77,27 @@ interface FreeTicketModalProps {
    * unchanged. Names are optional here: only a fully named set is sent.
    */
   allowedPlusOnes?: number;
+  /**
+   * Opens this event's tickets. Used by the "you already have N tickets" answer
+   * (claim-free `alreadyClaimed`), where nothing new was issued so the purchase
+   * success flow (`onSuccess`) would be the wrong confirmation.
+   */
+  onViewTickets?: () => void;
+  /** The server said this buyer already holds the free claim; carries their ticket count. */
+  onAlreadyClaimed?: (count: number) => void;
+}
+
+/**
+ * The 200 answer to a repeat claim. `alreadyClaimed` / `code` are additive
+ * fields; the stable English message is the fallback for a server deployed
+ * before them, so this build still never congratulates a repeat claim.
+ */
+function isAlreadyClaimedResponse(r: any): boolean {
+  return (
+    r?.alreadyClaimed === true ||
+    r?.code === 'already_claimed' ||
+    r?.message === 'You already claimed a ticket for this event.'
+  );
 }
 
 export default function FreeTicketModal({
@@ -97,6 +118,8 @@ export default function FreeTicketModal({
   attribution,
   onCheckoutFallback,
   allowedPlusOnes = 0,
+  onViewTickets,
+  onAlreadyClaimed,
 }: FreeTicketModalProps) {
   const { colors } = useTheme();
   const showAlert = useAppAlert();
@@ -238,7 +261,12 @@ export default function FreeTicketModal({
       // concurrent claims can't oversell the event or the tier. The previous
       // client-side write incremented `tickets_sold` with a read-modify-write,
       // which silently loses increments under concurrency.
-      const result = await backendJson<{ count?: number; message?: string }>(
+      const result = await backendJson<{
+        count?: number;
+        message?: string;
+        alreadyClaimed?: boolean;
+        code?: string;
+      }>(
         '/api/tickets/claim-free',
         {
           method: 'POST',
@@ -258,10 +286,26 @@ export default function FreeTicketModal({
         }
       );
 
+      setLoading(false);
+
+      // Nothing was issued: they already hold this event's free claim. Say so,
+      // with their real count, instead of the "you got N tickets" success copy.
+      if (isAlreadyClaimedResponse(result)) {
+        const held = Math.max(1, Number(result?.count) || 0);
+        onClose();
+        onAlreadyClaimed?.(held);
+        setTimeout(() => {
+          showAlert(t('freeTicket.alreadyTitle'), pc('freeTicket.alreadyBody', held), [
+            { text: t('freeTicket.viewTickets'), onPress: onViewTickets ?? onSuccess },
+            { text: t('common.ok'), style: 'cancel' },
+          ]);
+        }, 300);
+        return;
+      }
+
       const issued = Number(result?.count ?? claimQuantity) || claimQuantity;
       console.log('=== SUCCESS ===', issued);
 
-      setLoading(false);
       onClose();
 
       // Call onSuccess after a short delay to ensure modal is closed
@@ -314,6 +358,10 @@ export default function FreeTicketModal({
     }
   };
 
+  const stepperDisabledDec = quantity <= 1 || loading;
+  const stepperDisabledInc = quantity >= maxQuantity || loading;
+  const ticketWord = claimQuantity === 1 ? t('freeTicket.ticketWord.one') : t('freeTicket.ticketWord.other');
+
   return (
     <Modal
       visible={visible}
@@ -322,128 +370,117 @@ export default function FreeTicketModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => !loading && onClose()}
+          accessibilityLabel={t('common.cancel')}
+        />
         <View style={styles.modalContainer}>
           {/* Paints below the sheet's edge, so the event page's sticky bar can never
               show through a gap under the sheet (see ContactOrganizerModal). */}
           <View pointerEvents="none" style={styles.bottomFill} />
           <View style={styles.handle} />
-          {/* Header */}
+
+          {/* Editorial header: serif lowercase title, the event quietly beneath. */}
           <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={styles.iconCircle}>
-                <Ticket size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.headerTitle}>{t('freeTicket.title')}</Text>
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {t('freeTicket.title').toLowerCase()}
+              </Text>
+              {/* On a mixed free+paid event name the free tier the buyer picked;
+                  the generic "free event" line would be a lie there. */}
+              <Text style={styles.eventLine} numberOfLines={1}>
+                {eventTitle}
+                {tierName ? `  ·  ${tierName}` : ''}
+              </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <X size={24} color={colors.text} />
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.cancel')}
+            >
+              <X size={18} color={T.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Event Info */}
-          <View style={styles.eventInfo}>
-            <Text style={styles.eventTitle} numberOfLines={2}>
-              {eventTitle}
-            </Text>
-            {/* On a mixed free+paid event the generic "FREE EVENT" line would be a
-                lie — name the free tier the buyer actually picked instead. */}
-            <Text style={styles.freeLabel}>{tierName || t('freeTicket.freeEvent')}</Text>
-          </View>
-
-          {/* Quantity — a stepper when this sheet owns the choice, otherwise a
-              read-only confirmation of the quantity picked in the tier selector. */}
-          <View style={styles.quantitySection}>
-            <View style={styles.quantityHeader}>
-              <Text style={styles.sectionLabel}>{t('freeTicket.quantityLabel')}</Text>
+          {/* One filled row: label left, a small stepper (or the locked count) right. */}
+          <View style={styles.stepperRow}>
+            <View style={styles.stepperLabelWrap}>
+              <Text style={styles.stepperLabel}>{tf('freeTicket.ticketsLabel', 'Tickets')}</Text>
               {!isUnlimited && (
-                <Text style={styles.availabilityText}>
-                  {rc('freeTicket.availableCount', remainingTickets)}
-                </Text>
+                <Text style={styles.stepperMeta}>{rc('freeTicket.availableCount', remainingTickets)}</Text>
               )}
             </View>
-
             {isLocked ? (
-              <View style={styles.quantityDisplay}>
-                <Text style={styles.quantityNumber}>{claimQuantity}</Text>
-                <Text style={styles.quantityLabel}>
-                  {claimQuantity === 1
-                    ? t('freeTicket.ticketWord.one')
-                    : t('freeTicket.ticketWord.other')}
-                </Text>
-              </View>
-            ) : (
-            <View style={styles.quantityControls}>
-              <TouchableOpacity
-                onPress={handleDecrease}
-                disabled={quantity <= 1 || loading}
-                style={[styles.quantityButton, (quantity <= 1 || loading) && styles.quantityButtonDisabled]}
-              >
-                <Minus size={20} color={quantity <= 1 || loading ? colors.textSecondary : colors.primary} />
-              </TouchableOpacity>
-              
-              <View style={styles.quantityDisplay}>
-                <Text style={styles.quantityNumber}>{quantity}</Text>
-                <Text style={styles.quantityLabel}>
-                  {quantity === 1 ? t('freeTicket.ticketWord.one') : t('freeTicket.ticketWord.other')}
-                </Text>
-              </View>
-              
-              <TouchableOpacity
-                onPress={handleIncrease}
-                disabled={quantity >= maxQuantity || loading}
-                style={[styles.quantityButton, (quantity >= maxQuantity || loading) && styles.quantityButtonDisabled]}
-              >
-                <Plus size={20} color={quantity >= maxQuantity || loading ? colors.textSecondary : colors.primary} />
-              </TouchableOpacity>
-            </View>
-            )}
-
-            {!isLocked && quantity >= maxQuantity && maxQuantity < 10 && (
-              <Text style={styles.limitText}>
-                {pc('freeTicket.maxNote', maxQuantity)}
+              <Text style={styles.lockedCount}>
+                {claimQuantity} {ticketWord.toLowerCase()}
               </Text>
+            ) : (
+              <View style={styles.stepper}>
+                <TouchableOpacity
+                  onPress={handleDecrease}
+                  disabled={stepperDisabledDec}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={[styles.stepBtn, stepperDisabledDec && styles.stepBtnOff]}
+                  accessibilityRole="button"
+                  accessibilityLabel="-"
+                >
+                  <Minus size={14} color={T.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.stepCount}>{quantity}</Text>
+                <TouchableOpacity
+                  onPress={handleIncrease}
+                  disabled={stepperDisabledInc}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={[styles.stepBtn, stepperDisabledInc && styles.stepBtnOff]}
+                  accessibilityRole="button"
+                  accessibilityLabel="+"
+                >
+                  <Plus size={14} color={T.textPrimary} />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
+
+          {!isLocked && quantity >= maxQuantity && maxQuantity < 10 && (
+            <Text style={styles.limitText}>{pc('freeTicket.maxNote', maxQuantity)}</Text>
+          )}
 
           {namedSlots > 0 && (
             <View style={styles.plusOneSection}>
-              <Text style={styles.sectionLabel}>{t('attendRequests.claimPlusOne.title')}</Text>
+              <Text style={styles.plusOneTitle}>{t('attendRequests.claimPlusOne.title')}</Text>
               <Text style={styles.plusOneHint}>{t('attendRequests.claimPlusOne.hint')}</Text>
               <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!loading} />
             </View>
           )}
 
-          {/* Summary */}
-          <View style={styles.summary}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>{t('freeTicket.total')}</Text>
-              <Text style={styles.summaryValue}>{t('freeTicket.free')}</Text>
-            </View>
+          {/* A quiet total line, not a filled box with a giant amount. */}
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>{t('freeTicket.total')}</Text>
+            <Text style={styles.totalValue}>{t('common.free')}</Text>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={onClose}
-              style={styles.cancelButton}
               disabled={loading}
+              style={styles.cancelButton}
+              accessibilityRole="button"
             >
               <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity
+            <WhitePillCTA
+              compact
+              variant="rsvp"
+              label={pc('freeTicket.claimButton', claimQuantity)}
               onPress={handleClaimTickets}
-              style={[styles.claimButton, loading && styles.claimButtonDisabled]}
-              disabled={loading || remainingTickets <= 0}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.claimButtonText}>
-                  {pc('freeTicket.claimButton', claimQuantity)}
-                </Text>
-              )}
-            </TouchableOpacity>
+              loading={loading}
+              disabled={remainingTickets <= 0}
+              style={styles.claimButton}
+            />
           </View>
         </View>
       </View>
@@ -451,20 +488,22 @@ export default function FreeTicketModal({
   );
 }
 
-const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+// Black canvas, one 4px radius, fills not outlines, teal kept out of it entirely
+// (the white pill is the primary). About 40% shorter than the sheet it replaced.
+const getStyles = (_colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingTop: 12,
-    paddingBottom: 32,
-    paddingHorizontal: 20,
-    maxHeight: '80%',
+    backgroundColor: T.bg,
+    borderTopLeftRadius: radius.sm,
+    borderTopRightRadius: radius.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    maxHeight: '85%',
   },
   bottomFill: {
     position: 'absolute',
@@ -472,186 +511,144 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     right: 0,
     top: '100%',
     height: 400,
-    backgroundColor: colors.surface,
+    backgroundColor: T.bg,
   },
   handle: {
     alignSelf: 'center',
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: 12,
+    backgroundColor: T.surfaceRaised,
+    marginBottom: spacing.lg,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  headerText: {
     flex: 1,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    flex: 1,
+    fontFamily: 'InstrumentSerif_400Regular',
+    fontSize: 26,
+    lineHeight: 30,
+    color: T.textPrimary,
+  },
+  eventLine: {
+    marginTop: 2,
+    fontSize: 13,
+    color: T.textSecondary,
   },
   closeButton: {
-    padding: 4,
+    paddingTop: 6,
   },
-  eventInfo: {
-    backgroundColor: colors.primary + '10',
-    padding: 16,
-    borderRadius: radius.md,
-    marginBottom: 24,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  freeLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  quantitySection: {
-    marginBottom: 24,
-  },
-  quantityHeader: {
+  stepperRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: T.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 10,
+    paddingLeft: spacing.lg,
+    paddingRight: 10,
   },
-  sectionLabel: {
+  stepperLabelWrap: {
+    flex: 1,
+  },
+  stepperLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: T.textPrimary,
   },
-  availabilityText: {
-    fontSize: 13,
-    color: colors.textSecondary,
+  stepperMeta: {
+    marginTop: 1,
+    fontSize: 12,
+    color: T.textTertiary,
   },
-  quantityControls: {
+  stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
+    gap: spacing.md,
   },
-  quantityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    justifyContent: 'center',
+  stepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: T.surfaceRaised,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  quantityButtonDisabled: {
-    borderColor: colors.border,
-    opacity: 0.5,
+  stepBtnOff: {
+    opacity: 0.35,
   },
-  quantityDisplay: {
-    alignItems: 'center',
-    minWidth: 100,
-  },
-  quantityNumber: {
-    fontSize: 32,
+  stepCount: {
+    minWidth: 16,
+    textAlign: 'center',
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
+    color: T.textPrimary,
   },
-  quantityLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
+  lockedCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: T.textPrimary,
+    paddingRight: 6,
   },
   limitText: {
     fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 12,
+    color: T.textTertiary,
+    marginTop: spacing.sm,
   },
   plusOneSection: {
-    marginBottom: 16,
+    marginTop: spacing.lg,
+  },
+  plusOneTitle: {
+    fontFamily: 'InstrumentSerif_400Regular',
+    fontSize: 20,
+    color: T.textPrimary,
   },
   plusOneHint: {
     fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-    marginBottom: 12,
+    color: T.textSecondary,
+    marginTop: 2,
+    marginBottom: spacing.md,
   },
-  summary: {
-    backgroundColor: colors.surfaceRaised,
-    padding: 16,
-    borderRadius: radius.md,
-    marginBottom: 24,
-  },
-  summaryRow: {
+  totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingHorizontal: 2,
   },
-  summaryLabel: {
-    fontSize: 16,
+  totalLabel: {
+    fontSize: 13,
+    color: T.textSecondary,
+  },
+  totalValue: {
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
-  },
-  summaryValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.primary,
+    color: T.textPrimary,
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: radius.md,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
+    height: 46,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: T.textSecondary,
   },
   claimButton: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  claimButtonDisabled: {
-    opacity: 0.6,
-  },
-  claimButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
+    flex: 1,
   },
 });

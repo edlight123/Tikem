@@ -75,6 +75,7 @@ import SpotifyTrackCard from '../components/SpotifyTrackCard';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 import AttendRequestSheet from '../components/AttendRequestSheet';
 import RequestStatusDot, { requestTone } from '../components/RequestStatusDot';
+import { isLiveTicketStatus } from '../lib/profileStats';
 import {
   attendErrorKey,
   cancelAttendRequest,
@@ -175,6 +176,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const [attendAllowedPlusOnes, setAttendAllowedPlusOnes] = useState<number | null>(null);
   const [showRequestSheet, setShowRequestSheet] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+  // How many LIVE free tickets the signed-in user already holds for this event.
+  // The server allows one free claim per buyer per event (lib/tickets/
+  // free-claim-issue), so once this is > 0 a free-only event shows "You're
+  // going" instead of the claim CTA, and a mixed event closes its free tiers.
+  const [heldFreeTickets, setHeldFreeTickets] = useState(0);
   const scrollY = useRef(new Animated.Value(0)).current;
   const floatingBarAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
@@ -224,6 +230,34 @@ export default function EventDetailScreen({ route, navigation }: any) {
       cancelled = true;
     };
   }, [event, user, eventId]);
+
+  // Mirrors the server's dedup exactly (liveFreeTicketsFor): tickets stamped
+  // with this attendee, price 0, in a live status. Same two-equality query
+  // EventTicketsScreen already runs, so the rules and indexes allow it.
+  const loadHeldFreeTickets = async () => {
+    if (!user?.uid) {
+      setHeldFreeTickets(0);
+      return;
+    }
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'tickets'), where('event_id', '==', eventId), where('attendee_id', '==', user.uid))
+      );
+      const held = snap.docs.filter((d) => {
+        const data: any = d.data();
+        return Number(data.price_paid ?? 0) === 0 && isLiveTicketStatus(data.status);
+      }).length;
+      setHeldFreeTickets(held);
+    } catch (err) {
+      // Not fatal: the claim CTA stays, and the server answers a repeat claim
+      // with the existing tickets (FreeTicketModal shows "already have N").
+      console.warn('[EventDetail] held free tickets load failed', (err as any)?.code);
+    }
+  };
+  useEffect(() => {
+    loadHeldFreeTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, user?.uid]);
 
   const eventNeedsApproval = eventRequiresApproval(event);
   const loadAttendRequest = async () => {
@@ -593,6 +627,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
     // Free-ONLY event: nothing to choose, claim directly. Clear any tier picked
     // in an earlier flow so the server resolves the event's free tier itself and
     // the sheet owns the quantity (see lockedQuantity below).
+    if (isFree && heldFreeTickets > 0) {
+      // Already going: one free claim per event. Show their tickets instead.
+      navigation.navigate('EventTickets', { eventId });
+      return;
+    }
     if (isFree) {
       setSelectedTierId(null);
       setSelectedTierName('');
@@ -1175,6 +1214,24 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {isCancelled ? t('eventDetail.floating.eventCancelled') : t('eventDetail.floating.notOnSale')}
             </Text>
           </View>
+        ) : isFree && !requiresApproval && heldFreeTickets > 0 ? (
+          // Already holds this free-only event's claim: no claim sheet to open.
+          // Dot + label status (never a pill badge) and one way to the tickets.
+          <View style={styles.goingRow}>
+            <View style={styles.goingText}>
+              <RequestStatusDot tone="approved" label={t('freeTicket.alreadyTitle')} />
+              <Text style={styles.goingCount} numberOfLines={1}>
+                {heldFreeTickets}{' '}
+                {(heldFreeTickets === 1 ? t('freeTicket.ticketWord.one') : t('freeTicket.ticketWord.other')).toLowerCase()}
+              </Text>
+            </View>
+            <WhitePillCTA
+              compact
+              label={t('freeTicket.viewTickets')}
+              onPress={() => navigation.navigate('EventTickets', { eventId })}
+              style={styles.goingButton}
+            />
+          </View>
         ) : isSoldOut ? (
           <View style={[styles.ctaDisabled, styles.floatingCtaPill]}>
             <Text style={styles.ctaDisabledText}>{t('badges.soldout')}</Text>
@@ -1255,6 +1312,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         // Decides whether the service fee is added to the total the buyer reads.
         country={event?.country}
         feeIncidence={(event as any)?.fee_incidence ?? (event as any)?.feeIncidence}
+        freeClaimHeld={heldFreeTickets > 0}
       />
 
       <PurchaseSuccessSheet
@@ -1308,7 +1366,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
       {/* Free Ticket Modal */}
       <FreeTicketModal
         visible={showFreeTicketModal}
-        onClose={() => setShowFreeTicketModal(false)}
+        onClose={() => {
+          setShowFreeTicketModal(false);
+          // A claim may just have landed: flip the CTA to "You're going".
+          loadHeldFreeTickets();
+        }}
         eventId={eventId}
         eventTitle={event?.title || ''}
         userId={user?.uid || ''}
@@ -1331,6 +1393,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
         allowedPlusOnes={selectedTierId ? 0 : allowedPlusOnesHere}
         onCheckoutFallback={selectedTierId ? handleClaimCheckoutFallback : undefined}
         onSuccess={handleFreeTicketSuccess}
+        onViewTickets={() => navigation.navigate('EventTickets', { eventId })}
+        onAlreadyClaimed={(count) => setHeldFreeTickets(count)}
       />
 
       {/* Password gate — code prompt shown when a protected event has no grant */}
@@ -1765,6 +1829,27 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '700',
   },
   // Request state card: a fill, not a hairline (fill-not-hairline rule).
+  goingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 10,
+    paddingLeft: 16,
+    paddingRight: 10,
+  },
+  goingText: {
+    flex: 1,
+    gap: 4,
+  },
+  goingCount: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+  goingButton: {
+    paddingHorizontal: 18,
+  },
   requestCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,

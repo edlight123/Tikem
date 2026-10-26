@@ -64,6 +64,11 @@ interface EventbriteStyleTicketSelectorProps {
    */
   allowGuest?: boolean
   /**
+   * The buyer already holds this event's free claim (one per event). Free tiers
+   * stay listed but closed, with the reason; paid tiers sell as usual.
+   */
+  freeClaimHeld?: boolean
+  /**
    * `discountedTotal` is what THIS component computed after applying the promo —
    * a routing hint only (it decides whether to try the free-claim endpoint). The
    * server re-prices the order from Firestore and has the final say. `promo` is
@@ -85,6 +90,7 @@ export default function EventbriteStyleTicketSelector({
   feeIncidence,
   eventStartsAt,
   allowGuest = false,
+  freeClaimHeld = false,
   onPurchase
 }: EventbriteStyleTicketSelectorProps) {
   /** Who may press "checkout": a signed-in user, or a guest when guests are allowed. */
@@ -291,7 +297,9 @@ export default function EventbriteStyleTicketSelector({
       <div className="space-y-3">
         {tiers.map((tier) => {
           const available = getAvailableQuantity(tier)
-          const isAvailable = isTierAvailable(tier)
+          // A held free claim closes every free tier; the route would refuse it.
+          const freeClaimClosed = freeClaimHeld && isFreeTier(tier)
+          const isAvailable = isTierAvailable(tier) && !freeClaimClosed
           const quantity = quantities[tier.id] || 0
 
           return (
@@ -341,6 +349,7 @@ export default function EventbriteStyleTicketSelector({
                       has to be true. Nothing is rendered when there is plenty,
                       so the line's presence is itself the signal. */}
                   {(() => {
+                    if (freeClaimClosed) return null
                     const copy = scarcityCopy(scarcityFor(tier))
                     if (!copy) return null
                     const urgent = isUrgent(scarcityFor(tier))
@@ -357,7 +366,13 @@ export default function EventbriteStyleTicketSelector({
                       </p>
                     )
                   })()}
-                  {!isAvailable && available > 0 && (
+                  {freeClaimClosed && (
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300">
+                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      {t('events.free_tier_already_claimed', { defaultValue: 'You already have your free ticket' })}
+                    </p>
+                  )}
+                  {!freeClaimClosed && !isAvailable && available > 0 && (
                     <p className="text-xs text-amber-400 mt-1">
                       {tier.sales_start && new Date(tier.sales_start) > new Date()
                         ? `${t('events.sales_start')} ${new Date(tier.sales_start).toLocaleDateString()}`

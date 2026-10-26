@@ -90,6 +90,12 @@ interface TieredTicketSelectorProps {
   country?: string | null;
   /** The organizer's own absorb/pass-on choice, when they made one. */
   feeIncidence?: string | null;
+  /**
+   * The buyer already holds this event's free claim (a live free ticket). Free
+   * tiers are shown but closed, with the reason; paid tiers still sell. The
+   * server refuses a second free claim regardless; this keeps the picker honest.
+   */
+  freeClaimHeld?: boolean;
 }
 
 interface TierQuantity {
@@ -116,6 +122,7 @@ export default function TieredTicketSelector({
   currency,
   country,
   feeIncidence,
+  freeClaimHeld = false,
 }: TieredTicketSelectorProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -431,7 +438,9 @@ export default function TieredTicketSelector({
 
               {tiers.map((tier, index) => {
                 const available = getAvailableQuantity(tier);
-                const isAvailable = isTierAvailable(tier);
+                // A held free claim closes every free tier (one claim per event).
+                const freeClaimClosed = freeClaimHeld && isFreeTier(tier);
+                const isAvailable = isTierAvailable(tier) && !freeClaimClosed;
                 const quantity = tierQuantities[tier.id] || 0;
                 // On-sale gate (mirrors the web): empty bound = open. When not on
                 // sale the stepper is hidden (isAvailable is false) and a subdued
@@ -439,11 +448,13 @@ export default function TieredTicketSelector({
                 const now = new Date();
                 const notYetOnSale = !!tier.sales_start && new Date(tier.sales_start) > now;
                 const salesEnded = !!tier.sales_end && new Date(tier.sales_end) < now;
-                const isSoldOut = !notYetOnSale && !salesEnded && !tier.unlimited && !isAvailable;
+                const isSoldOut = !freeClaimClosed && !notYetOnSale && !salesEnded && !tier.unlimited && !isAvailable;
                 // One quiet note per row, same precedence as before, except a
                 // plentiful tier (unlimited, or stock above the per-order cap)
                 // says nothing at all instead of spending a line on it.
-                const note = notYetOnSale
+                const note = freeClaimClosed
+                  ? t('ticketSelector.freeAlreadyClaimed')
+                  : notYetOnSale
                   ? t('ticketSelector.onSaleFrom').replace('{date}', formatOnSaleDate(tier.sales_start))
                   : salesEnded
                     ? t('ticketSelector.salesEnded')

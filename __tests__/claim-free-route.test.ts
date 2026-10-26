@@ -430,6 +430,29 @@ describe('LEGACY shape {eventId, tierId, quantity} — mobile build 10, must not
     expect(state.added).toHaveLength(0)
   })
 
+  it('flags a repeat claim as alreadyClaimed (additive) while keeping the shipped fields', async () => {
+    state.existingTickets = [
+      { id: 'old1', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'confirmed' },
+      { id: 'old2', event_id: 'evt1', price_paid: 0, attendee_id: 'u1', status: 'valid' },
+    ]
+    const res = await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 1 }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.alreadyClaimed).toBe(true)
+    expect(body.code).toBe('already_claimed')
+    expect(body.count).toBe(2)
+    expect(body.tickets.map((t: any) => t.id).sort()).toEqual(['old1', 'old2'])
+    expect(state.added).toHaveLength(0)
+  })
+
+  it('does NOT flag a fresh claim as alreadyClaimed', async () => {
+    const body = await (await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 1 }))).json()
+    expect(body.success).toBe(true)
+    expect(body.alreadyClaimed).toBeUndefined()
+    expect(body.code).toBeUndefined()
+  })
+
   it('still surfaces a capacity refusal without issuing', async () => {
     state.reserveResult = { ok: false, reason: 'tier_capacity', remaining: 1 }
     const res = await POST(req({ eventId: 'evt1', tierId: 'freeA', quantity: 3 }))

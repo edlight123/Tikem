@@ -72,6 +72,23 @@ export function liveFreeTicketsFor(docs: any[], eventId: string): any[] {
     .filter((t: any) => t.event_id === eventId && Number(t.price_paid ?? 0) === 0 && isLiveTicketStatus(t.status))
 }
 
+/**
+ * How many live free tickets this ACCOUNT already holds for the event: the same
+ * query and filter the free-claim route dedups on, so the event page can show
+ * "You're going" exactly when a claim would come back `alreadyClaimed`. 0 on
+ * any read failure: the page then offers the claim, and the route still holds.
+ */
+export async function liveFreeTicketCount(eventId: string, uid: string): Promise<number> {
+  if (!eventId || !uid) return 0
+  try {
+    const snap = await adminDb.collection('tickets').where('attendee_id', '==', uid).get()
+    return liveFreeTicketsFor(snap?.docs || [], eventId).length
+  } catch (err) {
+    console.warn('[free-claim] held free ticket count failed', (err as any)?.code || err)
+    return 0
+  }
+}
+
 /** Statuses that void a free ticket for good. Anything else (transferred, unknown) is not void. */
 const VOIDED_FREE_TICKET_STATUSES = new Set(['refunded', 'cancelled', 'canceled', 'voided', 'void'])
 

@@ -42,9 +42,11 @@ interface EventDetailsClientProps {
   relatedEvents: any[]
   /** config/auth.invites, read on the server (lib/invites). */
   invitesEnabled?: boolean
+  /** Live free tickets the signed-in viewer already holds here (one free claim per event). */
+  heldFreeTickets?: number
 }
 
-export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents, invitesEnabled = false }: EventDetailsClientProps) {
+export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents, invitesEnabled = false, heldFreeTickets = 0 }: EventDetailsClientProps) {
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
   const numLocale = intlLocaleFor(i18n.language)
@@ -339,6 +341,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   eventStartsAt={event.start_datetime}
                   isPasswordProtected={!!event.is_password_protected}
                   plusOnesAllowed={eventAllowedPlusOnes(event as any)}
+                  heldFreeTickets={heldFreeTickets}
                 />
               )
             )}
@@ -684,6 +687,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       eventStartsAt={event.start_datetime}
                       isPasswordProtected={!!event.is_password_protected}
                       plusOnesAllowed={eventAllowedPlusOnes(event as any)}
+                      heldFreeTickets={heldFreeTickets}
                     />
                   )}
                   {!user && (event as any).requires_approval !== true && (

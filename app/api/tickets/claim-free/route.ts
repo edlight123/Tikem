@@ -249,8 +249,14 @@ export async function POST(request: Request) {
     )
     if (!outcome.ok) return fail(outcome.error, outcome.code, outcome.status)
     if (outcome.kind === 'existing') {
+      // Nothing was issued: the claimant already holds this event's free claim.
+      // `success` / `tickets` / `count` / `message` are the shipped shape (older
+      // clients parse them); `alreadyClaimed` + `code` are additive and let a
+      // current client say "you already have N tickets" instead of "you got N".
       return NextResponse.json({
         success: true,
+        alreadyClaimed: true,
+        code: 'already_claimed',
         tickets: outcome.tickets,
         count: outcome.tickets.length,
         message: 'You already claimed a ticket for this event.',

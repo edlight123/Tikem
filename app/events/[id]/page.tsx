@@ -10,6 +10,7 @@ import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Metadata } from 'next'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventDetailsClient from './EventDetailsClient'
+import { liveFreeTicketCount } from '@/lib/tickets/free-claim-policy'
 import AttributionBeacon from './AttributionBeacon'
 import { buildEventJsonLd, serializeJsonLd } from './eventJsonLd'
 import { CANONICAL_SITE_URL } from '@/lib/site-url'
@@ -191,12 +192,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   let relatedEvents: any[] = []
   let isFollowing = false
   let isFavorite = false
+  let heldFreeTickets = 0
 
   if (!isDemoMode()) {
     const now = new Date()
 
     // Start all independent queries in parallel
-    const [relatedSnapshot, followingResult, favoriteResult] = await Promise.all([
+    const [relatedSnapshot, followingResult, favoriteResult, heldFreeResult] = await Promise.all([
       adminDb.collection('events')
         .where('category', '==', event.category)
         .where('is_published', '==', true)
@@ -204,11 +206,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         .limit(4)
         .get(),
       user && event.organizer_id ? checkIsFollowing(user.id, event.organizer_id) : Promise.resolve(false),
-      user ? checkIsFavorite(user.id, id) : Promise.resolve(false)
+      user ? checkIsFavorite(user.id, id) : Promise.resolve(false),
+      // The signed-in buyer's live free tickets here (the claim route's own dedup),
+      // so a repeat visit shows "You're going" instead of another claim button.
+      user ? liveFreeTicketCount(id, user.id) : Promise.resolve(0),
     ])
 
     isFollowing = followingResult
     isFavorite = favoriteResult
+    heldFreeTickets = heldFreeResult
 
     // Process related events - batch fetch organizers
     const filteredRelated = relatedSnapshot.docs
@@ -326,6 +332,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         isFollowing={isFollowing}
         relatedEvents={serializedRelatedEvents}
         invitesEnabled={invitesEnabled}
+        heldFreeTickets={heldFreeTickets}
       />
       <MobileNavWrapper user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
     </div>

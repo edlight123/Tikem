@@ -353,7 +353,14 @@
     "claim_promo_already_used": "Vous avez déjà utilisé ce code promo.",
     "claim_event_cancelled": "Cet événement a été annulé.",
     "claim_event_unavailable": "Cet événement n'est pas disponible pour le moment.",
-    "claim_event_ended": "Cet événement est déjà terminé."
+    "claim_event_ended": "Cet événement est déjà terminé.",
+    "youre_going": "Vous y allez",
+    "held_tickets": "{{count}} billet",
+    "held_tickets_plural": "{{count}} billets",
+    "already_have_tickets": "Vous avez déjà {{count}} billet pour cet événement.",
+    "already_have_tickets_plural": "Vous avez déjà {{count}} billets pour cet événement.",
+    "view_my_tickets": "Voir mes billets",
+    "free_tier_already_claimed": "Vous avez déjà votre billet gratuit"
   },
   "favorites": {
     "title": "Mes favoris",

@@ -2912,6 +2912,7 @@ export default {
   },
 
   ticketSelector: {
+    freeAlreadyClaimed: 'You already have your free ticket',
     promoErrors: {
       invalid: 'This promo code is not valid for this event.',
       inactive: 'This promo code is no longer active.',
@@ -3025,6 +3026,12 @@ export default {
   },
 
   freeTicket: {
+    ticketsLabel: 'Tickets',
+    alreadyTitle: "You're going",
+    alreadyBody: {
+      one: 'You already have {count} ticket for this event.',
+      other: 'You already have {count} tickets for this event.',
+    },
     continueToCheckout: 'Continue to checkout',
     errors: {
       promoInvalid: 'This promo code is no longer valid for this event.',

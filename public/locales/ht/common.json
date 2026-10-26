@@ -353,7 +353,14 @@
     "claim_promo_already_used": "Ou te deja itilize kòd pwomo sa a.",
     "claim_event_cancelled": "Yo anile evènman sa a.",
     "claim_event_unavailable": "Evènman sa a pa disponib kounye a.",
-    "claim_event_ended": "Evènman sa a fini deja."
+    "claim_event_ended": "Evènman sa a fini deja.",
+    "youre_going": "Ou prale",
+    "held_tickets": "{{count}} tikè",
+    "held_tickets_plural": "{{count}} tikè",
+    "already_have_tickets": "Ou gen {{count}} tikè deja pou evènman sa a.",
+    "already_have_tickets_plural": "Ou gen {{count}} tikè deja pou evènman sa a.",
+    "view_my_tickets": "Gade tikè ou yo",
+    "free_tier_already_claimed": "Ou gen tikè gratis ou deja"
   },
   "favorites": {
     "title": "Favori mwen",

@@ -2844,6 +2844,7 @@ export default {
   },
 
   ticketSelector: {
+    freeAlreadyClaimed: 'Ou gen biyè gratis ou deja',
     promoErrors: {
       invalid: 'Kòd pwomo sa a pa valab pou evènman sa a.',
       inactive: 'Kòd pwomo sa a pa aktif ankò.',
@@ -2956,6 +2957,12 @@ export default {
   },
 
   freeTicket: {
+    ticketsLabel: 'Biyè',
+    alreadyTitle: 'Ou prale',
+    alreadyBody: {
+      one: 'Ou gen {count} biyè deja pou evènman sa a.',
+      other: 'Ou gen {count} biyè deja pou evènman sa a.',
+    },
     continueToCheckout: 'Kontinye nan peman an',
     errors: {
       promoInvalid: 'Kòd pwomo sa a pa valab ankò pou evènman sa a.',

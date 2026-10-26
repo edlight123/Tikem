@@ -12,6 +12,8 @@ import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
 import { Check, Lock } from 'lucide-react'
 import GuestCheckoutForm, { type GuestContactInput } from './GuestCheckoutForm'
+import Link from 'next/link'
+import RequestStatusLabel from '@/components/attend-requests/RequestStatusLabel'
 import { paymentNavigationMode } from '@/lib/utils/in-app-browser'
 import { captureAttribution } from '@/lib/attribution-client'
 import type { Attribution } from '@/lib/attribution'
@@ -80,12 +82,22 @@ interface BuyTicketButtonProps {
    * allowedPlusOnes). 0 = the plain quantity claim, unchanged.
    */
   plusOnesAllowed?: number
+  /**
+   * Live free tickets the signed-in buyer already holds for this event (read on
+   * the server with the claim route's own dedup). One free claim per event, so
+   * a free-only event shows "You're going" instead of the claim button, and a
+   * mixed event's selector closes its free tiers while paid ones still sell.
+   */
+  heldFreeTickets?: number
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0 }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country, feeIncidence = null, eventStartsAt, isPasswordProtected = false, plusOnesAllowed = 0, heldFreeTickets = 0 }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
+  // Seeded by the server, raised by a claim answer of `alreadyClaimed` (a tab
+  // left open across a claim made elsewhere).
+  const [heldFree, setHeldFree] = useState(userId ? heldFreeTickets : 0)
   const [showModal, setShowModal] = useState(false)
   const [showTieredModal, setShowTieredModal] = useState(false)
   const [showEmbeddedPayment, setShowEmbeddedPayment] = useState(false)
@@ -707,6 +719,28 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         throw claimError
       }
 
+      // Nothing was issued: this account already holds the event's free claim.
+      // Never the success copy; say how many they hold and take them to them.
+      if (data?.alreadyClaimed === true || data?.code === 'already_claimed') {
+        const held = Math.max(1, Number(data?.count) || 0)
+        setHeldFree(held)
+        setLoading(false)
+        showToast({
+          type: 'info',
+          title: t('events.youre_going', { defaultValue: "You're going" }),
+          message: t(held === 1 ? 'events.already_have_tickets' : 'events.already_have_tickets_plural', {
+            count: held,
+            defaultValue:
+              held === 1
+                ? 'You already have {{count}} ticket for this event.'
+                : 'You already have {{count}} tickets for this event.',
+          }),
+          duration: 5000,
+        })
+        router.push(`/tickets/event/${encodeURIComponent(eventId)}`)
+        return
+      }
+
       // Show success toast and redirect
       showToast({
         type: 'success',
@@ -1185,7 +1219,27 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           </form>
         </BottomSheet>
       )}
-      {isFree ? (
+      {isFree && heldFree > 0 ? (
+        // Already going: one free claim per event, so no claim button to press.
+        // Dot + label status (no pill badge), a fill not a hairline.
+        <div className="flex min-h-12 items-center justify-between gap-3 rounded bg-white/[0.055] py-2 pl-4 pr-2">
+          <div className="min-w-0">
+            <RequestStatusLabel tone="approved" label={t('events.youre_going', { defaultValue: "You're going" })} />
+            <p className="mt-0.5 truncate text-sm text-white/60">
+              {t(heldFree === 1 ? 'events.held_tickets' : 'events.held_tickets_plural', {
+                count: heldFree,
+                defaultValue: heldFree === 1 ? '{{count}} ticket' : '{{count}} tickets',
+              })}
+            </p>
+          </div>
+          <Link
+            href={`/tickets/event/${encodeURIComponent(eventId)}`}
+            className="shrink-0 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+          >
+            {t('events.view_my_tickets', { defaultValue: 'View tickets' })}
+          </Link>
+        </div>
+      ) : isFree ? (
         <div className="space-y-4">
           {/* Quantity Selector for Free Tickets */}
           <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
@@ -1306,6 +1360,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 feeIncidence={feeIncidence}
                 eventStartsAt={eventStartsAt}
                 allowGuest={isGuestCheckout}
+                freeClaimHeld={heldFree > 0}
                 onPurchase={handleTieredPurchase}
               />
             </BottomSheet>
