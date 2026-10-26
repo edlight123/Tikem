@@ -14,6 +14,7 @@ import { EditorialSectionHeading } from '@/components/ui/EditorialHeader'
 import { EmptyState } from '@/components/ui/kit'
 import { useToast } from '@/components/ui/Toast'
 import RequestStatusLabel, { attendErrorKey, toneForStatus } from '@/components/attend-requests/RequestStatusLabel'
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 import { intlLocaleFor } from '@/lib/dateLocale'
 
 type Row = {
@@ -44,20 +45,13 @@ function relativeTime(iso: string | null, locale: string): string {
 }
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
-  if (url) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
-  }
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join('')
   return (
-    <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.08] text-sm font-semibold text-white/70">
-      {initials || '?'}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url || defaultAvatarUrl(name || '')}
+      alt=""
+      className="h-11 w-11 shrink-0 rounded-full object-cover"
+    />
   )
 }
 

@@ -16,7 +16,7 @@ import type { PKPass as PKPassType } from 'passkit-generator'
 import type { AppleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
 import { appleAuthTokenFor, appleSerialFor, appleWebServiceUrl } from './apple-web-service'
-import { PASS_ICON, PASS_LOGO } from './brandArt'
+import { PASS_ICON } from './brandArt'
 
 export interface ApplePassOptions {
   /**
@@ -71,13 +71,14 @@ async function buildPassBackground(
     if (source.length > 15 * 1024 * 1024) return {}
 
     const { default: sharp } = await import('sharp')
-    // Darkened before iOS blurs it: white text and the QR panel must read on
-    // ANY poster, and a light flyer made the field text vanish (owner
-    // feedback 2026-10-25). Colour survives as a deep tint of the poster.
+    // Darkened HARD before iOS blurs it, so the near-black pass dominates and
+    // the poster survives only as a faint tint — the premium look the owner
+    // asked for (2026-10-26). It also keeps white text + the QR panel legible
+    // on ANY poster (a light flyer used to make the field text vanish).
     const resize = (w: number, h: number) =>
       sharp(source)
         .resize(w, h, { fit: 'cover', position: 'attention' })
-        .modulate({ brightness: 0.42, saturation: 0.9 })
+        .modulate({ brightness: 0.22, saturation: 0.7 })
         .png()
         .toBuffer()
     const [x1, x2] = await Promise.all([resize(180, 220), resize(360, 440)])
@@ -103,6 +104,30 @@ export async function buildApplePkpass(
 ): Promise<Buffer> {
   const voided = Boolean(options.voided)
   const serialNumber = options.serialNumber || appleSerialFor(ticket.id, ticket.qrVersion || 0)
+
+  // Haiti events get a French pass by default (owner 2026-10-26): same brand,
+  // French field labels + door copy. Detected from the event's country ('HT').
+  const fr = (ticket.country || '').trim().toUpperCase() === 'HT'
+  const L = {
+    ticket: fr ? 'BILLET' : 'TICKET',
+    event: fr ? 'ÉVÉNEMENT' : 'EVENT',
+    date: 'DATE',
+    tba: fr ? 'À venir' : 'TBA',
+    venue: fr ? 'LIEU' : 'VENUE',
+    admit: fr ? 'TITULAIRE' : 'ADMIT',
+    order: fr ? 'COMMANDE' : 'ORDER',
+    city: fr ? 'Ville' : 'City',
+    atDoor: fr ? 'À l’entrée' : 'At the door',
+    instructions: fr
+      ? 'Présentez ce billet à l’entrée. Chaque billet se scanne une seule fois.'
+      : 'Show this pass at the entrance. Each ticket scans once.',
+    status: fr ? 'STATUT' : 'STATUS',
+    voidValue: fr ? 'ANNULÉ' : 'VOID',
+    voidTitle: fr ? 'Ce billet est annulé' : 'This pass is void',
+    voidBody: fr
+      ? 'Ce billet a été transféré ou n’est plus valide. Il n’admet plus personne à l’entrée.'
+      : 'This ticket was transferred or is no longer valid. This pass no longer admits anyone at the door.',
+  }
   // The PassKit web service, so Wallet can be told when this pass changes
   // (lib/wallet/apple-web-service.ts). Omitted, rather than half-set, when the
   // deployment has no https origin or no key to derive the token from.
@@ -127,16 +152,13 @@ export async function buildApplePkpass(
 
   const pass = new PKPass(
     {
-      // Apple will not open a pass without an icon; `logo.png` is what shows in
-      // the pass header: the Tikèm "t" mark on transparency, built from the app
-      // icon (lib/wallet/brandArt). The old env wordmark sat on a grey box
-      // (owner feedback 2026-10-26).
+      // Apple will not open a pass without an icon. No separate logo.png: the
+      // header shows the plain "Tikèm" wordmark via logoText, not a mark image
+      // — owner feedback 2026-10-26 that the "t" mark read as weird; use the
+      // actual name instead.
       'icon.png': PASS_ICON.x1,
       'icon@2x.png': PASS_ICON.x2,
       'icon@3x.png': PASS_ICON.x3,
-      'logo.png': PASS_LOGO.x1,
-      'logo@2x.png': PASS_LOGO.x2,
-      'logo@3x.png': PASS_LOGO.x3,
       ...backgroundFiles,
     },
     {
@@ -199,13 +221,13 @@ export async function buildApplePkpass(
 
   pass.headerFields.push({
     key: 'tier',
-    label: 'TICKET',
+    label: L.ticket,
     value: ticket.tierName,
   })
 
   pass.primaryFields.push({
     key: 'event',
-    label: 'EVENT',
+    label: L.event,
     value: ticket.eventTitle,
   })
 
@@ -218,18 +240,18 @@ export async function buildApplePkpass(
     startValue
       ? {
           key: 'date',
-          label: 'DATE',
+          label: L.date,
           value: startValue,
           dateStyle: 'PKDateStyleMedium',
           timeStyle: 'PKDateStyleShort',
         }
-      : { key: 'date', label: 'DATE', value: 'TBA' }
+      : { key: 'date', label: L.date, value: L.tba }
   )
 
   if (ticket.venueName) {
     pass.secondaryFields.push({
       key: 'venue',
-      label: 'VENUE',
+      label: L.venue,
       value: ticket.venueName,
     })
   }
@@ -239,27 +261,26 @@ export async function buildApplePkpass(
   if (ticket.holderName && !voided) {
     pass.auxiliaryFields.push({
       key: 'holder',
-      label: 'ADMIT',
+      label: L.admit,
       value: ticket.holderName,
     })
   }
 
   pass.auxiliaryFields.push({
     key: 'order',
-    label: 'ORDER',
+    label: L.order,
     value: ticket.orderRef,
   })
 
   if (ticket.city) {
-    pass.backFields.push({ key: 'city', label: 'City', value: ticket.city })
+    pass.backFields.push({ key: 'city', label: L.city, value: ticket.city })
   }
   if (voided) {
-    pass.auxiliaryFields.push({ key: 'status', label: 'STATUS', value: 'VOID' })
+    pass.auxiliaryFields.push({ key: 'status', label: L.status, value: L.voidValue })
     pass.backFields.push({
       key: 'voided',
-      label: 'This pass is void',
-      value:
-        'This ticket was transferred or is no longer valid. This pass no longer admits anyone at the door.',
+      label: L.voidTitle,
+      value: L.voidBody,
     })
     // No barcode at all: nothing on a void pass can be scanned.
     pass.setBarcodes(null)
@@ -268,8 +289,8 @@ export async function buildApplePkpass(
 
   pass.backFields.push({
     key: 'instructions',
-    label: 'At the door',
-    value: 'Show this pass at the entrance. Each ticket scans once.',
+    label: L.atDoor,
+    value: L.instructions,
   })
 
   // THE existing QR payload, straight from Firestore. Re-encoding it in the

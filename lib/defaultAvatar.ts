@@ -1,23 +1,24 @@
 /**
- * The face for someone with no profile photo: one of twelve hand-drawn
- * portraits (DiceBear "Notionists", CC0) served from public/avatars, always the
- * same one for the same person. Mirrors mobile/lib/defaultAvatar.ts, same
- * files and same hash, so a person has one face on both.
+ * The avatar for someone with no profile photo: a single neutral person
+ * silhouette (Apple-style) on a softly lit dark disc, the same for everyone.
+ * Served from public/avatars/default.svg. Mirrors mobile/lib/defaultAvatar.ts
+ * (mobile/assets/avatars/default.png), so a person looks the same on both.
  */
 
-export const DEFAULT_AVATAR_COUNT = 12
+export const DEFAULT_AVATAR = '/avatars/default.svg'
 
-export function defaultAvatarIndex(seed: string): number {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0
-  return Math.abs(h) % DEFAULT_AVATAR_COUNT
+// Kept at 1 and the index helpers kept (always 0) so existing callers that
+// reference them keep compiling; there is now one avatar for everyone.
+export const DEFAULT_AVATAR_COUNT = 1
+
+export function defaultAvatarIndex(_seed?: string): number {
+  return 0
 }
 
-export function defaultAvatarAt(index: number): string {
-  const i = ((index % DEFAULT_AVATAR_COUNT) + DEFAULT_AVATAR_COUNT) % DEFAULT_AVATAR_COUNT
-  return `/avatars/a${i + 1}.png`
+export function defaultAvatarAt(_index?: number): string {
+  return DEFAULT_AVATAR
 }
 
-export function defaultAvatarUrl(seed: string): string {
-  return defaultAvatarAt(defaultAvatarIndex(seed || 'tikem'))
+export function defaultAvatarUrl(_seed?: string): string {
+  return DEFAULT_AVATAR
 }

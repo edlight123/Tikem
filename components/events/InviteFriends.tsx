@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, Link2, Search, UserPlus } from 'lucide-react'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 
 type PickerState = 'available' | 'invited' | 'going' | 'unavailable'
 interface PickerFriend {
@@ -187,12 +188,12 @@ export default function InviteFriends({ eventId, eventTitle, enabled, currentUse
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-default"
                     >
                       <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/[0.12] text-sm font-semibold text-white">
-                        {f.photoURL ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={f.photoURL} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          (f.displayName || 'U').charAt(0).toUpperCase()
-                        )}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={f.photoURL || defaultAvatarUrl(f.uid || f.displayName || '')}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </span>
                       <span className={`min-w-0 flex-1 truncate text-[15px] ${selectable ? 'text-white' : 'text-white/45'}`}>
                         {f.displayName}

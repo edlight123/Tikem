@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Default avatar">
+  <defs>
+    <radialGradient id="tkDisc" cx="50%" cy="0%" r="120%">
+      <stop offset="0" stop-color="#3b3b3d"/>
+      <stop offset="1" stop-color="#1b1b1d"/>
+    </radialGradient>
+    <linearGradient id="tkFig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cbcbd0"/>
+      <stop offset="1" stop-color="#97979d"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" fill="url(#tkDisc)"/>
+  <circle cx="60" cy="47" r="17.5" fill="url(#tkFig)"/>
+  <path d="M30 104 C30 81 43 72.5 60 72.5 C77 72.5 90 81 90 104 Z" fill="url(#tkFig)"/>
+</svg>
