@@ -23,10 +23,11 @@ import type { HomeWorld } from '@/lib/home/feed'
 // of lit worlds made two worlds two half-page posters with a lone digit in
 // the corner, which read as oversized and empty rather than chosen.
 //
-// No picture repeats on the page (app/page.tsx claims each one), so a world
-// whose posters are all shown above has none to give. Then every tile goes
-// typographic, short and filled: a row of mixed poster and blank tiles
-// read as images that failed to load.
+// No poster repeats on the page (app/page.tsx claims each one), so a world
+// whose posters are all shown above has none to give. That world wears its
+// own Tikèm painting instead (public/art/worlds, the piece the app's world
+// rail shows): all-typographic tiles read as images that failed to load
+// (owner feedback 2026-10-26).
 
 export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; scopeQs: string }) {
   const { t } = useTranslation('common')
@@ -35,7 +36,6 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
   // Two columns on a phone: with an odd count the first world goes full
   // width (and wider than tall) so the grid closes square.
   const oddOnPhone = live.length % 2 === 1
-  const posters = live.every((w) => w.poster)
 
   return (
     <section>
@@ -55,22 +55,21 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
                 href={`/discover?${w.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}&${scopeQs}`}
                 aria-label={`${w.label}: ${countLabel}`}
                 className={`group relative block overflow-hidden rounded bg-white/[0.06] outline-none transition-colors hover:bg-white/[0.09] focus-visible:ring-2 focus-visible:ring-white/70 ${
-                  !posters ? 'aspect-[16/9]' : wide ? 'aspect-[16/10] sm:aspect-[4/5]' : 'aspect-[4/5]'
+                  wide ? 'aspect-[16/10] sm:aspect-[4/5]' : 'aspect-[4/5]'
                 }`}
               >
-                {posters && w.poster && (
-                  <>
-                    <Image
-                      src={w.poster.banner_image_url}
-                      alt=""
-                      fill
-                      sizes="(min-width: 1024px) 210px, (min-width: 640px) 25vw, 50vw"
-                      quality={65}
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                    />
-                    <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
-                  </>
-                )}
+                {/* An event poster when the world has a spare one, else the
+                    world's own Tikèm painting (the same piece the app's world
+                    rail shows), so every card always has a picture. */}
+                <Image
+                  src={w.poster?.banner_image_url || `/art/worlds/${w.key}.webp`}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1024px) 210px, (min-width: 640px) 25vw, 50vw"
+                  quality={65}
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                />
+                <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
                 <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-3 sm:p-4">
                   <span className="font-grotesk font-bold lowercase !leading-none tracking-[-0.03em] text-white !text-[clamp(19px,1.6vw,23px)]">
                     {w.label}
