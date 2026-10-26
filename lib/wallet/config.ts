@@ -11,7 +11,6 @@
  * and off without re-importing modules.
  */
 
-import { solidPng } from './png'
 
 /** Machine-readable reasons a pass could not be produced. Clients localize off these. */
 export const WALLET_ERROR_CODES = {
@@ -40,8 +39,6 @@ export interface AppleWalletConfig {
   /** Only needed when the key PEM is itself encrypted. */
   signerKeyPassphrase?: string
   organizationName: string
-  iconPng: Buffer
-  logoPng: Buffer
 }
 
 export interface GoogleWalletConfig {
@@ -77,9 +74,6 @@ function envBase64(name: string): Buffer | null {
   }
 }
 
-/** The brand mark used when the owner has not supplied real pass artwork. */
-const TIKEM_TEAL: [number, number, number] = [13, 148, 136]
-
 /**
  * The Apple Wallet configuration, or null when the deployment cannot sign passes.
  *
@@ -106,9 +100,6 @@ export function getAppleWalletConfig(): AppleWalletConfig | null {
     wwdr,
     signerKeyPassphrase: envString('APPLE_WALLET_KEY_PASSPHRASE') || undefined,
     organizationName: envString('WALLET_ORGANIZATION_NAME') || 'Tikèm',
-    // 29pt @1x is the Wallet icon size; the logo sits in the pass header.
-    iconPng: envBase64('APPLE_PASS_ICON_PNG_BASE64') || solidPng(29, TIKEM_TEAL),
-    logoPng: envBase64('APPLE_PASS_LOGO_PNG_BASE64') || solidPng(160, TIKEM_TEAL),
   }
 }
 

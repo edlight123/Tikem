@@ -16,6 +16,7 @@ import type { PKPass as PKPassType } from 'passkit-generator'
 import type { AppleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
 import { appleAuthTokenFor, appleSerialFor, appleWebServiceUrl } from './apple-web-service'
+import { PASS_ICON, PASS_LOGO } from './brandArt'
 
 export interface ApplePassOptions {
   /**
@@ -42,53 +43,6 @@ function passDateValue(iso: string | null): string | null {
 }
 
 /**
- * Turn a logo drawn on solid black into one on transparency. The wordmark
- * asset in APPLE_PASS_LOGO_PNG_BASE64 is white/teal on an opaque black square,
- * which showed as a black box over the poster background (owner feedback
- * 2026-10-25). Each pixel's alpha becomes its brightest channel and its colour
- * is un-premultiplied, so white stays white, teal stays teal, black vanishes,
- * and anti-aliased edges stay smooth. A logo that is already transparent is
- * left as it is.
- */
-async function blackToTransparent(png: Buffer): Promise<Buffer> {
-  const { default: sharp } = await import('sharp')
-  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-  let transparentPixels = 0
-  for (let i = 3; i < data.length; i += 4) if (data[i] < 250) transparentPixels++
-  if (transparentPixels > (data.length / 4) * 0.05) return png
-  for (let i = 0; i < data.length; i += 4) {
-    const a = Math.max(data[i], data[i + 1], data[i + 2])
-    if (a === 0) {
-      data[i + 3] = 0
-      continue
-    }
-    data[i] = Math.min(255, Math.round((data[i] * 255) / a))
-    data[i + 1] = Math.min(255, Math.round((data[i + 1] * 255) / a))
-    data[i + 2] = Math.min(255, Math.round((data[i + 2] * 255) / a))
-    data[i + 3] = a
-  }
-  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer()
-}
-
-/**
- * Strip transparent padding from a PNG (the wordmark asset ships with baked-in
- * whitespace). sharp is imported lazily for the same build-OOM reason PKPass
- * is; any failure returns the buffer untouched — artwork must never block a
- * pass.
- */
-async function trimTransparentPadding(png: Buffer): Promise<Buffer> {
-  try {
-    const { default: sharp } = await import('sharp')
-    return await sharp(await blackToTransparent(png)).trim().png().toBuffer()
-  } catch (error) {
-    console.warn('[wallet] logo trim failed; using original', {
-      message: (error as any)?.message,
-    })
-    return png
-  }
-}
-
-/**
  * The event poster, sized for the eventTicket background slot (180×220pt,
  * @2x 360×440) — iOS applies the blur itself. Returns {} when there is no
  * banner or anything goes wrong, which yields the plain near-black pass.
@@ -97,7 +51,9 @@ async function trimTransparentPadding(png: Buffer): Promise<Buffer> {
 // an arbitrary URL here is SSRF. Only the storage hosts posters actually live
 // on (the same set next.config.js whitelists for next/image) are fetched, and
 // redirects are refused so an allowed host can't bounce us elsewhere.
-const PASS_IMAGE_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com'])
+// images.unsplash.com is where the flyer library's posters live (lib/flyerLibrary):
+// an event made from a library flyer used to get a plain black pass.
+const PASS_IMAGE_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com', 'images.unsplash.com'])
 
 async function buildPassBackground(
   bannerImageUrl: string | null
@@ -163,13 +119,6 @@ export async function buildApplePkpass(
 
   const startValue = passDateValue(ticket.startDatetime)
 
-  // Trim the logo's transparent padding at build time. The asset arrives from
-  // env base64 with baked-in left whitespace that read as "a gap next to the
-  // logo" on the pass header (tester feedback, 2026-08-29). Trimming here
-  // fixes every past and future asset without touching the env var. Never
-  // fails the pass: any sharp hiccup falls back to the original buffer.
-  const logoPng = await trimTransparentPadding(config.logoPng)
-
   // The event's poster as the pass background. Apple's eventTicket style blurs
   // background.png automatically — the exact premium treatment the poster-glow
   // design uses everywhere else. Best-effort: a missing/broken banner just
@@ -179,11 +128,15 @@ export async function buildApplePkpass(
   const pass = new PKPass(
     {
       // Apple will not open a pass without an icon; `logo.png` is what shows in
-      // the pass header. Both come from config (env override, brand fallback).
-      'icon.png': config.iconPng,
-      'icon@2x.png': config.iconPng,
-      'logo.png': logoPng,
-      'logo@2x.png': logoPng,
+      // the pass header: the Tikèm "t" mark on transparency, built from the app
+      // icon (lib/wallet/brandArt). The old env wordmark sat on a grey box
+      // (owner feedback 2026-10-26).
+      'icon.png': PASS_ICON.x1,
+      'icon@2x.png': PASS_ICON.x2,
+      'icon@3x.png': PASS_ICON.x3,
+      'logo.png': PASS_LOGO.x1,
+      'logo@2x.png': PASS_LOGO.x2,
+      'logo@3x.png': PASS_LOGO.x3,
       ...backgroundFiles,
     },
     {
@@ -205,8 +158,9 @@ export async function buildApplePkpass(
       ...(voided ? { voided: true } : {}),
       organizationName: config.organizationName,
       description: `${ticket.eventTitle} · ${ticket.tierName}`,
-      // NO logoText: `logo.png` is the Tikèm wordmark, so setting logoText too
-      // printed "tikèm" as art and "Tikèm" as text side by side in the header.
+      // The "t" mark plus the name beside it, the way airline passes pair a
+      // mark with a wordmark.
+      logoText: 'Tikèm',
       backgroundColor: 'rgb(10, 10, 10)',
       foregroundColor: 'rgb(255, 255, 255)',
       // A light teal: the poster background is darkened but tinted, and the

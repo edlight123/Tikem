@@ -17,7 +17,8 @@ import crypto from 'node:crypto'
 import type { GoogleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
 
-const POSTER_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com'])
+// images.unsplash.com hosts the flyer library's posters (lib/flyerLibrary).
+const POSTER_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com', 'images.unsplash.com'])
 
 /** The poster URL when it is an https link on our storage, else null. */
 function posterUrl(raw: string | null | undefined): string | null {
