@@ -190,7 +190,10 @@ export default async function HomePage({
   const weekUsed = new Set(used)
   const week = buildWeek(scoped, now, zone, weekUsed)
   if (week.reduce((n, d) => n + d.count, 0) >= 2) weekUsed.forEach((k) => used.add(k))
-  const worlds = buildWorlds(scoped, used)
+  // Worlds wear their own Tikèm paintings, not event posters, so they claim
+  // none: the posters stay free for the film strip below the hero, which
+  // hides itself under four (owner feedback 2026-10-26, "the carousel is gone").
+  const worlds = buildWorlds(scoped)
 
   // The film strip runs on artwork, which outlives its event: upcoming
   // posters first, then recent past ones. The chosen city's art when it has

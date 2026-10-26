@@ -1,8 +1,8 @@
 'use client'
 
 // "worlds": the eight Kreyòl cultural worlds (lib/categories — a display
-// layer over the canonical categories) as poster tiles. Each tile is that
-// world's top poster with its name set small over the bottom and the real
+// layer over the canonical categories) as art tiles. Each tile is that
+// world's painting with its name set small over the bottom and the real
 // upcoming count, and opens discover on the world's categories. Only lit
 // worlds show; nobody is sent to an empty page.
 //
@@ -23,11 +23,10 @@ import type { HomeWorld } from '@/lib/home/feed'
 // of lit worlds made two worlds two half-page posters with a lone digit in
 // the corner, which read as oversized and empty rather than chosen.
 //
-// No poster repeats on the page (app/page.tsx claims each one), so a world
-// whose posters are all shown above has none to give. That world wears its
-// own Tikèm painting instead (public/art/worlds, the piece the app's world
-// rail shows): all-typographic tiles read as images that failed to load
-// (owner feedback 2026-10-26).
+// Each tile wears its world's Tikèm painting (public/art/worlds, the piece the
+// app's world rail shows), never an event poster: posters on the worlds took
+// the film strip's pictures and hid it, and a world with none left went
+// blank (owner feedback 2026-10-26).
 
 export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; scopeQs: string }) {
   const { t } = useTranslation('common')
@@ -58,11 +57,10 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
                   wide ? 'aspect-[16/10] sm:aspect-[4/5]' : 'aspect-[4/5]'
                 }`}
               >
-                {/* An event poster when the world has a spare one, else the
-                    world's own Tikèm painting (the same piece the app's world
-                    rail shows), so every card always has a picture. */}
+                {/* The world's own Tikèm painting, the piece the app's world
+                    rail shows. Event posters are left to the film strip. */}
                 <Image
-                  src={w.poster?.banner_image_url || `/art/worlds/${w.key}.webp`}
+                  src={`/art/worlds/${w.key}.webp`}
                   alt=""
                   fill
                   sizes="(min-width: 1024px) 210px, (min-width: 640px) 25vw, 50vw"
