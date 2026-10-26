@@ -22,7 +22,8 @@ const esc = (v: string) => escapeHtml(v)
 const base = appUrl()
 const WHATSAPP = 'https://wa.me/17542768676'
 
-export function organizerOutreachHtml(name: string, event: string): string {
+/** Recent = their last event was within the last few months ("dènyèman"). */
+export function organizerOutreachHtml(name: string, event: string, recent = true): string {
   const fill = (rows: string, pad = '22px 22px') =>
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface}" style="background:${C.surface};border-radius:4px;border-collapse:separate;"><tr><td style="padding:${pad};">${rows}</td></tr></table>`
 
@@ -73,7 +74,9 @@ WhatsApp: <a href="${WHATSAPP}" target="_blank" style="color:${C.text};font-weig
     title('Tikè ou yo, san tèt chaje.', 36),
     gap(16),
     paragraphHtml(
-      `Bonjou ${esc(name)}, mwen wè ou te òganize <span style="color:${C.text};font-weight:700;">${esc(event)}</span> dènyèman. Bravo pou bèl travay la.`
+      recent
+        ? `Bonjou ${esc(name)}, mwen wè ou te òganize <span style="color:${C.text};font-weight:700;">${esc(event)}</span> dènyèman. Bravo pou bèl travay la.`
+        : `Bonjou ${esc(name)}, nou te wè <span style="color:${C.text};font-weight:700;">${esc(event)}</span> ak lòt evènman ou yo. Bravo pou bèl travay la.`
     ),
     gap(18),
     serifHeading('ou janm viv sa?'),
@@ -104,7 +107,9 @@ ${button('Telechaje aplikasyon an', `${base}/download`, 'secondary')}`,
       '26px 24px'
     ),
     gap(34),
-    paragraphHtml(`Prezantasyon an atache. Si ou pito pale, ekri m sou WhatsApp.`),
+    paragraphHtml(
+      `<a href="${base}/decks/Tikem-oganizate-Ayiti.pdf" target="_blank" style="color:${C.text};font-weight:700;text-decoration:underline;text-underline-offset:3px;">Gade prezantasyon an</a>. Si ou pito pale, ekri m sou WhatsApp.`
+    ),
     gap(6),
     signature,
   ]
@@ -133,7 +138,7 @@ ${head}${body}${foot}
 }
 
 if (require.main === module) {
-  const [out = 'organizer-outreach.html', name = '{NON}', event = '{EVENMAN}'] = process.argv.slice(2)
-  writeFileSync(out, organizerOutreachHtml(name, event))
+  const [out = 'organizer-outreach.html', name = '{NON}', event = '{EVENMAN}', recent = 'yes'] = process.argv.slice(2)
+  writeFileSync(out, organizerOutreachHtml(name, event, recent !== 'no'))
   console.log(out)
 }
