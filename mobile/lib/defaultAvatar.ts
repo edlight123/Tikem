@@ -1,40 +1,25 @@
 /**
- * The face for someone with no profile photo: one of twelve hand-drawn
- * portraits (DiceBear "Notionists", CC0, bundled so nothing loads from a third
- * party), always the same one for the same person (owner feedback
- * 2026-10-25: avatars, not an initial). The web mirrors this in
- * lib/defaultAvatar.ts with the same files under public/avatars.
+ * The avatar for someone with no profile photo: a single neutral person
+ * silhouette (Apple-style) on a softly lit dark disc, the same for everyone,
+ * bundled so nothing loads from a third party. The web mirrors this in
+ * lib/defaultAvatar.ts (public/avatars/default.svg).
  */
 import type { ImageSourcePropType } from 'react-native';
 
-const AVATARS: ImageSourcePropType[] = [
-  require('../assets/avatars/a1.png'),
-  require('../assets/avatars/a2.png'),
-  require('../assets/avatars/a3.png'),
-  require('../assets/avatars/a4.png'),
-  require('../assets/avatars/a5.png'),
-  require('../assets/avatars/a6.png'),
-  require('../assets/avatars/a7.png'),
-  require('../assets/avatars/a8.png'),
-  require('../assets/avatars/a9.png'),
-  require('../assets/avatars/a10.png'),
-  require('../assets/avatars/a11.png'),
-  require('../assets/avatars/a12.png'),
-];
+const DEFAULT_AVATAR: ImageSourcePropType = require('../assets/avatars/default.png');
 
-export const DEFAULT_AVATAR_COUNT = AVATARS.length;
+// Kept at 1 and the index helpers kept (always 0) so existing callers that
+// reference them keep compiling; there is now one avatar for everyone.
+export const DEFAULT_AVATAR_COUNT = 1;
 
-export function defaultAvatarAt(index: number): ImageSourcePropType {
-  return AVATARS[((index % AVATARS.length) + AVATARS.length) % AVATARS.length];
+export function defaultAvatarAt(_index?: number): ImageSourcePropType {
+  return DEFAULT_AVATAR;
 }
 
-/** Stable index 0..11 for a seed (a uid, or any string). */
-export function defaultAvatarIndex(seed: string): number {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-  return Math.abs(h) % AVATARS.length;
+export function defaultAvatarIndex(_seed?: string): number {
+  return 0;
 }
 
-export function defaultAvatar(seed: string): ImageSourcePropType {
-  return AVATARS[defaultAvatarIndex(seed || 'tikem')];
+export function defaultAvatar(_seed?: string): ImageSourcePropType {
+  return DEFAULT_AVATAR;
 }

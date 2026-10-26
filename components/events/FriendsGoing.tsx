@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 import type { FriendsGoingResponse } from '@/types/social'
 
 interface FriendsGoingProps {
@@ -58,12 +59,12 @@ export default function FriendsGoing({ eventId, currentUserId, className = '' }:
               title={f.displayName}
               className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-white/[0.12] text-xs font-semibold text-white ring-2 ring-black"
             >
-              {f.photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.photoURL} alt={f.displayName} className="h-full w-full object-cover" />
-              ) : (
-                (f.displayName || 'U').charAt(0).toUpperCase()
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={f.photoURL || defaultAvatarUrl(f.uid || f.displayName || '')}
+                alt={f.displayName}
+                className="h-full w-full object-cover"
+              />
             </Link>
           ))}
         </div>

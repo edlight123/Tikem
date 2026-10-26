@@ -39,6 +39,8 @@ export interface WalletTicket {
   holderName: string
   venueName: string
   city: string
+  /** ISO2 country of the event (e.g. 'HT'). Used to localize the Wallet pass. */
+  country: string
   /** ISO start datetime, or null when the event has no date yet. */
   startDatetime: string | null
   endDatetime: string | null
@@ -193,6 +195,7 @@ async function walletTicketFromDoc(
     holderName: firstString(ticket?.attendee_name),
     venueName: firstString(ticket?.venue_name, event?.venue_name),
     city: firstString(ticket?.city, event?.city),
+    country: firstString(ticket?.country, event?.country),
     // The LIVE event date wins over the copy frozen onto the ticket at
     // purchase. Organizers reschedule, and the ticket snapshot is never
     // rewritten when they do — a pass built from it sends the attendee on

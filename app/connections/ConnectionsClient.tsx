@@ -42,6 +42,7 @@ import ConnectButton from '@/components/connections/ConnectButton'
 import { EditorialHeader } from '@/components/ui/EditorialHeader'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import { EmptyState } from '@/components/ui/kit'
+import { defaultAvatarUrl } from '@/lib/defaultAvatar'
 import type { PublicUserSummary, FriendshipState } from '@/types/social'
 
 interface Overview {
@@ -72,18 +73,17 @@ const FIELD =
   'w-full rounded-xl bg-white/[0.055] text-white placeholder:text-white/30 transition-colors focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-brand-400/60'
 
 function Avatar({ user, size = 44 }: { user: PublicUserSummary; size?: number }) {
-  const initial = (user.displayName || 'U').charAt(0).toUpperCase()
   return (
     <div
-      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.08] font-grotesk font-bold text-white/60"
-      style={{ width: size, height: size, fontSize: size * 0.38 }}
+      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.08]"
+      style={{ width: size, height: size }}
     >
-      {user.photoURL ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={user.photoURL} alt={user.displayName} className="h-full w-full object-cover" />
-      ) : (
-        initial
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={user.photoURL || defaultAvatarUrl(user.uid || user.displayName || '')}
+        alt={user.displayName}
+        className="h-full w-full object-cover"
+      />
     </div>
   )
 }
