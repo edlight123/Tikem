@@ -1,5 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
-import { ORG_INVITES, teamCol } from './context'
+import { ORG_INVITES, membershipsCol, orgDisplayName, teamCol } from './context'
 
 /** The org team roster: active members (current profile names) and open invites. */
 
@@ -58,6 +58,25 @@ export async function roster(orgId: string): Promise<RosterRow[]> {
       finance_view: x.role === 'admin' && x.finance_view === true,
     })
   }
+  // Self-repair: members seated before the switcher existed (or by any path
+  // that missed it) have no users/{uid}/org_memberships/{org} mirror, so the
+  // org never appears in their "Acting for" switcher. Restore it here, every
+  // time the roster is read, so owners never have to know.
+  await Promise.all(
+    rows
+      .filter((r) => r.status === 'active' && r.uid)
+      .map(async (r) => {
+        try {
+          const ref = membershipsCol(r.uid!).doc(orgId)
+          if (!(await ref.get()).exists) {
+            await ref.set({ org_id: orgId, role: r.role, org_name: await orgDisplayName(orgId) })
+          }
+        } catch {
+          // best effort
+        }
+      }),
+  )
+
   // Active members show their CURRENT profile name, not the one typed at invite.
   await Promise.all(
     rows
