@@ -66,12 +66,27 @@ export async function readDeviceContacts(): Promise<DeviceContact[]> {
  */
 export async function syncContacts(
   uid: string,
-  { force = false }: { force?: boolean } = {}
+  {
+    force = false,
+    onContacts,
+  }: {
+    force?: boolean;
+    /**
+     * Fires with the device contacts the moment they are read, BEFORE the
+     * (networked) Tikèm match runs. The address book is local and fast; the
+     * match is a round-trip over hundreds of numbers. Painting the list on this
+     * callback lets people see and invite their contacts immediately instead of
+     * staring at a spinner until the match returns (TestFlight: "the contact is
+     * too slow to load"). Not called on a cache hit — that path is instant.
+     */
+    onContacts?: (contacts: DeviceContact[]) => void;
+  } = {}
 ): Promise<{ contacts: DeviceContact[]; matches: ContactMatch[] }> {
   if (!force && cache && cache.uid === uid && Date.now() - cache.at < MATCH_TTL_MS) {
     return { contacts: cache.contacts, matches: cache.matches };
   }
   const contacts = await readDeviceContacts();
+  onContacts?.(contacts);
   const phones = contacts.flatMap((c) => c.phones);
   const matches = phones.length ? await matchContacts(phones).catch(() => []) : [];
   cache = { uid, at: Date.now(), contacts, matches };

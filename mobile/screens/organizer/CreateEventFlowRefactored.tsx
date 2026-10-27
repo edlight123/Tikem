@@ -1925,9 +1925,10 @@ export default function CreateEventFlowRefactored() {
               // text link to the curated flyer library.
               <View style={[styles.flyerHero, styles.flyerHeroEmpty]}>
                 <View style={styles.flyerContent}>
-                  <Text style={styles.flyerEyebrow}>{t('organizerCreateEventFlow.canvas.flyerEyebrow')}</Text>
+                  {/* One short line, not an eyebrow + headline + paragraph
+                      (TestFlight: "why all this text / not premium"). The 4:5
+                      crop is handled on upload, so the hint is gone too. */}
                   <Text style={styles.flyerTitle}>{t('organizerCreateEventFlow.canvas.flyerTitle')}</Text>
-                  <Text style={styles.flyerSubtitle}>{t('organizerCreateEventFlow.canvas.flyerHint')}</Text>
                   <TouchableOpacity
                     style={styles.uploadPill}
                     activeOpacity={0.85}

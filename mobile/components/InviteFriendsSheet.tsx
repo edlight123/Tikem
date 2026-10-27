@@ -120,7 +120,14 @@ export function InviteFriendsSheet({
     async (force = false) => {
       setContacts({ kind: 'loading' });
       try {
-        const res = await syncContacts(uid, { force });
+        // Paint the device list the instant it is read; the "on Tikèm" matches
+        // (a network round-trip over every number) fill in a moment later
+        // instead of blocking the whole list behind a spinner.
+        const res = await syncContacts(uid, {
+          force,
+          onContacts: (deviceContacts) =>
+            setContacts({ kind: 'ready', contacts: deviceContacts, matches: [] }),
+        });
         setContacts({ kind: 'ready', ...res });
       } catch {
         setContacts({ kind: 'idle' });
