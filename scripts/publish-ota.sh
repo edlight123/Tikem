@@ -10,6 +10,11 @@
 # publish the same JS once per live version: as-is, then with app.json's
 # version set to each of LEGACY_RUNTIMES.
 #
+# Android: build 5 (1.0.2) is the first Android build on the current native
+# side, so it gets the current-runtime publish. The only older Android build,
+# versionCode 4 (runtime 1.0.0, commit 87609bb0), predates build 46's native
+# changes (no expo-asset), so legacy publishes are iOS-only.
+#
 # The legacy publishes are only safe while the NATIVE side is identical to
 # build 46 (builds 50 and later changed no native code): same package.json /
 # package-lock.json. The script refuses them if they drifted (a new native
@@ -55,13 +60,14 @@ fi
 npx tsc --noEmit
 
 publish() {
-  npx eas-cli@latest update --channel production --environment production --non-interactive -m "$1" \
+  npx eas-cli@latest update --channel production --environment production --non-interactive \
+    --platform "$2" -m "$1" \
     | grep -E "Published|Runtime|Update group ID|rror"
 }
 
 current=$(node -p "require('./app.json').expo.version")
-echo "== runtime $current"
-publish "$MSG"
+echo "== runtime $current (ios + android)"
+publish "$MSG" all
 
 native_same=1
 git -C "$ROOT" diff --quiet "$BUILD_46_COMMIT" "$COMMIT" -- mobile/package.json mobile/package-lock.json || native_same=0
@@ -69,9 +75,9 @@ git -C "$ROOT" diff --quiet "$BUILD_46_COMMIT" "$COMMIT" -- mobile/package.json 
 for legacy in $LEGACY_RUNTIMES; do
   [ "$legacy" = "$current" ] && continue
   if [ "$native_same" = 1 ]; then
-    echo "== runtime $legacy (native side unchanged since build 46)"
+    echo "== runtime $legacy, iOS only (native side unchanged since build 46)"
     node -e "const f='app.json',j=require('./'+f);j.expo.version='$legacy';require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n')"
-    publish "$MSG"
+    publish "$MSG" ios
     git -C "$WT" checkout -q -- mobile/app.json
   else
     echo "== SKIPPED runtime $legacy: native dependencies changed since build 46; those phones need the store update"

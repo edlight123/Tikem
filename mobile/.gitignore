@@ -48,3 +48,4 @@ yarn-error.*
 # local vercel deploy before being ignored.
 *.ipa
 *.app
+google-play-service-account.json

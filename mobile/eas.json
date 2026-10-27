@@ -54,6 +54,11 @@
       "ios": {
         "ascAppId": "6794334427",
         "appleTeamId": "DCS7MLAM3X"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "production",
+        "releaseStatus": "completed"
       }
     }
   }
