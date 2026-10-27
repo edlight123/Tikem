@@ -11,7 +11,7 @@ import {
 import { Image } from 'expo-image';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar, MapPin, Ticket, ChevronRight } from 'lucide-react-native';
+import { Ticket, Heart } from 'lucide-react-native';
 import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../config/firebase';
@@ -51,9 +51,11 @@ const reviveEvents = (events: any[]) =>
     end_datetime: e.end_datetime ? new Date(e.end_datetime) : null,
   }));
 
-/** Portrait poster thumb — the app's artwork is 2:3, so a square thumb cropped it. */
-const POSTER_W = 60;
-const POSTER_H = Math.round((POSTER_W * 3) / 2); // 90
+// Editorial direction (owner, Oct 2026): airy rows on the bare canvas, not
+// boxed cards. A small 2:3 poster anchors each row; the premium weight comes
+// from the type and the month dividers, not from a filled card.
+const POSTER_W = 64;
+const POSTER_H = Math.round((POSTER_W * 3) / 2); // 96
 
 // Dictionary keys for the two lifecycle labels the ticket detail screen never
 // needed. `t()` echoes the key back when it is missing, so both are read through
@@ -120,16 +122,17 @@ function rowStatusFor(
 /** Placeholder rows that mirror the ticket-row layout (poster + text lines). */
 function TicketsListSkeleton({ styles }: { styles: ReturnType<typeof getStyles> }) {
   return (
-    <View>
-      <Skeleton width={120} height={12} radius={4} style={styles.skeletonSectionHeader} />
-      {Array.from({ length: 4 }).map((_, i) => (
-        <View key={i} style={styles.ticketRow}>
+    <View style={styles.month}>
+      <View style={styles.monthHead}>
+        <Skeleton width={130} height={30} radius={4} />
+      </View>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <View key={i} style={styles.row}>
           <Skeleton width={POSTER_W} height={POSTER_H} radius={4} />
-          <View style={styles.ticketBody}>
-            <Skeleton width={'88%'} height={18} radius={4} />
-            <Skeleton width={'64%'} height={12} radius={4} style={{ marginTop: 6 }} />
-            <Skeleton width={'50%'} height={12} radius={4} style={{ marginTop: 6 }} />
-            <Skeleton width={'40%'} height={11} radius={4} style={{ marginTop: 8 }} />
+          <View style={styles.body}>
+            <Skeleton width={'85%'} height={20} radius={4} />
+            <Skeleton width={'60%'} height={12} radius={4} style={{ marginTop: 9 }} />
+            <Skeleton width={'35%'} height={11} radius={4} style={{ marginTop: 12 }} />
           </View>
         </View>
       ))}
@@ -150,7 +153,8 @@ export default function TicketsScreen({ navigation }: any) {
   const tabBarSpace = useTabBarSpace();
   const [upcomingTickets, setUpcomingTickets] = useState<any[]>([]);
   const [pastTickets, setPastTickets] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [savedEvents, setSavedEvents] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'saved'>('upcoming');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   // Scroll offset for the header chrome: solid canvas at rest, translucent
@@ -287,6 +291,55 @@ export default function TicketsScreen({ navigation }: any) {
     }
   };
 
+  // Saved tab (TestFlight: "for saved or favorite events can you show them here
+  // too?"). Favorites live in `event_favorites` (user_id → event_id); we hydrate
+  // the events and show them in the same poster-forward cards, newest date first.
+  const fetchFavorites = async () => {
+    if (!user) return;
+    try {
+      const favSnap = await getDocs(
+        query(collection(db, 'event_favorites'), where('user_id', '==', user.uid)),
+      );
+      if (favSnap.empty) {
+        setSavedEvents([]);
+        return;
+      }
+      const ids = favSnap.docs.map((d) => d.data().event_id).filter(Boolean);
+      const events: any[] = [];
+      for (let i = 0; i < ids.length; i += 30) {
+        const chunk = ids.slice(i, i + 30);
+        const snap = await getDocs(
+          query(collection(db, 'events'), where(documentId(), 'in', chunk)),
+        );
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          events.push({
+            id: d.id,
+            ...data,
+            start_datetime: data.start_datetime?.toDate
+              ? data.start_datetime.toDate()
+              : data.start_datetime
+                ? new Date(data.start_datetime)
+                : null,
+            end_datetime: data.end_datetime?.toDate
+              ? data.end_datetime.toDate()
+              : data.end_datetime
+                ? new Date(data.end_datetime)
+                : null,
+          });
+        });
+      }
+      events.sort(
+        (a, b) =>
+          (a.start_datetime ? new Date(a.start_datetime).getTime() : 0) -
+          (b.start_datetime ? new Date(b.start_datetime).getTime() : 0),
+      );
+      setSavedEvents(events);
+    } catch (error) {
+      console.error('Error fetching saved events:', error);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -303,7 +356,10 @@ export default function TicketsScreen({ navigation }: any) {
           }
         } catch {}
       }
-      if (!cancelled) fetchTickets();
+      if (!cancelled) {
+        fetchTickets();
+        fetchFavorites();
+      }
     })();
     return () => {
       cancelled = true;
@@ -317,6 +373,7 @@ export default function TicketsScreen({ navigation }: any) {
 
       const run = async () => {
         await fetchTickets();
+        fetchFavorites();
 
         // If we just completed a payment, tickets might not be mirrored yet.
         // Retry a couple times with small delays.
@@ -343,6 +400,7 @@ export default function TicketsScreen({ navigation }: any) {
   const onRefresh = () => {
     setRefreshing(true);
     fetchTickets();
+    fetchFavorites();
   };
 
   if (!user) {
@@ -369,6 +427,7 @@ export default function TicketsScreen({ navigation }: any) {
           <SegmentedTabs
             tabs={[
               { key: 'upcoming', label: t('tickets.upcoming') },
+              { key: 'saved', label: withDictionaryFallback(t, 'tickets.saved', 'Saved') },
               { key: 'past', label: t('tickets.past') },
             ]}
             value="upcoming"
@@ -380,24 +439,37 @@ export default function TicketsScreen({ navigation }: any) {
     );
   }
 
-  const displayedTickets = activeTab === 'upcoming' ? upcomingTickets : pastTickets;
+  const isSaved = activeTab === 'saved';
+  const displayedTickets =
+    activeTab === 'upcoming' ? upcomingTickets : activeTab === 'past' ? pastTickets : savedEvents;
 
-  // Group events into date sections (by month) for a tidy, scannable list.
-  const sections = (() => {
-    const groups: { key: string; label: string; items: any[] }[] = [];
-    const indexByKey = new Map<string, number>();
+  // Group into month → day. Each month is an editorial divider (a big
+  // lowercase serif month name over a ghosted month numeral); each day inside
+  // it gets a small-caps date rule. This is our own premium way to carry the
+  // passage of time, deliberately NOT Posh's left timeline rail.
+  type DayGroup = { key: string; date: Date | null; items: any[] };
+  type MonthGroup = { key: string; date: Date | null; days: DayGroup[] };
+  const months = (() => {
+    const out: MonthGroup[] = [];
+    const monthIdx = new Map<string, number>();
     for (const event of displayedTickets) {
       const d = event.start_datetime ? new Date(event.start_datetime) : null;
       const valid = d && !Number.isNaN(d.getTime());
-      const key = valid ? format(d as Date, 'yyyy-MM') : 'undated';
-      const label = valid ? safeFormatForLanguage(d as Date, 'MMMM yyyy', language) : t('tickets.undated') || 'Undated';
-      if (!indexByKey.has(key)) {
-        indexByKey.set(key, groups.length);
-        groups.push({ key, label, items: [] });
+      const mKey = valid ? format(d as Date, 'yyyy-MM') : 'undated';
+      const dKey = valid ? format(d as Date, 'yyyy-MM-dd') : 'undated';
+      if (!monthIdx.has(mKey)) {
+        monthIdx.set(mKey, out.length);
+        out.push({ key: mKey, date: valid ? (d as Date) : null, days: [] });
       }
-      groups[indexByKey.get(key)!].items.push(event);
+      const month = out[monthIdx.get(mKey)!];
+      let day = month.days.find((x) => x.key === dKey);
+      if (!day) {
+        day = { key: dKey, date: valid ? (d as Date) : null, items: [] };
+        month.days.push(day);
+      }
+      day.items.push(event);
     }
-    return groups;
+    return out;
   })();
 
   return (
@@ -414,10 +486,15 @@ export default function TicketsScreen({ navigation }: any) {
         <SegmentedTabs
           tabs={[
             { key: 'upcoming', label: t('tickets.upcoming'), count: upcomingTickets.length },
+            {
+              key: 'saved',
+              label: withDictionaryFallback(t, 'tickets.saved', 'Saved'),
+              count: savedEvents.length,
+            },
             { key: 'past', label: t('tickets.past'), count: pastTickets.length },
           ]}
           value={activeTab}
-          onChange={(key) => setActiveTab(key as 'upcoming' | 'past')}
+          onChange={(key) => setActiveTab(key as 'upcoming' | 'past' | 'saved')}
         />
       </View>
 
@@ -437,98 +514,163 @@ export default function TicketsScreen({ navigation }: any) {
           // A poster of Tikèm art instead of a lone icon: an empty wallet
           // should still feel like a night out waiting to happen.
           <EmptyState
-            icon={Ticket}
-            art={artByKey(activeTab === 'upcoming' ? 'domino' : 'twoubadou')}
-            title={activeTab === 'upcoming' ? t('tickets.emptyUpcomingTitle') : t('tickets.emptyPastTitle')}
-            subtitle={activeTab === 'upcoming' ? t('tickets.emptyUpcomingBody') : t('tickets.emptyPastBody')}
-            actionLabel={activeTab === 'upcoming' ? t('favorites.explore') : undefined}
-            onAction={activeTab === 'upcoming' ? () => navigation.navigate('Discover') : undefined}
+            icon={isSaved ? Heart : Ticket}
+            art={artByKey(activeTab === 'past' ? 'twoubadou' : 'domino')}
+            title={
+              isSaved
+                ? withDictionaryFallback(t, 'tickets.emptySavedTitle', 'Nothing saved yet')
+                : activeTab === 'upcoming'
+                  ? t('tickets.emptyUpcomingTitle')
+                  : t('tickets.emptyPastTitle')
+            }
+            subtitle={
+              isSaved
+                ? withDictionaryFallback(
+                    t,
+                    'tickets.emptySavedBody',
+                    'Tap the heart on an event to keep it here.',
+                  )
+                : activeTab === 'upcoming'
+                  ? t('tickets.emptyUpcomingBody')
+                  : t('tickets.emptyPastBody')
+            }
+            actionLabel={activeTab !== 'past' ? t('favorites.explore') : undefined}
+            onAction={activeTab !== 'past' ? () => navigation.navigate('Discover') : undefined}
           />
         ) : (
-          sections.map(section => (
-            <View key={section.key}>
-              <Text style={styles.sectionHeader}>{section.label}</Text>
-              {section.items.map((event, index) => {
-                const rowStatus = rowStatusFor(event.ticketStatusSummary, activeTab === 'past', t);
-                const dateLabel = event.start_datetime
-                  ? safeFormatForLanguage(event.start_datetime, 'EEE, MMM d • h:mm a', language)
-                  : '';
-                // Join only the parts we actually have, or a missing venue leaves
-                // a dangling ", Port-au-Prince".
-                const placeLabel = [event.venue_name, event.city].filter(Boolean).join(', ');
+          months.map((month) => {
+            // Big lowercase serif month over a ghosted numeral — a magazine
+            // section break, not a plain list header.
+            const monthName = month.date
+              ? safeFormatForLanguage(month.date, 'MMMM', language)
+              : t('tickets.undated') || 'Undated';
+            const monthYear = month.date ? format(month.date, 'yyyy') : '';
 
-                return (
-                  <TouchableOpacity
-                    key={event.id}
-                    style={[
-                      styles.ticketRow,
-                      index === section.items.length - 1 && styles.ticketRowLast,
-                    ]}
-                    onPress={() => navigation.navigate('EventTickets', { eventId: event.id })}
-                    activeOpacity={0.6}
-                  >
-                    {/* Portrait poster (2:3) — a square thumb cropped the artwork. */}
-                    <View style={styles.ticketPoster}>
-                      {/* Fallback art only — behind a loading image this flashed
-                          teal between skeleton and poster. */}
-                      {!(event.banner_image_url || event.cover_image_url) && (
-                        <LinearGradient
-                          colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
-                          start={{ x: 0.1, y: 0 }}
-                          end={{ x: 0.9, y: 1 }}
-                          style={StyleSheet.absoluteFill}
-                        />
-                      )}
-                      {(event.banner_image_url || event.cover_image_url) && (
-                        <Image
-                          source={{ uri: event.banner_image_url || event.cover_image_url }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                          transition={200}
-                          recyclingKey={event.id ? String(event.id) : undefined}
-                        />
-                      )}
-                    </View>
+            return (
+              <View key={month.key} style={styles.month}>
+                <View style={styles.monthHead}>
+                  {!!monthYear && (
+                    <Text style={styles.ghostNum} allowFontScaling={false} numberOfLines={1}>
+                      {monthYear}
+                    </Text>
+                  )}
+                  <Text style={styles.monthName} numberOfLines={1}>
+                    {monthName.toLowerCase()}
+                  </Text>
+                </View>
 
-                    <View style={styles.ticketBody}>
-                      <Text style={styles.ticketTitle} numberOfLines={2}>{event.title}</Text>
+                {month.days.map((day) => {
+                  const dayLabel = day.date
+                    ? safeFormatForLanguage(day.date, 'EEEE d MMM', language).toUpperCase()
+                    : '';
 
-                      {!!dateLabel && (
-                        <View style={styles.ticketMetaRow}>
-                          <Calendar size={12} color={colors.textSecondary} />
-                          <Text style={styles.ticketMetaText} numberOfLines={1}>{dateLabel}</Text>
-                        </View>
-                      )}
-
-                      {!!placeLabel && (
-                        <View style={styles.ticketMetaRow}>
-                          <MapPin size={12} color={colors.textSecondary} />
-                          <Text style={styles.ticketMetaText} numberOfLines={1}>{placeLabel}</Text>
-                        </View>
-                      )}
-
-                      {/* Status and count share ONE line, pinned to opposite edges,
-                          so neither leaves an empty tail and the counts align in a
-                          column down the list. Dot + label, never a filled pill;
-                          the count is a label, so no chip either. */}
-                      <View style={styles.ticketStatusLine}>
-                        <StatusChip status={rowStatus.status} label={rowStatus.label} />
-                        <View style={styles.ticketCountGroup}>
-                          <Ticket size={11} color={colors.textTertiary} />
-                          <Text style={styles.ticketCountText} numberOfLines={1}>
-                            {event.ticketCount} {event.ticketCount === 1 ? t('tickets.ticketSingular') : t('tickets.ticketPlural')}
+                  return (
+                    <View key={day.key} style={styles.day}>
+                      {!!dayLabel && (
+                        <View style={styles.dayHead}>
+                          <Text style={styles.dayLabel} numberOfLines={1}>
+                            {dayLabel}
                           </Text>
+                          <View style={styles.dayRule} />
                         </View>
-                      </View>
-                    </View>
+                      )}
 
-                    <ChevronRight size={18} color={colors.textTertiary} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ))
+                      {day.items.map((event) => {
+                        const rowStatus = rowStatusFor(
+                          event.ticketStatusSummary,
+                          activeTab === 'past',
+                          t,
+                        );
+                        const timeLabel = event.start_datetime
+                          ? safeFormatForLanguage(event.start_datetime, 'h:mm a', language)
+                          : '';
+                        const placeLabel = [event.venue_name, event.city]
+                          .filter(Boolean)
+                          .join(', ');
+                        // One quiet line: time · venue (no per-line icons — the
+                        // type carries it).
+                        const metaLabel = [timeLabel, placeLabel].filter(Boolean).join('  ·  ');
+                        const poster = event.banner_image_url || event.cover_image_url;
+
+                        return (
+                          <TouchableOpacity
+                            key={event.id}
+                            style={styles.row}
+                            onPress={() =>
+                              navigation.navigate(isSaved ? 'EventDetail' : 'EventTickets', {
+                                eventId: event.id,
+                              })
+                            }
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.poster}>
+                              {!poster && (
+                                <LinearGradient
+                                  colors={
+                                    resolvePosterTheme(
+                                      event,
+                                      event.id || event.title,
+                                      event.category,
+                                    ).colors
+                                  }
+                                  start={{ x: 0.1, y: 0 }}
+                                  end={{ x: 0.9, y: 1 }}
+                                  style={StyleSheet.absoluteFill}
+                                />
+                              )}
+                              {!!poster && (
+                                <Image
+                                  source={{ uri: poster }}
+                                  style={StyleSheet.absoluteFill}
+                                  contentFit="cover"
+                                  cachePolicy="memory-disk"
+                                  transition={200}
+                                  recyclingKey={event.id ? String(event.id) : undefined}
+                                />
+                              )}
+                            </View>
+
+                            <View style={styles.body}>
+                              <Text style={styles.rowTitle} numberOfLines={2}>
+                                {event.title}
+                              </Text>
+                              {!!metaLabel && (
+                                <Text style={styles.rowMeta} numberOfLines={1}>
+                                  {metaLabel}
+                                </Text>
+                              )}
+
+                              <View style={styles.rowFoot}>
+                                {isSaved ? (
+                                  <View style={styles.savedTag}>
+                                    <Heart size={12} color={colors.primary} fill={colors.primary} />
+                                    <Text style={styles.savedText}>
+                                      {withDictionaryFallback(t, 'tickets.savedLabel', 'Saved')}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <>
+                                    <StatusChip status={rowStatus.status} label={rowStatus.label} />
+                                    <Text style={styles.countSep}>·</Text>
+                                    <Text style={styles.count} numberOfLines={1}>
+                                      {event.ticketCount}{' '}
+                                      {event.ticketCount === 1
+                                        ? t('tickets.ticketSingular')
+                                        : t('tickets.ticketPlural')}
+                                    </Text>
+                                  </>
+                                )}
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })
         )}
       </Animated.ScrollView>
     </View>
@@ -558,82 +700,120 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   content: {
     flex: 1,
   },
-  sectionHeader: {
-    fontSize: 12,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 4,
+  // Month divider — a magazine section break: a big lowercase serif month name
+  // over a huge, barely-there ghosted numeral.
+  month: {
+    marginHorizontal: 20,
   },
-  skeletonSectionHeader: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
+  monthHead: {
+    position: 'relative',
+    justifyContent: 'flex-end',
+    minHeight: 58,
+    marginTop: 30,
+    marginBottom: 2,
   },
-  // No card: the row sits directly on the black canvas and is separated by a
-  // hairline (same idiom as the tier rows in TieredTicketSelector). Dropping the
-  // fill hands the full row width back to the content.
-  ticketRow: {
+  // The year, set huge and barely-there behind the month name — a magazine
+  // folio. Four digits, so a touch smaller than a 2-digit numeral and allowed
+  // to sit against the right edge.
+  ghostNum: {
+    position: 'absolute',
+    right: -2,
+    top: -6,
+    fontSize: 66,
+    fontWeight: '800',
+    letterSpacing: -2,
+    color: 'rgba(255,255,255,0.05)',
+  },
+  monthName: {
+    fontFamily: font.serif,
+    fontSize: 30,
+    lineHeight: 34,
+    color: colors.text,
+  },
+  // One day inside a month.
+  day: {
+    marginTop: 20,
+  },
+  dayHead: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  dayLabel: {
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    flexShrink: 0,
+  },
+  dayRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  skeletonSectionHeader: {
+    marginTop: 30,
+    marginBottom: 2,
+  },
+  // Editorial row — poster + type on the bare canvas, no box.
+  row: {
+    flexDirection: 'row',
     gap: 14,
-    marginHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    alignItems: 'flex-start',
+    marginBottom: 22,
   },
-  // Last row of a month group — the next section header supplies the break.
-  ticketRowLast: {
-    borderBottomWidth: 0,
-  },
-  ticketPoster: {
+  poster: {
     width: POSTER_W,
     height: POSTER_H,
     borderRadius: radius.sm,
     overflow: 'hidden',
     backgroundColor: colors.borderLight,
   },
-  ticketBody: {
+  body: {
     flex: 1,
     minWidth: 0,
-    gap: 5,
+    paddingTop: 1,
   },
-  ticketTitle: {
+  rowTitle: {
     fontFamily: font.serif,
-    fontSize: 18,
+    fontSize: 20,
+    lineHeight: 23,
     color: colors.text,
-    lineHeight: 21,
     letterSpacing: -0.2,
   },
-  ticketMetaRow: {
+  rowMeta: {
+    fontSize: 12.5,
+    letterSpacing: 0.1,
+    color: colors.textSecondary,
+    marginTop: 5,
+  },
+  rowFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 9,
+  },
+  countSep: {
+    color: colors.textTertiary,
+    fontSize: 11,
+  },
+  count: {
+    color: colors.textSecondary,
+    fontSize: 10.5,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    flexShrink: 1,
+  },
+  savedTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  ticketMetaText: {
-    flex: 1,
-    fontSize: 11.5,
-    letterSpacing: 0.3,
-    color: colors.textSecondary,
-  },
-  ticketStatusLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginTop: 1,
-  },
-  ticketCountGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flexShrink: 0,
-  },
-  ticketCountText: {
-    color: colors.textSecondary,
-    fontSize: 10.5,
+  savedText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
