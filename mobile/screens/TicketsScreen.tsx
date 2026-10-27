@@ -54,8 +54,8 @@ const reviveEvents = (events: any[]) =>
 // Editorial direction (owner, Oct 2026): airy rows on the bare canvas, not
 // boxed cards. A small 2:3 poster anchors each row; the premium weight comes
 // from the type and the month dividers, not from a filled card.
-const POSTER_W = 64;
-const POSTER_H = Math.round((POSTER_W * 3) / 2); // 96
+const POSTER_W = 92;
+const POSTER_H = Math.round((POSTER_W * 3) / 2); // 138
 
 // Dictionary keys for the two lifecycle labels the ticket detail screen never
 // needed. `t()` echoes the key back when it is missing, so both are read through
@@ -538,18 +538,23 @@ export default function TicketsScreen({ navigation }: any) {
             onAction={activeTab !== 'past' ? () => navigation.navigate('Discover') : undefined}
           />
         ) : (
-          months.map((month) => {
+          months.map((month, mi) => {
             // Big lowercase serif month over a ghosted numeral — a magazine
             // section break, not a plain list header.
             const monthName = month.date
               ? safeFormatForLanguage(month.date, 'MMMM', language)
               : t('tickets.undated') || 'Undated';
             const monthYear = month.date ? format(month.date, 'yyyy') : '';
+            // The ghosted year folio prints only when the year changes (the
+            // first month of each year), not on every divider.
+            const prevDate = mi > 0 ? months[mi - 1].date : null;
+            const prevYear = prevDate ? format(prevDate, 'yyyy') : '';
+            const showYear = !!monthYear && monthYear !== prevYear;
 
             return (
               <View key={month.key} style={styles.month}>
                 <View style={styles.monthHead}>
-                  {!!monthYear && (
+                  {showYear && (
                     <Text style={styles.ghostNum} allowFontScaling={false} numberOfLines={1}>
                       {monthYear}
                     </Text>

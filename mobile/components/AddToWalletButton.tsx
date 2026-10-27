@@ -9,11 +9,18 @@ import {
   Linking,
 } from 'react-native';
 import { Wallet, Download } from 'lucide-react-native';
+import QRCode from 'react-native-qrcode-svg';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendFetch } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
 import { radius } from '../theme/tokens';
+
+// A crisp, plain QR on white for the saved file — no center logo, so any scanner
+// reads it. Rendered off-screen only to rasterize; never shown.
+const DOWNLOAD_QR_SIZE = 600;
 
 interface AddToWalletButtonProps {
   ticketId: string;
@@ -67,6 +74,10 @@ export default function AddToWalletButton({
   // (lib/wallet/config.ts isGoogleWalletOffered), no app update needed.
   const [walletAvailable, setWalletAvailable] = useState<boolean | null>(Platform.OS === 'android' ? false : null);
   const mounted = useRef(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  // Ref to the off-screen QR — react-native-qrcode-svg hands back an instance
+  // with toDataURL(cb) that rasterizes the SVG to base64 PNG.
+  const qrRef = useRef<{ toDataURL: (cb: (data: string) => void) => void } | null>(null);
 
   /** `t()` with an English fallback for keys that may not exist yet. */
   const label = useCallback(
@@ -172,12 +183,50 @@ export default function AddToWalletButton({
     }
   };
 
-  const handleDownloadQR = () => {
-    showAlert(
-      t('addToWallet.downloadTitle'),
-      t('addToWallet.downloadBody'),
-      [{ text: t('common.ok') }]
-    );
+  // Rasterize the off-screen QR to a base64 PNG.
+  const qrToBase64 = () =>
+    new Promise<string>((resolve, reject) => {
+      const ref = qrRef.current;
+      if (!ref || typeof ref.toDataURL !== 'function') {
+        reject(new Error('qr_not_ready'));
+        return;
+      }
+      try {
+        ref.toDataURL((data: string) => {
+          if (data) resolve(data);
+          else reject(new Error('qr_empty'));
+        });
+      } catch (e) {
+        reject(e as Error);
+      }
+    });
+
+  // Save the QR as an image. Writes a PNG to the cache and opens the system
+  // share sheet, where the user can pick "Save Image" (→ Photos), Files, or any
+  // other app. Uses only modules already in the binary, so it ships over the air
+  // with no new build.
+  const handleDownloadQR = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const base64 = await qrToBase64();
+      const fileUri = `${FileSystem.cacheDirectory}tikem-ticket-${ticketId}.png`;
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: 'base64' });
+
+      if (!(await Sharing.isAvailableAsync())) {
+        throw new Error('sharing_unavailable');
+      }
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'image/png',
+        UTI: 'public.png',
+        dialogTitle: t('addToWallet.downloadTitle'),
+      });
+    } catch (error) {
+      console.error('Error saving QR image:', error);
+      showAlert(t('common.error'), t('addToWallet.errorBody'), [{ text: t('common.ok') }]);
+    } finally {
+      if (mounted.current) setIsDownloading(false);
+    }
   };
 
   return (
@@ -207,17 +256,37 @@ export default function AddToWalletButton({
         </TouchableOpacity>
       )}
 
-      {/* Download QR Button */}
+      {/* Download QR Button — saves the QR as an image via the share sheet */}
       <TouchableOpacity
         style={styles.downloadButton}
         onPress={handleDownloadQR}
+        disabled={isDownloading}
         activeOpacity={0.7}
       >
         <View style={styles.buttonContent}>
-          <Download size={18} color={colors.text} />
+          {isDownloading ? (
+            <ActivityIndicator size="small" color={colors.text} />
+          ) : (
+            <Download size={18} color={colors.text} />
+          )}
           <Text style={styles.downloadButtonText}>{t('addToWallet.saveImage')}</Text>
         </View>
       </TouchableOpacity>
+
+      {/* Off-screen QR, rendered only so we can rasterize it to a PNG on tap.
+          Kept out of layout and hidden from a11y / screen readers. */}
+      <View style={styles.offscreen} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <QRCode
+          value={qrCodeData || ticketId}
+          size={DOWNLOAD_QR_SIZE}
+          quietZone={24}
+          color="#000000"
+          backgroundColor="#FFFFFF"
+          getRef={(c: any) => {
+            qrRef.current = c;
+          }}
+        />
+      </View>
     </View>
   );
 }
@@ -243,6 +312,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  // Pushed far off-screen; present in the tree so its ref can rasterize, but
+  // never visible and zero layout impact.
+  offscreen: {
+    position: 'absolute',
+    left: -10000,
+    top: -10000,
+    width: DOWNLOAD_QR_SIZE,
+    height: DOWNLOAD_QR_SIZE,
+    opacity: 0,
   },
   walletButtonText: {
     fontSize: 16,
