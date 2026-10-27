@@ -665,6 +665,7 @@ export default {
   },
   home: {
     scrollToTop: "Remonte anwo",
+    offlineNote: "Ou offline — n ap montre evènman ki sove yo",
     attendanceNotice: {
       eyebrow: "Konfidansyalite",
       title: "Zanmi ou ka wè ki kote w prale",

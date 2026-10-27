@@ -71,6 +71,20 @@ export async function fetchPublishedEventsForCountry(
   country: string,
   max: number = PUBLISHED_FEED_LIMIT
 ): Promise<any[]> {
+  return (await fetchPublishedEventsForCountryWithMeta(country, max)).events;
+}
+
+/**
+ * Same fetch, but it also reports whether Firestore answered from its local
+ * cache rather than the server. OFFLINE, `getDocs` does NOT throw — it resolves
+ * from the on-device cache, which is usually empty — so an offline phone looks
+ * exactly like a market with no events. Browsing surfaces need to tell those
+ * two apart to show an honest "you're offline" state instead of "no events".
+ */
+export async function fetchPublishedEventsForCountryWithMeta(
+  country: string,
+  max: number = PUBLISHED_FEED_LIMIT
+): Promise<{ events: any[]; fromCache: boolean }> {
   const code = (country || '').trim().toUpperCase();
   // Never fall back to an unscoped query — see the note above. A blank country
   // is a caller bug (fetching before the country resolved), so surface it.
@@ -87,7 +101,7 @@ export async function fetchPublishedEventsForCountry(
     )
   );
 
-  return snapshot.docs.map((docSnap) => {
+  const events = snapshot.docs.map((docSnap) => {
     const data = docSnap.data();
     return {
       id: docSnap.id,
@@ -96,4 +110,5 @@ export async function fetchPublishedEventsForCountry(
       end_datetime: toDate(data.end_datetime),
     };
   });
+  return { events, fromCache: snapshot.metadata.fromCache };
 }

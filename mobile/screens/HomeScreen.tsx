@@ -13,7 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScrollToTop } from '@react-navigation/native';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import { filterExploreEvents } from '../lib/api/events';
-import { fetchPublishedEventsForCountry } from '../lib/api/eventFeed';
+import { fetchPublishedEventsForCountryWithMeta } from '../lib/api/eventFeed';
+import { persistFeedCache, restoreFeedCache } from '../lib/feedCache';
 import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useI18n } from '../contexts/I18nContext';
 import { useFilters } from '../contexts/FiltersContext';
@@ -113,6 +114,9 @@ export default function HomeScreen({ navigation }: any) {
   // for the fade's duration — visible in the tester's second recording.
   const [skeletonVisible, setSkeletonVisible] = useState(true);
   const [error, setError] = useState(false);
+  // True when the feed on screen came from the offline cache (Firestore served
+  // its local store, no server round-trip). Drives a quiet "you're offline" note.
+  const [offline, setOffline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const scrollViewRef = React.useRef<ScrollView>(null);
@@ -156,6 +160,69 @@ export default function HomeScreen({ navigation }: any) {
     extrapolate: 'clamp',
   });
 
+  // Fan a country-scoped list out into every rail on the page. Shared by the
+  // live fetch and the offline-cache restore, so both paint the full feed.
+  const applyEventLists = (countryFiltered: any[]) => {
+    const now = new Date();
+    const finalEvents = activeMetro
+      ? countryFiltered.filter((e) => isEventInMetro(e, activeMetro))
+      : countryFiltered;
+    setEvents(finalEvents);
+
+    setElsewhere(
+      elsewhereEvents(countryFiltered, activeMetro).sort(
+        (a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0),
+      ),
+    );
+
+    setFeaturedEvents(
+      [...finalEvents]
+        .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
+        .slice(0, 5),
+    );
+
+    setTrendingEvents(finalEvents.filter((e) => (e.tickets_sold || 0) > 10).slice(0, 6));
+
+    const oneWeekFromNow = new Date(now);
+    oneWeekFromNow.setDate(now.getDate() + 7);
+    setThisWeekEvents(finalEvents.filter((e) => e.start_datetime <= oneWeekFromNow).slice(0, 6));
+
+    setForYouEvents(
+      [...finalEvents]
+        .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
+        .slice(0, 8),
+    );
+
+    const nearCity = activeCity;
+    setNearYouEvents(
+      nearCity ? finalEvents.filter((e) => cityMatches(e.city, nearCity)).slice(0, 8) : [],
+    );
+
+    setFreeEvents(
+      finalEvents
+        .filter((e) => isBudgetFriendlyTicketPrice(e?.ticket_price, e?.currency))
+        .slice(0, 8),
+    );
+
+    setNewEvents(
+      [...finalEvents]
+        .sort((a: any, b: any) => toMillis(b.created_at) - toMillis(a.created_at))
+        .slice(0, 8),
+    );
+
+    const byCategory: Record<string, any[]> = {};
+    finalEvents.forEach((e) => {
+      const c = e.category;
+      if (!c) return;
+      (byCategory[c] = byCategory[c] || []).push(e);
+    });
+    setCategoryRails(
+      Object.keys(byCategory)
+        .map((c) => ({ category: c, events: byCategory[c].slice(0, 10) }))
+        .filter((r) => r.events.length > 0),
+    );
+  };
+
   const fetchEvents = async () => {
     // The country is a query predicate now, so a fetch before it hydrates would
     // pull the WRONG market (a Haiti phone in English (US) reports "US"). Pull
@@ -174,7 +241,9 @@ export default function HomeScreen({ navigation }: any) {
       // Miami, match none, and be told Miami is empty while Miami events sat
       // unfetched. Metro narrowing below stays client-side — inside one country
       // the sample is a real sample. See lib/api/eventFeed.ts.
-      const eventsData: any[] = await fetchPublishedEventsForCountry(userCountry);
+      const { events: eventsData, fromCache } = await fetchPublishedEventsForCountryWithMeta(
+        userCountry,
+      );
 
       // Sort client-side so the query needs no ORDERED composite index (the
       // equality-only is_published + country index is enough).
@@ -218,84 +287,27 @@ export default function HomeScreen({ navigation }: any) {
       // The query already scoped to `userCountry`; this re-check is a cheap
       // guard against a fetch that resolves after the user switched country.
       const countryFiltered = effectiveEvents.filter((e) => (e.country || 'HT') === userCountry);
-      const finalEvents = activeMetro
-        ? countryFiltered.filter((e) => isEventInMetro(e, activeMetro))
-        : countryFiltered;
+      if (fromCache && countryFiltered.length === 0) {
+        // OFFLINE: Firestore resolved from its empty local cache without
+        // throwing, so this is not really "no events". Show the last good feed
+        // if we saved one; otherwise the honest "can't load, retry" state —
+        // never a bare "no events in <place>".
+        const restored = await restoreFeedCache(userCountry);
+        if (restored && restored.length) {
+          applyEventLists(restored);
+          setOffline(true);
+          setError(false);
+        } else {
+          setOffline(true);
+          setError(true);
+        }
+        return;
+      }
 
-      console.log(
-        '[HomeScreen] Scoped to',
-        activeMetro?.label || userCountry,
-        '→',
-        finalEvents.length,
-        'of',
-        effectiveEvents.length
-      );
-      setEvents(finalEvents);
-
-      // Same country (or region), other metros. Built from the country list, so
-      // it can never leak another country in.
-      setElsewhere(
-        elsewhereEvents(countryFiltered, activeMetro).sort(
-          (a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0)
-        )
-      );
-
-      // Featured events (top 5 by tickets sold)
-      const featured = [...finalEvents]
-        .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
-        .slice(0, 5);
-      setFeaturedEvents(featured);
-
-      // Trending events (tickets_sold > 10)
-      const trending = finalEvents
-        .filter((e) => (e.tickets_sold || 0) > 10)
-        .slice(0, 6);
-      setTrendingEvents(trending);
-
-      // This week events
-      const oneWeekFromNow = new Date(now);
-      oneWeekFromNow.setDate(now.getDate() + 7);
-      const thisWeek = finalEvents
-        .filter((e) => e.start_datetime <= oneWeekFromNow)
-        .slice(0, 6);
-      setThisWeekEvents(thisWeek);
-
-      // For You — popular picks (most tickets sold), a light personalization proxy.
-      const forYou = [...finalEvents]
-        .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
-        .slice(0, 8);
-      setForYouEvents(forYou);
-
-      // Near You — events in the exact town, inside the already-scoped metro.
-      const nearCity = activeCity;
-      const nearYou = nearCity
-        ? finalEvents.filter((e) => cityMatches(e.city, nearCity)).slice(0, 8)
-        : [];
-      setNearYouEvents(nearYou);
-
-      // Free & budget-friendly.
-      const free = finalEvents
-        .filter((e) => isBudgetFriendlyTicketPrice(e?.ticket_price, e?.currency))
-        .slice(0, 8);
-      setFreeEvents(free);
-
-      // Just Announced — most recently created events.
-      const recentlyAdded = [...finalEvents]
-        .sort((a: any, b: any) => toMillis(b.created_at) - toMillis(a.created_at))
-        .slice(0, 8);
-      setNewEvents(recentlyAdded);
-
-      // One carousel per category that has events.
-      const byCategory: Record<string, any[]> = {};
-      finalEvents.forEach((e) => {
-        const c = e.category;
-        if (!c) return;
-        (byCategory[c] = byCategory[c] || []).push(e);
-      });
-      const catRails = Object.keys(byCategory)
-        .map((c) => ({ category: c, events: byCategory[c].slice(0, 10) }))
-        .filter((r) => r.events.length > 0);
-      setCategoryRails(catRails);
+      applyEventLists(countryFiltered);
+      setOffline(fromCache);
+      // Persist the last good online feed so the next offline open has events.
+      if (!fromCache) persistFeedCache(userCountry, countryFiltered);
     } catch (err) {
       console.error('Error fetching events:', err);
       setError(true);
@@ -494,6 +506,26 @@ export default function HomeScreen({ navigation }: any) {
             {/* Content fades in while the skeleton (absolute, on top,
                 non-interactive) fades out — a real crossfade, no black gap. */}
             <Animated.View style={{ opacity: contentFade }}>
+            {/* Offline + we're showing the saved feed: say so, so stale events
+                never masquerade as live ones (TestFlight: "can it be more
+                transparent"). */}
+            {offline && events.length > 0 && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 7,
+                  marginHorizontal: 20,
+                  marginTop: 2,
+                  marginBottom: 6,
+                }}
+              >
+                <CloudOff size={13} color={colors.textSecondary} />
+                <Text style={{ color: colors.textSecondary, fontSize: 12.5 }}>
+                  {t('home.offlineNote')}
+                </Text>
+              </View>
+            )}
             {/* (Removed the redundant "À l'affiche" masthead per beta feedback —
                 the tikèm wordmark in the top bar already brands the screen; the
                 section titles below carry the hierarchy.) */}

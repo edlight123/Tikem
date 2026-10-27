@@ -1042,6 +1042,7 @@ export default {
   },
   home: {
     scrollToTop: "Scroll to top",
+    offlineNote: "You're offline — showing saved events",
     attendanceNotice: {
       eyebrow: "Privacy",
       title: "Your friends can see your plans",
