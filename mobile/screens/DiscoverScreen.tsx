@@ -17,7 +17,8 @@ import { Search, SlidersHorizontal, Users, CloudOff, MapPin, ChevronDown } from 
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { filterExploreEvents } from '../lib/api/events';
-import { fetchPublishedEventsForCountry } from '../lib/api/eventFeed';
+import { fetchPublishedEventsForCountryWithMeta } from '../lib/api/eventFeed';
+import { persistFeedCache, restoreFeedCache } from '../lib/feedCache';
 import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
@@ -214,12 +215,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
       // whole catalogue: past ~50 published events a Miami user could receive 50
       // Haitian events, filter to Miami on the device, match none, and be told
       // Miami is empty while Miami events sat unfetched. See lib/api/eventFeed.ts.
-      const eventsData = await fetchPublishedEventsForCountry(userCountry);
-      console.log(
-        '[DiscoverScreen] Fetched',
-        eventsData.length,
-        'published events in',
-        userCountry
+      const { events: eventsData, fromCache } = await fetchPublishedEventsForCountryWithMeta(
+        userCountry,
       );
 
       // Sort client-side so the query needs no ORDERED composite index (the
@@ -248,8 +245,25 @@ export default function DiscoverScreen({ navigation, route }: any) {
         return cutoff >= now
       });
 
-      console.log('[DiscoverScreen] Future events:', futureEvents.length, 'out of', exploreEvents.length, 'total');
-      setAllEvents(futureEvents.length > 0 ? futureEvents : exploreEvents);
+      const finalList = futureEvents.length > 0 ? futureEvents : exploreEvents;
+
+      if (fromCache && finalList.length === 0) {
+        // OFFLINE: Firestore served an empty local cache without throwing — not
+        // really "no events". Restore the last good feed if we have one, else
+        // show the honest "can't load, retry" state.
+        const restored = await restoreFeedCache(userCountry);
+        if (restored && restored.length) {
+          setAllEvents(restored);
+          setError(false);
+        } else {
+          setError(true);
+        }
+        return;
+      }
+
+      setAllEvents(finalList);
+      // Persist the last good online feed so the next offline open has events.
+      if (!fromCache) persistFeedCache(userCountry, finalList);
     } catch (err) {
       console.error('[DiscoverScreen] Error fetching events:', err);
       setError(true);

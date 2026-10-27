@@ -695,6 +695,7 @@ export default {
   },
   home: {
     scrollToTop: "Remonter en haut",
+    offlineNote: "Vous êtes hors ligne — événements enregistrés",
     attendanceNotice: {
       eyebrow: "Confidentialité",
       title: "Vos amis voient vos sorties",
