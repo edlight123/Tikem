@@ -28,6 +28,7 @@ mobile/**/yarn-error.*
 mobile/**/.DS_Store
 mobile/.env*.local
 mobile/.env
+mobile/google-play-service-account.json
 mobile/**/*.tsbuildinfo
 # Generated native folders: EAS runs prebuild itself.
 mobile/ios/
