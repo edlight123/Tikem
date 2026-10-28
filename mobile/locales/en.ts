@@ -267,8 +267,10 @@ export default {
         couldNotCreateAccount: 'Could not create account.',
       },
       emailCheck: {
-        didYouMean: 'Did you mean {email}?',
-        useIt: 'Use it',
+        didYouMean: 'Did you mean',
+        useThis: 'Use this',
+        keepMine: 'Keep mine',
+        confirmFirst: 'Confirm your email so your tickets reach you.',
         noMailServer: "This address can't receive email. Check the part after the @.",
       },
       placeholders: {

@@ -20,7 +20,7 @@ import { AuthInput } from '../../components/auth/AuthInput';
 import { TermsAgreement } from '../../components/auth/TermsAgreement';
 import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import WhitePillCTA from '../../components/WhitePillCTA';
-import { colors, spacing } from '../../theme/tokens';
+import { colors, radius, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 import { suggestEmailFix } from '../../lib/emailSuggest';
 import { API_BASE_URL } from '../../lib/api/backend';
@@ -70,7 +70,12 @@ export default function SignupScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithGoogle, signInWithApple, appleAuthAvailable } = useAuth();
   const emailRef = useRef<TextInput>(null);
+  // Look-alike domains (gnail.com) take mail, so the server lets them through;
+  // sign-up waits until the person uses the fix or keeps what they typed.
   const emailFix = suggestEmailFix(email);
+  const [keptEmail, setKeptEmail] = useState<string | null>(null);
+  const [emailAttention, setEmailAttention] = useState(false);
+  const pendingFix = emailFix && keptEmail !== email.trim().toLowerCase() ? emailFix : null;
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
@@ -125,6 +130,10 @@ export default function SignupScreen({ navigation }: any) {
     }
     if (password.length < 6) {
       showAlert(t('common.error'), t('auth.signup.errors.passwordTooShort'));
+      return;
+    }
+    if (pendingFix) {
+      setEmailAttention(true);
       return;
     }
     setLoading(true);
@@ -210,13 +219,37 @@ export default function SignupScreen({ navigation }: any) {
                 blurOnSubmit={false}
                 onSubmitEditing={() => passwordRef.current?.focus()}
               />
-              {emailFix ? (
-                <Pressable onPress={() => setEmail(emailFix)} accessibilityRole="button" hitSlop={8}>
-                  <Text style={styles.emailHint}>
-                    {t('auth.signup.emailCheck.didYouMean', { email: emailFix })}{' '}
-                    <Text style={styles.linkTextBold}>{t('auth.signup.emailCheck.useIt')}</Text>
+              {pendingFix ? (
+                <View style={[styles.fixCard, emailAttention && styles.fixCardAttention]} accessibilityLiveRegion="polite">
+                  <Text style={styles.fixEyebrow}>{t('auth.signup.emailCheck.didYouMean')}</Text>
+                  <Text style={styles.fixEmail}>
+                    {pendingFix.slice(0, pendingFix.lastIndexOf('@') + 1)}
+                    <Text style={styles.fixDomain}>{pendingFix.slice(pendingFix.lastIndexOf('@') + 1)}</Text>
                   </Text>
-                </Pressable>
+                  {emailAttention ? <Text style={styles.fixNote}>{t('auth.signup.emailCheck.confirmFirst')}</Text> : null}
+                  <View style={styles.fixActions}>
+                    <Pressable
+                      onPress={() => {
+                        setEmail(pendingFix);
+                        setEmailAttention(false);
+                      }}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.fixButton, styles.fixUse, pressed && styles.pressed]}
+                    >
+                      <Text style={styles.fixUseText}>{t('auth.signup.emailCheck.useThis')}</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setKeptEmail(email.trim().toLowerCase());
+                        setEmailAttention(false);
+                      }}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.fixButton, styles.fixKeep, pressed && styles.pressed]}
+                    >
+                      <Text style={styles.fixKeepText}>{t('auth.signup.emailCheck.keepMine')}</Text>
+                    </Pressable>
+                  </View>
+                </View>
               ) : null}
               <AuthInput
                 ref={passwordRef}
@@ -317,10 +350,69 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
   },
-  emailHint: {
+  fixCard: {
     marginTop: -spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  fixCardAttention: {
+    borderColor: colors.accent,
+  },
+  fixEyebrow: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  fixEmail: {
+    marginTop: spacing.xs,
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  fixDomain: {
+    color: colors.tealBright,
+  },
+  fixNote: {
+    marginTop: 6,
     color: colors.textSecondary,
     fontSize: 13,
+  },
+  fixActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  fixButton: {
+    height: 36,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fixUse: {
+    backgroundColor: colors.white,
+  },
+  fixUseText: {
+    color: colors.black,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  fixKeep: {
+    backgroundColor: colors.surfaceRaised,
+  },
+  fixKeepText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  pressed: {
+    opacity: 0.7,
   },
   linkTextBold: {
     color: colors.tealBright,

@@ -294,8 +294,10 @@ export default {
         couldNotCreateAccount: 'Impossible de créer le compte.',
       },
       emailCheck: {
-        didYouMean: 'Vouliez-vous dire {email} ?',
-        useIt: 'Utiliser',
+        didYouMean: 'Vouliez-vous dire',
+        useThis: 'Utiliser',
+        keepMine: 'Garder la mienne',
+        confirmFirst: 'Confirmez votre email pour recevoir vos billets.',
         noMailServer: 'Cette adresse ne peut pas recevoir d’emails. Vérifiez la partie après le @.',
       },
       placeholders: {

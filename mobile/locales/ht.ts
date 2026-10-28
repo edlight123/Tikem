@@ -266,8 +266,10 @@ export default {
         couldNotCreateAccount: 'Pa t kapab kreye kont la.',
       },
       emailCheck: {
-        didYouMean: 'Èske ou vle di {email}?',
-        useIt: 'Pran l',
+        didYouMean: 'Èske ou vle di',
+        useThis: 'Pran sa a',
+        keepMine: 'Kenbe pa m nan',
+        confirmFirst: 'Konfime imèl ou pou tikè ou yo rive jwenn ou.',
         noMailServer: 'Adrès sa a pa ka resevwa imèl. Verifye pati ki apre @ la.',
       },
       placeholders: {

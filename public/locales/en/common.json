@@ -2076,8 +2076,10 @@
     }
   },
   "email_check": {
-    "did_you_mean": "Did you mean {{email}}?",
-    "use_it": "Use it",
+    "did_you_mean": "Did you mean",
+    "use_this": "Use this",
+    "keep_mine": "Keep mine",
+    "confirm_first": "Confirm your email so your tickets reach you.",
     "no_mail_server": "This address can't receive email. Check the part after the @."
   }
 }
