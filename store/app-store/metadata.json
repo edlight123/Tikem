@@ -25,25 +25,25 @@
       "$why": "Diaspora buyers live everywhere; organizers are limited to HT/US/CA/FR by the app itself. Pass --territories USA,CAN,FRA,HTI to the apply script to restrict."
     }
   },
-
   "localizations": {
     "en-US": {
       "name": "Tikèm: Events & Tickets",
-      "subtitle": "Haiti & the diaspora, live",
+      "subtitle": "Haiti concerts, konpa, parties",
       "promotionalText": "Konpa nights, festivals, concerts and culture across Haiti and the diaspora. Find what's on, get your ticket in seconds, walk in with a QR code.",
-      "keywords": "haiti,haitian,konpa,kompa,concert,party,nightlife,diaspora,moncash,festival,kanaval,rara,rsvp,fete",
+      "keywords": "haitian,kompa,kanaval,rara,festival,nightlife,diaspora,moncash,miami,montreal,boston,kreyol,fete",
       "description": "Tikèm is where Haitian culture goes out. Concerts, konpa nights, festivals, food, sport and community events across Haiti and the diaspora, all in one place and poster first.\n\nFIND WHAT'S ON\n• Browse by city and country, from Port-au-Prince to Miami, Montréal and Paris\n• Filter by category, date and price, or search by name\n• Save events, follow organizers and see which friends are going\n• Get reminders and add events to your calendar\n\nTICKETS THAT JUST WORK\n• Pay by card or Apple Pay, or with MonCash for events in Haiti\n• Every ticket is a QR code that lives in the app, even offline\n• Add your ticket to Apple Wallet\n• Send a ticket to a friend in a couple of taps\n• Join the waitlist when an event sells out\n\nHOST YOUR OWN\n• Create and publish an event in minutes, free\n• Set ticket tiers, free RSVPs, promo codes and private events\n• Share promoter links and see what each one sells\n• Scan tickets at the door with your phone; check-in keeps working offline\n• Invite your door team and send updates to your guests\n• Follow sales as they happen, then get paid through MonCash or bank in Haiti, or Stripe in the US, Canada and France\n\nTikèm speaks English, French and Haitian Creole.\n\nTickets on Tikèm are for real-world events. Organizers set their prices; a service fee may apply at checkout.",
       "whatsNew": "Updates now arrive on their own: the app picks up improvements the first time you open it. Hear an event's song right on the event page, see who's going, and follow @tikem.co on Instagram straight from your ticket. Plus smaller fixes and polish.",
       "supportUrl": "https://www.tikem.co/support",
       "marketingUrl": "https://www.tikem.co",
       "privacyPolicyUrl": "https://www.tikem.co/legal/privacy",
-      "termsUrl": "https://www.tikem.co/legal/terms"
+      "termsUrl": "https://www.tikem.co/legal/terms",
+      "$keywords": "ASO 2026-10-28: Apple already indexes every word in the name and subtitle, so keywords never repeat them (haiti, konpa, concert, party, events, tickets). Ships with the next version (1.0.3); name/subtitle/keywords are locked on a live version."
     },
     "fr-FR": {
       "name": "Tikèm : Événements & Billets",
-      "subtitle": "Haïti et sa diaspora, en live",
+      "subtitle": "Konpa, concerts, soirées Haïti",
       "promotionalText": "Soirées konpa, festivals, concerts et culture en Haïti et dans la diaspora. Trouvez quoi faire, prenez votre billet en quelques secondes, entrez avec un QR code.",
-      "keywords": "haïti,haïtien,konpa,kompa,concert,soirée,fête,diaspora,moncash,festival,kanaval,rara,sortie,rsvp",
+      "keywords": "haïtien,kompa,kanaval,rara,festival,fête,diaspora,moncash,montréal,miami,paris,kreyòl,sortie,billet",
       "description": "Tikèm, c'est la culture haïtienne quand elle sort. Concerts, soirées konpa, festivals, gastronomie, sport et événements communautaires en Haïti et dans la diaspora, réunis au même endroit, l'affiche en premier.\n\nTROUVEZ VOTRE SORTIE\n• Parcourez les événements par ville et par pays, de Port-au-Prince à Miami, Montréal et Paris\n• Filtrez par catégorie, date et prix, ou cherchez par nom\n• Enregistrez vos événements, suivez vos organisateurs et voyez quels amis y vont\n• Recevez des rappels et ajoutez les événements à votre calendrier\n\nDES BILLETS SANS PRISE DE TÊTE\n• Payez par carte ou Apple Pay, ou avec MonCash pour les événements en Haïti\n• Chaque billet est un QR code rangé dans l'app, même hors ligne\n• Ajoutez votre billet à Apple Wallet\n• Envoyez un billet à un ami en deux gestes\n• Inscrivez-vous sur liste d'attente quand c'est complet\n\nORGANISEZ LES VÔTRES\n• Créez et publiez un événement en quelques minutes, gratuitement\n• Proposez plusieurs catégories de billets, des RSVP gratuits, des codes promo et des événements privés\n• Partagez des liens promoteurs et voyez ce que chacun vend\n• Scannez les billets à l'entrée avec votre téléphone ; le contrôle continue de fonctionner hors ligne\n• Invitez votre équipe d'accueil et envoyez des nouvelles à vos invités\n• Suivez vos ventes en direct, puis encaissez via MonCash ou virement en Haïti, ou via Stripe aux États-Unis, au Canada et en France\n\nTikèm parle français, anglais et créole haïtien.\n\nLes billets vendus sur Tikèm donnent accès à des événements bien réels. Les organisateurs fixent leurs prix ; des frais de service peuvent s'appliquer au paiement.",
       "whatsNew": "Les mises à jour arrivent désormais toutes seules : l'app récupère les améliorations dès son ouverture. Écoutez la chanson d'un événement directement sur sa page, voyez qui y va et suivez @tikem.co sur Instagram depuis votre billet. Et d'autres petites corrections.",
       "supportUrl": "https://www.tikem.co/support",
@@ -52,7 +52,6 @@
       "termsUrl": "https://www.tikem.co/legal/terms"
     }
   },
-
   "ageRating": {
     "$why": "Answers for Apple's 2025 age-rating questionnaire (API field names). Organizers publish events without pre-approval, so UGC is true; posters for parties and nightlife routinely reference drinks, so alcohol is INFREQUENT and mature/suggestive themes INFREQUENT. Contact-organizer messages and event updates count as messaging; friends, followers, public profiles and 'who's going' count as social features. No ads, no gambling, no contests, no open browser (web views are locked to tikem.co and payment pages). Expect Apple to compute 13+; do not override.",
     "advertising": false,
@@ -80,7 +79,6 @@
     "violenceRealisticProlongedGraphicOrSadistic": "NONE",
     "violenceRealistic": "NONE"
   },
-
   "reviewDetail": {
     "contactFirstName": "Ted",
     "contactLastName": "Jacquet",
@@ -93,7 +91,6 @@
     "notesFile": "review-notes.md",
     "$notesFile": "The text between the NOTES-BEGIN / NOTES-END markers of review-notes.md is sent as the review notes, with {{PLACEHOLDERS}} filled in."
   },
-
   "screenshots": {
     "displayType": "APP_IPHONE_67",
     "defaultDir": "store/screenshots/ios-6.9",
