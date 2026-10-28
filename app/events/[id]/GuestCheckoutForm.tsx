@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PhoneField from '@/components/ui/PhoneField'
+import EmailSuggestion, { emailDomainTakesMail } from '@/components/ui/EmailSuggestion'
 
 export interface GuestContactInput {
   name: string
@@ -62,8 +63,9 @@ export default function GuestCheckoutForm({
   const [email, setEmail] = useState(initial?.email || '')
   const [phone, setPhone] = useState(initial?.phone || '')
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmedName = name.trim()
     const trimmedEmail = email.trim()
@@ -85,6 +87,15 @@ export default function GuestCheckoutForm({
       setError(
         t('checkout.guest_phone_required', { defaultValue: 'Please enter your phone number.' })
       )
+      return
+    }
+
+    // The ticket is emailed: a domain with no mail server means it never arrives.
+    setChecking(true)
+    const takesMail = await emailDomainTakesMail(trimmedEmail)
+    setChecking(false)
+    if (!takesMail) {
+      setError(t('email_check.no_mail_server'))
       return
     }
 
@@ -191,6 +202,7 @@ export default function GuestCheckoutForm({
           className={inputClass}
           placeholder="you@example.com"
         />
+        <EmailSuggestion email={email} onAccept={setEmail} />
       </div>
 
       <div>
@@ -231,10 +243,10 @@ export default function GuestCheckoutForm({
 
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || checking}
         className="block w-full h-12 bg-white hover:bg-white/90 text-black text-center font-semibold px-5 rounded transition-colors disabled:opacity-50"
       >
-        {busy ? t('events.processing') : submitLabel}
+        {busy || checking ? t('events.processing') : submitLabel}
       </button>
 
       {onCancel && (

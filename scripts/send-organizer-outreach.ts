@@ -9,6 +9,12 @@
  * list.json: [{ wave, name, email, event, recent: 'yes'|'no' }]
  * Each wave's messages go out SPACING_MIN apart from --start. A log of the
  * Resend ids is written next to the list (outreach-log-wave<N>.json).
+ *
+ * Before scheduling, rows are dropped when the address has ever bounced,
+ * complained or been suppressed in this Resend account, looks like a test or
+ * throwaway inbox, or reaches an inbox that already has a copy (gmail +aliases
+ * and dots land in one inbox) in this wave or in mail already sent/scheduled
+ * from the outreach domain. Bounces above ~4% put the whole account at risk.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { organizerOutreachHtml, discoveryOutreachHtml } from './build-organizer-outreach-email'
@@ -28,6 +34,53 @@ const DISCOVERY_SUBJECT_FALLBACK = 'Ki kote w ap soti wikenn sa a?'
 const SPACING_MIN = 3
 
 type Row = { wave: string | number; name: string; email: string; event: string; recent: string }
+
+const BAD_EVENTS = new Set(['bounced', 'complained', 'suppressed'])
+const TEST_ADDRESS = /(^|[._-])(scan|test|demo|fake|dummy|example|qa)[a-z0-9]*@|@(example|test)\./i
+const THROWAWAY_DOMAIN =
+  /(blaxion|mailinator|guerrillamail|yopmail|10minutemail|tempmail|temp-mail|sharklasers|trashmail|dispostable|getnada|maildrop|mohmal|emailnator|fakeinbox)/i
+
+/** The inbox an address delivers to: drops +tags, and dots for Gmail. */
+function inboxKey(address: string): string {
+  const [local, domain = ''] = address.trim().toLowerCase().split('@')
+  const d = domain === 'googlemail.com' ? 'gmail.com' : domain
+  let base = local.split('+')[0]
+  if (d === 'gmail.com') base = base.replace(/\./g, '')
+  return `${base}@${d}`
+}
+
+/**
+ * One pass over the account's sent mail: addresses that bounced, complained or
+ * were suppressed (any domain), and inboxes the outreach domain has already
+ * sent or scheduled to.
+ */
+async function resendHistory(): Promise<{ bad: Set<string>; contacted: Set<string> }> {
+  const bad = new Set<string>()
+  const contacted = new Set<string>()
+  const outreachDomain = FROM.match(/@([^>]+)/)![1]
+  let after = ''
+  for (;;) {
+    const res = await fetch(`https://api.resend.com/emails?limit=100${after ? `&after=${after}` : ''}`, {
+      headers: { Authorization: `Bearer ${apiKey()}` },
+    })
+    if (res.status === 429) {
+      await new Promise((ok) => setTimeout(ok, 1100))
+      continue
+    }
+    if (!res.ok) throw new Error(`Resend history: ${res.status} ${await res.text()}`)
+    const page: any = await res.json()
+    for (const e of page.data || []) {
+      const tos: string[] = [].concat(e.to).map((t: string) => t.toLowerCase())
+      if (BAD_EVENTS.has(e.last_event)) tos.forEach((t) => bad.add(t))
+      if (String(e.from).includes(`@${outreachDomain}`) && e.last_event !== 'canceled')
+        tos.forEach((t) => contacted.add(inboxKey(t)))
+    }
+    if (!page.has_more || !page.data?.length) break
+    after = page.data.at(-1).id
+    await new Promise((ok) => setTimeout(ok, 550))
+  }
+  return { bad, contacted }
+}
 
 /**
  * Clean a scraped name for display + decide whether it is a real person's name.
@@ -184,7 +237,29 @@ async function main() {
   const wave = String(flag('--wave') || '')
   const start = flag('--start')
   if (!wave || !start) throw new Error('--wave and --start are required')
-  const batch = rows.filter((r) => String(r.wave) === wave)
+  console.log('Checking Resend history for bounces and earlier sends...')
+  const { bad, contacted } = await resendHistory()
+  const batch: Row[] = []
+  const skipped: { email: string; why: string }[] = []
+  for (const r of rows.filter((r) => String(r.wave) === wave)) {
+    const email = r.email.trim().toLowerCase()
+    const why = bad.has(email)
+      ? 'bounced/complained before'
+      : TEST_ADDRESS.test(email)
+        ? 'test address'
+        : THROWAWAY_DOMAIN.test(email.split('@')[1] || '')
+          ? 'throwaway domain'
+          : contacted.has(inboxKey(email))
+            ? 'inbox already has a copy'
+            : ''
+    if (why) skipped.push({ email, why })
+    else {
+      batch.push(r)
+      contacted.add(inboxKey(email))
+    }
+  }
+  for (const s of skipped) console.log(`skip ${s.email} (${s.why})`)
+  console.log(`${batch.length} to schedule, ${skipped.length} skipped`)
   const t0 = new Date(start).getTime()
   const log = []
   for (const [i, r] of batch.entries()) {

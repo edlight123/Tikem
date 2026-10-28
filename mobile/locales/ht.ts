@@ -265,6 +265,11 @@ export default {
         signupFailedTitle: 'Enskripsyon echwe',
         couldNotCreateAccount: 'Pa t kapab kreye kont la.',
       },
+      emailCheck: {
+        didYouMean: 'Èske ou vle di {email}?',
+        useIt: 'Pran l',
+        noMailServer: 'Adrès sa a pa ka resevwa imèl. Verifye pati ki apre @ la.',
+      },
       placeholders: {
         fullName: 'Non konplè',
         email: 'Imèl',

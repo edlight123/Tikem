@@ -2074,5 +2074,10 @@
       "no_organizer": "This event has no organizer to contact.",
       "message_too_long": "Keep it under 1000 characters."
     }
+  },
+  "email_check": {
+    "did_you_mean": "Did you mean {{email}}?",
+    "use_it": "Use it",
+    "no_mail_server": "This address can't receive email. Check the part after the @."
   }
 }

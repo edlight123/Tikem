@@ -293,6 +293,11 @@ export default {
         signupFailedTitle: 'Inscription échouée',
         couldNotCreateAccount: 'Impossible de créer le compte.',
       },
+      emailCheck: {
+        didYouMean: 'Vouliez-vous dire {email} ?',
+        useIt: 'Utiliser',
+        noMailServer: 'Cette adresse ne peut pas recevoir d’emails. Vérifiez la partie après le @.',
+      },
       placeholders: {
         fullName: 'Nom complet',
         email: 'E-mail',
