@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
 
 const cache = new Map<string, { ok: boolean; at: number }>()
 const TTL_MS = 6 * 60 * 60 * 1000
+const MAX_CACHED = 2000
 
 async function domainTakesMail(domain: string): Promise<boolean> {
   const hit = cache.get(domain)
@@ -40,6 +41,9 @@ async function domainTakesMail(domain: string): Promise<boolean> {
     lookup(),
     new Promise<boolean>((_, fail) => setTimeout(() => fail(new Error('timeout')), 3000)),
   ])
+  // Bounded: anyone can send made-up domains, so the oldest entries go first.
+  cache.delete(domain)
+  if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!)
   cache.set(domain, { ok, at: Date.now() })
   return ok
 }
