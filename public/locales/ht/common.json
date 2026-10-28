@@ -2076,8 +2076,10 @@
     }
   },
   "email_check": {
-    "did_you_mean": "Èske ou vle di {{email}}?",
-    "use_it": "Pran l",
+    "did_you_mean": "Èske ou vle di",
+    "use_this": "Pran sa a",
+    "keep_mine": "Kenbe pa m nan",
+    "confirm_first": "Konfime imèl ou pou tikè ou yo rive jwenn ou.",
     "no_mail_server": "Adrès sa a pa ka resevwa imèl. Verifye pati ki apre @ la."
   }
 }

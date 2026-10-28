@@ -13,7 +13,7 @@ import { TikemWordmark } from '@/components/ui/TikemLogo'
 import type { UserRole } from '@/types/database'
 import PhoneField from '@/components/ui/PhoneField'
 import { safeSameOriginPath } from '@/lib/safeUrl'
-import EmailSuggestion, { emailDomainTakesMail } from '@/components/ui/EmailSuggestion'
+import EmailSuggestion, { emailDomainTakesMail, useEmailSuggestion } from '@/components/ui/EmailSuggestion'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -26,6 +26,7 @@ export default function SignupPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const emailSuggestion = useEmailSuggestion(email, setEmail)
 
   // Only same-origin paths survive. A startsWith('/') check let "/\evil.com"
   // through, which browsers read as protocol-relative (same fix as login).
@@ -47,6 +48,7 @@ export default function SignupPage() {
   async function handleSignup(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (emailSuggestion.holdSubmit()) return
     setLoading(true)
 
     // A domain with no mail server (a typo like "gmail.co m") would make the
@@ -203,7 +205,7 @@ export default function SignupPage() {
                 className="block w-full px-4 py-3 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 placeholder={t('signup.email_placeholder')}
               />
-              <EmailSuggestion email={email} onAccept={setEmail} />
+              <EmailSuggestion {...emailSuggestion.props} />
             </div>
 
             <div>

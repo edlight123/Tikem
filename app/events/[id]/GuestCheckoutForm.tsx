@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PhoneField from '@/components/ui/PhoneField'
-import EmailSuggestion, { emailDomainTakesMail } from '@/components/ui/EmailSuggestion'
+import EmailSuggestion, { emailDomainTakesMail, useEmailSuggestion } from '@/components/ui/EmailSuggestion'
 
 export interface GuestContactInput {
   name: string
@@ -64,6 +64,7 @@ export default function GuestCheckoutForm({
   const [phone, setPhone] = useState(initial?.phone || '')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+  const emailSuggestion = useEmailSuggestion(email, setEmail)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -87,6 +88,12 @@ export default function GuestCheckoutForm({
       setError(
         t('checkout.guest_phone_required', { defaultValue: 'Please enter your phone number.' })
       )
+      return
+    }
+
+    // A look-alike domain (gnail.com) takes mail, so ask before it goes to a stranger.
+    if (emailSuggestion.holdSubmit()) {
+      setError(null)
       return
     }
 
@@ -202,7 +209,7 @@ export default function GuestCheckoutForm({
           className={inputClass}
           placeholder="you@example.com"
         />
-        <EmailSuggestion email={email} onAccept={setEmail} />
+        <EmailSuggestion {...emailSuggestion.props} />
       </div>
 
       <div>
