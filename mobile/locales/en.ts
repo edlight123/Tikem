@@ -266,6 +266,11 @@ export default {
         signupFailedTitle: 'Sign up failed',
         couldNotCreateAccount: 'Could not create account.',
       },
+      emailCheck: {
+        didYouMean: 'Did you mean {email}?',
+        useIt: 'Use it',
+        noMailServer: "This address can't receive email. Check the part after the @.",
+      },
       placeholders: {
         fullName: 'Full Name',
         email: 'Email',

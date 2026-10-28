@@ -13,10 +13,12 @@ import { TikemWordmark } from '@/components/ui/TikemLogo'
 import type { UserRole } from '@/types/database'
 import PhoneField from '@/components/ui/PhoneField'
 import { safeSameOriginPath } from '@/lib/safeUrl'
+import EmailSuggestion, { emailDomainTakesMail } from '@/components/ui/EmailSuggestion'
 
 export default function SignupPage() {
   const router = useRouter()
   const { t } = useTranslation('auth')
+  const { t: tc } = useTranslation('common')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -46,6 +48,14 @@ export default function SignupPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
+    // A domain with no mail server (a typo like "gmail.co m") would make the
+    // account unreachable: no receipts, no password reset.
+    if (!(await emailDomainTakesMail(email))) {
+      setError(tc('email_check.no_mail_server'))
+      setLoading(false)
+      return
+    }
 
     try {
       // Create user with Firebase Auth
@@ -193,6 +203,7 @@ export default function SignupPage() {
                 className="block w-full px-4 py-3 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 placeholder={t('signup.email_placeholder')}
               />
+              <EmailSuggestion email={email} onAccept={setEmail} />
             </div>
 
             <div>

@@ -22,6 +22,8 @@ import { SocialSignInRow } from '../../components/auth/SocialSignInRow';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
+import { suggestEmailFix } from '../../lib/emailSuggest';
+import { API_BASE_URL } from '../../lib/api/backend';
 
 // Map a Firebase auth error code to a localized message key. We never surface
 // error.message (raw English) — unknown codes fall back to a generic string.
@@ -68,6 +70,7 @@ export default function SignupScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithGoogle, signInWithApple, appleAuthAvailable } = useAuth();
   const emailRef = useRef<TextInput>(null);
+  const emailFix = suggestEmailFix(email);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
@@ -125,6 +128,13 @@ export default function SignupScreen({ navigation }: any) {
       return;
     }
     setLoading(true);
+    // A domain with no mail server makes the account unreachable (no receipts,
+    // no password reset). Any doubt (offline, slow) lets the sign-up through.
+    if (!(await emailDomainTakesMail(email.trim().toLowerCase()))) {
+      setLoading(false);
+      showAlert(t('common.error'), t('auth.signup.emailCheck.noMailServer'));
+      return;
+    }
     try {
       await signUp(email.trim().toLowerCase(), password, fullName.trim());
     } catch (error: any) {
@@ -200,6 +210,14 @@ export default function SignupScreen({ navigation }: any) {
                 blurOnSubmit={false}
                 onSubmitEditing={() => passwordRef.current?.focus()}
               />
+              {emailFix ? (
+                <Pressable onPress={() => setEmail(emailFix)} accessibilityRole="button" hitSlop={8}>
+                  <Text style={styles.emailHint}>
+                    {t('auth.signup.emailCheck.didYouMean', { email: emailFix })}{' '}
+                    <Text style={styles.linkTextBold}>{t('auth.signup.emailCheck.useIt')}</Text>
+                  </Text>
+                </Pressable>
+              ) : null}
               <AuthInput
                 ref={passwordRef}
                 icon={Lock}
@@ -299,8 +317,32 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
   },
+  emailHint: {
+    marginTop: -spacing.xs,
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
   linkTextBold: {
     color: colors.tealBright,
     fontWeight: '700',
   },
 });
+
+/** Can this address's domain receive mail? True on any doubt. */
+async function emailDomainTakesMail(email: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${API_BASE_URL}/api/email/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const json = await res.json();
+    return json?.reason !== 'no_mail_server';
+  } catch {
+    return true;
+  }
+}

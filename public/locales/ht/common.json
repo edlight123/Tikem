@@ -2074,5 +2074,10 @@
       "no_organizer": "Evènman sa a pa gen òganizatè pou kontakte.",
       "message_too_long": "Pa depase 1000 karaktè."
     }
+  },
+  "email_check": {
+    "did_you_mean": "Èske ou vle di {{email}}?",
+    "use_it": "Pran l",
+    "no_mail_server": "Adrès sa a pa ka resevwa imèl. Verifye pati ki apre @ la."
   }
 }
