@@ -77,6 +77,7 @@ import { backendFetch, backendJson } from '../../lib/api/backend';
 import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
+import MirrorBallDropzone from '../../components/organizer/MirrorBallDropzone';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
@@ -1918,37 +1919,17 @@ export default function CreateEventFlowRefactored() {
                 </View>
               </TouchableOpacity>
             ) : (
-              // Empty poster frame (Stitch screen 251b4979d1f14176a9684c2812beb687):
-              // an unbordered 4:5 slab, the exact crop the event page and every
-              // poster card use, with a poster-caption block anchored bottom-left.
-              // One primary action (upload straight from the phone) and a quiet
-              // text link to the curated flyer library.
-              <View style={[styles.flyerHero, styles.flyerHeroEmpty]}>
-                <View style={styles.flyerContent}>
-                  {/* One short line, not an eyebrow + headline + paragraph
-                      (TestFlight: "why all this text / not premium"). The 4:5
-                      crop is handled on upload, so the hint is gone too. */}
-                  <Text style={styles.flyerTitle}>{t('organizerCreateEventFlow.canvas.flyerTitle')}</Text>
-                  <TouchableOpacity
-                    style={styles.uploadPill}
-                    activeOpacity={0.85}
-                    onPress={pickImage}
-                    accessibilityRole="button"
-                  >
-                    <Ionicons name="arrow-up" size={18} color="#000000" />
-                    <Text style={styles.uploadPillText}>{t('organizerCreateEventFlow.canvas.uploadFlyer')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.libraryLink}
-                    activeOpacity={0.6}
-                    onPress={() => setShowFlyerLibrary(true)}
-                    accessibilityRole="button"
-                    hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.libraryLinkText}>{t('organizerCreateEventFlow.canvas.browseLibrary')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              // Empty poster frame: a turning mirror ball the poster goes into,
+              // one light caption, a quiet library link. The whole 4:5 slab is
+              // the upload target (TestFlight: "make it look almost like a
+              // disco ball … the words are too heavy and big").
+              <MirrorBallDropzone
+                style={[styles.flyerHero, styles.flyerHeroEmpty]}
+                label={t('organizerCreateEventFlow.canvas.flyerTitle')}
+                linkLabel={t('organizerCreateEventFlow.canvas.browseLibrary')}
+                onUpload={pickImage}
+                onBrowse={() => setShowFlyerLibrary(true)}
+              />
             )}
 
             {/* Core inline fields */}
@@ -2904,6 +2885,7 @@ export default function CreateEventFlowRefactored() {
                 label={isEditMode ? t('organizerCreateEventFlow.updateEvent') : t('organizerCreateEventFlow.createEvent')}
                 onPress={handleSave}
                 disabled={saving}
+                compact
                 style={styles.footerCta}
               />
             </View>
@@ -3219,69 +3201,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Empty frame: one quiet fill step above the canvas, no border, no grid, no
-  // icon. Content sits at the bottom like a poster caption.
+  // Empty frame: one quiet fill step above the canvas (MirrorBallDropzone).
   flyerHeroEmpty: {
     backgroundColor: colors.surface,
-    alignItems: 'stretch',
-    justifyContent: 'flex-end',
-  },
-  flyerContent: {
-    alignSelf: 'stretch',
-    alignItems: 'flex-start',
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-  },
-  // The one teal touch on the step.
-  flyerEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.primary,
-    marginBottom: 10,
-  },
-  flyerTitle: {
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    color: colors.text,
-  },
-  flyerSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    marginTop: 8,
-  },
-  // Full-width solid-white primary, 56pt (WhitePillCTA geometry).
-  uploadPill: {
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 56,
-    paddingHorizontal: 22,
-    borderRadius: radius.button,
-    backgroundColor: colors.white,
-    marginTop: 20,
-  },
-  uploadPillText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  // Quiet secondary: text only, no box.
-  libraryLink: {
-    alignSelf: 'center',
-    paddingVertical: 12,
-    marginTop: 4,
-  },
-  libraryLinkText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
   },
   flyerOverlay: {
     position: 'absolute',
@@ -3756,26 +3678,28 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    gap: 10,
     // No hairline seam above the sticky bar: the canvas colour already
     // separates it from the scrolling form (fill, not a hairline).
     backgroundColor: colors.background,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    // The SafeAreaView already clears the home indicator; extra iOS padding
+    // on top of it floated the bar (TestFlight: "too high and big").
+    paddingBottom: Platform.OS === 'ios' ? 4 : 12,
   },
-  // Filled secondary, 56pt to pair with the 56pt white primary. A dark-grey
-  // fill, never a hairline outline (TestFlight: "doesn't follow the
-  // platform's style"); the white CTA still wins on contrast.
+  // Filled secondary, 46pt to pair with the compact white primary. A dark-grey
+  // fill, never a hairline outline; the white CTA still wins on contrast.
   backButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 56,
-    paddingHorizontal: 28,
+    height: 46,
+    paddingHorizontal: 22,
     borderRadius: radius.button,
     backgroundColor: colors.surfaceRaised,
   },
   backButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
