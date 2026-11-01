@@ -50,7 +50,7 @@ export default function ReactivatePage() {
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/50" />
         ) : (
           <>
-            <h1 className="font-display lowercase !text-[30px] !leading-none text-white mb-4">{t('reactivate.title')}</h1>
+            <h1 className="font-display italic lowercase !text-[30px] !leading-none text-white mb-4">{t('reactivate.title')}</h1>
             <p className="text-white/70 mb-3">{t('reactivate.body')}</p>
             <p className="text-white/70 mb-6">
               {eventCount > 0 ? t('reactivate.events_count', { count: eventCount }) : t('reactivate.events_none')}

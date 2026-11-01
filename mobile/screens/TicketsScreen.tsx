@@ -693,9 +693,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 20,
   },
   headerTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 32,
-    fontWeight: '700',
     letterSpacing: 0,
     color: colors.text,
   },

@@ -47,7 +47,7 @@ import { useAppMode } from '../contexts/AppModeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { db, isDemoMode } from '../config/firebase';
-import { colors as T, radius } from '../theme/tokens';
+import { colors as T, radius, font } from '../theme/tokens';
 import { getStaffEventIds } from '../lib/staffAssignments';
 import { countAttended, liveTicketEventIds, sortPostersNewestFirst, toDateOrNull } from '../lib/profileStats';
 import { getVerificationRequest, type VerificationRequest } from '../lib/verification';
@@ -1000,7 +1000,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     nameText: {
       flexShrink: 1,
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 36,
       lineHeight: 40,
       letterSpacing: -0.4,

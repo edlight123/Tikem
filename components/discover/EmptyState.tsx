@@ -22,7 +22,7 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
         <div className="mx-auto mb-5 grid h-14 w-14 place-items-center text-white/45">
           <MapPin className="h-9 w-9" strokeWidth={1.5} />
         </div>
-        <h3 className="mb-3 font-display lowercase !text-[22px] !leading-tight text-white">
+        <h3 className="mb-3 font-display italic lowercase !text-[22px] !leading-tight text-white">
           No events in {countryName} yet
         </h3>
         <p className="text-white/55 mb-8 max-w-md mx-auto px-4">
@@ -61,7 +61,7 @@ export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyState
 
   return (
     <div className="rounded-3xl bg-white/[0.055] px-6 py-20 text-center">
-      <h3 className="mb-3 font-display lowercase !text-[22px] !leading-tight text-white">
+      <h3 className="mb-3 font-display italic lowercase !text-[22px] !leading-tight text-white">
         {t('events.no_events')}
       </h3>
       <p className="text-white/55 mb-8">{t('common.try_different_search')}</p>

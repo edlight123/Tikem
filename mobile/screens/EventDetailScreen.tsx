@@ -37,7 +37,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
-import { colors as T, radius, withAlpha } from '../theme/tokens';
+import { colors as T, radius, withAlpha, font } from '../theme/tokens';
 import { safeFormatForLanguage } from '../lib/dates';
 import { isValidDate } from '../lib/dates';
 import WhitePillCTA from '../components/WhitePillCTA';
@@ -1579,7 +1579,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingTop: 9,
   },
   title: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 34,
     color: colors.text,
     lineHeight: 38,

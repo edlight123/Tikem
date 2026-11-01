@@ -65,7 +65,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
           {/* Center title for image-less posters */}
           {!hasImage && (
             <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-5 text-center">
-              <h3 className="font-display text-[24px] leading-[0.98] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.45)] line-clamp-4">
+              <h3 className="font-display italic text-[24px] leading-[0.98] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.45)] line-clamp-4">
                 {event.title}
               </h3>
             </div>
@@ -74,7 +74,7 @@ function ScanEventCard({ event, badge }: { event: any; badge?: { label: string; 
           {/* Bottom: title + meta */}
           <div className="relative z-10 space-y-1.5">
             {hasImage && (
-              <h3 className="font-display text-[22px] leading-[1.02] text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)] line-clamp-2">
+              <h3 className="font-display italic text-[22px] leading-[1.02] text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)] line-clamp-2">
                 {event.title}
               </h3>
             )}

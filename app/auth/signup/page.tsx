@@ -159,7 +159,7 @@ export default function SignupPage() {
             <TikemWordmark italic className="text-[46px] text-white" />
           </Link>
           <p className="mt-1.5 text-sm text-white/55">{BRAND.tagline}</p>
-          <h1 className="mt-6 font-display text-2xl md:text-3xl text-white">
+          <h1 className="mt-6 font-display italic text-2xl md:text-3xl text-white">
             {t('signup.title')}
           </h1>
         </div>

@@ -303,7 +303,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                 `.mobile-typography h2` (0,1,1) collapsed it to 18px on a phone. */}
             <h2
               id="transfer-modal-title"
-              className="font-display lowercase !text-2xl !leading-[1.04] text-white mb-4"
+              className="font-display italic lowercase !text-2xl !leading-[1.04] text-white mb-4"
             >
               {t('detail.transfer_title')}
             </h2>

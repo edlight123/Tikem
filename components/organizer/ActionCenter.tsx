@@ -26,7 +26,7 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
         <div className="flex items-start gap-4">
           <ShieldCheck className="w-6 h-6 shrink-0 text-emerald-300" />
           <div>
-            <h3 className="font-display text-xl text-white mb-1">{t('organizer.action_center.all_caught_up')}</h3>
+            <h3 className="font-display italic text-xl text-white mb-1">{t('organizer.action_center.all_caught_up')}</h3>
             <p className="text-sm text-emerald-300">{t('organizer.action_center.no_action_items')}</p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
           <AlertCircle className="w-5 h-5 text-red-300" />
         </div>
         <div>
-          <h3 className="font-display text-xl text-white">{t('organizer.action_center.title')}</h3>
+          <h3 className="font-display italic text-xl text-white">{t('organizer.action_center.title')}</h3>
           <p className="text-sm text-white/60">
             {alerts.length} {alerts.length !== 1 ? t('organizer.action_center.action_items_plural') : t('organizer.action_center.action_items')}
           </p>

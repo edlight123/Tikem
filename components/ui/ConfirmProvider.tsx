@@ -89,7 +89,7 @@ function ConsoleConfirmDialog({
           aria-describedby={description ? descId : undefined}
           className="relative w-full max-w-sm rounded-2xl bg-[#1c1c1c] p-6 shadow-2xl"
         >
-          <h2 id={titleId} className="font-display text-[26px] lowercase leading-tight text-white">
+          <h2 id={titleId} className="font-display italic text-[26px] lowercase leading-tight text-white">
             {title}
           </h2>
           {description && (

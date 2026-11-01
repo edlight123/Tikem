@@ -48,7 +48,7 @@ export default async function AccountDeletePage() {
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
         <p className="eyebrow text-white/45">{p('eyebrow', 'Your data')}</p>
         {/* `!` beats the legacy `.mobile-typography h1` rule on a phone. */}
-        <h1 className="mt-2 font-display lowercase !text-[clamp(30px,6vw,44px)] !leading-[1.04] text-white">
+        <h1 className="mt-2 font-display italic lowercase !text-[clamp(30px,6vw,44px)] !leading-[1.04] text-white">
           {p('title', 'Delete your Tikèm account')}
         </h1>
         <p className="mt-4 !text-[15px] !leading-relaxed text-white/65">{p('lede', '')}</p>

@@ -28,7 +28,7 @@ export default function CategoryPageContent({ category, events }: CategoryPageCo
       {/* Header */}
       <header className="mb-7 md:mb-9">
         <p className="eyebrow text-brand-400">{t('events.eyebrow_browse')}</p>
-        <h1 className="mt-1.5 font-display text-[clamp(28px,5vw,44px)] leading-[1.02] text-white">
+        <h1 className="mt-1.5 font-display italic text-[clamp(28px,5vw,44px)] leading-[1.02] text-white">
           {label}
         </h1>
         <p className="mt-1.5 text-sm text-white/55 sm:text-[15px]">
@@ -50,7 +50,7 @@ export default function CategoryPageContent({ category, events }: CategoryPageCo
           <div className="grid h-16 w-16 place-items-center rounded-2xl text-brand-400">
             <Inbox className="h-8 w-8" />
           </div>
-          <h3 className="mt-5 font-display text-2xl text-white">
+          <h3 className="mt-5 font-display italic text-2xl text-white">
             {t('events.no_category_events', { category: label })}
           </h3>
           <p className="mx-auto mt-2 max-w-md text-[15px] text-white/55">

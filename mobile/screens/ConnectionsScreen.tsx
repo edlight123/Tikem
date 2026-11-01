@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Users, Search, Phone, Inbox, Send, Share2, UserPlus } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import ConnectButton from '../components/ConnectButton';
@@ -581,9 +581,8 @@ const getStyles = (colors: any) =>
       padding: 2,
     },
     topTitle: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 34,
-      fontWeight: '700',
       letterSpacing: -0.5,
       color: colors.text,
     },

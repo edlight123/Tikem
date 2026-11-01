@@ -196,7 +196,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-                    <span className="font-display text-[clamp(24px,3vw,38px)] leading-[1.0] text-white/90">
+                    <span className="font-display italic text-[clamp(24px,3vw,38px)] leading-[1.0] text-white/90">
                       {event.title}
                     </span>
                   </div>

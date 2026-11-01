@@ -28,8 +28,9 @@ import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 import ConnectButton from '../components/ConnectButton';
+import SectionHeader from '../components/SectionHeader';
 import PosterEventCard from '../components/PosterEventCard';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { OrganizerProfileSkeleton } from '../components/Skeleton';
@@ -675,17 +676,22 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* Upcoming Events */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('organizerProfile.upcomingTitle')}</Text>
+            {/* The shared editorial header (lowercase serif), like every other
+                section in the app and on the website. */}
+            <SectionHeader
+              title={t('organizerProfile.upcomingTitle')}
+              subtitle={
+                upcomingEvents.length > 0
+                  ? `${upcomingEvents.length} ${t(
+                      upcomingEvents.length === 1
+                        ? 'organizerProfile.upcomingCountSingular'
+                        : 'organizerProfile.upcomingCountPlural'
+                    )}`
+                  : undefined
+              }
+            />
             {upcomingEvents.length > 0 ? (
               <>
-                <Text style={styles.sectionSubtitle}>
-                  {upcomingEvents.length}{' '}
-                  {t(
-                    upcomingEvents.length === 1
-                      ? 'organizerProfile.upcomingCountSingular'
-                      : 'organizerProfile.upcomingCountPlural'
-                  )}
-                </Text>
                 <View style={styles.eventsGrid}>
                   {upcomingEvents.map((event) => renderEventCard(event))}
                 </View>
@@ -708,15 +714,14 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               omitted (header included) when the organizer has no history. */}
           {pastEvents.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('organizerProfile.pastTitle')}</Text>
-              <Text style={styles.sectionSubtitle}>
-                {pastEvents.length}{' '}
-                {t(
+              <SectionHeader
+                title={t('organizerProfile.pastTitle')}
+                subtitle={`${pastEvents.length} ${t(
                   pastEvents.length === 1
                     ? 'organizerProfile.pastCountSingular'
                     : 'organizerProfile.pastCountPlural'
-                )}
-              </Text>
+                )}`}
+              />
 
               <View style={styles.eventsGrid}>
                 {visiblePastEvents.map((event) => renderPastEventCard(event))}
@@ -740,7 +745,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('organizerProfile.aboutTitle')}</Text>
+            <SectionHeader title={t('organizerProfile.aboutTitle')} />
             
             {!!aboutText && <Text style={styles.aboutText}>{aboutText}</Text>}
             {personHidden && !isSelf && (
@@ -781,7 +786,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           {/* Social & Contact Section */}
           {socialLinks.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('organizerProfile.connectTitle')}</Text>
+              <SectionHeader title={t('organizerProfile.connectTitle')} />
               <View style={styles.socialLinks}>
                 {socialLinks.map((link) => (
                   <TouchableOpacity
@@ -951,10 +956,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.primary,
   },
   organizerName: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    // Instrument Serif ships one weight; a bold request only fakes it.
+    fontFamily: font.serif,
     fontSize: 30,
     lineHeight: 36,
-    fontWeight: '700',
     letterSpacing: -0.5,
     color: colors.white,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
@@ -1043,19 +1048,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Sections
   section: {
     marginBottom: 28,
-  },
-  sectionTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
-    fontSize: 26,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-    color: colors.text,
-    marginBottom: 6,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 16,
   },
 
   // Events

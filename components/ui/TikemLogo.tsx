@@ -57,7 +57,7 @@ export function TikemMark({
       style={{ width: size, height: size, borderRadius: size * 0.24 }}
     >
       <span
-        className="font-display font-bold leading-none text-[#F8F5EE]"
+        className="font-display italic font-bold leading-none text-[#F8F5EE]"
         style={{ fontSize: size * 0.62 }}
       >
         T

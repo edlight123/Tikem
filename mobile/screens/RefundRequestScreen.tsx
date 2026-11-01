@@ -18,7 +18,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { RADIUS } from '../config/brand';
 import { backendFetch } from '../lib/api/backend';
 import { formatCurrency } from '../lib/currency';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { Skeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
@@ -356,9 +356,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     padding: 8,
   },
   headerTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 20,
-    fontWeight: '600',
     letterSpacing: 0,
     color: colors.text,
   },

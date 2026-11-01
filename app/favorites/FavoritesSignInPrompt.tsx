@@ -9,7 +9,7 @@ export default function FavoritesSignInPrompt() {
   return (
     <div className="flex items-center justify-center py-16">
       <div className="text-center">
-        <h2 className="font-display lowercase !text-[26px] !leading-tight text-white mb-5">
+        <h2 className="font-display italic lowercase !text-[26px] !leading-tight text-white mb-5">
           {t('sign_in.title')}
         </h2>
         <Link

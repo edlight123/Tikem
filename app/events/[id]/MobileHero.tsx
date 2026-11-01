@@ -103,7 +103,7 @@ export default function MobileHero({
           ) : (
             <div className="poster-vignette absolute inset-0" style={{ backgroundImage: posterTheme.bg }}>
               <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-                <span className="font-display text-[28px] leading-[0.98] text-white/90 drop-shadow line-clamp-3">
+                <span className="font-display italic text-[28px] leading-[0.98] text-white/90 drop-shadow line-clamp-3">
                   {title}
                 </span>
               </div>

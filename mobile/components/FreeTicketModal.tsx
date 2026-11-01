@@ -11,7 +11,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
-import { colors as T, radius, spacing } from '../theme/tokens';
+import { colors as T, radius, spacing, font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
 import type { Attribution } from '../lib/attribution';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../lib/ticketPricing';
@@ -532,7 +532,7 @@ const getStyles = (_colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     flex: 1,
   },
   headerTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 26,
     lineHeight: 30,
     color: T.textPrimary,
@@ -606,7 +606,7 @@ const getStyles = (_colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     marginTop: spacing.lg,
   },
   plusOneTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 20,
     color: T.textPrimary,
   },

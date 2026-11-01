@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Lock } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchEventSocial } from '../lib/api/social';
-import { colors as T, radius } from '../theme/tokens';
+import { colors as T, radius, font } from '../theme/tokens';
 import { useI18n } from '../contexts/I18nContext';
 import SectionHeader from './SectionHeader';
 import type { GuestlistVisibility } from '../lib/guestlistVisibility';
@@ -260,7 +260,7 @@ const getStyles = (colors: any) =>
       fontWeight: '700',
     },
     headline: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 38,
       lineHeight: 44,
       color: colors.text,

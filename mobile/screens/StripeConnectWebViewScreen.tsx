@@ -9,7 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { useAppAlert } from '../components/AppAlert';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 
 type Params = {
   url: string
@@ -366,7 +366,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 24,
   },
   failureTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 34,
     lineHeight: 38,
     color: colors.text,

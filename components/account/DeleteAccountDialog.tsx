@@ -158,7 +158,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
           <AlertTriangle className="h-6 w-6" aria-hidden />
         </div>
         {/* h3 + `!`: .mobile-typography would drop this to text-base on a phone. */}
-        <h3 id="delete-account-title" className="font-display !text-[24px] !leading-tight text-white">
+        <h3 id="delete-account-title" className="font-display italic !text-[24px] !leading-tight text-white">
           {title}
         </h3>
 

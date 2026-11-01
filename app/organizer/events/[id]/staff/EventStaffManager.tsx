@@ -519,7 +519,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             onClick={(e) => e.stopPropagation()}
             className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6"
           >
-            <h3 id="invite-staff-title" className="font-display text-xl text-white mb-4">{tx('event_staff.invite_staff')}</h3>
+            <h3 id="invite-staff-title" className="font-display italic text-xl text-white mb-4">{tx('event_staff.invite_staff')}</h3>
 
             <div className="space-y-4">
               <div>
@@ -622,7 +622,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
             onClick={(e) => e.stopPropagation()}
             className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6"
           >
-            <h3 id="staff-confirm-title" className="font-display text-xl text-white mb-2">{pendingConfirm.title}</h3>
+            <h3 id="staff-confirm-title" className="font-display italic text-xl text-white mb-2">{pendingConfirm.title}</h3>
             <p className="text-sm text-white/70 mb-6">{pendingConfirm.message}</p>
             <div className="flex gap-3">
               <button

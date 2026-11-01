@@ -11,7 +11,7 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { radius } from '../../theme/tokens';
+import { radius, font } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -250,9 +250,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   headerTitle: {
     flex: 1,
     fontSize: 22,
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     letterSpacing: 0,
-    fontWeight: 'bold',
     color: colors.text,
     // No marginLeft: OverlayHeader's row already puts a 12pt gap between the
     // close button and the title.

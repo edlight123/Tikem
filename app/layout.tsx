@@ -38,6 +38,9 @@ const inter = Inter({
 const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
   weight: '400',
+  // Headings are set in the italic (the editorial voice, same as mobile). Without
+  // the real italic cut the browser slants the roman instead.
+  style: ['normal', 'italic'],
   variable: '--font-serif-display',
   display: 'swap',
 })

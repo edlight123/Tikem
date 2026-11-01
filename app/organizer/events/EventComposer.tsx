@@ -2162,7 +2162,7 @@ export default function EventComposer({
             placeholder={t('composer.titlePlaceholder', { defaultValue: 'My event name' })}
             aria-label={tx('event_composer.event_name_required')}
             aria-required="true"
-            className="w-full bg-transparent font-display text-[clamp(34px,6vw,52px)] leading-[1.04] tracking-tight text-white placeholder:text-white/25 focus:outline-none"
+            className="w-full bg-transparent font-display italic text-[clamp(34px,6vw,52px)] leading-[1.04] tracking-tight text-white placeholder:text-white/25 focus:outline-none"
           />
           {titleInvalid && (
             <p className="mt-1 text-sm text-red-300">

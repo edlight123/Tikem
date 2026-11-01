@@ -36,7 +36,7 @@ export default function EmptyState({
       </div>
 
       {/* `!text-[22px]`: `.mobile-typography h3` outranks a plain size utility. */}
-      <h3 className="font-display lowercase !text-[22px] !leading-tight text-white">{title}</h3>
+      <h3 className="font-display italic lowercase !text-[22px] !leading-tight text-white">{title}</h3>
 
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/55">{description}</p>
 

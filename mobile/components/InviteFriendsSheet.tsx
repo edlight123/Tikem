@@ -20,7 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocialFlags } from '../lib/socialFlags';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 import { fetchInviteLink, fetchInvitePicker, sendInvites, type InvitePickerFriend } from '../lib/api/invites';
 import { sendConnectionRequest } from '../lib/api/social';
 import {
@@ -672,7 +672,7 @@ const getStyles = (colors: any) =>
     },
     header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     // Editorial sheet title, lowercased at the call site (house voice).
-    title: { fontFamily: 'InstrumentSerif_400Regular', fontSize: 30, lineHeight: 34, color: colors.text },
+    title: { fontFamily: font.serif, fontSize: 30, lineHeight: 34, color: colors.text },
     close: {
       width: 32,
       height: 32,

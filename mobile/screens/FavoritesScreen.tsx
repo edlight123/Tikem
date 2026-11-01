@@ -25,6 +25,7 @@ import { useAppAlert } from '../components/AppAlert';
 import { shareEvent } from '../lib/share';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 
+import { font } from '../theme/tokens';
 const { width } = Dimensions.get('window');
 const FAV_COLUMN_WIDTH = (width - 32 - 12) / 2;
 
@@ -260,9 +261,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 8,
   },
   headerTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 40,
-    fontWeight: '700',
     letterSpacing: -0.5,
     color: colors.text,
   },

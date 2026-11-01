@@ -50,7 +50,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
         {/* No wordmark here — the site navbar above already carries the logo. */}
         <div className="relative flex h-full flex-col justify-end p-10">
           <div>
-            <h2 className="max-w-sm font-display text-3xl leading-tight text-white">
+            <h2 className="max-w-sm font-display italic text-3xl leading-tight text-white">
               Create your world on tikèm.
             </h2>
             <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-white/55">
@@ -63,7 +63,7 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
       {/* Right — clean form */}
       <div className="flex items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-md">
-          <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.05] text-white">
+          <h1 className="font-display italic text-[clamp(28px,4vw,40px)] leading-[1.05] text-white">
             {t('upgrade_prompt.create_your_organization')}
           </h1>
           <p className="mt-2 text-[15px] text-white/55">
