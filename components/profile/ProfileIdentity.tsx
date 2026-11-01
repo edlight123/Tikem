@@ -152,7 +152,7 @@ export function ProfileIdentity({ profile, stats, onEdit, onOpenFollowing }: Pro
           <div className="flex items-start gap-2">
             {/* `!` on size and leading: `.mobile-typography h1` would shrink the
                 name to 20px on a phone and reset its leading. */}
-            <h1 className="min-w-0 break-words font-display !text-[30px] !leading-[1.02] text-white sm:!text-[44px]">
+            <h1 className="min-w-0 break-words font-display italic !text-[30px] !leading-[1.02] text-white sm:!text-[44px]">
               {name}
             </h1>
             {isVerified ? (

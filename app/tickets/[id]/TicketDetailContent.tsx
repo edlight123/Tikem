@@ -150,7 +150,7 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
               </div>
             ) : (
               <div className="relative w-full h-40 sm:h-48 bg-[#1c1c1c] flex items-center justify-center">
-                <span className="font-display text-5xl text-[#F8F5EE]">T</span>
+                <span className="font-display italic text-5xl text-[#F8F5EE]">T</span>
               </div>
             )}
             
@@ -256,7 +256,7 @@ export default function TicketDetailContent({ ticket, event, user, pendingTransf
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h3 className="font-display lowercase !text-[22px] !leading-none text-white mb-1.5">
+                <h3 className="font-display italic lowercase !text-[22px] !leading-none text-white mb-1.5">
                   {t('detail.how_to_use_title')}
                 </h3>
                 <p className="text-xs sm:text-sm text-white/60">{t('detail.how_to_use_subtitle')}</p>

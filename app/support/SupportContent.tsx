@@ -220,7 +220,7 @@ export default function SupportContent() {
               </div>
               {/* `!text-2xl`: `.mobile-typography h3` (0,1,1) was collapsing this
                   to 16px on every phone. */}
-              <h3 className="font-display lowercase !text-2xl !leading-[1.04] text-white mb-2">
+              <h3 className="font-display italic lowercase !text-2xl !leading-[1.04] text-white mb-2">
                 {t('search.no_results')}
               </h3>
               <p className="text-white/65">

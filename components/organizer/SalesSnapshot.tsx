@@ -76,7 +76,7 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
       {/* Header with Toggle */}
       <div className="mb-3.5 flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h3 className="font-display text-lg leading-none text-white sm:text-xl">{t('sales_snapshot.title')}</h3>
+          <h3 className="font-display italic text-lg leading-none text-white sm:text-xl">{t('sales_snapshot.title')}</h3>
           <span className="truncate text-xs text-white/40">{getRangeLabel(range)}</span>
         </div>
         {/*

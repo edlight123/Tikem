@@ -48,7 +48,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
             <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
             </div>
-            <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Not Found</h1>
+            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Not Found</h1>
             <p className="text-[13px] sm:text-base text-white/60 mb-4 sm:mb-6">
               This transfer link is invalid or has expired.
             </p>
@@ -95,7 +95,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
             <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               <Clock className="h-8 w-8 text-amber-300" strokeWidth={1.5} />
             </div>
-            <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Expired</h1>
+            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Expired</h1>
             <p className="text-[13px] sm:text-base text-white/60 mb-4 sm:mb-6">
               This transfer link expired on {new Date(transfer.expires_at).toLocaleString()}.
               <br />
@@ -128,7 +128,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
                 <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
               )}
             </div>
-            <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">
+            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">
               Transfer {transfer.status === 'accepted' ? 'Completed' : 'Cancelled'}
             </h1>
             <p className="text-[13px] sm:text-base text-white/60 mb-4 sm:mb-6">
@@ -159,7 +159,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
             <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
               <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
             </div>
-            <h1 className="font-display lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Ticket Not Found</h1>
+            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Ticket Not Found</h1>
             <p className="text-[13px] sm:text-base text-white/60">
               The ticket associated with this transfer no longer exists.
             </p>

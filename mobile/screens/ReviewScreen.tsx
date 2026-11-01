@@ -17,7 +17,7 @@ import { safeFormatForLanguage } from '../lib/dates';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { RADIUS } from '../config/brand';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 import { backendFetch } from '../lib/api/backend';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { ReviewSkeleton } from '../components/Skeleton';
@@ -297,9 +297,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     padding: 8,
   },
   headerTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 20,
-    fontWeight: '600',
     letterSpacing: 0,
     color: colors.text,
   },

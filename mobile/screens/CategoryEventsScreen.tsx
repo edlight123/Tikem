@@ -21,7 +21,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
 import { artForWorld, heroArtForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
-import { withAlpha } from '../theme/tokens';
+import { withAlpha, font } from '../theme/tokens';
 import { eventMatchesNationalDay, nationalDayName, resolveNationalDays } from '../lib/nationalDays';
 import { nationalDayArt } from '../lib/nationalDaysRemote';
 import WhenPickerSheet from '../components/WhenPickerSheet';
@@ -478,7 +478,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     // posh sets the name inside soft parentheses — quieter than the name.
     heroParen: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 32,
       color: 'rgba(255,255,255,0.65)',
     },

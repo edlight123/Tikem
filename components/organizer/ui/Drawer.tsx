@@ -78,7 +78,7 @@ export function Drawer({ open, onClose, title, size = 'md', children, footer }: 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           {title && (
-            <h2 id={titleId} className="font-display text-lg text-white">
+            <h2 id={titleId} className="font-display italic text-lg text-white">
               {title}
             </h2>
           )}

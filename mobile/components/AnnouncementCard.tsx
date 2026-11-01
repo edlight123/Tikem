@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyl
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 
 export interface AnnouncementAction {
   label: string;
@@ -107,7 +107,7 @@ const getStyles = (colors: any) =>
       color: colors.textSecondary,
     },
     title: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 28,
       lineHeight: 32,
       color: colors.text,

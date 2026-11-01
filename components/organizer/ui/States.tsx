@@ -33,7 +33,7 @@ export function OrgEmptyState({
           <Icon className="h-7 w-7" />
         </div>
       )}
-      <h3 className="font-display text-xl text-white">{title}</h3>
+      <h3 className="font-display italic text-xl text-white">{title}</h3>
       {description && (
         <p className="mx-auto mt-2 max-w-sm text-sm text-white/50">{description}</p>
       )}
@@ -66,7 +66,7 @@ export function OrgErrorState({
       <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl text-red-400">
         <AlertCircle className="h-7 w-7" />
       </div>
-      <h3 className="font-display text-xl text-white">{title ?? <T k="server_bits.something_went_wrong" />}</h3>
+      <h3 className="font-display italic text-xl text-white">{title ?? <T k="server_bits.something_went_wrong" />}</h3>
       {description && (
         <p className="mx-auto mt-2 max-w-sm text-sm text-white/50">{description}</p>
       )}

@@ -95,7 +95,7 @@ export function ConfirmationDialog({
           />
         </div>
 
-        <h2 id={titleId} className="font-display text-lg text-white">
+        <h2 id={titleId} className="font-display italic text-lg text-white">
           {title}
         </h2>
         {description && (

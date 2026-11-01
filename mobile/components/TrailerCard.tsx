@@ -24,7 +24,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { parseVideoEmbed } from '../lib/videoEmbed';
 import { useTrailerAutoplayAllowed } from '../lib/songAutoplay';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 
 function frameHtml(src: string): string {
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -115,7 +115,7 @@ const getStyles = (colors: any) =>
       gap: 8,
     },
     captionTitle: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 20,
       color: '#FFFFFF',
       textTransform: 'lowercase',

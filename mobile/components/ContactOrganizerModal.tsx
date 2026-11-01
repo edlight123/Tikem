@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
-import { radius, spacing } from '../theme/tokens';
+import { radius, spacing, font } from '../theme/tokens';
 
 /** Mirrors the server's TOPICS union — anything else is rejected by the route. */
 const TOPICS = ['event', 'ticket', 'other'] as const;
@@ -257,7 +257,7 @@ const getStyles = (colors: any) =>
     },
     // Editorial sheet title, lowercased at the call site (house voice).
     title: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 30,
       lineHeight: 34,
       color: colors.text,

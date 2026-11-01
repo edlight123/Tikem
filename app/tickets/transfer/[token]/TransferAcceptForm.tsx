@@ -94,7 +94,7 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
     <div className="bg-[#141414] rounded-xl sm:rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="text-white p-4 pb-0 sm:p-6 sm:pb-0">
-        <h1 className="flex items-center gap-2.5 font-display lowercase !text-[26px] sm:!text-[30px] !leading-none mb-2">
+        <h1 className="flex items-center gap-2.5 font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none mb-2">
           <Ticket className="h-6 w-6 shrink-0 text-white/60" strokeWidth={1.5} aria-hidden />
           {t('transfer.title', { defaultValue: 'Ticket Transfer' })}
         </h1>

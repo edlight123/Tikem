@@ -11,7 +11,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { X, Ticket, Share2 } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
-import { radius, spacing } from '../theme/tokens';
+import { radius, spacing, font } from '../theme/tokens';
 import { safeFormatForLanguage } from '../lib/dates';
 import { shareEvent } from '../lib/share';
 import FollowButton from './FollowButton';
@@ -196,7 +196,7 @@ const getStyles = (colors: any) =>
       marginBottom: spacing.lg,
     },
     headline: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 40,
       lineHeight: 44,
       color: colors.text,

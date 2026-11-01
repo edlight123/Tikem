@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ArrowRight } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
-import { colors as T, type as TYPE } from '../theme/tokens';
+import { colors as T, type as TYPE, font } from '../theme/tokens';
 
 interface SectionHeaderProps {
   title: string;
@@ -75,7 +75,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     title: {
       ...TYPE.sectionEyebrow,
-      fontFamily: 'InstrumentSerif_400Regular',
+      // Italic serif, as on the website. Instrument Serif has one weight, so
+      // the eyebrow's 600 is reset: a bold request only fakes it.
+      fontFamily: font.serif,
+      fontWeight: '400',
       fontSize: 22,
       letterSpacing: 0,
       color: colors.text,

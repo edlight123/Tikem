@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { radius, spacing } from '../../theme/tokens';
+import { radius, spacing, font } from '../../theme/tokens';
 
 interface FormSheetProps {
   visible: boolean;
@@ -139,7 +139,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: spacing.md,
       marginBottom: 4,
     },
-    title: { flex: 1, fontFamily: 'InstrumentSerif_400Regular', fontSize: 26, color: colors.text },
+    title: { flex: 1, fontFamily: font.serif, fontSize: 26, color: colors.text },
     closeBtn: {
       width: 36,
       height: 36,

@@ -197,7 +197,7 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
           >
             <h2
               id="refund-request-title"
-              className="font-display lowercase !text-2xl !leading-[1.04] text-white mb-5"
+              className="font-display italic lowercase !text-2xl !leading-[1.04] text-white mb-5"
             >
               {t('refund_request.title')}
             </h2>

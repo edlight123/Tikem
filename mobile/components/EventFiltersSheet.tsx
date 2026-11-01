@@ -30,7 +30,7 @@ import {
   EventTypeFilter
 } from '../types/filters';
 import { useTheme } from '../contexts/ThemeContext';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 
 // Every filter chip / segment is visually 30pt tall (see getStyles) so the rows
 // read as compact. hitSlop grows the effective touch target back to the 44pt
@@ -480,7 +480,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 8,
   },
   headerTitle: {
-    fontFamily: 'InstrumentSerif_400Regular',
+    fontFamily: font.serif,
     fontSize: 30,
     color: colors.text,
     letterSpacing: 0.2,

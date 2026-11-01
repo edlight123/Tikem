@@ -94,7 +94,7 @@ export default function SupportRequestForm() {
             <div className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-brand-500/15">
               <Check className="h-6 w-6 text-brand-300" />
             </div>
-            <h2 className="font-display lowercase !text-[28px] !leading-none text-white mb-3">
+            <h2 className="font-display italic lowercase !text-[28px] !leading-none text-white mb-3">
               {t('request_form.success_title')}
             </h2>
             <p className="text-white/70 mb-6">{t('request_form.success_message', { email: status.email, reference: status.reference })}</p>

@@ -170,7 +170,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
           <div className="bg-[#1c1c1c] rounded-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="w-6 h-6 text-amber-300" />
-              <h3 className="font-display text-xl text-white">{t('danger_zone.deactivate_account_q')}</h3>
+              <h3 className="font-display italic text-xl text-white">{t('danger_zone.deactivate_account_q')}</h3>
             </div>
             {blockedEvents ? (
               <div className="mb-6">

@@ -206,7 +206,7 @@ export function MessagesCard() {
             >
               <Poster url={thread.event_poster} className="h-14 w-11" />
               <span className="min-w-0">
-                <span className="block truncate font-display !text-[18px] !leading-snug text-white">
+                <span className="block truncate font-display italic !text-[18px] !leading-snug text-white">
                   {thread.event_title}
                 </span>
                 <span className="mt-0.5 block truncate text-[13px] text-white/50">{organizerLabel}</span>
@@ -333,7 +333,7 @@ export function MessagesCard() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
                     <span
-                      className={`truncate font-display !text-[18px] !leading-snug ${th.unread ? 'text-white' : 'text-white/80'}`}
+                      className={`truncate font-display italic !text-[18px] !leading-snug ${th.unread ? 'text-white' : 'text-white/80'}`}
                     >
                       {th.event_title}
                     </span>

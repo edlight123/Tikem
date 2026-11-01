@@ -24,7 +24,7 @@ export default function TicketsError({
           </div>
         </div>
 
-        <h1 className="font-display lowercase !text-[26px] !leading-tight text-white mb-3">
+        <h1 className="font-display italic lowercase !text-[26px] !leading-tight text-white mb-3">
           We couldn&apos;t load your tickets
         </h1>
 

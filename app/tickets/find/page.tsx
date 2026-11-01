@@ -26,7 +26,7 @@ export default async function FindTicketsPage() {
       <Navbar user={null} isAdmin={false} />
 
       <main className="max-w-md mx-auto px-4 py-12 pb-mobile-nav md:pb-16">
-        <h1 className="font-display lowercase !text-[34px] !leading-none text-white">Find my tickets</h1>
+        <h1 className="font-display italic lowercase !text-[34px] !leading-none text-white">Find my tickets</h1>
         <p className="text-white/60 mt-2 leading-relaxed">
           {smsEnabled
             ? tServer(lang, 'find_tickets.intro_sms', "Bought without an account? Enter the email address or phone number you used at checkout and we'll send your ticket link straight back to it.")

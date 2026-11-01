@@ -221,7 +221,7 @@ export function FiltersModal({
               which earns it; the panel colour runs straight through. */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
             <div className="flex items-baseline gap-2.5">
-              <h2 id="filters-modal-title" className="font-display text-2xl leading-none text-white">{t('filters.filters')}</h2>
+              <h2 id="filters-modal-title" className="font-display italic text-2xl leading-none text-white">{t('filters.filters')}</h2>
               {activeCount > 0 && (
                 <span className="eyebrow text-[11px] text-brand-400">{activeCount} {t('filters.active')}</span>
               )}

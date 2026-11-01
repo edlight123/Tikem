@@ -165,7 +165,7 @@ export function FollowingCard({ onCountChange }: { onCountChange?: (delta: numbe
                     >
                       <OrganizerMark logoUrl={org.avatar} className="h-11 w-11 rounded" />
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate font-display !text-[18px] !leading-snug text-white group-hover:text-white/80">
+                        <span className="truncate font-display italic !text-[18px] !leading-snug text-white group-hover:text-white/80">
                           {name}
                         </span>
                         {org.isVerified ? (

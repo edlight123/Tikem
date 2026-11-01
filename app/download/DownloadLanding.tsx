@@ -34,8 +34,7 @@ export default function DownloadLanding({ appStoreUrl, playStoreUrl }: Props) {
         </div>
 
         <h1
-          className="text-5xl leading-tight text-white"
-          style={{ fontFamily: 'var(--font-serif-display), Georgia, serif' }}
+          className="font-display italic lowercase text-5xl leading-tight text-white"
         >
           Get Tikèm
         </h1>

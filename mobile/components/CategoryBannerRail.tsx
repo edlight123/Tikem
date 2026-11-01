@@ -7,7 +7,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { getCategoryLabel } from '../lib/categories';
 import { DISCOVER_CATEGORIES } from '../lib/categoryArt';
 import { NO_ART_FILL, tileArtForCategory } from '../lib/artLibrary';
-import { radius, withAlpha } from '../theme/tokens';
+import { radius, withAlpha, font } from '../theme/tokens';
 
 /**
  * "discover more" — posh-style category banners: a vertical stack of
@@ -76,7 +76,7 @@ export default function CategoryBannerRail({
 const getStyles = (colors: any) =>
   StyleSheet.create({
     title: {
-      fontFamily: 'InstrumentSerif_400Regular',
+      fontFamily: font.serif,
       fontSize: 22,
       color: colors.text,
     },

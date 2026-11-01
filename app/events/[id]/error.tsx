@@ -26,7 +26,7 @@ export default function EventDetailError({
           </div>
         </div>
         
-        <h1 className="font-display lowercase !text-[26px] !leading-tight text-white mb-3">
+        <h1 className="font-display italic lowercase !text-[26px] !leading-tight text-white mb-3">
           {t('checkout.error_page_title', { defaultValue: 'Oops! Something went wrong' })}
         </h1>
 

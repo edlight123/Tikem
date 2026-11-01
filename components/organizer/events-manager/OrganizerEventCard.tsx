@@ -104,7 +104,7 @@ export default function OrganizerEventCard({ event, showNeedsAttention = true }:
             className="object-cover"
           />
         ) : (
-          <span className="absolute inset-0 grid place-items-center font-display text-xl text-white/80">
+          <span className="absolute inset-0 grid place-items-center font-display italic text-xl text-white/80">
             {(event.title || '?').trim().charAt(0).toUpperCase()}
           </span>
         )}
