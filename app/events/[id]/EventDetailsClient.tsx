@@ -29,6 +29,7 @@ import { Shield } from 'lucide-react'
 import { formatInZone } from '@/lib/home/format'
 import { eventZone } from '@/lib/home/feed'
 import Image from 'next/image'
+import PosterImage from '@/components/ui/PosterImage'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { resolveEventPricing } from '@/lib/ticketPricing'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
@@ -186,12 +187,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 style={event.banner_image_url ? undefined : { backgroundImage: posterTheme.bg }}
               >
                 {event.banner_image_url ? (
-                  <Image
+                  <PosterImage
                     src={event.banner_image_url}
                     alt={event.title}
-                    fill
                     sizes="(max-width: 1024px) 320px, 340px"
-                    className="object-cover"
                     priority
                   />
                 ) : (

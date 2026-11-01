@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PosterImage from '../components/PosterImage';
 import OrgMark from '../components/OrgMark';
 import { 
   View, 
@@ -865,11 +866,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
               style={StyleSheet.absoluteFill}
             />
             {(event.banner_image_url || event.cover_image_url) && (
-              <ExpoImage
-                source={{ uri: event.banner_image_url || event.cover_image_url }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                cachePolicy="memory-disk"
+              <PosterImage
+                uri={(event.banner_image_url || event.cover_image_url)!}
+                frameRatio={4 / 5}
                 transition={120}
                 recyclingKey={event.id ? String(event.id) : undefined}
               />
