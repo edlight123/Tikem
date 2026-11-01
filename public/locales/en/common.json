@@ -1499,7 +1499,18 @@
       "haitiVerifyLater": "You can publish now. Verify your identity before you withdraw your earnings."
     },
     "guestPaidNoteHaiti": "Paid events in Haiti can go live right away. Verify your identity before you withdraw your earnings.",
-    "guestPaidNoteStripe": "Paid events in {{country}} need identity verification and a connected Stripe account before they go live. You can finish setting everything up first."
+    "guestPaidNoteStripe": "Paid events in {{country}} need identity verification and a connected Stripe account before they go live. You can finish setting everything up first.",
+    "posterTemplates": {
+      "title": "Make a poster",
+      "cta": "Or make one from a template",
+      "hint": "Your event's details, designed. Pick a layout, then a colour.",
+      "photo": "Photo",
+      "yourPhoto": "Your photo",
+      "colour": "Colour {{n}}",
+      "use": "Use this poster",
+      "failed": "Could not make the poster. Try again.",
+      "sampleTitle": "Your event"
+    }
   },
   "promoter": {
     "portal_eyebrow": "Promoter portal",

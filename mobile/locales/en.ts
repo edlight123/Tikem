@@ -2819,6 +2819,16 @@ export default {
     instagram: 'Follow Tikèm on Instagram',
     goToTickets: 'Go to my tickets',
   },
+  posterTemplates: {
+    title: 'Make a poster',
+    cta: 'Or make one from a template',
+    hint: "Your event's details, designed. Pick a layout, then a colour.",
+    photo: 'Photo',
+    colour: 'Colour {n}',
+    use: 'Use this poster',
+    failed: 'Could not make the poster. Try again.',
+    sampleTitle: 'Your event',
+  },
   flyerLibrary: {
     title: 'Select a flyer',
     searchPlaceholder: 'Find an image',

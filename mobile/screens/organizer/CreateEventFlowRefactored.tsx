@@ -78,6 +78,7 @@ import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
 import MirrorBallDropzone from '../../components/organizer/MirrorBallDropzone';
+import PosterTemplateSheet, { makePoster, type PosterFacts, type PosterSpec } from '../../components/organizer/PosterTemplateSheet';
 import { incidenceForEvent, type FeeIncidence } from '../../lib/buyerPricing';
 import { isBelowMinPaidPrice, minPaidPriceFor } from '../../lib/minPaidPrice';
 import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../lib/lineup';
@@ -104,6 +105,8 @@ export interface EventDraft {
   description: string;
   category: string;
   banner_image_url: string;
+  /** The template behind a "Make a poster" poster, redrawn on save. */
+  poster_template?: PosterSpec | null;
 
   // Location
   venue_name: string;
@@ -653,6 +656,7 @@ export default function CreateEventFlowRefactored() {
           // legacy fallback) — reading only cover left edit mode showing the
           // empty "Upload Flyer" state for events that DO have a poster.
           banner_image_url: (event as any).banner_image_url || event.cover_image_url || '',
+          poster_template: (event as any).poster_template || null,
           venue_name: event.venue_name || '',
           country: (event as any).country || 'HT',
           department: resolvedDepartment,
@@ -745,6 +749,7 @@ export default function CreateEventFlowRefactored() {
   // its quiet link (and tapping an uploaded poster) opens the curated library
   // sheet, whose Upload pill falls through to the same picker.
   const [showFlyerLibrary, setShowFlyerLibrary] = useState(false);
+  const [showPosterTemplates, setShowPosterTemplates] = useState(false);
 
   const pickImage = async () => {
     try {
@@ -758,7 +763,7 @@ export default function CreateEventFlowRefactored() {
       });
 
       if (!result.canceled) {
-        updateDraft({ banner_image_url: result.assets[0].uri });
+        updateDraft({ banner_image_url: result.assets[0].uri, poster_template: null });
       }
     } catch (e) {
       console.error('Error picking flyer:', e);
@@ -1455,6 +1460,22 @@ export default function CreateEventFlowRefactored() {
     };
   };
 
+  // The facts a poster template is drawn with. The draft keeps 12h "HH:MM AM/PM".
+  const posterFacts = (): PosterFacts => {
+    const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i.exec((eventDraft.start_time || '').trim());
+    let hh = m ? Number(m[1]) % 12 : 20;
+    if (m && /pm/i.test(m[3] || '')) hh += 12;
+    if (m && !m[3]) hh = Number(m[1]);
+    return {
+      title: eventDraft.title.trim() || t('posterTemplates.sampleTitle'),
+      date: eventDraft.start_date || new Date().toISOString().slice(0, 10),
+      time: `${String(hh).padStart(2, '0')}:${m ? m[2] : '00'}`,
+      venue: eventDraft.venue_name,
+      city: eventDraft.city,
+      lineup: eventDraft.lineup.map((g) => g.name.trim()).filter(Boolean),
+    };
+  };
+
   const handleSubmit = async (options: SaveEventOptions) => {
     if (!userProfile?.id) {
       showAlert(t('common.error'), t('organizerCreateEventFlow.authRequired'));
@@ -1462,6 +1483,19 @@ export default function CreateEventFlowRefactored() {
     }
 
     const eventData = buildEventData();
+
+    // A template poster is redrawn with the facts as they are NOW, so editing
+    // the title or date after picking it can't leave old ones on the flyer.
+    // If the redraw fails the existing poster stays.
+    if (eventData.poster_template) {
+      try {
+        const url = await makePoster(posterFacts(), eventData.poster_template, language);
+        eventData.banner_image_url = url;
+        updateDraft({ banner_image_url: url });
+      } catch {
+        /* keep the poster already on the draft */
+      }
+    }
 
     // Paid events in Stripe Connect markets need a payout account that can
     // actually accept a charge. Ask the server rather than deciding here: this
@@ -1917,6 +1951,14 @@ export default function CreateEventFlowRefactored() {
                   <Ionicons name="camera-outline" size={16} color={colors.white} />
                   <Text style={styles.changeFlyerText}>{t('organizerCreateEventFlow.canvas.changeFlyer')}</Text>
                 </View>
+                <TouchableOpacity
+                  style={[styles.changeFlyerPill, styles.makePosterPill]}
+                  onPress={() => setShowPosterTemplates(true)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="color-palette-outline" size={16} color={colors.white} />
+                  <Text style={styles.changeFlyerText}>{t('posterTemplates.title')}</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
             ) : (
               // Empty poster frame: a turning mirror ball the poster goes into,
@@ -1929,6 +1971,8 @@ export default function CreateEventFlowRefactored() {
                 linkLabel={t('organizerCreateEventFlow.canvas.browseLibrary')}
                 onUpload={pickImage}
                 onBrowse={() => setShowFlyerLibrary(true)}
+                templateLabel={t('posterTemplates.cta')}
+                onTemplate={() => setShowPosterTemplates(true)}
               />
             )}
 
@@ -3042,10 +3086,20 @@ export default function CreateEventFlowRefactored() {
           </View>
         </View>
       </Modal>
+      <PosterTemplateSheet
+        visible={showPosterTemplates}
+        facts={posterFacts()}
+        photo={eventDraft.poster_template?.photo || (eventDraft.poster_template ? null : eventDraft.banner_image_url)}
+        onClose={() => setShowPosterTemplates(false)}
+        onPick={(url, spec) => {
+          updateDraft({ banner_image_url: url, poster_template: spec });
+          setShowPosterTemplates(false);
+        }}
+      />
       <FlyerLibrarySheet
         visible={showFlyerLibrary}
         onClose={() => setShowFlyerLibrary(false)}
-        onSelect={(f: SelectedFlyer) => updateDraft({ banner_image_url: f.url })}
+        onSelect={(f: SelectedFlyer) => updateDraft({ banner_image_url: f.url, poster_template: null })}
         onUpload={() => {
           setShowFlyerLibrary(false);
           // The picker waits for the sheet to finish sliding out or iOS drops it.
@@ -3223,6 +3277,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 8,
     borderRadius: radius.button,
     backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  // Second pill under "Change flyer" (same shape, stacked).
+  makePosterPill: {
+    top: 58,
   },
   changeFlyerText: {
     fontSize: 13,

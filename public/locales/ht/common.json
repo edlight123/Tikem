@@ -1499,7 +1499,18 @@
       "haitiVerifyLater": "Ou ka pibliye kounye a. Verifye idantite ou anvan ou retire lajan ou."
     },
     "guestPaidNoteHaiti": "Evènman peye ann Ayiti ka pibliye touswit. Verifye idantite ou anvan ou retire lajan ou.",
-    "guestPaidNoteStripe": "Evènman peye ({{country}}) bezwen verifikasyon idantite ak yon kont Stripe konekte anvan yo pibliye. Ou ka prepare tout bagay dabò."
+    "guestPaidNoteStripe": "Evènman peye ({{country}}) bezwen verifikasyon idantite ak yon kont Stripe konekte anvan yo pibliye. Ou ka prepare tout bagay dabò.",
+    "posterTemplates": {
+      "title": "Fè yon afich",
+      "cta": "Oswa fè youn ak yon modèl",
+      "hint": "Enfòmasyon evènman ou, byen ranje. Chwazi yon modèl, epi yon koulè.",
+      "photo": "Foto",
+      "yourPhoto": "Foto pa w",
+      "colour": "Koulè {{n}}",
+      "use": "Sèvi ak afich sa a",
+      "failed": "Nou pa t ka fè afich la. Eseye ankò.",
+      "sampleTitle": "Evènman ou"
+    }
   },
   "promoter": {
     "portal_eyebrow": "Pòtay pwomotè",

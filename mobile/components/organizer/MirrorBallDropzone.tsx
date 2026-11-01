@@ -54,10 +54,13 @@ interface Props {
   linkLabel: string;
   onUpload: () => void;
   onBrowse: () => void;
+  /** Optional second link: "Make a poster" from a template. */
+  templateLabel?: string;
+  onTemplate?: () => void;
   style?: ViewStyle | ViewStyle[];
 }
 
-export default function MirrorBallDropzone({ label, linkLabel, onUpload, onBrowse, style }: Props) {
+export default function MirrorBallDropzone({ label, linkLabel, onUpload, onBrowse, templateLabel, onTemplate, style }: Props) {
   const [width, setWidth] = useState(0);
   const [still, setStill] = useState(false);
   const turn = useRef(new Animated.Value(0)).current;
@@ -175,14 +178,26 @@ export default function MirrorBallDropzone({ label, linkLabel, onUpload, onBrows
         </View>
       )}
 
-      <Pressable
-        onPress={onBrowse}
-        accessibilityRole="button"
-        hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
-        style={({ pressed }) => [styles.link, pressed && styles.pressed]}
-      >
-        <Text style={styles.linkText}>{linkLabel}</Text>
-      </Pressable>
+      <View style={styles.links}>
+        {templateLabel && onTemplate ? (
+          <Pressable
+            onPress={onTemplate}
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Text style={[styles.linkText, styles.linkStrong]}>{templateLabel}</Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={onBrowse}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Text style={styles.linkText}>{linkLabel}</Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -224,10 +239,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
     color: colors.textPrimary,
   },
-  link: {
+  links: {
     position: 'absolute',
     bottom: 18,
     alignSelf: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  linkStrong: {
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   linkText: {
     fontSize: 13,
