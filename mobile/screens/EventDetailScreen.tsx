@@ -856,6 +856,20 @@ export default function EventDetailScreen({ route, navigation }: any) {
           )}
           <View style={styles.heroBackdropScrim} />
 
+          {/* Bottom blend into the page and top scrim for the buttons. Drawn
+              BEHIND the poster: on top, the 140px blend covered the poster's
+              lower 88px and the scrim its top, dimming the date and venue a
+              designed flyer prints there. The buttons carry their own scrim
+              circles, so they stay legible over the art. */}
+          <LinearGradient
+            colors={['transparent', colors.background]}
+            style={styles.heroBottomBlend}
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.45)', 'transparent']}
+            style={styles.heroTopScrim}
+          />
+
           {/* Centered sharp poster — expo-image so it reuses the memory-disk
               cache the Discover/Home card already filled, showing instantly. */}
           <View style={styles.heroPoster}>
@@ -875,17 +889,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
-          {/* Bottom blend into page background */}
-          <LinearGradient
-            colors={['transparent', colors.background]}
-            style={styles.heroBottomBlend}
-          />
-
-          {/* Top scrim for button legibility */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0.45)', 'transparent']}
-            style={styles.heroTopScrim}
-          />
 
           {/* Top Right Actions: Share & Save */}
           {/* Back — the most-visited pushed screen shipped with no back

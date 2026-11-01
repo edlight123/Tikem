@@ -68,6 +68,32 @@ const nextConfig = {
   },
   
   // Add headers for better caching, performance, and security
+  // The eight Kreyòl worlds (lib/categories.ts CULTURAL_CATEGORIES) browse
+  // through Discover with their stored categories. /categories/<world>
+  // filtered by the world key itself and rendered "0 events" on every one of
+  // these sitemap URLs. A config redirect answers 308 before any render (the
+  // page's own redirect ran after the loading shell had streamed, so it came
+  // back 200 with a client-side hop). Keep in step with lib/categories.ts.
+  async redirects() {
+    const worlds = {
+      mizik: ['Concert'],
+      'lavi-lannwit': ['Party'],
+      kilti: ['Theater', 'Festival'],
+      espo: ['Sports'],
+      gastronomi: ['Food & Drink'],
+      biznis: ['Conference', 'Workshop'],
+      fanmi: ['Family'],
+      eksperyans: ['Other'],
+    }
+    // Encoded twice: Next decodes a redirect destination once, and "Food &
+    // Drink" encoded once came out as a bare & that split the parameter.
+    return Object.entries(worlds).map(([key, cats]) => ({
+      source: `/categories/${key}`,
+      destination: `/discover?${cats.map((c) => `category=${encodeURIComponent(c).replace(/%/g, "%25")}`).join("&")}`,
+      permanent: true,
+    }))
+  },
+
   async headers() {
     // Content-Security-Policy allowlist derived from the app's real external
     // origins: Stripe (checkout), Firebase/Google (auth, Firestore, storage,

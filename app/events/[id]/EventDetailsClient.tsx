@@ -183,7 +183,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 />
               )}
               <div
-                className="poster-vignette relative aspect-[4/5] overflow-hidden rounded-none shadow-poster ring-1 ring-white/10"
+                // The vignette only on the gradient fallback: over a real flyer
+                // it darkened the corners where the date and venue usually sit.
+                className={`${event.banner_image_url ? '' : 'poster-vignette '}relative aspect-[4/5] overflow-hidden rounded-none shadow-poster ring-1 ring-white/10`}
                 style={event.banner_image_url ? undefined : { backgroundImage: posterTheme.bg }}
               >
                 {event.banner_image_url ? (

@@ -91,8 +91,10 @@ export default function MobileHero({
         <div className="relative mx-4 aspect-[4/5] overflow-hidden rounded bg-white/[0.04]">
           {bannerUrl ? (
             <>
+              {/* No scrim over the art: nothing is laid on its lower half, and a
+                  bottom gradient dimmed the date and venue a designed flyer
+                  carries there. The status chips bring their own backing. */}
               <PosterImage src={bannerUrl} alt={title} sizes="100vw" priority />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             </>
           ) : (
             <div className="poster-vignette absolute inset-0" style={{ backgroundImage: posterTheme.bg }}>

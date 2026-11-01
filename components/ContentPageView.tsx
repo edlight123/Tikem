@@ -26,41 +26,55 @@ const DRAFT_NOTE: Record<Locale, string> = {
   ht: 'Tradiksyon pwovizwa, n ap revize l. Vèsyon anglè a se referans lan.',
 }
 
-/** Render a single content block using the same markup the pages used inline. */
+/**
+ * Render a single content block.
+ *
+ * Styled here, not by `prose`: the typography plugin isn't installed, so the
+ * `prose` classes these pages carried did nothing and every legal page read
+ * as one unbroken wall (no heading space, no bullets, lists run into the
+ * paragraphs). `!` on sizes: body's .mobile-typography flattens bare
+ * h2/p utilities on phones.
+ */
+const BODY = '!text-[15px] !leading-relaxed text-white/75'
 function Block({ block }: { block: ContentBlock }) {
   switch (block.type) {
     case 'heading':
-      return block.level === 3 ? <h3>{block.text}</h3> : <h2>{block.text}</h2>
+      return block.level === 3 ? (
+        <h3 className="mb-2 mt-7 !text-[16px] font-semibold text-white">{block.text}</h3>
+      ) : (
+        <h2 className="mb-3 mt-10 font-grotesk !text-[20px] font-bold tracking-[-0.01em] text-white first:mt-0 sm:!text-[22px]">
+          {block.text}
+        </h2>
+      )
     case 'paragraph':
-      return <p>{block.text}</p>
+      return <p className={`mb-4 ${BODY}`}>{block.text}</p>
     case 'list':
       return block.ordered ? (
-        <ol>
+        <ol className={`mb-5 ml-5 list-decimal space-y-1.5 marker:text-white/40 ${BODY}`}>
           {block.items.map((item, i) => (
             <li key={i}>{item}</li>
           ))}
         </ol>
       ) : (
-        <ul>
+        <ul className={`mb-5 ml-5 list-disc space-y-1.5 marker:text-white/40 ${BODY}`}>
           {block.items.map((item, i) => (
             <li key={i}>{item}</li>
           ))}
         </ul>
       )
     case 'callout':
+      // A fill, not a coloured rule down the side (house rule: fill, not hairline).
       return (
-        <div className="border-l-4 border-brand-500 p-6 mt-8">
-          {block.title ? (
-            <h3 className="text-lg font-semibold text-brand-300 mt-0">{block.title}</h3>
-          ) : null}
+        <div className="mt-8 rounded bg-white/[0.05] p-5 sm:p-6">
+          {block.title ? <h3 className="mb-2 !text-[16px] font-semibold text-white">{block.title}</h3> : null}
           {block.items && block.items.length > 0 ? (
-            <ul className="mb-0">
+            <ul className={`ml-5 list-disc space-y-1.5 marker:text-white/40 ${BODY}`}>
               {block.items.map((item, i) => (
                 <li key={i}>{item}</li>
               ))}
             </ul>
           ) : null}
-          {block.text ? <p className="mb-0">{block.text}</p> : null}
+          {block.text ? <p className={BODY}>{block.text}</p> : null}
         </div>
       )
     default:
@@ -102,7 +116,7 @@ export default function ContentPageView({
           </p>
         ) : null}
 
-        <div className="bg-white/[0.03] rounded-xl shadow-sm border border-white/10 p-3 sm:p-4 md:p-6 lg:p-8 prose prose-sm sm:prose prose-teal max-w-none">
+        <div className="rounded bg-white/[0.03] p-5 sm:p-8">
           {page && page.blocks.length > 0 ? (
             page.blocks.map((block, i) => <Block key={i} block={block} />)
           ) : (
