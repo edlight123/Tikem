@@ -50,9 +50,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/legal/refunds`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ]
 
-  // The eight Kreyòl worlds are real browse pages.
+  // The eight Kreyòl worlds browse through Discover with their stored
+  // categories (/categories/<world> redirects there), so list that URL.
   const categoryRoutes: MetadataRoute.Sitemap = CULTURAL_CATEGORIES.map((c) => ({
-    url: `${siteUrl}/categories/${c.key}`,
+    url: `${siteUrl}/discover?${c.categories.map((x) => `category=${encodeURIComponent(x)}`).join('&amp;')}`,
     lastModified: now,
     changeFrequency: 'daily' as const,
     priority: 0.6,

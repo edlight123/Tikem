@@ -88,13 +88,15 @@ export default function SupportContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 text-white">
+      {/* Hero Section. On the page colour, like every other page: a full
+          teal slab made Support read as a different product (teal is the
+          sparing accent, never a field). */}
+      <div className="text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="text-center max-w-3xl mx-auto">
             {/* Pill Label */}
             <div className="inline-flex items-center gap-2 px-3 py-1 backdrop-blur-sm rounded text-sm font-medium mb-4">
-              <MessageCircle className="w-4 h-4 text-white/90" />
+              <MessageCircle className="w-4 h-4 text-brand-400" />
               <span>{t('hero.title')}</span>
             </div>
 
@@ -108,7 +110,7 @@ export default function SupportContent() {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-lg sm:text-xl text-brand-100 mb-8">
+            <p className="text-lg sm:text-xl text-white/60 mb-8">
               {t('hero.subtitle')}
             </p>
 
@@ -123,7 +125,7 @@ export default function SupportContent() {
                 // The field had `border-0` and no fill at all — a transparent
                 // input with only a caret to say it was there. A field gets a
                 // FILL; 16px keeps iOS from zooming the page on focus.
-                className="w-full pl-12 pr-4 py-4 rounded-xl border-0 bg-white/15 text-[16px] text-white placeholder-white/60 focus:ring-2 focus:ring-inset focus:ring-white/70 focus:outline-none"
+                className="w-full pl-12 pr-4 py-4 rounded-xl border-0 bg-white/[0.06] text-[16px] text-white placeholder-white/45 focus:ring-2 focus:ring-inset focus:ring-white/40 focus:outline-none"
               />
             </div>
           </div>

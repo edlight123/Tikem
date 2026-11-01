@@ -9,6 +9,8 @@ import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import CategoryPageContent from './CategoryPageContent'
 import type { Metadata } from 'next'
 import { CATEGORIES } from '@/lib/filters/config'
+import { permanentRedirect } from 'next/navigation'
+import { CULTURAL_CATEGORIES } from '@/lib/categories'
 
 export const revalidate = 120
 
@@ -43,6 +45,17 @@ export default async function CategoryPage({
 }) {
   const { category: rawCategory } = await params
   const category = decodeURIComponent(rawCategory)
+
+  // The eight Kreyòl worlds (/categories/mizik …) are display groupings over
+  // the stored English categories, and this page filters by the stored value
+  // — so every world URL (all of them in the sitemap) rendered "0 events".
+  // Send them where the home tiles already go: Discover with the world's
+  // real categories.
+  const world = CULTURAL_CATEGORIES.find((c) => c.key === category.toLowerCase())
+  if (world) {
+    permanentRedirect(`/discover?${world.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}`)
+  }
+
   const user = await getCurrentUser()
 
   // Country used to scope events (mirrors the homepage behaviour).

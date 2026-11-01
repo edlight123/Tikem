@@ -93,7 +93,11 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
         </div>
 
         {/* The facts. */}
-        <div className="min-w-0 lg:order-1 lg:col-span-6">
+        {/* The caption sits at the poster's foot on desktop. Centred, a
+            template poster's short caption floated alone in an empty half;
+            and with every slide bottom-aligned, the counter and prev/next stay
+            on one line as you step between short and full captions. */}
+        <div className="min-w-0 lg:order-1 lg:col-span-6 lg:self-end lg:pb-2">
           <div key={`copy-${ev.id}`} className="hero-arrive" aria-live="polite">
             {ev.posterHasText ? (
               // A template poster already says the title, date, venue and

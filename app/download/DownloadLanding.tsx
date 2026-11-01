@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { TikemWordmark } from '@/components/ui/TikemLogo'
 
 interface Props {
   appStoreUrl: string
@@ -25,20 +26,13 @@ export default function DownloadLanding({ appStoreUrl, playStoreUrl }: Props) {
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center px-6 py-16">
       <div className="w-full max-w-md text-center">
-        <div className="mb-8 flex justify-center">
-          <span
-            className="inline-block h-3 w-3 rounded-full"
-            style={{ backgroundColor: '#14B8A6' }}
-            aria-hidden
-          />
-        </div>
-
-        <h1
-          className="font-display italic lowercase text-5xl leading-tight text-white"
-        >
-          Get Tikèm
+        {/* The wordmark IS the heading: a lone teal dot over a small "get
+            tikèm" read as an image that failed to load, and the phone type
+            rules flattened the text-5xl heading to body size. */}
+        <h1 aria-label="Get Tikèm" className="flex justify-center">
+          <TikemWordmark className="text-white" style={{ fontSize: 88 }} />
         </h1>
-        <p className="mt-4 text-base text-white/60">
+        <p className="mt-6 text-base text-white/60">
           Discover events, buy tickets, and check in at the door, all from your phone.
         </p>
 
