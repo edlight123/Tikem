@@ -2142,7 +2142,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   privacyText: {
     flex: 1,
     fontFamily: font.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
@@ -2157,7 +2157,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   monoLabelSmall: {
     fontFamily: font.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     color: colors.textSecondary,
@@ -2195,7 +2195,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   recommended: {
     fontFamily: font.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: colors.primary,

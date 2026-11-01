@@ -124,13 +124,13 @@ const getStyles = (colors: any) =>
       gap: 6,
     },
     name: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 15,
+      fontWeight: '600',
       color: colors.text,
       textAlign: 'center',
     },
     reason: {
-      fontSize: 12,
+      fontSize: 13,
       color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 16,

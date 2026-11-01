@@ -176,7 +176,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingBottom: 20,
     },
     artPlace: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '700',
       letterSpacing: 1.6,
       color: 'rgba(255,255,255,0.62)',

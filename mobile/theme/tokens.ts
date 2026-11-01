@@ -86,6 +86,18 @@ export const radius = { none: 0, poster: 4, sm: 4, chip: 4, md: 4, button: 4, lg
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
+/**
+ * The text-size ladder. Every fontSize in the app is one of these steps; no
+ * half sizes (10.5 / 11.5 / 12.5 read as mistakes next to their neighbours).
+ *   11  uppercase eyebrows / tags only (the floor)
+ *   12  captions, tertiary meta
+ *   13  secondary meta, labels, links ("gade tout"), section subtitles
+ *   15  body; card and row titles (600)
+ *   17–18  emphasised titles; the poster card's serif title (18)
+ *   20  sheet / screen titles (sans)
+ *   22  serif section headers (SectionHeader)
+ *   28+ display
+ */
 export const type = {
   display: { fontSize: 28, fontWeight: '700' as const, lineHeight: 34 },
   title: { fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },

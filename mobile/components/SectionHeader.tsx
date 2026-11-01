@@ -84,7 +84,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.text,
     },
     subtitle: {
-      fontSize: 11,
+      fontSize: 13,
       letterSpacing: 0.4,
       color: colors.textSecondary,
       marginTop: 3,
@@ -97,7 +97,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingLeft: 8,
     },
     viewAllText: {
-      fontSize: 11,
+      fontSize: 13,
       letterSpacing: 0.4,
       color: T.teal,
     },

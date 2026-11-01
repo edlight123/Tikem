@@ -237,29 +237,29 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingTop: 8,
       gap: 3,
     },
+    // One ramp under every poster: an 18pt serif title, then 13pt detail
+    // lines that differ by colour, not by size (they used to step 11.5 → 11,
+    // which read as fine print next to the poster).
     title: {
       fontFamily: font.serif,
-      fontSize: 16,
+      fontSize: 18,
       color: colors.text,
-      lineHeight: 18,
-      letterSpacing: -0.2,
+      lineHeight: 22,
     },
     // Tier 2 — grey price · venue.
     tier2: {
       color: colors.textSecondary,
-      fontSize: 11.5,
+      fontSize: 13,
       // Explicit line heights keep the caption block's height fixed, so the
       // grid's row gap is measured from where the text really ends.
-      lineHeight: 15,
-      letterSpacing: 0.3,
+      lineHeight: 17,
       marginTop: 1,
     },
     // Tier 3 — lighter grey date.
     tier3: {
       color: colors.textTertiary,
-      fontSize: 11,
-      lineHeight: 14,
-      letterSpacing: 0.4,
+      fontSize: 13,
+      lineHeight: 17,
     },
     friendsRow: {
       flexDirection: 'row',
@@ -269,8 +269,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     friendsText: {
       color: colors.textSecondary,
-      fontSize: 10.5,
-      letterSpacing: 0.3,
+      fontSize: 12,
       flexShrink: 1,
     },
   });

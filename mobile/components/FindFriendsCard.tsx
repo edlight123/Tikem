@@ -140,8 +140,8 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
     },
     meta: { flex: 1, minWidth: 0 },
-    title: { fontSize: 14, fontWeight: '700', color: colors.text },
-    sub: { marginTop: 1, fontSize: 12, lineHeight: 16, color: colors.textTertiary },
+    title: { fontSize: 15, fontWeight: '600', color: colors.text },
+    sub: { marginTop: 1, fontSize: 13, lineHeight: 16, color: colors.textTertiary },
     action: { flexDirection: 'row', alignItems: 'center', gap: 2 },
     actionText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
   });

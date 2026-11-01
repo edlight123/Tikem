@@ -787,7 +787,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     letterSpacing: -0.2,
   },
   rowMeta: {
-    fontSize: 12.5,
+    fontSize: 13,
     letterSpacing: 0.1,
     color: colors.textSecondary,
     marginTop: 5,
@@ -804,7 +804,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   count: {
     color: colors.textSecondary,
-    fontSize: 10.5,
+    fontSize: 11,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
     flexShrink: 1,

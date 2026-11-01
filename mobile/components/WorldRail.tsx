@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   sub: {
     marginTop: 2,
     color: 'rgba(255,255,255,0.72)',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     letterSpacing: 0.2,
   },

@@ -1018,7 +1018,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     statValue: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
     statLabel: {
       marginTop: 4,
-      fontSize: 10.5,
+      fontSize: 11,
       letterSpacing: 0.8,
       textTransform: 'uppercase',
       textAlign: 'center',

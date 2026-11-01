@@ -96,7 +96,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       textShadowRadius: 6,
     },
     subtitle: {
-      fontSize: 12.5,
+      fontSize: 13,
       color: colors.textSecondary,
       fontWeight: '500',
       marginTop: 1,

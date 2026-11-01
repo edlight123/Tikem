@@ -498,7 +498,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingHorizontal: 12,
     },
     draftNoteText: {
-      fontSize: 12.5,
+      fontSize: 13,
       lineHeight: 18,
       color: colors.warning,
     },
