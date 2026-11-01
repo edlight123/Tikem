@@ -41,6 +41,12 @@ export interface HomeEvent {
   /** A sample listing (lib/home/feed isTemplateEvent): never the hero. */
   template: boolean
   lineup: string[]
+  /**
+   * The poster was drawn from a template (lib/posters), so its art already
+   * carries the title, date, venue and lineup. The hero then captions it
+   * small instead of setting the same facts again in display type.
+   */
+  posterHasText: boolean
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v))
@@ -122,6 +128,7 @@ export function toHomeEvent(e: any): HomeEvent | null {
     featured: e.featured === true || e.is_featured === true,
     template: isTemplateEvent(e),
     lineup,
+    posterHasText: Boolean(e.poster_template && typeof e.poster_template === 'object'),
   }
 }
 

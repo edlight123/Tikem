@@ -235,6 +235,11 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
         image_url: data?.banner_image_url || data?.image_url,
         banner_image_url: data?.banner_image_url || data?.image_url,
+        // The template behind a "Make a poster" poster (lib/posters): the composer
+        // redraws it on save and the home hero captions it small. Whitelisted,
+        // or every reader of this object would see it as absent.
+        poster_template:
+          data?.poster_template && typeof data?.poster_template === 'object' ? data?.poster_template : undefined,
         currency: data?.currency || 'HTG',
         // The organizer's absorb/pass-on choice. Every price the event page quotes
         // (headline, cart, payment sheet) is priced with it, exactly as checkout
@@ -412,6 +417,11 @@ const readPublishedEvents = unstable_cache(
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
+        // The template behind a "Make a poster" poster (lib/posters): the composer
+        // redraws it on save and the home hero captions it small. Whitelisted,
+        // or every reader of this object would see it as absent.
+        poster_template:
+          data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
@@ -600,6 +610,11 @@ export async function getOrganizerEvents(
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
+        // The template behind a "Make a poster" poster (lib/posters): the composer
+        // redraws it on save and the home hero captions it small. Whitelisted,
+        // or every reader of this object would see it as absent.
+        poster_template:
+          data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
@@ -723,6 +738,11 @@ export async function getAdminEvents(
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
+        // The template behind a "Make a poster" poster (lib/posters): the composer
+        // redraws it on save and the home hero captions it small. Whitelisted,
+        // or every reader of this object would see it as absent.
+        poster_template:
+          data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
@@ -809,6 +829,11 @@ export async function getOrganizerEventsClient(
         has_paid_tiers: data?.has_paid_tiers ?? undefined,
         image_url: data.banner_image_url || data.image_url,
         banner_image_url: data.banner_image_url || data.image_url,
+        // The template behind a "Make a poster" poster (lib/posters): the composer
+        // redraws it on save and the home hero captions it small. Whitelisted,
+        // or every reader of this object would see it as absent.
+        poster_template:
+          data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
