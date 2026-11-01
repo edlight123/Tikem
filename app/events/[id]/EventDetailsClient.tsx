@@ -305,7 +305,11 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
       {/* top-14 = the navbar's phone height (h-14): pinned UNDER the navbar,
           which is itself sticky. At top-0 it slid behind it while scrolling. */}
       <div className="md:hidden sticky top-14 z-40 bg-[#0a0a0a]/95 backdrop-blur px-4 py-3">
-        <div className="flex items-center gap-3">
+        {/* items-end, not center: on a password-protected event the buy
+            column grows a "Password required" line above the button, and
+            centred icons then floated between that line and the button. The
+            icons sit level with the button itself. */}
+        <div className="flex items-end gap-3">
           <div className="flex-1 min-w-0">
             {isPastEvent ? (
               <div className="block w-full rounded bg-white/[0.06] py-3 text-center font-semibold text-white/70">
@@ -352,12 +356,13 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               in beside share reclaims that height, groups the two secondary
               actions into one cluster, and keeps save reachable the whole way
               down the page (on the poster it would scroll out of reach). */}
+          {/* h-12 slots = the buy button's height, so the 40px icons centre on it. */}
           {user && (
-            <div className="flex-shrink-0">
+            <div className="flex h-12 flex-shrink-0 items-center">
               <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />
             </div>
           )}
-          <div className="flex-shrink-0">
+          <div className="flex h-12 flex-shrink-0 items-center">
             <ShareIconButton eventId={event.id} eventTitle={event.title} tone="dark" />
           </div>
         </div>

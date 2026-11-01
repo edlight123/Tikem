@@ -95,20 +95,32 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
         {/* The facts. */}
         <div className="min-w-0 lg:order-1 lg:col-span-6">
           <div key={`copy-${ev.id}`} className="hero-arrive" aria-live="polite">
-            <h2 className="break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
-              {ev.title}
-            </h2>
-            <p className="mt-5 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/50 sm:!text-[11px] sm:tracking-[0.08em]">
-              {eventWhen(ev.start_datetime, zone, i18n.language)}
-              {venue && <> · {venue}</>}
-            </p>
-            {lineup && (
-              <p className="mt-1 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/35 sm:!text-[11px] sm:tracking-[0.08em]">
-                {t('home.hero.lineup', { defaultValue: 'Lineup' })}: {lineup}
-              </p>
+            {ev.posterHasText ? (
+              // A template poster already says the title, date, venue and
+              // lineup in its art. Setting them again in 80px display type
+              // just repeated the poster below itself (owner: "wasting
+              // space"), so the caption is the title at body-title size.
+              <h2 className="break-words font-grotesk text-[22px] font-bold leading-tight tracking-[-0.02em] text-white sm:text-[26px]">
+                {ev.title}
+              </h2>
+            ) : (
+              <>
+                <h2 className="break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
+                  {ev.title}
+                </h2>
+                <p className="mt-5 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/50 sm:!text-[11px] sm:tracking-[0.08em]">
+                  {eventWhen(ev.start_datetime, zone, i18n.language)}
+                  {venue && <> · {venue}</>}
+                </p>
+                {lineup && (
+                  <p className="mt-1 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/35 sm:!text-[11px] sm:tracking-[0.08em]">
+                    {t('home.hero.lineup', { defaultValue: 'Lineup' })}: {lineup}
+                  </p>
+                )}
+              </>
             )}
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <div className={`${ev.posterHasText ? 'mt-4' : 'mt-8'} flex flex-wrap items-center gap-x-5 gap-y-3`}>
               <Link
                 href={href}
                 className="inline-flex h-12 items-center rounded bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
@@ -119,7 +131,7 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             </div>
           </div>
 
-          <div className="mt-10 flex items-center gap-6 lg:mt-14">
+          <div className={`${ev.posterHasText ? 'mt-6 lg:mt-10' : 'mt-10 lg:mt-14'} flex items-center gap-6`}>
             {count > 1 ? (
               <div className="flex items-center gap-4">
                 <p
