@@ -10,6 +10,7 @@ import {
 } from '../lib/api/social';
 import type { FriendshipState } from '../types/social';
 import { useAppAlert } from './AppAlert';
+import { useI18n } from '../contexts/I18nContext';
 import { radius } from '../theme/tokens';
 
 interface ConnectButtonProps {
@@ -35,6 +36,7 @@ export default function ConnectButton({
   onRequireAuth,
 }: ConnectButtonProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const showAlert = useAppAlert();
   const styles = getStyles(colors, size);
   const secondary = variant === 'secondary';
@@ -58,7 +60,7 @@ export default function ConnectButton({
     try {
       await fn();
     } catch (e: any) {
-      showAlert('Error', e?.message || 'Something went wrong. Please try again.');
+      showAlert(t('connectButton.errorTitle'), e?.message || t('connectButton.errorBody'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +86,7 @@ export default function ConnectButton({
     return (
       <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onRemove} activeOpacity={0.8} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
         <Ionicons name="checkmark" size={size === 'sm' ? 14 : 16} color={colors.text} />
-        <Text style={[styles.text, { color: colors.text }]}>Friends</Text>
+        <Text style={[styles.text, { color: colors.text }]}>{t('connectButton.friends')}</Text>
       </TouchableOpacity>
     );
   }
@@ -93,7 +95,7 @@ export default function ConnectButton({
     return (
       <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onRemove} activeOpacity={0.8} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
         <Ionicons name="time-outline" size={size === 'sm' ? 14 : 16} color={colors.textSecondary} />
-        <Text style={[styles.text, { color: colors.textSecondary }]}>Requested</Text>
+        <Text style={[styles.text, { color: colors.textSecondary }]}>{t('connectButton.requested')}</Text>
       </TouchableOpacity>
     );
   }
@@ -103,10 +105,10 @@ export default function ConnectButton({
       <View style={styles.row}>
         <TouchableOpacity style={[styles.btn, styles.primary]} onPress={onAccept} activeOpacity={0.8}>
           <Ionicons name="checkmark" size={size === 'sm' ? 14 : 16} color="#000000" />
-          <Text style={[styles.text, styles.primaryText]}>Accept</Text>
+          <Text style={[styles.text, styles.primaryText]}>{t('connectButton.accept')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onDecline} activeOpacity={0.8}>
-          <Text style={[styles.text, { color: colors.textSecondary }]}>Decline</Text>
+          <Text style={[styles.text, { color: colors.textSecondary }]}>{t('connectButton.decline')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -124,7 +126,7 @@ export default function ConnectButton({
         size={size === 'sm' ? 14 : 16}
         color={secondary ? colors.text : '#000000'}
       />
-      <Text style={[styles.text, secondary ? { color: colors.text } : styles.primaryText]}>Add friend</Text>
+      <Text style={[styles.text, secondary ? { color: colors.text } : styles.primaryText]}>{t('connectButton.addFriend')}</Text>
     </TouchableOpacity>
   );
 }

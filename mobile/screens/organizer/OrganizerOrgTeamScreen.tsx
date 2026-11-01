@@ -755,7 +755,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16 },
-    tabsWrap: { marginHorizontal: -16, paddingTop: 8, paddingBottom: 2 },
+    // Sits directly in the unpadded container: SegmentedTabs' own 16pt row
+    // padding puts the first tab on the cards' left edge (a -16 margin here
+    // pushed it to the screen edge; TestFlight "fix alignment issues").
+    tabsWrap: { paddingTop: 8, paddingBottom: 2 },
 
     addButton: {
       flexDirection: 'row',

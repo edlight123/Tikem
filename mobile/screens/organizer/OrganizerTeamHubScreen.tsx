@@ -19,7 +19,6 @@ import { font, radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { Image } from 'expo-image';
-import StatusChip from '../../components/StatusChip';
 import SectionHeader from '../../components/SectionHeader';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -37,10 +36,6 @@ type TeamMember = {
   role: TeamRole;
   status: 'active' | 'invited';
 };
-
-// Role → semantic StatusChip status (same mapping as OrganizerOrgTeamScreen).
-const roleChipStatus = (role: TeamRole): string =>
-  role === 'admin' ? 'live' : role === 'manager' ? 'pending' : 'neutral';
 
 /**
  * Top-level Team hub. Two different things, kept visibly apart:
@@ -149,7 +144,7 @@ export default function OrganizerTeamHubScreen() {
 
   const header = (
     <OrganizerScreenHeader
-      title={t('organizerTeamHub.title').toLowerCase()}
+      title={t('organizerTeamHub.screenTitle').toLowerCase()}
       onBack={() => navigation.goBack()}
       overlay
       onHeight={onHeight}
@@ -250,13 +245,14 @@ export default function OrganizerTeamHubScreen() {
                   <Text style={styles.memberName} numberOfLines={1}>
                     {m.name || m.email}
                   </Text>
-                  {m.status === 'invited' && (
-                    <Text style={styles.memberInvited} numberOfLines={1}>
-                      {t('organizerTeamHub.invited')}
-                    </Text>
-                  )}
+                  {/* Role and invite state as one quiet line, not a teal
+                      uppercase chip on every row (TestFlight: "not polished"). */}
+                  <Text style={styles.memberMeta} numberOfLines={1}>
+                    {roleLabel(m.role)}
+                    {m.status === 'invited' ? ` · ${t('organizerTeamHub.invited').toLowerCase()}` : ''}
+                  </Text>
                 </View>
-                <StatusChip status={roleChipStatus(m.role)} label={roleLabel(m.role)} />
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </TouchableOpacity>
             ))}
           </>
@@ -294,13 +290,20 @@ export default function OrganizerTeamHubScreen() {
                     <Ionicons name="image-outline" size={16} color={colors.textTertiary} />
                   </View>
                 )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
-                  <Text style={styles.eventDate} numberOfLines={1}>{formatDate(event.start_datetime)}</Text>
+                {/* Title gets the full width (two lines), date and staff count
+                    share one quiet line under it. The old right-hand "PA GEN
+                    ESTAF" column truncated every title. */}
+                <View style={styles.eventBody}>
+                  <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                  <Text style={styles.eventMeta} numberOfLines={1}>
+                    {formatDate(event.start_datetime)}
+                    {count ? (
+                      <Text style={staffCounts[event.id] === 0 ? styles.staffNone : styles.staffSome}>
+                        {`  ·  ${count.toLowerCase()}`}
+                      </Text>
+                    ) : null}
+                  </Text>
                 </View>
-                {count ? (
-                  <Text style={[styles.staffCount, staffCounts[event.id] === 0 && styles.staffCountNone]}>{count}</Text>
-                ) : null}
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </TouchableOpacity>
             );
@@ -366,10 +369,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     eventPoster: { width: 60, aspectRatio: 4 / 5, borderRadius: radius.poster, overflow: 'hidden', backgroundColor: colors.surfaceMuted },
     eventPosterFallback: { alignItems: 'center', justifyContent: 'center' },
-    eventTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
-    eventDate: { marginTop: 3, fontFamily: font.mono, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.textSecondary },
-    staffCount: { fontFamily: font.mono, fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.text },
-    staffCountNone: { color: colors.textTertiary },
+    eventBody: { flex: 1 },
+    eventTitle: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.text },
+    // Plain sans: the mono face is for ticket IDs and codes only.
+    eventMeta: { marginTop: 4, fontSize: 13, color: colors.textSecondary },
+    staffNone: { color: colors.textTertiary },
+    staffSome: { color: colors.text },
     textLink: {
       fontSize: 13,
       fontWeight: '600',
@@ -406,12 +411,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontWeight: '600',
       color: colors.text,
     },
-    memberInvited: {
+    memberMeta: {
       marginTop: 2,
-      fontSize: 11,
-      color: colors.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      fontSize: 13,
+      color: colors.textSecondary,
     },
     staffingHeader: { marginTop: 28 },
     mutedLine: {
