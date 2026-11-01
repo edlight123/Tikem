@@ -85,11 +85,13 @@ const nextConfig = {
       fanmi: ['Family'],
       eksperyans: ['Other'],
     }
-    // Encoded twice: Next decodes a redirect destination once, and "Food &
-    // Drink" encoded once came out as a bare & that split the parameter.
+    // Encoded once. Vercel serves the destination exactly as written
+    // (verified: a double-encoded one arrived as Food%2520%2526%2520Drink).
+    // `next dev` decodes it once, so locally "Food & Drink" shows a bare &;
+    // check this redirect against production, not dev.
     return Object.entries(worlds).map(([key, cats]) => ({
       source: `/categories/${key}`,
-      destination: `/discover?${cats.map((c) => `category=${encodeURIComponent(c).replace(/%/g, "%25")}`).join("&")}`,
+      destination: `/discover?${cats.map((c) => `category=${encodeURIComponent(c)}`).join('&')}`,
       permanent: true,
     }))
   },
