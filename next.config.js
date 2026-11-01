@@ -62,6 +62,9 @@ const nextConfig = {
   // serverless bundle ships without them and every share card 500s in prod.
   outputFileTracingIncludes: {
     '/events/[id]/opengraph-image': ['./assets/fonts/**'],
+    // Poster templates are drawn server-side with these typefaces.
+    '/api/posters/preview': ['./assets/fonts/**'],
+    '/api/posters/create': ['./assets/fonts/**'],
   },
   
   // Add headers for better caching, performance, and security

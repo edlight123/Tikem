@@ -610,6 +610,8 @@ export async function createEvent(
         category: eventData.category,
         // Both field names for compatibility
         banner_image_url: coverImageUrl,
+        // The template behind a "Make a poster" poster (null for an uploaded flyer).
+        poster_template: (eventData as any).poster_template ?? null,
         cover_image_url: coverImageUrl,
         image_url: coverImageUrl,
         venue_name: eventData.venue_name,
@@ -795,6 +797,8 @@ export async function updateEvent(
       description: eventData.description,
       category: eventData.category,
       banner_image_url: coverImageUrl,
+        // The template behind a "Make a poster" poster (null for an uploaded flyer).
+        poster_template: (eventData as any).poster_template ?? null,
       cover_image_url: coverImageUrl,
       image_url: coverImageUrl,
       venue_name: eventData.venue_name,

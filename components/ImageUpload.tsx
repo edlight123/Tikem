@@ -35,6 +35,8 @@ interface ImageUploadProps {
    * (storage rules require auth; the route uses the admin SDK).
    */
   endpoint?: string
+  /** Flyer only: opens the poster-template picker ("Make a poster"). */
+  onMakePoster?: () => void
 }
 
 export default function ImageUpload({
@@ -43,6 +45,7 @@ export default function ImageUpload({
   bucket = 'event-images',
   variant = 'default',
   endpoint,
+  onMakePoster,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentImage || null)
@@ -238,6 +241,15 @@ export default function ImageUpload({
                   {t('upload.browseLibrary', { defaultValue: 'Browse library' })}
                 </button>
               )}
+              {isFlyer && onMakePoster && (
+                <button
+                  type="button"
+                  onClick={onMakePoster}
+                  className="rounded bg-white/[0.12] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  {t('composer.posterTemplates.title', { defaultValue: 'Make a poster' })}
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -266,6 +278,15 @@ export default function ImageUpload({
                 className="mt-4 text-xs font-semibold text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
               >
                 {t('upload.noFlyer', { defaultValue: 'No flyer? Choose from our library' })}
+              </button>
+            )}
+            {isFlyer && onMakePoster && (
+              <button
+                type="button"
+                onClick={onMakePoster}
+                className="mt-2.5 text-xs font-semibold text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+              >
+                {t('composer.posterTemplates.cta', { defaultValue: 'Or make one from a template' })}
               </button>
             )}
           </div>

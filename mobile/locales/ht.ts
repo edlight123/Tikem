@@ -2751,6 +2751,16 @@ export default {
     instagram: 'Swiv Tikèm sou Instagram',
     goToTickets: 'Ale nan tikè m yo',
   },
+  posterTemplates: {
+    title: 'Fè yon afich',
+    cta: 'Oswa fè youn ak yon modèl',
+    hint: 'Enfòmasyon evènman ou, byen ranje. Chwazi yon modèl, epi yon koulè.',
+    photo: 'Foto',
+    colour: 'Koulè {n}',
+    use: 'Sèvi ak afich sa a',
+    failed: 'Nou pa t ka fè afich la. Eseye ankò.',
+    sampleTitle: 'Evènman ou',
+  },
   flyerLibrary: {
     title: 'Chwazi yon flayè',
     searchPlaceholder: 'Chèche yon imaj',

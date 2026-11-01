@@ -45,6 +45,7 @@ import {
 } from '@/lib/tickets/tier-reconcile'
 import { useToast } from '@/components/ui/Toast'
 import ImageUpload from '@/components/ImageUpload'
+import PosterTemplatePicker, { makePoster, type PosterFacts, type PosterSpec } from '@/components/organizer/PosterTemplatePicker'
 import SpotifySongPicker from '@/components/organizer/SpotifySongPicker'
 import { usePosterAccent, POSTER_ACCENT_FALLBACK } from '@/components/ui/usePosterAccent'
 import GuestEditorSheet from '@/components/organizer/GuestEditorSheet'
@@ -565,6 +566,22 @@ export default function EventComposer({
   const [summary, setSummary] = useState(event?.summary || '')
   const [showSummary, setShowSummary] = useState(!!event?.summary)
   const [bannerUrl, setBannerUrl] = useState(event?.banner_image_url || '')
+  // "Make a poster": the photo a template is drawn on. Kept apart from
+  // bannerUrl so re-opening the picker after applying a template starts from
+  // the organizer's own photo, not from the poster it already made.
+  const [posterOpen, setPosterOpen] = useState(false)
+  // The template behind the current poster (stored on the event as
+  // poster_template), so a save redraws it with the event's CURRENT title,
+  // date, venue and lineup — a poster made before the date was set would
+  // otherwise advertise the wrong day.
+  const [posterSpec, setPosterSpec] = useState<PosterSpec | null>(() => {
+    const p = event?.poster_template
+    return p && typeof p.template === 'string' ? { template: p.template, palette: Number(p.palette) || 0, photo: p.photo || null } : null
+  })
+  const [posterPhoto, setPosterPhoto] = useState<string>(() => {
+    const b = event?.banner_image_url || ''
+    return b.includes('/posters/') ? '' : b
+  })
 
   // Dates
   const [startDate, setStartDate] = useState(start0.date)
@@ -739,6 +756,16 @@ export default function EventComposer({
     Array.isArray(event?.guestlist) ? event.guestlist.map(lineupEntryFromRecord) : []
   )
 
+  // The facts a poster template is drawn with, from the form as it is now.
+  const posterFacts = (): PosterFacts => ({
+    title: title.trim() || t('composer.posterTemplates.sampleTitle', { defaultValue: 'Your event' }),
+    date: startDate || new Date().toISOString().slice(0, 10),
+    time: startTime || '20:00',
+    venue: venueName,
+    city,
+    lineup: guests.map((g) => g.name).filter(Boolean),
+  })
+
   // The entry currently open in the editor sheet — a fresh one when adding, a
   // copy of an existing one when editing. Editing works on a COPY so Cancel
   // genuinely discards: mutating the row in place would leave half-typed edits
@@ -905,6 +932,7 @@ export default function EventComposer({
       setShowSummary(true)
     }
     if (d.banner_image_url) setBannerUrl(d.banner_image_url)
+    if (d.poster_template && typeof d.poster_template.template === 'string') setPosterSpec(d.poster_template)
     if (s0.date) setStartDate(s0.date)
     if (s0.time) setStartTime(s0.time)
     if (e0.date) setEndDate(e0.date)
@@ -1281,6 +1309,7 @@ export default function EventComposer({
       guestlist: cleanGuests,
       currency: normalizeEventCurrencyForCountry(country, currency),
       banner_image_url: bannerUrl || null,
+      poster_template: posterSpec || null,
       is_online: isOnline,
       // Recurrence is create-only: on edit preserve the stored flag; on create it
       // reflects the chosen cadence (per-occurrence metadata is stamped below).
@@ -1635,6 +1664,19 @@ export default function EventComposer({
     setSaving(true)
     try {
       const { data, cleanTiers, isRsvp } = buildEventData()
+
+      // A template poster is redrawn with the event's facts as they are NOW,
+      // so changing the title or date after picking it can't leave the old
+      // ones on the flyer. If the redraw fails the existing poster stays.
+      if (posterSpec) {
+        try {
+          const url = await makePoster(posterFacts(), posterSpec, (i18n.language || 'ht').slice(0, 2))
+          data.banner_image_url = url
+          setBannerUrl(url)
+        } catch {
+          /* keep the poster already on the event */
+        }
+      }
 
       // A poster uploaded while signed out lives under guest-uploads/ with a
       // 7-day expiry — move it to its permanent home before the event points
@@ -3309,9 +3351,26 @@ export default function EventComposer({
             <ImageUpload
               variant="flyer"
               currentImage={bannerUrl}
-              onImageUploaded={(url) => setBannerUrl(url)}
+              onImageUploaded={(url) => {
+                setBannerUrl(url)
+                setPosterPhoto(url)
+                setPosterSpec(null)
+              }}
               endpoint={guest ? '/api/guest-upload' : undefined}
+              onMakePoster={() => setPosterOpen(true)}
             />
+            {posterOpen && (
+              <PosterTemplatePicker
+                facts={posterFacts()}
+                photo={posterPhoto || null}
+                onPick={(url, spec) => {
+                  setBannerUrl(url)
+                  setPosterSpec(spec)
+                  setPosterOpen(false)
+                }}
+                onClose={() => setPosterOpen(false)}
+              />
+            )}
             {guest && (
               <p className="-mt-1 text-center text-[11px] text-white/40">
                 {/* Short enough to hold one line at 11px in the 360px poster

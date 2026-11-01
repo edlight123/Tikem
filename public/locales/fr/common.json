@@ -1499,7 +1499,18 @@
       "haitiVerifyLater": "Vous pouvez publier dès maintenant. Vérifiez votre identité avant de retirer vos gains."
     },
     "guestPaidNoteHaiti": "Les événements payants en Haïti peuvent être publiés tout de suite. Vérifiez votre identité avant de retirer vos gains.",
-    "guestPaidNoteStripe": "Les événements payants ({{country}}) nécessitent une vérification d’identité et un compte Stripe connecté avant d’être publiés. Vous pouvez tout préparer d’abord."
+    "guestPaidNoteStripe": "Les événements payants ({{country}}) nécessitent une vérification d’identité et un compte Stripe connecté avant d’être publiés. Vous pouvez tout préparer d’abord.",
+    "posterTemplates": {
+      "title": "Créer une affiche",
+      "cta": "Ou créez-en une à partir d’un modèle",
+      "hint": "Les infos de votre événement, mises en page. Choisissez un modèle, puis une couleur.",
+      "photo": "Photo",
+      "yourPhoto": "Votre photo",
+      "colour": "Couleur {{n}}",
+      "use": "Utiliser cette affiche",
+      "failed": "Impossible de créer l’affiche. Réessayez.",
+      "sampleTitle": "Votre événement"
+    }
   },
   "promoter": {
     "portal_eyebrow": "Portail promoteur",

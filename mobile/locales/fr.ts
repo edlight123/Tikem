@@ -2783,6 +2783,16 @@ export default {
     instagram: 'Suivre Tikèm sur Instagram',
     goToTickets: 'Voir mes billets',
   },
+  posterTemplates: {
+    title: 'Créer une affiche',
+    cta: 'Ou créez-en une à partir d’un modèle',
+    hint: 'Les infos de votre événement, mises en page. Choisissez un modèle, puis une couleur.',
+    photo: 'Photo',
+    colour: 'Couleur {n}',
+    use: 'Utiliser cette affiche',
+    failed: 'Impossible de créer l’affiche. Réessayez.',
+    sampleTitle: 'Votre événement',
+  },
   flyerLibrary: {
     title: 'Choisir un visuel',
     searchPlaceholder: 'Rechercher une image',
