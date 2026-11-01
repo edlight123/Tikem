@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, MapPin } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import PaginationDots from './PaginationDots';
+import PosterImage from './PosterImage';
 import { useI18n } from '../contexts/I18nContext';
 import { resolvePosterTheme } from '../lib/posterGradient';
 import { font } from '../theme/tokens';
@@ -30,6 +31,9 @@ interface FeaturedCarouselProps {
 }
 
 const { width } = Dimensions.get('window');
+
+// Featured poster frame height; its width is the screen less the gutters.
+const POSTER_H = 420;
 
 export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarouselProps) {
   const { colors } = useTheme();
@@ -99,12 +103,9 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
                 />
               )}
               {event.banner_image_url && (
-                <Image
-                  source={{ uri: event.banner_image_url }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  transition={200}
+                <PosterImage
+                  uri={event.banner_image_url}
+                  frameRatio={(width - 32) / POSTER_H}
                   recyclingKey={event.id ? String(event.id) : undefined}
                 />
               )}
@@ -147,7 +148,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   poster: {
     width: '100%',
-    height: 420,
+    height: POSTER_H,
     borderRadius: 4,
     overflow: 'hidden',
     backgroundColor: colors.surfaceMuted,

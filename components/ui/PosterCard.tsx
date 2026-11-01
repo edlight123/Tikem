@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import PosterImage from '@/components/ui/PosterImage'
 import { usePosterAccent } from '@/components/ui/usePosterAccent'
 
 interface PosterCardProps {
@@ -84,11 +85,10 @@ export function PosterCard({
         }`}
       >
         {hasImage ? (
-          <Image
+          <PosterImage
             src={imageUrl as string}
             alt={title}
-            fill
-            className="object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            className="transition-transform duration-200 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             quality={78}
             onError={() => setImgError(true)}

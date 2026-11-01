@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
+import PosterImage from '@/components/ui/PosterImage'
 import { Shield } from 'lucide-react'
 import OrganizerMark from '@/components/OrganizerMark'
 import { getPosterTheme } from '@/lib/posterGradient'
@@ -90,14 +91,7 @@ export default function MobileHero({
         <div className="relative mx-4 aspect-[4/5] overflow-hidden rounded bg-white/[0.04]">
           {bannerUrl ? (
             <>
-              <Image
-                src={bannerUrl}
-                alt={title}
-                fill
-                sizes="100vw"
-                className="object-cover"
-                priority
-              />
+              <PosterImage src={bannerUrl} alt={title} sizes="100vw" priority />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             </>
           ) : (

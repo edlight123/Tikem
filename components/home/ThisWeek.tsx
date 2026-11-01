@@ -8,6 +8,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import PosterImage from '@/components/ui/PosterImage'
 import { useTranslation } from 'react-i18next'
 import { SectionHeader } from '@/components/ui/EditorialRails'
 import type { WeekDay } from '@/lib/home/feed'
@@ -52,13 +53,12 @@ export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: 
                 </p>
                 <div className="relative mt-2.5 aspect-[4/5] w-full overflow-hidden rounded bg-white/[0.06]">
                   {d.top && (
-                    <Image
+                    <PosterImage
                       src={d.top.banner_image_url}
                       alt={d.top.title}
-                      fill
                       sizes="(min-width: 1024px) 220px, 46vw"
                       quality={60}
-                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                      className="transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                     />
                   )}
                 </div>
