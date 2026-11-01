@@ -2202,6 +2202,7 @@ export default {
 
   organizerTeamHub: {
     title: 'Équipe',
+    screenTitle: 'équipe & personnel',
     teamSection: 'Équipe',
     manageTeam: 'Gérer',
     invited: 'Invité',
@@ -3523,6 +3524,16 @@ export default {
     loadFailedTitle: 'Statistiques non chargées',
     loadFailedBody: 'Vérifiez votre connexion et réessayez.',
     retry: 'Réessayer',
+  },
+  // Friend-request button (components/ConnectButton).
+  connectButton: {
+    addFriend: "Ajouter en ami",
+    friends: "Amis",
+    requested: "Demande envoyée",
+    accept: "Accepter",
+    decline: "Refuser",
+    errorTitle: "Erreur",
+    errorBody: "Une erreur est survenue. Réessayez.",
   },
   invites: {
     inviteFriends: "Inviter des amis",

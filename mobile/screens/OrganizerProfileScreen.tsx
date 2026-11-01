@@ -17,7 +17,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import {
   Calendar,
-    Star,
   MapPin,
   Globe,
   MessageCircle,
@@ -33,7 +32,6 @@ import { radius } from '../theme/tokens';
 import ConnectButton from '../components/ConnectButton';
 import PosterEventCard from '../components/PosterEventCard';
 import VerifiedBadge from '../components/VerifiedBadge';
-import EmptyState from '../components/EmptyState';
 import { OrganizerProfileSkeleton } from '../components/Skeleton';
 import { fetchConnections } from '../lib/api/social';
 import { fetchPublicProfileDetails, type PublicProfileDetails } from '../lib/api/publicDetails';
@@ -472,9 +470,18 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   // accept the legacy camelCase too. Value may be an ISO string or a Firestore
   // Timestamp-like { seconds }.
   const createdAtRaw = organizer.created_at ?? organizer.createdAt;
-  const hostingSince = createdAtRaw
-    ? new Date(createdAtRaw.seconds ? createdAtRaw.seconds * 1000 : createdAtRaw).getFullYear()
-    : null;
+  const hostingYear = createdAtRaw
+    ? new Date(
+        createdAtRaw.seconds
+          ? createdAtRaw.seconds * 1000
+          : typeof createdAtRaw.toDate === 'function'
+            ? createdAtRaw.toDate()
+            : createdAtRaw
+      ).getFullYear()
+    : NaN;
+  // A malformed date must hide the row: a bare NaN in JSX renders as text
+  // outside <Text>, which crashes on device.
+  const hostingSince = Number.isFinite(hostingYear) ? hostingYear : null;
   const subtitle = getSubtitle();
 
   // Org description, or a person's bio when the server says this viewer may
@@ -507,7 +514,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     { label: t('organizerProfile.stats.events'), value: String(stats.totalEvents || 0) },
     { label: t('organizerProfile.stats.followers'), value: String(stats.followerCount || 0) },
     { label: t('organizerProfile.stats.sold'), value: (stats.totalTicketsSold || 0).toLocaleString() },
-  ];
+  ].filter((item, i) => i < 2 || (stats.totalTicketsSold || 0) > 0); // "0 sold" says nothing
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -522,11 +529,13 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
         {/* Premium Hero Section with ImageBackground */}
         <ImageBackground
           source={organizer.coverImageUrl ? { uri: organizer.coverImageUrl } : undefined}
-          style={styles.hero}
+          // No cover: the header sits on the page's own black, not a lighter
+          // band (TestFlight: "is this page premium enough?").
+          style={[styles.hero, !organizer.coverImageUrl && styles.heroPlain]}
           resizeMode="cover"
         >
-          {/* Dark scrim overlay for readability */}
-          <View style={styles.heroScrim} />
+          {/* Dark scrim over a cover photo for readability */}
+          {!!organizer.coverImageUrl && <View style={styles.heroScrim} />}
 
           {/* Back Button — a clean chevron-back, consistent with the
               organizer-surface headers (top-left, never over the avatar). */}
@@ -667,30 +676,29 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           {/* Upcoming Events */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('organizerProfile.upcomingTitle')}</Text>
-            <Text style={styles.sectionSubtitle}>
-              {upcomingEvents.length}{' '}
-              {t(
-                upcomingEvents.length === 1
-                  ? 'organizerProfile.upcomingCountSingular'
-                  : 'organizerProfile.upcomingCountPlural'
-              )}
-            </Text>
-
             {upcomingEvents.length > 0 ? (
-              <View style={styles.eventsGrid}>
-                {upcomingEvents.map((event) => renderEventCard(event))}
-              </View>
+              <>
+                <Text style={styles.sectionSubtitle}>
+                  {upcomingEvents.length}{' '}
+                  {t(
+                    upcomingEvents.length === 1
+                      ? 'organizerProfile.upcomingCountSingular'
+                      : 'organizerProfile.upcomingCountPlural'
+                  )}
+                </Text>
+                <View style={styles.eventsGrid}>
+                  {upcomingEvents.map((event) => renderEventCard(event))}
+                </View>
+              </>
             ) : (
-              <EmptyState
-                icon={Calendar}
-                title={t('organizerProfile.noUpcomingTitle')}
-                subtitle={
-                  isFollowing
-                    ? t('organizerProfile.noUpcomingBodyFollowing')
-                    : t('organizerProfile.noUpcomingBodyNotFollowing')
-                }
-                compact
-              />
+              // One quiet line, not an icon + bold heading + "0 events" count
+              // filling half the screen.
+              <Text style={styles.quietLine}>
+                {t('organizerProfile.noUpcomingTitle')}.{' '}
+                {isFollowing
+                  ? t('organizerProfile.noUpcomingBodyFollowing')
+                  : t('organizerProfile.noUpcomingBodyNotFollowing')}
+              </Text>
             )}
           </View>
 
@@ -792,15 +800,6 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {/* Reviews Placeholder */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('organizerProfile.reviewsTitle')}</Text>
-            <EmptyState
-              icon={Star}
-              title={t('organizerProfile.reviewsComingSoon')}
-              compact
-            />
-          </View>
         </View>
       </ScrollView>
       <ReportContentModal
@@ -850,6 +849,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // clear of the controls, so the hero is exactly as tall as it needs to be.
   hero: {
     backgroundColor: colors.surfaceRaised, // neutral fallback behind poster (not decorative teal)
+  },
+  heroPlain: {
+    backgroundColor: colors.background,
   },
   heroScrim: {
     ...StyleSheet.absoluteFillObject,
@@ -1125,6 +1127,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surfaceRaised,
+  },
+  quietLine: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
   },
   privateNote: {
     fontSize: 13,

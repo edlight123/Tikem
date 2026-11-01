@@ -2611,6 +2611,7 @@ export default {
 
   organizerTeamHub: {
     title: 'Team',
+    screenTitle: 'team & staff',
     teamSection: 'Team',
     manageTeam: 'Manage',
     invited: 'Invited',
@@ -3504,6 +3505,16 @@ export default {
     loadFailedTitle: 'Analytics didn’t load',
     loadFailedBody: 'Check your connection and try again.',
     retry: 'Try again',
+  },
+  // Friend-request button (components/ConnectButton).
+  connectButton: {
+    addFriend: "Add friend",
+    friends: "Friends",
+    requested: "Requested",
+    accept: "Accept",
+    decline: "Decline",
+    errorTitle: "Error",
+    errorBody: "Something went wrong. Please try again.",
   },
   invites: {
     inviteFriends: "Invite friends",

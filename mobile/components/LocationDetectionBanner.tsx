@@ -3,12 +3,11 @@
  * Shows when device region differs from saved profile country
  * Offers to update user's location preferences
  *
- * Design (2026-10-03 TestFlight feedback, "make this more premium"): a compact
- * FILLED card inset from the screen edges, not a full-width strip with a
- * hairline under it. The flag carries the place, one confident line names it,
- * and the actions are words, not icon circles: "Yes" as a small white pill and
- * "Change" as a quiet text button. Teal stays out of it (POSH: the chrome is
- * black, white and grey).
+ * Design (2026-10-29 TestFlight: "what the heck is this? … more subtle and
+ * premium"): one slim filled row, not a card with a headline and buttons.
+ * The flag, one quiet question ("Wè evènman nan Miami?"), then the answers as
+ * words: "Chanje" in grey, "Wi" in white, and a small ×. Teal stays out of it
+ * (POSH: the chrome is black, white and grey).
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -191,7 +190,7 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
   const inCountry = t(`locationBanner.inCountry.${detectedCountry}`);
   const translateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [-(insets.top + 140), 0],
+    outputRange: [-(insets.top + 80), 0],
   });
 
   return (
@@ -202,63 +201,50 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
         { top: insets.top + 8, opacity: progress, transform: [{ translateY }] },
       ]}
     >
-      <View style={styles.card} accessibilityRole="alert">
-        <View style={styles.row}>
-          <View style={styles.flag}>
-            <Text style={styles.flagText} allowFontScaling={false}>{flag}</Text>
-          </View>
+      <View style={styles.bar} accessibilityRole="alert">
+        <Text style={styles.flagText} allowFontScaling={false}>{flag}</Text>
+        <Text style={styles.question} numberOfLines={1}>
+          {city
+            ? t('locationBanner.subtitle', { city })
+            : t('locationBanner.title', { inCountry })}
+        </Text>
 
-          <View style={styles.textContainer}>
-            <Text style={styles.title} numberOfLines={2}>
-              {t('locationBanner.title', { inCountry }).toLowerCase()}
-            </Text>
-            {!!city && (
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {t('locationBanner.subtitle', { city })}
-              </Text>
-            )}
-          </View>
-
+        {!!onChangeLocation && (
           <TouchableOpacity
-            onPress={handleDismiss}
+            onPress={handleChange}
             disabled={updating}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
             accessibilityRole="button"
-            accessibilityLabel={t('locationBanner.notNow')}
-            style={styles.close}
+            style={styles.action}
           >
-            <X size={16} color={colors.textTertiary} />
+            <Text style={styles.changeText}>{t('locationBanner.change')}</Text>
           </TouchableOpacity>
-        </View>
+        )}
 
-        <View style={styles.actions}>
-          {!!onChangeLocation && (
-            <TouchableOpacity
-              onPress={handleChange}
-              disabled={updating}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              style={styles.changeButton}
-            >
-              <Text style={styles.changeText}>{t('locationBanner.change')}</Text>
-            </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleAccept}
+          disabled={updating}
+          hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+          accessibilityRole="button"
+          style={styles.action}
+        >
+          {updating ? (
+            <ActivityIndicator size="small" color={colors.text} />
+          ) : (
+            <Text style={styles.yesText}>{t('locationBanner.yes')}</Text>
           )}
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.yesButton}
-            onPress={handleAccept}
-            disabled={updating}
-            activeOpacity={0.85}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityRole="button"
-          >
-            {updating ? (
-              <ActivityIndicator size="small" color={colors.background} />
-            ) : (
-              <Text style={styles.yesText}>{t('locationBanner.yes')}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={handleDismiss}
+          disabled={updating}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('locationBanner.notNow')}
+          style={styles.close}
+        >
+          <X size={14} color={colors.textTertiary} />
+        </TouchableOpacity>
       </View>
     </Animated.View>
   );
@@ -271,87 +257,49 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     right: 12,
     zIndex: 1000,
   },
-  // A fill, not a hairline: the card separates from the black canvas by being
-  // lighter, with a soft shadow for lift over the header and the feed.
-  card: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 4,
-    paddingTop: 14,
-    paddingBottom: 12,
-    paddingHorizontal: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  row: {
+  // A fill, not a hairline: one slim raised row with a soft shadow for lift
+  // over the header and the feed.
+  bar: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  flag: {
-    width: 40,
-    height: 40,
+    height: 48,
+    paddingLeft: 14,
+    paddingRight: 10,
     borderRadius: 4,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    backgroundColor: colors.surfaceRaised,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 10,
   },
   flagText: {
-    fontSize: 22,
+    fontSize: 16,
+    marginRight: 10,
   },
-  textContainer: {
+  question: {
     flex: 1,
-    paddingRight: 8,
-  },
-  // Editorial serif, lowercased at the call site (house voice, as in
-  // AnnouncementCard).
-  title: {
-    fontFamily: 'InstrumentSerif_400Regular',
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 14,
+    fontWeight: '500',
     color: colors.text,
   },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  close: {
-    alignSelf: 'flex-start',
-    padding: 2,
-  },
-  actions: {
-    flexDirection: 'row',
+  action: {
+    paddingHorizontal: 8,
+    minWidth: 28,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 12,
-    gap: 6,
-  },
-  changeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   changeText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.textSecondary,
-  },
-  yesButton: {
-    minWidth: 72,
-    height: 34,
-    paddingHorizontal: 18,
-    borderRadius: 4,
-    // White on the dark canvas; inverts with the theme so it never vanishes.
-    backgroundColor: colors.text,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   yesText: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.background,
-    letterSpacing: -0.1,
+    color: colors.text,
+  },
+  close: {
+    marginLeft: 4,
+    padding: 4,
   },
 });

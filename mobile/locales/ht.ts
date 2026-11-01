@@ -2171,6 +2171,7 @@ export default {
 
   organizerTeamHub: {
     title: 'Ekip',
+    screenTitle: 'ekip ak estaf',
     teamSection: 'Ekip',
     manageTeam: 'Jere',
     invited: 'Envite',
@@ -3491,6 +3492,16 @@ export default {
     loadFailedTitle: 'Estatistik yo pa chaje',
     loadFailedBody: 'Tcheke koneksyon ou epi eseye ankò.',
     retry: 'Eseye ankò',
+  },
+  // Friend-request button (components/ConnectButton).
+  connectButton: {
+    addFriend: "Ajoute zanmi",
+    friends: "Zanmi",
+    requested: "Demann voye",
+    accept: "Aksepte",
+    decline: "Refize",
+    errorTitle: "Erè",
+    errorBody: "Gen yon pwoblèm. Eseye ankò.",
   },
   invites: {
     inviteFriends: "Envite zanmi",
