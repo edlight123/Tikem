@@ -11,6 +11,7 @@
 import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import PosterImage from '@/components/ui/PosterImage'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { HomeEvent } from '@/lib/home/feed'
@@ -81,13 +82,11 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
             className="relative block aspect-[4/5] w-full max-w-[440px] overflow-hidden rounded bg-white/[0.06] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)] sm:w-[70%] lg:ml-auto lg:w-full lg:max-w-[560px]"
           >
             {ev.banner_image_url && (
-              <Image
+              <PosterImage
                 src={ev.banner_image_url}
                 alt={ev.title}
-                fill
                 priority={index === 0}
                 sizes="(min-width: 1024px) 560px, (min-width: 640px) 70vw, 100vw"
-                className="object-cover"
               />
             )}
           </Link>

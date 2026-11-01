@@ -7,6 +7,7 @@ import {
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
+import PosterImage from './PosterImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Users } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -143,12 +144,9 @@ export default function PosterEventCard({
               // every scroll/render (the RN Image before this had no cache).
               // recyclingKey keeps the right image on recycled rows; the built-in
               // transition fades it in over the gradient fallback.
-              <Image
-                source={{ uri: event.banner_image_url }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={200}
+              <PosterImage
+                uri={event.banner_image_url!}
+                frameRatio={1 / ratio}
                 recyclingKey={event.id ? String(event.id) : undefined}
               />
             ) : (
