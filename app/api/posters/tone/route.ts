@@ -20,6 +20,41 @@ export const runtime = 'nodejs'
 
 const FALLBACK = '#141414'
 
+// Unauthenticated and server-side, so it reads only our own posters and caps
+// the work: our storage bucket or an Unsplash photo (the flyer library), an
+// image content type, at most 15MB read as a stream, and a decode pixel cap.
+const MAX_BYTES = 15 * 1024 * 1024
+const BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || ''
+
+function isOwnPoster(raw: string): boolean {
+  const u = new URL(raw)
+  if (u.hostname === 'images.unsplash.com') return u.pathname.startsWith('/photo-')
+  if (!BUCKET) return false
+  if (u.hostname === 'firebasestorage.googleapis.com') return u.pathname.startsWith(`/v0/b/${BUCKET}/`)
+  if (u.hostname === 'storage.googleapis.com') return u.pathname.startsWith(`/${BUCKET}/`)
+  return false
+}
+
+async function readCapped(res: Response): Promise<Buffer> {
+  const declared = Number(res.headers.get('content-length') || 0)
+  if (declared > MAX_BYTES) throw new Error('too large')
+  if (!res.body) throw new Error('no body')
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > MAX_BYTES) {
+      await reader.cancel()
+      throw new Error('too large')
+    }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks)
+}
+
 // A poster's colour is public; any origin may read it (the app's web build
 // and previews call from another origin).
 const CORS = { 'Access-Control-Allow-Origin': '*' }
@@ -54,14 +89,15 @@ function toneFrom(r: number, g: number, b: number): string {
 
 export async function GET(req: Request) {
   const url = new URL(req.url).searchParams.get('url')
-  if (!isAllowedPosterUrl(url)) {
+  if (!isAllowedPosterUrl(url) || !isOwnPoster(url)) {
     return NextResponse.json({ tone: FALLBACK }, { status: 400, headers: CORS })
   }
   try {
     const res = await fetch(url, { redirect: 'error' })
     if (!res.ok) throw new Error(String(res.status))
+    if (!/^image\//i.test(res.headers.get('content-type') || '')) throw new Error('not an image')
     const { default: sharp } = await import('sharp')
-    const { data } = await sharp(Buffer.from(await res.arrayBuffer()))
+    const { data } = await sharp(await readCapped(res), { limitInputPixels: 50_000_000, failOn: 'error' })
       .resize(1, 1, { fit: 'fill' })
       .removeAlpha()
       .raw()
