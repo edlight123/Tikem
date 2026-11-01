@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
 /**
@@ -10,7 +10,9 @@ import Image from 'next/image'
  * Organizers upload flyers made for Instagram (square) or Stories (9:16);
  * every poster frame here is 4:5. `object-cover` cut the date or venue off
  * those flyers. A flyer close to the frame's shape still fills it; one that
- * isn't is shown whole, centred on a blurred, darkened copy of itself.
+ * isn't is shown whole, on one even, deep tone taken from the flyer
+ * (/api/posters/tone). A blurred copy left uneven patches above and below
+ * the art; a single tone reads as a deliberate mount.
  *
  * Renders inside a `relative` frame that sets the size (it uses `fill`).
  */
@@ -20,6 +22,22 @@ import Image from 'next/image'
 const FILL_TOLERANCE = 0.12
 
 const knownRatios = new Map<string, number>()
+const knownTones = new Map<string, Promise<string>>()
+
+// Neutral mount while the tone loads (and if it can't be read).
+const MOUNT = '#141414'
+
+function toneFor(src: string): Promise<string> {
+  let p = knownTones.get(src)
+  if (!p) {
+    p = fetch(`/api/posters/tone?url=${encodeURIComponent(src)}`)
+      .then((r) => r.json())
+      .then((j) => (typeof j?.tone === 'string' ? j.tone : MOUNT))
+      .catch(() => MOUNT)
+    knownTones.set(src, p)
+  }
+  return p
+}
 
 interface Props {
   src: string
@@ -46,6 +64,16 @@ export default function PosterImage({
 }: Props) {
   const [ratio, setRatio] = useState<number | undefined>(knownRatios.get(src))
   const fits = ratio === undefined || Math.abs(ratio - frameRatio) / frameRatio <= FILL_TOLERANCE
+  const [tone, setTone] = useState(MOUNT)
+
+  useEffect(() => {
+    if (fits) return
+    let live = true
+    toneFor(src).then((t) => live && setTone(t))
+    return () => {
+      live = false
+    }
+  }, [fits, src])
 
   const onLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget
@@ -58,12 +86,11 @@ export default function PosterImage({
   return (
     <>
       {!fits && (
-        // The room: the same flyer, blurred and darkened. A tiny source is
-        // enough, the blur discards the detail anyway.
-        <div aria-hidden className="absolute inset-0 overflow-hidden">
-          <Image src={src} alt="" fill sizes="64px" quality={40} className="scale-125 object-cover blur-2xl" />
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
+        <div
+          aria-hidden
+          className="absolute inset-0 transition-colors duration-300"
+          style={{ backgroundColor: tone }}
+        />
       )}
       <Image
         src={src}
