@@ -81,7 +81,7 @@ const getStyles = (colors: any) =>
       color: colors.text,
     },
     subtitle: {
-      fontSize: 11,
+      fontSize: 13,
       letterSpacing: 0.4,
       color: colors.textSecondary,
       marginTop: 3,
@@ -99,7 +99,7 @@ const getStyles = (colors: any) =>
       backgroundColor: colors.surface,
     },
     label: {
-      fontSize: 19,
+      fontSize: 20,
       fontWeight: '700',
       color: '#FFFFFF',
       letterSpacing: 0.2,

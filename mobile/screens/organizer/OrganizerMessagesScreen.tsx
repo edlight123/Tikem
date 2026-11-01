@@ -522,7 +522,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.warning,
     },
     needsReplyText: {
-      fontSize: 10.5,
+      fontSize: 11,
       fontWeight: '700',
       letterSpacing: 0.8,
       textTransform: 'uppercase',

@@ -163,7 +163,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingVertical: 16,
     },
     labelStacked: {
-      fontSize: 12.5,
+      fontSize: 13,
       fontWeight: '500',
       color: colors.textSecondary,
       textAlign: 'center',
@@ -213,7 +213,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     label: {
       flex: 1,
-      fontSize: 13.5,
+      fontSize: 14,
       fontWeight: '600',
       color: colors.text,
     },

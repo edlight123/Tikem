@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   caption: {
     flexShrink: 1,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.6,
     color: 'rgba(255,255,255,0.7)',

@@ -171,7 +171,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   detailText: {
     color: colors.textSecondary,
-    fontSize: 11.5,
+    fontSize: 13,
     letterSpacing: 0.3,
     flexShrink: 1,
   },

@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   value: {
-    fontSize: 27,
+    fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],

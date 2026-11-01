@@ -1735,7 +1735,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Quiet uppercase label, teal because teal here CARRIES MEANING (verified).
   // No backgroundColor / borderWidth — deliberately not a pill.
   verifiedTextInline: {
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
     color: colors.primary,

@@ -566,7 +566,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 32,
   },
   chartLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textSecondary,
     marginTop: 8,
   },

@@ -157,7 +157,7 @@ const getStyles = (colors: any) =>
     },
     cycleDim: { opacity: 0.75 },
     caption: {
-      fontSize: 9,
+      fontSize: 11,
       letterSpacing: 0.6,
       textTransform: 'uppercase',
       fontWeight: '600',

@@ -521,7 +521,7 @@ export default function HomeScreen({ navigation }: any) {
                 }}
               >
                 <CloudOff size={13} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, fontSize: 12.5 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
                   {t('home.offlineNote')}
                 </Text>
               </View>
