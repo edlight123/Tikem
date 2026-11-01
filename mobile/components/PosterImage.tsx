@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image, ImageLoadEventData } from 'expo-image';
+import { API_BASE_URL } from '../lib/api/backend';
 
 /**
  * An event poster that never crops a flyer badly.
@@ -8,8 +9,10 @@ import { Image, ImageLoadEventData } from 'expo-image';
  * Most organizers upload a flyer made for Instagram (square) or Stories
  * (9:16), and our cards are 4:5. Filling the card with `cover` cut the date or
  * venue off the edge of those flyers. Now a flyer whose shape is close to the
- * frame still fills it; one that isn't is shown WHOLE, centred on a blurred,
- * darkened copy of itself, so the card still reads as a full poster.
+ * frame still fills it; one that isn't is shown WHOLE on one even, deep tone
+ * taken from the flyer (the website's /api/posters/tone; the app can't read
+ * pixels without a native module). A blurred copy left uneven patches above
+ * and below the art; a single tone reads as a deliberate mount.
  *
  * The flyer's shape is only known once it loads, so it is remembered per URL:
  * a recycled or re-rendered card lays out right on the first frame instead of
@@ -21,6 +24,22 @@ import { Image, ImageLoadEventData } from 'expo-image';
 const FILL_TOLERANCE = 0.12;
 
 const knownRatios = new Map<string, number>();
+const knownTones = new Map<string, Promise<string>>();
+
+// Neutral mount while the tone loads (and if it can't be read).
+const MOUNT = '#141414';
+
+function toneFor(uri: string): Promise<string> {
+  let p = knownTones.get(uri);
+  if (!p) {
+    p = fetch(`${API_BASE_URL}/api/posters/tone?url=${encodeURIComponent(uri)}`)
+      .then((r) => r.json())
+      .then((j) => (typeof j?.tone === 'string' ? j.tone : MOUNT))
+      .catch(() => MOUNT);
+    knownTones.set(uri, p);
+  }
+  return p;
+}
 
 interface Props {
   uri: string;
@@ -42,6 +61,16 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
   };
 
   const fits = ratio === undefined || Math.abs(ratio - frameRatio) / frameRatio <= FILL_TOLERANCE;
+  const [tone, setTone] = useState(MOUNT);
+
+  useEffect(() => {
+    if (fits) return;
+    let live = true;
+    toneFor(uri).then((t) => live && setTone(t));
+    return () => {
+      live = false;
+    };
+  }, [fits, uri]);
 
   if (fits) {
     return (
@@ -58,16 +87,7 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
   }
 
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <Image
-        source={{ uri }}
-        style={[StyleSheet.absoluteFill, styles.backdrop]}
-        contentFit="cover"
-        blurRadius={36}
-        cachePolicy="memory-disk"
-        recyclingKey={recyclingKey}
-      />
-      <View style={styles.scrim} />
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: tone }]}>
       <Image
         source={{ uri }}
         style={StyleSheet.absoluteFill}
@@ -80,14 +100,3 @@ export default function PosterImage({ uri, frameRatio, recyclingKey, transition 
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // Slightly oversized so the blur's soft edge never shows inside the frame.
-  backdrop: {
-    transform: [{ scale: 1.15 }],
-  },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-  },
-});

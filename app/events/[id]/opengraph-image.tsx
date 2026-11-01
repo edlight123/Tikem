@@ -6,6 +6,7 @@ import { getEventById } from '@/lib/data/events'
 import { getPosterTheme } from '@/lib/posterGradient'
 import { resolveEventPricing } from '@/lib/ticketPricing'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { isAllowedPosterUrl } from '@/lib/posters/hosts'
 
 // nodejs, not edge: getEventById reaches Firestore through firebase-admin, which
 // cannot run on the edge runtime at all. (app/icon.tsx is edge only because it
@@ -47,26 +48,7 @@ const TEAL = '#2dd4bf'
 // than skipping — which would fail the whole route and leave the share with no
 // image at all. A HEAD first is cheaper than that outcome. Anything unreadable
 // falls through to the gradient, exactly like the in-app poster fallback.
-// banner_image_url is organizer-supplied, and this route fetches it from the
-// server: left open, it is an SSRF primitive (internal metadata endpoints,
-// localhost). Only the hosts posters are actually stored on are fetched, over
-// https, and redirects are refused so an allowed host cannot bounce elsewhere.
-const POSTER_HOSTS = new Set([
-  'firebasestorage.googleapis.com',
-  'storage.googleapis.com',
-  'images.unsplash.com',
-])
-
-function isAllowedPosterUrl(url: string | undefined | null): url is string {
-  if (!url) return false
-  try {
-    const u = new URL(url)
-    return u.protocol === 'https:' && !u.username && !u.password && !u.port && POSTER_HOSTS.has(u.hostname)
-  } catch {
-    return false
-  }
-}
-
+// Only poster hosts are fetched (SSRF guard): see lib/posters/hosts.
 async function usablePoster(url: string | undefined): Promise<string | null> {
   if (!isAllowedPosterUrl(url)) return null
   try {
