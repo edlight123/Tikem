@@ -182,8 +182,8 @@ const getStyles = (colors: any) =>
       flex: 1,
       height: 48,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
+      // A quiet fill, not an outline around nothing.
+      backgroundColor: colors.surfaceMuted,
       alignItems: 'center',
       justifyContent: 'center',
     },

@@ -61,7 +61,7 @@ export default function WhenPickerSheet({ visible, onClose, value, onSelect }: W
               <Text style={[styles.rowText, active && styles.rowTextActive]}>
                 {t(option.labelKey)}
               </Text>
-              {active && <Check size={18} color={colors.primary} />}
+              {active && <Check size={18} color={colors.background} />}
             </TouchableOpacity>
           );
         })}
@@ -74,7 +74,7 @@ export default function WhenPickerSheet({ visible, onClose, value, onSelect }: W
           <Text style={[styles.rowText, value === 'pick-date' && styles.rowTextActive]}>
             {t('filters.dateOptions.pickDate')}
           </Text>
-          {value === 'pick-date' && <Check size={18} color={colors.primary} />}
+          {value === 'pick-date' && <Check size={18} color={colors.background} />}
         </TouchableOpacity>
 
         {showCalendar && (
@@ -150,12 +150,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingVertical: 15,
       paddingHorizontal: 14,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: 'transparent',
       marginBottom: 8,
       backgroundColor: colors.surfaceMuted,
     },
-    rowActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+    // Selection is fill against fill, as on the website's chips: white with
+    // black ink, never a teal outline around a tinted box (TestFlight: "what
+    // did we say about this fill?").
+    rowActive: { backgroundColor: colors.white },
     rowText: { fontSize: 15, fontWeight: '600', color: colors.text },
-    rowTextActive: { color: colors.primarySoftText, fontWeight: '700' },
+    rowTextActive: { color: colors.background, fontWeight: '700' },
   });

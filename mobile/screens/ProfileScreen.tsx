@@ -507,6 +507,46 @@ export default function ProfileScreen() {
           })}
         </View>
 
+        {/* Role switching: only when the account has more than one hat. Sits
+            right under the stats so someone with an org switches without
+            scrolling past posters and settings (TestFlight: "have the bar
+            higher"). */}
+        {canUseOrganizerMode || canUseStaffTools ? (
+          <View style={styles.block}>
+            <SectionHeader title={t('profile.viewAs')} />
+            <View style={styles.chipRow}>
+              {([
+                { key: 'attendee', label: t('profile.modeAttendee'), show: true },
+                { key: 'organizer', label: t('profile.modeOrganizer'), show: canUseOrganizerMode },
+                { key: 'staff', label: t('profile.modeStaff'), show: canUseStaffTools },
+              ] as const)
+                .filter((m) => m.show)
+                .map((m) => {
+                  const active = mode === m.key;
+                  return (
+                    <TouchableOpacity
+                      key={m.key}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setMode(m.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{m.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
+            {canUseOrganizerMode ? <Text style={styles.caption}>{t('profile.modeSwitchTip')}</Text> : null}
+            {/* Someone who runs more than one org picks which one organizer mode acts for. */}
+            {canUseOrganizerMode && activeOrg.options.length > 1 ? (
+              <>
+                <Text style={styles.subLabel}>{t('orgTeam.switcher.label')}</Text>
+                <OrgSwitcherList />
+              </>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Organization (organizers): the brand shown in place of the
             personal name, with the logo changeable right here. */}
         {/* Acting for someone else's org: that org's card (admins edit it). */}
@@ -593,43 +633,6 @@ export default function ProfileScreen() {
         <PrivacySection />
 
         <SoundSection />
-
-        {/* Role switching: only when the account has more than one hat. */}
-        {canUseOrganizerMode || canUseStaffTools ? (
-          <View style={styles.block}>
-            <SectionHeader title={t('profile.viewAs')} />
-            <View style={styles.chipRow}>
-              {([
-                { key: 'attendee', label: t('profile.modeAttendee'), show: true },
-                { key: 'organizer', label: t('profile.modeOrganizer'), show: canUseOrganizerMode },
-                { key: 'staff', label: t('profile.modeStaff'), show: canUseStaffTools },
-              ] as const)
-                .filter((m) => m.show)
-                .map((m) => {
-                  const active = mode === m.key;
-                  return (
-                    <TouchableOpacity
-                      key={m.key}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setMode(m.key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{m.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-            </View>
-            {canUseOrganizerMode ? <Text style={styles.caption}>{t('profile.modeSwitchTip')}</Text> : null}
-            {/* Someone who runs more than one org picks which one organizer mode acts for. */}
-            {canUseOrganizerMode && activeOrg.options.length > 1 ? (
-              <>
-                <Text style={styles.subLabel}>{t('orgTeam.switcher.label')}</Text>
-                <OrgSwitcherList />
-              </>
-            ) : null}
-          </View>
-        ) : null}
 
         {/* Settings */}
         <View style={styles.block}>

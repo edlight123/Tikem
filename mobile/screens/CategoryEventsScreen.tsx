@@ -502,26 +502,29 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginBottom: 16,
       paddingHorizontal: 16,
     },
+    // Same chip as the website's (discoverChipCls): fill against fill, a faint
+    // white wash when off and solid white with black ink when on. The old
+    // hairline box read as an empty outline ("this fill doesn't match the
+    // website style").
     filterChip: {
       paddingHorizontal: 14,
       height: 36,
       borderRadius: 4,
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: 'rgba(255,255,255,0.08)',
       alignItems: 'center',
       justifyContent: 'center',
       maxWidth: 150,
     },
     filterChipActive: {
-      borderColor: colors.text,
+      backgroundColor: colors.white,
     },
     filterChipText: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.text,
+      color: 'rgba(255,255,255,0.75)',
     },
     filterChipTextActive: {
-      color: colors.text,
+      color: colors.background,
     },
     gridRow: {
       gap: 12,
