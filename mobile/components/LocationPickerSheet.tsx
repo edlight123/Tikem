@@ -126,7 +126,7 @@ export default function LocationPickerSheet({
         }}
         activeOpacity={0.8}
       >
-        <MapPin size={18} color={active ? colors.primary : colors.textSecondary} />
+        <MapPin size={18} color={active ? colors.background : colors.textSecondary} />
         <View style={styles.cityTextWrap}>
           <Text style={[styles.cityText, active && styles.cityTextActive]}>{label}</Text>
           {!!hint && (
@@ -135,7 +135,7 @@ export default function LocationPickerSheet({
             </Text>
           )}
         </View>
-        {active && <Check size={18} color={colors.primary} />}
+        {active && <Check size={18} color={colors.background} />}
       </TouchableOpacity>
     );
   };
@@ -242,7 +242,7 @@ export default function LocationPickerSheet({
                   }}
                   activeOpacity={0.8}
                 >
-                  <MapPin size={18} color={userCountry === c.code ? colors.primary : colors.textSecondary} />
+                  <MapPin size={18} color={userCountry === c.code ? colors.background : colors.textSecondary} />
                   <View style={styles.cityTextWrap}>
                     <Text
                       style={[styles.cityText, userCountry === c.code && styles.cityTextActive]}
@@ -250,7 +250,7 @@ export default function LocationPickerSheet({
                       {c.name}
                     </Text>
                   </View>
-                  {userCountry === c.code ? <Check size={18} color={colors.primary} /> : null}
+                  {userCountry === c.code ? <Check size={18} color={colors.background} /> : null}
                 </TouchableOpacity>
               ))
             ) : (
@@ -361,12 +361,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingVertical: 9,
       borderRadius: RADIUS.sm,
       backgroundColor: colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
+    // Fill against fill, like the website's chips: white when on, no outline.
     countryChipActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
+      backgroundColor: colors.white,
     },
     countryChipText: {
       fontSize: 14,
@@ -374,7 +372,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.text,
     },
     countryChipTextActive: {
-      color: colors.onPrimary,
+      color: colors.background,
     },
     searchField: {
       flexDirection: 'row',
@@ -426,14 +424,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingVertical: 14,
       paddingHorizontal: 14,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: 'transparent',
       marginBottom: 8,
       backgroundColor: colors.surfaceMuted,
     },
+    // White fill with black ink, same as the When sheet and the web chips.
     cityRowActive: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.white,
     },
     cityTextWrap: {
       flex: 1,
@@ -450,7 +446,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 2,
     },
     cityTextActive: {
-      color: colors.primarySoftText,
+      color: colors.background,
       fontWeight: '700',
     },
   });
