@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +34,7 @@ import GettingStartedCard from '../../components/organizer/GettingStartedCard';
 import ActionTileGrid, { ActionTile } from '../../components/organizer/ActionTileGrid';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
+import PosterImage from '../../components/PosterImage';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { formatPrice } from '../../lib/currency';
 import { prefetchEarningsHub } from '../../lib/earningsHubCache';
@@ -72,6 +74,11 @@ export default function OrganizerDashboardScreen() {
   // The tab bar is a translucent overlay, so reserve its height here or the
   // last row ends up sitting behind it.
   const tabBarSpace = useTabBarSpace();
+  // Tonight's poster frame. A full-width 4:5 flyer pushed the scan button
+  // (the day-of job) below the tab bar (TestFlight 2026-11-02), so the frame
+  // is square, and wider on short phones; the whole flyer still shows.
+  const { height: windowHeight } = useWindowDimensions();
+  const heroRatio = windowHeight < 760 ? 4 / 3 : 1;
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
   const [allEvents, setAllEvents] = useState<OrganizerEvent[]>([]);
   const [stats, setStats] = useState<OrganizerStats | null>(null);
@@ -318,7 +325,13 @@ export default function OrganizerDashboardScreen() {
         onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
         activeOpacity={0.85}
       >
-        <View style={styles.heroPoster}>{renderPoster(event.id, event.posterUri, event, 22)}</View>
+        <View style={[styles.heroPoster, { aspectRatio: heroRatio }]}>
+          {event.posterUri ? (
+            <PosterImage uri={event.posterUri} frameRatio={heroRatio} recyclingKey={event.id} />
+          ) : (
+            renderPoster(event.id, null, event, 22)
+          )}
+        </View>
 
         <Text style={styles.heroTitle} numberOfLines={2}>{event.title}</Text>
         {!!meta && <Text style={styles.heroMeta} numberOfLines={1}>{meta}</Text>}
@@ -409,7 +422,7 @@ export default function OrganizerDashboardScreen() {
         {/* Tonight: a poster-led hero, poster straight on the canvas. */}
         <View style={styles.section}>
           <Skeleton width={110} height={22} radius={4} style={{ marginBottom: 12 }} />
-          <Skeleton width="100%" aspectRatio={4 / 5} radius={radius.poster} />
+          <Skeleton width="100%" aspectRatio={heroRatio} radius={radius.poster} />
         </View>
         {/* This week: section title + the metric triplet (••• while loading). */}
         <View style={styles.section}>
@@ -598,12 +611,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingBottom: 4,
   },
   // Tonight hero: no card fill (owner: "no background behind the posters").
-  // The 4:5 flyer sits on the canvas, uncropped, text below it.
+  // The flyer sits on the canvas, uncropped, text below it; the frame's
+  // ratio is set in the component (heroRatio).
   heroCard: {},
   // surfaceRaised is the poster's own placeholder while the image loads.
   heroPoster: {
     width: '100%',
-    aspectRatio: 4 / 5,
     borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
