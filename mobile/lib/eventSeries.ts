@@ -6,9 +6,9 @@
  * "tomorrow", "Tuesday"), which made the platform look empty. Lists show a
  * series once, at its next date, with how many more dates follow.
  *
- * A series is the docs sharing `series_id` (set by the composers for
- * generated occurrences); docs without one group by title + venue + city, so
- * the same night copied by hand collapses too. Twin of the website's
+ * A series is one organizer's docs sharing `series_id` (set by the
+ * composers for generated occurrences); docs without one group by title +
+ * venue + city, so the same night copied by hand collapses too. Twin of the website's
  * lib/events/series.ts; keep the two in step.
  *
  * Calendar-style views (the home "this week" strip, a date filter) want every
@@ -18,22 +18,27 @@
 const norm = (v: unknown) =>
   String(v ?? '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim()
 
 export function seriesKey(e: {
   id?: unknown
+  organizer_id?: unknown
   series_id?: unknown
   title?: unknown
   venue_name?: unknown
   city?: unknown
 }): string {
-  if (e.series_id) return `s:${String(e.series_id)}`
+  // Scoped to the organizer: without it, anyone could list an earlier event
+  // with a competitor's title and venue (or copy a series_id) and replace that
+  // competitor's card in every list. Only one organizer's own dates merge.
+  const org = String(e.organizer_id ?? '')
+  if (e.series_id) return `s:${org}:${String(e.series_id)}`
   const t = norm(e.title)
   // An untitled doc never merges with another.
-  return t ? `t:${t}|${norm(e.venue_name)}|${norm(e.city)}` : `id:${String(e.id ?? '')}`
+  return t ? `t:${org}|${t}|${norm(e.venue_name)}|${norm(e.city)}` : `id:${String(e.id ?? '')}`
 }
 
 const startMs = (e: { start_datetime?: unknown }) => {

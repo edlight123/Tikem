@@ -50,6 +50,8 @@ export interface HomeEvent {
   posterHasText: boolean
   /** Recurring occurrences share it (lib/events/series). */
   series_id?: string
+  /** The owner; series only merge within one organizer (lib/events/series). */
+  organizer_id?: string
   /** Other dates of this series hidden behind this card (collapseSeries). */
   more_dates?: number
 }
@@ -135,6 +137,7 @@ export function toHomeEvent(e: any): HomeEvent | null {
     lineup,
     posterHasText: Boolean(e.poster_template && typeof e.poster_template === 'object'),
     series_id: e.series_id ? str(e.series_id) : undefined,
+    organizer_id: e.organizer_id ? str(e.organizer_id) : undefined,
   }
 }
 
