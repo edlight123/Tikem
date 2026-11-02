@@ -1,5 +1,6 @@
 'use client'
 
+import { collapseSeries } from '@/lib/events/series'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
@@ -42,7 +43,8 @@ export function DiscoverPageContent({
   const [tab, setTab] = useState<DiscoverTab>('forYou')
   const [savedEvents, setSavedEvents] = useState<any[] | null>(null)
 
-  // De-dupe the feed.
+  // De-dupe the feed, then show each recurring series once at its soonest
+  // date that passed the filters (a date filter still finds the right day).
   const feed = useMemo(() => {
     const seen = new Set<string>()
     const out: any[] = []
@@ -52,7 +54,7 @@ export function DiscoverPageContent({
         out.push(e)
       }
     }
-    return out
+    return collapseSeries(out)
   }, [filteredEvents])
 
   // Saved tab — intersect the user's favorites with the loaded events.

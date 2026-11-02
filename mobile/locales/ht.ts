@@ -121,6 +121,7 @@ export default {
     privacyNoteOther: '{count} moun ap ale. Moun k ap patisipe yo kenbe patisipasyon yo prive.',
   },
   common: {
+    moreDates: '+{n} lòt dat',
     edit: 'Chanje',
     free: 'Gratis',
     from: 'apati',

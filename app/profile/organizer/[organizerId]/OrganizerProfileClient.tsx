@@ -29,6 +29,7 @@
  * everywhere else here; tickets sold is a Ticket.
  */
 
+import { collapseSeries } from '@/lib/events/series'
 import { useMemo } from 'react'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
@@ -151,7 +152,7 @@ function SectionHead({ title, note }: { title: string; note?: string }) {
 
 export default function OrganizerProfileClient({
   organizer,
-  upcomingEvents,
+  upcomingEvents: upcomingAllDates,
   pastEvents,
   followerCount,
   totalEvents,
@@ -165,6 +166,8 @@ export default function OrganizerProfileClient({
   country,
   isBlocked = false,
 }: OrganizerProfileClientProps) {
+  // A recurring series is listed once, at its next date (lib/events/series).
+  const upcomingEvents = useMemo(() => collapseSeries(upcomingAllDates || []), [upcomingAllDates])
   const { t, i18n } = useTranslation('profile')
   const about = aboutFrom(details)
   const socialEntries = SOCIAL_META.filter(({ key }) => (about.links[key] || '').trim())

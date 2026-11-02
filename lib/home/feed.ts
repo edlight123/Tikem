@@ -10,6 +10,7 @@
  * ones, not the edge cases.
  */
 
+import { seriesKey } from '@/lib/events/series'
 import { CULTURAL_CATEGORIES } from '@/lib/categories'
 import { LOCATION_CONFIG, normalizeEventCategory } from '@/lib/filters/config'
 
@@ -47,6 +48,12 @@ export interface HomeEvent {
    * small instead of setting the same facts again in display type.
    */
   posterHasText: boolean
+  /** Recurring occurrences share it (lib/events/series). */
+  series_id?: string
+  /** The owner; series only merge within one organizer (lib/events/series). */
+  organizer_id?: string
+  /** Other dates of this series hidden behind this card (collapseSeries). */
+  more_dates?: number
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v))
@@ -129,6 +136,8 @@ export function toHomeEvent(e: any): HomeEvent | null {
     template: isTemplateEvent(e),
     lineup,
     posterHasText: Boolean(e.poster_template && typeof e.poster_template === 'object'),
+    series_id: e.series_id ? str(e.series_id) : undefined,
+    organizer_id: e.organizer_id ? str(e.organizer_id) : undefined,
   }
 }
 
@@ -451,22 +460,39 @@ export function buildWeek(
   }))
   const index = new Map(days.map((d) => [d.date, d]))
   const art = new Map<string, HomeEvent[]>()
+  const daySeries = new Map<string, Set<string>>()
   for (const e of events) {
     if (hasEnded(e, now)) continue
     const day = index.get(dayKey(e.start_datetime, zone))
     if (!day) continue
     day.count += 1
+    daySeries.set(day.date, (daySeries.get(day.date) || new Set()).add(seriesKey(e)))
     if (!e.banner_image_url) continue
     art.set(day.date, [...(art.get(day.date) || []), e])
   }
+  // Series already on a day of this strip: a daily party used to take
+  // Today, Mon and Tue with the same poster while those days had others.
+  const shownSeries = new Set<string>()
   for (const d of days) {
+    // A day whose only events repeat a series an earlier day already shows
+    // goes dark: the strip lists the series once, not Today, Mon and Tue.
+    const keys = daySeries.get(d.date)
+    if (keys && [...keys].every((k) => shownSeries.has(k))) {
+      d.count = 0
+      continue
+    }
     // The biggest event, featured breaking ties; a poster not yet on the
-    // page wins over one that is, but a day never goes blank for it.
+    // page wins, then any event of a series the strip doesn't show yet, and
+    // only then a repeat, so a day never goes blank for it.
     const ranked = (art.get(d.date) || []).sort(
       (a, b) => b.tickets_sold - a.tickets_sold || Number(b.featured) - Number(a.featured)
     )
-    const e = ranked.find((x) => !used.has(imageKey(x.banner_image_url))) || ranked[0]
+    const e =
+      ranked.find((x) => !used.has(imageKey(x.banner_image_url)) && !shownSeries.has(seriesKey(x))) ||
+      ranked.find((x) => !shownSeries.has(seriesKey(x))) ||
+      ranked[0]
     if (!e) continue
+    shownSeries.add(seriesKey(e))
     used.add(imageKey(e.banner_image_url))
     d.top = { id: e.id, title: e.title, banner_image_url: e.banner_image_url as string }
   }

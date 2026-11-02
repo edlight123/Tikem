@@ -360,7 +360,9 @@
     "already_have_tickets": "Ou gen {{count}} tikè deja pou evènman sa a.",
     "already_have_tickets_plural": "Ou gen {{count}} tikè deja pou evènman sa a.",
     "view_my_tickets": "Gade tikè ou yo",
-    "free_tier_already_claimed": "Ou gen tikè gratis ou deja"
+    "free_tier_already_claimed": "Ou gen tikè gratis ou deja",
+    "more_dates_one": "+{{count}} lòt dat",
+    "more_dates_other": "+{{count}} lòt dat"
   },
   "favorites": {
     "title": "Favori mwen",
