@@ -1,5 +1,6 @@
 'use client'
 
+import StoreBadges from '@/components/ui/StoreBadges'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
@@ -155,6 +156,15 @@ export default function PurchaseSuccessContentClient(props: Props) {
         >
           {t('tickets:purchase_success.find_more_events')}
         </Link>
+      </div>
+
+      {/* Right after a purchase is when the app is worth the most: the
+          ticket lives on the phone, offline, at the door. */}
+      <div className="mt-8 rounded bg-white/[0.055] p-4 md:p-6">
+        <p className="mb-3 text-[14px] text-white/75">
+          {t('common:store_badges.after_purchase', { defaultValue: 'Keep your ticket on your phone, even offline.' })}
+        </p>
+        <StoreBadges />
       </div>
 
       <div className="mt-8 bg-white/[0.055] rounded-2xl p-4 md:p-6">

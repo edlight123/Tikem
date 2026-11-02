@@ -2094,5 +2094,14 @@
     "keep_mine": "Kenbe pa m nan",
     "confirm_first": "Konfime imèl ou pou tikè ou yo rive jwenn ou.",
     "no_mail_server": "Adrès sa a pa ka resevwa imèl. Verifye pati ki apre @ la."
+  },
+  "store_badges": {
+    "play_small": "Jwenn li sou",
+    "apple_small": "Telechaje sou",
+    "play_aria": "Jwenn li sou Google Play",
+    "apple_aria": "Telechaje sou App Store",
+    "get_the_app": "Telechaje aplikasyon an",
+    "after_purchase": "Kenbe tikè w sou telefòn ou, menm san entènèt.",
+    "event_hint": "Peye pi vit epi jwenn tikè w san entènèt nan aplikasyon an."
   }
 }

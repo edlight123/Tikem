@@ -1,5 +1,6 @@
 'use client'
 
+import StoreBadges from '@/components/ui/StoreBadges'
 import Link from 'next/link'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { usePathname } from 'next/navigation'
@@ -79,6 +80,10 @@ export default function Footer() {
                 exactly the first-time visitor most likely to need it. Beside
                 the places we cover is also simply where a reader looks. */}
             <LanguageSwitcher className="mt-6 -ml-1.5" />
+            <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.16em] text-white/35">
+              {t('store_badges.get_the_app', { defaultValue: 'Get the app' })}
+            </p>
+            <StoreBadges className="mt-3" />
           </div>
 
           {/* Discover column */}

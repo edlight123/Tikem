@@ -2094,5 +2094,14 @@
     "keep_mine": "Keep mine",
     "confirm_first": "Confirm your email so your tickets reach you.",
     "no_mail_server": "This address can't receive email. Check the part after the @."
+  },
+  "store_badges": {
+    "play_small": "Get it on",
+    "apple_small": "Download on the",
+    "play_aria": "Get it on Google Play",
+    "apple_aria": "Download on the App Store",
+    "get_the_app": "Get the app",
+    "after_purchase": "Keep your ticket on your phone, even offline.",
+    "event_hint": "Faster checkout and your tickets offline in the app."
   }
 }

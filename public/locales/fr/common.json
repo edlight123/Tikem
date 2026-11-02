@@ -2094,5 +2094,14 @@
     "keep_mine": "Garder la mienne",
     "confirm_first": "Confirmez votre email pour recevoir vos billets.",
     "no_mail_server": "Cette adresse ne peut pas recevoir d'emails. Vérifiez la partie après le @."
+  },
+  "store_badges": {
+    "play_small": "Disponible sur",
+    "apple_small": "Télécharger dans l’",
+    "play_aria": "Disponible sur Google Play",
+    "apple_aria": "Télécharger dans l’App Store",
+    "get_the_app": "Téléchargez l’app",
+    "after_purchase": "Gardez votre billet sur votre téléphone, même hors ligne.",
+    "event_hint": "Paiement plus rapide et billets hors ligne dans l’app."
   }
 }

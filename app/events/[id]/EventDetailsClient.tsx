@@ -1,5 +1,6 @@
 'use client'
 
+import StoreBadges from '@/components/ui/StoreBadges'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
@@ -731,6 +732,15 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           capacity={(event as any).total_tickets}
           className="mt-8"
         />
+
+        {/* The app, quietly: the site linked Google Play almost nowhere, and
+            most of Haiti is on Android. */}
+        <div className="mt-8 px-4 md:px-0">
+          <p className="mb-3 text-[13px] text-white/60">
+            {t('store_badges.event_hint', { defaultValue: 'Faster checkout and your tickets offline in the app.' })}
+          </p>
+          <StoreBadges />
+        </div>
 
         {/* Report — quiet, but on every event page (App Store 1.2). Hidden
             from the organizer's own event: the server refuses a self-report. */}
