@@ -1,3 +1,4 @@
+import { collapseSeries } from '../lib/eventSeries';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { themedArt } from '../lib/nationalDaysRemote';
 import { 
@@ -459,7 +460,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
     const feed = [...events].sort(
       (a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
     );
-    setFeedEvents(feed);
+    // One card per recurring series, at its soonest date that passed the filters.
+    setFeedEvents(collapseSeries(feed));
 
     // The one labelled rail: same country (or same region in a big country),
     // OTHER metros. Same date/category rules as the feed, only the location
@@ -473,7 +475,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
       filterByDate(applyFilters([...allEvents], { ...appliedFilters, city: '' }))
     );
     setElsewhere(
-      elsewhereEvents(countryWide, activeMetro).sort(
+      collapseSeries(elsewhereEvents(countryWide, activeMetro)).sort(
         (a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0)
       )
     );

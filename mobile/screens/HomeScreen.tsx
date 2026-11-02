@@ -1,3 +1,4 @@
+import { collapseSeries } from '../lib/eventSeries';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -162,7 +163,10 @@ export default function HomeScreen({ navigation }: any) {
 
   // Fan a country-scoped list out into every rail on the page. Shared by the
   // live fetch and the offline-cache restore, so both paint the full feed.
-  const applyEventLists = (countryFiltered: any[]) => {
+  const applyEventLists = (countryFilteredAllDates: any[]) => {
+    // Every rail shows a recurring series once, at its next date
+    // (lib/eventSeries): a daily party used to fill a rail by itself.
+    const countryFiltered = collapseSeries(countryFilteredAllDates);
     const now = new Date();
     const finalEvents = activeMetro
       ? countryFiltered.filter((e) => isEventInMetro(e, activeMetro))

@@ -122,6 +122,7 @@ export default {
     privacyNoteOther: '{count} people are going. Attendees keep their attendance private.',
   },
   common: {
+    moreDates: '+{n} more dates',
     edit: 'Edit',
     free: 'Free',
     from: 'from',

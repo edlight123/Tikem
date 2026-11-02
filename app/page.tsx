@@ -11,6 +11,7 @@ import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAdmin } from '@/lib/admin'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { getDiscoverEvents, getCinemaArtworkEvents } from '@/lib/data/events'
+import { collapseSeries } from '@/lib/events/series'
 import { filterBlockedEvents, getBlockedOrganizerIds } from '@/lib/moderation/blocks'
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import { getLocationFromVercelHeaders, mapToSupportedLocation } from '@/lib/geolocation'
@@ -135,10 +136,13 @@ export default async function HomePage({
   ])
 
   const now = Date.now()
-  const upcoming: HomeEvent[] = filterBlockedEvents(rawEvents, blockedOrganizers)
+  const upcomingAll: HomeEvent[] = filterBlockedEvents(rawEvents, blockedOrganizers)
     .map(toHomeEvent)
     .filter((e): e is HomeEvent => !!e && !hasEnded(e, now))
     .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+  // One card per recurring series everywhere but the week strip, which is a
+  // calendar and wants every date (lib/events/series).
+  const upcoming: HomeEvent[] = collapseSeries(upcomingAll)
 
   const inCountry = upcoming.filter((e) => e.country === country)
   const cities = buildCityIndex(inCountry)
@@ -188,7 +192,8 @@ export default async function HomePage({
 
   // The week claims its posters only when it shows (ThisWeek: two events or more).
   const weekUsed = new Set(used)
-  const week = buildWeek(scoped, now, zone, weekUsed)
+  const scopedAllDates = upcomingAll.filter((e) => e.country === country && inCity(e, active?.key ?? null))
+  const week = buildWeek(scopedAllDates, now, zone, weekUsed)
   if (week.reduce((n, d) => n + d.count, 0) >= 2) weekUsed.forEach((k) => used.add(k))
   // Worlds wear their own Tikèm paintings, not event posters, so they claim
   // none: the posters stay free for the film strip below the hero, which

@@ -49,11 +49,18 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
   // Guard the date: parseISO on a missing/invalid string yields an Invalid Date,
   // and date-fns `format` throws on that. Only format when the date is valid.
   const parsedDate = event.start_datetime ? parseISO(event.start_datetime) : null
-  const dateLabel =
+  const baseDate =
     parsedDate && isValid(parsedDate)
       ? // The event's zone, as the event page prints it (and as the server did).
         formatEventDate(event.start_datetime, t, i18n.language, eventZone(event as any))
       : undefined
+  // A recurring series shows once (lib/events/series); its other dates are
+  // counted here instead of filling the row with the same poster.
+  const moreDates = Number((event as any).more_dates) || 0
+  const dateLabel =
+    baseDate && moreDates > 0
+      ? `${baseDate} · ${t('events.more_dates', { count: moreDates, defaultValue: '+{{count}} more dates' })}`
+      : baseDate
 
   // Poster overlay chips, stacked top-left: the status cue (Popular / Few tickets
   // left, else category) plus a friends-going social-proof chip when relevant.

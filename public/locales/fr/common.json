@@ -360,7 +360,9 @@
     "already_have_tickets": "Vous avez déjà {{count}} billet pour cet événement.",
     "already_have_tickets_plural": "Vous avez déjà {{count}} billets pour cet événement.",
     "view_my_tickets": "Voir mes billets",
-    "free_tier_already_claimed": "Vous avez déjà votre billet gratuit"
+    "free_tier_already_claimed": "Vous avez déjà votre billet gratuit",
+    "more_dates_one": "+{{count}} autre date",
+    "more_dates_other": "+{{count}} autres dates"
   },
   "favorites": {
     "title": "Mes favoris",

@@ -85,9 +85,14 @@ export default function PosterEventCard({
 
   // Date is guarded — an invalid/missing start_datetime yields '' rather than
   // crashing date-fns (POSH constraint: never crash on a bad date).
-  const dateLabel = showMeta
+  // A recurring series shows once (lib/eventSeries); its other dates are
+  // counted after the date instead of repeating the poster across the row.
+  const moreDates = Number((event as any).more_dates) || 0;
+  const baseDate = showMeta
     ? safeFormatForLanguage(event.start_datetime, 'EEE, MMM d', language)
     : '';
+  const dateLabel =
+    baseDate && moreDates > 0 ? `${baseDate} · ${t('common.moreDates', { n: moreDates })}` : baseDate;
 
   // Venue-first place line: the venue is never redundant; the city only shows
   // when the event is out of the viewer's town.

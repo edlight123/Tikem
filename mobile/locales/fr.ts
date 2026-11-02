@@ -149,6 +149,7 @@ export default {
     privacyNoteOther: '{count} personnes y vont. Les participants gardent leur présence privée.',
   },
   common: {
+    moreDates: '+{n} autres dates',
     edit: 'Modifier',
     free: 'Gratuit',
     from: 'à partir de',

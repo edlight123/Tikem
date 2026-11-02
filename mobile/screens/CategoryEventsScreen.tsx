@@ -1,3 +1,4 @@
+import { collapseSeries } from '../lib/eventSeries';
 import React, { useEffect, useRef, useState } from 'react';
 import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { isVisibleOnExplore } from '../lib/api/events';
@@ -150,9 +151,10 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
           : nationalDayDef
             ? local.filter((e: any) => eventMatchesNationalDay(e, nationalDayDef))
             : local;
-        setEvents(feed ? applyHomeFeed(scoped, feed, { city }) : scoped);
+        // One card per recurring series (lib/eventSeries).
+        setEvents(collapseSeries(feed ? applyHomeFeed(scoped, feed, { city }) : scoped));
         setElsewhere(
-          elsewhereEvents(inCountry, activeMetro).sort(
+          collapseSeries(elsewhereEvents(inCountry, activeMetro)).sort(
             (a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0)
           )
         );

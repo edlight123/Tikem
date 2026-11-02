@@ -240,6 +240,10 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
         // or every reader of this object would see it as absent.
         poster_template:
           data?.poster_template && typeof data?.poster_template === 'object' ? data?.poster_template : undefined,
+
+        // Recurring occurrences share it; lists show a series once (lib/events/series).
+
+        series_id: typeof data?.series_id === 'string' ? data?.series_id : undefined,
         currency: data?.currency || 'HTG',
         // The organizer's absorb/pass-on choice. Every price the event page quotes
         // (headline, cart, payment sheet) is priced with it, exactly as checkout
@@ -422,6 +426,10 @@ const readPublishedEvents = unstable_cache(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+
+        // Recurring occurrences share it; lists show a series once (lib/events/series).
+
+        series_id: typeof data.series_id === 'string' ? data.series_id : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
@@ -615,6 +623,10 @@ export async function getOrganizerEvents(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+
+        // Recurring occurrences share it; lists show a series once (lib/events/series).
+
+        series_id: typeof data.series_id === 'string' ? data.series_id : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
@@ -743,6 +755,10 @@ export async function getAdminEvents(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+
+        // Recurring occurrences share it; lists show a series once (lib/events/series).
+
+        series_id: typeof data.series_id === 'string' ? data.series_id : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,
@@ -834,6 +850,10 @@ export async function getOrganizerEventsClient(
         // or every reader of this object would see it as absent.
         poster_template:
           data.poster_template && typeof data.poster_template === 'object' ? data.poster_template : undefined,
+
+        // Recurring occurrences share it; lists show a series once (lib/events/series).
+
+        series_id: typeof data.series_id === 'string' ? data.series_id : undefined,
         currency: data.currency || 'HTG',
         total_tickets: data.total_tickets || data.capacity || 0,
         tickets_sold: data.tickets_sold || 0,

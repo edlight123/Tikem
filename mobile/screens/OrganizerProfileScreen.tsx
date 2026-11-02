@@ -1,3 +1,4 @@
+import { collapseSeries } from '../lib/eventSeries';
 import React, { useState, useEffect } from 'react';
 import { defaultAvatar } from '../lib/defaultAvatar';
 import OrgMark from '../components/OrgMark';
@@ -224,7 +225,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           timeOf(b.end_datetime || b.start_datetime) - timeOf(a.end_datetime || a.start_datetime)
       );
 
-      setUpcomingEvents(upcoming);
+      // A recurring series is listed once, at its next date (lib/eventSeries).
+      setUpcomingEvents(collapseSeries(upcoming));
       setPastEvents(past);
 
       // Fetch follower count
