@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { adminDb, adminStorage } from '@/lib/firebase/admin';
 import { sniffRasterImage } from '@/lib/security/sniffImage';
 import { syncPublicProfileAdmin } from '@/lib/firestore/public-profile';
+import { downloadUrl } from '@/lib/firebase/downloadUrl';
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,11 +71,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Make the file publicly accessible
-    await fileRef.makePublic();
-
-    // Get the public URL
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    const publicUrl = await downloadUrl(fileRef);
 
     // Update user profile in Firestore
     await adminDb.collection('users').doc(user.id).update({

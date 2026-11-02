@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminStorage } from '@/lib/firebase/admin'
 import { cleanInput, renderPoster } from '@/lib/posters/render'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
+import { downloadUrl } from '@/lib/firebase/downloadUrl'
 
 export const runtime = 'nodejs'
 
@@ -64,8 +65,7 @@ export async function POST(req: Request) {
       contentType: 'image/jpeg',
       metadata: { cacheControl: 'public, max-age=31536000, immutable' },
     })
-    await file.makePublic()
-    return NextResponse.json({ url: `https://storage.googleapis.com/${bucket.name}/${fileName}` })
+    return NextResponse.json({ url: await downloadUrl(file) })
   } catch (e) {
     console.error('[posters/create]', (e as Error)?.message)
     return NextResponse.json({ error: 'render failed' }, { status: 500 })
