@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import DownloadLanding from './DownloadLanding'
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/storeLinks'
 
 export const metadata = {
   title: 'Download Tikèm',
@@ -16,14 +17,6 @@ export const metadata = {
 // Depends on the request User-Agent, so it must never be statically cached —
 // otherwise one visitor's device redirect could be served to another.
 export const dynamic = 'force-dynamic'
-
-// Store links are env-overridable (e.g. to point at an interim/TestFlight page
-// before the public listings are live) but default to the real store URLs.
-const APP_STORE_URL =
-  process.env.NEXT_PUBLIC_APP_STORE_URL || 'https://apps.apple.com/app/id6794334427'
-const PLAY_STORE_URL =
-  process.env.NEXT_PUBLIC_PLAY_STORE_URL ||
-  'https://play.google.com/store/apps/details?id=co.tikem.mobile'
 
 export default async function DownloadPage() {
   const ua = (await headers()).get('user-agent') || ''
