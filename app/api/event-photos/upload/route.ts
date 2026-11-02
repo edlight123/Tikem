@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminDb, adminStorage } from '@/lib/firebase/admin'
 import { sniffRasterImage } from '@/lib/security/sniffImage'
 import { canOnEvent } from '@/lib/organizer/context'
+import { downloadUrl } from '@/lib/firebase/downloadUrl'
 
 const MAX_BYTES = 10 * 1024 * 1024
 
@@ -62,8 +63,7 @@ export async function POST(req: NextRequest) {
         resumable: false,
         metadata: { cacheControl: 'public, max-age=31536000' },
       })
-      await fileRef.makePublic()
-      photoUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`
+      photoUrl = await downloadUrl(fileRef)
     } catch (storageError) {
       console.error('Firebase Storage upload error:', storageError)
       return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })

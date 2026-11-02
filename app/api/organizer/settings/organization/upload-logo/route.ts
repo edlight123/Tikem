@@ -4,6 +4,7 @@ import { adminStorage } from '@/lib/firebase/admin';
 import { sniffRasterImage } from '@/lib/security/sniffImage';
 import { writeOrgBrandAdmin } from '@/lib/firestore/org-brand-server';
 import { requireOrg } from '@/lib/organizer/context';
+import { downloadUrl } from '@/lib/firebase/downloadUrl';
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,9 +84,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await fileRef.makePublic();
-
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    const publicUrl = await downloadUrl(fileRef);
 
     // Canonical public_profiles/{orgId}, plus the users/{orgId} copy the app reads
     // and organizers/{orgId} for the settings page (lib/profile/org-brand.ts).

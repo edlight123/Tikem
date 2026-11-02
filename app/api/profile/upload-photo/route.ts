@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb, adminStorage } from '@/lib/firebase/admin'
 import { sniffRasterImage } from '@/lib/security/sniffImage'
+import { downloadUrl } from '@/lib/firebase/downloadUrl'
 
 /**
  * The signed-in reader's own avatar. Mirrors the organization-logo upload, but
@@ -38,9 +39,7 @@ export async function POST(request: NextRequest) {
     const bucket = adminStorage.bucket()
     const fileRef = bucket.file(fileName)
     await fileRef.save(buffer, { metadata: { contentType: sniffed.mime } })
-    await fileRef.makePublic()
-
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`
+    const publicUrl = await downloadUrl(fileRef)
 
     await adminDb.collection('users').doc(user.id).set(
       { photo_url: publicUrl, updated_at: FieldValue.serverTimestamp() },
