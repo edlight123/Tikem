@@ -89,11 +89,42 @@ const nextConfig = {
     // (verified: a double-encoded one arrived as Food%2520%2526%2520Drink).
     // `next dev` decodes it once, so locally "Food & Drink" shows a bare &;
     // check this redirect against production, not dev.
-    return Object.entries(worlds).map(([key, cats]) => ({
+    const worldRedirects = Object.entries(worlds).map(([key, cats]) => ({
       source: `/categories/${key}`,
       destination: `/discover?${cats.map((c) => `category=${encodeURIComponent(c)}`).join('&')}`,
       permanent: true,
     }))
+
+    return [
+      ...worldRedirects,
+      // The apex sends everything to www EXCEPT /.well-known/: Android App
+      // Links verification refuses redirects, and the Vercel domain-level
+      // apex->www redirect made https://tikem.co/.well-known/assetlinks.json
+      // a 308, so Play reported the app's five tikem.co link paths as
+      // failing. With the domain set to serve (not redirect), this rule keeps
+      // every other apex URL going to www as before.
+      {
+        source: '/:path((?!\\.well-known/).*)',
+        has: [{ type: 'host', value: 'tikem.co' }],
+        destination: 'https://www.tikem.co/:path',
+        permanent: true,
+      },
+      // /download: phones straight to their store as a real redirect. The
+      // page's own redirect() ran after the stream started (200 + a 1s
+      // meta refresh), which in-app browsers like WhatsApp's handle poorly.
+      {
+        source: '/download',
+        has: [{ type: 'header', key: 'user-agent', value: '.*Android.*' }],
+        destination: 'https://play.google.com/store/apps/details?id=co.tikem.mobile',
+        permanent: false,
+      },
+      {
+        source: '/download',
+        has: [{ type: 'header', key: 'user-agent', value: '.*(iPhone|iPad|iPod).*' }],
+        destination: 'https://apps.apple.com/app/id6794334427',
+        permanent: false,
+      },
+    ]
   },
 
   async headers() {
