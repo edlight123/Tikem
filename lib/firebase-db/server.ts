@@ -28,6 +28,25 @@ function serializeFirestoreData(obj: any): any {
   return serialized
 }
 
+
+/** One where() constraint evaluated on a value already read (the by-id path). */
+function matchesConstraint(value: any, op: string, expected: any): boolean {
+  switch (op) {
+    case '==': return value === expected
+    case '!=': return value !== expected
+    case '<': return value < expected
+    case '<=': return value <= expected
+    case '>': return value > expected
+    case '>=': return value >= expected
+    case 'in': return Array.isArray(expected) && expected.includes(value)
+    case 'not-in': return Array.isArray(expected) && !expected.includes(value)
+    case 'array-contains': return Array.isArray(value) && value.includes(expected)
+    case 'array-contains-any':
+      return Array.isArray(value) && Array.isArray(expected) && expected.some((e) => value.includes(e))
+    default: return false
+  }
+}
+
 class ServerQueryBuilder {
   private collectionName: string
   private constraints: any[] = []
@@ -292,21 +311,24 @@ class ServerQueryBuilder {
         return { data: Array.isArray(this.pendingInsert) ? results : results[0], error: null }
       }
 
-      // Special case: querying by document ID
-      if (this.constraints.length === 1 && 
-          this.constraints[0].field === 'id' && 
-          this.constraints[0].op === '==') {
-        const docRef = adminDb.collection(this.collectionName).doc(this.constraints[0].value as string)
+      // Querying by document ID: read the doc itself. Docs created with
+      // addDoc (every app-made event) carry no `id` field, so where('id', ...)
+      // never finds them; that 404'd the web edit page, which also filters on
+      // organizer_id. Any other constraints are checked on the doc we read.
+      const idConstraint = this.constraints.find((c) => c.field === 'id' && c.op === '==')
+      if (idConstraint) {
+        const docRef = adminDb.collection(this.collectionName).doc(String(idConstraint.value))
         const docSnapshot = await docRef.get()
-        
-        if (!docSnapshot.exists) {
+        const raw = docSnapshot.exists ? { id: docSnapshot.id, ...docSnapshot.data() } : null
+        const matches =
+          !!raw &&
+          this.constraints.every((c) => c === idConstraint || matchesConstraint((raw as any)[c.field], c.op, c.value))
+
+        if (!matches) {
           return { data: this.singleDoc ? null : [], error: null }
         }
-        
-        const docData = serializeFirestoreData({ 
-          id: docSnapshot.id, 
-          ...docSnapshot.data() 
-        })
+
+        const docData = serializeFirestoreData(raw)
         return { data: this.singleDoc ? docData : [docData], error: null }
       }
 
@@ -403,72 +425,6 @@ export async function createClient() {
           return { error }
         }
       }
-    },
-
-    storage: {
-      from: (bucket: string) => ({
-        upload: async (path: string, file: any) => {
-          try {
-            const bucketInstance = adminStorage.bucket()
-            const fileRef = bucketInstance.file(path)
-            
-            // If file is a Buffer or has buffer method
-            let buffer: Buffer
-            if (Buffer.isBuffer(file)) {
-              buffer = file
-            } else if (file.arrayBuffer) {
-              // If it's a File/Blob object
-              const arrayBuffer = await file.arrayBuffer()
-              buffer = Buffer.from(arrayBuffer)
-            } else {
-              throw new Error('Invalid file format')
-            }
-            
-            await fileRef.save(buffer, {
-              metadata: {
-                contentType: file.type || 'application/octet-stream',
-              },
-            })
-            
-            // Make the file publicly accessible
-            await fileRef.makePublic()
-            
-            return { 
-              data: { 
-                path: path,
-                fullPath: path 
-              }, 
-              error: null 
-            }
-          } catch (error: any) {
-            return { data: null, error }
-          }
-        },
-        getPublicUrl: (path: string) => {
-          try {
-            const bucketInstance = adminStorage.bucket()
-            const file = bucketInstance.file(path)
-            const publicUrl = `https://storage.googleapis.com/${bucketInstance.name}/${path}`
-            return { data: { publicUrl } }
-          } catch (error: any) {
-            return { data: { publicUrl: '' } }
-          }
-        },
-        remove: async (paths: string[]) => {
-          try {
-            const bucketInstance = adminStorage.bucket()
-            await Promise.all(
-              paths.map(async (path) => {
-                const file = bucketInstance.file(path)
-                await file.delete()
-              })
-            )
-            return { data: null, error: null }
-          } catch (error: any) {
-            return { data: null, error }
-          }
-        }
-      })
     }
   }
 }

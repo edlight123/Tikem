@@ -1597,7 +1597,10 @@ export default function CreateEventFlowRefactored() {
       setConfirmVisible(false);
       showAlert(
         t('common.error'),
-        error.message || (isEditMode ? t('organizerCreateEventFlow.saveFailedUpdate') : t('organizerCreateEventFlow.saveFailedCreate'))
+        error.message || (isEditMode ? t('organizerCreateEventFlow.saveFailedUpdate') : t('organizerCreateEventFlow.saveFailedCreate')),
+        // Saved as a draft but not published: leave the composer, or a second
+        // tap on create would save the event again.
+        error?.draftSaved ? [{ text: t('common.ok'), onPress: () => navigation.goBack() }] : undefined
       );
     } finally {
       setSaving(false);

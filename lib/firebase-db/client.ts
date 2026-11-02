@@ -15,7 +15,8 @@ import {
   orderBy,
   limit as firestoreLimit,
   QueryConstraint,
-  Timestamp
+  Timestamp,
+  documentId,
 } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
@@ -40,7 +41,10 @@ class FirebaseQueryBuilder {
   }
 
   eq(field: string, value: any): this {
-    this.constraints.push(where(field, '==', value))
+    // `id` means the document ID: docs made with addDoc (every app-made
+    // event) have no `id` field, so where('id', ...) matched nothing and an
+    // update through .eq('id', x) saved nowhere while reporting success.
+    this.constraints.push(where(field === 'id' ? documentId() : field, '==', value))
     return this
   }
 

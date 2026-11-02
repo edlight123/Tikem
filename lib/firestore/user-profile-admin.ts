@@ -114,8 +114,12 @@ export async function getUserProfileAdmin(uid: string): Promise<UserProfile | nu
 export async function createUserProfileAdmin(uid: string, profile: Partial<UserProfile>): Promise<void> {
   try {
     const userRef = adminDb.collection('users').doc(uid)
-    
-    await userRef.set({
+
+    // create(), not set(): a caller that only THINKS the profile is missing
+    // (the read above returns null on any error) must never overwrite a real
+    // one and drop its role, verification and payout fields.
+    await userRef.create({
+      role: 'attendee',
       full_name: profile.displayName || '',
       display_name: profile.displayName || '',
       email: profile.email || '',
@@ -142,7 +146,9 @@ export async function createUserProfileAdmin(uid: string, profile: Partial<UserP
       full_name: profile.displayName || '',
       photo_url: profile.photoURL || '',
     })
-  } catch (error) {
+  } catch (error: any) {
+    // ALREADY_EXISTS: the profile is there after all; nothing to do.
+    if (error?.code === 6) return
     console.error('Error creating user profile (admin):', error)
     throw error
   }

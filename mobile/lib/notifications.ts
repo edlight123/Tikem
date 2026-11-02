@@ -113,16 +113,17 @@ export async function markAllAsRead(userId: string): Promise<void> {
     );
 
     const snapshot = await getDocs(q);
-    const batch = writeBatch(db);
+    const readAt = new Date().toISOString();
 
-    snapshot.forEach((document) => {
-      batch.update(document.ref, {
-        isRead: true,
-        readAt: new Date().toISOString(),
+    // A batch holds at most 500 writes; one big batch failed outright for a
+    // long-unread inbox.
+    for (let i = 0; i < snapshot.docs.length; i += 450) {
+      const batch = writeBatch(db);
+      snapshot.docs.slice(i, i + 450).forEach((document) => {
+        batch.update(document.ref, { isRead: true, readAt });
       });
-    });
-
-    await batch.commit();
+      await batch.commit();
+    }
   } catch (error) {
     console.error('Error marking all as read:', error);
     throw error;

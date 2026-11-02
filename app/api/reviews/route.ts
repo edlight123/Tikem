@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     // Verify user attended the event
     const { data: ticket } = await supabase
       .from('tickets')
-      .select('*, events(*)')
+      .select('*')
       .eq('id', ticketId)
       .eq('attendee_id', user.id)
       .eq('event_id', eventId)
@@ -29,8 +29,16 @@ export async function POST(request: Request) {
       return Response.json({ error: 'You must have attended this event to leave a review' }, { status: 403 })
     }
 
+    // The shim has no joins (`events(*)` came back undefined and every review
+    // 500'd), so the event is read on its own.
+    const { data: event } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', eventId)
+      .single()
+
     // Check if event has ended
-    if (new Date(ticket.events.start_datetime) > new Date()) {
+    if (!event || new Date(event.start_datetime) > new Date()) {
       return Response.json({ error: 'You can only review events that have already occurred' }, { status: 400 })
     }
 
@@ -75,7 +83,8 @@ export async function POST(request: Request) {
         comment: comment || null,
         organizer_rating: organizerRating || null,
         would_recommend: wouldRecommend || null,
-        is_verified: ticket.status === 'used', // Mark as verified if ticket was actually used
+        // Verified = the ticket was scanned at the door ('used' is not a status).
+        is_verified: ticket.checked_in === true || !!ticket.checked_in_at,
         is_approved: true // Auto-approve for now, can add moderation later
       })
       .select()

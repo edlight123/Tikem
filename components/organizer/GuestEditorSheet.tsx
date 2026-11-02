@@ -95,7 +95,9 @@ export default function GuestEditorSheet({
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
+    // Only the types storage.rules accepts (an SVG/AVIF/BMP was refused
+    // there with a vague permission error).
+    if (!/^image\/(jpeg|png|webp|heic|heif|gif)$/.test(file.type)) {
       setUploadError(t('composer.guest.photoType', { defaultValue: 'Please choose an image file.' }))
       return
     }
@@ -270,7 +272,7 @@ export default function GuestEditorSheet({
             </div>
           </div>
 
-          <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif" onChange={handlePhoto} className="hidden" />
 
           {uploadError && (
             <p className="rounded-xl bg-red-500/10 px-3.5 py-2.5 text-[13px] text-red-300">{uploadError}</p>

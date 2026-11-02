@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { adminStorage } from '@/lib/firebase/admin'
 import { createClient } from '@/lib/firebase-db/server'
 import { canOnEvent } from '@/lib/organizer/context'
+import { storagePathFromUrl } from '@/lib/firebase/downloadUrl'
 
 /**
  * Get photos for an event
@@ -91,15 +92,13 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    // Delete from Firebase Storage if the URL is a GCS URL
+    // Delete the file too. Uploads store a download link since PR #32; the
+    // old storage.googleapis.com form is still understood.
     if (photo.photo_url) {
       try {
-        const url = String(photo.photo_url)
         const bucket = adminStorage.bucket()
-        // URL format: https://storage.googleapis.com/<bucket>/<path>
-        const prefix = `https://storage.googleapis.com/${bucket.name}/`
-        if (url.startsWith(prefix)) {
-          const storagePath = decodeURIComponent(url.slice(prefix.length))
+        const storagePath = storagePathFromUrl(String(photo.photo_url), bucket.name)
+        if (storagePath) {
           await bucket.file(storagePath).delete({ ignoreNotFound: true })
         }
       } catch (storageErr) {

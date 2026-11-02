@@ -4,6 +4,7 @@ import { ChevronLeft, Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, 
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase';
+import { backendJson } from '../lib/api/backend';
 import { useTheme } from '../contexts/ThemeContext';
 import { safeFormatForLanguage } from '../lib/dates';
 import TransferTicketModal from '../components/TransferTicketModal';
@@ -174,10 +175,13 @@ export default function TicketDetailScreen({ route }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { updateDoc, doc } = await import('firebase/firestore');
-              await updateDoc(doc(db, 'ticket_transfers', pendingTransfer.id), {
-                status: 'cancelled',
-                updated_at: new Date().toISOString()
+              // Through the server, like the web: it also stamps responded_at
+              // and tells the recipient (email + push) the offer is gone. A
+              // direct status write left them holding a dead "you've been
+              // sent a ticket" notice.
+              await backendJson('/api/tickets/transfer/cancel', {
+                method: 'POST',
+                body: JSON.stringify({ transferId: pendingTransfer.id }),
               });
               setPendingTransfer(null);
               showAlert(t('common.success'), t('ticketDetail.transfer.cancelSuccess'));

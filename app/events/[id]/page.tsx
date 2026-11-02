@@ -198,13 +198,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     const now = new Date()
 
     // Start all independent queries in parallel
-    const [relatedSnapshot, followingResult, favoriteResult, heldFreeResult] = await Promise.all([
+    // start_datetime is a Timestamp on app-made events and an ISO string on
+    // web-made ones, and a range only matches its own type: ask once per type
+    // or web-made events never show as related.
+    const relatedQuery = (bound: Date | string) =>
       adminDb.collection('events')
         .where('category', '==', event.category)
         .where('is_published', '==', true)
-        .where('start_datetime', '>=', now)
+        .where('start_datetime', '>=', bound)
         .limit(4)
-        .get(),
+        .get()
+        .then((s: any) => s.docs)
+        .catch(() => [])
+    const [relatedDocs, followingResult, favoriteResult, heldFreeResult] = await Promise.all([
+      Promise.all([relatedQuery(now), relatedQuery(now.toISOString())]).then(([a, b]) => [...a, ...b]),
       user && event.organizer_id ? checkIsFollowing(user.id, event.organizer_id) : Promise.resolve(false),
       user ? checkIsFavorite(user.id, id) : Promise.resolve(false),
       // The signed-in buyer's live free tickets here (the claim route's own dedup),
@@ -217,8 +224,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     heldFreeTickets = heldFreeResult
 
     // Process related events - batch fetch organizers
-    const filteredRelated = relatedSnapshot.docs
+    const startMs = (d: any) => {
+      const v = d.data().start_datetime
+      return typeof v?.toMillis === 'function' ? v.toMillis() : new Date(v).getTime()
+    }
+    const filteredRelated = relatedDocs
       .filter((doc: any) => doc.id !== id)
+      .sort((x: any, y: any) => startMs(x) - startMs(y))
       .slice(0, 3)
     
     const organizerIds = Array.from(new Set(filteredRelated.map((doc: any) => doc.data().organizer_id)))
