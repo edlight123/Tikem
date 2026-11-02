@@ -17,6 +17,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as Crypto from 'expo-crypto';
 import { isDeviceOnlyImageUri } from '../localImageUri';
+import { profileImageContentType } from '../profileImagePath';
 import { hasPaidTier } from '../ticketPricing';
 import { plusOnesSetting } from '../attendRequests';
 import { backendJson } from './backend';
@@ -491,11 +492,15 @@ async function publishCreatedEvents(eventIds: string[]): Promise<void> {
       });
     }
   } catch (error: any) {
-    throw new Error(
+    const draft: Error & { draftSaved?: boolean } = new Error(
       error?.message
         ? `Saved as a draft, but not published: ${error.message}`
         : 'Your event was saved as a draft but could not be published.'
     );
+    // The event exists: the composer must close rather than invite a retry,
+    // which would create a second copy (a whole second series if recurring).
+    draft.draftSaved = true;
+    throw draft;
   }
 }
 
@@ -722,8 +727,9 @@ export async function createEvent(
     if (publish) await publishCreatedEvents(createdIds);
     // Keep the existing return contract: the FIRST occurrence's id.
     return createdIds[0] || '';
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating event:', error);
+    if (error?.draftSaved) throw error;
     throw new Error('Failed to create event. Please try again.');
   }
 }
@@ -943,7 +949,9 @@ async function uploadEventImage(
     const filename = `${uploaderUid}_${Date.now()}.jpg`;
     const storageRef = ref(storage, `event-images/${filename}`);
     
-    await uploadBytes(storageRef, blob);
+    // The rule only takes image/(jpeg|png|webp|heic|heif|gif); an untyped RN
+    // blob goes up as application/octet-stream and is refused.
+    await uploadBytes(storageRef, blob, { contentType: profileImageContentType(blob.type) });
     const downloadUrl = await getDownloadURL(storageRef);
     
     return downloadUrl;

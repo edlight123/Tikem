@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import AdminUserDetailsClient from './AdminUserDetailsClient'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
 import { revalidatePath } from 'next/cache'
+import { LIVE_TICKET_STATUSES } from '@/lib/tickets/status'
 
 
 function serializeFirestoreValue(value: any): any {
@@ -54,7 +55,7 @@ async function computeAttendeeStats(userId: string): Promise<{
     adminDb
       .collection('tickets')
       .where('attendee_id', '==', userId)
-      .where('status', '==', 'confirmed')
+      .where('status', 'in', [...LIVE_TICKET_STATUSES])
       .count()
       .get()
       .catch(() => null as any),
@@ -76,7 +77,7 @@ async function computeAttendeeStats(userId: string): Promise<{
   let q: any = adminDb
     .collection('tickets')
     .where('attendee_id', '==', userId)
-    .where('status', '==', 'confirmed')
+    .where('status', 'in', [...LIVE_TICKET_STATUSES])
     .orderBy('__name__')
 
   let lastDoc: any = null

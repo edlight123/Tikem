@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
+import { docsInDateRange } from '@/lib/firestore/dateRange'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,18 +42,21 @@ export async function GET(request: Request) {
     console.log(`Calculating daily stats for ${yesterdayStr}`)
 
     // Get all tickets purchased yesterday
-    const ticketsSnapshot = await adminDb
-      .collection('tickets')
-      .where('purchased_at', '>=', yesterday)
-      .where('purchased_at', '<', today)
-      .where('status', 'in', liveTicketStatusesForQuery())
-      .get()
+    // Paid tickets store purchased_at as an ISO string, free/comp ones as a
+    // Timestamp: read both (lib/firestore/dateRange).
+    const ticketDocs = await docsInDateRange(
+      adminDb.collection('tickets').where('status', 'in', liveTicketStatusesForQuery()),
+      'purchased_at',
+      yesterday,
+      today,
+      { toExclusive: true },
+    )
 
     // Calculate GMV (Gross Merchandise Value)
     let gmvConfirmed = 0
     let ticketsConfirmed = 0
 
-    ticketsSnapshot.forEach((doc: any) => {
+    ticketDocs.forEach((doc: any) => {
       const data = doc.data()
       const pricePaid = data.price_paid || data.pricePaid || 0
       gmvConfirmed += pricePaid
@@ -60,17 +64,18 @@ export async function GET(request: Request) {
     })
 
     // Get refunds for yesterday
-    const refundsSnapshot = await adminDb
-      .collection('tickets')
-      .where('updated_at', '>=', yesterday)
-      .where('updated_at', '<', today)
-      .where('status', '==', 'refunded')
-      .get()
+    const refundDocs = await docsInDateRange(
+      adminDb.collection('tickets').where('status', '==', 'refunded'),
+      'updated_at',
+      yesterday,
+      today,
+      { toExclusive: true },
+    )
 
-    const refundsCount = refundsSnapshot.size
+    const refundsCount = refundDocs.length
     let refundsAmount = 0
 
-    refundsSnapshot.forEach((doc: any) => {
+    refundDocs.forEach((doc: any) => {
       const data = doc.data()
       const pricePaid = data.price_paid || data.pricePaid || 0
       refundsAmount += pricePaid

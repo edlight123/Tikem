@@ -411,9 +411,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
           where('event_id', '==', eventId)
         );
         const snapshot = await getDocs(q);
-        snapshot.docs.forEach(async (docSnapshot) => {
-          await deleteDoc(doc(db, 'event_favorites', docSnapshot.id));
-        });
+        await Promise.all(
+          snapshot.docs.map((d) => deleteDoc(doc(db, 'event_favorites', d.id)))
+        );
         setIsFavorite(false);
         showAlert(t('common.success'), t('eventDetail.favorites.removed'));
       } else {

@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { adminDb } from '@/lib/firebase/admin'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
+import { docsInDateRange, storedDateMs } from '@/lib/firestore/dateRange'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,17 +66,14 @@ export async function GET(request: Request) {
       queryRef = queryRef.where('event_id', '==', eventId)
     }
 
-    // Date filters
-    if (startDate) {
-      const start = new Date(startDate)
-      queryRef = queryRef.where('purchased_at', '>=', start)
-    }
-
-    if (endDate) {
-      const end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
-      queryRef = queryRef.where('purchased_at', '<=', end)
-    }
+    // Date filters. purchased_at is an ISO string on paid tickets and a
+    // Timestamp on free ones, and one range query only matches one type, so a
+    // dated search reads both and sorts/pages in memory (below).
+    const rangeStart = startDate ? new Date(startDate) : null
+    const rangeEnd = endDate ? new Date(endDate) : null
+    rangeEnd?.setHours(23, 59, 59, 999)
+    const dated = !!(rangeStart || rangeEnd)
+    const baseRef = queryRef
 
     // Sorting
     if (sortBy === 'oldest') {
@@ -91,7 +89,20 @@ export async function GET(request: Request) {
     // Get total count (for pagination info). The aggregation query can fail in
     // some environments / index states — degrade gracefully instead of 500-ing.
     let totalCount = 0
-    try {
+    let datedPage: any[] | null = null
+    if (dated) {
+      const docs = await docsInDateRange(baseRef, 'purchased_at', rangeStart, rangeEnd)
+      const price = (d: any) => Number(d.data().price_paid) || 0
+      const when = (d: any) => storedDateMs(d.data().purchased_at) || 0
+      docs.sort((x, y) =>
+        sortBy === 'oldest' ? when(x) - when(y)
+        : sortBy === 'highest' ? price(y) - price(x)
+        : sortBy === 'lowest' ? price(x) - price(y)
+        : when(y) - when(x),
+      )
+      totalCount = docs.length
+      datedPage = docs.slice((page - 1) * pageSize, page * pageSize)
+    } else try {
       const countSnapshot = await queryRef.count().get()
       totalCount = countSnapshot.data().count
     } catch (countErr) {
@@ -112,7 +123,7 @@ export async function GET(request: Request) {
     // If the ordered query fails, retry without ordering so the page still loads.
     let snapshot
     try {
-      snapshot = await pagedRef.get()
+      snapshot = datedPage ? { docs: datedPage } : await pagedRef.get()
     } catch (orderErr) {
       console.warn('orders ordered query failed; retrying unordered', orderErr)
       let fallbackRef: any = adminDb.collection('tickets')
@@ -251,11 +262,12 @@ export async function POST(request: Request) {
 
       let recentDocs: any[] = []
       try {
-        const recentTickets = await ticketsRef
-          .where('status', 'in', liveTicketStatusesForQuery())
-          .where('purchased_at', '>=', thirtyDaysAgo)
-          .get()
-        recentDocs = recentTickets.docs
+        // purchased_at is an ISO string on paid tickets, a Timestamp on free ones.
+        recentDocs = await docsInDateRange(
+          ticketsRef.where('status', 'in', liveTicketStatusesForQuery()),
+          'purchased_at',
+          thirtyDaysAgo,
+        )
       } catch (e) {
         console.warn('orders summary revenue query failed; falling back to in-memory date filter', e)
         try {
@@ -293,7 +305,9 @@ export async function POST(request: Request) {
       // Today's orders
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const todayOrders = await safeCount(ticketsRef.where('purchased_at', '>=', today))
+      const todayOrders = (
+        await safeCount(ticketsRef.where('purchased_at', '>=', today))
+      ) + (await safeCount(ticketsRef.where('purchased_at', '>=', today.toISOString())))
 
       return adminOk({
         summary: {

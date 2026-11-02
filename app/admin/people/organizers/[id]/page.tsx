@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
 import { readOrgBrandAdmin } from '@/lib/firestore/org-brand-server'
 import OrganizerDetailsClient from './OrganizerDetailsClient'
+import { LIVE_TICKET_STATUSES } from '@/lib/tickets/status'
 
 /** How many of an organizer's events the detail page lists inline. */
 const EVENTS_LIST_LIMIT = 25
@@ -163,7 +164,7 @@ async function getOrganizerDetails(organizerId: string) {
         const ticketsBatchSnapshot = await adminDb
           .collection('tickets')
           .where('event_id', 'in', batch)
-          .where('status', '==', 'confirmed')
+          .where('status', 'in', [...LIVE_TICKET_STATUSES])
           .count()
           .get()
         ticketsCount += ticketsBatchSnapshot.data().count

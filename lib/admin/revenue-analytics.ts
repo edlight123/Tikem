@@ -5,6 +5,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
+import { docsInDateRange, storedDateMs } from '@/lib/firestore/dateRange'
 
 export interface RevenueBreakdown {
   totalRevenueUSD: number
@@ -194,17 +195,15 @@ export async function getPlatformRevenueAnalytics(
 ): Promise<RevenueBreakdown> {
   const ticketsRef = adminDb.collection('tickets')
   // Every live status (lib/tickets/status.ts): valid | confirmed | active.
-  let query: any = ticketsRef.where('status', 'in', liveTicketStatusesForQuery())
-
-  if (startDate) {
-    query = query.where('created_at', '>=', startDate)
-  }
-  if (endDate) {
-    query = query.where('created_at', '<=', endDate)
-  }
-
-  const snapshot = await query.get()
-  const tickets = snapshot.docs.map((doc: any) => ({
+  // created_at is an ISO string on paid tickets and a Timestamp on free/comp
+  // ones; a Date range alone counted only the free ones.
+  const docs = await docsInDateRange(
+    ticketsRef.where('status', 'in', liveTicketStatusesForQuery()),
+    'created_at',
+    startDate,
+    endDate,
+  )
+  const tickets = docs.map((doc: any) => ({
     id: doc.id,
     ...doc.data()
   }))
@@ -476,14 +475,14 @@ export async function getRevenueByPeriod(
   startDate: Date,
   endDate: Date
 ): Promise<Array<{ date: string; revenueUSD: number; revenueHTG: number; tickets: number }>> {
-  const ticketsSnapshot = await adminDb
-    .collection('tickets')
-    .where('status', 'in', liveTicketStatusesForQuery())
-    .where('created_at', '>=', startDate)
-    .where('created_at', '<=', endDate)
-    .get()
+  const ticketDocs = await docsInDateRange(
+    adminDb.collection('tickets').where('status', 'in', liveTicketStatusesForQuery()),
+    'created_at',
+    startDate,
+    endDate,
+  )
 
-  const tickets = ticketsSnapshot.docs.map((doc: any) => ({
+  const tickets = ticketDocs.map((doc: any) => ({
     id: doc.id,
     ...doc.data()
   }))
@@ -491,7 +490,7 @@ export async function getRevenueByPeriod(
   const revenueByDate = new Map<string, { revenueUSD: number; revenueHTG: number; tickets: number }>()
 
   for (const ticket of tickets) {
-    const createdAt = ticket.created_at?.toDate?.() || new Date()
+    const createdAt = new Date(storedDateMs(ticket.created_at) || Date.now())
     const { priceUSD, priceHTG } = ticketRevenueAmounts(ticket)
 
     let dateKey: string

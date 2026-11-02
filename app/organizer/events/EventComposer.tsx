@@ -1305,6 +1305,11 @@ export default function EventComposer({
       ticket_price: isRsvp ? 0 : firstTier.price,
       has_paid_tiers: !isRsvp && cleanTiers.some((t) => Number(t.price || 0) > 0),
       total_tickets: isRsvp ? 0 : totalQty,
+      // The sales gate reads max_tickets ?? capacity ?? total_tickets, and the
+      // app writes `capacity`: without it here, an event made on the phone and
+      // then given more tickets on the web stayed capped at the old total.
+      capacity: isRsvp ? 0 : totalQty,
+      total_capacity: isRsvp ? 0 : totalQty,
       ticket_name: isRsvp ? 'RSVP' : firstTier.name,
       guestlist: cleanGuests,
       currency: normalizeEventCurrencyForCountry(country, currency),
@@ -1485,7 +1490,12 @@ export default function EventComposer({
           sort_order: ins.sortOrder,
         }))
       )
-      if (error) console.error('Error saving ticket tiers:', error)
+      // Fail the save: an event without its tiers can't sell, and a success
+      // toast over that hid it until a buyer hit it.
+      if (error) {
+        console.error('Error saving ticket tiers:', error)
+        throw error
+      }
       const insertedRows = Array.isArray(inserted) ? inserted : []
       plan.inserts.forEach((ins, k) => {
         const id = insertedRows[k]?.id
