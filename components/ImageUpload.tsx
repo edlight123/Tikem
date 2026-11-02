@@ -69,7 +69,9 @@ export default function ImageUpload({
     if (!file) return
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Only the types storage.rules accepts (an SVG/AVIF/BMP was refused
+    // there with a vague permission error).
+    if (!/^image\/(jpeg|png|webp|heic|heif|gif)$/.test(file.type)) {
       setError(t('upload.errType', { defaultValue: 'Please select an image file' }))
       return
     }
@@ -303,7 +305,7 @@ export default function ImageUpload({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
           onChange={handleFileSelect}
           className="hidden"
           disabled={uploading}
