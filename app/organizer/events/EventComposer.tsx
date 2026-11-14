@@ -22,7 +22,18 @@ import { useTranslation } from 'react-i18next'
 // here too because the shim can't reach subcollections, and the hashed access
 // code is written straight to events/{id}/private/access via setDoc.
 let _shim: typeof import('@/lib/firebase-db/client') | null = null
-const getShim = async () => (_shim ??= await import('@/lib/firebase-db/client')).firebaseDb
+// Both loaders wait for the persisted session before handing anything back: the
+// Firebase client module is first evaluated HERE, and a write sent before the
+// session is restored goes out unauthenticated and is refused by the rules.
+const authReady = async () => {
+  const { getSignedInUser } = await import('@/lib/firebase/client')
+  await getSignedInUser()
+}
+const getShim = async () => {
+  _shim ??= await import('@/lib/firebase-db/client')
+  await authReady()
+  return _shim.firebaseDb
+}
 
 let _fs: Promise<
   [typeof import('firebase/firestore'), typeof import('@/lib/firebase/client')]
@@ -33,6 +44,7 @@ const getFirestore = async () => {
     import('firebase/firestore'),
     import('@/lib/firebase/client'),
   ]))
+  await client.getSignedInUser()
   return { ...fs, db: client.db }
 }
 import { isDemoMode } from '@/lib/demo'
@@ -1067,8 +1079,12 @@ export default function EventComposer({
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const composeISO = (d: string, t: string) =>
-    d ? new Date(`${d}T${t || '00:00'}`).toISOString() : null
+  // Never throws: a malformed time must not take the whole composer down.
+  const composeISO = (d: string, t: string) => {
+    if (!d) return null
+    const parsed = new Date(`${d}T${t || '00:00'}`)
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+  }
 
   // Validation
   const startISOv = composeISO(startDate, startTime)

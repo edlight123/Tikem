@@ -16,7 +16,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { normalizePromoValidationResponse } from '../lib/promoCodes';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatCurrency } from '../lib/currency';
-import { computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_PER_PERSON } from '../lib/ticketPricing';
+import { computeSelectionTotal, isFreeTier, MAX_FREE_TICKETS_PER_PERSON, tierMaxPerOrder } from '../lib/ticketPricing';
 import { priceOrder } from '../lib/buyerPricing';
 import WhitePillCTA from './WhitePillCTA';
 import MoneyText from './MoneyText';
@@ -304,7 +304,7 @@ export default function TieredTicketSelector({
     
     const currentQty = tierQuantities[tierId] || 0;
     const available = getAvailableQuantity(tier);
-    const cap = isFreeTier(tier) ? MAX_FREE_TICKETS_PER_PERSON : 10;
+    const cap = Math.min(isFreeTier(tier) ? MAX_FREE_TICKETS_PER_PERSON : 10, tierMaxPerOrder(tier as any) ?? Infinity);
     const newQty = Math.max(0, Math.min(currentQty + delta, available, cap));
 
     // Buyers can mix paid ticket types (2 VIP + 1 General Admission): every

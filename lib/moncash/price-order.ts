@@ -26,6 +26,7 @@ import {
   normalizeTierLines,
   parseTicketQuantity,
   pickTierWhenUnspecified,
+  tierOrderLimitRefusal,
 } from '@/lib/tickets/purchasable'
 import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { fromCents } from '@/lib/ticketPricing'
@@ -177,6 +178,9 @@ export function priceFaceSelections(input: {
       const onSale = tierIsOnSale(tier, now)
       if (!onSale.ok) return { ok: false, status: 400, error: onSale.reason }
 
+      const limitRefusal = tierOrderLimitRefusal(tier, selection.quantity)
+      if (limitRefusal) return { ok: false, status: limitRefusal.status, error: limitRefusal.error, code: limitRefusal.code }
+
       const sold = Number(tier.sold_quantity || 0)
       const total = Number(tier.total_quantity || 0)
       const remaining = Math.max(0, total - sold)
@@ -225,6 +229,9 @@ export function priceFaceSelections(input: {
     if (tier) {
       const onSale = tierIsOnSale(tier, now)
       if (!onSale.ok) return { ok: false, status: 400, error: onSale.reason }
+
+      const limitRefusal = tierOrderLimitRefusal(tier, quantity)
+      if (limitRefusal) return { ok: false, status: limitRefusal.status, error: limitRefusal.error, code: limitRefusal.code }
 
       const sold = Number(tier.sold_quantity || 0)
       const total = Number(tier.total_quantity || 0)

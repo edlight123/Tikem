@@ -70,6 +70,38 @@ export function tierPrice(tier: TierPriceLike | null | undefined): number {
 /** Mirrors lib/ticketPricing.ts: free tickets one person may hold for an event. */
 export const MAX_FREE_TICKETS_PER_PERSON = 2;
 
+/**
+ * The organizer's "Limit purchase quantity" on a tier (`max_per_order`) as a
+ * positive whole number, or null when the tier has no limit. Server routes
+ * refuse a line above it (lib/tickets/purchasable tierOrderLimitRefusal); the
+ * pickers stop their steppers at it. Mirrors lib/ticketPricing.ts on web.
+ */
+export function tierMaxPerOrder(tier: { max_per_order?: unknown; maxPerOrder?: unknown } | null | undefined): number | null {
+  const n = Number(tier?.max_per_order ?? tier?.maxPerOrder ?? 0);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : null;
+}
+
+/**
+ * Most free tickets one person may claim on this event: the global per-person
+ * cap, tightened by the claimed tier's limit, or (no tier named, so the server
+ * picks the free tier) by the tightest limit among the event's free tiers.
+ */
+export function freeClaimCap(
+  tiers: Array<{ id?: string; price?: unknown; max_per_order?: unknown; maxPerOrder?: unknown }> | null | undefined,
+  tierId?: string | null
+): number {
+  const list = Array.isArray(tiers) ? tiers : [];
+  const relevant = tierId
+    ? list.filter((t) => String(t.id) === String(tierId))
+    : list.filter((t) => tierPrice(t as TierPriceLike) === 0);
+  let cap = MAX_FREE_TICKETS_PER_PERSON;
+  for (const t of relevant) {
+    const max = tierMaxPerOrder(t);
+    if (max !== null) cap = Math.min(cap, max);
+  }
+  return cap;
+}
+
 /** A tier is free when its price is exactly zero. */
 export function isFreeTier(tier: TierPriceLike | null | undefined): boolean {
   return tierPrice(tier) === 0;

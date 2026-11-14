@@ -296,6 +296,8 @@ export const firebaseDb = {
   
   auth: {
     getUser: async () => {
+      // Wait for the persisted session: right after a lazy import it is not restored yet.
+      await auth.authStateReady().catch(() => {})
       const user = auth.currentUser
       if (!user) {
         return { data: { user: null }, error: null }

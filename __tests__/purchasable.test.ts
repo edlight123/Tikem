@@ -10,6 +10,7 @@ import {
   checkTierForEvent,
   normalizeTierLines,
   parseTicketQuantity,
+  tierOrderLimitRefusal,
   pickTierWhenUnspecified,
   validateStoredOrderLines,
 } from '@/lib/tickets/purchasable'
@@ -305,5 +306,24 @@ describe('selectReconcileCandidates (MonCash stuck orders)', () => {
       { order_id: 's', status: 'pending', payment_method: 'sogepay', created_at: ago(HOUR) },
     ]
     expect(selectReconcileCandidates(rows, now)).toEqual([])
+  })
+})
+
+describe('tierOrderLimitRefusal (organizer per-order limit)', () => {
+  it('allows any quantity when the tier has no limit', () => {
+    expect(tierOrderLimitRefusal({ name: 'GA' }, 5)).toBeNull()
+    expect(tierOrderLimitRefusal({ name: 'GA', max_per_order: null }, 5)).toBeNull()
+    expect(tierOrderLimitRefusal({ name: 'GA', max_per_order: 0 }, 5)).toBeNull()
+  })
+  it('allows a quantity at the limit', () => {
+    expect(tierOrderLimitRefusal({ name: 'Scholar', max_per_order: 1 }, 1)).toBeNull()
+  })
+  it('refuses a quantity above the limit', () => {
+    const r = tierOrderLimitRefusal({ name: 'Scholar', max_per_order: 1 }, 2)
+    expect(r).toMatchObject({ ok: false, code: 'tier_order_limit', status: 400 })
+    expect(r?.error).toContain('Limit of 1 ticket')
+  })
+  it('reads the camelCase draft field too', () => {
+    expect(tierOrderLimitRefusal({ maxPerOrder: '3' }, 4)).toMatchObject({ code: 'tier_order_limit' })
   })
 })

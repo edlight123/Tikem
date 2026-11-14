@@ -731,10 +731,14 @@ export function TimePicker({
     if (open) setDraft(value)
   }, [open, value])
 
+  // An empty draft must read as "nothing chosen": ''.split(':') is [''], which
+  // used to parse as h=0, m=undefined (Number.isNaN(undefined) is false). That
+  // painted a ":undefined" minute and, on the first AM/PM tap, committed
+  // "12:undefined", which crashed the composer (Invalid time value).
   const parts = useMemo(() => {
-    const [h, m] = (draft || '').split(':').map(Number)
-    if (Number.isNaN(h) || Number.isNaN(m)) return null
-    return { h, m }
+    const match = /^(\d{1,2}):(\d{2})$/.exec((draft || '').trim())
+    if (!match) return null
+    return { h: Number(match[1]), m: Number(match[2]) }
   }, [draft])
 
   const commit = (h: number, m: number) => {

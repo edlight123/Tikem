@@ -22,6 +22,7 @@ import {
   normalizeTierLines,
   parseTicketQuantity,
   pickTierWhenUnspecified,
+  tierOrderLimitRefusal,
 } from '@/lib/tickets/purchasable'
 import { priceOrderCents } from '@/lib/checkout/buyer-pricing'
 import { getPlatformSettings } from '@/lib/admin/platform-settings'
@@ -204,6 +205,11 @@ export async function POST(request: Request) {
         const onSale = tierIsOnSale(tierRow)
         if (!onSale.ok) return NextResponse.json({ error: onSale.reason }, { status: 400 })
 
+        const limitRefusal = tierOrderLimitRefusal(tierRow, qty)
+        if (limitRefusal) {
+          return NextResponse.json({ error: limitRefusal.error, code: limitRefusal.code }, { status: limitRefusal.status })
+        }
+
         const sold = Number(tierRow.sold_quantity || 0)
         const total = Number(tierRow.total_quantity || 0)
         const remaining = Math.max(0, total - sold)
@@ -251,6 +257,10 @@ export async function POST(request: Request) {
         if (!onSale.ok) return NextResponse.json({ error: onSale.reason }, { status: 400 })
 
         const qty = singleQuantity
+        const limitRefusal = tierOrderLimitRefusal(tierRow, qty)
+        if (limitRefusal) {
+          return NextResponse.json({ error: limitRefusal.error, code: limitRefusal.code }, { status: limitRefusal.status })
+        }
         const sold = Number(tierRow.sold_quantity || 0)
         const total = Number(tierRow.total_quantity || 0)
         const remaining = Math.max(0, total - sold)
