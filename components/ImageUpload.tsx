@@ -111,7 +111,7 @@ export default function ImageUpload({
       // storage.rules only lets a signed-in user write event-images/{uid}_*:
       // a bare UUID name was refused for everyone ("you don't have
       // permission"), e.g. the logo on the Create organization step.
-      const uid = (await import('@/lib/firebase/client')).auth.currentUser?.uid
+      const uid = (await (await import('@/lib/firebase/client')).getSignedInUser())?.uid
       if (!uid) {
         throw Object.assign(new Error('Not signed in'), { code: 'storage/unauthenticated' })
       }

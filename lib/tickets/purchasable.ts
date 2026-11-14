@@ -17,6 +17,8 @@
  * __tests__/purchasable.test.ts and every route calls the same code.
  */
 
+import { tierMaxPerOrder } from '@/lib/ticketPricing'
+
 /**
  * Most tickets one order may carry, across all of its tiers.
  *
@@ -121,6 +123,27 @@ export function checkTierForEvent(tier: any, eventId: string): { ok: true } | Ga
     return refuse('This ticket tier is not available.', 'tier_inactive', 400)
   }
   return { ok: true }
+}
+
+/**
+ * The organizer's "Limit purchase quantity" setting on a tier (`max_per_order`).
+ *
+ * The composers (web + mobile) have saved this for a long time, but nothing at
+ * checkout read it, so a tier set to "1 per person" still sold 2+. Every sale and
+ * free-claim path now calls tierOrderLimitRefusal with the line quantity.
+ */
+/** Refuses a line that asks for more of a tier than its `max_per_order`. */
+export function tierOrderLimitRefusal(tier: any, quantity: number): GateRefusal | null {
+  const max = tierMaxPerOrder(tier)
+  if (max === null || quantity <= max) return null
+  const name = String(tier?.name || 'this ticket')
+  return refuse(
+    max === 1
+      ? `Limit of 1 ticket per order for ${name}.`
+      : `Limit of ${max} tickets per order for ${name}.`,
+    'tier_order_limit',
+    400
+  )
 }
 
 /**

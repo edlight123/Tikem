@@ -100,6 +100,17 @@ export function tierPrice(tier: TierPriceLike | null | undefined): number {
  */
 export const MAX_FREE_TICKETS_PER_PERSON = 2
 
+/**
+ * The organizer's "Limit purchase quantity" on a tier (`max_per_order`) as a
+ * positive whole number, or null when the tier has no limit. Server routes
+ * refuse a line above it (lib/tickets/purchasable tierOrderLimitRefusal); the
+ * pickers stop their steppers at it. Mirrored in mobile/lib/ticketPricing.ts.
+ */
+export function tierMaxPerOrder(tier: { max_per_order?: unknown; maxPerOrder?: unknown } | null | undefined): number | null {
+  const n = Number(tier?.max_per_order ?? tier?.maxPerOrder ?? 0)
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : null
+}
+
 /** A tier is free when its price is exactly zero. */
 export function isFreeTier(tier: TierPriceLike | null | undefined): boolean {
   return tierPrice(tier) === 0

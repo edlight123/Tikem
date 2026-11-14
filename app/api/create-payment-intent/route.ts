@@ -64,6 +64,7 @@ import {
   parseTicketQuantity,
   pickTierWhenUnspecified,
   type TierLine,
+  tierOrderLimitRefusal,
 } from '@/lib/tickets/purchasable'
 
 /** The event's own currency, or its country's default. */
@@ -315,6 +316,8 @@ export async function POST(request: Request) {
       const salesStart = tier.sales_start ? new Date(tier.sales_start) : null
       const salesEnd = tier.sales_end ? new Date(tier.sales_end) : null
       if (tier.is_active === false) return 'This ticket tier is not available.'
+      const limitRefusal = tierOrderLimitRefusal(tier, lineQuantity)
+      if (limitRefusal) return limitRefusal.error
       if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
         return 'Ticket sales for this tier have not started yet.'
       }

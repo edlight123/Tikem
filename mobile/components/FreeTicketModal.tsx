@@ -14,7 +14,7 @@ import { useAppAlert } from './AppAlert';
 import { colors as T, radius, spacing, font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
 import type { Attribution } from '../lib/attribution';
-import { MAX_FREE_TICKETS_PER_PERSON } from '../lib/ticketPricing';
+import { freeClaimCap } from '../lib/ticketPricing';
 import { PlusOneFields, plusOnesPayload, resizePlusOnes, type PlusOneDraft } from './AttendRequestSheet';
 
 /**
@@ -145,7 +145,8 @@ export default function FreeTicketModal({
   const remainingTickets = isUnlimited
     ? Infinity
     : totalCap - (Number(event.tickets_sold) || 0);
-  const maxQuantity = Math.min(MAX_FREE_TICKETS_PER_PERSON, remainingTickets);
+  // Per-person cap, tightened by the organizer's per-order limit on the free tier.
+  const maxQuantity = Math.min(freeClaimCap((event as any)?.ticket_tiers, tierId), remainingTickets);
   // The quantity actually claimed: the upstream selection when locked, else the
   // stepper value.
   const claimQuantity = isLocked ? (lockedQuantity as number) : quantity;

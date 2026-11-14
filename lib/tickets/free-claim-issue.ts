@@ -34,7 +34,7 @@ import { computeSelectionTotal, toCents } from '@/lib/ticketPricing'
 import { sendTicketConfirmation } from '@/lib/tickets/confirmation'
 import type { CheckoutIdentity } from '@/lib/guest/checkout'
 import { attachTicketsToGuestOrder } from '@/lib/guest/identity'
-import type { TierLine } from '@/lib/tickets/purchasable'
+import { tierOrderLimitRefusal, type TierLine } from '@/lib/tickets/purchasable'
 import {
   FREE_CLAIM_LOCK_IN_FLIGHT_MS,
   GUEST_ALREADY_CLAIMED_MESSAGE,
@@ -292,6 +292,16 @@ export async function issueFreeClaim(
     // Empty tierId — these tickets carry no tier and only count toward the
     // event-level tickets_sold (buildTierSoldIncrements skips them).
     claims = [{ tierId: '', tierName: 'General Admission', quantity: ticketQuantity, unitPrice: price }]
+  }
+
+  // ── Per-tier order limit ────────────────────────────────────────────────────
+  // The organizer's "Limit purchase quantity" (max_per_order). A person gets one
+  // free claim per event, so on a free tier this is the per-person limit.
+  for (const claim of claims) {
+    if (!claim.tierId) continue
+    const tier = tierDocs.find((t: any) => String(t.id) === claim.tierId)
+    const limitRefusal = tierOrderLimitRefusal(tier, claim.quantity)
+    if (limitRefusal) return fail(limitRefusal.error, limitRefusal.code, limitRefusal.status)
   }
 
   // ── Final price gate ────────────────────────────────────────────────────────
