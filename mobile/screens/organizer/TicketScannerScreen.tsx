@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Switch,
+  Linking,
 } from 'react-native';
 import { colors as T, radius, spacing } from '../../theme/tokens';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -57,7 +58,7 @@ import {
   readCheckInQueue,
   saveDoorList,
 } from '../../lib/doorCheckIn';
-import { Camera, DoorOpen, Search, Vibrate, VibrateOff } from 'lucide-react-native';
+import { Camera, DoorOpen, Search, Vibrate, VibrateOff, X } from 'lucide-react-native';
 
 import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
@@ -1191,13 +1192,31 @@ export default function TicketScannerScreen() {
   }
 
   if (!permission.granted) {
+    // Once iOS has said no for good, requestPermission() returns instantly
+    // without a prompt, so the button opens Settings instead. The close button
+    // keeps this from being a dead end (it used to have no way out).
+    const blockedForGood = !permission.canAskAgain;
     return (
       <View style={styles.container}>
+        <TouchableOpacity
+          style={[styles.permissionClose, { top: insets.top + 8 }]}
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        >
+          <X size={22} color={T.white} />
+        </TouchableOpacity>
         <EmptyState
           icon={Camera}
           title={t('organizerTicketScanner.permissions.required')}
-          actionLabel={t('organizerTicketScanner.permissions.grant')}
-          onAction={requestPermission}
+          subtitle={blockedForGood ? t('organizerTicketScanner.permissions.deniedBody') : undefined}
+          actionLabel={
+            blockedForGood
+              ? t('organizerTicketScanner.permissions.openSettings')
+              : t('organizerTicketScanner.permissions.grant')
+          }
+          onAction={blockedForGood ? () => Linking.openSettings() : requestPermission}
         />
       </View>
     );
@@ -1524,6 +1543,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  permissionClose: {
+    position: 'absolute',
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: T.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   message: {
     fontSize: 15,

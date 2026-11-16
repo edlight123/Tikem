@@ -26,7 +26,10 @@ import {
   ChevronLeft,
   PlayCircle,
   MoreHorizontal,
-  Globe
+  Globe,
+  CalendarPlus,
+  Lock,
+  X,
 } from 'lucide-react-native';
 import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -69,6 +72,8 @@ import { useSocialFlags } from '../lib/socialFlags';
 import { fetchInviteLink } from '../lib/api/invites';
 import { requestPhonePrompt } from '../lib/phonePrompt';
 import { useAppAlert } from '../components/AppAlert';
+import ChromeBlur from '../components/ChromeBlur';
+import * as haptics from '../lib/haptics';
 import { EventDetailSkeleton } from '../components/Skeleton';
 import EventLineupRail from '../components/EventLineupRail';
 import TrailerCard from '../components/TrailerCard';
@@ -86,13 +91,14 @@ import {
   type OwnAttendRequest,
 } from '../lib/attendRequests';
 const { width } = Dimensions.get('window');
-const POSTER_W = width * 0.86;
-// The poster is 4:5, so its height follows from its width. The hero adds a
-// fixed bleed band above and below rather than a magic total height: at a flat
-// 600pt the hero ate 71% of an 844pt screen, so the host, title and date all
-// began below the fold — where posh shows them immediately.
+// Full-bleed poster (posh): the flyer spans the screen width and the same
+// art, blurred and darkened, fills the band behind the header above it and
+// bleeds a little below before melting into the page.
+const POSTER_W = width;
 const POSTER_H = POSTER_W * 1.25;
-const HERO_BLEED = 52;
+const HERO_BLEED = 28;
+// Height of the sticky header's button row (below the status bar).
+const HEADER_BAR = 52;
 
 // Dictionary key for the compact countdown prefix ("Starts in").
 const STARTS_IN_KEY = 'eventDetail.startsIn';
@@ -415,7 +421,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
           snapshot.docs.map((d) => deleteDoc(doc(db, 'event_favorites', d.id)))
         );
         setIsFavorite(false);
-        showAlert(t('common.success'), t('eventDetail.favorites.removed'));
+        haptics.select();
       } else {
         // Add to favorites
         await addDoc(collection(db, 'event_favorites'), {
@@ -424,7 +430,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
           created_at: Timestamp.now()
         });
         setIsFavorite(true);
-        showAlert(t('common.success'), t('eventDetail.favorites.saved'));
+        haptics.success();
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -825,6 +831,21 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const startsInLabel =
     t(STARTS_IN_KEY) === STARTS_IN_KEY ? 'Starts in' : t(STARTS_IN_KEY);
 
+ // The header's backdrop and title fade in over the last stretch before the
+  // poster's bottom edge passes under the bar.
+  const posterBottom = insets.top + HEADER_BAR + POSTER_H;
+  const fadeEnd = Math.max(1, posterBottom - (insets.top + HEADER_BAR));
+  const headerBgOpacity = scrollY.interpolate({
+    inputRange: [fadeEnd - 160, fadeEnd],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [fadeEnd - 20, fadeEnd + 40],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <Animated.ScrollView 
@@ -832,12 +853,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
+          { useNativeDriver: true }
         )}
         scrollEventThrottle={16}
       >
         {/* Hero — same poster blurred as backdrop, sharp poster centered */}
-        <View style={styles.heroContainer}>
+        <View style={[styles.heroContainer, { paddingTop: insets.top + HEADER_BAR }]}>
           <LinearGradient
             colors={resolvePosterTheme(event, event.id || event.title, event.category).colors}
             start={{ x: 0.1, y: 0 }}
@@ -890,45 +911,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
           </View>
 
 
-          {/* Top Right Actions: Share & Save */}
-          {/* Back — the most-visited pushed screen shipped with no back
-              affordance at all; only the edge-swipe worked. Same scrim-circle
-              as the share/heart cluster opposite. */}
-          <TouchableOpacity
-            style={[styles.iconButton, styles.heroBack, { top: insets.top + 8 }]}
-            onPress={() => goBackOrHome(navigation)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-          >
-            <ChevronLeft size={22} color="#FFF" />
-          </TouchableOpacity>
-          <View style={[styles.heroActions, { top: insets.top + 8 }]}>
-            <TouchableOpacity style={styles.iconButton} onPress={handleShare} hitSlop={8}>
-              <Share2 size={20} color="#FFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={handleMore}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('moderation.moreTitle')}
-            >
-              <MoreHorizontal size={20} color="#FFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={toggleFavorite}
-              disabled={favoriteLoading}
-              hitSlop={8}
-            >
-              <Heart 
-                size={20} 
-                color="#FFF"
-                fill={isFavorite ? '#FFF' : 'transparent'}
-              />
-            </TouchableOpacity>
-          </View>
         </View>
 
         <View style={styles.content}>
@@ -1017,32 +999,19 @@ export default function EventDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
-          {/* Quick Actions - Calendar & Waitlist */}
-          <View style={styles.quickActionsRow}>
-            <AddToCalendarButton 
-              event={{
-                id: eventId,
-                title: event.title,
-                description: event.description,
-                start_datetime: event.start_datetime,
-                end_datetime: event.end_datetime,
-                venue_name: event.venue_name,
-                address: event.address,
-                city: event.city,
-              }}
-              style={styles.quickActionButton}
-            />
-            {/* Only when the organizer turned the waitlist on: the server
-                refuses to join anything else. */}
-            {isSoldOut && (event as any).enable_waitlist === true && (
+          {/* Waitlist (Add to Calendar moved to the header as an icon). Only
+              when the organizer turned the waitlist on: the server refuses to
+              join anything else. */}
+          {isSoldOut && (event as any).enable_waitlist === true && (
+            <View style={styles.quickActionsRow}>
               <JoinWaitlistButton
                 eventId={eventId}
                 eventTitle={event.title}
                 isSoldOut={isSoldOut}
                 style={styles.quickActionButton}
               />
-            )}
-          </View>
+            </View>
+          )}
 
           {/* About Section */}
           <View style={styles.section}>
@@ -1122,6 +1091,86 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <View style={{ height: 160 }} />
         </View>
       </Animated.ScrollView>
+
+      {/* Sticky header. The buttons never scroll away (they used to ride off
+          with the poster, leaving no way back), and once the poster has
+          scrolled under the bar a blurred canvas fades in behind them with
+          the event name, so content never slides under the status bar. */}
+      <View style={[styles.stickyHeader, { paddingTop: insets.top, height: insets.top + HEADER_BAR }]}>
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: headerBgOpacity }]}>
+          <ChromeBlur edge="top" tintOpacity={0.7} scrimExtra={24} />
+        </Animated.View>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => goBackOrHome(navigation)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <ChevronLeft size={22} color="#FFF" />
+        </TouchableOpacity>
+        <Animated.Text
+          style={[styles.stickyTitle, { opacity: headerTitleOpacity }]}
+          numberOfLines={1}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        >
+          {event.title}
+        </Animated.Text>
+        <View style={styles.headerActions}>
+          <AddToCalendarButton
+            event={{
+              id: eventId,
+              title: event.title,
+              description: event.description,
+              start_datetime: event.start_datetime,
+              end_datetime: event.end_datetime,
+              venue_name: event.venue_name,
+              address: event.address,
+              city: event.city,
+            }}
+            renderTrigger={(open) => (
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={open}
+                hitSlop={4}
+                accessibilityRole="button"
+                accessibilityLabel={t('calendar.addToCalendar')}
+              >
+                <CalendarPlus size={19} color="#FFF" />
+              </TouchableOpacity>
+            )}
+          />
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={handleShare}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.share')}
+          >
+            <Share2 size={19} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={handleMore}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={t('moderation.moreTitle')}
+          >
+            <MoreHorizontal size={19} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={toggleFavorite}
+            disabled={favoriteLoading}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFavorite }}
+          >
+            <Heart size={19} color="#FFF" fill={isFavorite ? '#FFF' : 'transparent'} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Floating Bottom CTA Pill Card */}
       <Animated.View 
@@ -1356,7 +1405,20 @@ export default function EventDetailScreen({ route, navigation }: any) {
             onPress={() => !unlocking && setShowAccessGate(false)}
           />
           <View style={styles.accessCard}>
-            <Text style={styles.accessTitle}>🔒 {t('eventAccess.locked')}</Text>
+            <TouchableOpacity
+              style={styles.accessClose}
+              onPress={() => setShowAccessGate(false)}
+              disabled={unlocking}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <X size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <View style={styles.accessTitleRow}>
+              <Lock size={16} color={colors.text} />
+              <Text style={styles.accessTitle}>{t('eventAccess.locked')}</Text>
+            </View>
             <TextInput
               style={styles.accessInput}
               placeholder={t('eventAccess.enterCode')}
@@ -1381,10 +1443,18 @@ export default function EventDetailScreen({ route, navigation }: any) {
               activeOpacity={0.8}
             >
               {unlocking ? (
-                <ActivityIndicator size="small" color={T.onTeal} />
+                <ActivityIndicator size="small" color={T.onWhite} />
               ) : (
                 <Text style={styles.accessButtonText}>{t('eventAccess.unlock')}</Text>
               )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.accessCancel}
+              onPress={() => setShowAccessGate(false)}
+              disabled={unlocking}
+              accessibilityRole="button"
+            >
+              <Text style={styles.accessCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1454,10 +1524,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   heroContainer: {
     position: 'relative',
     width: width,
-    height: POSTER_H + HERO_BLEED * 2,
+    paddingBottom: HERO_BLEED,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   // 0.35, not 0.55. The backdrop is the SAME poster blurred, and the point of
   // it is the artwork's colour bleeding into the page — posh's defining hero
@@ -1466,7 +1535,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // own shadow, so legibility does not depend on this layer.
   heroBackdropScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,10,10,0.35)',
+    // Darker than when the poster floated inset (0.35): the backdrop now only
+    // shows in the header band and the bleed below, where it must read as a
+    // dark glow behind the white buttons, not as competing art.
+    backgroundColor: 'rgba(10,10,10,0.5)',
   },
   heroPoster: {
     width: POSTER_W,
@@ -1495,22 +1567,34 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     height: 130,
   },
   
-  // Top Right Actions (Share & Save)
-  heroActions: {
+  // Sticky header: back on the left, actions on the right, the event name
+  // fading in between once the poster has scrolled away.
+  stickyHeader: {
     position: 'absolute',
-    top: 60,
-    right: 16,
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     gap: 8,
+    zIndex: 20,
   },
-  heroBack: {
-    position: 'absolute',
-    left: 16,
-    zIndex: 10,
+  stickyTitle: {
+    flex: 1,
+    // Same serif as the page title (owner: event names stay serif).
+    fontFamily: font.serif,
+    fontSize: 19,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 6,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: radius.md,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
@@ -1857,15 +1941,28 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     padding: 22,
     gap: 14,
   },
+  accessClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+    padding: 4,
+  },
+  accessTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+  },
   accessTitle: {
     fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
+  // A filled field (canvas on the surface card), no hairline box.
   accessInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -1879,8 +1976,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '500',
     textAlign: 'center',
   },
+  // The white pill: the one primary CTA (teal is not a button colour).
   accessButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: T.white,
     borderRadius: radius.button,
     paddingVertical: 15,
     alignItems: 'center',
@@ -1890,8 +1988,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     opacity: 0.5,
   },
   accessButtonText: {
-    color: T.onTeal,
+    color: T.onWhite,
     fontSize: 16,
     fontWeight: '800',
+  },
+  accessCancel: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  accessCancelText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

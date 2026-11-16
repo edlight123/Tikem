@@ -151,6 +151,7 @@ export default {
     venue: 'Kote',
     send: 'Voye',
     close: 'Fèmen',
+    share: 'Pataje',
     na: 'N/A',
     general: 'Jeneral',
     generalAdmission: 'Antre jeneral',
@@ -1138,6 +1139,8 @@ export default {
   organizerTicketScanner: {
     headerTitle: 'Eskane biyè',
     permissions: {
+      openSettings: 'Louvri Paramèt',
+      deniedBody: 'Aksè kamera a fèmen pou Tikèm. Ouvri l nan Paramèt pou w ka eskane biyè.',
       requesting: 'Nap mande pèmisyon kamera...',
       required: 'Ou bezwen pèmisyon kamera pou eskane biyè',
       grant: 'Bay pèmisyon',
@@ -1913,6 +1916,10 @@ export default {
   },
 
   organizerEarnings: {
+    freeEvent: {
+      title: 'evènman gratis',
+      body: 'Pa gen biyè peye, kidonk pa gen anyen pou peye w. Lavant ak antre yo nan Analiz.',
+    },
     loading: 'Nap chaje revni yo...',
     headerTitle: 'Revni evènman',
     availableToWithdraw: 'Disponib pou w retire',
@@ -2142,6 +2149,8 @@ export default {
   },
 
   organizerDashboard: {
+    statSold: 'Vann',
+    statUpcoming: 'Ap vini',
     onSale: 'An vant',
     liveNow: 'An dirèk kounye a',
     soldOf: '{sold} sou {total} vann',
@@ -2277,6 +2286,7 @@ export default {
   },
 
   organizerScan: {
+    recentCheckIns: 'Dènye antre',
     offlineReadyShort: 'Pare san entènèt',
     loading: 'Nap chaje evènman yo…',
     title: 'Eskane',

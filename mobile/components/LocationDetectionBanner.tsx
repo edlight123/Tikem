@@ -20,7 +20,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useFilters } from '../contexts/FiltersContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -55,7 +54,6 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
-  const insets = useSafeAreaInsets();
   const { user, userProfile, loading: authLoading, updateUserProfile } = useAuth();
   const { setUserCountry, setActiveCity } = useFilters();
 
@@ -188,9 +186,11 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
   const city = locationLabel(DEFAULT_CITIES[detectedCountry] || '', detectedCountry);
   const flag = flagFor(detectedCountry);
   const inCountry = t(`locationBanner.inCountry.${detectedCountry}`);
+  // An in-flow row at the top of the feed (it scrolls away with it), so it
+  // only nudges in a few points rather than dropping from above the notch.
   const translateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [-(insets.top + 80), 0],
+    outputRange: [-8, 0],
   });
 
   return (
@@ -198,7 +198,7 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
       pointerEvents="box-none"
       style={[
         styles.container,
-        { top: insets.top + 8, opacity: progress, transform: [{ translateY }] },
+        { opacity: progress, transform: [{ translateY }] },
       ]}
     >
       <View style={styles.bar} accessibilityRole="alert">
@@ -251,11 +251,12 @@ export default function LocationDetectionBanner({ onChangeLocation }: LocationDe
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  // Part of the scroll content, not pinned over it: a pinned banner covered
+  // the feed while scrolling (simulator audit 2026-11-16).
   container: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    zIndex: 1000,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
   },
   // A fill, not a hairline: one slim raised row with a soft shadow for lift
   // over the header and the feed.

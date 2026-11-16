@@ -33,9 +33,28 @@ import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Skeleton } from '../../components/Skeleton';
 import { Touchable } from '../../components/ui/Touchable';
-import { Text as UIText } from '../../components/ui/Text';
 import { Switch } from '../../components/ui/Switch';
-import ActionTileGrid, { type ActionTile } from '../../components/organizer/ActionTileGrid';
+import { ListGroup, ListRow } from '../../components/ui/ListRow';
+import {
+  Hand,
+  Users,
+  UserCheck,
+  ListChecks,
+  Gift,
+  Receipt,
+  Banknote,
+  ChartColumn,
+  Eye,
+  MessageCircle,
+  Tag,
+  Megaphone,
+  Link,
+  Pencil,
+  Send,
+  Pause,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react-native';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import ChromeBlur from '../../components/ChromeBlur';
@@ -43,12 +62,11 @@ import StatusChip from '../../components/StatusChip';
 import StatTriplet from '../../components/StatTriplet';
 import SectionHeader from '../../components/SectionHeader';
 import { resolvePosterTheme } from '../../lib/posterGradient';
-import { colors as T, radius } from '../../theme/tokens';
+import { colors as T, radius, font } from '../../theme/tokens';
 import { eventRequiresApproval, getEventRequests } from '../../lib/attendRequests';
 import { displayCapacity } from '../../lib/ticketPricing';
 
-/** Pressed fill for the controls rows: one step up from their surfaceRaised group. */
-const ROW_PRESSED = 'rgba(255,255,255,0.06)';
+type ActionRow = { key: string; label: string; icon: LucideIcon; onPress: () => void };
 
 type RouteParams = {
   OrganizerEventManagement: {
@@ -408,16 +426,16 @@ export default function OrganizerEventManagementScreen() {
   const canCancel = event?.status !== 'cancelled';
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
 
-  const actionGroups: { key: string; label: string; tiles: ActionTile[] }[] = [
+  const actionGroups: { key: string; label: string; rows: ActionRow[] }[] = [
     {
       key: 'door',
       label: t('organizerEventManagement.actionGroups.door'),
-      tiles: [
+      rows: [
         ...(requiresApproval
           ? [
               {
                 key: 'requests',
-                icon: 'hand-left-outline' as const,
+                icon: Hand,
                 label: pendingRequests
                   ? t('attendRequests.organizer.actionCount', { count: pendingRequests })
                   : t('attendRequests.organizer.action'),
@@ -425,33 +443,33 @@ export default function OrganizerEventManagementScreen() {
               },
             ]
           : []),
-        { key: 'staff', icon: 'people-outline', label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
-        { key: 'attendees', icon: 'people-circle-outline', label: t('organizerEventManagement.actions.viewAttendees'), onPress: handleViewAttendees },
-        { key: 'guestList', icon: 'list-outline', label: t('organizerEventManagement.actions.guestList'), onPress: handleGuestList },
-        { key: 'comps', icon: 'gift-outline', label: t('organizerEventManagement.actions.comps'), onPress: handleViewComps },
+        { key: 'staff', icon: Users, label: t('organizerEventManagement.actions.staff'), onPress: handleManageStaff },
+        { key: 'attendees', icon: UserCheck, label: t('organizerEventManagement.actions.viewAttendees'), onPress: handleViewAttendees },
+        { key: 'guestList', icon: ListChecks, label: t('organizerEventManagement.actions.guestList'), onPress: handleGuestList },
+        { key: 'comps', icon: Gift, label: t('organizerEventManagement.actions.comps'), onPress: handleViewComps },
       ],
     },
     {
       key: 'sales',
       label: t('organizerEventManagement.actionGroups.sales'),
-      tiles: [
-        { key: 'orders', icon: 'receipt-outline', label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
+      rows: [
+        { key: 'orders', icon: Receipt, label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
         // Earnings: owner, or a finance-granted admin (read-only). Never managers.
         ...(canSeeEarnings
-          ? [{ key: 'earnings', icon: 'cash-outline', label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings }]
+          ? [{ key: 'earnings', icon: Banknote, label: t('organizerEventManagement.actions.earnings'), onPress: handleViewEarnings }]
           : []),
-        { key: 'analytics', icon: 'bar-chart-outline', label: t('organizerEventManagement.actions.analytics'), onPress: handleViewAnalytics },
-        { key: 'public', icon: 'eye-outline', label: t('organizerEventManagement.actions.viewPublicPage'), onPress: handleViewPublicPage },
+        { key: 'analytics', icon: ChartColumn, label: t('organizerEventManagement.actions.analytics'), onPress: handleViewAnalytics },
+        { key: 'public', icon: Eye, label: t('organizerEventManagement.actions.viewPublicPage'), onPress: handleViewPublicPage },
       ],
     },
     {
       key: 'promote',
       label: t('organizerEventManagement.actionGroups.promote'),
-      tiles: [
-        { key: 'messages', icon: 'chatbubble-ellipses-outline', label: t('organizerEventManagement.actions.messages'), onPress: handleViewMessages },
-        { key: 'promo', icon: 'pricetag-outline', label: t('organizerEventManagement.actions.promoCodes'), onPress: handlePromoCodes },
-        { key: 'promoters', icon: 'megaphone-outline', label: t('organizerEventManagement.actions.promoters'), onPress: handlePromoters },
-        { key: 'tracking', icon: 'link-outline', label: t('organizerEventManagement.actions.trackingLinks'), onPress: handleTrackingLinks },
+      rows: [
+        { key: 'messages', icon: MessageCircle, label: t('organizerEventManagement.actions.messages'), onPress: handleViewMessages },
+        { key: 'promo', icon: Tag, label: t('organizerEventManagement.actions.promoCodes'), onPress: handlePromoCodes },
+        { key: 'promoters', icon: Megaphone, label: t('organizerEventManagement.actions.promoters'), onPress: handlePromoters },
+        { key: 'tracking', icon: Link, label: t('organizerEventManagement.actions.trackingLinks'), onPress: handleTrackingLinks },
       ],
     },
   ];
@@ -538,21 +556,25 @@ export default function OrganizerEventManagementScreen() {
             <SectionHeader title={t('organizerEventManagement.sections.ticketTypes')} />
             <View style={styles.group}>
               {ticketData.ticketTypes.map((ticketType, index) => {
-                const pct =
-                  ticketType.capacity > 0
-                    ? Math.min(100, (ticketType.sold / ticketType.capacity) * 100)
-                    : 0;
+                // The 1,000,000 "unlimited" sentinel is not a real cap: show
+                // just "22 sold" and no progress bar.
+                const tierCap = displayCapacity(ticketType.capacity);
+                const pct = tierCap > 0 ? Math.min(100, (ticketType.sold / tierCap) * 100) : 0;
                 return (
                   <View key={index} style={[styles.tierRow, index > 0 && styles.tierRowSpaced]}>
                     <View style={styles.tierInfo}>
                       <Text style={styles.tierName} numberOfLines={1}>{ticketType.name}</Text>
                       <Text style={styles.tierStats}>
-                        {ticketType.sold} / {ticketType.capacity} {t('common.sold')}
+                        {tierCap > 0
+                          ? `${ticketType.sold} / ${tierCap} ${t('common.sold')}`
+                          : `${ticketType.sold} ${t('common.sold')}`}
                       </Text>
                     </View>
-                    <View style={styles.tierTrack}>
-                      <View style={[styles.tierFill, { width: `${pct}%` }]} />
-                    </View>
+                    {tierCap > 0 && (
+                      <View style={styles.tierTrack}>
+                        <View style={[styles.tierFill, { width: `${pct}%` }]} />
+                      </View>
+                    )}
                   </View>
                 );
               })}
@@ -560,62 +582,52 @@ export default function OrganizerEventManagementScreen() {
           </View>
         )}
 
-        {/* Quick actions */}
-        <View style={styles.section}>
-          <SectionHeader title={t('organizerEventManagement.sections.quickActions')} />
-          {/* Twelve actions in three named groups of four, each a 2x2 grid of
-              compact tiles, instead of one undifferentiated wall of tiles
-              (TestFlight: "this looks weird"). Scan is not repeated here: the
-              pinned "Open door scanner" button below already does it. */}
-          {actionGroups.map((group) => (
-            <View key={group.key} style={styles.actionGroup}>
-              <UIText variant="eyebrow" style={styles.groupEyebrow}>{group.label}</UIText>
-              <ActionTileGrid variant="compact" tiles={group.tiles} />
-            </View>
-          ))}
-        </View>
+        {/* Actions: grouped list rows (icon, label, chevron) under the serif
+            section rail, one filled group each, instead of the old tile walls
+            under uppercase eyebrows. Scan is not repeated here: the pinned
+            "Open door scanner" button below already does it. */}
+        {actionGroups.map((group) => (
+          <View key={group.key} style={styles.section}>
+            <SectionHeader title={group.label} />
+            <ListGroup>
+              {group.rows.map((row) => (
+                <ListRow key={row.key} icon={row.icon} title={row.label} onPress={row.onPress} />
+              ))}
+            </ListGroup>
+          </View>
+        ))}
 
-        {/* Controls: one surface-filled group, rows split by a subtle inset divider. */}
+        {/* Controls: the same grouped rows. The pause row is a plain row with
+            the switch as its trailing element, centred on the label (it used
+            to ride above the label's baseline inside a pressable row). */}
         <View style={styles.section}>
           <SectionHeader title={t('organizerEventManagement.sections.eventControls')} />
-          <View style={styles.controlsGroup}>
-            <Touchable scale={false} pressedColor={ROW_PRESSED} style={styles.controlRow} onPress={handleEditEvent}>
-              <Text style={styles.controlText}>{t('organizerEventManagement.actions.editEvent')}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-            </Touchable>
-            <View style={styles.divider} />
-            <Touchable scale={false} pressedColor={ROW_PRESSED} style={styles.controlRow} onPress={handleSendUpdate}>
-              <Text style={styles.controlText}>{t('organizerEventManagement.controls.sendUpdate')}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-            </Touchable>
-            <View style={styles.divider} />
-            <Touchable
-              scale={false}
-              pressedColor={ROW_PRESSED}
-              style={styles.controlRow}
-              onPress={handleToggleSales}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: isPaused }}
-            >
-              <Text style={styles.controlText}>
-                {t('organizerEventManagement.controls.pauseTicketSales')}
-              </Text>
-              {/* On = sales paused. Controlled: it only flips once the
-                  confirmation lands and the event reloads. */}
-              <Switch value={isPaused} onValueChange={() => handleToggleSales()} />
-            </Touchable>
-            {canCancel && (
-              <>
-                <View style={styles.divider} />
-                <Touchable scale={false} pressedColor={ROW_PRESSED} style={styles.controlRow} onPress={handleCancelEvent}>
-                  <Text style={[styles.controlText, styles.dangerText]}>
-                    {t('organizerEventManagement.controls.cancelEvent')}
-                  </Text>
-                  <Ionicons name="warning-outline" size={19} color={T.red} />
-                </Touchable>
-              </>
-            )}
-          </View>
+          <ListGroup>
+            <ListRow icon={Pencil} title={t('organizerEventManagement.actions.editEvent')} onPress={handleEditEvent} />
+            <ListRow icon={Send} title={t('organizerEventManagement.controls.sendUpdate')} onPress={handleSendUpdate} />
+            <ListRow
+              icon={Pause}
+              title={t('organizerEventManagement.controls.pauseTicketSales')}
+              // On = sales paused. Controlled: it only flips once the
+              // confirmation lands and the event reloads.
+              trailing={
+                <Switch
+                  value={isPaused}
+                  onValueChange={() => handleToggleSales()}
+                  accessibilityLabel={t('organizerEventManagement.controls.pauseTicketSales')}
+                />
+              }
+            />
+            {canCancel ? (
+              <ListRow
+                icon={TriangleAlert}
+                title={t('organizerEventManagement.controls.cancelEvent')}
+                onPress={handleCancelEvent}
+                destructive
+                chevron={false}
+              />
+            ) : null}
+          </ListGroup>
         </View>
       </Animated.ScrollView>
 
@@ -713,10 +725,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 20,
     gap: 10,
   },
+  // Event names are set in the serif everywhere (owner, 2026-11-16), as on
+  // the attendee event page.
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -0.8,
+    fontFamily: font.serif,
+    fontSize: 34,
     lineHeight: 38,
     color: T.white,
   },
@@ -731,14 +744,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   section: {
     paddingHorizontal: 20,
     paddingTop: 32,
-  },
-  actionGroup: {
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  // Group label under the section rail (the profile screen's ACTIONS eyebrow).
-  groupEyebrow: {
-    marginBottom: 8,
   },
   group: {
     backgroundColor: T.surface,
@@ -777,36 +782,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     height: '100%',
     backgroundColor: T.white,
     borderRadius: 3,
-  },
-  // Same fill, radius, inset and type as the quick-action tiles above, so the
-  // two sections read as one system (TestFlight: "text sizes aren't uniform").
-  controlsGroup: {
-    backgroundColor: T.surfaceRaised,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  controlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    minHeight: 58,
-  },
-  controlText: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: T.white,
-  },
-  dangerText: {
-    color: T.red,
-  },
-  // Very subtle inset divider between grouped rows.
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    marginLeft: 14,
   },
   ctaDock: {
     position: 'absolute',

@@ -21,6 +21,9 @@ import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
 import { useActiveOrg } from '../../lib/activeOrg'
 import { getEventById } from '../../lib/api/organizer'
+import { isFreeOnlyEvent } from '../../lib/ticketPricing'
+import EmptyState from '../../components/EmptyState'
+import { Gift } from 'lucide-react-native'
 import { getVerificationRequest } from '../../lib/verification'
 import { getRequiredPayoutProfileIdForEventCountry, normalizeCountryCode } from '../../lib/payment-provider'
 import { RADIUS } from '../../config/brand'
@@ -83,6 +86,9 @@ export default function OrganizerEventEarningsScreen() {
 
   const [loading, setLoading] = useState(true)
   const [eventTitle, setEventTitle] = useState<string>('')
+  // No paid tiers: there is nothing to settle or withdraw, so the screen shows
+  // a short "free event" state instead of balances, dates and payout CTAs.
+  const [freeOnly, setFreeOnly] = useState(false)
   const [eventCountry, setEventCountry] = useState<string>('')
   const [earnings, setEarnings] = useState<EventEarnings | null>(null)
 
@@ -322,6 +328,7 @@ export default function OrganizerEventEarningsScreen() {
     try {
       const event = await getEventById(eventId)
       setEventTitle(event?.title || '')
+      setFreeOnly(event ? isFreeOnlyEvent(event as any) : false)
       const rawCountry = (event as any)?.country
       setEventCountry(normalizeCountryCode(rawCountry) || '')
 
@@ -827,6 +834,28 @@ export default function OrganizerEventEarningsScreen() {
     )
   }
 
+  // Belt and braces: a "free" event that somehow took money keeps the full screen.
+  const tookMoney = (earnings?.totalEarned ?? 0) > 0 || (earnings?.grossSales ?? 0) > 0
+  if (freeOnly && !tookMoney) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <OrganizerScreenHeader
+          title={t('organizerEarnings.headerTitle')}
+          subtitle={eventTitle || eventId}
+          onBack={() => navigation.goBack()}
+        />
+        <View style={styles.freeWrap}>
+          <EmptyState
+            icon={Gift}
+            title={t('organizerEarnings.freeEvent.title')}
+            subtitle={t('organizerEarnings.freeEvent.body')}
+          />
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
@@ -1239,6 +1268,11 @@ export default function OrganizerEventEarningsScreen() {
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  freeWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 80,
+  },
   withdrawTitle: {
     fontFamily: font.serif,
     fontSize: 28,

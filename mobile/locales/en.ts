@@ -152,6 +152,7 @@ export default {
     venue: 'Venue',
     send: 'Send',
     close: 'Close',
+    share: 'Share',
     na: 'N/A',
     general: 'General',
     generalAdmission: 'General Admission',
@@ -1575,6 +1576,8 @@ export default {
   organizerTicketScanner: {
     headerTitle: 'Scan Ticket',
     permissions: {
+      openSettings: 'Open Settings',
+      deniedBody: 'Camera access is off for Tikèm. Turn it on in Settings to scan tickets.',
       requesting: 'Requesting camera permission...',
       required: 'Camera permission is required to scan tickets',
       grant: 'Grant Permission',
@@ -2353,6 +2356,10 @@ export default {
   },
 
   organizerEarnings: {
+    freeEvent: {
+      title: 'free event',
+      body: 'No paid tickets, so there is nothing to pay out. Sales and check-ins are in Analytics.',
+    },
     loading: 'Loading earnings...',
     headerTitle: 'Event Earnings',
     availableToWithdraw: 'Available to withdraw',
@@ -2582,6 +2589,8 @@ export default {
   },
 
   organizerDashboard: {
+    statSold: 'Sold',
+    statUpcoming: 'Upcoming',
     onSale: 'On sale',
     liveNow: 'Live now',
     soldOf: '{sold} of {total} sold',
@@ -2717,6 +2726,7 @@ export default {
   },
 
   organizerScan: {
+    recentCheckIns: 'Recent check-ins',
     offlineReadyShort: 'Offline ready',
     loading: 'Loading events...',
     title: 'Scan',

@@ -28,10 +28,8 @@ import ElsewhereRail from '../components/ElsewhereRail';
 import { elsewhereEvents, isEventInMetro } from '../data/metros';
 
 import { TikemWordmark } from '../components/TikemWordmark';
-import TrendingSection from '../components/TrendingSection';
 import WorldRail from '../components/WorldRail';
 import FindFriendsCard from '../components/FindFriendsCard';
-import ThisWeekSection from '../components/ThisWeekSection';
 import AllEventsPreview from '../components/AllEventsPreview';
 import EventRail from '../components/EventRail';
 import EmptyState from '../components/EmptyState';
@@ -49,28 +47,12 @@ import {
 import { HomeFeedSkeleton } from '../components/Skeleton';
 import ChromeBlur from '../components/ChromeBlur';
 import { Touchable } from '../components/ui/Touchable';
-import { isBudgetFriendlyTicketPrice } from '../lib/pricing';
 import { isEventOver, type HomeFeed } from '../lib/homeFeeds';
 import { getCategoryLabel } from '../lib/categories';
 import { shareEvent } from '../lib/share';
 
-// Tolerant city matching (accents/case/"City, ST") so the Near You rail lines up
-// with whatever string is stored on each event's `city`.
-const normalizeCity = (s: any): string =>
-  (s ?? '')
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-
-const cityMatches = (eventCity: any, target: string): boolean => {
-  const e = normalizeCity(eventCity);
-  const full = normalizeCity(target);
-  if (!e || !full) return false;
-  const short = normalizeCity(target.split(',')[0]);
-  return e === full || e === short || e.includes(short) || short.includes(e);
-};
+// A rail with a single card reads as half-empty; hide anything thinner.
+const MIN_RAIL_EVENTS = 2;
 
 const toMillis = (v: any): number => {
   if (!v) return 0;
@@ -93,12 +75,7 @@ export default function HomeScreen({ navigation }: any) {
   // last row ends up sitting behind it.
   const tabBarSpace = useTabBarSpace();
   const [events, setEvents] = useState<any[]>([]);
-  const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
-  const [trendingEvents, setTrendingEvents] = useState<any[]>([]);
-  const [thisWeekEvents, setThisWeekEvents] = useState<any[]>([]);
   const [forYouEvents, setForYouEvents] = useState<any[]>([]);
-  const [nearYouEvents, setNearYouEvents] = useState<any[]>([]);
-  const [freeEvents, setFreeEvents] = useState<any[]>([]);
   const [newEvents, setNewEvents] = useState<any[]>([]);
   const [categoryRails, setCategoryRails] = useState<{ category: string; events: any[] }[]>([]);
   // Top events from OTHER metros in the same country/region — its own rail,
@@ -168,7 +145,6 @@ export default function HomeScreen({ navigation }: any) {
     // Every rail shows a recurring series once, at its next date
     // (lib/eventSeries): a daily party used to fill a rail by itself.
     const countryFiltered = collapseSeries(countryFilteredAllDates);
-    const now = new Date();
     const finalEvents = activeMetro
       ? countryFiltered.filter((e) => isEventInMetro(e, activeMetro))
       : countryFiltered;
@@ -180,32 +156,9 @@ export default function HomeScreen({ navigation }: any) {
       ),
     );
 
-    setFeaturedEvents(
-      [...finalEvents]
-        .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
-        .slice(0, 5),
-    );
-
-    setTrendingEvents(finalEvents.filter((e) => (e.tickets_sold || 0) > 10).slice(0, 6));
-
-    const oneWeekFromNow = new Date(now);
-    oneWeekFromNow.setDate(now.getDate() + 7);
-    setThisWeekEvents(finalEvents.filter((e) => e.start_datetime <= oneWeekFromNow).slice(0, 6));
-
     setForYouEvents(
       [...finalEvents]
         .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
-        .slice(0, 8),
-    );
-
-    const nearCity = activeCity;
-    setNearYouEvents(
-      nearCity ? finalEvents.filter((e) => cityMatches(e.city, nearCity)).slice(0, 8) : [],
-    );
-
-    setFreeEvents(
-      finalEvents
-        .filter((e) => isBudgetFriendlyTicketPrice(e?.ticket_price, e?.currency))
         .slice(0, 8),
     );
 
@@ -221,10 +174,15 @@ export default function HomeScreen({ navigation }: any) {
       if (!c) return;
       (byCategory[c] = byCategory[c] || []).push(e);
     });
+    // Only the two deepest categories get a rail of their own (and never the
+    // catch-all "other"): one rail per category repeated the same handful of
+    // events down the whole page. Discover's chips cover the rest.
     setCategoryRails(
       Object.keys(byCategory)
-        .map((c) => ({ category: c, events: byCategory[c].slice(0, 10) }))
-        .filter((r) => r.events.length > 0),
+        .filter((c) => c !== 'other' && byCategory[c].length >= MIN_RAIL_EVENTS)
+        .sort((x, y) => byCategory[y].length - byCategory[x].length)
+        .slice(0, 2)
+        .map((c) => ({ category: c, events: byCategory[c].slice(0, 10) })),
     );
   };
 
@@ -389,23 +347,12 @@ export default function HomeScreen({ navigation }: any) {
       city: feed === 'nearYou' ? activeCity : undefined,
     });
 
-  const handleViewAllTrending = () =>
-    openFeed('trending', t('home.trendingTitle'), t('home.trendingSubtitle'));
-
-  const handleViewAllThisWeek = () =>
-    openFeed('thisWeek', t('home.thisWeekTitle'), t('home.thisWeekSubtitle'));
-
   const handleViewAllEvents = () => openFeed('all', t('home.allEventsTitle'));
 
   const handleViewAllForYou = () =>
     openFeed('forYou', t('home.forYouTitle'), t('home.forYouSubtitle'));
 
-  const handleViewAllFree = () => openFeed('free', t('home.freeTitle'), t('home.freeSubtitle'));
-
   const handleViewAllNew = () => openFeed('new', t('home.newTitle'), t('home.newSubtitle'));
-
-  const handleViewAllNearYou = () =>
-    openFeed('nearYou', t('home.nearYouTitle'), t('home.nearYouSubtitle'));
 
   // Where you are browsing, in words: the metro when we know it, otherwise the
   // chosen town, otherwise the whole country.
@@ -417,9 +364,6 @@ export default function HomeScreen({ navigation }: any) {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      
-      {/* Location Detection Banner */}
-      <LocationDetectionBanner onChangeLocation={() => setLocationSheetOpen(true)} />
 
       {/* Floating brand + location header */}
       <Animated.View
@@ -495,6 +439,8 @@ export default function HomeScreen({ navigation }: any) {
         scrollEventThrottle={16}
       >
         <Animated.View style={{ height: headerSpacerHeight }} />
+        {/* In the scroll content (not pinned over it) so it scrolls away. */}
+        <LocationDetectionBanner onChangeLocation={() => setLocationSheetOpen(true)} />
         {loading ? (
           <HomeFeedSkeleton />
         ) : error && events.length === 0 ? (
@@ -506,7 +452,12 @@ export default function HomeScreen({ navigation }: any) {
             onAction={onRefresh}
           />
         ) : (
-          <View>
+          // overflow: 'hidden' matters on the New Architecture: Fabric's
+          // ScrollView sizes its content from the content's OVERFLOW bounds,
+          // so the absolutely positioned skeleton overlay below (a full feed of
+          // placeholders, taller than a short feed) stretched the scroll area
+          // and left hundreds of points of empty black after the last rail.
+          <View style={{ overflow: 'hidden' }}>
             {/* Content fades in while the skeleton (absolute, on top,
                 non-interactive) fades out — a real crossfade, no black gap. */}
             <Animated.View style={{ opacity: contentFade }}>
@@ -548,7 +499,7 @@ export default function HomeScreen({ navigation }: any) {
                 }}
               />
             )}
-            {dayEvents.length > 0 && (
+            {dayEvents.length >= MIN_RAIL_EVENTS && (
               <View style={styles.firstSection}>
                 <EventRail
                   title={t('home.nationalDay.nearYou', { day: dayName })}
@@ -559,8 +510,13 @@ export default function HomeScreen({ navigation }: any) {
               </View>
             )}
 
+            {/* The feed is capped at a few strong rails: For You, Worlds, the
+                two deepest categories, Just Announced, All Events. Trending,
+                Near You (the feed is already scoped to the metro), This Week
+                and Free used to repeat the same events rail after rail. Their
+                pages still exist (CategoryEvents feeds) for Discover/search. */}
             {/* For You */}
-            {forYouEvents.length > 0 && (
+            {forYouEvents.length >= MIN_RAIL_EVENTS && (
               <View style={styles.firstSection}>
                 <EventRail
                   title={t('home.forYouTitle')}
@@ -571,49 +527,15 @@ export default function HomeScreen({ navigation }: any) {
               </View>
             )}
 
-            {/* Trending Now */}
-            {trendingEvents.length > 0 && (
-              <View style={styles.section}>
-                <TrendingSection
-                  events={trendingEvents}
-                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
-                  onViewAll={handleViewAllTrending}
-                />
-              </View>
-            )}
-
             {/* Worlds: always present, so browsing by vibe never depends on
                 tonight's inventory. Each tile opens that world's page. */}
-            <View style={styles.section}>
+            <View style={forYouEvents.length >= MIN_RAIL_EVENTS ? styles.section : styles.firstSection}>
               <WorldRail
                 onWorldPress={(world, label) =>
                   navigation.navigate('CategoryEvents', { world, title: label })
                 }
               />
             </View>
-
-            {/* Near You */}
-            {nearYouEvents.length > 0 && (
-              <View style={styles.section}>
-                <EventRail
-                  title={t('home.nearYouTitle')}
-                  events={nearYouEvents}
-                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
-                  onViewAll={handleViewAllNearYou}
-                />
-              </View>
-            )}
-
-            {/* This Week */}
-            {thisWeekEvents.length > 0 && (
-              <View style={styles.section}>
-                <ThisWeekSection
-                  events={thisWeekEvents}
-                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
-                  onViewAll={handleViewAllThisWeek}
-                />
-              </View>
-            )}
 
             {/* People you may know: renders nothing (no gap) unless the
                 friend_suggestions switch is on and there are 3+ people. */}
@@ -623,19 +545,7 @@ export default function HomeScreen({ navigation }: any) {
                 account has no friends yet. Renders nothing otherwise. */}
             <FindFriendsCard variant="home" style={styles.section} />
 
-            {/* Free & Budget-Friendly */}
-            {freeEvents.length > 0 && (
-              <View style={styles.section}>
-                <EventRail
-                  title={t('home.freeTitle')}
-                  events={freeEvents}
-                  onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
-                  onViewAll={handleViewAllFree}
-                />
-              </View>
-            )}
-
-            {/* One carousel per category */}
+            {/* The two deepest categories (see applyEventLists) */}
             {categoryRails.map((rail) => (
               <View key={rail.category} style={styles.section}>
                 <EventRail
@@ -648,7 +558,7 @@ export default function HomeScreen({ navigation }: any) {
             ))}
 
             {/* Just Announced */}
-            {newEvents.length > 0 && (
+            {newEvents.length >= MIN_RAIL_EVENTS && (
               <View style={styles.section}>
                 <EventRail
                   title={t('home.newTitle')}
@@ -664,7 +574,7 @@ export default function HomeScreen({ navigation }: any) {
                 per tester feedback (2026-08-29): "this looks too much like
                 posh". Category browsing lives in the Discover tab's chips. */}
             {/* All Events Preview */}
-            {events.length > 0 && (
+            {events.length >= MIN_RAIL_EVENTS && (
               <View style={styles.section}>
                 <AllEventsPreview
                   events={events}
@@ -689,7 +599,7 @@ export default function HomeScreen({ navigation }: any) {
 
             {/* The ONE labelled cross-metro rail, below every local section.
                 Guarded so an absent rail leaves no empty gap. */}
-            {elsewhere.length > 0 && (
+            {elsewhere.length >= MIN_RAIL_EVENTS && (
               <View style={styles.section}>
                 <ElsewhereRail
                   events={elsewhere}
@@ -699,13 +609,13 @@ export default function HomeScreen({ navigation }: any) {
               </View>
             )}
 
-            {/* Bottom Spacing */}
-            <View style={{ height: 32 + tabBarSpace }} />
+            {/* Bottom Spacing: just clear the translucent tab bar. */}
+            <View style={{ height: 8 + tabBarSpace }} />
             </Animated.View>
             {skeletonVisible && (
               <Animated.View
                 pointerEvents="none"
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, opacity: skeletonFade }}
+                style={{ ...StyleSheet.absoluteFillObject, overflow: 'hidden', opacity: skeletonFade }}
               >
                 <HomeFeedSkeleton />
               </Animated.View>

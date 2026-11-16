@@ -78,6 +78,7 @@ import { Touchable } from '../components/ui/Touchable';
 import { Text as UIText } from '../components/ui/Text';
 import { ListGroup, ListRow } from '../components/ui/ListRow';
 import { Switch } from '../components/ui/Switch';
+import StatusBarBackdrop from '../components/StatusBarBackdrop';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -751,6 +752,8 @@ export default function ProfileScreen() {
           <PhoneLinkSheet visible={showPhoneLink} onClose={() => setShowPhoneLink(false)} />
         ) : null}
       </ScrollView>
+      {/* No top bar here, so keep content from sliding under the clock. */}
+      <StatusBarBackdrop />
     </SafeAreaView>
   );
 }

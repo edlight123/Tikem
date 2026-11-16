@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useAppAlert } from '../../components/AppAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import SectionHeader from '../../components/SectionHeader';
 import { Calendar, Image as ImageIcon, ScanQrCode, UserSearch } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,6 +22,21 @@ import StatusChip from '../../components/StatusChip';
 import { Skeleton } from '../../components/Skeleton';
 
 import { Touchable } from '../../components/ui/Touchable';
+
+/** How many recent check-ins the list under the actions shows. */
+const RECENT_CHECKINS_MAX = 8;
+
+type RecentCheckIn = { id: string; name: string; tier: string; at: number };
+
+/** checked_in_at is a Firestore Timestamp on scanner writes, an ISO string on some older ones. */
+function checkInMillis(raw: any): number {
+  if (!raw) return 0;
+  if (typeof raw?.toMillis === 'function') return raw.toMillis();
+  if (typeof raw?.seconds === 'number') return raw.seconds * 1000;
+  const n = new Date(raw).getTime();
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function OrganizerScanScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -38,6 +56,48 @@ export default function OrganizerScanScreen() {
   const [selectedEvent, setSelectedEvent] = useState<TodayEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEventSelector, setShowEventSelector] = useState(false);
+  const [recent, setRecent] = useState<RecentCheckIn[]>([]);
+
+  // Last few check-ins for the selected event: one equality query (the same
+  // event_id + checked_in pair getTodayEvents already counts with, so no new
+  // index), sorted on the client. Refreshed on focus, so coming back from the
+  // scanner shows who just walked in; no polling.
+  const selectedId = selectedEvent?.id;
+  const loadRecent = useCallback(async () => {
+    if (!selectedId) {
+      setRecent([]);
+      return;
+    }
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'tickets'), where('event_id', '==', selectedId), where('checked_in', '==', true))
+      );
+      const rows = snap.docs
+        .map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            name: data.attendee_name || data.attendee_email || '',
+            tier: data.tier_name || data.ticket_type || '',
+            at: checkInMillis(data.checked_in_at),
+          };
+        })
+        .filter((r) => r.at > 0)
+        .sort((a, b) => b.at - a.at)
+        .slice(0, RECENT_CHECKINS_MAX);
+      setRecent(rows);
+    } catch (error) {
+      // Quiet: the list is a nicety, the screen works without it.
+      console.warn('[OrganizerScan] recent check-ins failed', error);
+      setRecent([]);
+    }
+  }, [selectedId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRecent();
+    }, [loadRecent])
+  );
 
   useEffect(() => {
     loadEvents();
@@ -212,6 +272,30 @@ export default function OrganizerScanScreen() {
           </>
         ) : null}
 
+        {/* Recent check-ins: fills the lower half with who just came in.
+            Renders nothing until the first guest is scanned. */}
+        {selectedEvent && recent.length > 0 ? (
+          <View style={styles.recentSection}>
+            <SectionHeader title={t('organizerScan.recentCheckIns')} />
+            {recent.map((r, i) => (
+              <View key={r.id} style={[styles.recentRow, i === recent.length - 1 && styles.recentRowLast]}>
+                <View style={styles.recentMain}>
+                  <Text style={styles.recentName} numberOfLines={1}>
+                    {r.name || t('common.attendee')}
+                  </Text>
+                  {!!r.tier && (
+                    <Text style={styles.recentSub} numberOfLines={1}>
+                      {r.tier}
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.recentTime}>
+                  {new Date(r.at).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
 
       <EventSelectorSheet
@@ -282,9 +366,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     eventBody: {
       flex: 1,
     },
+    // Event names are set in the serif everywhere (owner, 2026-11-16).
     eventTitle: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontFamily: font.serif,
+      fontSize: 22,
+      lineHeight: 26,
       color: colors.text,
     },
     eventSub: {
@@ -363,5 +449,40 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     textActionLabel: {
       fontSize: 15,
       color: colors.textSecondary,
+    },
+    recentSection: {
+      marginTop: 28,
+    },
+    // Plain list rows (EventAttendeesScreen idiom): hairline between rows only.
+    recentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: 56,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    recentRowLast: {
+      borderBottomWidth: 0,
+    },
+    recentMain: {
+      flex: 1,
+      minWidth: 0,
+    },
+    recentName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    recentSub: {
+      marginTop: 2,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    recentTime: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontVariant: ['tabular-nums'],
     },
   });

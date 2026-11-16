@@ -11,7 +11,7 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors as T, radius } from '../../theme/tokens';
+import { colors as T, radius, font } from '../../theme/tokens';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -32,7 +32,10 @@ import { Text as UIText } from '../../components/ui/Text';
 import StatTriplet from '../../components/StatTriplet';
 import StatusChip from '../../components/StatusChip';
 import GettingStartedCard from '../../components/organizer/GettingStartedCard';
-import ActionTileGrid, { ActionTile } from '../../components/organizer/ActionTileGrid';
+import { ListGroup, ListRow } from '../../components/ui/ListRow';
+import StatusBarBackdrop from '../../components/StatusBarBackdrop';
+import { Banknote, ChartColumn, Wallet, RotateCcw, Users, type LucideIcon } from 'lucide-react-native';
+import { displayCapacity } from '../../lib/ticketPricing';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
 import PosterImage from '../../components/PosterImage';
@@ -228,53 +231,48 @@ export default function OrganizerDashboardScreen() {
     </View>
   );
 
-  const allActions: Array<ActionTile & { ownerOnly?: boolean; finance?: boolean }> = [
+  type ManageRow = { key: string; label: string; icon: LucideIcon; onPress: () => void };
+  const allActions: Array<ManageRow & { ownerOnly?: boolean; finance?: boolean }> = [
     {
       finance: true,
       key: 'earnings',
       label: t('organizerDashboard.earnings') || 'Earnings',
-      icon: 'cash-outline',
+      icon: Banknote,
       onPress: () => navigation.navigate('OrganizerEarningsHub'),
     },
     {
       key: 'analytics',
       label: t('organizerDashboard.analytics') || 'Analytics',
-      icon: 'bar-chart-outline',
+      icon: ChartColumn,
       onPress: () => navigation.navigate('OrganizerAnalytics'),
     },
     {
       ownerOnly: true,
       key: 'payouts',
       label: t('organizerDashboard.payouts') || 'Payouts',
-      icon: 'wallet-outline',
+      icon: Wallet,
       onPress: () => navigation.navigate('OrganizerPayoutSettings'),
     },
     {
       key: 'refunds',
       label: t('organizerDashboard.refunds') || 'Refunds',
-      icon: 'refresh-outline',
+      icon: RotateCcw,
       onPress: () => navigation.navigate('OrganizerRefunds'),
     },
     {
       key: 'team',
       label: t('organizerDashboard.team') || 'Team',
-      icon: 'people-outline',
+      icon: Users,
       onPress: () => navigation.navigate('OrganizerTeamHub'),
     },
-    {
-      key: 'scan',
-      label: t('tabs.scan') || 'Scan',
-      icon: 'qr-code-outline',
-      onPress: () => navigation.navigate('Scan'),
-    },
-    // No Create tile here (per beta feedback): Create already lives in My
-    // Events' header button.
+    // No Scan row: it duplicates the Scan tab. No Create row either (per beta
+    // feedback): Create already lives in My Events' header button.
   ];
   // Payouts (money out) are the owner's alone; Earnings also show to an admin
   // the owner granted read-only finances.
-  const quickActions: ActionTile[] = allActions
+  const quickActions: ManageRow[] = allActions
     .filter((a) => (!a.ownerOnly || activeOrg.can('owner_only')) && (!a.finance || financeView))
-    .map(({ ownerOnly: _ownerOnly, finance: _finance, ...tile }) => tile);
+    .map(({ ownerOnly: _ownerOnly, finance: _finance, ...row }) => row);
 
   const renderPoster = (
     id: string,
@@ -314,17 +312,18 @@ export default function OrganizerDashboardScreen() {
   const renderTonightHero = (event: TodayEvent) => {
     const start = new Date(event.start_datetime).getTime();
     const running = !isNaN(start) && start <= Date.now() && Date.now() < start + NO_END_RUNNING_MS;
-    const soldOut = event.capacity > 0 && event.ticketsSold >= event.capacity;
+    const cap = displayCapacity(event.capacity);
+    const soldOut = cap > 0 && event.ticketsSold >= cap;
     // Time, then the place when we have one. An empty location used to
     // leave a pin icon with nothing next to it (TestFlight 2026-09-06).
     const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
-    const progress = event.capacity > 0 ? Math.min(1, event.ticketsSold / event.capacity) : 0;
+    const progress = cap > 0 ? Math.min(1, event.ticketsSold / cap) : 0;
 
     return (
       <Touchable
         key={event.id}
         scale={0.98}
-        style={styles.heroCard}
+        style={[styles.heroCard, { width: heroWidth }]}
         onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
       >
         <View style={[styles.heroPoster, { width: heroWidth, aspectRatio: heroRatio }]}>
@@ -335,8 +334,15 @@ export default function OrganizerDashboardScreen() {
           )}
         </View>
 
-        <Text style={styles.heroTitle} numberOfLines={2}>{event.title}</Text>
-        {!!meta && <Text style={styles.heroMeta} numberOfLines={1}>{meta}</Text>}
+        {/* The flyer already states the name, time and place, so the lines
+            under it repeated it (owner, 2026-11-16: "remove all that"). Only
+            a poster-less event keeps its title + meta here. */}
+        {!event.posterUri && (
+          <>
+            <Text style={styles.heroTitle} numberOfLines={2}>{event.title}</Text>
+            {!!meta && <Text style={styles.heroMeta} numberOfLines={1}>{meta}</Text>}
+          </>
+        )}
 
         <View style={styles.heroStatusRow}>
           {soldOut ? (
@@ -347,12 +353,12 @@ export default function OrganizerDashboardScreen() {
             <StatusChip status="upcoming" label={t('organizerDashboard.onSale')} />
           )}
           <Text style={styles.heroSoldText}>
-            {event.capacity > 0
-              ? t('organizerDashboard.soldOf', { sold: event.ticketsSold, total: event.capacity })
+            {cap > 0
+              ? t('organizerDashboard.soldOf', { sold: event.ticketsSold, total: cap })
               : `${event.ticketsSold} ${t('common.sold')}`}
           </Text>
         </View>
-        {event.capacity > 0 && (
+        {cap > 0 && (
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
           </View>
@@ -383,6 +389,7 @@ export default function OrganizerDashboardScreen() {
   // button so the hero keeps the only primary fill.
   const renderTonightRow = (event: TodayEvent) => {
     const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
+    const cap = displayCapacity(event.capacity);
     return (
       <Touchable
         key={event.id}
@@ -395,8 +402,8 @@ export default function OrganizerDashboardScreen() {
           <Text style={styles.tonightRowTitle} numberOfLines={2}>{event.title}</Text>
           {!!meta && <Text style={styles.tonightRowMeta} numberOfLines={1}>{meta}</Text>}
           <Text style={styles.tonightRowMeta} numberOfLines={1}>
-            {event.capacity > 0
-              ? t('organizerDashboard.soldOf', { sold: event.ticketsSold, total: event.capacity })
+            {cap > 0
+              ? t('organizerDashboard.soldOf', { sold: event.ticketsSold, total: cap })
               : `${event.ticketsSold} ${t('common.sold')}`}
           </Text>
         </View>
@@ -430,8 +437,8 @@ export default function OrganizerDashboardScreen() {
           <StatTriplet
             items={[
               { label: t('organizerDashboard.revenue'), value: null },
-              { label: t('organizerDashboard.ticketsSold'), value: null },
-              { label: t('organizerDashboard.upcomingEvents'), value: null },
+              { label: t('organizerDashboard.statSold'), value: null },
+              { label: t('organizerDashboard.statUpcoming'), value: null },
             ]}
           />
         </View>
@@ -484,8 +491,8 @@ export default function OrganizerDashboardScreen() {
             <StatTriplet
               items={[
                 { label: t('organizerDashboard.revenue'), ...revenueCell(stats) },
-                { label: t('organizerDashboard.ticketsSold'), value: stats ? (stats.ticketsSold || 0) : null },
-                { label: t('organizerDashboard.upcomingEvents'), value: stats ? (stats.upcomingEvents || 0) : null },
+                { label: t('organizerDashboard.statSold'), value: stats ? (stats.ticketsSold || 0) : null },
+                { label: t('organizerDashboard.statUpcoming'), value: stats ? (stats.upcomingEvents || 0) : null },
               ]}
             />
           </Touchable>
@@ -523,7 +530,7 @@ export default function OrganizerDashboardScreen() {
                         15,
                       )}
                     </View>
-                    <Text style={styles.railTitle} numberOfLines={1}>{event.title}</Text>
+                    <Text style={styles.railTitle} numberOfLines={2}>{event.title}</Text>
                     {!!meta && <Text style={styles.railMeta} numberOfLines={1}>{meta}</Text>}
                     <Text style={styles.railSold} numberOfLines={1}>
                       {`${event.tickets_sold || 0} ${t('common.sold')}`}
@@ -538,9 +545,15 @@ export default function OrganizerDashboardScreen() {
         {/* Manage */}
         <View style={styles.section}>
           <SectionHeader title={t('organizerDashboard.manage')} />
-          <ActionTileGrid tiles={quickActions} variant="stacked" columns={2} />
+          <ListGroup>
+            {quickActions.map((row) => (
+              <ListRow key={row.key} icon={row.icon} title={row.label} onPress={row.onPress} />
+            ))}
+          </ListGroup>
         </View>
       </ScrollView>
+      {/* No top bar here, so keep content from sliding under the clock. */}
+      <StatusBarBackdrop />
     </View>
   );
 }
@@ -604,10 +617,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Tonight hero: no card fill (owner: "no background behind the posters").
   // The flyer sits on the canvas, uncropped, text below it; the frame's
   // ratio is set in the component (heroRatio).
-  heroCard: {},
+  // The status row, progress and scan button share the poster's width and
+  // centring (heroWidth is applied inline), so the block reads as one column.
+  heroCard: {
+    alignSelf: 'center',
+  },
   // surfaceRaised is the poster's own placeholder while the image loads.
   heroPoster: {
-    alignSelf: 'center',
     borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
@@ -619,12 +635,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     opacity: 0.9,
     paddingHorizontal: 8,
   },
+  // Event names are set in the serif everywhere (owner, 2026-11-16).
   heroTitle: {
     marginTop: 16,
-    fontSize: 22,
-    lineHeight: 27,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontFamily: font.serif,
+    fontSize: 26,
+    lineHeight: 30,
     color: colors.text,
   },
   heroMeta: {
@@ -694,8 +710,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 3,
   },
   tonightRowTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: font.serif,
+    fontSize: 19,
+    lineHeight: 22,
     color: colors.text,
   },
   tonightRowMeta: {
@@ -736,8 +753,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   railTitle: {
     marginTop: 8,
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: font.serif,
+    fontSize: 19,
+    lineHeight: 22,
     color: colors.text,
   },
   railMeta: {
