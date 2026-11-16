@@ -27,6 +27,8 @@ export type NotificationCategory =
   | 'organizer_nudge' // sales are slow, here is your promoter link
   | 'national_day' // a short note on a Haitian holiday (lib/nationalDays)
   | 'friend_invite' // a connection invited you to an event / joined from your invite (lib/invites)
+  | 'event_feedback' // the morning after: "how was it?" (checked-in attendees only)
+  | 'organizer_recap' // the morning after: your event's recap
 
 const TRANSACTIONAL: ReadonlySet<NotificationCategory> = new Set([
   'purchase',
@@ -59,6 +61,9 @@ const PREFERENCE_FIELD: Record<NotificationCategory, string | null> = {
   organizer_nudge: 'notify_organizer_nudges',
   national_day: 'notify_national_day',
   friend_invite: 'notify_friend_invites',
+  // "How was it?" is part of the event's own lifecycle: off with reminders.
+  event_feedback: 'notify_reminders',
+  organizer_recap: 'notify_organizer_milestones',
 }
 
 export function isCategoryEnabled(
@@ -87,6 +92,11 @@ const COUNTRY_TIMEZONE: Record<string, string> = {
   US: 'America/New_York',
   CA: 'America/Toronto',
   FR: 'Europe/Paris',
+}
+
+/** The market's default timezone, or null when the country is unknown. */
+export function marketTimezone(countryCode?: string | null): string | null {
+  return COUNTRY_TIMEZONE[String(countryCode || '').toUpperCase()] || null
 }
 
 export function localHour(now: Date, countryCode?: string | null): number {

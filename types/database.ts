@@ -17,6 +17,10 @@ export type NotificationType =
   // link (lib/invites). Discretionary: policy category 'friend_invite'.
   | 'friend_invite'
   | 'invite_joined'
+  // The morning after an event (lib/postEvent): "how was it?" to checked-in
+  // attendees, and the recap to the organizer side. Discretionary.
+  | 'event_feedback'
+  | 'organizer_recap'
   | 'ticket_purchased' 
   | 'ticket_transfer'
   | 'event_updated' 

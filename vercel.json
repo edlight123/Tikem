@@ -80,6 +80,10 @@
     {
       "path": "/api/cron/connect-health-sweep",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/post-event-followup",
+      "schedule": "5 * * * *"
     }
   ]
 }

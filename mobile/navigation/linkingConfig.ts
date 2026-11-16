@@ -39,6 +39,9 @@ export const LINKING_CONFIG = {
     // App scheme only: the web twin is /profile?thread=<id>#messages, and
     // /messages is not in the AASA or the Android intent filters.
     MessageThread: 'messages/:threadId',
+    // Morning-after pushes (lib/postEvent): "how was it?" and the recap.
+    EventFeedback: 'events/:eventId/feedback',
+    OrganizerEventRecap: 'organizer/events/:eventId/recap',
     Messages: 'messages',
     // New approval-list request pushes (lib/notifications/attend-requests).
     EventRequests: 'organizer/events/:eventId/requests',

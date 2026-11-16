@@ -412,6 +412,15 @@ export default function NotificationsScreen() {
     }
     // The organizer answered: open the conversation itself, where the
     // attendee can read the whole thread and write back.
+    // The morning after an event (lib/postEvent on the server).
+    if ((notification.type as string) === 'event_feedback') {
+      const eventId = notification.eventId || (notification.metadata as any)?.eventId;
+      if (eventId) return { screen: 'EventFeedback', params: { eventId } };
+    }
+    if ((notification.type as string) === 'organizer_recap') {
+      const eventId = notification.eventId || (notification.metadata as any)?.eventId;
+      if (eventId) return { screen: 'OrganizerEventRecap', params: { eventId } };
+    }
     if (notification.type === 'organizer_reply') {
       const threadId = (notification.metadata as any)?.messageId;
       if (typeof threadId === 'string' && threadId) return { screen: 'MessageThread', params: { threadId } };
