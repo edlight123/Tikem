@@ -35,7 +35,7 @@ import GettingStartedCard from '../../components/organizer/GettingStartedCard';
 import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import StatusBarBackdrop from '../../components/StatusBarBackdrop';
 import { Banknote, ChartColumn, Wallet, RotateCcw, Users, MessageCircle, type LucideIcon } from 'lucide-react-native';
-import { backendJson } from '../../lib/api/backend';
+import { refreshOrganizerUnread, useOrganizerUnread } from '../../lib/organizerUnread';
 import { displayCapacity } from '../../lib/ticketPricing';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
@@ -163,17 +163,10 @@ export default function OrganizerDashboardScreen() {
   // Unread attendee messages for the Messages row. Staff can't read the inbox,
   // so they never ask. A failed count just hides the number.
   const canMessages = activeOrg.can('manage_events');
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const unreadMessages = useOrganizerUnread({ enabled: canMessages });
   useFocusEffect(
     useCallback(() => {
-      if (!canMessages) return;
-      let live = true;
-      backendJson<{ unreadCount?: number }>('/api/organizer/messages?limit=100')
-        .then((r) => live && setUnreadMessages(Number(r?.unreadCount) || 0))
-        .catch(() => live && setUnreadMessages(0));
-      return () => {
-        live = false;
-      };
+      if (canMessages) refreshOrganizerUnread();
     }, [canMessages, activeOrg.orgId])
   );
 

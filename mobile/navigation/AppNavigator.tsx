@@ -43,6 +43,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 
 // Organizer Screens
 import OrganizerDashboardScreen from '../screens/organizer/OrganizerDashboardScreen';
+import { useOrganizerUnread } from '../lib/organizerUnread';
 import OrganizerEventsScreen from '../screens/organizer/OrganizerEventsScreen';
 import OrganizerScanScreen from '../screens/organizer/OrganizerScanScreen';
 import OrganizerEventManagementScreen from '../screens/organizer/OrganizerEventManagementScreen';
@@ -240,7 +241,7 @@ interface TabBarProps {
   state: any;
   descriptors: any;
   navigation: any;
-  tabs: Array<{ name: string; label: string; icon: string; activeIcon: string; isCreate?: boolean }>;
+  tabs: Array<{ name: string; label: string; icon: string; activeIcon: string; isCreate?: boolean; dot?: boolean }>;
 }
 
 // Whether the signed-in account can use organizer mode. Computed once in
@@ -436,6 +437,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
                 size={26}
                 color={iconColor}
               />
+              {tab.dot ? <View style={[tabBarStyles.dot, { backgroundColor: colors.primary }]} /> : null}
             </Animated.View>
           </TouchableOpacity>
         );
@@ -495,6 +497,17 @@ const TAB_BAR_SCRIM_EXTRA = 64;
 const TAB_BAR_SCRIM_SEAM_ALPHA = 0.8;
 
 const tabBarStyles = StyleSheet.create({
+  // Unread dot on a tab icon (organizer Dashboard: attendee messages waiting).
+  dot: {
+    position: 'absolute',
+    // iconWrap is 56 wide around a 26pt icon: 15pt to the icon's right edge.
+    // The dot straddles that top-right corner.
+    top: -2,
+    right: 11,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   container: {
     flexDirection: 'row',
     paddingTop: 0,
@@ -590,8 +603,21 @@ function AttendeeTabNavigator() {
 
 function OrganizerTabNavigator() {
   const { t } = useI18n();
+  // Unread attendee messages: a dot on the Dashboard tab, wherever you are.
+  const activeOrg = useActiveOrg();
+  const unreadMessages = useOrganizerUnread({
+    enabled: activeOrg.can('manage_events'),
+    poll: true,
+    orgKey: activeOrg.orgId,
+  });
   const organizerTabs = [
-    { name: 'Dashboard', label: t('tabs.dashboard'), icon: 'stats-chart-outline', activeIcon: 'stats-chart' },
+    {
+      name: 'Dashboard',
+      label: t('tabs.dashboard'),
+      icon: 'stats-chart-outline',
+      activeIcon: 'stats-chart',
+      dot: unreadMessages > 0,
+    },
     { name: 'MyEvents', label: t('tabs.myEvents'), icon: 'calendar-outline', activeIcon: 'calendar' },
     { name: 'Scan', label: t('tabs.scan'), icon: 'qr-code-outline', activeIcon: 'qr-code' },
     { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person' },
