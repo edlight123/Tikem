@@ -21,8 +21,6 @@ import { attendeeFAQCategoryMeta, organizerFAQCategoryMeta, type UserRole, type 
  * the rule between rows IS the meaning.
  */
 
-/** A card sitting directly on the page. */
-const PAGE_CARD = 'rounded-xl bg-white/[0.03] p-6 transition-colors hover:bg-white/[0.07]'
 /** A card sitting on another card — one step up the ladder. */
 const NESTED_CARD = 'rounded-xl bg-white/[0.06] p-6 transition-colors hover:bg-white/[0.12]'
 
@@ -180,12 +178,12 @@ export default function SupportContent() {
               title={t('categories.title', 'Top Help Topics')}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
               {currentFAQs.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => scrollToCategory(category.id)}
-                  className={`${PAGE_CARD} text-left group flex items-center gap-3`}
+                  className="group flex items-center gap-3 rounded bg-white/[0.03] px-4 py-4 text-left transition-colors hover:bg-white/[0.07] sm:px-6 sm:py-5"
                 >
                   {/* Icon + label: the one-line descriptions under each topic
                       repeated the topic's name in more words. */}
