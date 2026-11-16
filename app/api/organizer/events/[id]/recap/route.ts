@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { canOnEvent } from '@/lib/organizer/context'
+import { canOnEvent, eventOrgId, isPlatformAdmin, teamSeatIn } from '@/lib/organizer/context'
 import { loadEventRecap } from '@/lib/postEvent/server'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +23,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!(await canOnEvent(user, event, 'manage_events')).allowed) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
-    return NextResponse.json(await loadEventRecap(eventId, event))
+    // Ticket revenue is finance: the owner, an admin with the finance grant,
+    // or a platform admin. Managers get the recap without it.
+    const orgId = eventOrgId(event)
+    const finance =
+      orgId === user.id ||
+      isPlatformAdmin(user) ||
+      (orgId ? (await teamSeatIn(orgId, user.id).catch(() => null))?.financeView === true : false)
+    const recap = await loadEventRecap(eventId, event)
+    return NextResponse.json(finance ? recap : { ...recap, revenue: null })
   } catch (error) {
     console.error('[organizer/recap] failed', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

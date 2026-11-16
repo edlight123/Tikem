@@ -31,7 +31,7 @@ type Recap = {
   currency: string;
   sold: number;
   checkedIn: number;
-  revenue: number;
+  revenue: number | null;
   arrivals: Array<{ at: string; count: number }>;
   peakArrival: string | null;
   newFollowers: number;
@@ -158,7 +158,7 @@ export default function OrganizerEventRecapScreen() {
 
             <View style={styles.section}>
               <ListGroup>
-                {recap.revenue > 0 && activeOrg.financeView ? (
+                {recap.revenue != null && recap.revenue > 0 && activeOrg.financeView ? (
                   <ListRow
                     icon={Banknote}
                     title={t('eventRecap.revenue')}

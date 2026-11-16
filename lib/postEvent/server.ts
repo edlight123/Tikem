@@ -76,7 +76,8 @@ export interface EventRecap {
   currency: string
   sold: number
   checkedIn: number
-  revenue: number
+  /** Gross ticket sales. null when the caller may not see finances (route strips it). */
+  revenue: number | null
   arrivals: Array<{ at: string; count: number }>
   peakArrival: string | null
   newFollowers: number
