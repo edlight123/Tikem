@@ -48,6 +48,7 @@ const PHOTO_LIST: ArtPiece[] = [
   { key: "photo-montreal", source: require('../assets/photos/places/montreal.jpg'), alt: "Tabou Combo on stage at the Nuits d'Afrique festival in Montréal", worlds: [], place: "Nuits d'Afrique · Montréal" },
   { key: "photo-saintdenis", source: require('../assets/photos/places/saintdenis.jpg'), alt: "The west front of the Basilica of Saint-Denis", worlds: [], place: "Basilique · Saint-Denis", scrim: 'strong' },
   { key: "photo-flag-crowd", source: require('../assets/photos/places/flag-crowd.jpg'), alt: "A Haitian flag held up in a festival crowd", worlds: [] },
+  { key: "photo-vertieres", source: require('../assets/photos/days/vertieres.jpg'), alt: "The monument to the heroes of Vertières, outside Cap-Haïtien", worlds: [], place: "Vertières · Cap-Haïtien", scrim: 'strong' },
   { key: "photo-soupjoumou", source: require('../assets/photos/days/soupjoumou.jpg'), alt: "A bowl of soup joumou", worlds: [], place: "Soup joumou", scrim: 'strong' },
   { key: "photo-kanaval-mask", source: require('../assets/photos/days/kanaval-mask.jpg'), alt: "A horned papier-mâché mask at the Jacmel kanaval", worlds: [], place: "Kanaval · Jacmel" },
   { key: "photo-kap", source: require('../assets/photos/days/kap.jpg'), alt: "A bright kite flying over a green hillside", worlds: [], place: "Monte kap · Pak", scrim: 'strong' },
@@ -108,7 +109,7 @@ const NATIONAL_DAY_PHOTOS: Record<string, string> = {
   dessalines:   'photo-dessalines',    // his statue on the Champ de Mars
   allsaints:    'photo-cap-cathedral',
   morts:        'photo-cap-cathedral',
-  vertieres:    'photo-cap-haitien',   // the battle was fought outside Le Cap
+  vertieres:    'photo-vertieres',     // the real monument (Wilmeus Tamar, CC BY-SA 4.0)
   discovery:    'photo-labadee',       // the north coast
   noel:         'photo-nwel',
 };
