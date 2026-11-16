@@ -105,6 +105,7 @@ export default {
     friendsGoingSuffix: 'friends going',
   },
   whosGoing: {
+    othersGoing: "Others are going",
     privateSub: "Guests here keep their attendance private.",
     title: 'Who\'s going',
     personOne: '{count} person',

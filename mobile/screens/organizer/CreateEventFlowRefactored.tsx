@@ -248,6 +248,7 @@ function InlineTextRow({
   onChangeText,
   error,
   multiline,
+  compact,
   keyboardType,
   maxLength,
   onFocus,
@@ -264,6 +265,8 @@ function InlineTextRow({
   onChangeText: (t: string) => void;
   error?: boolean;
   multiline?: boolean;
+  /** Multiline that starts one line tall (a short note), not a 96pt box. */
+  compact?: boolean;
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;
   onFocus?: () => void;
@@ -276,7 +279,7 @@ function InlineTextRow({
     <View style={[inline.row, { borderBottomColor: error ? colors.error : colors.border }]}>
       <TextInput
         style={[
-          multiline ? inline.multiline : inline.input,
+          multiline ? (compact ? inline.multilineCompact : inline.multiline) : inline.input,
           { color: colors.text },
         ]}
         placeholder={placeholder}
@@ -306,6 +309,7 @@ function InlineDateTimeRow({
   dateText,
   timeText,
   timePlaceholder,
+  datePlaceholder,
   onPressDate,
   onPressTime,
   error,
@@ -315,21 +319,29 @@ function InlineDateTimeRow({
   dateText: string;
   timeText: string;
   timePlaceholder: string;
+  datePlaceholder?: string;
   onPressDate: () => void;
   onPressTime: () => void;
   error?: boolean;
 }) {
   const hasDate = !!dateText;
+  // The label always shows on the left, the date and time on the right (owner:
+  // "fix the positioning" — a set end date used to replace its label, so
+  // "Sales end" read as an unlabeled date under a "Sales start" placeholder).
+  const cleanLabel = label.replace(/\s*\*$/, '');
   return (
     <View style={[inline.row, inline.rowInner, { borderBottomColor: error ? colors.error : colors.border }]}>
-      <TouchableOpacity style={inline.flex} onPress={onPressDate} activeOpacity={0.7}>
-        <Text style={[inline.rowText, { color: hasDate ? colors.text : error ? colors.error : colors.textSecondary }]}>
-          {hasDate ? dateText : label}
+      <Text style={[inline.rowLabel, { color: error ? colors.error : colors.textSecondary }]} numberOfLines={1}>
+        {cleanLabel}
+      </Text>
+      <TouchableOpacity onPress={onPressDate} activeOpacity={0.7} style={inline.valueCell}>
+        <Text style={[inline.rowText, { color: hasDate ? colors.text : colors.textTertiary }]} numberOfLines={1}>
+          {hasDate ? dateText : datePlaceholder || '—'}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onPressTime} activeOpacity={0.7} style={inline.timeCell}>
-        <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-        <Text style={[inline.timeText, { color: timeText ? colors.text : colors.textSecondary }]}>
+        <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
+        <Text style={[inline.timeText, { color: timeText ? colors.text : colors.textTertiary }]}>
           {timeText || timePlaceholder}
         </Text>
       </TouchableOpacity>
@@ -357,16 +369,33 @@ const inline = StyleSheet.create({
     padding: 0,
   },
   rowText: {
-    fontSize: 17,
+    fontSize: 16,
+  },
+  rowLabel: {
+    flex: 1,
+    fontSize: 16,
+  },
+  valueCell: {
+    paddingLeft: 12,
   },
   timeCell: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingLeft: 12,
+    gap: 5,
+    paddingLeft: 14,
+    minWidth: 92,
+    justifyContent: 'flex-end',
   },
   timeText: {
-    fontSize: 15,
+    fontSize: 16,
+    fontVariant: ['tabular-nums'],
+  },
+  // A short note (a ticket type's description): one line that grows.
+  multilineCompact: {
+    fontSize: 16,
+    minHeight: 22,
+    maxHeight: 120,
+    padding: 0,
   },
 });
 
@@ -1993,6 +2022,7 @@ export default function CreateEventFlowRefactored() {
                 dateText={eventDraft.start_date}
                 timeText={eventDraft.start_time}
                 timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
+                datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
                 onPressDate={() => { closeAllPickers(); Keyboard.dismiss(); setShowStartDate(true); }}
                 onPressTime={() => { closeAllPickers(); Keyboard.dismiss(); setShowStartTime(true); }}
                 error={!!errors.start}
@@ -2003,6 +2033,7 @@ export default function CreateEventFlowRefactored() {
                 dateText={eventDraft.end_date}
                 timeText={eventDraft.end_time}
                 timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
+                datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
                 onPressDate={() => { closeAllPickers(); Keyboard.dismiss(); setShowEndDate(true); }}
                 onPressTime={() => { closeAllPickers(); Keyboard.dismiss(); setShowEndTime(true); }}
                 error={!!errors.end}
@@ -2463,6 +2494,7 @@ export default function CreateEventFlowRefactored() {
                         value={tier.description}
                         onChangeText={(text) => updateTier(index, 'description', text)}
                         multiline
+                        compact
                         maxLength={500}
                       />
 
@@ -2486,6 +2518,7 @@ export default function CreateEventFlowRefactored() {
                             dateText={formatSaleDate(tier.sale_start)}
                             timeText={formatSaleTime(tier.sale_start)}
                             timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
+                            datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
                             onPressDate={() => openSalePicker(index, 'start', 'date')}
                             onPressTime={() => openSalePicker(index, 'start', 'time')}
                             error={!!errors[`tier_${index}_sale`]}
@@ -2496,6 +2529,7 @@ export default function CreateEventFlowRefactored() {
                             dateText={formatSaleDate(tier.sale_end)}
                             timeText={formatSaleTime(tier.sale_end)}
                             timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
+                            datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
                             onPressDate={() => openSalePicker(index, 'end', 'date')}
                             onPressTime={() => openSalePicker(index, 'end', 'time')}
                             error={!!errors[`tier_${index}_sale`]}
@@ -2530,6 +2564,7 @@ export default function CreateEventFlowRefactored() {
                             dateText={formatSaleDate(tier.valid_from)}
                             timeText={formatSaleTime(tier.valid_from)}
                             timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
+                            datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
                             onPressDate={() => openSalePicker(index, 'validStart', 'date')}
                             onPressTime={() => openSalePicker(index, 'validStart', 'time')}
                             error={!!errors[`tier_${index}_validity`]}
@@ -2540,6 +2575,7 @@ export default function CreateEventFlowRefactored() {
                             dateText={formatSaleDate(tier.valid_until)}
                             timeText={formatSaleTime(tier.valid_until)}
                             timePlaceholder={t('organizerCreateEvent.schedule.selectTime')}
+                            datePlaceholder={t('organizerCreateEvent.schedule.selectDate')}
                             onPressDate={() => openSalePicker(index, 'validEnd', 'date')}
                             onPressTime={() => openSalePicker(index, 'validEnd', 'time')}
                             error={!!errors[`tier_${index}_validity`]}

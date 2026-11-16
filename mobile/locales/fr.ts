@@ -132,6 +132,7 @@ export default {
     friendsGoingSuffix: 'amis y vont',
   },
   whosGoing: {
+    othersGoing: "D'autres y vont",
     privateSub: "Les invités gardent leur présence privée.",
     title: 'Qui y va',
     personOne: '{count} personne',

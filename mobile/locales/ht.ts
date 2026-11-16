@@ -104,6 +104,7 @@ export default {
     friendsGoingSuffix: 'zanmi ap ale',
   },
   whosGoing: {
+    othersGoing: "Lòt moun ap vini",
     privateSub: 'Envite yo kenbe patisipasyon yo prive.',
     title: 'Ki moun k ap ale',
     personOne: '{count} moun',

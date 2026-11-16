@@ -117,9 +117,15 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
   const named = friendsGoing.length + pile.length + (viewerIsGoing ? 1 : 0);
   const remaining = showCount ? Math.max(0, totalGoing - named) : 0;
 
-  // Nobody shows a face: a private list. One quiet filled row, not a box with
-  // a lonely "You" bubble in it.
-  if (friendsGoing.length === 0 && pile.length === 0) {
+  // Nobody shows a named face (guests without an account, private profiles),
+  // but the organizer chose faces and others ARE going: show the crowd as
+  // unnamed portraits (owner: "even for the guest list it doesn't show for
+  // the scholars event"). Falls through to the pile below with no names.
+  const crowdOthers = totalGoing - (viewerIsGoing ? 1 : 0);
+  const showAnonCrowd = visibility === 'faces' && friendsGoing.length === 0 && pile.length === 0 && crowdOthers >= 1;
+
+  // Nobody shows a face and nobody else is going: one quiet filled row.
+  if (friendsGoing.length === 0 && pile.length === 0 && !showAnonCrowd) {
     if (!showCount && !viewerIsGoing) return null;
     return (
       <View style={styles.section}>
@@ -151,7 +157,7 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
           count: friendsGoing.length,
         })
       : !lead
-        ? null
+        ? t('whosGoing.othersGoing')
         : totalGoing <= 1
           ? t('whosGoing.leadOnly', { name: lead })
           : !showCount
