@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { Lock } from 'lucide-react'
 import type { PublicUserSummary } from '@/types/social'
 import type { GuestlistVisibility } from '@/lib/guestlistVisibility'
 import { shouldShowGoingCount } from '@/lib/socialProof'
 import { defaultAvatarAt, defaultAvatarIndex, defaultAvatarUrl } from '@/lib/defaultAvatar'
+import GuestlistSheet from './GuestlistSheet'
 
 interface WhosGoingProps {
   eventId: string
@@ -29,6 +28,10 @@ interface WhosGoingProps {
   /** Ticket capacity: the count only prints once half of it is taken
    *  (shouldShowGoingCount). Unset means faces and names, no number. */
   capacity?: number | null
+  /** The viewer's own name and photo: the photo decides the "show your face"
+   *  step before the full list. */
+  viewerName?: string | null
+  viewerPhotoUrl?: string | null
 }
 
 interface SocialData {
@@ -62,8 +65,11 @@ export default function WhosGoing({
   visibility = 'faces',
   className = '',
   capacity,
+  viewerName,
+  viewerPhotoUrl,
 }: WhosGoingProps) {
   const { t } = useTranslation('common')
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [data, setData] = useState<SocialData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -93,15 +99,11 @@ export default function WhosGoing({
 
   if (visibility === 'hidden') return null
 
+  // The card's own footprint while it loads, so nothing jumps when it lands.
   if (loading) {
     return (
-      <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
-        <div className="h-5 w-32 rounded mb-4 animate-pulse" />
-        <div className="flex -space-x-3">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="w-10 h-10 rounded-full ring-2 ring-[#0a0a0a] animate-pulse" />
-          ))}
-        </div>
+      <div className={`px-4 md:px-0 ${className}`}>
+        <div className="h-[76px] rounded bg-white/[0.05] animate-pulse" />
       </div>
     )
   }
@@ -142,139 +144,89 @@ export default function WhosGoing({
     )
   }
 
-  const pile = publicGoing.slice(0, 8)
-  const namedCount = friendsGoing.length + pile.length
-  // Everyone else going keeps their privacy but still counts as a face: an
-  // unnamed drawn portrait each, so the pile holds up to five faces and a
-  // crowd reads as a crowd. Seeded by the event so they stay put.
-  const others = Math.max(0, totalGoing - namedCount - (viewerIsGoing ? 1 : 0))
-  const anonCount = Math.min(others, Math.max(0, 5 - pile.length - (viewerIsGoing ? 1 : 0)))
-  const anonBase = defaultAvatarIndex(eventId)
-  const anon = Array.from({ length: anonCount }, (_, i) => defaultAvatarAt(anonBase + i * 5))
-  const remaining = showCount ? Math.max(0, others - anonCount) : 0
+  // Nameless accounts come back as "Tikèm user": never the lead name, never a
+  // face (they still count as an unnamed portrait below).
+  const isNamed = (u: PublicUserSummary) => !!u.displayName?.trim() && u.displayName !== 'Tikèm user'
+  const named = [...friendsGoing, ...publicGoing].filter(isNamed)
   // Nothing to show: no faces, not the viewer, and the number held back.
-  if (!showCount && !viewerIsGoing && friendsGoing.length === 0 && pile.length === 0) return null
+  if (!showCount && !viewerIsGoing && named.length === 0 && totalGoing <= (viewerIsGoing ? 1 : 0)) return null
 
+  // The card's pile: three faces, unnamed portraits filling in for guests who
+  // keep themselves private, so a crowd still reads as one.
+  const faces = named.slice(0, 3)
+  const others = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - faces.length)
+  const anonBase = defaultAvatarIndex(eventId)
+  const anon = Array.from({ length: Math.min(others, 3 - faces.length) }, (_, i) => defaultAvatarAt(anonBase + i * 5))
+
+  const lead = (named[0]?.displayName || '').split(' ')[0]
+  const sub = viewerIsGoing
+    ? t('whos_going.youre_going', "You're going")
+    : friendsGoing.length > 0
+      ? t(friendsGoing.length === 1 ? 'whos_going.friend_going' : 'whos_going.friend_going_plural', {
+          count: friendsGoing.length,
+          defaultValue: friendsGoing.length === 1 ? '{{count}} friend going' : '{{count}} friends going',
+        })
+      : lead && showCount && totalGoing > 1
+        ? t('whos_going.lead_and_others', { name: lead, count: totalGoing - 1, defaultValue: '{{name}} and {{count}} others going' })
+        : lead && totalGoing > 1
+          ? t('whos_going.lead_and_others_vague', { name: lead, defaultValue: '{{name}} and others are going' })
+          : t('whos_going.see_whos_going', "See who's going")
+
+  const openList = () => {
+    if (!currentUserId) {
+      const redirectTo = `${window.location.pathname}${window.location.search || ''}`
+      window.location.href = `/auth/login?redirect=${encodeURIComponent(redirectTo)}`
+      return
+    }
+    setSheetOpen(true)
+  }
+
+  // One filled card, Posh's shape in our materials: what it is on the left,
+  // the faces and "View" on the right. It replaced a heading over a
+  // left-aligned pile, which sat lopsided on the page (owner, 2026-11-16).
   return (
-    <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
-          {t('whos_going.title', "Who's going")}
-        </h2>
-        {showCount && (
-          <span className="text-sm font-semibold text-white/50">
-            {t(totalGoing === 1 ? 'whos_going.person' : 'whos_going.person_plural', {
-              count: totalGoing,
-              defaultValue: totalGoing === 1 ? '{{count}} person' : '{{count}} people',
-            })}
-          </span>
-        )}
-      </div>
+    <div className={`px-4 md:max-w-xl md:px-0 ${className}`}>
+      <button
+        type="button"
+        onClick={openList}
+        className="flex w-full items-center gap-3 rounded bg-white/[0.05] py-4 pl-[18px] pr-3.5 text-left transition-colors hover:bg-white/[0.08]"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-bold text-white">{t('whos_going.guestlist', 'Guestlist')}</span>
+          <span className="mt-0.5 block truncate text-[13px] text-white/55">{sub}</span>
+        </span>
+        <span className="flex shrink-0 -space-x-3.5" aria-hidden>
+          {faces.map((u) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={u.uid}
+              src={u.photoURL || defaultAvatarUrl(String(u.uid))}
+              alt=""
+              className="h-11 w-11 rounded-full object-cover ring-2 ring-[#161616]"
+            />
+          ))}
+          {anon.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={`anon-${i}`} src={src} alt="" className="h-11 w-11 rounded-full ring-2 ring-[#161616]" />
+          ))}
+        </span>
+        <span className="grid h-9 shrink-0 place-items-center rounded bg-white/[0.08] px-4 text-[13px] font-bold text-white">
+          {t('whos_going.view', 'View')}
+        </span>
+      </button>
 
-      {/* Friends going */}
-      {friendsGoing.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-brand-300 uppercase tracking-wide mb-2">
-            {t(friendsGoing.length === 1 ? 'whos_going.friend_going' : 'whos_going.friend_going_plural', {
-              count: friendsGoing.length,
-              defaultValue: friendsGoing.length === 1 ? '{{count}} friend going' : '{{count}} friends going',
-            })}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {friendsGoing.map((f) => (
-              <Link
-                key={f.uid}
-                href={`/profile/organizer/${f.uid}`}
-                className="flex items-center gap-2 hover:bg-white/[0.07] rounded pl-1 pr-3 py-1 transition-colors"
-              >
-                <Avatar user={f} size={28} />
-                <span className="text-sm font-medium text-white truncate max-w-[120px]">{f.displayName}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Public face pile */}
-      {(pile.length > 0 || viewerIsGoing || anon.length > 0) && (
-        <div className="flex items-center gap-3">
-          <div className="flex -space-x-3">
-            {viewerIsGoing && (
-              <div
-                className="rounded-full w-10 h-10 bg-white/[0.14] flex items-center justify-center text-white text-xs font-semibold ring-2 ring-black"
-                title={t('whos_going.youre_going', "You're going")}
-              >
-                {t('whos_going.you_badge', 'You')}
-              </div>
-            )}
-            {pile.map((u) => (
-              <Avatar key={u.uid} user={u} size={40} />
-            ))}
-            {anon.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={`anon-${i}`} src={src} alt="" aria-hidden="true" className="rounded-full w-10 h-10 ring-2 ring-black" />
-            ))}
-            {remaining > 0 && (
-              <div className="rounded-full w-10 h-10 bg-white/[0.08] flex items-center justify-center text-white/70 text-xs font-semibold ring-2 ring-black">
-                +{remaining}
-              </div>
-            )}
-          </div>
-          {/* "Rutshelle and 24 others going" — naming the first face makes the
-              pile a sentence someone can read, instead of a number beside a
-              row of strangers. Falls back to the bare count when nobody in the
-              pile is public. */}
-          <p className="text-sm text-white/55">
-            {(() => {
-              const lead = friendsGoing[0]?.displayName || pile[0]?.displayName
-              const others = Math.max(0, totalGoing - 1)
-              if (viewerIsGoing) return t('whos_going.youre_going', "You're going")
-              if (lead && others === 0)
-                return t('whos_going.lead_only', { name: lead.split(' ')[0], defaultValue: '{{name}} is going' })
-              if (lead && !showCount)
-                return t('whos_going.lead_and_others_vague', {
-                  name: lead.split(' ')[0],
-                  defaultValue: '{{name}} and others are going',
-                })
-              if (lead && others === 1)
-                return t('whos_going.lead_and_one', {
-                  name: lead.split(' ')[0],
-                  defaultValue: '{{name}} and 1 other going',
-                })
-              if (lead && others > 0)
-                return t('whos_going.lead_and_others', {
-                  name: lead.split(' ')[0],
-                  count: others,
-                  defaultValue: '{{name}} and {{count}} others going',
-                })
-              if (!showCount) return null
-              return t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' })
-            })()}
-          </p>
-        </div>
-      )}
-
-      {/* Privacy note when nobody is publicly visible */}
-      {friendsGoing.length === 0 && pile.length === 0 && (
-        <div className="flex items-start gap-2 text-sm text-white/50">
-          <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <p>
-            {showCount
-              ? t(totalGoing === 1 ? 'whos_going.privacy_note' : 'whos_going.privacy_note_plural', {
-                  count: totalGoing,
-                  defaultValue:
-                    totalGoing === 1
-                      ? '{{count}} person is going. Attendees keep their attendance private.'
-                      : '{{count}} people are going. Attendees keep their attendance private.',
-                })
-              : t('whos_going.privacy_note_vague', 'Attendees keep their attendance private.')}{' '}
-            {currentUserId && (
-              <Link href="/profile" className="text-brand-300 hover:underline font-medium">
-                {t('whos_going.show_going_cta', "Show that you're going")}
-              </Link>
-            )}
-          </p>
-        </div>
+      {currentUserId && (
+        <GuestlistSheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          eventId={eventId}
+          viewerId={currentUserId}
+          viewerName={viewerName}
+          viewerPhotoUrl={viewerPhotoUrl}
+          previewFaces={named}
+          totalGoing={totalGoing}
+          showCount={showCount}
+        />
       )}
     </div>
   )

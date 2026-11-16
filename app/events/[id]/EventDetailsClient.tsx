@@ -100,6 +100,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   })
   const selloutSoon = !isSoldOut && isUrgent(scarcity)
   const posterTheme = getPosterTheme(event.id || event.title, event.category)
+  const showCategory = !!event.category && event.category.toLowerCase() !== 'other'
   // Organization brand overrides the personal name wherever the organizer is
   // shown (falls back to full_name, then a generic label).
   const organizerLabel = event.users?.organization_name || event.users?.full_name || 'Event Organizer'
@@ -231,8 +232,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               {/* Category + marketing signals as one quiet eyebrow line */}
               <div className="mb-5 flex items-start justify-between gap-3">
                 <p className="eyebrow pt-2 text-white/60">
-                  {event.category}
-                  {isTrending && <span className="text-white/30"> · </span>}
+                  {/* "Other" says nothing; the line keeps its height either way. */}
+                  {showCategory && event.category}
+                  {showCategory && isTrending && <span className="text-white/30"> · </span>}
                   {isTrending && <span>{t('events.trending')}</span>}
                 </p>
                 {/* Save + share as one cluster, mirroring the mobile buy row.
@@ -717,6 +719,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           currentUserId={user?.id || null}
           visibility={guestlistVisibilityFrom(event as any)}
           capacity={(event as any).total_tickets}
+          viewerName={(user as any)?.full_name ?? null}
+          viewerPhotoUrl={(user as any)?.photo_url ?? null}
           className="mt-8"
         />
 

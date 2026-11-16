@@ -22,6 +22,9 @@ const GOING_STATUSES = new Set(['valid', 'active', 'used', 'confirmed', 'checked
 // event pages responsive on large events.
 const PUBLIC_SCAN_CAP = 80
 const PUBLIC_PILE_LIMIT = 12
+// The full list: bounded too, so a sold-out arena does not read 10k profiles.
+const FULL_SCAN_CAP = 400
+const FULL_LIST_LIMIT = 200
 
 export interface EventSocialAttendance {
   totalGoing: number
@@ -69,8 +72,12 @@ async function fetchUserDocs(ids: string[]): Promise<Map<string, any>> {
  */
 export async function getEventSocialAttendance(
   eventId: string,
-  viewerId: string | null
+  viewerId: string | null,
+  opts: { full?: boolean } = {}
 ): Promise<EventSocialAttendance> {
+  // The full guest list (the "View" sheet) reads further than the face pile.
+  const scanCap = opts.full ? FULL_SCAN_CAP : PUBLIC_SCAN_CAP
+  const pileLimit = opts.full ? FULL_LIST_LIMIT : PUBLIC_PILE_LIMIT
   // 1. Collect distinct attendee ids from tickets.
   const ticketsSnap = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
 
@@ -98,7 +105,7 @@ export async function getEventSocialAttendance(
   }
 
   // 3. Sample attendees for the public face pile (bounded scan).
-  const sampledAttendeeIds = Array.from(attendeeIds).slice(0, PUBLIC_SCAN_CAP)
+  const sampledAttendeeIds = Array.from(attendeeIds).slice(0, scanCap)
 
   // Fetch the union of friend-attendees and the sampled attendees.
   const idsToFetch = Array.from(new Set([...friendAttendeeIds, ...sampledAttendeeIds]))
@@ -119,7 +126,7 @@ export async function getEventSocialAttendance(
   // viewer and anyone already shown in the friends row.
   const publicGoing: PublicUserSummary[] = []
   for (const id of sampledAttendeeIds) {
-    if (publicGoing.length >= PUBLIC_PILE_LIMIT) break
+    if (publicGoing.length >= pileLimit) break
     if (id === viewerId || friendSet.has(id)) continue
     const data = userDocs.get(id)
     if (attendanceVisibilityOf(data) === 'everyone') {
