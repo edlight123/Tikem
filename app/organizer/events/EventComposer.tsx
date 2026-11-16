@@ -1388,6 +1388,18 @@ export default function EventComposer({
         country === seedCountry &&
         (isOnline || !city.trim() || !defaultCity || city.trim().toLowerCase() === defaultCity.trim().toLowerCase())
       data.timezone = seed.timezone && atDefaultPlace ? seed.timezone : timezoneForEvent(country, isOnline ? '' : city)
+    } else {
+      // Edit: the stored zone stands while the event stays in the same city. A
+      // moved event (or one with no zone) is re-derived, and so is the blanket
+      // Port-au-Prince the app used to stamp on every event, wherever it was.
+      const stored = typeof event?.timezone === 'string' ? event.timezone : ''
+      const sameCity =
+        city.trim().toLowerCase() === String(event?.city || '').trim().toLowerCase() &&
+        !!event?.is_online === isOnline
+      const blanketHaiti = stored === 'America/Port-au-Prince' && country !== 'HT'
+      if (!stored || !sameCity || blanketHaiti) {
+        data.timezone = timezoneForEvent(country, isOnline ? '' : city)
+      }
     }
     return { data, cleanTiers, isRsvp }
   }
