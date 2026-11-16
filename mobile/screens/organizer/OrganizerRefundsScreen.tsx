@@ -310,7 +310,6 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
             title={filter === 'pending'
               ? (t('refunds.noPending') || 'No pending requests')
               : (t('refunds.noRequests') || 'No refund requests')}
-            subtitle={t('refunds.emptyDescription') || 'Refund requests from attendees will appear here'}
           />
         ) : (
           filteredRequests.map((request) => (

@@ -17,6 +17,8 @@ import DailySalesChart from '../../components/organizer/DailySalesChart';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { fetchEventAnalytics, type EventAnalyticsResponse } from '../../lib/api/eventOrders';
 import { formatMoneyLines } from '../../lib/orderDisplay';
+import { getCachedEvent, getEventById } from '../../lib/api/organizer';
+import { displayCapacity, isFreeOnlyEvent } from '../../lib/ticketPricing';
 
 type RouteParams = { EventAnalytics: { eventId: string; eventTitle?: string } };
 
@@ -37,13 +39,24 @@ export default function EventAnalyticsScreen() {
   const { formatDate } = useLocaleFormat();
 
   const [data, setData] = useState<EventAnalyticsResponse | null>(null);
+  // Free-only events have no revenue to show (the REVENUE cell is hidden).
+  // Seeded from the event cache so a known free event never flashes the cell.
+  const [freeOnly, setFreeOnly] = useState(() => {
+    const cached = getCachedEvent(eventId);
+    return cached ? isFreeOnlyEvent(cached as any) : false;
+  });
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setData(await fetchEventAnalytics(eventId));
+      const [analytics, eventDoc] = await Promise.all([
+        fetchEventAnalytics(eventId),
+        getEventById(eventId).catch(() => null),
+      ]);
+      setData(analytics);
+      if (eventDoc) setFreeOnly(isFreeOnlyEvent(eventDoc as any));
       setFailed(false);
     } catch (e) {
       console.warn('[EventAnalytics] load failed', e);
@@ -90,7 +103,7 @@ export default function EventAnalyticsScreen() {
           <View style={styles.statsWrap}>
             <StatTriplet
               items={[
-                { label: tripletLabels.revenue, value: null },
+                ...(freeOnly ? [] : [{ label: tripletLabels.revenue, value: null }]),
                 { label: tripletLabels.sold, value: null },
                 { label: tripletLabels.checkIn, value: null },
               ]}
@@ -141,7 +154,11 @@ export default function EventAnalyticsScreen() {
   const currency = data!.event.currency || 'HTG';
   const [primaryRevenue, ...otherRevenue] = a.revenue;
   const pct = (n: number) => `${Math.round(n * 100)}%`;
-  const capacityPct = a.capacity > 0 ? Math.round((a.ticketsSold / a.capacity) * 100) : null;
+  // The 1,000,000 "unlimited" sentinel is not a real cap ("0% of 1000000").
+  const cap = displayCapacity(a.capacity);
+  const capacityPct = cap > 0 ? Math.round((a.ticketsSold / cap) * 100) : null;
+  // Belt and braces: a "free" event that somehow took money still shows it.
+  const hideRevenue = freeOnly && !a.revenue.some((r) => r.amount > 0);
   const bestDay = a.salesByDay.reduce<{ date: string; count: number } | null>(
     (best, d) => (!best || d.count > best.count ? d : best),
     null
@@ -161,17 +178,23 @@ export default function EventAnalyticsScreen() {
         <View style={styles.statsWrap}>
           <StatTriplet
             items={[
-              {
-                label: tripletLabels.revenue,
-                value: formatMoneyLines([primaryRevenue ?? { currency, amount: 0 }]),
-                caption: otherRevenue.length ? otherRevenue.map((r) => `+ ${formatMoneyLines([r])}`).join('\n') : undefined,
-              },
+              ...(hideRevenue
+                ? []
+                : [
+                    {
+                      label: tripletLabels.revenue,
+                      value: formatMoneyLines([primaryRevenue ?? { currency, amount: 0 }]),
+                      caption: otherRevenue.length
+                        ? otherRevenue.map((r) => `+ ${formatMoneyLines([r])}`).join('\n')
+                        : undefined,
+                    },
+                  ]),
               {
                 label: tripletLabels.sold,
                 value: a.ticketsSold,
                 caption:
                   capacityPct !== null
-                    ? t('organizerEventAnalytics.ofCapacity', { pct: capacityPct, cap: a.capacity })
+                    ? t('organizerEventAnalytics.ofCapacity', { pct: capacityPct, cap })
                     : undefined,
               },
               {
@@ -187,7 +210,6 @@ export default function EventAnalyticsScreen() {
           <EmptyState
             icon={BarChart2}
             title={t('organizerEventAnalytics.empty.title')}
-            subtitle={t('organizerEventAnalytics.empty.body')}
           />
         ) : (
           <>
@@ -234,7 +256,7 @@ export default function EventAnalyticsScreen() {
                         <View style={styles.track}>
                           <View style={[styles.fill, { width: `${Math.max(share * 100, 2)}%` }]} />
                         </View>
-                        {tier.revenue.length > 0 ? (
+                        {!hideRevenue && tier.revenue.length > 0 ? (
                           <Text style={styles.barCaption}>{formatMoneyLines(tier.revenue)}</Text>
                         ) : null}
                       </View>
@@ -270,13 +292,6 @@ export default function EventAnalyticsScreen() {
                   ))
                 )}
               </View>
-              {a.cities.length > 0 && a.buyersWithoutCity > 0 ? (
-                <Text style={styles.footnote}>
-                  {a.buyersWithoutCity === 1
-                    ? t('organizerEventAnalytics.noCityNoteOne')
-                    : t('organizerEventAnalytics.noCityNote', { n: a.buyersWithoutCity })}
-                </Text>
-              ) : null}
             </View>
 
             {/* Check-in */}
@@ -392,12 +407,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     // Cities are a ranking, not a status — kept neutral so teal stays scarce.
     fillNeutral: {
       backgroundColor: colors.textSecondary,
-    },
-    footnote: {
-      marginTop: 10,
-      fontSize: 12,
-      lineHeight: 17,
-      color: colors.textTertiary,
     },
     checkInHead: {
       flexDirection: 'row',

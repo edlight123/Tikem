@@ -88,9 +88,6 @@ export default function StaffScanScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {t('staffScan.title')}
         </Text>
-        <Text style={styles.headerSub} numberOfLines={1}>
-          {t('staffScan.subtitle')}
-        </Text>
       </View>
 
       <ScrollView
@@ -196,11 +193,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '700',
     letterSpacing: -0.8,
     color: colors.text,
-  },
-  headerSub: {
-    marginTop: 4,
-    fontSize: 15,
-    color: colors.textSecondary,
   },
   scroll: {
     flex: 1,

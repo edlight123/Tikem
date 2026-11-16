@@ -78,6 +78,7 @@ import { Touchable } from '../components/ui/Touchable';
 import { Text as UIText } from '../components/ui/Text';
 import { ListGroup, ListRow } from '../components/ui/ListRow';
 import { Switch } from '../components/ui/Switch';
+import StatusBarBackdrop from '../components/StatusBarBackdrop';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -498,7 +499,7 @@ export default function ProfileScreen() {
                 accessibilityLabel={`${s.value} ${s.label}`}
               >
                 {statsLoaded ? (
-                  <Text style={styles.statLabel} numberOfLines={1}>
+                  <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                     <Text style={styles.statValue}>{s.value}</Text> {s.label.toLowerCase()}
                   </Text>
                 ) : (
@@ -622,7 +623,6 @@ export default function ProfileScreen() {
               <EmptyState
                 icon={Compass}
                 title={t('profile.postersEmptyTitle')}
-                subtitle={t('profile.postersEmptyBody')}
                 actionLabel={t('profile.postersExplore')}
                 onAction={() => openAttendeeTab('Discover')}
                 compact
@@ -751,6 +751,8 @@ export default function ProfileScreen() {
           <PhoneLinkSheet visible={showPhoneLink} onClose={() => setShowPhoneLink(false)} />
         ) : null}
       </ScrollView>
+      {/* No top bar here, so keep content from sliding under the clock. */}
+      <StatusBarBackdrop />
     </SafeAreaView>
   );
 }
@@ -966,8 +968,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     locationRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
     locationText: { fontSize: 13, color: colors.textSecondary },
 
-    statsRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 16, marginTop: 10 },
-    statItem: { paddingVertical: 4 },
+    statsRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'nowrap', columnGap: 16, marginTop: 10, paddingHorizontal: 8 },
+    statItem: { paddingVertical: 4, flexShrink: 1, minWidth: 0 },
     statValue: { fontWeight: '700', color: colors.text },
     statLabel: { fontSize: 13, color: colors.textSecondary },
 

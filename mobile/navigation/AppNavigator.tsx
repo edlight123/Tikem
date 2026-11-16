@@ -922,7 +922,14 @@ export default function AppNavigator() {
               component={PaymentWebViewScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen name="StripeConnectWebView" component={GatedStripeConnectWebView} options={{ headerShown: false }} />
+            {/* A sheet over Payouts, not a full-screen push (TestFlight #70). Swipe
+                to dismiss is off so leaving mid-onboarding still goes through the
+                screen's close button and its "leave?" confirm. */}
+            <Stack.Screen
+              name="StripeConnectWebView"
+              component={GatedStripeConnectWebView}
+              options={{ headerShown: false, presentation: 'modal', gestureEnabled: false }}
+            />
             <Stack.Screen name="StripeOnboarding" component={GatedStripeOnboarding} options={{ headerShown: false }} />
             <Stack.Screen
               name="InAppWebView"
@@ -949,7 +956,7 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Notifications"
               component={NotificationsScreen}
-              options={{ headerShown: true, headerTitle: t('screens.notifications.title') }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="OrganizerVerification" 

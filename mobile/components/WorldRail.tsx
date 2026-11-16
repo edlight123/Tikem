@@ -29,7 +29,7 @@ export default function WorldRail({ onWorldPress }: { onWorldPress: (world: Worl
   const { t } = useI18n();
   return (
     <View>
-      <SectionHeader title={t('home.worlds.title')} subtitle={t('home.worlds.subtitle')} />
+      <SectionHeader title={t('home.worlds.title')} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

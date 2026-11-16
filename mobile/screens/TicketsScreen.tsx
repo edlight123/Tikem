@@ -530,9 +530,7 @@ export default function TicketsScreen({ navigation }: any) {
                     'tickets.emptySavedBody',
                     'Tap the heart on an event to keep it here.',
                   )
-                : activeTab === 'upcoming'
-                  ? t('tickets.emptyUpcomingBody')
-                  : t('tickets.emptyPastBody')
+                : undefined
             }
             actionLabel={activeTab !== 'past' ? t('favorites.explore') : undefined}
             onAction={activeTab !== 'past' ? () => navigation.navigate('Discover') : undefined}

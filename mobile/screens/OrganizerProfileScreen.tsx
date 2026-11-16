@@ -702,10 +702,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               // One quiet line, not an icon + bold heading + "0 events" count
               // filling half the screen.
               <Text style={styles.quietLine}>
-                {t('organizerProfile.noUpcomingTitle')}.{' '}
-                {isFollowing
-                  ? t('organizerProfile.noUpcomingBodyFollowing')
-                  : t('organizerProfile.noUpcomingBodyNotFollowing')}
+                {t('organizerProfile.noUpcomingTitle')}
               </Text>
             )}
           </View>

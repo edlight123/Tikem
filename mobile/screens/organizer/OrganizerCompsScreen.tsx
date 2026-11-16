@@ -364,7 +364,7 @@ export default function OrganizerCompsScreen() {
         <View style={styles.section}>
           <SectionHeader title={t('organizerComps.listTitle')} />
           {comps.length === 0 ? (
-            <EmptyState icon={Gift} title={t('organizerComps.empty')} subtitle={t('organizerComps.emptySubtitle')} compact />
+            <EmptyState icon={Gift} title={t('organizerComps.empty')} compact />
           ) : (
             comps.map((c) => (
               <View key={c.key} style={styles.compCard}>

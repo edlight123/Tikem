@@ -118,7 +118,6 @@ export default function SubscriptionsScreen({ navigation }: any) {
           <EmptyState
             icon={UserPlus}
             title={t('subscriptions.emptyTitle')}
-            subtitle={t('subscriptions.emptyBody')}
           />
           <WhitePillCTA
             label={t('favorites.explore')}

@@ -31,7 +31,7 @@ import {
   type EventOrder,
   type EventOrdersResponse,
 } from '../../lib/api/eventOrders';
-import { formatMoneyLines, isLiveTicket, liveRevenue, methodKey, orderTone } from '../../lib/orderDisplay';
+import { formatMoneyLines, isLiveTicket, liveRevenue, orderTone } from '../../lib/orderDisplay';
 
 type RouteParams = { EventOrders: { eventId: string; eventTitle?: string } };
 type Filter = 'all' | 'paid' | 'refunded';
@@ -114,6 +114,8 @@ export default function EventOrdersScreen() {
     const [primary, ...rest] = revenue;
     const liveTickets = orders.reduce((n, o) => n + o.tickets.filter((tk) => isLiveTicket(tk.status)).length, 0);
     return {
+      // Every order free and no money taken: a free event, so no revenue cell.
+      allFree: orders.length > 0 && revenue.length === 0 && orders.every((o) => !o.amounts.length),
       orders: orders.filter((o) => !isRefundedOrder(o)).length,
       tickets: liveTickets,
       revenue: primary ? formatMoneyLines([primary]) : formatMoneyLines([{ currency: data?.event.currency || 'HTG', amount: 0 }]),
@@ -155,7 +157,7 @@ export default function EventOrdersScreen() {
           </View>
           <View style={styles.gutter}>
             {[0, 1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} width="100%" height={92} radius={radius.lg} style={{ marginBottom: 10 }} />
+              <Skeleton key={i} width="100%" height={48} radius={radius.sm} style={{ marginBottom: 14 }} />
             ))}
           </View>
         </View>
@@ -183,52 +185,48 @@ export default function EventOrdersScreen() {
     );
   }
 
+  // A plain list row (EventAttendeesScreen idiom): buyer, then a quiet
+  // "1 ticket · tier · date" line; the amount (or "Free", said once) on the
+  // right, with the order state under it only when it isn't a settled sale.
   const renderOrder = ({ item }: { item: EventOrder }) => {
     const tierLabel = item.tiers
       .map((tier) => `${tier.name || t('organizerOrders.generalAdmission')}${tier.count > 1 ? ` ×${tier.count}` : ''}`)
       .join(', ');
-    const meta = [
-      tierLabel,
-      t(`organizerOrders.method.${methodKey(item.paymentMethod)}`),
-      item.purchasedAt ? formatDate(item.purchasedAt, 'MMM d') : '',
-    ]
+    const qty =
+      item.quantity === 1 ? t('organizerOrders.ticketsOne') : t('organizerOrders.ticketsMany', { n: item.quantity });
+    const meta = [qty, tierLabel, item.purchasedAt ? formatDate(item.purchasedAt, 'MMM d') : '']
       .filter(Boolean)
       .join(' · ');
     // Struck through only when none of the money is still live.
     const muted = item.status === 'refunded' || item.status === 'refund_pending' || item.status === 'cancelled';
+    const settled = item.status === 'paid' || item.status === 'free';
+    const amount = item.amounts.length ? formatMoneyLines(item.amounts) : t('organizerOrders.free');
+    const buyer = item.buyer.name || item.buyer.email || t('organizerOrders.unknownBuyer');
 
     return (
       <Touchable
-        scale={0.98}
-        pressedColor={colors.surfaceRaised}
+        scale={false}
+        pressedColor={colors.surface}
         onPress={() => navigation.navigate('EventOrderDetail', { eventId, orderId: item.id })}
         style={styles.row}
         accessibilityRole="button"
-        accessibilityLabel={`${item.buyer.name || t('organizerOrders.unknownBuyer')}, ${formatMoneyLines(item.amounts) || t('organizerOrders.free')}`}
+        accessibilityLabel={`${buyer}, ${amount}`}
       >
-        <View style={styles.rowTop}>
+        <View style={styles.rowMain}>
           <Text style={styles.buyerName} numberOfLines={1}>
-            {item.buyer.name || t('organizerOrders.unknownBuyer')}
+            {buyer}
           </Text>
-          <Text style={[styles.amount, muted && styles.amountMuted]} numberOfLines={1}>
-            {item.amounts.length ? formatMoneyLines(item.amounts) : t('organizerOrders.free')}
-          </Text>
-        </View>
-        <View style={styles.rowMiddle}>
-          <Text style={styles.email} numberOfLines={1}>
-            {item.buyer.email || ' '}
-          </Text>
-          <StatusChip status={orderTone(item.status)} label={t(`organizerOrders.status.${item.status}`)} />
-        </View>
-        <View style={styles.rowBottom}>
-          <Text style={styles.qty}>
-            {item.quantity === 1
-              ? t('organizerOrders.ticketsOne')
-              : t('organizerOrders.ticketsMany', { n: item.quantity })}
-          </Text>
-          <Text style={styles.meta} numberOfLines={1}>
+          <Text style={styles.rowSub} numberOfLines={1}>
             {meta}
           </Text>
+        </View>
+        <View style={styles.rowEnd}>
+          <Text style={[styles.amount, muted && styles.amountMuted]} numberOfLines={1}>
+            {amount}
+          </Text>
+          {!settled ? (
+            <StatusChip status={orderTone(item.status)} label={t(`organizerOrders.status.${item.status}`)} />
+          ) : null}
         </View>
       </Touchable>
     );
@@ -249,7 +247,9 @@ export default function EventOrdersScreen() {
             <View style={styles.statsWrap}>
               <StatTriplet
                 items={[
-                  { label: t('organizerOrders.stats.revenue'), value: stats.revenue, caption: stats.revenueCaption },
+                  ...(stats.allFree
+                    ? []
+                    : [{ label: t('organizerOrders.stats.revenue'), value: stats.revenue, caption: stats.revenueCaption }]),
                   { label: t('organizerOrders.stats.orders'), value: stats.orders },
                   { label: t('organizerOrders.stats.tickets'), value: stats.tickets },
                 ]}
@@ -296,14 +296,12 @@ export default function EventOrdersScreen() {
             <EmptyState
               icon={ShoppingBag}
               title={t('organizerOrders.empty.title')}
-              subtitle={t('organizerOrders.empty.body')}
             />
           ) : (
             <EmptyState
               icon={ShoppingBag}
               compact
               title={t('organizerOrders.empty.filteredTitle')}
-              subtitle={t('organizerOrders.empty.filteredBody')}
             />
           )
         }
@@ -353,30 +351,40 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     tabs: {
       marginBottom: 12,
     },
-    // Cards are a brightness step above the canvas — never a border.
+    // Plain list rows split by a hairline, no card fill (owner: lists are
+    // rows, not stacks of cards). Same rhythm as EventAttendeesScreen.
     row: {
-      marginHorizontal: spacing.lg,
-      marginBottom: 10,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: 14,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-    },
-    rowTop: {
       flexDirection: 'row',
-      alignItems: 'baseline',
-      justifyContent: 'space-between',
+      alignItems: 'center',
       gap: 12,
+      minHeight: 60,
+      marginHorizontal: spacing.lg,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    rowMain: {
+      flex: 1,
+      minWidth: 0,
     },
     buyerName: {
-      flex: 1,
       fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },
+    rowSub: {
+      marginTop: 2,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    rowEnd: {
+      alignItems: 'flex-end',
+      gap: 4,
+      maxWidth: '45%',
+    },
     amount: {
       fontSize: 15,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.text,
       fontVariant: ['tabular-nums'],
       letterSpacing: -0.2,
@@ -384,34 +392,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     amountMuted: {
       color: colors.textTertiary,
       textDecorationLine: 'line-through',
-    },
-    rowMiddle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      marginTop: 4,
-    },
-    email: {
-      flex: 1,
-      fontSize: 13,
-      color: colors.textSecondary,
-    },
-    rowBottom: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 10,
-    },
-    qty: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text,
-      fontVariant: ['tabular-nums'],
-    },
-    meta: {
-      flex: 1,
-      fontSize: 12,
-      color: colors.textTertiary,
     },
   });

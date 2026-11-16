@@ -270,7 +270,6 @@ export default function OrganizerVerificationScreen() {
           <View style={styles.submitSection}>
             {/* The one white pill on this screen. */}
             <WhitePillCTA label={t('verification.organizerVerification.submit.button')} onPress={submit} />
-            <Text style={styles.reviewTimeNote}>{t('verification.organizerVerification.submit.reviewTimeNote')}</Text>
           </View>
         )}
 
@@ -375,13 +374,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   submitSection: {
     marginTop: 20,
-  },
-  reviewTimeNote: {
-    marginTop: 12,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
-    textAlign: 'center',
   },
   notice: {
     flexDirection: 'row',

@@ -74,7 +74,7 @@ export default function InviteContactsCard({
 
   return (
     <View style={{ marginTop: 20 }}>
-      <SectionHeader title={t('invites.contactsTitle')} subtitle={t('invites.contactsSub')} subtitleLines={2} />
+      <SectionHeader title={t('invites.contactsTitle')} />
       <View style={styles.searchBox}>
         <Search size={18} color={colors.textSecondary} />
         <TextInput

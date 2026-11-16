@@ -431,7 +431,6 @@ export default function TieredTicketSelector({
                 <View style={[styles.tierRow, styles.tierRowLast]} accessibilityRole="text">
                   <View style={{ flex: 1 }}>
                     <Text style={styles.tierName}>{t('ticketSelector.noTiers')}</Text>
-                    <Text style={styles.tierMeta}>{t('ticketSelector.noTiersHint')}</Text>
                   </View>
                 </View>
               )}

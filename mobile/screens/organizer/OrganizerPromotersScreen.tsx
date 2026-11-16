@@ -29,7 +29,6 @@ import EmptyState from '../../components/EmptyState';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
-import InfoNotice from '../../components/organizer/InfoNotice';
 import { getEventById } from '../../lib/api/organizer';
 import { backendJson } from '../../lib/api/backend';
 import { formatCurrency } from '../../lib/currency';
@@ -264,7 +263,6 @@ export default function OrganizerPromotersScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
         keyboardShouldPersistTaps="handled"
       >
-        <InfoNotice text={t('organizerPromoters.infoNotice')} />
 
         {/* Create form */}
         <View style={styles.formCard}>
@@ -362,7 +360,6 @@ export default function OrganizerPromotersScreen() {
             <EmptyState
               icon={Megaphone}
               title={t('organizerPromoters.empty')}
-              subtitle={t('organizerPromoters.emptySubtitle')}
               compact
             />
           ) : (

@@ -108,7 +108,6 @@ export default function TicketPassCard({
           orderRef={orderRef.replace(/^TKM-/, '')}
         />
       </Touchable>
-      <Text style={styles.tapHint}>{t('ticketPass.tapHint')}</Text>
 
       {isUsed && ticket?.checked_in_at && (
         <View style={styles.usedBanner}>
@@ -168,12 +167,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     chipRow: {
       alignItems: 'center',
       marginBottom: 12,
-    },
-    tapHint: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 12,
     },
     usedBanner: {
       backgroundColor: colors.successLight,

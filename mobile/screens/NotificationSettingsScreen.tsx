@@ -224,12 +224,12 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
         : { status: 'pending', label: t('notificationSettings.push.notSet') };
 
   const alwaysOn = [
-    { title: t('notificationSettings.alwaysOn.tickets'), body: t('notificationSettings.alwaysOn.ticketsBody') },
-    { title: t('notificationSettings.alwaysOn.reminders'), body: t('notificationSettings.alwaysOn.remindersBody') },
-    { title: t('notificationSettings.alwaysOn.changes'), body: t('notificationSettings.alwaysOn.changesBody') },
-    { title: t('notificationSettings.alwaysOn.refunds'), body: t('notificationSettings.alwaysOn.refundsBody') },
+    { title: t('notificationSettings.alwaysOn.tickets') },
+    { title: t('notificationSettings.alwaysOn.reminders') },
+    { title: t('notificationSettings.alwaysOn.changes') },
+    { title: t('notificationSettings.alwaysOn.refunds') },
     ...(isOrganizer
-      ? [{ title: t('notificationSettings.alwaysOn.payouts'), body: t('notificationSettings.alwaysOn.payoutsBody') }]
+      ? [{ title: t('notificationSettings.alwaysOn.payouts') }]
       : []),
   ];
 
@@ -293,7 +293,6 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
               <View key={r.title} style={[styles.row, i > 0 && styles.rowDivided]}>
                 <View style={styles.rowText}>
                   <Text style={styles.rowTitle}>{r.title}</Text>
-                  <Text style={styles.rowBody}>{r.body}</Text>
                 </View>
                 <StatusChip status="active" label={t('notificationSettings.alwaysOn.label')} />
               </View>
@@ -311,21 +310,18 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
             <View style={styles.card}>
               <PrefRow
                 title={t('notificationSettings.fromTikem.discovery')}
-                body={t('notificationSettings.fromTikem.discoveryBody')}
                 value={userPrefs.notify_discovery}
                 onChange={(v) => toggleUserPref('notify_discovery', v)}
               />
               <PrefRow
                 divided
                 title={t('notificationSettings.fromTikem.fillingFast')}
-                body={t('notificationSettings.fromTikem.fillingFastBody')}
                 value={userPrefs.notify_filling_fast}
                 onChange={(v) => toggleUserPref('notify_filling_fast', v)}
               />
               <PrefRow
                 divided
                 title={t('notificationSettings.fromTikem.nationalDay')}
-                body={t('notificationSettings.fromTikem.nationalDayBody')}
                 value={userPrefs.notify_national_day}
                 onChange={(v) => toggleUserPref('notify_national_day', v)}
               />
@@ -333,7 +329,6 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                 <PrefRow
                   divided
                   title={t('notificationSettings.fromTikem.friendInvites')}
-                  body={t('notificationSettings.fromTikem.friendInvitesBody')}
                   value={userPrefs.notify_friend_invites}
                   onChange={(v) => toggleUserPref('notify_friend_invites', v)}
                 />
@@ -367,7 +362,6 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                   <View style={styles.card}>
                     <PrefRow
                       title={t('notificationSettings.organizer.attendeeMessages')}
-                      body={t('notificationSettings.organizer.attendeeMessagesEmail')}
                       value={orgPrefs.email_attendee_messages ?? true}
                       onChange={(v) => toggleOrgPref('email_attendee_messages', v)}
                     />
@@ -377,28 +371,24 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                   <View style={styles.card}>
                     <PrefRow
                       title={t('notificationSettings.organizer.ticketSales')}
-                      body={t('notificationSettings.organizer.ticketSalesPush')}
                       value={orgPrefs.push_ticket_sales}
                       onChange={(v) => toggleOrgPref('push_ticket_sales', v)}
                     />
                     <PrefRow
                       divided
                       title={t('notificationSettings.organizer.attendeeMessages')}
-                      body={t('notificationSettings.organizer.attendeeMessagesPush')}
                       value={orgPrefs.push_attendee_messages ?? true}
                       onChange={(v) => toggleOrgPref('push_attendee_messages', v)}
                     />
                     <PrefRow
                       divided
                       title={t('notificationSettings.organizer.milestones')}
-                      body={t('notificationSettings.organizer.milestonesBody')}
                       value={userPrefs.notify_organizer_milestones}
                       onChange={(v) => toggleUserPref('notify_organizer_milestones', v)}
                     />
                     <PrefRow
                       divided
                       title={t('notificationSettings.organizer.nudges')}
-                      body={t('notificationSettings.organizer.nudgesBody')}
                       value={userPrefs.notify_organizer_nudges}
                       onChange={(v) => toggleUserPref('notify_organizer_nudges', v)}
                     />
@@ -415,13 +405,11 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
 
 function PrefRow({
   title,
-  body,
   value,
   onChange,
   divided,
 }: {
   title: string;
-  body: string;
   value: boolean;
   onChange: (v: boolean) => void;
   divided?: boolean;
@@ -430,7 +418,6 @@ function PrefRow({
     <View style={[styles.row, divided && styles.rowDivided]}>
       <View style={styles.rowText}>
         <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.rowBody}>{body}</Text>
       </View>
       <UISwitch value={value} onValueChange={onChange} accessibilityLabel={title} />
     </View>

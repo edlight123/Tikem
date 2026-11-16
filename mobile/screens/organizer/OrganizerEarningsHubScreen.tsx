@@ -436,7 +436,6 @@ export default function OrganizerEarningsHubScreen() {
         onClose={() => setPickerOpen(false)}
         closeLabel={t('common.close')}
       >
-        <Text style={styles.sheetBody}>{t('organizerEarningsHub.pickBody')}</Text>
         {withBalance.map((event) => {
           const m = money[event.id];
           return (
@@ -615,12 +614,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    sheetBody: {
-      fontSize: 13,
-      lineHeight: 19,
-      color: colors.textSecondary,
-      marginBottom: 14,
     },
     pickRow: {
       flexDirection: 'row',

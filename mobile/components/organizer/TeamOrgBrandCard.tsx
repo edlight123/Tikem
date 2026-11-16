@@ -148,9 +148,7 @@ export default function TeamOrgBrandCard({ style }: { style?: any }) {
             {name || t('orgTeam.unnamedOrg')}
           </Text>
           <Text style={styles.hint} numberOfLines={2}>
-            {editable
-              ? t('orgTeam.brand.hintAdmin', { role: roleLabel(role) })
-              : t('orgTeam.brand.hintReadOnly', { role: roleLabel(role) })}
+            {t('orgTeam.brand.hintReadOnly', { role: roleLabel(role) })}
           </Text>
         </TouchableOpacity>
         {editable ? (

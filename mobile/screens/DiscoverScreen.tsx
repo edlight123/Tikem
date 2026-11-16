@@ -511,7 +511,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
   const renderFeed = (
     list: any[],
     emptyTitle: string,
-    emptySubtitle: string,
+    emptySubtitle: string | undefined,
     emptyAction?: { label: string; onAction: () => void },
     emptyIcon: typeof Search = Search,
     emptyArt?: string,
@@ -710,7 +710,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
                   ? renderFeed(
                       feedEvents,
                       t('discover.noEventsFound'),
-                      t('discover.tryAdjusting'),
+                      undefined,
                       { label: t('discover.clearFilters'), onAction: handleClearFilters },
                       Search,
                       'rara',
@@ -737,7 +737,6 @@ export default function DiscoverScreen({ navigation, route }: any) {
                 icon={Users}
                 art={artByKey('diaspora')}
                 title={t('discover.following.emptyTitle')}
-                subtitle={t('discover.following.emptySubtitle')}
                 actionLabel={t('discover.following.syncContacts')}
                 onAction={() => navigation.navigate('Connections', { autoSync: true })}
               />

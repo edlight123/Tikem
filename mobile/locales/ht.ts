@@ -151,6 +151,7 @@ export default {
     venue: 'Kote',
     send: 'Voye',
     close: 'Fèmen',
+    share: 'Pataje',
     na: 'N/A',
     general: 'Jeneral',
     generalAdmission: 'Antre jeneral',
@@ -390,9 +391,9 @@ export default {
     reasonPrefix: 'Rezon: ',
     changePhoto: 'Chanje foto',
     editProfileHint: 'Tape sou avatar la pou chanje foto ou.',
-    eventsAttended: 'Evènman ou te ale',
-    following: 'Ou swiv',
-    followers: 'Moun ki swiv ou',
+    eventsAttended: 'Ale',
+    following: 'Swiv',
+    followers: 'Abòne',
     postersTitle: 'Evènman ou yo',
     postersEmptyTitle: 'Poko gen evènman',
     postersEmptyBody: 'Evènman ou sere ak sa ou ale yo ap parèt isit la tankou yon mi afich.',
@@ -673,7 +674,7 @@ export default {
   },
   home: {
     scrollToTop: "Remonte anwo",
-    offlineNote: "Ou offline — n ap montre evènman ki sove yo",
+    offlineNote: "Ou offline, n ap montre evènman ki sove yo",
     attendanceNotice: {
       eyebrow: "Konfidansyalite",
       title: "Zanmi ou ka wè ki kote w prale",
@@ -1117,9 +1118,13 @@ export default {
       notValid: 'Pa valab',
     },
     checkedInPrefix: 'Verifye ',
-    checkIn: 'Verifye',
-    checkInConfirmTitle: 'Verifye?',
-    checkInConfirmBody: 'Verifye {name}?',
+    checkIn: 'Antre',
+    checkInConfirmTitle: 'Fè l antre?',
+    checkInConfirmBody: 'Fè {name} antre?',
+    checkInAll: 'Fè tout antre',
+    checkInAllConfirm: 'Fè {count} moun antre?',
+    checkInAllDone: '{count} moun antre',
+    checkInAllPartial: '{done} sou {count} antre',
     checkInFailed: 'Nou pa t kapab verifye. Tanpri eseye ankò.',
     outsideWindow: 'Tikè sa a deyò lè antre li. Sèvi ak eskanè a pou fòse antre a.',
     empty: {
@@ -1138,6 +1143,8 @@ export default {
   organizerTicketScanner: {
     headerTitle: 'Eskane biyè',
     permissions: {
+      openSettings: 'Louvri Paramèt',
+      deniedBody: 'Aksè kamera a fèmen pou Tikèm. Ouvri l nan Paramèt pou w ka eskane biyè.',
       requesting: 'Nap mande pèmisyon kamera...',
       required: 'Ou bezwen pèmisyon kamera pou eskane biyè',
       grant: 'Bay pèmisyon',
@@ -1913,6 +1920,10 @@ export default {
   },
 
   organizerEarnings: {
+    freeEvent: {
+      title: 'evènman gratis',
+      body: 'Pa gen biyè peye, kidonk pa gen anyen pou peye w. Lavant ak antre yo nan Analiz.',
+    },
     loading: 'Nap chaje revni yo...',
     headerTitle: 'Revni evènman',
     availableToWithdraw: 'Disponib pou w retire',
@@ -2142,6 +2153,8 @@ export default {
   },
 
   organizerDashboard: {
+    statSold: 'Vann',
+    statUpcoming: 'Ap vini',
     onSale: 'An vant',
     liveNow: 'An dirèk kounye a',
     soldOf: '{sold} sou {total} vann',
@@ -2277,6 +2290,7 @@ export default {
   },
 
   organizerScan: {
+    recentCheckIns: 'Dènye antre',
     offlineReadyShort: 'Pare san entènèt',
     loading: 'Nap chaje evènman yo…',
     title: 'Eskane',
@@ -2788,7 +2802,6 @@ export default {
       play: 'Jwe',
       fullSong: 'Tout chante a sou Spotify',
       pause: 'Poz',
-      nowPlaying: 'Y ap jwe yon ekstrè',
     },
     onlineEvent: 'Evènman anliy',
     // Prefiks sèlman — konpoze kòm `${startsIn} 2d 11h` nan CountdownTimer.
@@ -3129,6 +3142,10 @@ export default {
     ticketsSold: 'Biyè vann',
     totalEvents: 'Total evènman',
     published: 'Pibliye',
+    statRevenue: 'Revni',
+    statSold: 'Vann',
+    statEvents: 'Evènman',
+    statPublished: 'Pibliye',
     salesOverTime: 'Vant atravè tan',
     noSalesInRange: 'Poko gen vant nan peryòd sa a',
     bestDay: 'Pi bon jou',

@@ -15,7 +15,6 @@ import { TEAM_ROLES, type TeamRole } from '../../lib/orgTeamRoles'
 import { colors as T, radius, spacing } from '../../theme/tokens'
 import { Skeleton } from '../../components/Skeleton'
 import EmptyState from '../../components/EmptyState'
-import SectionHeader from '../../components/SectionHeader'
 import StatusChip from '../../components/StatusChip'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
 import { useOverlayHeaderInset } from '../../components/OverlayHeader'
@@ -470,7 +469,6 @@ export default function OrganizerOrgTeamScreen() {
                 <EmptyState
                   icon={Users}
                   title={t('organizerOrgTeam.emptyTeamTitle')}
-                  subtitle={t('orgTeam.team.emptyBody')}
                   actionLabel={t('orgTeam.team.invite')}
                   onAction={openInvite}
                   compact
@@ -478,24 +476,11 @@ export default function OrganizerOrgTeamScreen() {
               </View>
             ) : null}
 
-            <View style={styles.rolesBlock}>
-              <SectionHeader title={t('orgTeam.team.rolesTitle')} />
-              {TEAM_ROLES.map((r) => (
-                <View key={r} style={styles.roleExplain}>
-                  <Text style={styles.roleExplainName}>{roleLabel(r)}</Text>
-                  <Text style={styles.roleExplainBody}>{roleBlurb(r)}</Text>
-                  {r === 'admin' ? (
-                    <Text style={[styles.roleExplainBody, styles.roleExplainNote]}>{t('orgTeam.finance.accessNote')}</Text>
-                  ) : null}
-                </View>
-              ))}
-            </View>
           </>
         ) : tasks.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
             title={t('organizerOrgTeam.emptyTasksTitle')}
-            subtitle={t('organizerOrgTeam.emptyTasksSubtitle')}
             actionLabel={t('organizerOrgTeam.newTask')}
             onAction={openNewTask}
           />
@@ -559,7 +544,6 @@ export default function OrganizerOrgTeamScreen() {
         {activeOrg.isOwner && newRole === 'admin' ? (
           <FinanceSwitch value={newFinance} onChange={setNewFinance} />
         ) : null}
-        <Text style={styles.sheetNote}>{t('orgTeam.team.inviteNote')}</Text>
       </FormSheet>
 
       {/* One member: change role, remove / cancel the invite */}
@@ -792,9 +776,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
 
     emptyWrap: { marginTop: spacing.lg },
 
-    rolesBlock: { marginTop: 28 },
-    roleExplain: { marginBottom: 14 },
-    roleExplainNote: { marginTop: 4, color: colors.textTertiary },
     financeRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -805,8 +786,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderRadius: radius.md,
       backgroundColor: T.surfaceRaised,
     },
-    roleExplainName: { fontSize: 13, fontWeight: '700', color: colors.text },
-    roleExplainBody: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
 
     rolePicker: { gap: 8 },
     roleOption: {
@@ -832,7 +811,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     radioOn: { backgroundColor: T.white },
     radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: T.onWhite },
 
-    sheetNote: { marginTop: 14, fontSize: 12, lineHeight: 17, color: colors.textTertiary },
     memberHead: { marginTop: 6, gap: 8 },
     multiline: { minHeight: 72, textAlignVertical: 'top' },
     selectLabel: {

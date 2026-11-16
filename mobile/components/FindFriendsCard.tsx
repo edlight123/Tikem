@@ -95,9 +95,6 @@ export default function FindFriendsCard({ variant, style }: { variant: 'profile'
           <Text style={styles.title} numberOfLines={1}>
             {t('profile.findFriends.title')}
           </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            {t('profile.findFriends.rowBody')}
-          </Text>
         </View>
         <View style={styles.action}>
           <Text style={styles.actionText}>{t('profile.findFriends.rowAction')}</Text>
@@ -112,7 +109,6 @@ export default function FindFriendsCard({ variant, style }: { variant: 'profile'
       icon={Users}
       eyebrow={t('profile.findFriends.eyebrow')}
       title={t('profile.findFriends.title')}
-      body={t('profile.findFriends.body')}
       primary={{ label: t('profile.findFriends.cta'), onPress: open }}
       secondary={variant === 'home' ? { label: t('profile.findFriends.notNow'), onPress: markDone } : undefined}
       style={style}
@@ -141,7 +137,6 @@ const getStyles = (colors: any) =>
     },
     meta: { flex: 1, minWidth: 0 },
     title: { fontSize: 15, fontWeight: '600', color: colors.text },
-    sub: { marginTop: 1, fontSize: 13, lineHeight: 16, color: colors.textTertiary },
     action: { flexDirection: 'row', alignItems: 'center', gap: 2 },
     actionText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
   });

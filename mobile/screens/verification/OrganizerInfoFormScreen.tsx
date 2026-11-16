@@ -158,9 +158,6 @@ export default function OrganizerInfoFormScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.sectionDescription}>
-          {t('verification.organizerInfo.subtitle')}
-        </Text>
 
         {/* Full Name */}
         <View style={styles.fieldGroup}>
@@ -312,12 +309,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   contentContainer: {
     padding: 16,
     paddingBottom: 24,
-  },
-  sectionDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    marginBottom: 24,
   },
   fieldGroup: {
     marginBottom: 20,

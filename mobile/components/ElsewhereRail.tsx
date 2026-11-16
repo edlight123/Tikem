@@ -53,7 +53,6 @@ export default function ElsewhereRail({ events, metro, onEventPress, limit = 8 }
     <View style={[styles.wrap, { borderTopColor: colors.border }]}>
       <EventRail
         title={t('discover.elsewhere.title', { place })}
-        subtitle={t('discover.elsewhere.subtitle', { location: metro.label })}
         events={events.slice(0, limit)}
         onEventPress={onEventPress}
       />

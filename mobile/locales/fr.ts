@@ -179,6 +179,7 @@ export default {
     venue: 'Lieu',
     send: 'Envoyer',
     close: 'Fermer',
+    share: 'Partager',
     na: 'N/D',
     general: 'Général',
     generalAdmission: 'Admission générale',
@@ -418,7 +419,7 @@ export default {
     reasonPrefix: 'Raison : ',
     changePhoto: 'Changer la photo',
     editProfileHint: 'Touchez l’avatar pour changer votre photo.',
-    eventsAttended: 'Participations',
+    eventsAttended: 'Sorties',
     following: 'Abonnements',
     followers: 'Abonnés',
     postersTitle: 'Vos évènements',
@@ -703,7 +704,7 @@ export default {
   },
   home: {
     scrollToTop: "Remonter en haut",
-    offlineNote: "Vous êtes hors ligne — événements enregistrés",
+    offlineNote: "Vous êtes hors ligne, événements enregistrés",
     attendanceNotice: {
       eyebrow: "Confidentialité",
       title: "Vos amis voient vos sorties",
@@ -1148,9 +1149,13 @@ export default {
       notValid: 'Non valide',
     },
     checkedInPrefix: 'Enregistré à ',
-    checkIn: 'Enregistrer',
-    checkInConfirmTitle: 'Enregistrer ?',
-    checkInConfirmBody: 'Enregistrer {name} ?',
+    checkIn: 'Faire entrer',
+    checkInConfirmTitle: 'Faire entrer ?',
+    checkInConfirmBody: 'Faire entrer {name} ?',
+    checkInAll: 'Tout faire entrer',
+    checkInAllConfirm: 'Faire entrer {count} invités ?',
+    checkInAllDone: '{count} entrés',
+    checkInAllPartial: '{done} sur {count} entrés',
     checkInFailed: "Échec de l'enregistrement. Veuillez réessayer.",
     outsideWindow: "Ce billet est hors de sa plage d'entrée. Utilisez le scanner pour forcer l'entrée.",
     empty: {
@@ -1169,6 +1174,8 @@ export default {
   organizerTicketScanner: {
     headerTitle: 'Scanner un billet',
     permissions: {
+      openSettings: 'Ouvrir les Réglages',
+      deniedBody: 'L\'accès à la caméra est désactivé pour Tikèm. Activez-le dans les Réglages pour scanner les billets.',
       requesting: 'Demande d’autorisation caméra…',
       required: 'L’autorisation caméra est requise pour scanner des billets',
       grant: 'Autoriser',
@@ -1944,6 +1951,10 @@ export default {
   },
 
   organizerEarnings: {
+    freeEvent: {
+      title: 'événement gratuit',
+      body: 'Aucun billet payant, donc rien à verser. Les ventes et les entrées sont dans Statistiques.',
+    },
     loading: 'Chargement des revenus…',
     headerTitle: 'Revenus de l’événement',
     availableToWithdraw: 'Disponible à retirer',
@@ -2173,6 +2184,8 @@ export default {
   },
 
   organizerDashboard: {
+    statSold: 'Vendus',
+    statUpcoming: 'À venir',
     onSale: 'En vente',
     liveNow: 'En cours',
     soldOf: '{sold} sur {total} vendus',
@@ -2308,6 +2321,7 @@ export default {
   },
 
   organizerScan: {
+    recentCheckIns: 'Entrées récentes',
     offlineReadyShort: 'Prêt hors ligne',
     loading: 'Chargement des événements…',
     title: 'Scanner',
@@ -2820,7 +2834,6 @@ export default {
       play: 'Écouter',
       fullSong: 'Titre complet sur Spotify',
       pause: 'Pause',
-      nowPlaying: 'Extrait en cours',
     },
     onlineEvent: 'Événement en ligne',
     // Préfixe uniquement — composé en `${startsIn} 2d 11h` par CountdownTimer.
@@ -3161,6 +3174,10 @@ export default {
     ticketsSold: 'Billets vendus',
     totalEvents: 'Total événements',
     published: 'Publiés',
+    statRevenue: 'Revenus',
+    statSold: 'Vendus',
+    statEvents: 'Événements',
+    statPublished: 'Publiés',
     salesOverTime: 'Ventes au fil du temps',
     noSalesInRange: 'Aucune vente sur cette période',
     bestDay: 'Meilleur jour',

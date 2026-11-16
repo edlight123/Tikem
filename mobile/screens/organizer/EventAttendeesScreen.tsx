@@ -64,6 +64,19 @@ const isLive = (a: Attendee): boolean => {
   return s === '' || s === 'valid' || s === 'confirmed' || s === 'active' || s === 'checked_in';
 };
 
+/**
+ * Last loaded ticket list per event, kept in memory for this app session only
+ * (nothing written to disk). Re-opening the list, or opening it from a
+ * notification after it was seen once, renders this instantly while a fresh
+ * query runs underneath (TestFlight #195).
+ */
+const attendeesCache = new Map<string, Attendee[]>();
+
+/** Bulk check-in runs this many server check-ins at a time. */
+const BULK_CHECK_IN_BATCH = 4;
+
+type CheckInOutcome = 'in' | 'refused' | 'failed';
+
 export default function EventAttendeesScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -78,18 +91,24 @@ export default function EventAttendeesScreen() {
   const showAlert = useAppAlert();
   const { formatDate } = useLocaleFormat();
 
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [attendees, setAttendees] = useState<Attendee[]>(() => attendeesCache.get(eventId) ?? []);
+  const [loading, setLoading] = useState(() => !attendeesCache.has(eventId));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checked_in' | 'not_checked_in'>('all');
   // Ticket ids with an in-flight check-in write — used to disable the row's
   // button so a double-tap can't fire two check-ins.
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   useEffect(() => {
     loadAttendees();
   }, [eventId]);
+
+  // Keep the session cache in step with every change (loads and check-ins).
+  useEffect(() => {
+    if (!loading) attendeesCache.set(eventId, attendees);
+  }, [attendees, loading, eventId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -160,8 +179,67 @@ export default function EventAttendeesScreen() {
   // transaction that re-checks status, expiry and "already in"), so this list
   // and a scanner on another phone can never both admit one ticket. Optimistic
   // local update, reverted if the server refuses or cannot be reached.
+  // `silent` skips the per-ticket alert (bulk check-in reports one total).
+  const checkInAttendee = async (attendee: Attendee, silent = false): Promise<CheckInOutcome> => {
+    // Optimistic: flip the row to checked-in immediately and mark the
+    // ticket pending so the button is disabled while we write.
+    setPendingIds((prev) => new Set(prev).add(attendee.id));
+    setAttendees((prev) =>
+      prev.map((a) =>
+        a.id === attendee.id
+          ? { ...a, checked_in: true, checked_in_at: new Date(), status: 'checked_in' }
+          : a
+      )
+    );
+
+    const revert = () =>
+      setAttendees((prev) =>
+        prev.map((a) =>
+          a.id === attendee.id
+            ? {
+                ...a,
+                checked_in: attendee.checked_in,
+                checked_in_at: attendee.checked_in_at,
+                status: attendee.status,
+              }
+            : a
+        )
+      );
+
+    try {
+      // Picked off the attendee list by hand, NOT a scan: payout review
+      // reads check_in_method.
+      const res = await postCheckIn(eventId, { ticketId: attendee.id, method: 'manual' });
+      if (res.verdict === 'CHECKED_IN' || (res.verdict === 'ALREADY_CHECKED_IN' && res.mine)) return 'in';
+      // Refused on the server's re-check. If it is already in (another
+      // door got there first), keep it shown as checked in.
+      if (res.verdict === 'ALREADY_CHECKED_IN') {
+        const at = res.row?.checkedInAt ? new Date(res.row.checkedInAt) : new Date();
+        setAttendees((prev) =>
+          prev.map((a) => (a.id === attendee.id ? { ...a, checked_in: true, checked_in_at: at } : a))
+        );
+      } else {
+        revert();
+      }
+      if (!silent) showAlert(refusalMessage(res.verdict));
+      return 'refused';
+    } catch (error) {
+      console.error('Error checking in attendee:', error);
+      // Revert the optimistic change to the exact prior values.
+      revert();
+      if (!silent) showAlert(t('organizerAttendees.checkInFailed'));
+      return 'failed';
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(attendee.id);
+        return next;
+      });
+    }
+  };
+
   const handleManualCheckIn = (attendee: Attendee) => {
-    if (pendingIds.has(attendee.id) || isCheckedIn(attendee) || !isLive(attendee)) return;
+    if (bulkRunning || pendingIds.has(attendee.id) || isCheckedIn(attendee) || !isLive(attendee)) return;
 
     const name = attendee.attendee_name || attendee.attendee_email || t('common.attendee');
 
@@ -172,60 +250,49 @@ export default function EventAttendeesScreen() {
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('organizerAttendees.checkIn'),
+          onPress: () => {
+            void checkInAttendee(attendee);
+          },
+        },
+      ]
+    );
+  };
+
+  // "Check in all" on the not-checked-in filter: every live ticket not yet in,
+  // through the same server check-in as one row, a few at a time, then one
+  // total.
+  const handleCheckInAll = () => {
+    if (bulkRunning) return;
+    const targets = attendees.filter((a) => isLive(a) && !isCheckedIn(a) && !pendingIds.has(a.id));
+    if (targets.length === 0) return;
+    const count = String(targets.length);
+
+    showAlert(
+      t('organizerAttendees.checkInAll'),
+      t('organizerAttendees.checkInAllConfirm').replace('{count}', count),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('organizerAttendees.checkIn'),
           onPress: async () => {
-            // Optimistic: flip the row to checked-in immediately and mark the
-            // ticket pending so the button is disabled while we write.
-            setPendingIds((prev) => new Set(prev).add(attendee.id));
-            setAttendees((prev) =>
-              prev.map((a) =>
-                a.id === attendee.id
-                  ? { ...a, checked_in: true, checked_in_at: new Date(), status: 'checked_in' }
-                  : a
-              )
-            );
-
-            const revert = () =>
-              setAttendees((prev) =>
-                prev.map((a) =>
-                  a.id === attendee.id
-                    ? {
-                        ...a,
-                        checked_in: attendee.checked_in,
-                        checked_in_at: attendee.checked_in_at,
-                        status: attendee.status,
-                      }
-                    : a
-                )
-              );
-
+            setBulkRunning(true);
+            let done = 0;
             try {
-              // Picked off the attendee list by hand, NOT a scan: payout review
-              // reads check_in_method.
-              const res = await postCheckIn(eventId, { ticketId: attendee.id, method: 'manual' });
-              if (res.verdict === 'CHECKED_IN' || (res.verdict === 'ALREADY_CHECKED_IN' && res.mine)) return;
-              // Refused on the server's re-check. If it is already in (another
-              // door got there first), keep it shown as checked in.
-              if (res.verdict === 'ALREADY_CHECKED_IN') {
-                const at = res.row?.checkedInAt ? new Date(res.row.checkedInAt) : new Date();
-                setAttendees((prev) =>
-                  prev.map((a) => (a.id === attendee.id ? { ...a, checked_in: true, checked_in_at: at } : a))
-                );
-              } else {
-                revert();
+              for (let i = 0; i < targets.length; i += BULK_CHECK_IN_BATCH) {
+                const batch = targets.slice(i, i + BULK_CHECK_IN_BATCH);
+                const results = await Promise.all(batch.map((a) => checkInAttendee(a, true)));
+                done += results.filter((r) => r === 'in').length;
               }
-              showAlert(refusalMessage(res.verdict));
-            } catch (error) {
-              console.error('Error checking in attendee:', error);
-              // Revert the optimistic change to the exact prior values.
-              revert();
-              showAlert(t('organizerAttendees.checkInFailed'));
             } finally {
-              setPendingIds((prev) => {
-                const next = new Set(prev);
-                next.delete(attendee.id);
-                return next;
-              });
+              setBulkRunning(false);
             }
+            showAlert(
+              done === targets.length
+                ? t('organizerAttendees.checkInAllDone').replace('{count}', String(done))
+                : t('organizerAttendees.checkInAllPartial')
+                    .replace('{done}', String(done))
+                    .replace('{count}', count)
+            );
           },
         },
       ]
@@ -235,7 +302,7 @@ export default function EventAttendeesScreen() {
   // One plain list row per attendee (owner, 2026-11-16: "it should be a
   // list, why is each name a card?"). Name, then tier and email on one quiet
   // line — never "N/A" or a 0 HTG price on a free ticket — and the door state
-  // on the right: a check + time once in, a small Verify button before.
+  // on the right: a check + time once in, a small Check in button before.
   const renderAttendee = ({ item }: { item: Attendee }) => {
     const checkedIn = isCheckedIn(item);
     const live = isLive(item);
@@ -273,12 +340,12 @@ export default function EventAttendeesScreen() {
           </View>
         ) : (
           <Touchable
-            style={[styles.checkInButton, pending && styles.checkInButtonDisabled]}
+            style={[styles.checkInButton, (pending || bulkRunning) && styles.checkInButtonDisabled]}
             onPress={() => handleManualCheckIn(item)}
-            disabled={pending}
+            disabled={pending || bulkRunning}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityState={{ disabled: pending }}
+            accessibilityState={{ disabled: pending || bulkRunning }}
           >
             <Text style={styles.checkInButtonText}>{t('organizerAttendees.checkIn')}</Text>
           </Touchable>
@@ -310,6 +377,7 @@ export default function EventAttendeesScreen() {
   const liveAttendees = attendees.filter(isLive);
   const liveCount = liveAttendees.length;
   const checkedInCount = liveAttendees.filter(isCheckedIn).length;
+  const notCheckedInCount = liveCount - checkedInCount;
 
   return (
     <View style={styles.container}>
@@ -356,7 +424,7 @@ export default function EventAttendeesScreen() {
           tabs={[
             { key: 'all', label: t('organizerAttendees.filters.all'), count: attendees.length },
             { key: 'checked_in', label: t('organizerAttendees.filters.checkedIn'), count: checkedInCount },
-            { key: 'not_checked_in', label: t('organizerAttendees.filters.notCheckedIn'), count: liveCount - checkedInCount },
+            { key: 'not_checked_in', label: t('organizerAttendees.filters.notCheckedIn'), count: notCheckedInCount },
           ]}
         />
       </View>
@@ -364,6 +432,24 @@ export default function EventAttendeesScreen() {
       {/* Attendees list */}
       <FlatList
         data={filteredAttendees}
+        ListHeaderComponent={
+          filterStatus === 'not_checked_in' && notCheckedInCount > 0 && !searchQuery ? (
+            <View style={styles.bulkRow}>
+              <Touchable
+                onPress={handleCheckInAll}
+                disabled={bulkRunning}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: bulkRunning, busy: bulkRunning }}
+                style={bulkRunning ? styles.checkInButtonDisabled : undefined}
+              >
+                <Text style={styles.bulkText}>
+                  {t('organizerAttendees.checkInAll')} ({notCheckedInCount})
+                </Text>
+              </Touchable>
+            </View>
+          ) : null
+        }
         renderItem={renderAttendee}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
@@ -474,6 +560,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 12,
     borderRadius: RADIUS.sm,
     backgroundColor: colors.surfaceRaised,
+  },
+  bulkRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+  },
+  bulkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   checkInButtonDisabled: {
     opacity: 0.45,

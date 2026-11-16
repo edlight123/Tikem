@@ -116,11 +116,8 @@ export default function InviteRedeemScreen({ route, navigation }: Props) {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background || '#fff' }}>
       <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
         <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: 20, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 16 }}>
             {t('inviteRedeem.title')}
-          </Text>
-          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 16 }}>
-            {t('inviteRedeem.subtitle')}
           </Text>
 
           {status === 'working' ? (

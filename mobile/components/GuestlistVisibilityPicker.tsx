@@ -83,7 +83,6 @@ export default function GuestlistVisibilityPicker({
 
         <View style={styles.textCol} accessibilityLiveRegion="polite">
           <Text style={styles.sentence}>{sentence}</Text>
-          <Text style={styles.hint}>{t(k(`${value}Hint`))}</Text>
         </View>
 
         <TouchableOpacity
@@ -145,7 +144,6 @@ const getStyles = (colors: any) =>
     },
     textCol: { flex: 1, minWidth: 0 },
     sentence: { fontSize: 15, fontWeight: '600', color: colors.text, lineHeight: 19 },
-    hint: { marginTop: 3, fontSize: 11, color: colors.textSecondary, lineHeight: 15 },
     cycle: {
       minHeight: 44,
       paddingHorizontal: 10,

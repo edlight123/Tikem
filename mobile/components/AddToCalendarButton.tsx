@@ -25,9 +25,14 @@ interface AddToCalendarButtonProps {
     city?: string;
   };
   style?: any;
+  /**
+   * Custom trigger (e.g. the event page's header icon button). Receives the
+   * function that opens the calendar picker; the default is the labelled slab.
+   */
+  renderTrigger?: (open: () => void) => React.ReactNode;
 }
 
-export default function AddToCalendarButton({ event, style }: AddToCalendarButtonProps) {
+export default function AddToCalendarButton({ event, style, renderTrigger }: AddToCalendarButtonProps) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { t, language } = useI18n();
@@ -108,12 +113,16 @@ export default function AddToCalendarButton({ event, style }: AddToCalendarButto
 
   return (
     <>
-      <TouchableOpacity 
-        style={[styles.button, style]} 
-        onPress={() => setShowModal(true)}
-      >
-        <Text style={styles.buttonText}>{t('calendar.addToCalendar') || 'Add to Calendar'}</Text>
-      </TouchableOpacity>
+      {renderTrigger ? (
+        renderTrigger(() => setShowModal(true))
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, style]}
+          onPress={() => setShowModal(true)}
+        >
+          <Text style={styles.buttonText}>{t('calendar.addToCalendar') || 'Add to Calendar'}</Text>
+        </TouchableOpacity>
+      )}
 
       <Modal
         visible={showModal}

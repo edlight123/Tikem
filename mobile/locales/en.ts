@@ -152,6 +152,7 @@ export default {
     venue: 'Venue',
     send: 'Send',
     close: 'Close',
+    share: 'Share',
     na: 'N/A',
     general: 'General',
     generalAdmission: 'General Admission',
@@ -1050,7 +1051,7 @@ export default {
   },
   home: {
     scrollToTop: "Scroll to top",
-    offlineNote: "You're offline — showing saved events",
+    offlineNote: "You're offline, showing saved events",
     attendanceNotice: {
       eyebrow: "Privacy",
       title: "Your friends can see your plans",
@@ -1557,6 +1558,10 @@ export default {
     checkIn: 'Check in',
     checkInConfirmTitle: 'Check in?',
     checkInConfirmBody: 'Check in {name}?',
+    checkInAll: 'Check in all',
+    checkInAllConfirm: 'Check in {count} guests?',
+    checkInAllDone: '{count} checked in',
+    checkInAllPartial: '{done} of {count} checked in',
     checkInFailed: 'Could not check in. Please try again.',
     outsideWindow: 'This ticket is outside its entry window. Use the scanner to override.',
     empty: {
@@ -1575,6 +1580,8 @@ export default {
   organizerTicketScanner: {
     headerTitle: 'Scan Ticket',
     permissions: {
+      openSettings: 'Open Settings',
+      deniedBody: 'Camera access is off for Tikèm. Turn it on in Settings to scan tickets.',
       requesting: 'Requesting camera permission...',
       required: 'Camera permission is required to scan tickets',
       grant: 'Grant Permission',
@@ -2353,6 +2360,10 @@ export default {
   },
 
   organizerEarnings: {
+    freeEvent: {
+      title: 'free event',
+      body: 'No paid tickets, so there is nothing to pay out. Sales and check-ins are in Analytics.',
+    },
     loading: 'Loading earnings...',
     headerTitle: 'Event Earnings',
     availableToWithdraw: 'Available to withdraw',
@@ -2582,6 +2593,8 @@ export default {
   },
 
   organizerDashboard: {
+    statSold: 'Sold',
+    statUpcoming: 'Upcoming',
     onSale: 'On sale',
     liveNow: 'Live now',
     soldOf: '{sold} of {total} sold',
@@ -2717,6 +2730,7 @@ export default {
   },
 
   organizerScan: {
+    recentCheckIns: 'Recent check-ins',
     offlineReadyShort: 'Offline ready',
     loading: 'Loading events...',
     title: 'Scan',
@@ -2856,7 +2870,6 @@ export default {
       play: 'Play',
       fullSong: 'Full song on Spotify',
       pause: 'Pause',
-      nowPlaying: 'Playing a preview',
     },
     onlineEvent: 'Online event',
     // Prefix only — composed as `${startsIn} 2d 11h` by CountdownTimer.
@@ -3141,6 +3154,10 @@ export default {
     ticketsSold: 'Tickets Sold',
     totalEvents: 'Total Events',
     published: 'Published',
+    statRevenue: 'Revenue',
+    statSold: 'Sold',
+    statEvents: 'Events',
+    statPublished: 'Published',
     salesOverTime: 'Sales Over Time',
     noSalesInRange: 'No sales yet in this range',
     bestDay: 'Best Day',

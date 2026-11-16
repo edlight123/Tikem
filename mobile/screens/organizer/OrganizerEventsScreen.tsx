@@ -24,7 +24,7 @@ import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { resolvePosterTheme } from '../../lib/posterGradient';
-import { radius, colors as tokenColors, font } from '../../theme/tokens';
+import { radius, font } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import { Touchable } from '../../components/ui/Touchable';
 import { select as hapticSelect } from '../../lib/haptics';
@@ -64,8 +64,7 @@ export default function OrganizerEventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // The acting org's events (lib/activeOrg.ts), not the signed-in uid's.
-  const { orgId, can } = useActiveOrg();
-  const canSetUpPayouts = can('owner_only');
+  const { orgId } = useActiveOrg();
 
   useEffect(() => {
     setLoading(true);
@@ -118,23 +117,15 @@ export default function OrganizerEventsScreen() {
 
   const events = eventTab === 'upcoming' ? upcomingEvents : pastEvents;
 
-  // "Can't take payments" is written per EVENT (`payout_blocked`, set by the
-  // Connect health sweep and the publish gate) but its cause is the
-  // organizer's payout account, checked per (organizer, country) and only for
-  // live paid events. So it is said ONCE, as a banner above the upcoming list,
-  // not on every card. Nuance kept: when only SOME live events are blocked
-  // (one country's account is fine and another's isn't, or free events the
-  // sweep never checks), those cards carry it as their one status.
+  // "Can't take payments" (`payout_blocked`) is caused by the payout account,
+  // which is fixed from Earnings/Payouts, so this list carries no banner for it
+  // (TestFlight #176). When only SOME live events are blocked, those cards
+  // still carry it as their one status.
   const isLive = (e: OrganizerEvent) =>
     e.is_published && e.status !== 'cancelled' && (e as any).rejected !== true;
   const liveUpcoming = upcomingEvents.filter(isLive);
   const blockedCount = liveUpcoming.filter((e) => Boolean((e as any).payout_blocked)).length;
   const allLiveBlocked = blockedCount > 0 && blockedCount === liveUpcoming.length;
-  const payoutBannerLabel = allLiveBlocked
-    ? t('organizerEvents.payoutBanner.all')
-    : blockedCount === 1
-      ? t('organizerEvents.payoutBanner.one')
-      : t('organizerEvents.payoutBanner.some', { count: blockedCount });
 
   const getDisplayStatus = (event: OrganizerEvent, isPast: boolean): EventStatus => {
     if ((event as any).rejected === true) return 'rejected';
@@ -286,38 +277,11 @@ export default function OrganizerEventsScreen() {
           />
         }
       >
-        {/* One slim notice instead of an amber label on every card. Filled
-            surface, amber dot, the fix one tap away. */}
-        {eventTab === 'upcoming' && blockedCount > 0 ? (
-          <Touchable
-            scale={0.98}
-            style={styles.payoutBanner}
-            // Payout setup is the org owner's; a team member just sees the notice.
-            onPress={canSetUpPayouts ? () => navigation.navigate('OrganizerPayoutSettings') : undefined}
-            disabled={!canSetUpPayouts}
-            accessibilityRole={canSetUpPayouts ? 'button' : 'text'}
-            accessibilityLabel={
-              canSetUpPayouts
-                ? `${payoutBannerLabel}. ${t('organizerEvents.payoutBanner.action')}`
-                : `${payoutBannerLabel}. ${t('orgTeam.ownerSetsUpPayouts')}`
-            }
-          >
-            <View style={styles.payoutBannerDot} />
-            <Text style={styles.payoutBannerText} numberOfLines={1}>
-              {payoutBannerLabel}
-            </Text>
-            {canSetUpPayouts ? <Ionicons name="chevron-forward" size={14} color={colors.text} /> : null}
-          </Touchable>
-        ) : null}
-
         {events.length === 0 ? (
           <EmptyState
             icon={Calendar}
             art={artByKey(eventTab === 'upcoming' ? 'kanaval' : 'galri')}
             title={eventTab === 'upcoming' ? t('organizerEvents.emptyUpcomingTitle') : t('organizerEvents.emptyPastTitle')}
-            subtitle={eventTab === 'upcoming'
-              ? t('organizerEvents.emptyUpcomingBody')
-              : t('organizerEvents.emptyPastBody')}
             actionLabel={eventTab === 'upcoming' ? t('organizerDashboard.createEventCta') : undefined}
             onAction={eventTab === 'upcoming' ? () => navigation.navigate('CreateEvent') : undefined}
           />
@@ -367,7 +331,7 @@ export default function OrganizerEventsScreen() {
             // One line: date · venue · sales.
             const metaLine = [metaLabel, salesLabel].filter(Boolean).join(' · ');
             // ONE status per card. The payout problem replaces "On sale" only
-            // when the banner can't speak for every live card (see above).
+            // when some, not all, live events are blocked (see above).
             const showBlockedOnCard = payoutBlocked && !allLiveBlocked;
 
             return (
@@ -578,27 +542,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     height: '100%',
     borderRadius: 1,
     backgroundColor: colors.text,
-  },
-  // Slim filled notice (a fill, not a hairline; 4px corners).
-  payoutBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  payoutBannerDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: tokenColors.amber,
-  },
-  payoutBannerText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.text,
   },
 });

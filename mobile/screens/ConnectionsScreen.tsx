@@ -254,7 +254,6 @@ function FriendsTab({ overview, colors, onOpen, onChange, onRequireAuth }: any) 
       <EmptyState
         icon={Users}
         title={t('connections.friends.emptyTitle')}
-        subtitle={t('connections.friends.emptySubtitle')}
       />
     );
   }
@@ -278,7 +277,6 @@ function RequestsTab({ overview, colors, onOpen, onChange, onRequireAuth }: any)
       <EmptyState
         icon={Inbox}
         title={t('connections.requests.emptyTitle')}
-        subtitle={t('connections.requests.emptySubtitle')}
       />
     );
   }
@@ -498,9 +496,9 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.contactTitle}>{t('connections.find.contactTitle')}</Text>
-            <Text style={styles.contactSub}>
-              {needsPhone ? t('friendSuggestions.contactsNeedsPhone') : t('connections.find.contactSub')}
-            </Text>
+            {needsPhone ? (
+              <Text style={styles.contactSub}>{t('friendSuggestions.contactsNeedsPhone')}</Text>
+            ) : null}
           </View>
         </View>
         <Touchable style={styles.syncBtn} onPress={startSync} disabled={contactLoading} accessibilityRole="button">
@@ -554,7 +552,6 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.contactTitle}>{t('invites.shareInviteLink')}</Text>
-              <Text style={styles.contactSub}>{t('invites.appLinkSub')}</Text>
             </View>
           </View>
         </Touchable>

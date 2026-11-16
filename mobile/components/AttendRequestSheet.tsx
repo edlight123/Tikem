@@ -213,7 +213,6 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
                 <X size={22} color={T.textSecondary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.subtitle}>{t('attendRequests.sheet.subtitle')}</Text>
 
             {allowedPlusOnes > 0 && (
               <>
@@ -257,7 +256,6 @@ export default function AttendRequestSheet({ visible, onClose, eventId, allowedP
               loading={sending}
               style={{ marginTop: spacing.xl }}
             />
-            <Text style={styles.footnote}>{t('attendRequests.sheet.footnote')}</Text>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -305,12 +303,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     color: T.textPrimary,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: T.textSecondary,
-    marginTop: spacing.xs,
   },
   eyebrowRow: {
     flexDirection: 'row',
@@ -387,12 +379,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     fontSize: 13,
     color: T.red,
-  },
-  footnote: {
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-    fontSize: 12,
-    color: T.textTertiary,
   },
 });

@@ -15,14 +15,22 @@ import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeade
 import { GridSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import { getCategoryLabel } from '../lib/categories';
-import { applyHomeFeed, isEventOver } from '../lib/homeFeeds';
+import { applyHomeFeed, isEventOver, type HomeFeed } from '../lib/homeFeeds';
 import ElsewhereRail from '../components/ElsewhereRail';
 import { elsewhereEvents, eventCountry, isEventInMetro } from '../data/metros';
 import { useActiveLocationCopy } from '../lib/locationCopy';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { categoryArt } from '../lib/categoryArt';
-import { artForWorld, heroArtForWorld, tileArtForCategory, worldForCategory, worldLabel } from '../lib/artLibrary';
+import {
+  WORLD_PHOTOS,
+  artForWorld,
+  heroArtForWorld,
+  tileArtForCategory,
+  worldForCategory,
+  worldLabel,
+  type WorldKey,
+} from '../lib/artLibrary';
 import { withAlpha, font } from '../theme/tokens';
 import { eventMatchesNationalDay, nationalDayName, resolveNationalDays } from '../lib/nationalDays';
 import { nationalDayArt } from '../lib/nationalDaysRemote';
@@ -41,6 +49,18 @@ import type { DateFilter } from '../components/DateChips';
 // grid and GridSkeleton's FAV_COLUMN_WIDTH so the placeholder and the real
 // content line up exactly. 32 = the list's 16pt side padding, 12 = the gutter.
 const COLUMN_WIDTH = (Dimensions.get('window').width - 32 - 12) / 2;
+
+// The hero photo for each curated feed: real photos only (WORLD_PHOTOS),
+// never the illustrations.
+const FEED_PHOTO_WORLD: Record<HomeFeed, WorldKey> = {
+  forYou: 'lavi-lannwit',
+  trending: 'kilti',
+  nearYou: 'gastronomi',
+  thisWeek: 'eksperyans',
+  free: 'fanmi',
+  new: 'mizik',
+  all: 'lavi-lannwit',
+};
 
 export default function CategoryEventsScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -210,11 +230,12 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
       }`
     : t('filters.price');
 
-  // Category pages get posh's treatment: a full-bleed art hero — the category
-  // photo under a scrim with "( label )" centered — that scrolls away with the
-  // grid. Curated-feed pages ("for you", "this week"…) have no category art
-  // and keep the blurred overlay header.
+  // Every "view all" page gets posh's treatment: a full-bleed photo hero with
+  // "( label )" centered that scrolls away with the grid. Curated feeds ("for
+  // you", "this week"…) borrow a world photo (FEED_PHOTO_WORLD) so they match
+  // the category pages. The filter chips stay category-only.
   const isCategoryPage = !!category || !!world || !!nationalDayDef;
+  const hasHero = isCategoryPage || !!feed;
   // A national-day page opened from the push carries only the key, so the
   // day's own name stands in for the title Home passes.
   const label = (
@@ -232,9 +253,11 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
     ? nationalDayArt(nationalDayDef)?.source ?? artForWorld('kilti', 'kilti').source
     : world
     ? heroArtForWorld(world).source
-    : tileArtForCategory(category)?.source ?? categoryArt(category);
+    : category
+    ? tileArtForCategory(category)?.source ?? categoryArt(category)
+    : WORLD_PHOTOS[FEED_PHOTO_WORLD[feed as HomeFeed] ?? 'lavi-lannwit'].source;
 
-  const Hero = isCategoryPage ? (
+  const Hero = hasHero ? (
     <View style={styles.hero}>
       <Image
         source={heroArt}
@@ -270,7 +293,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
 
   return (
     <View style={styles.container}>
-      {!isCategoryPage && (
+      {!hasHero && (
       <OverlayHeader onHeight={onHeight} scrollY={scrollY}>
         {/* Fixed 32pt box + extra gap: the 30pt italic serif's 'g' swash leans
             left past its text box and was colliding with the chevron's tap
@@ -294,9 +317,9 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
       )}
 
       {loading ? (
-        <View style={{ paddingTop: isCategoryPage ? 0 : headerH + 16 }}>
+        <View style={{ paddingTop: hasHero ? 0 : headerH + 16 }}>
           {Hero}
-          <View style={isCategoryPage ? styles.heroGridPad : null}>
+          <View style={hasHero ? styles.heroGridPad : null}>
             <GridSkeleton />
           </View>
         </View>
@@ -360,10 +383,10 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
               )}
             </View>
           }
-          ListHeaderComponentStyle={isCategoryPage ? styles.heroListHeader : null}
+          ListHeaderComponentStyle={hasHero ? styles.heroListHeader : null}
           contentContainerStyle={[
             styles.listContent,
-            isCategoryPage
+            hasHero
               // The hero pays the top of the page; the grid needs only its gap.
               ? { paddingTop: 0, paddingBottom: 32 + insets.bottom }
               : { paddingTop: headerH + 16, paddingBottom: 32 + insets.bottom },
@@ -371,9 +394,8 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
           ListEmptyComponent={
             <EmptyState
               icon={MapPin}
-              // Curated pages ("this week", "free"…) get an art poster; a
-              // category page already opens on its world's art in the hero.
-              art={isCategoryPage ? undefined : artForWorld(null, feed || title || '')}
+              // The hero already carries the page's photo.
+              art={hasHero ? undefined : artForWorld(null, feed || title || '')}
               title={
                 filtersActive
                   ? t('filters.noMatchTitle')
@@ -381,7 +403,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
               }
               subtitle={
                 filtersActive
-                  ? t('filters.noMatchSubtitle')
+                  ? undefined
                   : locationCopy.emptySubtitle
               }
               actionLabel={filtersActive ? undefined : t('discover.changeLocation')}
