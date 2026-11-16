@@ -2759,12 +2759,13 @@ export default {
     tonight: 'Tonight',
     inCount: '{in} of {total} in',
     changeEvent: 'Change event',
-    findGuest: 'Find a guest by name',
+    findGuest: 'Find a guest',
     doorMode: 'Door mode',
     offlineReady: 'Works offline · saves {n} tickets when you start',
   },
 
   contactOrganizer: {
+    short: 'Message',
     title: 'Message the organizer',
     aboutEvent: 'About {event}',
     topicLabel: 'What is it about?',

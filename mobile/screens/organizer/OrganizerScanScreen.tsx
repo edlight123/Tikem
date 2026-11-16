@@ -172,7 +172,7 @@ export default function OrganizerScanScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       {header}
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace + 16 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace + (selectedEvent ? 170 : 16) }]}>
         {todayEvents.length === 0 ? (
           <View style={styles.emptyWrap}>
             {loadFailed ? (
@@ -241,40 +241,6 @@ export default function OrganizerScanScreen() {
           </>
         ) : null}
 
-        <View style={{ height: 20 }} />
-
-        {/* The one white primary on this screen. */}
-        <WhitePillCTA
-          label={t('organizerScan.startScanning')}
-          onPress={() => openScanner()}
-          disabled={!selectedEvent}
-          icon={<ScanQrCode size={22} color={T.onWhite} strokeWidth={1.75} />}
-          style={styles.primary}
-        />
-
-        {selectedEvent ? (
-          <>
-            <Touchable
-              style={styles.secondary}
-              onPress={() => openScanner({ openLookup: true })}
-              accessibilityRole="button"
-            >
-              <UserSearch size={18} color={colors.text} strokeWidth={1.75} />
-              <Text style={styles.secondaryText}>{t('organizerScan.findGuest')}</Text>
-            </Touchable>
-            {/* Door mode as a second filled row, same weight as Find a guest,
-                so the screen reads complete before the first check-in (#198). */}
-            <Touchable
-              style={styles.secondary}
-              onPress={() => openScanner({ doorMode: true })}
-              accessibilityRole="button"
-            >
-              <DoorOpen size={18} color={colors.text} strokeWidth={1.75} />
-              <Text style={styles.secondaryText}>{t('organizerScan.doorMode')}</Text>
-            </Touchable>
-          </>
-        ) : null}
-
         {/* Recent check-ins: fills the lower half with who just came in.
             Renders nothing until the first guest is scanned. */}
         {selectedEvent && recent.length > 0 ? (
@@ -300,6 +266,43 @@ export default function OrganizerScanScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      {/* The door actions, pinned at thumb height above the tab bar (owner:
+          "the start scanning button is too high up"). Only with an event to
+          scan for: a greyed-out button on an empty day was a dead control. */}
+      {selectedEvent ? (
+        <View style={[styles.dock, { paddingBottom: tabBarSpace + 12 }]}>
+          <View style={styles.secondaryRow}>
+            <View style={styles.secondaryHalf}>
+              <Touchable
+                style={[styles.secondary, styles.secondaryFill]}
+                onPress={() => openScanner({ openLookup: true })}
+                accessibilityRole="button"
+              >
+                <UserSearch size={18} color={colors.text} strokeWidth={1.75} />
+                <Text style={styles.secondaryText} numberOfLines={1}>{t('organizerScan.findGuest')}</Text>
+              </Touchable>
+            </View>
+            <View style={styles.secondaryHalf}>
+              <Touchable
+                style={[styles.secondary, styles.secondaryFill]}
+                onPress={() => openScanner({ doorMode: true })}
+                accessibilityRole="button"
+              >
+                <DoorOpen size={18} color={colors.text} strokeWidth={1.75} />
+                <Text style={styles.secondaryText} numberOfLines={1}>{t('organizerScan.doorMode')}</Text>
+              </Touchable>
+            </View>
+          </View>
+          <WhitePillCTA
+            label={t('organizerScan.startScanning')}
+            onPress={() => openScanner()}
+            icon={<ScanQrCode size={20} color={T.onWhite} strokeWidth={1.75} />}
+            compact
+            style={styles.primary}
+          />
+        </View>
+      ) : null}
 
       <EventSelectorSheet
         visible={showEventSelector}
@@ -426,21 +429,36 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       height: '100%',
       backgroundColor: T.white,
     },
+    // Smaller than before (owner: "kinda too big"): 52 / 46 instead of 64 / 56.
     primary: {
-      height: 64,
+      height: 52,
     },
+    dock: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      gap: 10,
+      backgroundColor: colors.background,
+    },
+    secondaryRow: { flexDirection: 'row', gap: 10 },
+    // Equal slots: Touchable styles its inner view, so the flex lives here.
+    secondaryHalf: { flex: 1 },
+    secondaryFill: { marginTop: 0 },
     secondary: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 10,
-      height: 56,
+      gap: 8,
+      height: 46,
       marginTop: 12,
       borderRadius: radius.button,
       backgroundColor: T.surfaceRaised,
     },
     secondaryText: {
-      fontSize: 17,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },

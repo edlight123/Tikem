@@ -43,6 +43,7 @@ import { fetchFriendsGoingCounts } from '../lib/api/social';
 import { shareEvent } from '../lib/share';
 import { elsewhereEvents } from '../data/metros';
 import { useActiveLocationCopy } from '../lib/locationCopy';
+import { isEventOver } from '../lib/homeFeeds';
 
 export default function DiscoverScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -237,16 +238,11 @@ export default function DiscoverScreen({ navigation, route }: any) {
       // …and events from organizers this user blocked (App Store 1.2).
       const exploreEvents = filterBlockedEvents(filterExploreEvents(notRejected), blockedOrganizers);
 
+      // Same "over" rule as Home (lib/homeFeeds). No fallback to finished
+      // events: a country with nothing upcoming used to show its PAST events
+      // here as if they were on, while Home rightly said there were none.
       const now = new Date();
-      const futureEvents = exploreEvents.filter((event) => {
-        const start = event.start_datetime ? new Date(event.start_datetime) : null
-        const end = event.end_datetime ? new Date(event.end_datetime) : null
-        const cutoff = end || start
-        if (!cutoff) return false
-        return cutoff >= now
-      });
-
-      const finalList = futureEvents.length > 0 ? futureEvents : exploreEvents;
+      const finalList = exploreEvents.filter((event) => !isEventOver(event, now));
 
       if (fromCache && finalList.length === 0) {
         // OFFLINE: Firestore served an empty local cache without throwing — not

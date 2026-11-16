@@ -268,3 +268,15 @@ export async function postUndoCheckIn(
   if (res.ok || res.status === 409) return true;
   return false;
 }
+
+/**
+ * Forget a ticket's queued (not yet synced) check-in on this device, so an
+ * undo can't be reversed by a later replay of the old offline check-in.
+ */
+export function dropQueuedCheckIn(uid: string, eventId: string, ticketId: string): Promise<void> {
+  return withQueueLock(async () => {
+    const queue = await readCheckInQueue(uid);
+    const next = queue.filter((q) => !(q.eventId === eventId && q.ticketId === ticketId));
+    if (next.length !== queue.length) await writeCheckInQueue(uid, next);
+  });
+}

@@ -577,6 +577,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               ]}
               onPress={handleFollow}
             >
+              {isFollowing ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
               <Text style={[styles.followButtonSmallText, isFollowing && styles.followingButtonSmallText]}>
                 {isFollowing ? t('organizerProfile.following') : t('organizerProfile.follow')}
               </Text>
@@ -899,10 +900,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.button,
     zIndex: 10,
   },
+  // Following = a quiet dark fill with a check, like the app-wide FollowButton.
+  // The old white outline read as a call to action (owner: "misleading").
   followingButtonSmall: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1.5,
-    borderColor: colors.white,
+    backgroundColor: 'rgba(28, 28, 28, 0.85)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   // White pill = the follow CTA (POSH §2.2): black label on white, never teal.
   followButtonSmallText: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,12 @@ import {
 import { useAppAlert } from '../../components/AppAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { useRoute, RouteProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { db } from '../../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { postCheckIn, postUndoCheckIn, type UndoCheckInReason } from '../../lib/doorCheckIn';
+import { readPersisted, writePersisted, deletePersisted } from '../../lib/persistentCache';
+import { dropQueuedCheckIn, postCheckIn, postUndoCheckIn, type UndoCheckInReason } from '../../lib/doorCheckIn';
 import type { DoorVerdict } from '../../lib/doorList';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -73,6 +74,26 @@ const isLive = (a: Attendee): boolean => {
  */
 const attendeesCache = new Map<string, Attendee[]>();
 
+/** What the list renders, with dates as ISO strings (JSON-safe for the phone copy). */
+function slimAttendee(a: Attendee): Attendee {
+  const iso = (v: any) => {
+    if (!v) return v;
+    const d = typeof v?.toDate === 'function' ? v.toDate() : typeof v?.seconds === 'number' ? new Date(v.seconds * 1000) : new Date(v);
+    return isNaN(d?.getTime?.()) ? null : d.toISOString();
+  };
+  return {
+    id: a.id,
+    attendee_name: a.attendee_name,
+    attendee_email: a.attendee_email,
+    tier_name: (a as any).tier_name,
+    price_paid: (a as any).price_paid,
+    currency: (a as any).currency,
+    status: a.status,
+    checked_in: a.checked_in,
+    checked_in_at: iso(a.checked_in_at),
+  } as Attendee;
+}
+
 /** Bulk check-in runs this many server check-ins at a time. */
 const BULK_CHECK_IN_BATCH = 4;
 
@@ -106,13 +127,39 @@ export default function EventAttendeesScreen() {
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [bulkRunning, setBulkRunning] = useState(false);
 
+  // Coming back to this screen (it stays mounted under the stack) reloads,
+  // so a change made elsewhere (an undo, another door) never shows stale.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      loadAttendees();
+    }, [eventId, cacheKey])
+  );
+
   useEffect(() => {
+    // Cold start (e.g. opened from a notification): show the last good list
+    // from the phone at once, then refresh. Keyed by uid + event.
+    if (cacheKey && !attendeesCache.has(cacheKey)) {
+      readPersisted<Attendee[]>(`attendees:${cacheKey}`).then((saved) => {
+        if (saved && saved.length) {
+          setAttendees((cur) => (cur.length ? cur : saved));
+          setLoading(false);
+        }
+      });
+    }
     loadAttendees();
   }, [eventId]);
 
-  // Keep the session cache in step with every change (loads and check-ins).
+  // Keep the session cache (and the on-phone copy) in step with every change.
   useEffect(() => {
-    if (!loading && cacheKey) attendeesCache.set(cacheKey, attendees);
+    if (!loading && cacheKey) {
+      attendeesCache.set(cacheKey, attendees);
+      writePersisted(`attendees:${cacheKey}`, attendees.map(slimAttendee));
+    }
   }, [attendees, loading, cacheKey]);
 
   const onRefresh = async () => {
@@ -156,7 +203,10 @@ export default function EventAttendeesScreen() {
       console.error('Error loading attendees:', error);
       // Fail closed: a refused or failed load (e.g. access removed) must not
       // leave a cached list of names on screen.
-      if (cacheKey) attendeesCache.delete(cacheKey);
+      if (cacheKey) {
+        attendeesCache.delete(cacheKey);
+        deletePersisted(`attendees:${cacheKey}`);
+      }
       setAttendees([]);
     } finally {
       setLoading(false);
@@ -274,6 +324,7 @@ export default function EventAttendeesScreen() {
     try {
       const ok = await postUndoCheckIn(eventId, attendee.id, reason);
       if (!ok) throw new Error('undo_refused');
+      if (user?.uid) await dropQueuedCheckIn(user.uid, eventId, attendee.id);
       setAttendees((prev) =>
         prev.map((a) =>
           a.id === attendee.id

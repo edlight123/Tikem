@@ -591,7 +591,7 @@ export default function HomeScreen({ navigation }: any) {
                 icon={MapPin}
                 art={themedArt(artForPlace(activeMetro, activeCity))}
                 title={locationCopy.emptyTitle}
-                subtitle={locationCopy.emptySubtitle}
+                // No subtitle: it only repeated the title (owner: "too much info").
                 actionLabel={t('discover.changeLocation')}
                 onAction={() => setLocationSheetOpen(true)}
               />

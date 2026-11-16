@@ -2108,7 +2108,7 @@ export default {
     loading: 'Chargement du profil…',
     notFound: 'Organisateur introuvable',
     follow: '+ Suivre',
-    following: 'Suivi',
+    following: 'Abonné',
     verified: 'Vérifié',
     contactSocial: 'Contact & réseaux',
     stats: {
@@ -2350,7 +2350,7 @@ export default {
     tonight: 'Ce soir',
     inCount: '{in} sur {total} entrés',
     changeEvent: 'Changer d’événement',
-    findGuest: 'Trouver un invité par son nom',
+    findGuest: 'Trouver un invité',
     doorMode: 'Mode accueil',
     offlineReady: 'Fonctionne hors ligne · enregistre {n} billets au démarrage',
   },
@@ -2729,6 +2729,7 @@ export default {
   },
 
   contactOrganizer: {
+    short: 'Message',
     title: "Écrire à l'organisateur",
     aboutEvent: 'À propos de {event}',
     topicLabel: 'C’est à quel sujet ?',

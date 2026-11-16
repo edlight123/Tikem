@@ -2077,7 +2077,7 @@ export default {
     loading: 'Nap chaje pwofil òganizatè a…',
     notFound: 'Òganizatè pa jwenn',
     follow: '+ Swiv',
-    following: 'Ap swiv',
+    following: 'W ap swiv',
     verified: 'Verifye',
     contactSocial: 'Kontak & rezo',
     stats: {
@@ -2319,7 +2319,7 @@ export default {
     tonight: 'Aswè a',
     inCount: '{in} sou {total} antre',
     changeEvent: 'Chanje evènman',
-    findGuest: 'Chèche yon envite pa non',
+    findGuest: 'Chèche yon envite',
     doorMode: 'Mòd pòt',
     offlineReady: 'Mache san entènèt · sove {n} biyè lè w kòmanse',
   },
@@ -2698,6 +2698,7 @@ export default {
   },
 
   contactOrganizer: {
+    short: 'Ekri',
     title: 'Ekri òganizatè a',
     aboutEvent: 'Konsènan {event}',
     topicLabel: 'Se sou ki sa?',
