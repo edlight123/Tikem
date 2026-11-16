@@ -455,6 +455,7 @@ export default {
     terms: 'Tèm',
     privacy: 'Konfidansyalite',
     refundPolicy: 'Politik ranbousman',
+    photoCredits: 'Kredi foto',
     about: 'Konsènan Tikèm',
     instagram: 'Swiv nou sou Instagram',
     builtBy: 'Se EdLight Labs ki bati l',

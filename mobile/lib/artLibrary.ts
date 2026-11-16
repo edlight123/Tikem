@@ -12,7 +12,13 @@
  *
  * Assets are `require`d, so Metro bundles them as files (not JS) and they ship
  * in OTA updates like any other image. Nothing here is fetched at runtime.
+ *
+ * Places, national days and placeholders now show real PHOTOGRAPHS
+ * (lib/photoLibrary, 2026-11-16); the illustrations remain the flyer
+ * picker's stock and the fallback where no photo exists.
  */
+
+import { generalPhotos, photoByKey, placeholderPhotos } from './photoLibrary';
 
 /**
  * The eight cultural worlds — the mobile mirror of the web's
@@ -143,9 +149,9 @@ export function generalArt(): ArtPiece[] {
   return pool.length ? pool : ART.slice();
 }
 
-/** One piece by key, or undefined. */
+/** One piece by key (an illustration, or a "photo-…" photograph), or undefined. */
 export function artByKey(key: string): ArtPiece | undefined {
-  return BY_KEY[key];
+  return BY_KEY[key] || photoByKey(key);
 }
 
 /** Pieces made for a world, best fit first. Empty when the world has none. */
@@ -166,14 +172,17 @@ export function hashSeed(seed: string | number | null | undefined): number {
 }
 
 /**
- * The art for a world, picked deterministically by `seed` (an event id, a world
- * key…) so the same seed always gets the same piece. A world with no art, an
- * unknown world or no world at all falls back to the general pool. Always
- * returns a piece.
+ * The placeholder for a world, picked deterministically by `seed` (an event
+ * id, a world key…) so the same seed always gets the same picture. Real
+ * photos: the world's tile photo plus its placeholder photos
+ * (lib/photoLibrary). An unknown world or no world at all draws from every
+ * placeholder photo. Always returns a piece. (The flyer picker reads the
+ * illustrations through artInWorld / artForPicker, not this.)
  */
 export function artForWorld(world: string | null | undefined, seed?: string | number | null): ArtPiece {
-  const own = artInWorld(world);
-  const pool = own.length ? own : generalArt();
+  const tile = WORLD_PHOTOS[world as WorldKey];
+  const own = placeholderPhotos(world);
+  const pool = tile ? [tile, ...own] : own.length ? own : generalPhotos();
   return pool[hashSeed(seed ?? world ?? '') % pool.length];
 }
 
@@ -305,59 +314,62 @@ export function artForPicker(category: string | null | undefined): ArtPiece[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Which piece fits the active metro / city, so an empty feed shows a landmark
+ * Which picture fits the active metro / city, so an empty feed shows a landmark
  * of the place you are browsing (2026-10-04 feedback: "i like the citadelle -
- * but that is more okap ... and so for each of the cities").
+ * but that is more okap ... and so for each of the cities"). Since 2026-11-16
+ * these are real PHOTOS (lib/photoLibrary keys), captioned with the place.
  *
- * A town name (Pétion-Ville, Delmas, Kenscoff…) wins over its metro, so a
- * Pétion-Ville feed shows Saint-Pierre rather than downtown. A list rotates
- * once a day. A Haitian place with no landmark of its own gets the lakou; a
- * place elsewhere with none gets PLACE_ART_GENERAL, which names no landmark,
- * so it is never wrong. No place at all keeps the Citadelle.
+ * A town name (Pétion-Ville, Kenscoff, Jacmel…) wins over its metro. A list
+ * rotates once a day. A Haitian place with no photo of its own gets an
+ * uncaptioned Haitian coast; a place elsewhere with none gets the flag in a
+ * crowd, which names no landmark, so it is never wrong. No place at all keeps
+ * the Citadelle.
  *
- * Anywhere abroad without its own piece gets the dyaspora block party.
- *
- * STILL WANTED (one line here once the art exists): Gonaïves (Place d'Armes),
- * Saint-Marc, Île-à-Vache, Santo Domingo (the Malecón), Toronto, Atlanta.
+ * STILL WANTED (one line here once a good photo exists): Gonaïves (Place
+ * d'Armes), Port-Salut, Jérémie, Saint-Marc, Delmas, Mattapan, Santo Domingo,
+ * Toronto, Atlanta.
  */
-const PLACE_ART_DEFAULT = 'citadelle';
-const PLACE_ART_GENERAL = 'dyaspora';
-const PLACE_ART_HAITI = 'lakou';
+const PLACE_ART_DEFAULT = 'photo-citadelle';
+const PLACE_ART_GENERAL = 'photo-flag-crowd';
+const PLACE_ART_HAITI = 'photo-haiti-coast';
+const PAP = ['photo-negmawon', 'photo-dessalines'];
+const OKAP = ['photo-citadelle', 'photo-cap-cathedral', 'photo-cap-haitien'];
+const LABADEE = ['photo-labadee', 'photo-labadee-coast'];
+const ARCADINS = ['photo-arcadins', 'photo-wahoo'];
 
 // prettier-ignore
 const PLACE_ART_BY_METRO: Record<string, string | string[]> = {
-  'ht-port-au-prince': ['champdemars', 'tour2004'],
-  'ht-cap-haitien':    'citadelle',
-  'ht-jacmel':         'jacmel',
-  'ht-les-cayes':      'portsalut',
-  'ht-jeremie':        'portsalut',
-  'us-new-york':       ['diaspora', 'flatbush'],
-  'us-miami':          'miami',
-  'us-boston':         'boston',
-  'ca-montreal':       'montreal',
-  'fr-paris':          'paris',
+  'ht-port-au-prince': PAP,
+  'ht-cap-haitien':    OKAP,
+  'ht-jacmel':         ['photo-jacmel', 'photo-bassinbleu'],
+  'ht-les-cayes':      ['photo-lescayes', 'photo-ileavache'],
+  'us-new-york':       'photo-flatbush',
+  'us-miami':          'photo-miami',
+  'us-boston':         'photo-boston',
+  'ca-montreal':       'photo-montreal',
+  'fr-paris':          'photo-saintdenis',
 };
 
 // Normalised town names and nicknames. Checked before the metro.
 // prettier-ignore
 const PLACE_ART_BY_NAME: Record<string, string | string[]> = {
-  'okap': 'citadelle', 'au cap': 'citadelle', 'le cap': 'citadelle', 'cap haitien': 'citadelle',
-  'milot': 'sanssouci', 'labadee': 'labadeenight', 'labadie': 'labadeenight',
-  'jacmel': 'jacmel', 'jakmel': 'jacmel', 'bassin bleu': 'bassinbleunight',
-  'port au prince': ['champdemars', 'tour2004'], 'potoprens': ['champdemars', 'tour2004'], 'pap': ['champdemars', 'tour2004'],
-  'champ de mars': 'champdemars',
-  'petion ville': 'saintpierre', 'petionville': 'saintpierre', 'petyonvil': 'saintpierre',
-  'delmas': 'viaducdelmas',
-  'kenscoff': ['fortjacques', 'fortalexandre'], 'kenskof': ['fortjacques', 'fortalexandre'], 'fermathe': 'fortjacques',
-  'saut d eau': 'sautdeau', 'sodo': 'sautdeau', 'ville bonheur': 'sautdeau', 'mirebalais': 'sautdeau',
-  'foret des pins': 'foretdespins', 'fonds verrettes': 'foretdespins',
-  'port salut': 'portsalut', 'ile a vache': 'portsalut', 'les cayes': 'portsalut', 'okay': 'portsalut',
-  'new york': ['diaspora', 'flatbush'], 'nyc': ['diaspora', 'flatbush'], 'brooklyn': ['diaspora', 'flatbush'], 'queens': 'diaspora',
-  'flatbush': 'flatbush', 'nostrand': 'flatbush',
-  'miami': 'miami', 'little haiti': 'miami', 'north miami': 'miami',
-  'boston': 'boston', 'mattapan': 'boston',
-  'montreal': 'montreal', 'saint michel': 'montreal', 'st michel': 'montreal',
-  'paris': 'paris', 'saint denis': 'paris',
+  'okap': OKAP, 'au cap': OKAP, 'le cap': OKAP, 'cap haitien': OKAP,
+  'milot': ['photo-sanssouci', 'photo-citadelle'], 'labadee': LABADEE, 'labadie': LABADEE,
+  'jacmel': 'photo-jacmel', 'jakmel': 'photo-jacmel', 'bassin bleu': 'photo-bassinbleu',
+  'port au prince': PAP, 'potoprens': PAP, 'pap': PAP, 'delmas': PAP,
+  'champ de mars': PAP,
+  'petion ville': 'photo-petionville', 'petionville': 'photo-petionville', 'petyonvil': 'photo-petionville',
+  'kenscoff': 'photo-kenscoff', 'kenskof': 'photo-kenscoff', 'fermathe': 'photo-kenscoff',
+  'saut d eau': 'photo-sautdeau', 'sodo': 'photo-sautdeau', 'ville bonheur': 'photo-sautdeau', 'mirebalais': 'photo-sautdeau',
+  'foret des pins': 'photo-foretdespins', 'fonds verrettes': 'photo-foretdespins',
+  'les cayes': 'photo-lescayes', 'okay': 'photo-lescayes', 'ile a vache': 'photo-ileavache', 'port salut': 'photo-sud-beach',
+  'montrouis': ARCADINS, 'arcahaie': ARCADINS, 'carries': 'photo-wahoo', 'cote des arcadins': ARCADINS,
+  'new york': 'photo-flatbush', 'nyc': 'photo-flatbush', 'brooklyn': 'photo-flatbush',
+  'flatbush': 'photo-flatbush', 'nostrand': 'photo-flatbush',
+  'miami': 'photo-miami', 'little haiti': 'photo-miami', 'north miami': 'photo-miami',
+  'boston': 'photo-boston',
+  'montreal': 'photo-montreal', 'saint michel': 'photo-montreal', 'st michel': 'photo-montreal',
+  'paris': 'photo-saintdenis', 'saint denis': 'photo-saintdenis',
 };
 
 /** Today as a seed, so a rotating place changes once a day, not per render. */
@@ -369,7 +381,7 @@ const normPlace = (value: unknown): string =>
     .trim();
 
 /**
- * The art for the active place. Accepts a Metro (or anything with an `id`,
+ * The photo (else art) for the active place. Accepts a Metro (or anything with an `id`,
  * `label` and `cities`), a city string, or nothing. Always returns a piece.
  */
 export function artForPlace(
@@ -380,7 +392,7 @@ export function artForPlace(
   const pick = (entry: string | string[] | undefined): ArtPiece | undefined => {
     if (!entry) return undefined;
     const key = Array.isArray(entry) ? entry[hashSeed(seed) % entry.length] : entry;
-    return BY_KEY[key];
+    return artByKey(key);
   };
   const byName = (n: string): ArtPiece | undefined => {
     const exact = pick(PLACE_ART_BY_NAME[n]);
@@ -415,9 +427,9 @@ export function artForPlace(
     if (found) return found;
   }
 
-  if (haiti) return BY_KEY[PLACE_ART_HAITI];
-  if (!town && !normalised.length) return BY_KEY[PLACE_ART_DEFAULT];
-  return BY_KEY[PLACE_ART_GENERAL];
+  if (haiti) return artByKey(PLACE_ART_HAITI)!;
+  if (!town && !normalised.length) return artByKey(PLACE_ART_DEFAULT)!;
+  return artByKey(PLACE_ART_GENERAL)!;
 }
 
 const fold = (s: string) =>

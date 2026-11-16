@@ -483,6 +483,7 @@ export default {
     terms: 'Conditions',
     privacy: 'Confidentialité',
     refundPolicy: 'Politique de remboursement',
+    photoCredits: 'Crédits photo',
     about: 'À propos',
     instagram: 'Suivez-nous sur Instagram',
     builtBy: 'Conçu par EdLight Labs',

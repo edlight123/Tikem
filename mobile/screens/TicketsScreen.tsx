@@ -515,7 +515,7 @@ export default function TicketsScreen({ navigation }: any) {
           // should still feel like a night out waiting to happen.
           <EmptyState
             icon={isSaved ? Heart : Ticket}
-            art={artByKey(activeTab === 'past' ? 'twoubadou' : 'domino')}
+            art={artByKey(activeTab === 'past' ? 'photo-mizik-tabou' : 'photo-lavi-crowd')}
             title={
               isSaved
                 ? withDictionaryFallback(t, 'tickets.emptySavedTitle', 'Nothing saved yet')

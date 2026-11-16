@@ -280,7 +280,7 @@ export default function OrganizerEventsScreen() {
         {events.length === 0 ? (
           <EmptyState
             icon={Calendar}
-            art={artByKey(eventTab === 'upcoming' ? 'kanaval' : 'galri')}
+            art={artByKey(eventTab === 'upcoming' ? 'photo-kilti-parade' : 'photo-mizik-tabou')}
             title={eventTab === 'upcoming' ? t('organizerEvents.emptyUpcomingTitle') : t('organizerEvents.emptyPastTitle')}
             actionLabel={eventTab === 'upcoming' ? t('organizerDashboard.createEventCta') : undefined}
             onAction={eventTab === 'upcoming' ? () => navigation.navigate('CreateEvent') : undefined}
