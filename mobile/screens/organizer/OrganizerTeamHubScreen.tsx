@@ -19,6 +19,7 @@ import { font, radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import { Image } from 'expo-image';
+import PersonAvatar from '../../components/PersonAvatar';
 import SectionHeader from '../../components/SectionHeader';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -236,11 +237,9 @@ export default function OrganizerTeamHubScreen() {
                 style={styles.memberRow}
                 onPress={() => navigation.navigate('OrganizerOrgTeam')}
               >
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>
-                    {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
-                  </Text>
-                </View>
+                {/* The house default portrait for someone without a photo,
+                    never an initial letter (owner rule). */}
+                <PersonAvatar user={{ uid: m.id, displayName: m.name || m.email || '', photoURL: (m as any).photo_url || (m as any).photoURL || null }} size={36} />
                 <View style={styles.memberBody}>
                   <Text style={styles.memberName} numberOfLines={1}>
                     {m.name || m.email}
@@ -380,16 +379,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.text,
       textDecorationLine: 'underline',
     },
-    // Filled rows on the canvas (fill, not a hairline).
+    // Plain list rows with a divider, like the attendee list — not a stack
+    // of cards (owner, 2026-11-16).
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderRadius: radius.md,
-      backgroundColor: colors.surface,
-      marginBottom: 8,
+      minHeight: 60,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
     },
     memberAvatar: {
       width: 34,
