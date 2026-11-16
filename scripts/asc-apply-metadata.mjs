@@ -93,7 +93,13 @@ const mask = (s) => {
 // ---------- auth ----------
 const KEY_ID = ENV.ASC_KEY_ID || 'XA7DX3A8Z8'
 const ISSUER = ENV.ASC_ISSUER_ID || '0eddb34e-a05b-4930-8418-7f60a80d0f04'
-const KEY_PATH = ENV.ASC_KEY_PATH || path.join(os.homedir(), 'Downloads', `AuthKey_${KEY_ID}.p8`)
+// The key lives in the home folder (moved from Downloads, 2026-11-15); both are tried.
+const KEY_PATH =
+  ENV.ASC_KEY_PATH ||
+  [path.join(os.homedir(), `AuthKey_${KEY_ID}.p8`), path.join(os.homedir(), 'Downloads', `AuthKey_${KEY_ID}.p8`)].find((p) =>
+    fs.existsSync(p)
+  ) ||
+  path.join(os.homedir(), `AuthKey_${KEY_ID}.p8`)
 let jwt = null
 let jwtExp = 0
 function token() {
