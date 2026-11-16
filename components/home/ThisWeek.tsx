@@ -29,7 +29,7 @@ export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: 
         cta={t('home.see_all', { defaultValue: 'see all' })}
         ctaTone="quiet"
       />
-      <ol className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
+      <ol className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:scroll-px-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
         {lit.map((d) => {
           const { weekday, day } = dayParts(d.date, i18n.language)
           const countLabel = t('home.week.events', { count: d.count, defaultValue: `${d.count} events` })
@@ -62,7 +62,7 @@ export default function ThisWeek({ days, scopeQs }: { days: WeekDay[]; scopeQs: 
                     />
                   )}
                 </div>
-                <p className="mt-2.5 truncate text-[13px] text-white/80">{d.top?.title}</p>
+                <p className="mt-2.5 truncate font-display text-[19px] italic leading-[1.15] text-white">{d.top?.title}</p>
                 {d.count > 1 && (
                   <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-white/40">{countLabel}</p>
                 )}
