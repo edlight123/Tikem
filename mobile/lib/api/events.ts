@@ -261,7 +261,8 @@ function tierEditableFields(
     quantity: totalQuantity,
     total_quantity: totalQuantity,
     available,
-    description: tier.description || tier.name,
+    // Never the name as a stand-in: that read back as "VIP — VIP" at checkout.
+    description: tier.description?.trim() || '',
     unlimited: tier.unlimited || false,
     sort_order: index,
     // Hidden tiers stay sellable by link but never render in the public
