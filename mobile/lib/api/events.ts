@@ -261,7 +261,8 @@ function tierEditableFields(
     quantity: totalQuantity,
     total_quantity: totalQuantity,
     available,
-    description: tier.description || tier.name,
+    // Never the name as a stand-in: that read back as "VIP — VIP" at checkout.
+    description: tier.description?.trim() || '',
     unlimited: tier.unlimited || false,
     sort_order: index,
     // Hidden tiers stay sellable by link but never render in the public
@@ -861,6 +862,10 @@ export async function updateEvent(
     // and stay in the series). Each sibling's ticket_tiers are synced too, onto
     // its OWN tier docs, keeping its own ids and sold counts.
     // Capped so a runaway series can't fan out unbounded writes.
+    // A newly typed access code, hashed once for this event and any siblings.
+    const newCodeHash = eventData.is_password_protected
+      ? await hashAccessCode(eventData.access_code || '')
+      : '';
     if (options.applyToSeries) {
       const targetSnap = await getDoc(eventRef);
       const seriesId = targetSnap.exists() ? (targetSnap.data() as any)?.series_id : null;
@@ -886,6 +891,11 @@ export async function updateEvent(
             sibling.ref,
             withStoredMoneyFields({ ...seriesShared, ticket_tiers: sibEmbedded }, sibling.data())
           );
+          // The flag was just copied to the sibling, so the code must be too —
+          // otherwise turning protection on for a series left every other
+          // occurrence protected with no code at all (unpurchasable), and a
+          // changed code only applied to this one (the web composer does both).
+          if (newCodeHash) await writeAccessHash(sibling.id, newCodeHash);
         }
         console.log(`Series ${seriesId}: applied edits to ${processed} sibling event(s).`);
       }
@@ -895,11 +905,8 @@ export async function updateEvent(
     // protected AND a new non-empty code was typed. A blank code in protected
     // mode intentionally preserves the existing hash (organizer left it alone).
     // When toggled off we leave the stale hash untouched (flag is false above).
-    if (eventData.is_password_protected) {
-      const codeHash = await hashAccessCode(eventData.access_code || '');
-      if (codeHash) {
-        await writeAccessHash(eventId, codeHash);
-      }
+    if (newCodeHash) {
+      await writeAccessHash(eventId, newCodeHash);
     }
 
     // Publication state, when the caller explicitly asked for it (the

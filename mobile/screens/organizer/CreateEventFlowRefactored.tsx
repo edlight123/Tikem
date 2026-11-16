@@ -85,6 +85,7 @@ import { lineupFromEvent, lineupEntryToRecord, type LineupEntry } from '../../li
 import { AFTER_ALERT_MS } from '../../lib/moderationActions';
 import { allowedPlusOnes, plusOnesSetting } from '../../lib/attendRequests';
 import { MAX_FREE_TICKETS_PER_PERSON } from '../../lib/ticketPricing';
+import { isRsvpEvent, resolveEventTimezone, rsvpCapacityFrom, tierDescriptionFrom } from '../../lib/composerFields';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -504,6 +505,13 @@ export default function CreateEventFlowRefactored() {
   // Edit mode: whether to apply this edit to every event in the loaded series.
   // series_id is captured from the loaded event (create/no-series → null).
   const [seriesId, setSeriesId] = useState<string | null>(null);
+  // Edit mode: the zone, country and city the event was stored with, so a save
+  // keeps a stored zone only while the event is still at that place
+  // (resolveEventTimezone). Null on create: the zone follows the place.
+  const storedPlaceRef = useRef<{ timezone: unknown; country: unknown; city: unknown } | null>(null);
+  // Edit mode: whether the stored event was already password-protected (so a
+  // code hash exists and a blank code field may keep it).
+  const storedProtectedRef = useRef(false);
   const [applyToSeries, setApplyToSeries] = useState(false);
 
   const eventId = route.params?.eventId;
@@ -650,7 +658,8 @@ export default function CreateEventFlowRefactored() {
                 price: String(tier.price ?? 0),
                 // Unlimited tiers store a large sentinel; don't surface it as the field value.
                 quantity: unlimited ? '' : String(rawQty),
-                description: tier.description || '',
+                // A description equal to the name is the old save placeholder.
+                description: tierDescriptionFrom(tier),
                 unlimited,
                 // Restore any stored sale window (ISO strings) so editing keeps it.
                 sale_start: tier.sales_start || undefined,
@@ -669,7 +678,12 @@ export default function CreateEventFlowRefactored() {
             })
           : [{ name: 'General Admission', price: '0', quantity: '100', description: '', unlimited: false }];
 
-        const isRsvp = Boolean((event as any).is_rsvp);
+        // `is_rsvp` (mobile) or `ticket_name: 'RSVP'` (web).
+        const isRsvp = isRsvpEvent(event as any);
+        // The free tier an RSVP saves back into (same pick as rsvpSourceTier).
+        const rsvpTier = isRsvp
+          ? sourceTiers.find((tier: any) => Number(tier?.price ?? 0) === 0) || null
+          : null;
 
         // Department: prefer the stored value; otherwise derive from the stored
         // city (arrondissement main-city) via the Haiti geo dataset.
@@ -696,11 +710,15 @@ export default function CreateEventFlowRefactored() {
           start_time: hasStart ? formatTime(startDate) : '',
           end_date: hasEnd ? toLocalDateString(endDate!) : '',
           end_time: hasEnd ? formatTime(endDate!) : '',
-          timezone: 'America/Port-au-Prince',
+          // The stored zone; buildEventData keeps it only while the place is unchanged.
+          timezone: typeof (event as any).timezone === 'string' ? (event as any).timezone : '',
           ticket_tiers: formattedTicketTiers,
-          currency: event.currency || 'USD',
+          // A missing currency follows the event's country (HTG for Haiti), as on the web.
+          currency: event.currency || defaultCurrencyForCountry((event as any).country || 'HT'),
           is_rsvp: isRsvp,
-          capacity: String((event as any).total_tickets ?? formattedTicketTiers[0]?.quantity ?? '100'),
+          capacity: isRsvp
+            ? rsvpCapacityFrom(event as any, rsvpTier, UNLIMITED_SENTINEL)
+            : String((event as any).total_tickets ?? formattedTicketTiers[0]?.quantity ?? '100'),
           // Advanced settings — default to visible/on when the field is absent.
           show_on_explore: (event as any).show_on_explore !== false,
           video_url: (event as any).video_url || '',
@@ -732,6 +750,12 @@ export default function CreateEventFlowRefactored() {
         });
         // Capture the series membership so edit mode can offer "apply to series".
         setSeriesId((event as any).series_id || null);
+        storedProtectedRef.current = Boolean((event as any).is_password_protected);
+        storedPlaceRef.current = {
+          timezone: (event as any).timezone,
+          country: (event as any).country || 'HT',
+          city: storedCity,
+        };
       }
     } catch (error) {
       console.error('Error loading event:', error);
@@ -1407,7 +1431,10 @@ export default function CreateEventFlowRefactored() {
     // brute-forceable). Require a code on create and enforce a length floor.
     if (eventDraft.is_password_protected) {
       const code = eventDraft.access_code.trim();
-      if (!isEditMode && !code) {
+      // A blank code keeps the stored hash only when there IS one: turning the
+      // gate on during an edit with no code left the event protected by no
+      // code at all, which nobody can ever unlock (accessCodeMatches).
+      if (!code && (!isEditMode || !storedProtectedRef.current)) {
         errs.access_code = t('organizerCreateEventFlow.canvas.accessCodeRequired');
       } else if (code && code.length < 6) {
         errs.access_code = t('organizerCreateEventFlow.canvas.accessCodeTooShort');
@@ -1453,6 +1480,15 @@ export default function CreateEventFlowRefactored() {
     // resolved fee incidence (choice, else country default), the lineup as
     // `guestlist` records, and an online event's blanked location.
     const shared = {
+      // The zone the event happens in (it used to be Port-au-Prince for every
+      // event, so a Paris event printed six hours off on the web page).
+      timezone: resolveEventTimezone({
+        stored: storedPlaceRef.current?.timezone,
+        storedCountry: storedPlaceRef.current?.country,
+        storedCity: storedPlaceRef.current?.city,
+        country: draft.country || 'HT',
+        city: draft.is_online ? '' : draft.city,
+      }),
       fee_incidence: incidenceForEvent({ country: draft.country, fee_incidence }),
       guestlist: lineup.filter((g) => g.name.trim()).map(lineupEntryToRecord),
       // Kept only while the date still sits near that same day.
@@ -2818,7 +2854,7 @@ export default function CreateEventFlowRefactored() {
                       <InlineTextRow
                         colors={colors}
                         placeholder={
-                          isEditMode
+                          isEditMode && storedProtectedRef.current
                             ? t('organizerCreateEventFlow.canvas.accessCodeEditPlaceholder')
                             : t('organizerCreateEventFlow.canvas.accessCode')
                         }

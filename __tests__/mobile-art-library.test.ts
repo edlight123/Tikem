@@ -77,8 +77,10 @@ describe('artForWorld', () => {
     expect(picked.size).toBeGreaterThan(1)
   })
 
-  it('falls back to the general pool and never returns undefined', () => {
-    const general = new Set(generalArt().map((a) => a.key))
+  it('falls back to the general photo pool and never returns undefined', () => {
+    // Placeholders are real photos since 2026-11-16 (owner: no AI art).
+    const { generalPhotos } = require('../mobile/lib/photoLibrary')
+    const general = new Set(generalPhotos().map((a: any) => a.key))
     for (const world of [null, undefined, '', 'not-a-world', 'MIZIK']) {
       for (const seed of [null, undefined, '', 'x', 0, 123456789]) {
         const piece = artForWorld(world as any, seed as any)
@@ -152,21 +154,22 @@ describe('isDeviceOnlyImageUri (what the poster upload must upload)', () => {
   })
 })
 
-describe('artForPlace', () => {
+describe('artForPlace (real photos since 2026-11-16)', () => {
   const { findMetro } = require('../mobile/data/metros')
-  const PAP = ['champdemars', 'tour2004']
+  const PAP = ['photo-negmawon', 'photo-dessalines']
+  const OKAP = ['photo-citadelle', 'photo-cap-cathedral', 'photo-cap-haitien']
   it('gives each city its landmark', () => {
     expect(PAP).toContain(artForPlace(findMetro('Port-au-Prince', 'HT')).key)
-    expect(artForPlace(findMetro('Cap-Haïtien', 'HT')).key).toBe('citadelle')
-    expect(artForPlace(findMetro('Jacmel', 'HT')).key).toBe('jacmel')
-    expect(artForPlace(findMetro('Les Cayes', 'HT')).key).toBe('portsalut')
-    expect(['diaspora', 'flatbush']).toContain(artForPlace(findMetro('Brooklyn', 'US')).key)
+    expect(OKAP).toContain(artForPlace(findMetro('Cap-Haïtien', 'HT')).key)
+    expect(['photo-jacmel', 'photo-bassinbleu']).toContain(artForPlace(findMetro('Jacmel', 'HT')).key)
+    expect(['photo-lescayes', 'photo-ileavache']).toContain(artForPlace(findMetro('Les Cayes', 'HT')).key)
+    expect(artForPlace(findMetro('Brooklyn', 'US')).key).toBe('photo-flatbush')
   })
   it('lets the town beat its metro', () => {
     const pap = findMetro('Port-au-Prince', 'HT')
-    expect(artForPlace(pap, 'Pétion-Ville').key).toBe('saintpierre')
-    expect(artForPlace(pap, 'Delmas 33').key).toBe('viaducdelmas')
-    expect(['fortjacques', 'fortalexandre']).toContain(artForPlace(pap, 'Kenscoff').key)
+    expect(artForPlace(pap, 'Pétion-Ville').key).toBe('photo-petionville')
+    expect(PAP).toContain(artForPlace(pap, 'Delmas 33').key)
+    expect(artForPlace(pap, 'Kenscoff').key).toBe('photo-kenscoff')
   })
   it('rotates a list by day, stably within a day', () => {
     const pap = findMetro('Port-au-Prince', 'HT')
@@ -175,26 +178,26 @@ describe('artForPlace', () => {
     expect(artForPlace(pap, null, '2026-10-04').key).toBe(artForPlace(pap, null, '2026-10-04').key)
   })
   it('matches loose strings and aliases', () => {
-    expect(artForPlace('Okap').key).toBe('citadelle')
-    expect(artForPlace('PETION-VILLE, Ouest').key).toBe('saintpierre')
-    expect(artForPlace('Milot').key).toBe('sanssouci')
-    expect(artForPlace("Saut-d'Eau").key).toBe('sautdeau')
-    expect(artForPlace('Labadee').key).toBe('labadeenight')
+    expect(OKAP).toContain(artForPlace('Okap').key)
+    expect(artForPlace('PETION-VILLE, Ouest').key).toBe('photo-petionville')
+    expect(['photo-sanssouci', 'photo-citadelle']).toContain(artForPlace('Milot').key)
+    expect(artForPlace("Saut-d'Eau").key).toBe('photo-sautdeau')
+    expect(['photo-labadee', 'photo-labadee-coast']).toContain(artForPlace('Labadee').key)
   })
-  it('gives other Haitian towns the lakou and names no wrong landmark abroad', () => {
-    expect(artForPlace(findMetro('Gonaïves', 'HT')).key).toBe('lakou')
+  it('gives other Haitian towns a Haiti photo and names no wrong landmark abroad', () => {
+    expect(artForPlace(findMetro('Gonaïves', 'HT')).key).toBe('photo-haiti-coast')
     for (const c of ['Atlanta, GA', 'Toronto', 'Chicago']) {
-      expect(artForPlace(c).key).toBe('dyaspora')
+      expect(artForPlace(c).key).toBe('photo-flag-crowd')
     }
-    expect(artForPlace(findMetro('Miami', 'US')).key).toBe('miami')
-    expect(artForPlace(findMetro('Boston', 'US')).key).toBe('boston')
-    expect(artForPlace('Montréal').key).toBe('montreal')
-    expect(artForPlace('Saint-Denis').key).toBe('paris')
-    expect(artForPlace(null, 'Flatbush').key).toBe('flatbush')
-    expect(artForPlace(null).key).toBe('citadelle')
-    expect(artForPlace('').key).toBe('citadelle')
+    expect(artForPlace(findMetro('Miami', 'US')).key).toBe('photo-miami')
+    expect(artForPlace(findMetro('Boston', 'US')).key).toBe('photo-boston')
+    expect(artForPlace('Montréal').key).toBe('photo-montreal')
+    expect(artForPlace('Saint-Denis').key).toBe('photo-saintdenis')
+    expect(artForPlace(null, 'Flatbush').key).toBe('photo-flatbush')
+    expect(artForPlace(null).key).toBe('photo-citadelle')
+    expect(artForPlace('').key).toBe('photo-citadelle')
   })
-  it('captions every landmark piece and ships every file', () => {
+  it('captions every illustrated landmark piece (still used by the flyer picker)', () => {
     for (const k of ['champdemars', 'tour2004', 'viaducdelmas', 'saintpierre', 'fortjacques', 'fortalexandre', 'sautdeau', 'foretdespins', 'sanssouci', 'jacmel', 'portsalut', 'labadeenight', 'bassinbleunight']) {
       expect(artByKey(k)?.place).toBeTruthy()
     }

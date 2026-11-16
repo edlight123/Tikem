@@ -239,8 +239,13 @@ export function sanitizePrivacy(input: unknown, current?: Partial<PrivacySetting
   const discoverable = obj.discoverable_by_phone ?? current?.discoverable_by_phone
 
   return {
-    // Unset stays the default (public); only an explicit 'private' is private.
-    profile_visibility: profileVis === 'private' ? 'private' : profileVis === 'public' ? 'public' : DEFAULT_PRIVACY.profile_visibility,
+    // Unset → the default (public). Anything malformed fails closed to private.
+    profile_visibility:
+      profileVis === undefined || profileVis === null || profileVis === ''
+        ? DEFAULT_PRIVACY.profile_visibility
+        : profileVis === 'public'
+          ? 'public'
+          : 'private',
     attendance_visibility: normalizeAttendanceVisibility(attendanceVis),
     discoverable_by_phone: discoverable === false ? false : true,
   }
