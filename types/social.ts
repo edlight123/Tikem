@@ -52,8 +52,10 @@ export interface PrivacySettings {
 }
 
 export const DEFAULT_PRIVACY: PrivacySettings = {
-  profile_visibility: 'private',
-  attendance_visibility: 'friends',
+  // Owner decision 2026-11-16: public by default (was private / friends,
+  // 2026-10). An explicit choice by the user always wins.
+  profile_visibility: 'public',
+  attendance_visibility: 'everyone',
   discoverable_by_phone: true,
 }
 
@@ -237,7 +239,8 @@ export function sanitizePrivacy(input: unknown, current?: Partial<PrivacySetting
   const discoverable = obj.discoverable_by_phone ?? current?.discoverable_by_phone
 
   return {
-    profile_visibility: profileVis === 'public' ? 'public' : 'private',
+    // Unset stays the default (public); only an explicit 'private' is private.
+    profile_visibility: profileVis === 'private' ? 'private' : profileVis === 'public' ? 'public' : DEFAULT_PRIVACY.profile_visibility,
     attendance_visibility: normalizeAttendanceVisibility(attendanceVis),
     discoverable_by_phone: discoverable === false ? false : true,
   }
