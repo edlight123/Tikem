@@ -3072,6 +3072,7 @@ export default {
     successBody: 'Biyè ou a ajoute nan wallet ou a!',
     errorBody: 'Nou pa t kapab ajoute biyè a nan wallet la. Tanpri eseye ankò.',
     downloadTitle: 'Telechaje QR code la',
+    savedTitle: 'Anrejistre nan Foto',
     downloadBody: 'Pran yon kapti ekran biyè sa a pou anrejistre QR code la, oswa itilize fonksyon « Ajoute nan Wallet » pou aksè fasil.',
   },
 

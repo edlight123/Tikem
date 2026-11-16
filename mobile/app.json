@@ -150,6 +150,14 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Tikèm uses your photos when you choose a profile picture, an event poster or an ID document.",
+          "savePhotosPermission": "Tikèm saves your ticket's QR code to Photos when you tap Save image.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "react-native-document-scanner-plugin",
         {
           "cameraPermission": "Allow Tikèm to use the camera to scan your payment card at checkout, or your ID document when we verify your identity before sending you money. Scans are used only for that and are never stored."

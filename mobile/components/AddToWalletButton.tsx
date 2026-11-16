@@ -12,6 +12,7 @@ import { Wallet, Download } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendFetch } from '../lib/api/backend';
@@ -21,6 +22,26 @@ import { radius } from '../theme/tokens';
 // A crisp, plain QR on white for the saved file — no center logo, so any scanner
 // reads it. Rendered off-screen only to rasterize; never shown.
 const DOWNLOAD_QR_SIZE = 600;
+
+/**
+ * Save a local image to Photos. Returns false (caller falls back to the share
+ * sheet) when this binary predates expo-media-library or the user declines.
+ * The module is required lazily: importing it in a build without the native
+ * side throws at load and would take the whole screen down.
+ */
+async function saveToPhotos(fileUri: string): Promise<boolean> {
+  if (!requireOptionalNativeModule('ExpoMediaLibrary')) return false;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const MediaLibrary = require('expo-media-library') as typeof import('expo-media-library');
+    const perm = await MediaLibrary.requestPermissionsAsync(true);
+    if (!perm.granted) return false;
+    await MediaLibrary.saveToLibraryAsync(fileUri);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface AddToWalletButtonProps {
   ticketId: string;
@@ -212,6 +233,13 @@ export default function AddToWalletButton({
       const base64 = await qrToBase64();
       const fileUri = `${FileSystem.cacheDirectory}tikem-ticket-${ticketId}.png`;
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: 'base64' });
+
+      // Straight to Photos when the build has the media-library module
+      // (1.0.3+). Older binaries don't, so they keep the share sheet.
+      if (await saveToPhotos(fileUri)) {
+        showAlert(t('addToWallet.savedTitle'), '', [{ text: t('common.ok') }]);
+        return;
+      }
 
       if (!(await Sharing.isAvailableAsync())) {
         throw new Error('sharing_unavailable');

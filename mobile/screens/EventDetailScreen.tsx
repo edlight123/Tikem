@@ -50,6 +50,7 @@ import PaymentModal from '../components/PaymentModal';
 import TieredTicketSelector, { PurchaseSelectionMeta } from '../components/TieredTicketSelector';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { advertisedPrice } from '../lib/buyerPricing';
+import { formatPrice } from '../lib/currency';
 import { setTicketsRefreshHint } from '../lib/ticketsRefreshHint';
 import { resolvePosterTheme } from '../lib/posterGradient';
 import FreeTicketModal from '../components/FreeTicketModal';
@@ -815,15 +816,15 @@ export default function EventDetailScreen({ route, navigation }: any) {
     const currency = event.currency || 'HTG';
     if (pricing.kind === 'mixed') {
       return pricing.lowestPaidPrice != null
-        ? `${t('common.free')} – ${advertisedPrice(
-            pricing.lowestPaidPrice,
-            event as any
-          ).toLocaleString()} ${currency}`
+        ? `${t('common.free')} – ${formatPrice(
+            advertisedPrice(pricing.lowestPaidPrice, event as any),
+            currency
+          )}`
         : undefined;
     }
     const from = pricing.lowestPaidPrice ?? Number(event.ticket_price || 0);
     if (!(from > 0)) return undefined;
-    return `${t('common.from')} ${advertisedPrice(from, event as any).toLocaleString()} ${currency}`;
+    return `${t('common.from')} ${formatPrice(advertisedPrice(from, event as any), currency)}`;
   })();
 
   // Compact countdown prefix. `t()` echoes the key back when it is missing from
