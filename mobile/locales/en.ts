@@ -456,6 +456,7 @@ export default {
     terms: 'Terms',
     privacy: 'Privacy',
     refundPolicy: 'Refund Policy',
+    photoCredits: 'Photo credits',
     about: 'About',
     instagram: 'Follow us on Instagram',
     builtBy: 'Built by EdLight Labs',

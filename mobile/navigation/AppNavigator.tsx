@@ -36,6 +36,7 @@ import SearchScreen from '../screens/SearchScreen';
 import SubscriptionsScreen from '../screens/SubscriptionsScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ContentPageScreen from '../screens/ContentPageScreen';
+import PhotoCreditsScreen from '../screens/PhotoCreditsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import TicketsScreen from '../screens/TicketsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -120,6 +121,7 @@ export type RootStackParamList = {
   Subscriptions: undefined;
   NotificationSettings: { organizer?: boolean } | undefined;
   ContentPage: { slug: string; title?: string };
+  PhotoCredits: undefined;
   PaymentWebView: { url: string; title?: string; authToken?: string | null; eventId?: string };
   StripeConnectWebView: { url: string; authToken?: string | null };
   StripeOnboarding: { accountLocation?: 'united_states' | 'canada' | 'france'; hostedOnly?: boolean } | undefined;
@@ -974,6 +976,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ContentPage" component={ContentPageScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PhotoCredits" component={PhotoCreditsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MessageThread" component={MessageThreadScreen} options={{ headerShown: false }} />

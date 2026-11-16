@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { artByKey, type ArtPiece } from './artLibrary';
+import { nationalDayPhoto } from './photoLibrary';
 import {
   activeNationalDay,
   nationalDayArtKey,
@@ -88,9 +89,14 @@ export function currentNationalDay(now: Date = new Date()): ActiveNationalDay | 
   return activeNationalDay(now, config, { force: forcedKey() });
 }
 
-/** The art piece for a day: its own, else its fallback (always in the library). */
+/**
+ * The picture for a day: its real photo (lib/photoLibrary), else its own
+ * illustration, else the fallback piece. The remote config can point a day
+ * at another photo by setting `artKey` to a "photo-…" key.
+ */
 export function nationalDayArt(day: NationalDay): ArtPiece | undefined {
-  return artByKey(nationalDayArtKey(day, (k) => !!artByKey(k)));
+  if (day.artKey?.startsWith('photo-') && artByKey(day.artKey)) return artByKey(day.artKey);
+  return nationalDayPhoto(day.key) || artByKey(nationalDayArtKey(day, (k) => !!artByKey(k)));
 }
 
 /**

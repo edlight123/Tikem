@@ -709,7 +709,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
                       undefined,
                       { label: t('discover.clearFilters'), onAction: handleClearFilters },
                       Search,
-                      'rara',
+                      'photo-kilti-drum',
                     )
                   : renderFeed(
                       feedEvents,
@@ -731,7 +731,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
             {discoverTab === 'following' && (
               <EmptyState
                 icon={Users}
-                art={artByKey('diaspora')}
+                art={artByKey('photo-flag-crowd')}
                 title={t('discover.following.emptyTitle')}
                 actionLabel={t('discover.following.syncContacts')}
                 onAction={() => navigation.navigate('Connections', { autoSync: true })}

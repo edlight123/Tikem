@@ -367,7 +367,7 @@ export default function SearchScreen({ navigation }: any) {
             // tap — never widen the results on our own.
             <EmptyState
               icon={SearchIcon}
-              art={artByKey('rara')}
+              art={artByKey('photo-kilti-drum')}
               title={t('search.noResults')}
               subtitle={
                 canWidenSearch
