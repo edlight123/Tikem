@@ -79,7 +79,7 @@ export default function Footer() {
                 until it is dismissed, so a control put there is invisible to
                 exactly the first-time visitor most likely to need it. Beside
                 the places we cover is also simply where a reader looks. */}
-            <LanguageSwitcher className="mt-6 -ml-1.5" />
+            <LanguageSwitcher className="mt-6" />
             <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.16em] text-white/35">
               {t('store_badges.get_the_app', { defaultValue: 'Get the app' })}
             </p>

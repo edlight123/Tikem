@@ -21,8 +21,6 @@ import { attendeeFAQCategoryMeta, organizerFAQCategoryMeta, type UserRole, type 
  * the rule between rows IS the meaning.
  */
 
-/** A card sitting directly on the page. */
-const PAGE_CARD = 'rounded-xl bg-white/[0.03] p-6 transition-colors hover:bg-white/[0.07]'
 /** A card sitting on another card — one step up the ladder. */
 const NESTED_CARD = 'rounded-xl bg-white/[0.06] p-6 transition-colors hover:bg-white/[0.12]'
 
@@ -94,25 +92,15 @@ export default function SupportContent() {
       <div className="text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="text-center max-w-3xl mx-auto">
-            {/* Pill Label */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 backdrop-blur-sm rounded text-sm font-medium mb-4">
-              <MessageCircle className="w-4 h-4 text-brand-400" />
-              <span>{t('hero.title')}</span>
-            </div>
-
+            {/* No eyebrow: it repeated the title word for word. */}
             {/* Title. `!` on the base size: body carries `.mobile-typography`,
                 whose `h1 { @apply text-xl }` is an element+class selector (0,1,1)
                 and beats a bare utility (0,1,0) — without it this hero collapsed
                 to 20px on every phone. The sm:/lg: steps sit above that media
                 query, so they need no override. */}
-            <h1 className="!text-4xl !leading-[1.05] sm:text-5xl lg:text-6xl font-bold mb-4">
+            <h1 className="!text-4xl !leading-[1.05] sm:text-5xl lg:text-6xl font-bold mb-8">
               {t('hero.title')}
             </h1>
-
-            {/* Subtitle */}
-            <p className="text-lg sm:text-xl text-white/60 mb-8">
-              {t('hero.subtitle')}
-            </p>
 
             {/* Search Bar */}
             <div className="relative max-w-2xl mx-auto">
@@ -188,25 +176,21 @@ export default function SupportContent() {
             <EditorialSectionHeading
               className="mb-8"
               title={t('categories.title', 'Top Help Topics')}
-              description={t('categories.subtitle', 'Browse by category or search for specific questions')}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
               {currentFAQs.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => scrollToCategory(category.id)}
-                  className={`${PAGE_CARD} text-left group`}
+                  className="group flex items-center gap-3 rounded bg-white/[0.03] px-4 py-4 text-left transition-colors hover:bg-white/[0.07] sm:px-6 sm:py-5"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.07] flex items-center justify-center mb-3">
-                    <category.icon className="w-5 h-5 text-brand-300" />
-                  </div>
-                  <h3 className="font-semibold text-white mb-2">
+                  {/* Icon + label: the one-line descriptions under each topic
+                      repeated the topic's name in more words. */}
+                  <category.icon className="w-5 h-5 shrink-0 text-white/60 transition-colors group-hover:text-white" />
+                  <h3 className="font-semibold text-white">
                     {category.title}
                   </h3>
-                  <p className="text-sm text-white/65">
-                    {category.description}
-                  </p>
                 </button>
               ))}
             </div>
@@ -233,16 +217,7 @@ export default function SupportContent() {
 
           {filteredFAQs.map((category) => (
             <div key={category.id} id={category.id} className="scroll-mt-20">
-              <div className="flex items-start gap-3 mb-6">
-                <div className="w-10 h-10 shrink-0 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                  <category.icon className="w-5 h-5 text-white/70" />
-                </div>
-                <EditorialSectionHeading
-                  className="min-w-0 flex-1"
-                  title={category.title}
-                  description={category.description}
-                />
-              </div>
+              <EditorialSectionHeading className="mb-6" title={category.title} />
 
               {/* The `divide-y` stays: a rule BETWEEN the rows of one accordion
                   is the meaning. What went is the border drawn around the box. */}
@@ -284,22 +259,19 @@ export default function SupportContent() {
             the purest form of the defect. */}
         <div className="mt-20 rounded-2xl bg-white/[0.03] p-8 sm:p-12">
           <div className="max-w-2xl mb-8">
-            <EditorialSectionHeading
-              title={t('need_help.title')}
-              description={t('need_help.description')}
-            />
+            <EditorialSectionHeading title={t('need_help.title')} />
           </div>
 
           {/* These cards sit ON the card above, so they take the next rung of
               the ladder — a 0.03 inside a 0.03 is invisible. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Email Support */}
             <a
               href="mailto:support@tikem.co"
               className={`${NESTED_CARD} group block`}
             >
               <div className="flex items-center justify-between mb-3">
-                <Mail className="w-6 h-6 text-brand-300" />
+                <Mail className="w-6 h-6 text-white/70" />
                 <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
               </div>
               <h3 className="font-semibold text-white mb-1">{t('contact_cards.email_title')}</h3>
@@ -332,7 +304,7 @@ export default function SupportContent() {
               className={`${NESTED_CARD} group block`}
             >
               <div className="flex items-center justify-between mb-3">
-                <FileText className="w-6 h-6 text-brand-300" />
+                <FileText className="w-6 h-6 text-white/70" />
                 <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
               </div>
               <h3 className="font-semibold text-white mb-1">{t('contact_cards.request_title')}</h3>

@@ -48,7 +48,8 @@ export default function ShareIconButton({
 
   const toneClasses =
     tone === 'light'
-      ? 'text-white ring-1 ring-white/20 hover:bg-white/20 backdrop-blur-md'
+      ? // A fill, not a hairline ring around an empty box (house rule).
+        'bg-white/[0.10] text-white hover:bg-white/[0.18] backdrop-blur-md'
       /* Was `bg-white/[0.04] ring-1 ring-gray-200`: a near-WHITE hairline
          around a 4%-opacity disc, sitting on the #0a0a0a sticky bar — so all
          you saw was a bright ring around nothing, the exact pattern the house

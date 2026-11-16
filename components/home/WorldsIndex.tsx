@@ -23,10 +23,12 @@ import type { HomeWorld } from '@/lib/home/feed'
 // of lit worlds made two worlds two half-page posters with a lone digit in
 // the corner, which read as oversized and empty rather than chosen.
 //
-// Each tile wears its world's Tikèm painting (public/art/worlds, the piece the
-// app's world rail shows), never an event poster: posters on the worlds took
-// the film strip's pictures and hid it, and a world with none left went
-// blank (owner feedback 2026-10-26).
+// Each tile wears its world's photograph (public/art/world-photos, the same
+// Unsplash photos as the app's WORLD_PHOTOS in mobile/lib/artLibrary), never
+// an event poster: posters on the worlds took the film strip's pictures and
+// hid it, and a world with none left went blank (owner feedback 2026-10-26).
+// The illustrated tiles (public/art/worlds) "read very AI" (owner,
+// 2026-11-14); the app moved to real photos then and the site follows.
 
 export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; scopeQs: string }) {
   const { t } = useTranslation('common')
@@ -57,10 +59,10 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
                   wide ? 'aspect-[16/10] sm:aspect-[4/5]' : 'aspect-[4/5]'
                 }`}
               >
-                {/* The world's own Tikèm painting, the piece the app's world
-                    rail shows. Event posters are left to the film strip. */}
+                {/* The world's photograph, as in the app. Event posters are
+                    left to the film strip. */}
                 <Image
-                  src={`/art/worlds/${w.key}.webp`}
+                  src={`/art/world-photos/${w.key}.jpg`}
                   alt=""
                   fill
                   sizes="(min-width: 1024px) 210px, (min-width: 640px) 25vw, 50vw"

@@ -83,9 +83,11 @@ export default function MobileKeyFacts({
         {formatInZone(startDate, zone, 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
       </p>
 
+      {/* No venue, no address, no city: there is nowhere to open in Maps. */}
+      {(venueName || address || city) && (
       <p className="mt-1.5 text-[14px] text-white/60">
         {venueName}
-        <span className="text-white/25"> · </span>
+        {venueName && <span className="text-white/25"> · </span>}
         {/* py-3/-my-3 grows the hit area past 44px without moving the line: the
             padding is cancelled by the negative margin. It sits inline in a
             sentence, so it cannot simply be made 44px tall, and at 21px it was
@@ -98,8 +100,9 @@ export default function MobileKeyFacts({
           {t('events.open_in_maps')} →
         </button>
       </p>
+      )}
 
-      <p className="mt-3 text-[15px] font-medium text-brand-300">
+      <p className="mt-3 text-[15px] font-semibold text-white">
         {priceLine}
         {!isFree && (
           <span className="ml-1.5 text-[13px] font-normal text-white/45">

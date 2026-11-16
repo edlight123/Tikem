@@ -17,6 +17,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { venueAddressLines } from '@/lib/events/venueLines'
 import { formatInZone } from '@/lib/home/format'
 import { dayKey } from '@/lib/home/feed'
 import Badge from '@/components/ui/Badge'
@@ -105,13 +106,10 @@ export default function MobileSections({
   return (
     <div className="divide-y divide-white/[0.06] px-4 md:hidden">
       {/* About */}
+      {(description?.trim() || videoUrl || (tags && tags.length > 0)) && (
       <Section title={t('events.about_event')}>
-        {description && description.trim() ? (
+        {description && description.trim() && (
           <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-white/70">{description}</p>
-        ) : (
-          <p className="text-[15px] italic leading-relaxed text-white/40">
-            {t('events.no_description', { defaultValue: 'The organizer hasn’t added a description yet.' })}
-          </p>
         )}
         {/* Under the description, exactly where the app puts it. */}
         <PromoVideo url={videoUrl} className="mt-4" />
@@ -125,6 +123,7 @@ export default function MobileSections({
           </div>
         )}
       </Section>
+      )}
 
       {/* Date & Time — before the venue: "when" is what a reader asks first,
           and the app orders it the same way.
@@ -161,13 +160,16 @@ export default function MobileSections({
         </div>
       </Section>
 
-      {/* Venue */}
+      {/* Venue — left out when the event names no place at all; the map
+          links would search for an empty string. */}
+      {(venueName || address || commune || city) && (
       <Section title={t('events.venue_directions')}>
-        <p className="text-[15px] font-medium text-white">{venueName}</p>
-        {address && <p className="mt-1 break-words text-[15px] text-white/60">{address}</p>}
-        <p className="text-[15px] text-white/60">
-          {[commune, city].filter(Boolean).join(', ')}
-        </p>
+        {venueName && <p className="text-[15px] font-medium text-white">{venueName}</p>}
+        {venueAddressLines({ venueName, address, commune, city }).map((line, i) => (
+          <p key={i} className={`${i === 0 ? 'mt-1 ' : ''}break-words text-[15px] text-white/60`}>
+            {line}
+          </p>
+        ))}
         {/* Same placement idea as desktop: address, then the tile, then the two
             map links. Rendered bare (no wrapper div) because the tile returns
             null with no provider key configured, a wrapper would leave its
@@ -178,7 +180,7 @@ export default function MobileSections({
             href={`https://maps.apple.com/?q=${mapsQuery}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-400 hover:text-brand-300"
+            className="text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
           >
             {t('events.apple_maps')}
           </a>
@@ -187,12 +189,13 @@ export default function MobileSections({
             href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-400 hover:text-brand-300"
+            className="text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
           >
             {t('events.google_maps')}
           </a>
         </p>
       </Section>
+      )}
 
       {/* Organizer */}
       <Section title={t('events.organizer')}>
