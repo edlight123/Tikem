@@ -1168,9 +1168,13 @@ export default function EventComposer({
   // Access code: required (min 6) when enabling protection on CREATE; on edit a
   // blank code keeps the existing hash, but a typed code must still be >= 6.
   const trimmedCode = accessCode.trim()
+  // A blank code keeps the stored hash only when the event was ALREADY
+  // protected: switching the gate on in an edit with no code left an event no
+  // one could ever unlock (accessCodeMatches refuses when no hash is stored).
+  const hasStoredCode = isEdit && !!event?.is_password_protected
   const accessCodeInvalid =
     passwordProtected &&
-    ((!isEdit && trimmedCode.length < 6) || (trimmedCode.length > 0 && trimmedCode.length < 6))
+    ((!hasStoredCode && trimmedCode.length < 6) || (trimmedCode.length > 0 && trimmedCode.length < 6))
 
   // The organizer's own UTC offset, shown beside the date fields so "8pm" is
   // unambiguous. Only the browser knows it — the server renders in its own zone
@@ -1677,7 +1681,7 @@ export default function EventComposer({
       showToast({
         type: 'error',
         title: t('composer.toasts.accessTitle', { defaultValue: 'Set an access code' }),
-        message: isEdit
+        message: hasStoredCode
           ? t('composer.accessCodeError', { defaultValue: 'Access codes must be at least 6 characters.' })
           : t('composer.toasts.accessMsgNew', {
               defaultValue: 'Protected events need an access code of at least 6 characters.',
@@ -3306,7 +3310,7 @@ export default function EventComposer({
                       value={accessCode}
                       onChange={(e) => setAccessCode(e.target.value)}
                       placeholder={
-                        isEdit
+                        hasStoredCode
                           ? t('composer.accessCodePlaceholderEdit', {
                               defaultValue: 'New access code (blank keeps current)',
                             })

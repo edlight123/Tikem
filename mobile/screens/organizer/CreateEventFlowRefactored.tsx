@@ -480,6 +480,9 @@ export default function CreateEventFlowRefactored() {
   // keeps a stored zone only while the event is still at that place
   // (resolveEventTimezone). Null on create: the zone follows the place.
   const storedPlaceRef = useRef<{ timezone: unknown; country: unknown; city: unknown } | null>(null);
+  // Edit mode: whether the stored event was already password-protected (so a
+  // code hash exists and a blank code field may keep it).
+  const storedProtectedRef = useRef(false);
   const [applyToSeries, setApplyToSeries] = useState(false);
 
   const eventId = route.params?.eventId;
@@ -718,6 +721,7 @@ export default function CreateEventFlowRefactored() {
         });
         // Capture the series membership so edit mode can offer "apply to series".
         setSeriesId((event as any).series_id || null);
+        storedProtectedRef.current = Boolean((event as any).is_password_protected);
         storedPlaceRef.current = {
           timezone: (event as any).timezone,
           country: (event as any).country || 'HT',
@@ -1398,7 +1402,10 @@ export default function CreateEventFlowRefactored() {
     // brute-forceable). Require a code on create and enforce a length floor.
     if (eventDraft.is_password_protected) {
       const code = eventDraft.access_code.trim();
-      if (!isEditMode && !code) {
+      // A blank code keeps the stored hash only when there IS one: turning the
+      // gate on during an edit with no code left the event protected by no
+      // code at all, which nobody can ever unlock (accessCodeMatches).
+      if (!code && (!isEditMode || !storedProtectedRef.current)) {
         errs.access_code = t('organizerCreateEventFlow.canvas.accessCodeRequired');
       } else if (code && code.length < 6) {
         errs.access_code = t('organizerCreateEventFlow.canvas.accessCodeTooShort');
@@ -2811,7 +2818,7 @@ export default function CreateEventFlowRefactored() {
                       <InlineTextRow
                         colors={colors}
                         placeholder={
-                          isEditMode
+                          isEditMode && storedProtectedRef.current
                             ? t('organizerCreateEventFlow.canvas.accessCodeEditPlaceholder')
                             : t('organizerCreateEventFlow.canvas.accessCode')
                         }
