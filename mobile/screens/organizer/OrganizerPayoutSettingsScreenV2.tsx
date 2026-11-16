@@ -39,9 +39,14 @@ import EmptyState from '../../components/EmptyState'
 import WhitePillCTA from '../../components/WhitePillCTA'
 import MoneyText from '../../components/MoneyText'
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader'
-import SelectField from '../../components/organizer/SelectField'
 import MarketsSheet, { FlagSquare, MarketsPicker } from '../../components/organizer/MarketsSheet'
-import { HAITI_BANKS, OTHER_BANK } from '../../data/haitiBanks'
+import { ListGroup, ListRow } from '../../components/ui/ListRow'
+import PayoutMethodFlow, {
+  type BankFormState,
+  type MoncashFormState,
+  type PayoutMethodType,
+} from '../../components/organizer/payouts/PayoutMethodFlow'
+import { OTHER_BANK } from '../../data/haitiBanks'
 import { getDeviceLocationInfo } from '../../utils/deviceLocation'
 import { countryName, normalizeSupportedCountry } from '../../lib/countrySupport'
 import {
@@ -50,7 +55,7 @@ import {
   shouldShowRail,
   useDeclaredMarkets,
 } from '../../lib/organizerMarkets'
-import { Receipt, Wallet } from 'lucide-react-native'
+import { Globe, Landmark, Plus, Receipt, ShieldCheck, Smartphone, Zap } from 'lucide-react-native'
 import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 
 import { Touchable } from '../../components/ui/Touchable';
@@ -110,64 +115,34 @@ const NATCASH_ENABLED = false
  * Status as a dot + sentence-case label (TestFlight #197: no uppercase chips
  * on this screen). Same locked tones as the shared StatusChip.
  */
-function StatusDot({ status, label }: { status: string; label?: string }) {
+function StatusDot({ status, label, lines = 1 }: { status: string; label?: string; lines?: number }) {
   const tone = statusTone(status)
   const text = label ?? tone.defaultLabel
   return (
     <View
-      style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
       accessible
       accessibilityRole="text"
       accessibilityLabel={text}
     >
       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tone.color }} />
-      <Text style={{ fontSize: 13, color: T.textSecondary }} numberOfLines={1}>
+      <Text style={{ fontSize: 13, color: T.textSecondary, flexShrink: 1 }} numberOfLines={lines}>
         {text}
       </Text>
     </View>
   )
 }
 
-/**
- * One payout REGION rail. Uses the app's editorial section rail (Instrument
- * Serif, lowercased, with a tight grey subtitle) rather than a bold sans
- * heading, so this screen reads like the rest of Tikèm instead of a settings
- * pane. Status appears ONLY when the region needs attention — every method
- * below already carries its own VERIFIED / CONNECTED chip, so a second "Ready"
- * was noise saying what the rows already said.
- */
-function RegionSection({
-  colors,
-  title,
-  blurb,
-  status,
-  t,
-}: {
-  colors: ReturnType<typeof useTheme>['colors']
-  title: string
-  blurb: string
-  status: 'ready' | 'pending' | 'none'
-  t: (key: string) => string
-}) {
-  // Dot + label (StatusChip), never a bare coloured word.
-  const trailing =
-    status === 'ready' ? null : (
-      <StatusDot
-        status={status === 'pending' ? 'pending' : 'neutral'}
-        label={
-          status === 'pending'
-            ? t('organizerPayoutSettings.regions.statusPending')
-            : t('organizerPayoutSettings.regions.statusNone')
-        }
-      />
-    )
+type PayoutRegion = 'haiti' | 'international'
 
-  return (
-    <View style={{ marginTop: 18 }}>
-      <SectionHeader title={title} subtitle={blurb} trailing={trailing} />
-    </View>
-  )
-}
+// The region the organizer last looked at, kept for this app session so
+// coming back to the screen lands where they left it.
+let lastRegionThisSession: PayoutRegion | null = null
+
+const EMPTY_BANK_FORM: BankFormState = { accountName: '', bankName: '', accountNumber: '', routingNumber: '', swift: '' }
+const EMPTY_MONCASH_FORM: MoncashFormState = { provider: 'moncash', accountName: '', phoneNumber: '+509 ' }
+
+type SaveResult = 'ok' | 'verify' | 'error'
 
 export default function OrganizerPayoutSettingsScreenV2() {
   const { colors } = useTheme();
@@ -229,34 +204,36 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const [payoutsError, setPayoutsError] = useState(false)
   const [payoutsLoaded, setPayoutsLoaded] = useState(false)
 
-  // Add method modal
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [selectedMethodType, setSelectedMethodType] = useState<'bank' | 'moncash' | null>(null)
+  // Add / change a Haiti method: a three-step flow (type → details → save).
+  const [flowVisible, setFlowVisible] = useState(false)
+  const [flowStep, setFlowStep] = useState<1 | 2 | 3>(1)
+  const [flowType, setFlowType] = useState<PayoutMethodType | null>(null)
+  const [flowMode, setFlowMode] = useState<'add' | 'change'>('add')
+  // The server asked for the payout-change email code before saving.
+  const [flowNeedsCode, setFlowNeedsCode] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [sendingOtp, setSendingOtp] = useState(false)
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
 
   // Bank form
-  const [showBankForm, setShowBankForm] = useState(false)
   const [savingBank, setSavingBank] = useState(false)
-  const [bankForm, setBankForm] = useState({
-    accountName: '',
-    bankName: '',
-    accountNumber: '',
-    routingNumber: '',
-    swift: '',
-  })
+  const [bankForm, setBankForm] = useState<BankFormState>(EMPTY_BANK_FORM)
   // Tracks the bank-name DROPDOWN selection (one of HAITI_BANKS). When it is
   // 'Other', a free-text field is revealed and the typed value is what lands in
   // bankForm.bankName. For a listed bank, the dropdown value IS bankForm.bankName.
   const [bankNameChoice, setBankNameChoice] = useState('')
 
   // MonCash form
-  const [showMoncashForm, setShowMoncashForm] = useState(false)
   const [savingMoncash, setSavingMoncash] = useState(false)
-  const [moncashForm, setMoncashForm] = useState({
-    provider: 'moncash',
-    accountName: '',
-    // Pre-fill the Haiti country code so organizers only type the local digits.
-    phoneNumber: '+509 ',
-  })
+  // Pre-fill the Haiti country code so organizers only type the local digits.
+  const [moncashForm, setMoncashForm] = useState<MoncashFormState>(EMPTY_MONCASH_FORM)
+
+  // The method whose detail sheet is open.
+  const [detailDest, setDetailDest] = useState<PayoutDestination | null>(null)
+
+  // Region on show: the organizer's pick this session, else where they run events.
+  const [pickedRegion, setPickedRegion] = useState<PayoutRegion | null>(lastRegionThisSession)
 
   // Verification flow for selected destination
   const [selectedDestination, setSelectedDestination] = useState<PayoutDestination | null>(null)
@@ -276,11 +253,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const [savingInstant, setSavingInstant] = useState(false)
   // A background refresh landing mid-toggle must not stomp the optimistic value.
   const savingInstantRef = useRef(false)
-
-  // Phone verification (for MonCash)
-  const [phoneCode, setPhoneCode] = useState('')
-  const [sendingPhoneCode, setSendingPhoneCode] = useState(false)
-  const [verifyingPhoneCode, setVerifyingPhoneCode] = useState(false)
 
   // Maps a destination's verification status onto the shared StatusChip's locked
   // semantic tones (POSH §2.7) — pending is amber, not teal.
@@ -603,34 +575,56 @@ export default function OrganizerPayoutSettingsScreenV2() {
     return method || ''
   }, [t])
 
-  const handleAddMethodSelect = useCallback((type: 'bank' | 'moncash') => {
+  // Identity gate for adding or changing a payout method (same alert as before).
+  const promptIdentity = useCallback(() => {
+    showAlert(
+      t('organizerPayoutSettings.identityRequired.title'),
+      t('organizerPayoutSettings.identityRequired.body'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('organizerPayoutSettings.verifyIdentity'), onPress: openVerificationAfterAlert },
+      ]
+    )
+  }, [showAlert, openVerificationAfterAlert, t])
+
+  const resetOtp = useCallback(() => {
+    setFlowNeedsCode(false)
+    setOtpCode('')
+    setOtpSent(false)
+  }, [])
+
+  const closeFlow = useCallback(() => {
+    setFlowVisible(false)
+    resetOtp()
+  }, [resetOtp])
+
+  // "Add a payout method": step 1 of the flow (choose MonCash or a bank).
+  const openAddFlow = useCallback(() => {
     if (!identityVerified) {
-      // Close the add sheet first: navigating from under an open Modal pushes
-      // the verification screen behind it, so the button looked dead. The
-      // alert waits for the sheet to finish closing or iOS drops it.
-      setShowAddModal(false)
-      setTimeout(() => showAlert(
-        t('organizerPayoutSettings.identityRequired.title'),
-        t('organizerPayoutSettings.identityRequired.body'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('organizerPayoutSettings.verifyIdentity'), onPress: openVerificationAfterAlert },
-        ]
-      ), AFTER_ALERT_MS)
+      promptIdentity()
       return
     }
+    setBankForm(EMPTY_BANK_FORM)
+    setBankNameChoice('')
+    setMoncashForm(EMPTY_MONCASH_FORM)
+    setFlowType(null)
+    setFlowMode('add')
+    setFlowStep(1)
+    resetOtp()
+    setFlowVisible(true)
+  }, [identityVerified, promptIdentity, resetOtp])
 
-    setSelectedMethodType(type)
-    setShowAddModal(false)
-
-    if (type === 'bank') {
-      setBankNameChoice('')
-      setShowBankForm(true)
-    } else {
-      setMoncashForm({ provider: 'moncash', accountName: '', phoneNumber: '+509 ' })
-      setShowMoncashForm(true)
-    }
-  }, [identityVerified, openVerificationAfterAlert, t])
+  // Opens the flow straight at the details step for one type.
+  const openFlowAtDetails = useCallback(
+    (type: PayoutMethodType, mode: 'add' | 'change') => {
+      setFlowType(type)
+      setFlowMode(mode)
+      setFlowStep(2)
+      resetOtp()
+      setFlowVisible(true)
+    },
+    [resetOtp]
+  )
 
   // Stripe Connect onboarding for events OUTSIDE Haiti (US/Canada/France).
   // The mobile payout screen was Haiti-only; this is the entry point that lets a
@@ -647,16 +641,15 @@ export default function OrganizerPayoutSettingsScreenV2() {
     [navigation]
   )
 
-  // The two payout REGIONS as pickable options. Which region an organizer
-  // belongs to decides which rails can ever pay them, so the picker leads with
-  // their own region and names the actual institutions — "Bank Account" alone
-  // reads as universal, and a US organizer would reasonably fill in a form
-  // wired to Sogebank/Unibank.
-  const ownRegion = useMemo(() => {
-    // A DECLARATION outranks any inference — the organizer said outright where
-    // they run events, and the first market they named leads.
+  // Which region the organizer belongs to by default: a DECLARATION outranks
+  // any inference — the organizer said outright where they run events, and the
+  // first market they named leads.
+  const ownRegion = useMemo<PayoutRegion>(() => {
     const rails = railsForMarkets(declaredMarkets)
     if (rails.length > 0) return rails[0] === 'stripe_connect' ? 'international' : 'haiti'
+
+    // Nothing declared, but only Stripe is set up: that is where they are paid.
+    if (stripeProfile?.connected && destinations.length === 0) return 'international'
 
     const stated = (userProfile as any)?.default_country
     const code = stated || (() => {
@@ -668,77 +661,36 @@ export default function OrganizerPayoutSettingsScreenV2() {
       }
     })()
     return code && code !== 'HT' ? 'international' : 'haiti'
-  }, [declaredMarkets, userProfile])
+  }, [declaredMarkets, userProfile, stripeProfile?.connected, destinations.length])
 
-  const haitiGroup = useMemo(
-    () => ({
-      key: 'haiti',
-      isOwn: ownRegion === 'haiti',
-      heading: t('organizerPayoutSettings.regions.haitiTitle'),
-      options: [
-        {
-          key: 'bank',
-          icon: 'card-outline',
-          title: t('organizerPayoutSettings.methodOptions.bankTitle'),
-          description: t('organizerPayoutSettings.methodOptions.bankDescription'),
-          onPress: () => handleAddMethodSelect('bank'),
-        },
-        {
-          key: 'moncash',
-          icon: 'phone-portrait-outline',
-          title: t('organizerPayoutSettings.methodOptions.moncashTitle'),
-          description: t('organizerPayoutSettings.methodOptions.moncashDescription'),
-          onPress: () => handleAddMethodSelect('moncash'),
-        },
-      ],
-    }),
-    [ownRegion, t, handleAddMethodSelect]
-  )
+  const region: PayoutRegion = pickedRegion ?? ownRegion
+  const pickRegion = useCallback((next: PayoutRegion) => {
+    lastRegionThisSession = next
+    setPickedRegion(next)
+  }, [])
 
   const handleAddStripe = useCallback(() => {
     if (!identityVerified) {
-      setShowAddModal(false)
-      setTimeout(() => showAlert(
-        t('organizerPayoutSettings.identityRequired.title'),
-        t('organizerPayoutSettings.identityRequired.body'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('organizerPayoutSettings.verifyIdentity'), onPress: openVerificationAfterAlert },
-        ]
-      ), AFTER_ALERT_MS)
+      promptIdentity()
       return
     }
-    setShowAddModal(false)
     showAlert(t('organizerPayoutSettings.stripeSetup.title'), t('organizerPayoutSettings.stripeSetup.question'), [
       { text: t('organizerPayoutSettings.countries.united_states'), onPress: () => startStripeConnect('united_states') },
       { text: t('organizerPayoutSettings.countries.canada'), onPress: () => startStripeConnect('canada') },
       { text: t('organizerPayoutSettings.countries.france'), onPress: () => startStripeConnect('france') },
       { text: t('common.cancel'), style: 'cancel' },
     ])
-  }, [identityVerified, openVerificationAfterAlert, startStripeConnect, t])
+  }, [identityVerified, promptIdentity, showAlert, startStripeConnect, t])
 
-  const internationalGroup = useMemo(
-    () => ({
-      key: 'international',
-      isOwn: ownRegion === 'international',
-      heading: t('organizerPayoutSettings.regions.internationalTitle'),
-      options: [
-        {
-          key: 'stripe',
-          icon: 'globe-outline',
-          title: t('organizerPayoutSettings.methodOptions.stripeTitle'),
-          description: t('organizerPayoutSettings.methodOptions.stripeDescription'),
-          onPress: handleAddStripe,
-        },
-      ],
-    }),
-    [ownRegion, t, handleAddStripe]
-  )
-
-  const handleSaveBank = useCallback(async () => {
+  /**
+   * Saves the bank in the flow. Returns 'verify' when the server wants the
+   * payout-change email code first (the flow then shows the code step and
+   * retries), 'ok' on success, 'error' otherwise.
+   */
+  const handleSaveBank = useCallback(async (): Promise<SaveResult> => {
     if (!bankForm.accountName || !bankForm.bankName || !bankForm.accountNumber) {
       showAlert(t('organizerPayoutSettings.alerts.missingInfoTitle'), t('organizerPayoutSettings.alerts.missingBankBody'))
-      return
+      return 'error'
     }
 
     setSavingBank(true)
@@ -759,15 +711,9 @@ export default function OrganizerPayoutSettingsScreenV2() {
       const data = await res.json()
 
       if (!res.ok) {
-        // Handle verification requirement
+        // Adding a bank needs a recent payout-change email code.
         if (data?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
-          showAlert(
-            t('organizerPayoutSettings.alerts.securityTitle'),
-            data.message || t('organizerPayoutSettings.alerts.securityBody'),
-            [{ text: t('common.ok') }]
-          )
-          setShowBankForm(false)
-          return
+          return 'verify'
         }
         throw new Error(data?.error || data?.message || t('organizerPayoutSettings.alerts.failedAddBank'))
       }
@@ -798,6 +744,8 @@ export default function OrganizerPayoutSettingsScreenV2() {
           const msg = String(profileData?.message || profileData?.error || '')
           // Preserve OTP step-up: switching an existing method may require a
           // recent security verification before the profile change is accepted.
+          // The bank itself is already saved, so retrying the whole save would
+          // add it twice: say so and stop (as before).
           if (
             profileData?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED' ||
             msg.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
@@ -807,9 +755,9 @@ export default function OrganizerPayoutSettingsScreenV2() {
               t('organizerPayoutSettings.alerts.securityBody'),
               [{ text: t('common.ok') }]
             )
-            setShowBankForm(false)
+            closeFlow()
             await loadDestinations()
-            return
+            return 'ok'
           }
           // Non-fatal: the bank destination itself was saved. Log and continue.
           console.warn('Failed to set Haiti profile method to bank_transfer:', msg)
@@ -825,9 +773,9 @@ export default function OrganizerPayoutSettingsScreenV2() {
           {
             text: t('organizerPayoutSettings.alerts.verifyNow'),
             onPress: () => {
-              setShowBankForm(false)
+              closeFlow()
               // Use the freshly-loaded list (not the stale `destinations` closure),
-              // and wait out the form's slide-down or iOS drops the next modal.
+              // and wait out the flow's slide-down or iOS drops the next modal.
               Promise.all([
                 loadDestinations(),
                 new Promise((resolve) => setTimeout(resolve, AFTER_ALERT_MS)),
@@ -842,23 +790,25 @@ export default function OrganizerPayoutSettingsScreenV2() {
               })
             },
           },
-          { text: t('organizerPayoutSettings.alerts.later'), onPress: () => setShowBankForm(false) },
+          { text: t('organizerPayoutSettings.alerts.later'), onPress: closeFlow },
         ]
       )
 
-      setBankForm({ accountName: '', bankName: '', accountNumber: '', routingNumber: '', swift: '' })
+      setBankForm(EMPTY_BANK_FORM)
       await loadDestinations()
+      return 'ok'
     } catch (e: any) {
       showAlert(t('common.error'), e?.message || t('organizerPayoutSettings.alerts.failedSaveBank'))
+      return 'error'
     } finally {
       setSavingBank(false)
     }
-  }, [bankForm, loadDestinations, t])
+  }, [bankForm, loadDestinations, closeFlow, showAlert, t])
 
-  const handleSaveMoncash = useCallback(async () => {
+  const handleSaveMoncash = useCallback(async (): Promise<SaveResult> => {
     if (!moncashForm.accountName.trim() || !moncashForm.phoneNumber.trim()) {
       showAlert(t('organizerPayoutSettings.alerts.missingInfoTitle'), t('organizerPayoutSettings.alerts.missingMoncashBody'))
-      return
+      return 'error'
     }
 
     setSavingMoncash(true)
@@ -881,22 +831,99 @@ export default function OrganizerPayoutSettingsScreenV2() {
       if (!res.ok) {
         // Replacing an existing MonCash number needs a recent email OTP.
         if (data?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
-          showAlert(t('organizerPayoutSettings.alerts.securityTitle'), t('organizerPayoutSettings.alerts.securityBody'))
-          return
+          return 'verify'
         }
         throw new Error(data?.error || data?.message || t('organizerPayoutSettings.alerts.failedSaveMoncash'))
       }
 
       showAlert(t('organizerPayoutSettings.alerts.moncashSavedTitle'), t('organizerPayoutSettings.alerts.moncashSavedBody'))
-      setMoncashForm({ provider: 'moncash', accountName: '', phoneNumber: '+509 ' })
-      setShowMoncashForm(false)
+      setMoncashForm(EMPTY_MONCASH_FORM)
+      closeFlow()
       await loadDestinations()
+      return 'ok'
     } catch (e: any) {
       showAlert(t('common.error'), e?.message || t('organizerPayoutSettings.alerts.failedSaveMoncash'))
+      return 'error'
     } finally {
       setSavingMoncash(false)
     }
-  }, [moncashForm, loadDestinations, t])
+  }, [moncashForm, loadDestinations, closeFlow, showAlert, t])
+
+  const saveFlowMethod = useCallback(async (): Promise<SaveResult> => {
+    const result = flowType === 'bank' ? await handleSaveBank() : await handleSaveMoncash()
+    if (result === 'verify') setFlowNeedsCode(true)
+    return result
+  }, [flowType, handleSaveBank, handleSaveMoncash])
+
+  // Payout-change email code (the same endpoints the withdraw sheet uses).
+  const sendPayoutChangeCode = useCallback(async () => {
+    setSendingOtp(true)
+    try {
+      await backendJson('/api/organizer/payout-details-change/send-email-code', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+      setOtpSent(true)
+      showAlert(t('organizerEarnings.otp.codeSentTitle'), t('organizerEarnings.otp.codeSentBody'))
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message || t('organizerEarnings.errors.sendCodeFailed'))
+    } finally {
+      setSendingOtp(false)
+    }
+  }, [showAlert, t])
+
+  const verifyCodeThenSave = useCallback(async () => {
+    if (!otpCode.trim()) {
+      showAlert(t('organizerEarnings.otp.enterCodeTitle'), t('organizerEarnings.otp.enterCodeBody'))
+      return
+    }
+    setVerifyingOtp(true)
+    try {
+      await backendJson('/api/organizer/payout-details-change/verify-email-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: otpCode.trim() }),
+      })
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message || t('organizerEarnings.errors.verificationFailed'))
+      setVerifyingOtp(false)
+      return
+    }
+    setVerifyingOtp(false)
+    const result = await saveFlowMethod()
+    if (result === 'verify') {
+      showAlert(t('common.error'), t('organizerEarnings.errors.verificationFailed'))
+    }
+  }, [otpCode, saveFlowMethod, showAlert, t])
+
+  const flowBack = useCallback(() => {
+    if (flowNeedsCode) {
+      resetOtp()
+      return
+    }
+    // A "change" starts at the details step; back from there closes.
+    const firstStep = flowMode === 'change' ? 2 : 1
+    if (flowStep > firstStep) setFlowStep((flowStep - 1) as 1 | 2)
+    else closeFlow()
+  }, [flowNeedsCode, flowMode, flowStep, resetOtp, closeFlow])
+
+  const flowContinue = useCallback(() => {
+    if (flowStep === 1) {
+      if (flowType) setFlowStep(2)
+      return
+    }
+    if (flowStep === 2) {
+      if (flowType === 'bank') {
+        if (!bankForm.accountName.trim() || !bankForm.bankName.trim() || !bankForm.accountNumber.trim()) {
+          showAlert(t('organizerPayoutSettings.alerts.missingInfoTitle'), t('organizerPayoutSettings.alerts.missingBankBody'))
+          return
+        }
+      } else if (!moncashForm.accountName.trim() || !moncashForm.phoneNumber.replace(/\D/g, '').replace(/^509/, '')) {
+        showAlert(t('organizerPayoutSettings.alerts.missingInfoTitle'), t('organizerPayoutSettings.alerts.missingMoncashBody'))
+        return
+      }
+      setFlowStep(3)
+    }
+  }, [flowStep, flowType, bankForm, moncashForm, showAlert, t])
 
   /**
    * Instant MonCash opt-in. Optimistic: the switch moves at once, and snaps
@@ -944,8 +971,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
       : prefunding.available
         ? 'available'
         : 'paused'
-  const instantMinimumLine = t('organizerPayoutSettings.instantMoncash.minimum')
-    .replace('{htg}', fmtCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG', { fromCents: true, decimals: 0 }))
   const instantFeeLabel = `${Math.round(INSTANT_MONCASH_FEE_PERCENT * 100)}%`
 
   const pickVerificationDocument = useCallback(async () => {
@@ -1010,199 +1035,140 @@ export default function OrganizerPayoutSettingsScreenV2() {
     }
   }, [verificationAsset, selectedDestination, verificationType, loadDestinations, t])
 
+  // ── Method helpers ───────────────────────────────────────────────────────
+  const methodName = (dest: PayoutDestination) =>
+    dest.type === 'bank'
+      ? (dest as BankDestination).bankName
+      : (dest as MoncashDestination).provider === 'natcash'
+        ? 'NatCash'
+        : 'MonCash'
+  const methodLast4 = (dest: PayoutDestination) =>
+    dest.type === 'bank' ? (dest as BankDestination).accountNumberLast4 : (dest as MoncashDestination).phoneNumberLast4
+
+  // The Haiti profile pays to ONE active method: MonCash, or the bank saved
+  // with it (the primary bank destination, else the first bank).
+  const defaultDestinationId = useMemo(() => {
+    if (haitiMethod === 'mobile_money') return 'haiti-mobile-money'
+    if (haitiMethod === 'bank_transfer') {
+      const banks = destinations.filter((d) => d.type === 'bank') as BankDestination[]
+      return (banks.find((b) => b.isPrimary) ?? banks[0])?.id ?? null
+    }
+    return null
+  }, [haitiMethod, destinations])
+
+  // Opens a sheet/screen only after the detail sheet has finished closing:
+  // iOS drops a modal presented while another is still animating out.
+  const afterDetailCloses = (fn: () => void) => {
+    setDetailDest(null)
+    setTimeout(fn, AFTER_ALERT_MS)
+  }
+
+  const renderDetailSheet = () => {
+    const dest = detailDest
+    if (!dest) return null
+    const isBank = dest.type === 'bank'
+    const chip = statusChip(dest.verificationStatus)
+    const holder = isBank ? (dest as BankDestination).accountName : (dest as MoncashDestination).accountName
+    const canVerifyBank = isBank && dest.verificationStatus !== 'verified'
+    const needsIdentity = !isBank && !identityVerified
+    return (
+      <>
+        <Text style={styles.modalTitle} numberOfLines={1}>
+          {methodName(dest)}
+          <Text style={styles.modalTitleDigits}>{`  •••• ${methodLast4(dest)}`}</Text>
+        </Text>
+        <ListGroup inset={16}>
+          {holder ? <ListRow key="holder" title={t('organizerPayoutSettings.hub.holderLabel')} value={holder} /> : null}
+          <ListRow
+            key="status"
+            title={t('organizerPayoutSettings.hub.status')}
+            trailing={<StatusDot status={chip.status} label={chip.label} />}
+          />
+          {dest.id === defaultDestinationId ? (
+            <ListRow key="default" title={t('organizerPayoutSettings.hub.default')} trailing={<Ionicons name="checkmark" size={18} color={colors.text} />} />
+          ) : null}
+        </ListGroup>
+        <ListGroup inset={16} style={{ marginTop: 12 }}>
+          {canVerifyBank ? (
+            <ListRow
+              key="verify"
+              title={t('organizerPayoutSettings.hub.verifyAccount')}
+              onPress={() =>
+                afterDetailCloses(() => {
+                  setSelectedDestination(dest)
+                  setShowVerificationModal(true)
+                })
+              }
+            />
+          ) : null}
+          {needsIdentity ? (
+            <ListRow
+              key="identity"
+              title={t('organizerPayoutSettings.identityRowLabel')}
+              onPress={() => afterDetailCloses(() => navigation.navigate('OrganizerVerification'))}
+            />
+          ) : null}
+          <ListRow
+            key="change"
+            title={t('organizerPayoutSettings.markets.change')}
+            onPress={() => afterDetailCloses(() => openChangeMethod(dest))}
+          />
+        </ListGroup>
+      </>
+    )
+  }
+
   const modals = (
     <>
-      {/* Add Method Modal */}
-      {/* A bottom sheet, like the markets and location pickers — not a card
-          floating mid-screen — so every chooser on this page behaves alike. */}
-      <Modal visible={showAddModal} transparent animationType="slide" onRequestClose={() => setShowAddModal(false)}>
+      <PayoutMethodFlow
+        visible={flowVisible}
+        step={flowStep}
+        type={flowType}
+        mode={flowMode}
+        onBack={flowBack}
+        onClose={closeFlow}
+        onSelectType={(type) => {
+          setFlowType(type)
+          if (type === 'moncash' && !moncashForm.accountName) {
+            setMoncashForm((s) => ({
+              ...s,
+              accountName: String((userProfile as any)?.full_name || (userProfile as any)?.name || ''),
+            }))
+          }
+        }}
+        onContinue={flowContinue}
+        onSave={saveFlowMethod}
+        saving={savingBank || savingMoncash}
+        moncashForm={moncashForm}
+        onMoncashChange={(patch) => setMoncashForm((s) => ({ ...s, ...patch }))}
+        natcashEnabled={NATCASH_ENABLED}
+        bankForm={bankForm}
+        onBankChange={(patch) => setBankForm((s) => ({ ...s, ...patch }))}
+        bankNameChoice={bankNameChoice}
+        onBankChoice={(v) => {
+          setBankNameChoice(v)
+          // A listed bank writes straight into bankForm.bankName; 'Other'
+          // clears it so the revealed free-text field supplies the value.
+          setBankForm((s) => ({ ...s, bankName: v === OTHER_BANK ? '' : v }))
+        }}
+        needsCode={flowNeedsCode}
+        code={otpCode}
+        onCodeChange={setOtpCode}
+        codeSent={otpSent}
+        sendingCode={sendingOtp}
+        verifyingCode={verifyingOtp}
+        onSendCode={sendPayoutChangeCode}
+        onVerifyAndSave={verifyCodeThenSave}
+      />
+
+      {/* One method's detail: status, default, verify, change. */}
+      <Modal visible={Boolean(detailDest)} transparent animationType="slide" onRequestClose={() => setDetailDest(null)}>
         <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowAddModal(false)} />
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDetailDest(null)} />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.modalTitle}>{t('organizerPayoutSettings.addModal.title')}</Text>
-
-            {/* Grouped by REGION, and the organizer's own region leads. A flat
-                list made "Bank Account" a trap: every US organizer has a bank
-                account, but that rail is Sogebank/Unibank — Haiti only. The
-                region heading plus the named institutions in each row is what
-                stops someone filling in the wrong section entirely. */}
-            {[haitiGroup, internationalGroup]
-              .filter((group) => (group.key === 'haiti' ? showHaitiRail : showStripeRail))
-              .sort((a, b) => Number(b.isOwn) - Number(a.isOwn))
-              .map((group) => (
-                <View key={group.key}>
-                  <Text style={styles.methodGroupHeading}>{group.heading}</Text>
-                  {group.options.map((opt) => (
-                    <Touchable
-                      key={opt.key}
-                      scale={0.98}
-                      style={styles.methodOption}
-                      onPress={opt.onPress}
-                    >
-                      <View style={styles.methodIcon}>
-                        <Ionicons name={opt.icon as any} size={22} color={colors.text} />
-                      </View>
-                      <View style={styles.methodText}>
-                        <Text style={styles.methodTitle}>{opt.title}</Text>
-                        <Text style={styles.methodDescription} numberOfLines={2}>{opt.description}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                    </Touchable>
-                  ))}
-                </View>
-              ))}
-
-            <Touchable style={[styles.secondaryButton, { marginTop: 8 }]} onPress={() => setShowAddModal(false)}>
-              <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
-            </Touchable>
+            {renderDetailSheet()}
           </View>
-        </View>
-      </Modal>
-
-      {/* Bank Form Modal */}
-      <Modal visible={showBankForm} animationType="slide" onRequestClose={() => setShowBankForm(false)}>
-        <View style={styles.container}>
-          <OrganizerScreenHeader title={t('organizerPayoutSettings.bankForm.headerTitle')} onBack={() => setShowBankForm(false)} />
-
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
-            <Text style={styles.label}>{t('organizerPayoutSettings.bankForm.accountHolder')}</Text>
-            <TextInput
-              style={styles.input}
-              value={bankForm.accountName}
-              onChangeText={(v) => setBankForm((s) => ({ ...s, accountName: v }))}
-              placeholder={t('organizerPayoutSettings.bankForm.fullNamePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <SelectField
-              label={t('organizerPayoutSettings.bankForm.bankName')}
-              value={bankNameChoice}
-              options={HAITI_BANKS}
-              onSelect={(v) => {
-                setBankNameChoice(v)
-                // A listed bank writes straight into bankForm.bankName; 'Other'
-                // clears it so the revealed free-text field supplies the value.
-                setBankForm((s) => ({ ...s, bankName: v === OTHER_BANK ? '' : v }))
-              }}
-              placeholder={t('organizerPayoutSettings.bankForm.selectBank')}
-              sheetTitle={t('organizerPayoutSettings.bankForm.selectBank')}
-            />
-            {bankNameChoice === OTHER_BANK && (
-              <TextInput
-                style={[styles.input, { marginTop: 12 }]}
-                value={bankForm.bankName}
-                onChangeText={(v) => setBankForm((s) => ({ ...s, bankName: v }))}
-                placeholder={t('organizerPayoutSettings.bankForm.otherBankPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                selectionColor={colors.primary}
-              />
-            )}
-
-            <Text style={styles.label}>{t('organizerPayoutSettings.bankForm.accountNumber')}</Text>
-            <TextInput
-              style={styles.input}
-              value={bankForm.accountNumber}
-              onChangeText={(v) => setBankForm((s) => ({ ...s, accountNumber: v }))}
-              placeholder={t('organizerPayoutSettings.bankForm.accountNumberPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-              keyboardType="number-pad"
-            />
-
-            <Text style={styles.label}>{t('organizerPayoutSettings.bankForm.routingNumber')}</Text>
-            <TextInput
-              style={styles.input}
-              value={bankForm.routingNumber}
-              onChangeText={(v) => setBankForm((s) => ({ ...s, routingNumber: v }))}
-              placeholder={t('organizerPayoutSettings.bankForm.routingNumberPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <Text style={styles.label}>{t('organizerPayoutSettings.bankForm.swift')}</Text>
-            <TextInput
-              style={styles.input}
-              value={bankForm.swift}
-              onChangeText={(v) => setBankForm((s) => ({ ...s, swift: v }))}
-              placeholder={t('organizerPayoutSettings.bankForm.swiftPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-              autoCapitalize="characters"
-            />
-
-            <WhitePillCTA
-              style={{ marginTop: 24 }}
-              label={t('organizerPayoutSettings.bankForm.save')}
-              onPress={handleSaveBank}
-              loading={savingBank}
-              disabled={savingBank}
-            />
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {/* MonCash Form Modal */}
-      <Modal visible={showMoncashForm} animationType="slide" onRequestClose={() => setShowMoncashForm(false)}>
-        <View style={styles.container}>
-          <OrganizerScreenHeader title={t('organizerPayoutSettings.moncashForm.headerTitle')} onBack={() => setShowMoncashForm(false)} />
-
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
-            <Text style={styles.label}>{t('organizerPayoutSettings.moncashForm.provider')}</Text>
-            <View style={styles.row}>
-              <Touchable
-                style={[styles.chip, moncashForm.provider === 'moncash' && styles.chipActive]}
-                onPress={() => setMoncashForm((s) => ({ ...s, provider: 'moncash' }))}
-              >
-                <Text style={[styles.chipText, moncashForm.provider === 'moncash' && styles.chipTextActive]}>
-                  MonCash
-                </Text>
-              </Touchable>
-              {/* NatCash hidden for launch (MonCash-only). A previously saved
-                  NatCash destination still renders in the list; only the
-                  option to pick it for NEW methods is gated. */}
-              {NATCASH_ENABLED && (
-                <Touchable
-                  style={[styles.chip, moncashForm.provider === 'natcash' && styles.chipActive]}
-                  onPress={() => setMoncashForm((s) => ({ ...s, provider: 'natcash' }))}
-                >
-                  <Text style={[styles.chipText, moncashForm.provider === 'natcash' && styles.chipTextActive]}>
-                    NatCash
-                  </Text>
-                </Touchable>
-              )}
-            </View>
-
-            <Text style={styles.label}>{t('organizerPayoutSettings.moncashForm.accountName')}</Text>
-            <TextInput
-              style={styles.input}
-              value={moncashForm.accountName}
-              onChangeText={(v) => setMoncashForm((s) => ({ ...s, accountName: v }))}
-              placeholder={t('organizerPayoutSettings.bankForm.fullNamePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-
-            <Text style={styles.label}>{t('organizerPayoutSettings.moncashForm.phoneNumber')}</Text>
-            <TextInput
-              style={styles.input}
-              value={moncashForm.phoneNumber}
-              onChangeText={(v) => setMoncashForm((s) => ({ ...s, phoneNumber: v }))}
-              placeholder="+509..."
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-              keyboardType="phone-pad"
-            />
-
-            <WhitePillCTA
-              style={{ marginTop: 24 }}
-              label={t('organizerPayoutSettings.moncashForm.save')}
-              onPress={handleSaveMoncash}
-              loading={savingMoncash}
-              disabled={savingMoncash}
-            />
-          </ScrollView>
         </View>
       </Modal>
 
@@ -1216,64 +1182,57 @@ export default function OrganizerPayoutSettingsScreenV2() {
           <OrganizerScreenHeader title={t('organizerPayoutSettings.verifyModal.headerTitle')} onBack={() => setShowVerificationModal(false)} />
 
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('organizerPayoutSettings.verifyModal.requiredTitle')}</Text>
-              <Text style={styles.metaText}>
-                {t('organizerPayoutSettings.verifyModal.requiredBody')}
-              </Text>
-              <View style={{ marginTop: 8 }}>
-                <Text style={styles.bulletPoint}>• {t('organizerPayoutSettings.verifyModal.bulletAccount')}</Text>
-                <Text style={styles.bulletPoint}>• {t('organizerPayoutSettings.verifyModal.bulletName')}</Text>
-                <Text style={styles.bulletPoint}>• {t('organizerPayoutSettings.verifyModal.bulletBank')}</Text>
-              </View>
-            </View>
+            {/* What the document must show: a requirement, so it stays. */}
+            <Text style={styles.fieldEyebrow}>{t('organizerPayoutSettings.verifyModal.requiredTitle')}</Text>
+            <ListGroup inset={16}>
+              <ListRow key="a" title={t('organizerPayoutSettings.verifyModal.bulletAccount')} />
+              <ListRow key="n" title={t('organizerPayoutSettings.verifyModal.bulletName')} />
+              <ListRow key="b" title={t('organizerPayoutSettings.verifyModal.bulletBank')} />
+            </ListGroup>
 
-            <Text style={[styles.label, { marginTop: 16 }]}>{t('organizerPayoutSettings.verifyModal.documentType')}</Text>
+            <Text style={[styles.fieldEyebrow, { marginTop: 24 }]}>{t('organizerPayoutSettings.verifyModal.documentType')}</Text>
             <View style={styles.row}>
-              <Touchable
-                style={[styles.chip, verificationType === 'bank_statement' && styles.chipActive]}
-                onPress={() => setVerificationType('bank_statement')}
-              >
-                <Text style={[styles.chipText, verificationType === 'bank_statement' && styles.chipTextActive]}>
-                  {t('organizerPayoutSettings.verifyModal.bankStatement')}
-                </Text>
-              </Touchable>
-              <Touchable
-                style={[styles.chip, verificationType === 'void_check' && styles.chipActive]}
-                onPress={() => setVerificationType('void_check')}
-              >
-                <Text style={[styles.chipText, verificationType === 'void_check' && styles.chipTextActive]}>
-                  {t('organizerPayoutSettings.verifyModal.voidCheck')}
-                </Text>
-              </Touchable>
-              <Touchable
-                style={[styles.chip, verificationType === 'utility_bill' && styles.chipActive]}
-                onPress={() => setVerificationType('utility_bill')}
-              >
-                <Text style={[styles.chipText, verificationType === 'utility_bill' && styles.chipTextActive]}>
-                  {t('organizerPayoutSettings.verifyModal.utilityBill')}
-                </Text>
-              </Touchable>
+              {(['bank_statement', 'void_check', 'utility_bill'] as const).map((kind) => {
+                const on = verificationType === kind
+                const label =
+                  kind === 'bank_statement'
+                    ? t('organizerPayoutSettings.verifyModal.bankStatement')
+                    : kind === 'void_check'
+                      ? t('organizerPayoutSettings.verifyModal.voidCheck')
+                      : t('organizerPayoutSettings.verifyModal.utilityBill')
+                return (
+                  <Touchable
+                    key={kind}
+                    style={[styles.chip, on && styles.chipActive]}
+                    onPress={() => setVerificationType(kind)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextActive]}>{label}</Text>
+                  </Touchable>
+                )
+              })}
             </View>
 
-            <Touchable
-              style={[styles.secondaryButton, { marginTop: 16 }]}
-              onPress={pickVerificationDocument}
-            >
-              <Ionicons name="document-attach-outline" size={20} color={colors.text} />
-              <Text style={styles.secondaryButtonText}>
-                {verificationAsset ? t('organizerPayoutSettings.verifyModal.changeDocument') : t('organizerPayoutSettings.verifyModal.chooseDocument')}
-              </Text>
-            </Touchable>
-
-            {verificationAsset && (
-              <View style={[styles.card, { marginTop: 12, backgroundColor: `${colors.success}10` }]}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={[styles.metaText, { marginLeft: 10, color: colors.success }]}>
-                  {t('organizerPayoutSettings.verifyModal.documentSelected')}: {verificationAsset.fileName || t('organizerPayoutSettings.verifyModal.imageFallback')}
-                </Text>
-              </View>
-            )}
+            <ListGroup inset={16} style={{ marginTop: 24 }}>
+              <ListRow
+                key="doc"
+                title={
+                  verificationAsset
+                    ? verificationAsset.fileName || t('organizerPayoutSettings.verifyModal.imageFallback')
+                    : t('organizerPayoutSettings.verifyModal.chooseDocument')
+                }
+                value={verificationAsset ? t('organizerPayoutSettings.verifyModal.changeDocument') : undefined}
+                leading={
+                  <Ionicons
+                    name={verificationAsset ? 'checkmark-circle' : 'document-attach-outline'}
+                    size={20}
+                    color={verificationAsset ? colors.success : colors.textSecondary}
+                  />
+                }
+                onPress={pickVerificationDocument}
+              />
+            </ListGroup>
 
             <WhitePillCTA
               style={{ marginTop: 24 }}
@@ -1282,7 +1241,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
               loading={submittingVerification}
               disabled={submittingVerification || !verificationAsset}
             />
-
           </ScrollView>
         </View>
       </Modal>
@@ -1419,17 +1377,28 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const finishSetup = useCallback(async () => {
     if (setupMethod === 'moncash') {
       if (!requireIdentity()) return
-      await handleSaveMoncash()
+      const result = await handleSaveMoncash()
+      if (result === 'verify') {
+        // Needs the payout-change email code: finish in the flow's code step.
+        setFlowType('moncash')
+        setFlowMode('add')
+        setFlowStep(3)
+        setOtpCode('')
+        setOtpSent(false)
+        setFlowNeedsCode(true)
+        setFlowVisible(true)
+      }
       return
     }
     if (setupMethod === 'bank') {
       if (!requireIdentity()) return
+      setBankForm(EMPTY_BANK_FORM)
       setBankNameChoice('')
-      setShowBankForm(true)
+      openFlowAtDetails('bank', 'add')
       return
     }
     setSetupDone(true)
-  }, [setupMethod, requireIdentity, handleSaveMoncash])
+  }, [setupMethod, requireIdentity, handleSaveMoncash, openFlowAtDetails])
 
   const setupBack = () => {
     if (setupStep && setupStep > 1) setSetupStep((setupStep - 1) as 1 | 2)
@@ -1685,10 +1654,11 @@ export default function OrganizerPayoutSettingsScreenV2() {
     if (dest.type === 'moncash') {
       const m = dest as MoncashDestination
       setMoncashForm({ provider: m.provider || 'moncash', accountName: m.accountName || '', phoneNumber: m.phoneNumber || '+509 ' })
-      setShowMoncashForm(true)
+      openFlowAtDetails('moncash', 'change')
     } else {
+      setBankForm(EMPTY_BANK_FORM)
       setBankNameChoice('')
-      setShowBankForm(true)
+      openFlowAtDetails('bank', 'change')
     }
   }
 
@@ -1702,16 +1672,167 @@ export default function OrganizerPayoutSettingsScreenV2() {
   }
 
   const inHistory = activeTab === 'history'
+  const hub = (key: string) => t(`organizerPayoutSettings.hub.${key}`)
+
+  // ── Region summaries (the two tiles at the top) ──────────────────────────
+  const haitiSummary: { status: string; label: string } = (() => {
+    const n = destinations.length
+    if (n === 0) return { status: 'neutral', label: hub('notSetUp') }
+    const count = n === 1 ? hub('methodCountOne') : hub('methodCountMany').replace('{n}', String(n))
+    if (destinations.some((d) => d.verificationStatus === 'verified')) return { status: 'verified', label: `${count} · ${hub('ready')}` }
+    if (destinations.some((d) => d.verificationStatus === 'pending')) return { status: 'pending', label: `${count} · ${hub('underReview')}` }
+    return { status: 'actionneeded', label: `${count} · ${hub('actionNeeded')}` }
+  })()
+  const outsideSummary: { status: string; label: string } = !stripeProfile?.connected
+    ? { status: 'neutral', label: hub('notSetUp') }
+    : stripeProfile.verified
+      ? { status: 'verified', label: hub('ready') }
+      : { status: 'pending', label: hub('finishSetup') }
+
+  const stripeCountry = stripeProfile?.country === 'CA' ? 'CA' : stripeProfile?.country === 'FR' ? 'FR' : 'US'
+  const stripeCurrency = stripeCountry === 'CA' ? 'CAD' : stripeCountry === 'FR' ? 'EUR' : 'USD'
+  const stripeAction = () => {
+    if (stripeProfile?.connected) {
+      startStripeConnect(stripeCountry === 'CA' ? 'canada' : stripeCountry === 'FR' ? 'france' : 'united_states')
+    } else {
+      handleAddStripe()
+    }
+  }
+  const stripeActionLabel = !stripeProfile?.connected
+    ? hub('connect')
+    : stripeProfile.verified
+      ? hub('manage')
+      : hub('finishInStripe')
+
+  const minimumHtg = fmtCurrency(MONCASH_MIN_WITHDRAWAL_HTG_CENTS, 'HTG', { fromCents: true, decimals: 0 })
+
+  const renderRegionTile = (key: PayoutRegion, title: string, sub: string, summary: { status: string; label: string }) => {
+    const on = region === key
+    return (
+      <Touchable
+        key={key}
+        scale={0.98}
+        style={[styles.regionTile, on && styles.regionTileOn]}
+        onPress={() => pickRegion(key)}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: on }}
+        accessibilityLabel={`${title}, ${summary.label}`}
+      >
+        <Text style={[styles.regionTitle, !on && styles.regionTitleOff]} numberOfLines={1}>{title}</Text>
+        <Text style={styles.regionSub} numberOfLines={1}>{sub}</Text>
+        <View style={{ marginTop: 10 }}>
+          <StatusDot status={summary.status} label={summary.label} lines={2} />
+        </View>
+        {on ? <View style={styles.regionBar} /> : null}
+      </Touchable>
+    )
+  }
+
+  const renderHaiti = () => (
+    <>
+      <View style={styles.sectionGap}>
+        <SectionHeader title={hub('methodsTitle')} />
+      </View>
+      <ListGroup>
+        {destinations.map((dest) => {
+          const chip = statusChip(dest.verificationStatus)
+          const isDefault = dest.id === defaultDestinationId
+          return (
+            <ListRow
+              key={dest.id}
+              icon={dest.type === 'bank' ? Landmark : Smartphone}
+              title={methodName(dest)}
+              subtitle={[`•••• ${methodLast4(dest)}`, isDefault ? hub('default') : null].filter(Boolean).join(' · ')}
+              trailing={<StatusDot status={chip.status} label={chip.label} />}
+              chevron
+              onPress={() => setDetailDest(dest)}
+            />
+          )
+        })}
+        <ListRow key="add" icon={Plus} title={t('organizerPayoutSettings.addMethodRow')} onPress={openAddFlow} />
+      </ListGroup>
+
+      {/* Instant MonCash opt-in, only while payouts go to MonCash. */}
+      {instantState ? (
+        <ListGroup style={{ marginTop: 12 }}>
+          <ListRow
+            key="instant"
+            icon={Zap}
+            title={hub('instant')}
+            subtitle={
+              instantState === 'paused'
+                ? hub('instantPaused')
+                : t('organizerPayoutSettings.instantMoncash.feeLine').replace('{fee}', instantFeeLabel)
+            }
+            value={instantState === 'not_yet' ? hub('instantSoon') : undefined}
+            trailing={
+              instantState === 'not_yet' ? undefined : (
+                <Switch
+                  value={allowInstantMoncash}
+                  onValueChange={toggleInstantMoncash}
+                  disabled={instantState !== 'available' || savingInstant}
+                  accessibilityLabel={hub('instant')}
+                />
+              )
+            }
+            chevron={false}
+          />
+          <ListRow key="min" icon={Receipt} title={hub('minimum')} value={minimumHtg} />
+        </ListGroup>
+      ) : null}
+    </>
+  )
+
+  const renderOutside = () => (
+    <>
+      <View style={styles.sectionGap}>
+        <SectionHeader title={hub('stripeTitle')} />
+      </View>
+      <ListGroup inset={60}>
+        <ListRow
+          key="stripe"
+          icon={Globe}
+          title={t('organizerPayoutSettings.stripe.title')}
+          trailing={<StatusDot status={outsideSummary.status} label={outsideSummary.label} />}
+          chevron
+          onPress={stripeAction}
+          accessibilityLabel={`${t('organizerPayoutSettings.stripe.title')}, ${outsideSummary.label}, ${stripeActionLabel}`}
+        />
+        {stripeProfile?.connected ? (
+          <ListRow key="country" title={hub('country')} value={countryName(stripeCountry)} leading={<View style={styles.rowSpacer} />} />
+        ) : null}
+        {stripeProfile?.connected ? (
+          <ListRow key="currency" title={hub('currency')} value={stripeCurrency} leading={<View style={styles.rowSpacer} />} />
+        ) : null}
+      </ListGroup>
+
+      {/* One connected account, fixed country: other markets pay into it. */}
+      {mismatchedStripeMarkets.length > 0 ? (
+        <Text style={styles.caption}>
+          {hub('mismatch')
+            .replace('{currency}', stripeCurrency)
+            .replace('{markets}', mismatchedStripeMarkets.map((code) => countryName(code)).join(', '))}
+        </Text>
+      ) : null}
+
+      <WhitePillCTA style={{ marginTop: 20 }} label={stripeActionLabel} onPress={stripeAction} />
+    </>
+  )
+
+  const marketsValue =
+    declaredMarkets.length > 0
+      ? declaredMarkets.map((code) => countryName(code)).join(', ')
+      : t('organizerPayoutSettings.markets.notSet')
 
   return (
     <View style={styles.container}>
       <OrganizerScreenHeader
-        title={inHistory ? t('organizerPayoutSettings.payoutHistory.title') : t('organizerPayoutSettings.headerTitle')}
+        title={inHistory ? t('organizerPayoutSettings.payoutHistory.title') : hub('title')}
         onBack={() => (inHistory ? setActiveTab('methods') : navigation.goBack())}
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
         }
@@ -1719,284 +1840,69 @@ export default function OrganizerPayoutSettingsScreenV2() {
         {/* First-ever load only. After first paint this branch never shows
             again; background refreshes keep the data on screen. */}
         {loading || (!serverLoaded && !hasAnyMethod) ? (
-          <View>
+          <View style={{ gap: 12 }}>
+            <View style={styles.regionRow}>
+              <Skeleton width="49%" height={96} radius={4} />
+              <Skeleton width="49%" height={96} radius={4} />
+            </View>
             {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.destinationCard}>
-                <View style={styles.destinationHeader}>
-                  <Skeleton width={32} height={32} radius={4} />
-                  <View style={{ flex: 1, marginLeft: 10, gap: 7 }}>
-                    <Skeleton width="52%" height={14} radius={4} />
-                    <Skeleton width="38%" height={11} radius={4} />
-                  </View>
-                </View>
-              </View>
+              <Skeleton key={i} width="100%" height={64} radius={4} />
             ))}
           </View>
         ) : !inHistory ? (
           <>
             {/* Identity, only while it still needs doing. */}
-            {!identityVerified && (
-              <Touchable
-                scale={0.98}
-                style={styles.setupRow}
-                onPress={() => navigation.navigate('OrganizerVerification')}
-                accessibilityRole="button"
-              >
-                <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} />
-                <View style={styles.setupRowText}>
-                  <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.identityRowLabel')}</Text>
-                  <StatusDot
-                    status={identitySubmitted ? 'pending' : 'actionneeded'}
-                    label={identitySubmitted ? t('organizerPayoutSettings.status.underReview') : t('organizerPayoutSettings.summary.actionNeeded')}
-                  />
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </Touchable>
-            )}
-
-            {/* Where you run events: the saved answer as one row. */}
-            <View style={{ marginTop: 8 }}>
-              <SectionHeader title={t('organizerPayoutSettings.markets.title')} />
-            </View>
-            <View style={styles.setupRow}>
-              <View style={styles.flagStack}>
-                {declaredMarkets.length > 0 ? (
-                  declaredMarkets.slice(0, 3).map((code) => <FlagSquare key={code} code={code} size={20} />)
-                ) : (
-                  <Ionicons name="globe-outline" size={20} color={colors.textSecondary} />
-                )}
-              </View>
-              <Text
-                style={[styles.setupRowHint, { flex: 1 }, declaredMarkets.length > 0 && styles.setupRowValue]}
-                numberOfLines={1}
-              >
-                {marketsSummary}
-              </Text>
-              <Touchable
-                onPress={() => setMarketsSheetOpen(true)}
-                disabled={!marketsLoaded}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                accessibilityRole="button"
-                accessibilityLabel={`${t('organizerPayoutSettings.markets.title')}: ${marketsSummary}`}
-              >
-                <Text style={styles.changeLink}>
-                  {declaredMarkets.length > 0
-                    ? t('organizerPayoutSettings.markets.change')
-                    : t('organizerPayoutSettings.markets.choose')}
-                </Text>
-              </Touchable>
-            </View>
-
-            {/* Cross-border advisory: one connected account, fixed country. */}
-            {mismatchedStripeMarkets.length > 0 ? (
-              <View style={styles.marketsWarning}>
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.marketsWarningText}>
-                  {t('organizerPayoutSettings.markets.countryMismatch')
-                    .replace('{account}', countryName(connectedAccountCountry))
-                    .replace('{markets}', mismatchedStripeMarkets.map((code) => countryName(code)).join(', '))}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* The payout methods, by region: which one an event pays through
-                is decided by the event's country, server-side. */}
-            {showStripeRail ? (
-              <>
-                <RegionSection
-                  colors={colors}
-                  title={t('organizerPayoutSettings.regions.internationalTitle')}
-                  blurb={t('organizerPayoutSettings.regions.internationalBlurb')}
-                  status={stripeProfile?.connected ? (stripeProfile.verified ? 'ready' : 'pending') : 'none'}
-                  t={t}
-                />
-                {stripeProfile?.connected ? (
-                  // The whole row opens Stripe, not just its link (TestFlight #82).
-                  <Touchable
-                    scale={0.98}
-                    style={styles.destinationCard}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${t('organizerPayoutSettings.stripe.title')}, ${
-                      stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')
-                    }`}
-                    onPress={() =>
-                      startStripeConnect(
-                        stripeProfile.country === 'CA' ? 'canada' : stripeProfile.country === 'FR' ? 'france' : 'united_states'
-                      )
-                    }
-                  >
-                    <View style={styles.destinationHeader}>
-                      <View style={styles.methodIconTile}>
-                        <Ionicons name="globe-outline" size={16} color={colors.text} />
-                      </View>
-                      <View style={styles.destinationBody}>
-                        <Text style={styles.destinationTitle} numberOfLines={1}>{t('organizerPayoutSettings.stripe.title')}</Text>
-                        <Text style={styles.destinationSubtitle} numberOfLines={1}>
-                          {stripeProfile.country === 'CA'
-                            ? t('organizerPayoutSettings.countries.canada')
-                            : stripeProfile.country === 'FR'
-                              ? t('organizerPayoutSettings.countries.france')
-                              : t('organizerPayoutSettings.countries.united_states')}
-                        </Text>
-                        <View style={styles.destinationStatus}>
-                          {stripeProfile.verified ? (
-                            <StatusDot status="verified" label={t('organizerPayoutSettings.stripeCard.connected')} />
-                          ) : (
-                            <StatusDot status="pending" label={t('organizerPayoutSettings.stripeCard.finishSetup')} />
-                          )}
-                        </View>
-                      </View>
-                      <Text style={styles.changeLink}>
-                        {stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')}
-                      </Text>
-                    </View>
-                  </Touchable>
-                ) : (
-                  <Touchable scale={0.98} style={styles.setupRow} onPress={handleAddStripe} accessibilityRole="button">
-                    <Text style={[styles.setupRowHint, { flex: 1 }]}>{t('organizerPayoutSettings.regions.emptyInternational')}</Text>
-                    <Text style={styles.changeLink}>{t('organizerPayoutSettings.setup.method.connect')}</Text>
-                  </Touchable>
-                )}
-              </>
-            ) : null}
-
-            {showHaitiRail ? (
-              <>
-                <RegionSection
-                  colors={colors}
-                  title={t('organizerPayoutSettings.regions.haitiTitle')}
-                  blurb={t('organizerPayoutSettings.regions.haitiBlurb')}
-                  status={
-                    destinations.length === 0
-                      ? 'none'
-                      : destinations.some((d) => d.verificationStatus === 'verified')
-                        ? 'ready'
-                        : 'pending'
+            {!identityVerified ? (
+              <ListGroup style={{ marginBottom: 16 }}>
+                <ListRow
+                  icon={ShieldCheck}
+                  title={t('organizerPayoutSettings.identityRowLabel')}
+                  trailing={
+                    <StatusDot
+                      status={identitySubmitted ? 'pending' : 'actionneeded'}
+                      label={identitySubmitted ? hub('underReview') : hub('actionNeeded')}
+                    />
                   }
-                  t={t}
+                  chevron
+                  onPress={() => navigation.navigate('OrganizerVerification')}
                 />
-                {destinations.length === 0 ? (
-                  <Text style={styles.regionEmpty}>{t('organizerPayoutSettings.regions.emptyHaiti')}</Text>
-                ) : null}
+              </ListGroup>
+            ) : null}
 
-                {destinations.map((dest) => {
-                  const chip = statusChip(dest.verificationStatus)
-                  const isBank = dest.type === 'bank'
-                  return (
-                    <Touchable
-                      key={dest.id}
-                      scale={0.98}
-                      style={styles.destinationCard}
-                      disabled={dest.verificationStatus === 'verified'}
-                      accessibilityRole="button"
-                      onPress={() => {
-                        setSelectedDestination(dest)
-                        if (isBank) {
-                          setShowVerificationModal(true)
-                        } else if (identityVerified) {
-                          showAlert(
-                            t('organizerPayoutSettings.moncashVerify.readyTitle'),
-                            t('organizerPayoutSettings.moncashVerify.readyBody')
-                          )
-                        } else {
-                          showAlert(t('organizerPayoutSettings.moncashVerify.title'), t('organizerPayoutSettings.moncashVerify.body'), [
-                            { text: t('organizerPayoutSettings.moncashVerify.cancel'), style: 'cancel' },
-                            {
-                              text: t('organizerPayoutSettings.moncashVerify.verifyCta'),
-                              onPress: openVerificationAfterAlert,
-                            },
-                          ])
-                        }
-                      }}
-                    >
-                      <View style={styles.destinationHeader}>
-                        <View style={styles.methodIconTile}>
-                          <Ionicons name={isBank ? 'card-outline' : 'phone-portrait-outline'} size={16} color={colors.text} />
-                        </View>
-                        <View style={styles.destinationBody}>
-                          <Text style={styles.destinationTitle} numberOfLines={1}>
-                            {isBank ? (dest as BankDestination).bankName : (dest as MoncashDestination).provider === 'natcash' ? 'NatCash' : 'MonCash'}
-                            <Text style={styles.destinationDigits}>
-                              {'  •••• '}
-                              {isBank ? (dest as BankDestination).accountNumberLast4 : (dest as MoncashDestination).phoneNumberLast4}
-                            </Text>
-                          </Text>
-                          <Text style={styles.destinationSubtitle} numberOfLines={1}>
-                            {isBank ? (dest as BankDestination).accountName : (dest as MoncashDestination).accountName}
-                          </Text>
-                          <View style={styles.destinationStatus}>
-                            <StatusDot status={chip.status} label={chip.label} />
-                          </View>
-                        </View>
-                        <Touchable
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          accessibilityRole="button"
-                          onPress={() => openChangeMethod(dest)}
-                        >
-                          <Text style={styles.changeLink}>{t('organizerPayoutSettings.markets.change')}</Text>
-                        </Touchable>
-                      </View>
-                    </Touchable>
-                  )
-                })}
+            {/* Haiti | Outside Haiti: one region on screen at a time. */}
+            <View style={styles.regionRow} accessibilityRole="tablist">
+              {renderRegionTile('haiti', hub('haiti'), hub('haitiSub'), haitiSummary)}
+              {renderRegionTile('international', hub('outside'), hub('outsideSub'), outsideSummary)}
+            </View>
 
-                {/* Instant MonCash opt-in, under the MonCash method it applies to. */}
-                {instantState ? (
-                  <View style={styles.instantCard}>
-                    <View style={styles.destinationHeader}>
-                      <View style={styles.methodIconTile}>
-                        <Ionicons name="flash-outline" size={16} color={colors.text} />
-                      </View>
-                      <View style={styles.destinationBody}>
-                        <Text style={styles.destinationTitle}>{t('organizerPayoutSettings.instantMoncash.title')}</Text>
-                        <Text style={styles.destinationSubtitle}>
-                          {t('organizerPayoutSettings.instantMoncash.feeLine').replace('{fee}', instantFeeLabel)}
-                        </Text>
-                      </View>
-                      {instantState === 'not_yet' ? (
-                        <Text style={styles.instantStateLabel}>{t('organizerPayoutSettings.instantMoncash.stateNotYet')}</Text>
-                      ) : (
-                        <Switch
-                          value={allowInstantMoncash}
-                          onValueChange={toggleInstantMoncash}
-                          disabled={instantState !== 'available' || savingInstant}
-                          accessibilityLabel={t('organizerPayoutSettings.instantMoncash.title')}
-                        />
-                      )}
-                    </View>
-                    <Text style={styles.instantBody}>
-                      {instantState === 'available'
-                        ? t('organizerPayoutSettings.instantMoncash.bodyAvailable').replace('{fee}', instantFeeLabel)
-                        : instantState === 'paused'
-                          ? t('organizerPayoutSettings.instantMoncash.bodyPaused')
-                          : t('organizerPayoutSettings.instantMoncash.bodyNotYet')}
-                    </Text>
-                    <Text style={styles.instantBody}>{instantMinimumLine}</Text>
+            {region === 'haiti' ? renderHaiti() : renderOutside()}
+
+            {/* Settings that apply to both regions. */}
+            <ListGroup style={{ marginTop: 32 }}>
+              <ListRow
+                key="markets"
+                leading={
+                  <View style={styles.flagTile}>
+                    {declaredMarkets.length > 0 ? (
+                      <FlagSquare code={declaredMarkets[0]} size={20} />
+                    ) : (
+                      <Globe size={18} color={colors.textSecondary} strokeWidth={1.75} />
+                    )}
                   </View>
-                ) : null}
-              </>
-            ) : null}
-
-            {/* Adding a method is its own sub-flow (the sheet below). */}
-            <Touchable style={styles.addMethodRow} onPress={() => setShowAddModal(true)} accessibilityRole="button">
-              <Ionicons name="add" size={18} color={colors.text} />
-              <Text style={styles.addMethodRowText}>{t('organizerPayoutSettings.addMethodRow')}</Text>
-            </Touchable>
-
-            {/* History is a row now, not a tab. */}
-            <Touchable scale={0.98} style={[styles.setupRow, { marginTop: 10 }]} onPress={() => setActiveTab('history')} accessibilityRole="button">
-              <Ionicons name="receipt-outline" size={20} color={colors.textSecondary} />
-              <View style={styles.setupRowText}>
-                <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.payoutHistory.title')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-            </Touchable>
-
-            {someRailHidden ? (
-              <TouchableOpacity onPress={() => setShowAllRails(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'center' }}>
-                <Text style={styles.marketsShowAll}>{t('organizerPayoutSettings.markets.showAllRails')}</Text>
-              </TouchableOpacity>
-            ) : null}
+                }
+                title={hub('eventsIn')}
+                value={marketsValue}
+                chevron
+                disabled={!marketsLoaded}
+                onPress={() => setMarketsSheetOpen(true)}
+              />
+              <ListRow
+                key="history"
+                icon={Receipt}
+                title={t('organizerPayoutSettings.payoutHistory.title')}
+                onPress={() => setActiveTab('history')}
+              />
+            </ListGroup>
           </>
         ) : payoutsLoading && !refreshing ? (
           <View style={{ gap: 12 }}>
@@ -2274,18 +2180,80 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.textSecondary,
   },
   // ── Summary ──
-  flagStack: {
+  // Haiti | Outside Haiti: two filled tiles side by side; the one on show is a
+  // step brighter with a white bar under it (no outline, no pill).
+  regionRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
   },
-  changeLink: {
-    fontSize: 13,
+  regionTile: {
+    flex: 1,
+    minHeight: 96,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  regionTileOn: {
+    backgroundColor: colors.surfaceRaised,
+  },
+  regionTitle: {
+    fontSize: 17,
     fontWeight: '600',
     color: colors.text,
-    textDecorationLine: 'underline',
   },
-  destinationStatus: {
-    marginTop: 6,
+  regionTitleOff: {
+    color: colors.textSecondary,
+  },
+  regionSub: {
+    marginTop: 2,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  regionBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: T.white,
+  },
+  sectionGap: {
+    marginTop: 28,
+  },
+  // Lines up value rows with the icon row above them (32 tile + 12 gap - 12 row gap).
+  rowSpacer: {
+    width: 32,
+  },
+  flagTile: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: T.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  caption: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  },
+  fieldEyebrow: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 10,
+  },
+  modalTitleDigits: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textTertiary,
   },
   // Plain list row (TestFlight #197): hairline between rows, no card.
   payoutRow: {
@@ -2320,12 +2288,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.textSecondary,
     fontSize: 15,
   },
-  bulletPoint: {
-    color: colors.textSecondary,
-    fontSize: 15,
-    marginLeft: 8,
-    marginTop: 4,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2333,126 +2295,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexWrap: 'wrap',
     marginTop: 10,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  methodGroupHeading: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-    marginTop: 14,
-    marginBottom: 8,
-  },
-  regionEmpty: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    paddingVertical: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  // Plain list rows (TestFlight #197): no filled card per row, only the
-  // hairline between rows.
-  setupRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 56,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  setupRowText: { flex: 1, gap: 2 },
-  setupRowLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
-  setupRowHint: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
-  setupRowValue: { fontSize: 13, color: colors.text },
-  setupRowAction: { fontSize: 13, fontWeight: '600', color: colors.text },
-  instantCard: {
-    paddingVertical: 12,
-    gap: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  instantBody: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
-  instantStateLabel: { fontSize: 12, color: colors.textSecondary },
-  addMethodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: radius.button,
-    backgroundColor: colors.surfaceRaised,
-  },
-  addMethodRowText: { fontSize: 15, fontWeight: '600', color: colors.text },
-  marketsWarning: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 12,
-  },
-  marketsWarningText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.textSecondary,
-  },
   marketsShowAll: {
     marginTop: 14,
     fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
     textDecorationLine: 'underline',
-  },
-  // Every method is one row of the same height: same padding, same content
-  // shape, no per-card action to stretch it.
-  destinationCard: {
-    paddingVertical: 12,
-    justifyContent: 'center',
-    minHeight: 64,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  destinationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // Compact 32px icon container so the row reads tight (was a bare 24px icon
-  // with loose margins).
-  // Bare icon, no tile behind it (fewer boxes).
-  methodIconTile: {
-    width: 24,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  destinationBody: {
-    flex: 1,
-    marginLeft: 10,
-    marginRight: 8,
-  },
-  destinationTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  destinationSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  destinationDigits: {
-    fontSize: 12,
-    color: colors.textTertiary,
   },
   // Compact inline card action (Manage on Stripe / Verify Now) — replaces the
   // old full-width 48px secondary bar inside method cards.
@@ -2495,58 +2343,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     letterSpacing: -0.3,
     color: colors.text,
-    marginBottom: 22,
-  },
-  methodOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: RADIUS.lg,
-    backgroundColor: colors.surfaceRaised,
-    marginBottom: 10,
-  },
-  methodIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
-  methodText: {
-    flex: 1,
-  },
-  methodTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-    color: colors.text,
-  },
-  methodDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
-    marginTop: 3,
-  },
-  label: {
-    marginTop: 16,
-    marginBottom: 8,
-    color: colors.text,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  input: {
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: colors.text,
-    backgroundColor: colors.surfaceRaised,
-    fontSize: 15,
+    marginBottom: 18,
   },
   chip: {
     paddingHorizontal: 14,
