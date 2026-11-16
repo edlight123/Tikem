@@ -18,12 +18,8 @@
 
 import { useTranslation } from 'react-i18next'
 import { venueAddressLines } from '@/lib/events/venueLines'
-import { formatInZone } from '@/lib/home/format'
-import { dayKey } from '@/lib/home/feed'
 import Badge from '@/components/ui/Badge'
 import PromoVideo from '@/components/events/PromoVideo'
-import OrganizerMark from '@/components/OrganizerMark'
-import { dateLocaleFor } from '@/lib/dateLocale'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -45,19 +41,9 @@ interface MobileSectionsProps {
   address: string
   commune: string
   city: string
-  startDatetime: string
-  endDatetime: string
-  /** The event's IANA zone (lib/home/feed eventZone): times print in it. */
-  zone: string
-  organizerName: string
-  /** Organizer's uploaded logo; the organization mark stands in without one. */
-  organizerLogo?: string | null
-  organizerId: string
-  isVerified: boolean
-  shareButton: React.ReactNode
   /**
-   * The venue map tile, passed in already-built — the same `shareButton`
-   * convention this component already uses for composed children. Kept as a
+   * The venue map tile, passed in already-built (a composed child, like
+   * `contactOrganizer`). Kept as a
    * node (rather than widening the props with the raw event doc) so this
    * component stays a list of flat scalars, and so the tile's link is
    * constructed once, next to the desktop one it must match.
@@ -75,28 +61,12 @@ export default function MobileSections({
   address,
   commune,
   city,
-  startDatetime,
-  endDatetime,
-  zone,
-  organizerName,
-  organizerLogo,
-  organizerId,
-  isVerified,
-  shareButton,
   venueMap,
   contactOrganizer
 }: MobileSectionsProps) {
-  const { t, i18n } = useTranslation('common')
-  const dfLocale = dateLocaleFor(i18n.language)
+  const { t } = useTranslation('common')
 
   const mapsQuery = encodeURIComponent(address || `${venueName}, ${commune}, ${city}`)
-
-  // An end that equals the start is the page's own fallback for "not set", so
-  // it is not an end. Both are compared as instants, not strings.
-  const startMs = new Date(startDatetime).getTime()
-  const endMs = new Date(endDatetime).getTime()
-  const hasEnd = Number.isFinite(endMs) && endMs > startMs
-  const sameDay = hasEnd && dayKey(startDatetime, zone) === dayKey(endDatetime, zone)
 
   // Dividers between sections, softened, and no rule at the bottom. Four
   // `white/10` hairlines down a phone screen plus the container's own closing
@@ -124,41 +94,6 @@ export default function MobileSections({
         )}
       </Section>
       )}
-
-      {/* Date & Time — before the venue: "when" is what a reader asks first,
-          and the app orders it the same way.
-
-          Rewritten because the old shape read as "START Friday, August 28,
-          2026 · 2:00 PM" — an all-caps label butted against the date with a
-          single space, which is what the owner meant by the start displaying
-          "kinda weird". The date now leads on its own line and the time sits
-          under it as a RANGE, which is how anyone reads an event listing.
-
-          The end is genuinely absent on most events (25 of 27 in production
-          carry no end_datetime at all), so the range collapses to a single
-          time rather than printing a fake one. */}
-      <Section title={t('events.date_time')}>
-        {/* Printed in the event's zone: a runtime-zone format rendered UTC on
-            the server and the reader's zone in the browser (React #418). */}
-        <div>
-          <p className="text-[17px] font-medium leading-snug text-white">
-            {formatInZone(startDatetime, zone, 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
-          </p>
-          <p className="mt-1 text-[15px] text-white/70">
-            {formatInZone(startDatetime, zone, 'h:mm a', { locale: dfLocale })}
-            {hasEnd && (
-              <>
-                {' – '}
-                {/* Same day: the time alone. A different day needs its date,
-                    or "2:00 PM – 2:00 AM" silently loses the overnight. */}
-                {sameDay
-                  ? formatInZone(endDatetime, zone, 'h:mm a', { locale: dfLocale })
-                  : formatInZone(endDatetime, zone, 'EEE, MMM d · h:mm a', { locale: dfLocale })}
-              </>
-            )}
-          </p>
-        </div>
-      </Section>
 
       {/* Venue — left out when the event names no place at all; the map
           links would search for an empty string. */}
@@ -197,25 +132,10 @@ export default function MobileSections({
       </Section>
       )}
 
-      {/* Organizer */}
-      <Section title={t('events.organizer')}>
-        <a
-          href={`/profile/organizer/${organizerId}`}
-          className="flex items-center gap-3 transition-opacity hover:opacity-80"
-        >
-          <OrganizerMark logoUrl={organizerLogo} className="h-11 w-11 rounded-xl" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-medium text-white">{organizerName}</p>
-            {isVerified && (
-              <p className="mt-0.5 text-sm text-brand-400">{t('events.verified_organizer')}</p>
-            )}
-          </div>
-        </a>
-        {contactOrganizer}
-      </Section>
-
-      {/* Share */}
-      <Section title={t('events.share_event')}>{shareButton}</Section>
+      {/* The organizer and the date already lead the page (hero, key facts)
+          and share sits beside the title, so their sections are gone: only
+          the one thing nothing above offers, a way to write to the organizer. */}
+      {contactOrganizer && <section className="py-6">{contactOrganizer}</section>}
     </div>
   )
 }

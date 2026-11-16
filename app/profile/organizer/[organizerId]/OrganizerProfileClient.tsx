@@ -395,9 +395,9 @@ export default function OrganizerProfileClient({
           />
 
           {upcomingEvents && upcomingEvents.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-0 min-[420px]:grid-cols-2 min-[420px]:gap-4 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
               {upcomingEvents.map((event: any) => (
-                <DiscoverEventCard key={event.id} event={event} />
+                <DiscoverEventCard key={event.id} event={event} rowOnPhone />
               ))}
             </div>
           ) : (
@@ -428,9 +428,9 @@ export default function OrganizerProfileClient({
                 name: organizer.name,
               })}
             />
-            <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-0 min-[420px]:grid-cols-2 min-[420px]:gap-4 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
               {pastEvents.map((event: any) => (
-                <DiscoverEventCard key={event.id} event={event} />
+                <DiscoverEventCard key={event.id} event={event} rowOnPhone />
               ))}
             </div>
           </section>

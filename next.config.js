@@ -97,6 +97,9 @@ const nextConfig = {
 
     return [
       ...worldRedirects,
+      // There is no events index; /events (what anyone types after trimming
+      // an event link) was a 404. Not permanent, in case one ever exists.
+      { source: '/events', destination: '/discover', permanent: false },
       // The apex sends everything to www EXCEPT /.well-known/: Android App
       // Links verification refuses redirects, and the Vercel domain-level
       // apex->www redirect made https://tikem.co/.well-known/assetlinks.json

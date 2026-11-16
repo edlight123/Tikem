@@ -13,6 +13,8 @@ import {
   toggleBookmark as toggleBookmarkHelper,
 } from '@/lib/discover/helpers'
 import { PosterCard } from '@/components/ui/PosterCard'
+import PosterImage from '@/components/ui/PosterImage'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useFriendsGoingCount } from './FriendsGoingContext'
 import { eventZone } from '@/lib/home/feed'
@@ -21,9 +23,15 @@ type Event = Database['public']['Tables']['events']['Row']
 
 interface DiscoverEventCardProps {
   event: Event
+  /**
+   * Below 420px, a plain row (small poster, title, date, price) instead of a
+   * full-width poster. For long lists — an organizer with 40 events was a
+   * 27,000px scroll of one poster per screen. The feed keeps its posters.
+   */
+  rowOnPhone?: boolean
 }
 
-export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
+export function DiscoverEventCard({ event, rowOnPhone = false }: DiscoverEventCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(false)
 
   useEffect(() => {
@@ -89,8 +97,8 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
       </>
     ) : null
 
-  return (
-    <div className="relative h-full">
+  const card = (
+    <div className={`relative h-full ${rowOnPhone ? 'hidden min-[420px]:block' : ''}`}>
       <PosterCard
         imageUrl={event.banner_image_url ?? undefined}
         title={event.title}
@@ -119,5 +127,30 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
         </button>
       </div>
     </div>
+  )
+
+  if (!rowOnPhone) return card
+
+  return (
+    <>
+      <Link
+        href={`/events/${event.id}`}
+        className="flex items-center gap-3.5 py-2.5 transition-opacity active:opacity-70 min-[420px]:hidden"
+      >
+        <div className="relative aspect-[4/5] w-[72px] shrink-0 overflow-hidden rounded bg-white/[0.06]">
+          {event.banner_image_url && (
+            <PosterImage src={event.banner_image_url} alt={event.title} sizes="72px" frameRatio={4 / 5} />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[17px] italic leading-tight text-white">{event.title}</p>
+          {dateLabel && <p className="mt-1 truncate text-[13px] text-white/60">{dateLabel}</p>}
+          {venue && <p className="mt-0.5 truncate text-[13px] text-white/45">{venue}</p>}
+          {/* Its own line: beside a long venue name it was the part cut off. */}
+          {priceLabel && <p className="mt-1 text-[13px] font-medium text-white/85">{priceLabel}</p>}
+        </div>
+      </Link>
+      {card}
+    </>
   )
 }

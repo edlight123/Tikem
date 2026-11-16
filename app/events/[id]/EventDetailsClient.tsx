@@ -1,6 +1,5 @@
 'use client'
 
-import StoreBadges from '@/components/ui/StoreBadges'
 import { DiscoverEventCard } from '@/components/discover/DiscoverEventCard'
 import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
@@ -10,7 +9,6 @@ import { eventAllowedPlusOnes } from '@/lib/events/approval'
 import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
 import ShareIconButton from './ShareIconButton'
-import ShareButtonInline from './ShareButtonInline'
 import { ReportButton } from '@/components/moderation/ModerationActions'
 import MobileHero from './MobileHero'
 import OrganizerMark from '@/components/OrganizerMark'
@@ -142,6 +140,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         isTrending={isTrending}
         isSoldOut={isSoldOut}
         selloutSoon={selloutSoon}
+        actions={
+          <>
+            {user && <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />}
+            <ShareIconButton eventId={event.id} eventTitle={event.title} tone="dark" />
+          </>
+        }
       />
 
       {/* DESKTOP HERO - Poster-shaped (portrait), editorial layout */}
@@ -317,8 +321,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             column grows a "Password required" line above the button, and
             centred icons then floated between that line and the button. The
             icons sit level with the button itself. */}
-        <div className="flex items-end gap-3">
-          <div className="flex-1 min-w-0">
+        {/* The buy column takes the full width: save + share moved up beside
+            the organizer, where they were squeezing the quantity box. */}
+        <div>
+          <div className="min-w-0">
             {isPastEvent ? (
               <div className="block w-full rounded bg-white/[0.06] py-3 text-center font-semibold text-white/70">
                 {t('events.event_ended', { defaultValue: 'Event ended' })}
@@ -357,27 +363,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               )
             )}
           </div>
-          {/* Save and share, as a pair, ON the buy row.
-              The heart used to sit in a `mt-3` block BELOW this row — and
-              because this bar is `sticky top-0`, that orphaned row cost ~52px
-              of viewport at every scroll position, not just once. Folding it
-              in beside share reclaims that height, groups the two secondary
-              actions into one cluster, and keeps save reachable the whole way
-              down the page (on the poster it would scroll out of reach). */}
-          {/* h-12 slots = the buy button's height, so the 40px icons centre on it. */}
-          {user && (
-            <div className="flex h-12 flex-shrink-0 items-center">
-              <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />
-            </div>
-          )}
-          <div className="flex h-12 flex-shrink-0 items-center">
-            <ShareIconButton eventId={event.id} eventTitle={event.title} tone="dark" />
-          </div>
         </div>
       </div>
 
       <MobileKeyFacts
         startDate={event.start_datetime}
+        endDate={event.end_datetime || undefined}
         zone={zone}
         venueName={event.venue_name}
         city={event.city}
@@ -402,20 +393,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         address={event.address || ''}
         commune={event.commune || ''}
         city={event.city}
-        startDatetime={event.start_datetime}
-        endDatetime={event.end_datetime || event.start_datetime}
-        zone={zone}
-        organizerName={organizerLabel}
-        organizerLogo={event.users?.organization_logo}
-        organizerId={event.organizer_id}
-        isVerified={event.users?.is_verified || false}
         contactOrganizer={
           canContactOrganizer ? (
             <ContactOrganizer
               eventId={event.id}
               eventTitle={event.title}
               userId={user?.id ?? null}
-              className="mt-4"
             />
           ) : null
         }
@@ -425,14 +408,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             href={googleMapsHref}
             venueName={event.venue_name}
             className="mt-4"
-          />
-        }
-        shareButton={
-          <ShareButtonInline
-            eventId={event.id}
-            eventTitle={event.title}
-            eventDate={formatInZone(event.start_datetime, zone, 'MMM d, yyyy', { locale: dfLocale })}
-            eventVenue={`${event.venue_name}, ${event.city}`}
           />
         }
       />
@@ -744,12 +719,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           capacity={(event as any).total_tickets}
           className="mt-8"
         />
-
-        {/* The app, quietly: the site linked Google Play almost nowhere, and
-            most of Haiti is on Android. */}
-        <div className="mt-8 px-4 md:px-0">
-          <StoreBadges />
-        </div>
 
         {/* Report — quiet, but on every event page (App Store 1.2). Hidden
             from the organizer's own event: the server refuses a self-report. */}

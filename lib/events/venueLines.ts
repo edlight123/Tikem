@@ -19,7 +19,15 @@ export function venueAddressLines({
   city?: string | null
 }): string[] {
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-  const addr = (address || '').trim()
+  // An address that opens with the venue's own name ("Kokoye, Pétion-Ville"
+  // under a venue called Kokoye) loses that segment: the name is printed
+  // right above it.
+  const venueN = norm(venueName || '')
+  const addr = (address || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s, i) => s && !(i === 0 && venueN && norm(s) === venueN))
+    .join(', ')
   const seen = norm(`${venueName || ''} ${addr}`)
   const place: string[] = []
   for (const raw of [commune, city]) {
