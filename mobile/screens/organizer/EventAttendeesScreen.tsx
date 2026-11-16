@@ -18,6 +18,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { postCheckIn } from '../../lib/doorCheckIn';
 import type { DoorVerdict } from '../../lib/doorList';
 import { useI18n } from '../../contexts/I18nContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useLocaleFormat } from '../../lib/format';
 import ExportAttendeesButton from '../../components/ExportAttendeesButton';
 import { SPACING, RADIUS } from '../../config/brand';
@@ -91,8 +92,12 @@ export default function EventAttendeesScreen() {
   const showAlert = useAppAlert();
   const { formatDate } = useLocaleFormat();
 
-  const [attendees, setAttendees] = useState<Attendee[]>(() => attendeesCache.get(eventId) ?? []);
-  const [loading, setLoading] = useState(() => !attendeesCache.has(eventId));
+  // Cache key includes the signed-in person, so another account on the same
+  // device never sees this list; an empty uid means no cache at all.
+  const { user } = useAuth();
+  const cacheKey = user?.uid ? `${user.uid}:${eventId}` : '';
+  const [attendees, setAttendees] = useState<Attendee[]>(() => (cacheKey && attendeesCache.get(cacheKey)) || []);
+  const [loading, setLoading] = useState(() => !(cacheKey && attendeesCache.has(cacheKey)));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checked_in' | 'not_checked_in'>('all');
@@ -107,8 +112,8 @@ export default function EventAttendeesScreen() {
 
   // Keep the session cache in step with every change (loads and check-ins).
   useEffect(() => {
-    if (!loading) attendeesCache.set(eventId, attendees);
-  }, [attendees, loading, eventId]);
+    if (!loading && cacheKey) attendeesCache.set(cacheKey, attendees);
+  }, [attendees, loading, cacheKey]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -149,6 +154,10 @@ export default function EventAttendeesScreen() {
       setAttendees(data);
     } catch (error) {
       console.error('Error loading attendees:', error);
+      // Fail closed: a refused or failed load (e.g. access removed) must not
+      // leave a cached list of names on screen.
+      if (cacheKey) attendeesCache.delete(cacheKey);
+      setAttendees([]);
     } finally {
       setLoading(false);
     }
