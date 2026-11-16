@@ -318,7 +318,6 @@ export default function TicketDetailScreen({ route }: any) {
                     </View>
                     <View style={styles.transferButtonTextContainer}>
                       <Text style={styles.transferButtonTitle}>{t('ticketDetail.transfer.buttonTitle')}</Text>
-                      <Text style={styles.transferButtonSubtitle}>{t('ticketDetail.transfer.buttonSubtitle')}</Text>
                     </View>
                     <ChevronRight size={18} color={colors.textTertiary} />
                   </View>
@@ -753,10 +752,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     color: colors.text,
     marginBottom: 2,
-  },
-  transferButtonSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
   },
   errorText: {
     fontSize: 15,

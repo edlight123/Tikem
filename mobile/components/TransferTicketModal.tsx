@@ -184,10 +184,6 @@ export default function TransferTicketModal({
                   </View>
                 )}
 
-                <Text style={styles.description}>
-                  Transfer your ticket for <Text style={styles.bold}>{eventTitle}</Text> to another person.
-                </Text>
-
                 <View style={styles.infoBox}>
                   <Text style={styles.infoText}>
                     ⏰ Transfer links expire in 24 hours{'\n'}
@@ -372,16 +368,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   content: {
     padding: 20,
-  },
-  description: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  bold: {
-    fontWeight: '600',
-    color: colors.text,
   },
   infoBox: {
     backgroundColor: 'rgba(20,184,166,0.14)',

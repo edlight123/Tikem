@@ -450,7 +450,6 @@ export default function FreeTicketModal({
           {namedSlots > 0 && (
             <View style={styles.plusOneSection}>
               <Text style={styles.plusOneTitle}>{t('attendRequests.claimPlusOne.title')}</Text>
-              <Text style={styles.plusOneHint}>{t('attendRequests.claimPlusOne.hint')}</Text>
               <PlusOneFields value={plusOnes} onChange={setPlusOnes} editable={!loading} />
             </View>
           )}
@@ -607,12 +606,6 @@ const getStyles = (_colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     fontFamily: font.serif,
     fontSize: 20,
     color: T.textPrimary,
-  },
-  plusOneHint: {
-    fontSize: 12,
-    color: T.textSecondary,
-    marginTop: 2,
-    marginBottom: spacing.md,
   },
   totalRow: {
     flexDirection: 'row',

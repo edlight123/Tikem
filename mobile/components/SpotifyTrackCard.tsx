@@ -56,6 +56,19 @@ window.onSpotifyIframeApiReady = function (API) {
 </body></html>`;
 }
 
+/** JSON that is also safe inside an inline <script> (no `</script>` break-out). */
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+/** What the lock screen / Now Playing shows for the clip (else it reads "apple.com"). */
+type NowPlayingMeta = { title: string; artist: string; artwork: string | null };
+
 /**
  * A page holding one <audio> for the clip. The app drives it with
  * window.tk(cmd) and hears back 'playing' / 'paused' / 'ended' / 'blocked'.
@@ -63,20 +76,37 @@ window.onSpotifyIframeApiReady = function (API) {
  * silent on a muted phone; a tap asks for `playback` so it is heard anyway.
  */
 function clipHtml(src: string): string {
-  return `<!doctype html><html><body>
-<audio id="a" src=${JSON.stringify(src)} preload="auto" playsinline></audio>
+  return `<!doctype html><html><head><meta charset="utf-8"></head><body>
+<audio id="a" preload="auto" playsinline></audio>
 <script>
 var a = document.getElementById('a');
+a.src = ${scriptJson(src)};
 function send(m) { window.ReactNativeWebView && window.ReactNativeWebView.postMessage(m); }
 function session(t) { try { if (navigator.audioSession) navigator.audioSession.type = t; } catch (e) {} }
+function nowPlaying() {
+  try {
+    var m = window.tkMeta;
+    if (!m || !('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: m.title || '',
+      artist: m.artist || '',
+      album: 'Tikèm',
+      artwork: m.artwork ? [{ src: m.artwork, sizes: '640x640', type: 'image/jpeg' }] : []
+    });
+  } catch (e) {}
+}
 ['playing', 'pause', 'ended'].forEach(function (ev) {
-  a.addEventListener(ev, function () { send(ev === 'pause' && !a.ended ? 'paused' : ev); });
+  a.addEventListener(ev, function () {
+    if (ev === 'playing') nowPlaying();
+    send(ev === 'pause' && !a.ended ? 'paused' : ev);
+  });
 });
 a.addEventListener('error', function () { send('blocked'); });
 window.tk = function (cmd) {
   if (cmd === 'pause') { a.pause(); return; }
   session(cmd === 'auto' ? 'ambient' : 'playback');
   if (a.ended) a.currentTime = 0;
+  nowPlaying();
   var p = a.play();
   if (p && p.catch) p.catch(function () { send('blocked'); });
 };
@@ -105,8 +135,12 @@ export default function SpotifyTrackCard({ url }: { url?: string | null }) {
   // Autoplay at most once per visit to the page, never after a manual pause.
   const autoplayed = useRef(false);
 
+  // Read at command time so a late oEmbed/preview still reaches Now Playing.
+  const nowPlayingMeta = useRef<NowPlayingMeta | null>(null);
+
   const command = useCallback((cmd: 'auto' | 'play' | 'pause') => {
-    clipRef.current?.injectJavaScript(`window.tk && window.tk(${JSON.stringify(cmd)}); true;`);
+    const meta = nowPlayingMeta.current ? `window.tkMeta = ${scriptJson(nowPlayingMeta.current)}; ` : '';
+    clipRef.current?.injectJavaScript(`${meta}window.tk && window.tk(${JSON.stringify(cmd)}); true;`);
   }, []);
 
   useEffect(() => {
@@ -180,7 +214,11 @@ export default function SpotifyTrackCard({ url }: { url?: string | null }) {
 
   if (!openUrl) return null;
 
-  const title = meta?.title || t('eventDetail.song.fallbackTitle');
+  const title = meta?.title || preview?.trackName || t('eventDetail.song.fallbackTitle');
+  const artist = preview?.artistName?.trim() || '';
+  nowPlayingMeta.current = preview
+    ? { title: preview.trackName || title, artist, artwork: meta?.thumbnailUrl ?? null }
+    : null;
   const openInSpotify = () => Linking.openURL(openUrl).catch(() => undefined);
   const hasClip = !!preview;
   const clipPlaying = hasClip && clip === 'playing';
@@ -262,7 +300,11 @@ export default function SpotifyTrackCard({ url }: { url?: string | null }) {
             {clipPlaying ? (
               <>
                 <View style={styles.liveDot} />
-                <Text style={styles.source}>{t('eventDetail.song.nowPlaying')}</Text>
+                {artist ? (
+                  <Text style={styles.source} numberOfLines={1}>
+                    {artist}
+                  </Text>
+                ) : null}
               </>
             ) : (
               <>

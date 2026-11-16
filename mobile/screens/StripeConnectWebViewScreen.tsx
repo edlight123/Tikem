@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { StyleSheet, Text, View, ViewStyle } from 'react-native'
+import { Platform, StyleSheet, Text, View, ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
@@ -27,6 +27,10 @@ export default function StripeConnectWebViewScreen() {
   const navigation = useNavigation<any>()
   const route = useRoute<any>()
   const insets = useSafeAreaInsets()
+  // Presented as a sheet (AppNavigator, TestFlight #70). An iOS sheet already
+  // sits below the status bar, so only Android's full-screen modal needs the
+  // top inset.
+  const topInset = Platform.OS === 'ios' ? 0 : insets.top
 
   const { url, authToken } = (route.params || {}) as Params
 
@@ -148,7 +152,7 @@ export default function StripeConnectWebViewScreen() {
   }, [failed, navigation])
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+    <View style={[styles.header, { paddingTop: topInset + 6 }]}>
       <Touchable
         onPress={handleRequestClose}
         style={styles.headerButton}
@@ -178,7 +182,7 @@ export default function StripeConnectWebViewScreen() {
   // onboarding page (heading, a few labelled fields, a continue button) using the
   // shared Skeleton primitive instead of a bare centered spinner.
   const brandedLoading = (
-    <View style={[styles.loadingOverlay, { paddingTop: insets.top + 72 }]}>
+    <View style={[styles.loadingOverlay, { paddingTop: topInset + 72 }]}>
       <View style={styles.onboardingSkeleton}>
         <Skeleton width={'62%'} height={26} radius={4} />
         <Skeleton width={'88%'} height={13} radius={4} style={{ marginTop: 12 } as ViewStyle} />
@@ -227,7 +231,7 @@ export default function StripeConnectWebViewScreen() {
   ) : null
 
   if (!url) {
-    return <View style={[styles.container, { paddingTop: insets.top }]} />
+    return <View style={[styles.container, { paddingTop: topInset }]} />
   }
 
   return (

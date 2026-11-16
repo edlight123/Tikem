@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import SegmentedTabs from '../../components/organizer/SegmentedTabs';
 import { format, subDays, startOfDay } from 'date-fns';
 import { safeFormatForLanguage } from '../../lib/dates';
-import { normalizeCurrency } from '../../lib/currency';
+import { formatCurrency, normalizeCurrency, splitFormattedMoney } from '../../lib/currency';
 import {
   CurrencyAmount,
   dominantEventCurrency,
@@ -63,6 +63,62 @@ function revenueListFromApi(map: unknown): CurrencyAmount[] {
     .sort((a, b) => b.amount - a.amount || a.currency.localeCompare(b.currency));
 }
 
+interface AnalyticsStats {
+  totalEvents: number;
+  publishedEvents: number;
+  totalTicketsSold: number;
+  totalRevenue: number;
+  currency: string;
+}
+
+interface AnalyticsResult {
+  stats: AnalyticsStats;
+  revenueByCurrency: CurrencyAmount[];
+  chartData: ChartData[];
+  topEvents: EventStats[];
+}
+
+type TimeRange = '7d' | '30d' | 'all';
+
+/**
+ * Last result per (org, range), in memory for this app session only. Shown
+ * instantly on re-open while a fresh load runs underneath (TestFlight #200).
+ */
+const analyticsCache = new Map<string, AnalyticsResult>();
+const cacheKey = (orgId: string | null | undefined, range: TimeRange) => `${orgId || ''}:${range}`;
+
+/** Fallback ticket reads run this many events at a time. */
+const FALLBACK_CONCURRENCY = 6;
+
+async function forEachLimited<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      await fn(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
+/** "12.5K" / "1.2M" so four figures fit on one line; small values stay exact. */
+function compactNumber(value: number): string {
+  const n = Number.isFinite(value) ? value : 0;
+  const abs = Math.abs(n);
+  const trim = (x: number) => x.toFixed(1).replace(/\.0$/, '');
+  if (abs >= 1_000_000) return `${trim(n / 1_000_000)}M`;
+  if (abs >= 10_000) return `${trim(n / 1_000)}K`;
+  return Math.round(n).toLocaleString('en-US');
+}
+
+/** Money in the compact form, keeping the currency's own symbol placement. */
+function compactMoney(amount: number, currency?: string): string {
+  const code = normalizeCurrency(currency);
+  if (Math.abs(amount) < 10_000) return formatCurrency(amount, code, { decimals: Number.isInteger(amount) ? 0 : 2 });
+  const { prefix, suffix } = splitFormattedMoney(formatCurrency(0, code, { decimals: 0 }));
+  return `${prefix}${compactNumber(amount)}${suffix}`;
+}
+
 export default function OrganizerAnalyticsScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -72,59 +128,87 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
   const { t, language } = useI18n();
   const { formatMoney: fmtMoney } = useLocaleFormat();
   const { height: headerH, onHeight } = useOverlayHeaderInset();
-  const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const initial = analyticsCache.get(cacheKey(orgId, '7d'));
+  const [loading, setLoading] = useState(!initial);
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
-    totalEvents: 0,
-    publishedEvents: 0,
-    totalTicketsSold: 0,
-    totalRevenue: 0,
-    currency: normalizeCurrency(null),
-  });
+  const [stats, setStats] = useState<AnalyticsStats>(
+    initial?.stats ?? {
+      totalEvents: 0,
+      publishedEvents: 0,
+      totalTicketsSold: 0,
+      totalRevenue: 0,
+      currency: normalizeCurrency(null),
+    }
+  );
   // Revenue per currency, largest first. Never summed across currencies.
-  const [revenueByCurrency, setRevenueByCurrency] = useState<CurrencyAmount[]>([]);
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [topEvents, setTopEvents] = useState<EventStats[]>([]);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
+  const [revenueByCurrency, setRevenueByCurrency] = useState<CurrencyAmount[]>(initial?.revenueByCurrency ?? []);
+  const [chartData, setChartData] = useState<ChartData[]>(initial?.chartData ?? []);
+  const [topEvents, setTopEvents] = useState<EventStats[]>(initial?.topEvents ?? []);
+  // The (org, range) the screen currently wants; a slower earlier load for
+  // another range must not overwrite it.
+  const wantedKey = useRef(cacheKey(orgId, timeRange));
+
+  const applyResult = (result: AnalyticsResult) => {
+    setStats(result.stats);
+    setRevenueByCurrency(result.revenueByCurrency);
+    setChartData(result.chartData);
+    setTopEvents(result.topEvents);
+  };
 
   useEffect(() => {
+    const key = cacheKey(orgId, timeRange);
+    wantedKey.current = key;
+    const cached = analyticsCache.get(key);
+    if (cached) {
+      applyResult(cached);
+      setLoading(false);
+    }
     loadData();
   }, [orgId, timeRange]);
 
   const loadData = async () => {
     if (!orgId) return;
+    const key = cacheKey(orgId, timeRange);
 
+    let result: AnalyticsResult | null = null;
     try {
       // Fetch analytics from the web API (same endpoint the web uses)
       const response = await backendFetch(`/api/organizer/analytics?range=${timeRange}`);
-      
+
       if (response.ok) {
         const data = await response.json();
-        setStats({
-          totalEvents: data.totalEvents || 0,
-          publishedEvents: data.publishedEvents || 0,
-          totalTicketsSold: data.totalTicketsSold || 0,
-          totalRevenue: data.totalRevenue || 0,
-          currency: normalizeCurrency(data.currency),
-        });
-        // Major units, keyed by every currency that sold (not just USD/HTG).
-        setRevenueByCurrency(revenueListFromApi(data.revenueByCurrency));
-        setChartData(data.chartData || []);
-        setTopEvents(data.topEvents || []);
+        result = {
+          stats: {
+            totalEvents: data.totalEvents || 0,
+            publishedEvents: data.publishedEvents || 0,
+            totalTicketsSold: data.totalTicketsSold || 0,
+            totalRevenue: data.totalRevenue || 0,
+            currency: normalizeCurrency(data.currency),
+          },
+          // Major units, keyed by every currency that sold (not just USD/HTG).
+          revenueByCurrency: revenueListFromApi(data.revenueByCurrency),
+          chartData: data.chartData || [],
+          topEvents: data.topEvents || [],
+        };
       } else {
         // Fallback: Load from Firebase directly
-        await loadFromFirebase();
+        result = await loadFromFirebase();
       }
     } catch (error) {
       console.error('Error loading analytics:', error);
-      await loadFromFirebase();
+      result = await loadFromFirebase();
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (result) analyticsCache.set(key, result);
+      if (wantedKey.current === key) {
+        if (result) applyResult(result);
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
-  const loadFromFirebase = async () => {
+  const loadFromFirebase = async (): Promise<AnalyticsResult | null> => {
     try {
       // Calculate the cutoff date based on time range
       const now = new Date();
@@ -159,7 +243,8 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
         dailySales[dateKey] = { sales: 0, revenue: 0 };
       }
 
-      for (const event of events) {
+      // Every event's tickets at once (a few in flight), not one after another.
+      await forEachLimited(events, FALLBACK_CONCURRENCY, async (event) => {
         const eventData = event as any;
         eventCurrencyById[event.id] = eventData.currency;
 
@@ -212,7 +297,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
             currency: eventCurrency,
           });
         }
-      }
+      });
 
       eventStats.sort((a, b) => b.ticketCount - a.ticketCount);
 
@@ -221,15 +306,13 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
       const revenueRows = sumRevenueByCurrency(soldInRange, eventCurrencyById);
       const primaryCurrency = revenueRows[0]?.currency || dominantEventCurrency(events as any[]);
 
-      setStats({
+      const fallbackStats: AnalyticsStats = {
         totalEvents: events.length,
         publishedEvents: events.filter((e: any) => e.is_published).length,
         totalTicketsSold: totalTickets,
         totalRevenue: revenueRows[0]?.amount || 0,
         currency: primaryCurrency,
-      });
-      setRevenueByCurrency(revenueRows);
-      setTopEvents(eventStats.slice(0, 5));
+      };
 
       // Build chart data
       const chart: ChartData[] = [];
@@ -243,9 +326,15 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           revenue: dailySales[dateKey]?.revenue || 0,
         });
       }
-      setChartData(chart);
+      return {
+        stats: fallbackStats,
+        revenueByCurrency: revenueRows,
+        chartData: chart,
+        topEvents: eventStats.slice(0, 5),
+      };
     } catch (error) {
       console.error('Error loading from Firebase:', error);
+      return null;
     }
   };
 
@@ -262,13 +351,14 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
   // Total revenue: the largest currency is the figure, any other currency is a
   // caption under it ("+ $40"). Currencies are never added together.
+  // Compact ("12.5K HTG") so it fits a quarter of the line.
   const totalRevenueCell = () => {
     const [primary, ...rest] = revenueByCurrency;
-    if (!primary) return { value: formatMoney(0, stats.currency) };
+    if (!primary) return { value: compactMoney(0, stats.currency) };
     return {
-      value: formatMoney(primary.amount, primary.currency),
+      value: compactMoney(primary.amount, primary.currency),
       caption: rest.length
-        ? rest.map((r) => `+ ${formatMoney(r.amount, r.currency)}`).join('\n')
+        ? rest.map((r) => `+ ${compactMoney(r.amount, r.currency)}`).join('\n')
         : undefined,
     };
   };
@@ -296,15 +386,15 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
               ))}
             </View>
           </View>
-          {/* Metric grid: the real 2-col StatTriplet with ••• placeholders. */}
+          {/* Metric line: the real 4-col StatTriplet with ••• placeholders. */}
           <View style={styles.statsWrap}>
             <StatTriplet
-              columns={2}
+              columns={4}
               items={[
-                { label: t('analytics.totalRevenue') || 'Total Revenue', value: null },
-                { label: t('analytics.ticketsSold') || 'Tickets Sold', value: null },
-                { label: t('analytics.totalEvents') || 'Total Events', value: null },
-                { label: t('analytics.published') || 'Published', value: null },
+                { label: t('analytics.statRevenue'), value: null },
+                { label: t('analytics.statSold'), value: null },
+                { label: t('analytics.statEvents'), value: null },
+                { label: t('analytics.statPublished'), value: null },
               ]}
             />
           </View>
@@ -364,7 +454,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
         <View style={styles.timeRangeContainer}>
           <SegmentedTabs
             value={timeRange}
-            onChange={(key) => setTimeRange(key as '7d' | '30d' | 'all')}
+            onChange={(key) => setTimeRange(key as TimeRange)}
             tabs={[
               { key: '7d', label: t('analytics.7days') || '7 Days' },
               { key: '30d', label: t('analytics.30days') || '30 Days' },
@@ -373,15 +463,16 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           />
         </View>
 
-        {/* Stats — the POSH metric grid (§2.3): white numerals; teal is kept for meaning. */}
+        {/* Stats on one line, label over value, like the event analytics
+            header (TestFlight #199). Values compact so four fit. */}
         <View style={styles.statsWrap}>
           <StatTriplet
-            columns={2}
+            columns={4}
             items={[
-              { label: t('analytics.totalRevenue') || 'Total Revenue', ...totalRevenueCell() },
-              { label: t('analytics.ticketsSold') || 'Tickets Sold', value: stats.totalTicketsSold },
-              { label: t('analytics.totalEvents') || 'Total Events', value: stats.totalEvents },
-              { label: t('analytics.published') || 'Published', value: stats.publishedEvents },
+              { label: t('analytics.statRevenue'), ...totalRevenueCell() },
+              { label: t('analytics.statSold'), value: compactNumber(stats.totalTicketsSold) },
+              { label: t('analytics.statEvents'), value: compactNumber(stats.totalEvents) },
+              { label: t('analytics.statPublished'), value: compactNumber(stats.publishedEvents) },
             ]}
           />
         </View>

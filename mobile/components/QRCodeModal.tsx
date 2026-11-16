@@ -87,9 +87,6 @@ export default function QRCodeModal({ visible, onClose, qrValue, ticketNumber }:
               />
             </View>
             
-            <Text style={styles.instruction}>
-              {t('qrModal.instruction')}
-            </Text>
           </View>
         </View>
       </View>
@@ -140,13 +137,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     padding: 32,
     borderRadius: 4,
-  },
-  instruction: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    marginTop: 32,
-    maxWidth: 280,
-    lineHeight: 20,
   },
 });

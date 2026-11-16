@@ -491,9 +491,6 @@ export default function OrganizerPromoCodesScreen() {
                     placeholderTextColor={colors.textTertiary}
                     selectionColor={colors.primary}
                   />
-                  <Text style={styles.helperText}>
-                    {t('organizerPromoCodes.create.limitHelper').replace('{n}', (maxUses || '200').trim())}
-                  </Text>
                 </>
               )}
 
@@ -801,12 +798,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   inputSpaced: {
     marginTop: 10,
-  },
-  helperText: {
-    marginTop: 8,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
   },
   toggleRow: {
     flexDirection: 'row',

@@ -372,7 +372,7 @@ export default function SearchScreen({ navigation }: any) {
               subtitle={
                 canWidenSearch
                   ? t('search.noResultsInLocation', { location: locationCopy.locationName })
-                  : t('search.noResultsSubtitle')
+                  : undefined
               }
               actionLabel={
                 canWidenSearch

@@ -33,7 +33,7 @@ import { RADIUS } from '../../config/brand'
 import { colors as T, font, radius } from '../../theme/tokens'
 import { Skeleton } from '../../components/Skeleton'
 import { useAppAlert } from '../../components/AppAlert'
-import StatusChip from '../../components/StatusChip'
+import { statusTone } from '../../components/StatusChip'
 import SectionHeader from '../../components/SectionHeader'
 import EmptyState from '../../components/EmptyState'
 import WhitePillCTA from '../../components/WhitePillCTA'
@@ -107,6 +107,28 @@ const payoutCacheKey = (uid: string) => `payout_settings_cache_${uid}`
 const NATCASH_ENABLED = false
 
 /**
+ * Status as a dot + sentence-case label (TestFlight #197: no uppercase chips
+ * on this screen). Same locked tones as the shared StatusChip.
+ */
+function StatusDot({ status, label }: { status: string; label?: string }) {
+  const tone = statusTone(status)
+  const text = label ?? tone.defaultLabel
+  return (
+    <View
+      style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 }}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={text}
+    >
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tone.color }} />
+      <Text style={{ fontSize: 13, color: T.textSecondary }} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
+  )
+}
+
+/**
  * One payout REGION rail. Uses the app's editorial section rail (Instrument
  * Serif, lowercased, with a tight grey subtitle) rather than a bold sans
  * heading, so this screen reads like the rest of Tikèm instead of a settings
@@ -130,7 +152,7 @@ function RegionSection({
   // Dot + label (StatusChip), never a bare coloured word.
   const trailing =
     status === 'ready' ? null : (
-      <StatusChip
+      <StatusDot
         status={status === 'pending' ? 'pending' : 'neutral'}
         label={
           status === 'pending'
@@ -999,7 +1021,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
           <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.modalTitle}>{t('organizerPayoutSettings.addModal.title')}</Text>
-            <Text style={styles.modalSubtitle}>{t('organizerPayoutSettings.addModal.subtitle')}</Text>
 
             {/* Grouped by REGION, and the organizer's own region leads. A flat
                 list made "Bank Account" a trap: every US organizer has a bank
@@ -1262,9 +1283,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
               disabled={submittingVerification || !verificationAsset}
             />
 
-            <Text style={[styles.metaHint, { marginTop: 16, textAlign: 'center' }]}>
-              {t('organizerPayoutSettings.verifyModal.hint')}
-            </Text>
           </ScrollView>
         </View>
       </Modal>
@@ -1484,11 +1502,11 @@ export default function OrganizerPayoutSettingsScreenV2() {
             <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.identity.lead')}</Text>
             {identityVerified ? (
               <View style={styles.stepStatus}>
-                <StatusChip status="verified" label={t('organizerPayoutSettings.status.verified')} />
+                <StatusDot status="verified" label={t('organizerPayoutSettings.status.verified')} />
               </View>
             ) : identitySubmitted ? (
               <View style={styles.stepStatus}>
-                <StatusChip status="pending" label={t('organizerPayoutSettings.status.underReview')} />
+                <StatusDot status="pending" label={t('organizerPayoutSettings.status.underReview')} />
               </View>
             ) : null}
             {identityStepRows.map((row, i) => {
@@ -1530,8 +1548,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         <>
           {renderStepHeader(2)}
           <ScrollView contentContainerStyle={styles.stepBody}>
-            <Text style={styles.stepTitle}>{t('organizerPayoutSettings.setup.markets.title')}</Text>
-            <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.markets.lead')}</Text>
+            <Text style={[styles.stepTitle, styles.stepTitleSolo]}>{t('organizerPayoutSettings.setup.markets.title')}</Text>
             <Text style={styles.monoLabel}>{t('organizerPayoutSettings.setup.markets.pickAll')}</Text>
             <MarketsPicker
               draft={marketsDraft}
@@ -1561,8 +1578,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
       <>
         {renderStepHeader(3)}
         <ScrollView contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
-          <Text style={styles.stepTitle}>{t('organizerPayoutSettings.setup.method.title')}</Text>
-          <Text style={styles.stepLead}>{t('organizerPayoutSettings.setup.method.lead')}</Text>
+          <Text style={[styles.stepTitle, styles.stepTitleSolo]}>{t('organizerPayoutSettings.setup.method.title')}</Text>
 
           {showHaitiRail ? (
             <>
@@ -1729,7 +1745,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                 <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} />
                 <View style={styles.setupRowText}>
                   <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.identityRowLabel')}</Text>
-                  <StatusChip
+                  <StatusDot
                     status={identitySubmitted ? 'pending' : 'actionneeded'}
                     label={identitySubmitted ? t('organizerPayoutSettings.status.underReview') : t('organizerPayoutSettings.summary.actionNeeded')}
                   />
@@ -1795,7 +1811,20 @@ export default function OrganizerPayoutSettingsScreenV2() {
                   t={t}
                 />
                 {stripeProfile?.connected ? (
-                  <View style={styles.destinationCard}>
+                  // The whole row opens Stripe, not just its link (TestFlight #82).
+                  <Touchable
+                    scale={0.98}
+                    style={styles.destinationCard}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('organizerPayoutSettings.stripe.title')}, ${
+                      stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')
+                    }`}
+                    onPress={() =>
+                      startStripeConnect(
+                        stripeProfile.country === 'CA' ? 'canada' : stripeProfile.country === 'FR' ? 'france' : 'united_states'
+                      )
+                    }
+                  >
                     <View style={styles.destinationHeader}>
                       <View style={styles.methodIconTile}>
                         <Ionicons name="globe-outline" size={16} color={colors.text} />
@@ -1811,27 +1840,17 @@ export default function OrganizerPayoutSettingsScreenV2() {
                         </Text>
                         <View style={styles.destinationStatus}>
                           {stripeProfile.verified ? (
-                            <StatusChip status="verified" label={t('organizerPayoutSettings.stripeCard.connected')} />
+                            <StatusDot status="verified" label={t('organizerPayoutSettings.stripeCard.connected')} />
                           ) : (
-                            <StatusChip status="pending" label={t('organizerPayoutSettings.stripeCard.finishSetup')} />
+                            <StatusDot status="pending" label={t('organizerPayoutSettings.stripeCard.finishSetup')} />
                           )}
                         </View>
                       </View>
-                      <Touchable
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        accessibilityRole="button"
-                        onPress={() =>
-                          startStripeConnect(
-                            stripeProfile.country === 'CA' ? 'canada' : stripeProfile.country === 'FR' ? 'france' : 'united_states'
-                          )
-                        }
-                      >
-                        <Text style={styles.changeLink}>
-                          {stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')}
-                        </Text>
-                      </Touchable>
+                      <Text style={styles.changeLink}>
+                        {stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')}
+                      </Text>
                     </View>
-                  </View>
+                  </Touchable>
                 ) : (
                   <Touchable scale={0.98} style={styles.setupRow} onPress={handleAddStripe} accessibilityRole="button">
                     <Text style={[styles.setupRowHint, { flex: 1 }]}>{t('organizerPayoutSettings.regions.emptyInternational')}</Text>
@@ -1906,7 +1925,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                             {isBank ? (dest as BankDestination).accountName : (dest as MoncashDestination).accountName}
                           </Text>
                           <View style={styles.destinationStatus}>
-                            <StatusChip status={chip.status} label={chip.label} />
+                            <StatusDot status={chip.status} label={chip.label} />
                           </View>
                         </View>
                         <Touchable
@@ -1997,7 +2016,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
           <EmptyState
             icon={Receipt}
             title={t('organizerPayoutSettings.payoutHistory.emptyTitle')}
-            subtitle={t('organizerPayoutSettings.payoutHistory.empty')}
           />
         ) : (
           payouts.map((p) => {
@@ -2011,7 +2029,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                     {[payoutMethodLabel(p.method), formatDate(p.createdAt)].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
-                <StatusChip status={meta.tone} label={label} />
+                <StatusDot status={meta.tone} label={label} />
               </View>
             )
           })
@@ -2077,6 +2095,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     lineHeight: 40,
     color: colors.text,
   },
+  // A step title with no lead under it keeps the lead's gap to the content.
+  stepTitleSolo: { marginBottom: 24 },
   stepLead: {
     marginTop: 10,
     marginBottom: 24,
@@ -2267,14 +2287,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   destinationStatus: {
     marginTop: 6,
   },
+  // Plain list row (TestFlight #197): hairline between rows, no card.
   payoutRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: RADIUS.lg,
-    padding: 16,
-    marginBottom: 10,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   payoutAmount: {
     fontSize: 17,
@@ -2299,10 +2319,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginTop: 6,
     color: colors.textSecondary,
     fontSize: 15,
-  },
-  metaHint: {
-    color: colors.textSecondary,
-    fontSize: 12,
   },
   bulletPoint: {
     color: colors.textSecondary,
@@ -2343,15 +2359,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  // Plain list rows (TestFlight #197): no filled card per row, only the
+  // hairline between rows.
   setupRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: radius.button,
-    backgroundColor: colors.surface,
-    marginBottom: 10,
+    minHeight: 56,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   setupRowText: { flex: 1, gap: 2 },
   setupRowLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
@@ -2359,11 +2376,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   setupRowValue: { fontSize: 13, color: colors.text },
   setupRowAction: { fontSize: 13, fontWeight: '600', color: colors.text },
   instantCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    padding: 13,
-    marginBottom: 10,
+    paddingVertical: 12,
     gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   instantBody: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
   instantStateLabel: { fontSize: 12, color: colors.textSecondary },
@@ -2382,10 +2398,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: radius.button,
-    backgroundColor: colors.surface,
+    paddingVertical: 12,
   },
   marketsWarningText: {
     flex: 1,
@@ -2403,12 +2416,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Every method is one row of the same height: same padding, same content
   // shape, no per-card action to stretch it.
   destinationCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    padding: 13,
-    marginBottom: 10,
+    paddingVertical: 12,
     justifyContent: 'center',
-    minHeight: 68,
+    minHeight: 64,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   destinationHeader: {
     flexDirection: 'row',
@@ -2416,11 +2428,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   // Compact 32px icon container so the row reads tight (was a bare 24px icon
   // with loose margins).
+  // Bare icon, no tile behind it (fewer boxes).
   methodIconTile: {
-    width: 32,
+    width: 24,
     height: 32,
-    borderRadius: radius.chip,
-    backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2431,7 +2442,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   destinationTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
   },
   destinationSubtitle: {
@@ -2488,12 +2499,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '700',
     letterSpacing: -0.3,
     color: colors.text,
-  },
-  modalSubtitle: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    marginTop: 6,
     marginBottom: 22,
   },
   methodOption: {

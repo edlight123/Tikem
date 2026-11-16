@@ -53,7 +53,7 @@ export default function PhoneLinkSheet({ visible, onClose, onLinked, title, subt
             <Text style={styles.sub}>{t('auth.phone.link.success')}</Text>
           ) : (
             <>
-              <Text style={styles.sub}>{subtitle ?? t('auth.phone.link.subtitle')}</Text>
+              {subtitle ? <Text style={styles.sub}>{subtitle}</Text> : null}
               <PhoneCodeFlow
                 ctaLabel={t('auth.phone.link.cta')}
                 onBusyChange={setBusy}

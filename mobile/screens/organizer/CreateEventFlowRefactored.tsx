@@ -1662,7 +1662,6 @@ export default function CreateEventFlowRefactored() {
             <View style={styles.tierOptionRow}>
               <View style={styles.settingTextCol}>
                 <Text style={styles.tierToggleLabel}>{t('organizerCreateEventFlow.canvas.tierOptions.limitQty')}</Text>
-                <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.tierOptions.limitQtyHint')}</Text>
               </View>
               <Switch
                 value={limitOn}
@@ -1725,7 +1724,6 @@ export default function CreateEventFlowRefactored() {
             <View style={styles.tierOptionRow}>
               <View style={styles.settingTextCol}>
                 <Text style={styles.tierToggleLabel}>{t('organizerCreateEventFlow.canvas.tierOptions.waitlist')}</Text>
-                <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.tierOptions.waitlistHint')}</Text>
               </View>
               <Switch
                 value={!!tier.waitlist}
@@ -1811,7 +1809,6 @@ export default function CreateEventFlowRefactored() {
             <View style={styles.entryIntro}>
               <Text style={styles.entryKicker}>{t('organizerCreateEventFlow.entry.kicker')}</Text>
               <Text style={styles.entryTitle}>{t('organizerCreateEventFlow.entry.title')}</Text>
-              <Text style={styles.entryLead}>{t('organizerCreateEventFlow.entry.lead')}</Text>
             </View>
 
             <View style={styles.entryTiles}>
@@ -1825,7 +1822,6 @@ export default function CreateEventFlowRefactored() {
                 </View>
                 <View style={styles.entryTileText}>
                   <Text style={styles.entryTileLabel}>{t('organizerCreateEventFlow.entry.sellTitle')}</Text>
-                  <Text style={styles.entryTileDesc}>{t('organizerCreateEventFlow.entry.sellDesc')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
               </TouchableOpacity>
@@ -1840,13 +1836,11 @@ export default function CreateEventFlowRefactored() {
                 </View>
                 <View style={styles.entryTileText}>
                   <Text style={styles.entryTileLabel}>{t('organizerCreateEventFlow.entry.rsvpTitle')}</Text>
-                  <Text style={styles.entryTileDesc}>{t('organizerCreateEventFlow.entry.rsvpDesc')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.entrySubtitle}>{t('organizerCreateEventFlow.entry.subtitle')}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -2028,9 +2022,6 @@ export default function CreateEventFlowRefactored() {
                     <Text style={styles.onlineLabel}>
                       {t('organizerCreateEventFlow.canvas.nationalDay.label', { day: nationalDayLabel })}
                     </Text>
-                    <Text style={styles.settingHint}>
-                      {t('organizerCreateEventFlow.canvas.nationalDay.hint', { day: nationalDayLabel })}
-                    </Text>
                   </View>
                   <Switch
                     value={eventDraft.national_day === eligibleNationalDay.eventTag}
@@ -2050,9 +2041,6 @@ export default function CreateEventFlowRefactored() {
                 <Ionicons name="globe-outline" size={18} color={colors.textSecondary} />
                 <View style={styles.settingTextCol}>
                   <Text style={styles.onlineLabel}>{t('organizerCreateEventFlow.canvas.online.title')}</Text>
-                  {eventDraft.is_online && (
-                    <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.online.hint')}</Text>
-                  )}
                 </View>
                 <Switch
                   value={eventDraft.is_online}
@@ -2306,10 +2294,6 @@ export default function CreateEventFlowRefactored() {
                     error={!!errors.capacity}
                     keyboardType="numeric"
                   />
-                  <View style={styles.infoRow}>
-                    <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.infoText}>{t('organizerCreateEvent.rsvp.infoText')}</Text>
-                  </View>
                 </>
               ) : (
                 <>
@@ -2742,7 +2726,6 @@ export default function CreateEventFlowRefactored() {
                   <View style={styles.settingRow}>
                     <View style={styles.settingTextCol}>
                       <Text style={styles.settingLabel}>{t('organizerCreateEventFlow.canvas.visibility')}</Text>
-                      <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.visibilityHint')}</Text>
                     </View>
                     <Switch
                       value={eventDraft.show_on_explore}
@@ -2784,7 +2767,6 @@ export default function CreateEventFlowRefactored() {
                   <View style={styles.settingRow}>
                     <View style={styles.settingTextCol}>
                       <Text style={styles.settingLabel}>{t('organizerCreateEventFlow.canvas.passwordProtect')}</Text>
-                      <Text style={styles.settingHint}>{t('organizerCreateEventFlow.canvas.accessCodeHint')}</Text>
                     </View>
                     <Switch
                       value={eventDraft.is_password_protected}
@@ -2821,11 +2803,9 @@ export default function CreateEventFlowRefactored() {
                   <View style={styles.settingRow}>
                     <View style={styles.settingTextCol}>
                       <Text style={styles.settingLabel}>{t('attendRequests.composer.requireApproval')}</Text>
-                      <Text style={styles.settingHint}>
-                        {hasPaidTier
-                          ? t('attendRequests.composer.requireApprovalPaid')
-                          : t('attendRequests.composer.requireApprovalHint')}
-                      </Text>
+                      {hasPaidTier ? (
+                        <Text style={styles.settingHint}>{t('attendRequests.composer.requireApprovalPaid')}</Text>
+                      ) : null}
                     </View>
                     <Switch
                       value={eventDraft.requires_approval && !hasPaidTier}
@@ -2841,7 +2821,6 @@ export default function CreateEventFlowRefactored() {
                       get under the free-ticket cap (allowedPlusOnes). */}
                   <View style={styles.chipBlock}>
                     <Text style={styles.chipLabel}>{t('attendRequests.composer.plusOnes')}</Text>
-                    <Text style={styles.settingHint}>{t('attendRequests.composer.plusOnesHint')}</Text>
                     <View style={[styles.chipScroll, { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }]}>
                       {[0, 1, 2, 3].map((n) => {
                         const selected = eventDraft.plus_ones_max === n;
@@ -3188,12 +3167,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     lineHeight: 44,
     color: colors.text,
   },
-  entryLead: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textSecondary,
-    maxWidth: 320,
-  },
   entryTiles: {
     gap: 12,
   },
@@ -3223,16 +3196,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 17,
     fontWeight: '700',
     color: colors.text,
-  },
-  entryTileDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
-  },
-  entrySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
   },
 
   content: {

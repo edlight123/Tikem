@@ -136,7 +136,6 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
                   ? t('whosGoing.youreGoing')
                   : t('whosGoing.goingCount', { count: totalGoing })}
             </Text>
-            <Text style={styles.privateSub}>{t('whosGoing.privateSub')}</Text>
           </View>
         </View>
       </View>
@@ -317,11 +316,5 @@ const getStyles = (colors: any) =>
       fontSize: 15,
       fontWeight: '700',
       color: colors.text,
-    },
-    privateSub: {
-      fontSize: 13,
-      lineHeight: 18,
-      color: colors.textSecondary,
-      marginTop: 2,
     },
   });

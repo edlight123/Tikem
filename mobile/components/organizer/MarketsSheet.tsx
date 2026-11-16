@@ -108,12 +108,8 @@ export function MarketsPicker({ draft, onToggle, disabled = false, onCanvas = fa
   const { t } = useI18n();
 
   const rails = railsForMarkets(draft);
-  const hint =
-    draft.length === 0
-      ? t('organizerPayoutSettings.markets.noneHint')
-      : rails.length > 1
-        ? t('organizerPayoutSettings.markets.twoSetupsHint')
-        : t('organizerPayoutSettings.markets.oneSetupHint');
+  // Only the two-setup case is worth a line: it is the one that surprises.
+  const hint = rails.length > 1 ? t('organizerPayoutSettings.markets.twoSetupsHint') : null;
 
   const railLabel = (code: string) => {
     const rail = countrySupport(code)?.requiredProfile;
@@ -152,7 +148,7 @@ export function MarketsPicker({ draft, onToggle, disabled = false, onCanvas = fa
           </Touchable>
         );
       })}
-      {showHint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {showHint && hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -191,7 +187,6 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{t('organizerPayoutSettings.markets.title')}</Text>
-              <Text style={styles.subtitle}>{t('organizerPayoutSettings.markets.subtitle')}</Text>
             </View>
             <Touchable
               style={styles.closeBtn}
@@ -254,12 +249,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
-    },
-    subtitle: {
-      fontSize: 13,
-      lineHeight: 18,
-      color: colors.textSecondary,
-      marginTop: 4,
     },
     closeBtn: {
       width: 36,

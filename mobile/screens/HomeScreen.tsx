@@ -350,9 +350,9 @@ export default function HomeScreen({ navigation }: any) {
   const handleViewAllEvents = () => openFeed('all', t('home.allEventsTitle'));
 
   const handleViewAllForYou = () =>
-    openFeed('forYou', t('home.forYouTitle'), t('home.forYouSubtitle'));
+    openFeed('forYou', t('home.forYouTitle'));
 
-  const handleViewAllNew = () => openFeed('new', t('home.newTitle'), t('home.newSubtitle'));
+  const handleViewAllNew = () => openFeed('new', t('home.newTitle'));
 
   // Where you are browsing, in words: the metro when we know it, otherwise the
   // chosen town, otherwise the whole country.

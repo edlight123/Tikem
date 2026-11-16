@@ -199,7 +199,6 @@ export default function FavoritesScreen({ navigation }: any) {
             icon={Heart}
             art={artByKey('tekemab')}
             title={t('favorites.emptyTitle')}
-            subtitle={t('favorites.emptyBody')}
             actionLabel={t('favorites.explore')}
             onAction={() => openAttendeeTab('Discover')}
           />

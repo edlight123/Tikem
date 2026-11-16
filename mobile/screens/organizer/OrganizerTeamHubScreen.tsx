@@ -209,7 +209,6 @@ export default function OrganizerTeamHubScreen() {
               </View>
             </View>
             <Text style={styles.emptyTitle}>{t('organizerTeamHub.emptyTeamTitle')}</Text>
-            <Text style={styles.emptyBody}>{t('organizerTeamHub.emptyTeamBody')}</Text>
             <WhitePillCTA
               label={t('organizerTeamHub.inviteFirst')}
               onPress={() => navigation.navigate('OrganizerOrgTeam')}
@@ -259,10 +258,7 @@ export default function OrganizerTeamHubScreen() {
 
         {/* Per-event staffing (scanning / check-in access). */}
         <View style={styles.staffingHeader}>
-          <SectionHeader
-            title={t('organizerTeamHub.eventStaffingSection')}
-            subtitle={t('organizerTeamHub.eventStaffingSubtitle')}
-          />
+          <SectionHeader title={t('organizerTeamHub.eventStaffingSection')} />
         </View>
 
         {events.length === 0 ? (
@@ -347,14 +343,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       lineHeight: 36,
       color: colors.text,
       textAlign: 'center',
-    },
-    emptyBody: {
-      marginTop: 10,
-      fontSize: 15,
-      lineHeight: 22,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      maxWidth: 320,
     },
     emptyCta: { alignSelf: 'stretch', marginTop: 28 },
     // Event rows: standalone 4:5 poster on the canvas, no card behind the row.

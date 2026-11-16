@@ -445,9 +445,9 @@ export function InviteFriendsSheet({
                     <Users size={20} color={colors.text} />
                   </View>
                   <Text style={styles.connectTitle}>{t('invites.contactsCardTitle')}</Text>
-                  <Text style={styles.connectBody}>
-                    {contacts.kind === 'denied' ? t('invites.contactsDenied') : t('invites.contactsCardBody')}
-                  </Text>
+                  {contacts.kind === 'denied' ? (
+                    <Text style={styles.connectBody}>{t('invites.contactsDenied')}</Text>
+                  ) : null}
                   <TouchableOpacity
                     style={styles.connectBtn}
                     onPress={() => (contacts.kind === 'denied' ? Linking.openSettings().catch(() => {}) : connectContacts())}
@@ -611,19 +611,13 @@ export default function InviteFriendsRow({
           setAutoConnect(false);
           setOpen(true);
         }}
-        activeOpacity={0.8}
+        activeOpacity={0.6}
         accessibilityRole="button"
         accessibilityLabel={t('invites.inviteFriends')}
+        hitSlop={8}
       >
-        <View style={styles.entryIcon}>
-          <UserPlus size={18} color={colors.text} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.entryTitle}>{t('invites.inviteFriends')}</Text>
-          <Text style={styles.entrySub} numberOfLines={1}>
-            {t('invites.inviteFriendsSub')}
-          </Text>
-        </View>
+        <UserPlus size={18} color={colors.text} />
+        <Text style={styles.entryTitle}>{t('invites.inviteFriends')}</Text>
       </TouchableOpacity>
       <InviteFriendsSheet
         visible={open}
@@ -828,24 +822,14 @@ const getStyles = (colors: any) =>
     submitText: { color: '#000000', fontSize: 15, fontWeight: '700' },
     submitTextDisabled: { color: colors.textTertiary || colors.textSecondary },
     sentWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    // A quiet text row: icon + label, no fill, no tile.
     entry: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      paddingHorizontal: 14,
+      alignSelf: 'flex-start',
+      gap: 10,
       paddingVertical: 12,
-      marginTop: 12,
+      marginTop: 4,
     },
-    entryIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: radius.md,
-      backgroundColor: colors.surfaceRaised,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    entryTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
-    entrySub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+    entryTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
   });

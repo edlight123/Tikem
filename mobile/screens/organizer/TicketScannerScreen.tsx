@@ -1378,9 +1378,7 @@ export default function TicketScannerScreen() {
 
             <View style={styles.recentCard}>
               <Text style={styles.recentTitle}>{t('doorScanner.recent.title')}</Text>
-              {recentScans.length === 0 ? (
-                <Text style={styles.recentEmpty}>{t('doorScanner.recent.empty')}</Text>
-              ) : (
+              {recentScans.length === 0 ? null : (
                 recentScans.slice(0, 3).map((r) => (
                   <View key={r.key} style={styles.recentRow}>
                     <Text style={styles.recentName} numberOfLines={1}>{r.name}</Text>
@@ -1671,10 +1669,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     letterSpacing: 0.6,
     textTransform: 'uppercase',
     color: colors.textSecondary,
-  },
-  recentEmpty: {
-    fontSize: 13,
-    color: colors.textTertiary,
   },
   recentRow: {
     flexDirection: 'row',

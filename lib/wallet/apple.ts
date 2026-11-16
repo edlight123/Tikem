@@ -78,7 +78,7 @@ async function buildPassBackground(
     const resize = (w: number, h: number) =>
       sharp(source)
         .resize(w, h, { fit: 'cover', position: 'attention' })
-        .modulate({ brightness: 0.22, saturation: 0.7 })
+        .modulate({ brightness: 0.15, saturation: 0.7 })
         .png()
         .toBuffer()
     const [x1, x2] = await Promise.all([resize(180, 220), resize(360, 440)])

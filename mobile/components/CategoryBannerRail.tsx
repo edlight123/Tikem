@@ -28,7 +28,6 @@ export default function CategoryBannerRail({
   return (
     <View>
       <Text style={styles.title}>{t('home.discoverMoreTitle')}</Text>
-      <Text style={styles.subtitle}>{t('home.discoverMoreSubtitle')}</Text>
       <View style={styles.stack}>
         {DISCOVER_CATEGORIES.map((cat, i) => {
           const art = tileArtForCategory(cat);
@@ -79,12 +78,6 @@ const getStyles = (colors: any) =>
       fontFamily: font.serif,
       fontSize: 22,
       color: colors.text,
-    },
-    subtitle: {
-      fontSize: 13,
-      letterSpacing: 0.4,
-      color: colors.textSecondary,
-      marginTop: 3,
       marginBottom: 14,
     },
     stack: {

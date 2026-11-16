@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useAppAlert } from '../../components/AppAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import SectionHeader from '../../components/SectionHeader';
-import { Calendar, Image as ImageIcon, ScanQrCode, UserSearch } from 'lucide-react-native';
+import { Calendar, DoorOpen, Image as ImageIcon, ScanQrCode, UserSearch } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useActiveOrg } from '../../lib/activeOrg';
@@ -262,13 +262,16 @@ export default function OrganizerScanScreen() {
               <UserSearch size={18} color={colors.text} strokeWidth={1.75} />
               <Text style={styles.secondaryText}>{t('organizerScan.findGuest')}</Text>
             </Touchable>
-            <TouchableOpacity
-              style={styles.textAction}
+            {/* Door mode as a second filled row, same weight as Find a guest,
+                so the screen reads complete before the first check-in (#198). */}
+            <Touchable
+              style={styles.secondary}
               onPress={() => openScanner({ doorMode: true })}
               accessibilityRole="button"
             >
-              <Text style={styles.textActionLabel}>{t('organizerScan.doorMode')}</Text>
-            </TouchableOpacity>
+              <DoorOpen size={18} color={colors.text} strokeWidth={1.75} />
+              <Text style={styles.secondaryText}>{t('organizerScan.doorMode')}</Text>
+            </Touchable>
           </>
         ) : null}
 
@@ -440,15 +443,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontSize: 17,
       fontWeight: '600',
       color: colors.text,
-    },
-    textAction: {
-      alignSelf: 'center',
-      paddingTop: 16,
-      paddingBottom: 4,
-    },
-    textActionLabel: {
-      fontSize: 15,
-      color: colors.textSecondary,
     },
     recentSection: {
       marginTop: 28,

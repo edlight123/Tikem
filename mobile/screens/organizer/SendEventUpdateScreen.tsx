@@ -146,10 +146,6 @@ export default function SendEventUpdateScreen() {
           <InfoNotice icon="calendar-outline" text={eventTitle} />
         </View>
 
-        <View style={styles.infoWrap}>
-          <InfoNotice text={t('organizerSendUpdate.infoText')} />
-        </View>
-
         <View style={styles.form}>
           <Text style={styles.label}>{t('organizerSendUpdate.fields.titleLabel')}</Text>
           <TextInput
@@ -281,10 +277,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   eventInfoWrap: {
     marginHorizontal: 16,
     marginTop: 16,
-  },
-  infoWrap: {
-    marginHorizontal: 16,
-    marginTop: 12,
     marginBottom: 24,
   },
   form: {

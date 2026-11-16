@@ -154,10 +154,6 @@ export default function JoinWaitlistButton({
                 <Text style={styles.positionNumber}>#{position}</Text>
               </View>
 
-              <Text style={styles.modalText}>
-                {t('waitlist.infoText') || "You'll be notified by email if tickets become available. Keep an eye on your inbox!"}
-              </Text>
-
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowInfoModal(false)}
@@ -264,13 +260,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 32,
     fontWeight: '700',
     color: '#FFF',
-  },
-  modalText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
   },
   closeButton: {
     backgroundColor: colors.primary,

@@ -210,7 +210,6 @@ export default function EventAnalyticsScreen() {
           <EmptyState
             icon={BarChart2}
             title={t('organizerEventAnalytics.empty.title')}
-            subtitle={t('organizerEventAnalytics.empty.body')}
           />
         ) : (
           <>
@@ -293,13 +292,6 @@ export default function EventAnalyticsScreen() {
                   ))
                 )}
               </View>
-              {a.cities.length > 0 && a.buyersWithoutCity > 0 ? (
-                <Text style={styles.footnote}>
-                  {a.buyersWithoutCity === 1
-                    ? t('organizerEventAnalytics.noCityNoteOne')
-                    : t('organizerEventAnalytics.noCityNote', { n: a.buyersWithoutCity })}
-                </Text>
-              ) : null}
             </View>
 
             {/* Check-in */}
@@ -415,12 +407,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     // Cities are a ranking, not a status — kept neutral so teal stays scarce.
     fillNeutral: {
       backgroundColor: colors.textSecondary,
-    },
-    footnote: {
-      marginTop: 10,
-      fontSize: 12,
-      lineHeight: 17,
-      color: colors.textTertiary,
     },
     checkInHead: {
       flexDirection: 'row',

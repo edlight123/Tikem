@@ -311,7 +311,6 @@ export default function SelfieUploadScreen() {
               />
             </View>
           </View>
-          <Text style={styles.guideSubtitle}>{t('verification.selfie.guide.subtitle')}</Text>
         </View>
 
         {/* Instructions */}
@@ -353,9 +352,6 @@ export default function SelfieUploadScreen() {
                 <>
                   <Ionicons name="camera-outline" size={64} color={colors.primary} />
                   <Text style={styles.uploadButtonText}>{t('verification.selfie.buttons.takeSelfieWithId')}</Text>
-                  <Text style={styles.uploadButtonSubtext}>
-                    {t('verification.selfie.uploadHint')}
-                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -382,22 +378,11 @@ export default function SelfieUploadScreen() {
                 <Text style={styles.uploadButtonText}>
                   {livenessDone ? t('liveness.redo') : t('liveness.start')}
                 </Text>
-                <Text style={styles.uploadButtonSubtext}>{t('liveness.sectionHint')}</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Example */}
-        <View style={styles.exampleCard}>
-          <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-          <View style={styles.exampleText}>
-            <Text style={styles.exampleTitle}>{t('verification.selfie.example.goodTitle')}</Text>
-            <Text style={styles.exampleDescription}>
-              {t('verification.selfie.example.goodDescription')}
-            </Text>
-          </View>
-        </View>
       </ScrollView>
 
       {/* Continue Button */}
@@ -517,12 +502,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   personIcon: {
     opacity: 0.3,
   },
-  guideSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 8,
-  },
   instructionsCard: {
     padding: 16,
     backgroundColor: colors.surface,
@@ -573,12 +552,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.text,
     marginTop: 16,
   },
-  uploadButtonSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 4,
-    textAlign: 'center',
-  },
   previewContainer: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -604,29 +577,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     color: colors.primary,
     marginLeft: 8,
-  },
-  exampleCard: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: colors.success + '10',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.success + '30',
-  },
-  exampleText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  exampleTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.success,
-    marginBottom: 4,
-  },
-  exampleDescription: {
-    fontSize: 13,
-    color: colors.success,
-    lineHeight: 18,
   },
   footer: {
     padding: 16,

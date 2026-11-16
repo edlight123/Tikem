@@ -269,7 +269,6 @@ export default function EventFiltersSheet() {
                     <Text style={styles.selectedDateText}>
                       {t('filters.selected')}: {new Date(draftFilters.pickedDate).toLocaleDateString(locale)}
                     </Text>
-                    <Text style={styles.selectedDateHint}>{t('filters.tapToChange')}</Text>
                   </Touchable>
                 )}
               </>
@@ -652,10 +651,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
-  },
-  selectedDateHint: {
-    fontSize: 13,
-    color: colors.textSecondary,
   },
   // Compact budget control, now UNBOXED: no background, no radius, no inner
   // padding, so the slider spans the full content width and its ends line up

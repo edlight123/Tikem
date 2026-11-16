@@ -431,7 +431,6 @@ export default function OrganizerGuestListScreen() {
             <EmptyState
               icon={Users}
               title={t('organizerGuestList.empty')}
-              subtitle={t('organizerGuestList.emptySubtitle')}
               actionLabel={t('organizerGuestList.add')}
               onAction={openAdd}
             />
@@ -508,7 +507,6 @@ export default function OrganizerGuestListScreen() {
         <View style={styles.toggleCard}>
           <ToggleRow
             title={t('organizerGuestList.sheet.plusOne')}
-            hint={t('organizerGuestList.sheet.plusOneHint')}
             value={plusOne}
             onValueChange={setPlusOne}
             colors={colors}
@@ -518,7 +516,6 @@ export default function OrganizerGuestListScreen() {
               <View style={styles.toggleDivider} />
               <ToggleRow
                 title={t('organizerGuestList.sheet.checkedIn')}
-                hint={t('organizerGuestList.sheet.checkedInHint')}
                 value={checkedIn}
                 onValueChange={setCheckedIn}
                 colors={colors}
@@ -533,13 +530,11 @@ export default function OrganizerGuestListScreen() {
 
 function ToggleRow({
   title,
-  hint,
   value,
   onValueChange,
   colors,
 }: {
   title: string;
-  hint: string;
   value: boolean;
   onValueChange: (v: boolean) => void;
   colors: ReturnType<typeof useTheme>['colors'];
@@ -548,7 +543,6 @@ function ToggleRow({
     <View style={toggleStyles.row}>
       <View style={toggleStyles.textWrap}>
         <Text style={[toggleStyles.title, { color: colors.text }]}>{title}</Text>
-        <Text style={[toggleStyles.hint, { color: colors.textSecondary }]}>{hint}</Text>
       </View>
       <Switch
         value={value}
@@ -571,7 +565,6 @@ const toggleStyles = StyleSheet.create({
   },
   textWrap: { flex: 1 },
   title: { fontSize: 15, fontWeight: '600' },
-  hint: { fontSize: 13, marginTop: 2, lineHeight: 18 },
 });
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>

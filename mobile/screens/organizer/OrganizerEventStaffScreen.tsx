@@ -319,7 +319,6 @@ export default function OrganizerEventStaffScreen() {
           <EmptyState
             icon={Users}
             title={t('organizerStaff.emptyAllTitle')}
-            subtitle={t('organizerStaff.emptyAllSubtitle')}
             actionLabel={t('organizerStaff.inviteButton')}
             onAction={openInviteModal}
           />
@@ -495,7 +494,6 @@ export default function OrganizerEventStaffScreen() {
             <View style={styles.toggleCard}>
               <View style={styles.toggleText}>
                 <Text style={styles.toggleTitle}>{t('organizerStaff.viewAttendees')}</Text>
-                <Text style={styles.toggleHelp}>{t('organizerStaff.viewAttendeesHelp')}</Text>
               </View>
               <Switch
                 value={viewAttendees}
@@ -615,7 +613,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   toggleText: { flex: 1 },
   toggleTitle: { color: colors.text, fontWeight: '600', fontSize: 15 },
-  toggleHelp: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 },
 
   modalActions: { gap: 10, marginTop: 16 },
 })

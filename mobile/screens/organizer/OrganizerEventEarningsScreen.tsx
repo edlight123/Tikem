@@ -849,7 +849,6 @@ export default function OrganizerEventEarningsScreen() {
           <EmptyState
             icon={Gift}
             title={t('organizerEarnings.freeEvent.title')}
-            subtitle={t('organizerEarnings.freeEvent.body')}
           />
         </View>
       </View>
@@ -1237,9 +1236,6 @@ export default function OrganizerEventEarningsScreen() {
                     </View>
                   )}
 
-                  <Text style={styles.sectionHelp}>
-                    {t('organizerEarnings.bank.verificationHint')}
-                  </Text>
                 </View>
               )}
             </ScrollView>

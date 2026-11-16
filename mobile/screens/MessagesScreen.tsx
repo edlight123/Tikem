@@ -110,7 +110,6 @@ export default function MessagesScreen({ navigation }: any) {
           <EmptyState
             icon={MessageCircle}
             title={failed ? t('attendeeMessages.loadFailed') : t('attendeeMessages.emptyTitle')}
-            subtitle={failed ? undefined : t('attendeeMessages.emptyBody')}
           />
           {failed ? (
             <Touchable style={styles.retry} onPress={() => { setLoading(true); load(); }} accessibilityRole="button">

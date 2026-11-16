@@ -344,7 +344,6 @@ export default function OrganizerMessagesScreen() {
               disabled={sending || reply.trim().length === 0}
               style={styles.submit}
             />
-            <Text style={styles.privacyNote}>{t('organizerMessages.privacyNote')}</Text>
           </View>
 
           <View style={{ height: 40 + insets.bottom }} />
@@ -418,7 +417,6 @@ export default function OrganizerMessagesScreen() {
           <EmptyState
             icon={MessageSquare}
             title={t('organizerMessages.empty')}
-            subtitle={t('organizerMessages.emptySubtitle')}
           />
         ) : (
           <>
@@ -589,12 +587,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     submit: {
       marginTop: 16,
-    },
-    privacyNote: {
-      marginTop: 12,
-      fontSize: 12,
-      lineHeight: 16,
-      textAlign: 'center',
-      color: colors.textTertiary,
     },
   });

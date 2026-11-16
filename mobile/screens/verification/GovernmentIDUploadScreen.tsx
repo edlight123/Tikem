@@ -381,14 +381,6 @@ export default function GovernmentIDUploadScreen() {
           ) : null}
         </View>
 
-        {/*
-          One line, not a card. Four tips behind a 32pt icon took a third of the
-          screen to say something the scanner now handles itself — it frames,
-          straightens and waits for focus. The advice that still depends on the
-          organizer is light, so that is what remains.
-        */}
-        <Text style={styles.tipsInline}>{t('verification.governmentId.tipsInline')}</Text>
-
         {/* Front Upload */}
         <View style={styles.uploadSection}>
           <Text style={styles.uploadLabel}>
@@ -420,9 +412,6 @@ export default function GovernmentIDUploadScreen() {
                 <>
                   <Ionicons name="cloud-upload-outline" size={48} color={colors.primary} />
                   <Text style={styles.uploadButtonText}>{t('verification.governmentId.buttons.uploadFront')}</Text>
-                  <Text style={styles.uploadButtonSubtext}>
-                    {t('verification.common.uploadHint')}
-                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -459,9 +448,6 @@ export default function GovernmentIDUploadScreen() {
                 <>
                   <Ionicons name="cloud-upload-outline" size={48} color={colors.primary} />
                   <Text style={styles.uploadButtonText}>{t('verification.governmentId.buttons.uploadBack')}</Text>
-                  <Text style={styles.uploadButtonSubtext}>
-                    {t('verification.common.uploadHint')}
-                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -547,12 +533,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   // One line, three chips. Wrapping put "Driver's licence" on a row of its own,
   // which read as a separate choice rather than the third of three.
-  tipsInline: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textSecondary,
-    marginBottom: 18,
-  },
   typeRow: {
     flexDirection: 'row',
     gap: 6,
@@ -609,11 +589,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     color: colors.text,
     marginTop: 12,
-  },
-  uploadButtonSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 4,
   },
   previewContainer: {
     backgroundColor: colors.surface,

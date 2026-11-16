@@ -296,14 +296,12 @@ export default function EventOrdersScreen() {
             <EmptyState
               icon={ShoppingBag}
               title={t('organizerOrders.empty.title')}
-              subtitle={t('organizerOrders.empty.body')}
             />
           ) : (
             <EmptyState
               icon={ShoppingBag}
               compact
               title={t('organizerOrders.empty.filteredTitle')}
-              subtitle={t('organizerOrders.empty.filteredBody')}
             />
           )
         }

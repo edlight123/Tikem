@@ -270,9 +270,6 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                 </Touchable>
               </View>
             )}
-            {!blocked && !isOrganizer ? (
-              <Text style={styles.privacy}>{t('attendeeMessages.privacy')}</Text>
-            ) : null}
           </View>
         </>
       )}
@@ -342,5 +339,4 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'center',
     },
     sendButtonDisabled: { opacity: 0.4 },
-    privacy: { marginTop: 8, fontSize: 12, lineHeight: 16, color: colors.textTertiary, paddingHorizontal: 4 },
   });

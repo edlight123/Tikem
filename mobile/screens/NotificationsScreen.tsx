@@ -12,11 +12,11 @@ import {
   PanResponder,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, CheckCheck } from 'lucide-react-native';
+import { ArrowLeft, Bell, CheckCheck } from 'lucide-react-native';
+import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
-import { colors as T, radius } from '../theme/tokens';
+import { colors as T, font, radius } from '../theme/tokens';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -47,6 +47,7 @@ export default function NotificationsScreen() {
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   const showAlert = useAppAlert();
+  const { height: headerH, onHeight: onHeaderHeight } = useOverlayHeaderInset();
   // "4:40 PM" today, "Nov 12" otherwise: one short token beside the title.
   const shortTime = (iso: string) => {
     const d = new Date(iso);
@@ -467,16 +468,41 @@ export default function NotificationsScreen() {
     }
   };
 
+  const pageHeader = (
+    <OverlayHeader onHeight={onHeaderHeight} style={styles.pageHeader}>
+      {navigation.canGoBack() ? (
+        <Touchable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <ArrowLeft size={24} color={colors.text} />
+        </Touchable>
+      ) : (
+        <View style={styles.backButton} />
+      )}
+      <Text style={styles.pageTitle} numberOfLines={1}>
+        {t('screens.notifications.title')}
+      </Text>
+      <View style={styles.backButton} />
+    </OverlayHeader>
+  );
+
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <NotificationsSkeleton />
-      </SafeAreaView>
+      <View style={styles.container}>
+        {pageHeader}
+        <View style={{ paddingTop: headerH }}>
+          <NotificationsSkeleton />
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: headerH }]}>
+      {pageHeader}
       {/* Header actions: Mark all read (left) + Clear all (right) */}
       {notifications.length > 0 && (
         <View style={styles.header}>
@@ -525,7 +551,6 @@ export default function NotificationsScreen() {
               icon={Bell}
               art={artByKey('kafe')}
               title={t('notifications.emptyTitle')}
-              subtitle={t('notifications.emptyBody')}
             />
           </View>
         ) : (
@@ -650,7 +675,7 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -708,6 +733,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
+  // Same chrome as Subscriptions/Favorites: back arrow + centred serif title.
+  pageHeader: {
+    paddingHorizontal: 8,
+  },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  pageTitle: { flex: 1, textAlign: 'center', fontFamily: font.serif, fontSize: 22, color: colors.text },
   // Quiet text actions, no filled bar or rule under them.
   header: {
     flexDirection: 'row',

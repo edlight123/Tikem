@@ -143,9 +143,6 @@ export default function StaffEventsScreen() {
       <View style={styles.empty}>
         <Icon size={40} color={colors.textSecondary} strokeWidth={1.5} />
         <Text style={styles.emptyTitle}>{emptyText}</Text>
-        {!!uid && !error && (
-          <Text style={styles.emptyBody}>{t('staffEvents.noAssignedBody')}</Text>
-        )}
         {!!uid && error && (
           <TouchableOpacity
             style={[styles.primary, styles.emptyCta]}
@@ -184,9 +181,6 @@ export default function StaffEventsScreen() {
             <Text style={styles.eyebrow}>{t('staffEvents.staffModeTitle').toUpperCase()}</Text>
           </View>
           <Text style={styles.title}>{t('staffEvents.assignedTitle')}</Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {t('staffEvents.assignedSubtitle')}
-          </Text>
         </View>
 
         {loading && !hasEvents ? (
@@ -271,11 +265,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     letterSpacing: -0.8,
     color: colors.text,
   },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
   section: {
     marginTop: 24,
   },
@@ -345,14 +334,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     letterSpacing: -0.3,
     color: colors.text,
     textAlign: 'center',
-  },
-  emptyBody: {
-    marginTop: 6,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    maxWidth: 300,
   },
   emptyCta: {
     alignSelf: 'stretch',
