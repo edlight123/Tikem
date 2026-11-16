@@ -62,6 +62,8 @@ import OrganizerTrackingLinksScreen from '../screens/organizer/OrganizerTracking
 import OrganizerMessagesScreen from '../screens/organizer/OrganizerMessagesScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import MessageThreadScreen from '../screens/MessageThreadScreen';
+import EventFeedbackScreen from '../screens/EventFeedbackScreen';
+import OrganizerEventRecapScreen from '../screens/organizer/OrganizerEventRecapScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
@@ -172,6 +174,8 @@ export type RootStackParamList = {
   // one conversation (the "organizer replied" notification and push).
   Messages: undefined;
   MessageThread: { threadId: string; eventTitle?: string };
+  EventFeedback: { eventId: string };
+  OrganizerEventRecap: { eventId: string };
   OrganizerVerification: undefined;
   OrganizerInfoForm: { onComplete?: () => void };
   GovernmentIDUpload: { onComplete?: () => void };
@@ -973,6 +977,12 @@ export default function AppNavigator() {
             <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MessageThread" component={MessageThreadScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="EventFeedback"
+              component={EventFeedbackScreen}
+              options={{ headerShown: false, presentation: 'modal' }}
+            />
+            <Stack.Screen name="OrganizerEventRecap" component={OrganizerEventRecapScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CategoryEvents" component={CategoryEventsScreen} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />

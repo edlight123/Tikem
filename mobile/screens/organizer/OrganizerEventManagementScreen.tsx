@@ -54,6 +54,7 @@ import {
   Pause,
   TriangleAlert,
   type LucideIcon,
+  Sparkles,
 } from 'lucide-react-native';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -426,6 +427,8 @@ export default function OrganizerEventManagementScreen() {
   const canCancel = event?.status !== 'cancelled';
   const ctaBlockH = 56 + 16 + Math.max(insets.bottom, 16);
 
+  const startMs = event?.start_datetime ? new Date(event.start_datetime as any).getTime() : NaN;
+  const hasStarted = Number.isFinite(startMs) && startMs < Date.now();
   const actionGroups: { key: string; label: string; rows: ActionRow[] }[] = [
     {
       key: 'door',
@@ -453,6 +456,17 @@ export default function OrganizerEventManagementScreen() {
       key: 'sales',
       label: t('organizerEventManagement.actionGroups.sales'),
       rows: [
+        // The morning-after recap, once the event has started.
+        ...(hasStarted
+          ? [
+              {
+                key: 'recap',
+                icon: Sparkles,
+                label: t('eventRecap.title'),
+                onPress: () => navigation.navigate('OrganizerEventRecap', { eventId }),
+              },
+            ]
+          : []),
         { key: 'orders', icon: Receipt, label: t('organizerEventManagement.actions.orders'), onPress: handleViewOrders },
         // Earnings: owner, or a finance-granted admin (read-only). Never managers.
         ...(canSeeEarnings
