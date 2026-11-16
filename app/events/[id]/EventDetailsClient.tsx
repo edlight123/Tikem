@@ -35,6 +35,7 @@ import { getPosterTheme } from '@/lib/posterGradient'
 import { resolveEventPricing } from '@/lib/ticketPricing'
 import { priceOrder } from '@/lib/checkout/buyer-pricing'
 import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
+import { venueAddressLines } from '@/lib/events/venueLines'
 
 interface EventDetailsClientProps {
   event: any
@@ -186,7 +187,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               <div
                 // The vignette only on the gradient fallback: over a real flyer
                 // it darkened the corners where the date and venue usually sit.
-                className={`${event.banner_image_url ? '' : 'poster-vignette '}relative aspect-[4/5] overflow-hidden rounded-none shadow-poster ring-1 ring-white/10`}
+                className={`${event.banner_image_url ? '' : 'poster-vignette '}relative aspect-[4/5] overflow-hidden rounded shadow-poster`}
                 style={event.banner_image_url ? undefined : { backgroundImage: posterTheme.bg }}
               >
                 {event.banner_image_url ? (
@@ -243,9 +244,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               </div>
 
               {/* Title */}
-              {/* The poster voice: event titles are grotesk (design system 2026-08-28);
-                  serif italic is the eyebrow/wordmark voice, never a title. */}
-              <h1 className="font-grotesk font-bold !text-[clamp(30px,4vw,52px)] !leading-[1.03] tracking-[-0.01em] text-white mb-4">
+              {/* Event names are the serif italic, as in the app (owner: "event
+                  names stay serif"); the grotesk is the UI voice. */}
+              <h1 className="font-display italic !text-[clamp(40px,4.6vw,64px)] !leading-[1.0] tracking-[-0.01em] text-white mb-5">
                 {event.title}
               </h1>
 
@@ -276,11 +277,15 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     {formatInZone(event.start_datetime, zone, 'h:mm a', { locale: dfLocale })}
                   </p>
                 </div>
-                <div className="min-w-0 max-w-[260px]">
-                  <p className="eyebrow mb-1.5 text-[10px] text-white/50">{t('events.venue_name')}</p>
-                  <p className="text-[15px] text-white line-clamp-1">{event.venue_name}</p>
-                  <p className="text-[13px] text-white/60 line-clamp-1">{event.city}</p>
-                </div>
+                {(event.venue_name || event.city) && (
+                  <div className="min-w-0 max-w-[260px]">
+                    <p className="eyebrow mb-1.5 text-[10px] text-white/50">{t('events.venue_label', { defaultValue: 'Venue' })}</p>
+                    <p className="text-[15px] text-white line-clamp-1">{event.venue_name || event.city}</p>
+                    {event.venue_name && event.city && (
+                      <p className="text-[13px] text-white/60 line-clamp-1">{event.city}</p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <p className="eyebrow mb-1.5 text-[10px] text-white/50">{t('events.availability')}</p>
                   <p className="flex items-center gap-2 text-[15px] text-white">
@@ -456,24 +461,26 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               hairlines, headings in the editorial serif voice. */}
           <div className="lg:col-span-2">
             {/* Desktop About Section */}
+            {(event.description?.trim() || (event as any).video_url || event.spotify_url) && (
             <div className="hidden md:block border-b border-white/10 pb-8">
-              <h2 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">
-                {t('events.about_event')}
-              </h2>
-              {event.description && event.description.trim() ? (
-                <p className="max-w-[65ch] text-[15px] leading-relaxed text-white/70 whitespace-pre-wrap">
-                  {event.description}
-                </p>
-              ) : (
-                <p className="text-[15px] italic leading-relaxed text-white/70">
-                  {t('events.no_description', { defaultValue: 'The organizer hasn’t added a description yet.' })}
-                </p>
+              {/* No description: no heading and no apology line; the media
+                  (if any) still sits here. */}
+              {event.description && event.description.trim() && (
+                <>
+                  <h2 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">
+                    {t('events.about_event')}
+                  </h2>
+                  <p className="max-w-[65ch] text-[15px] leading-relaxed text-white/70 whitespace-pre-wrap">
+                    {event.description}
+                  </p>
+                </>
               )}
               {/* The trailer, then the song — both under the about text. */}
               <PromoVideo url={(event as any).video_url} className="mt-6 max-w-[65ch]" />
               {/* The event's song — desktop placement, under the about text. */}
-              <SpotifyEmbed url={event.spotify_url} className="mt-6 max-w-[65ch]" />
+              <SpotifyEmbed url={event.spotify_url} className={`${event.description?.trim() ? 'mt-6 ' : ''}max-w-[65ch]`} />
             </div>
+            )}
 
             {/* The bill — desktop. Between About and the venue: the reader has
                 just learned what the event is, and who is on it is the next
@@ -486,16 +493,19 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 </div>
               )}
 
-            {/* Venue Details - Desktop */}
+            {/* Venue Details - Desktop. Left out when the event names no
+                place at all (the map links searched for "undefined"). */}
+            {(event.venue_name || event.address || event.commune || event.city) && (
             <div className="hidden md:block border-b border-white/10 py-8">
               <h2 className="mb-3 font-display lowercase italic !text-[22px] !leading-snug text-white">
                 {t('events.venue_information')}
               </h2>
-              <p className="text-[15px] text-white">{event.venue_name}</p>
-              <p className="mt-1 text-[15px] text-white/60">
-                {event.address || t('events.address_not_specified')}
-              </p>
-              <p className="text-[15px] text-white/60">{event.commune}, {event.city}</p>
+              {event.venue_name && <p className="text-[15px] text-white">{event.venue_name}</p>}
+              {venueAddressLines(event).map((line, i) => (
+                <p key={i} className={`${i === 0 && event.venue_name ? 'mt-1 ' : ''}text-[15px] text-white/60`}>
+                  {line}
+                </p>
+              ))}
               {/* The venue, as a picture. Sits between the address and the two
                   map links: the tile shows where, the links are the actions.
                   Renders nothing at all until a static-maps key exists, which
@@ -528,6 +538,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 </a>
               </div>
             </div>
+            )}
 
             {/* Date & Time Details - Desktop */}
             <div className="hidden md:block border-b border-white/10 py-8">
@@ -610,8 +621,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               <div className="mb-6">
                 {isFree ? (
                   <div>
+                    {/* "No ticket required" used to sit under this, above a
+                        button that claims a free ticket. */}
                     <p className="font-grotesk text-3xl font-bold text-white">{t('common.free')}</p>
-                    <p className="mt-1.5 text-[13px] text-white/50">{t('events.no_ticket_required')}</p>
                   </div>
                 ) : pricing.kind === 'mixed' ? (
                   // Free AND paid tiers coexist. Showing the denormalized
@@ -736,9 +748,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         {/* The app, quietly: the site linked Google Play almost nowhere, and
             most of Haiti is on Android. */}
         <div className="mt-8 px-4 md:px-0">
-          <p className="mb-3 text-[13px] text-white/60">
-            {t('store_badges.event_hint', { defaultValue: 'Faster checkout and your tickets offline in the app.' })}
-          </p>
           <StoreBadges />
         </div>
 
@@ -754,7 +763,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         {relatedEvents?.length > 0 && (
           <div className="mt-12 px-4 md:px-0">
             <h2 className="mb-6 font-display lowercase italic !text-[26px] !leading-snug text-white">{t('events.similar_events')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
               {relatedEvents.map((e: any) => <DiscoverEventCard key={e.id} event={e} />)}
             </div>
           </div>

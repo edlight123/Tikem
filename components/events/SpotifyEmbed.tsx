@@ -29,6 +29,11 @@ export default function SpotifyEmbed({ url, className = '' }: { url?: string | n
   const compact = parsed.type === 'track' || parsed.type === 'episode'
   return (
     <div className={className}>
+      {/* color-scheme: normal — the page is `color-scheme: dark`, and an
+          iframe whose scheme differs from its document's gets an opaque
+          canvas: white showed in the corners outside Spotify's own rounded
+          player. The 4px clip is the house radius. */}
+      <div className="overflow-hidden rounded">
       <iframe
         src={`https://open.spotify.com/embed/${parsed.type}/${parsed.id}?theme=0`}
         width="100%"
@@ -36,9 +41,11 @@ export default function SpotifyEmbed({ url, className = '' }: { url?: string | n
         frameBorder="0"
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
         loading="lazy"
-        className="rounded-xl"
+        className="block"
+        style={{ colorScheme: 'normal' }}
         title="Spotify player"
       />
+      </div>
     </div>
   )
 }
