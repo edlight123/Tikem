@@ -24,6 +24,7 @@ import WhitePillCTA from '../../components/WhitePillCTA';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { backendJson } from '../../lib/api/backend';
+import { refreshOrganizerUnread } from '../../lib/organizerUnread';
 import { safeFormatForLanguage } from '../../lib/dates';
 
 import { Touchable } from '../../components/ui/Touchable';
@@ -116,6 +117,9 @@ export default function OrganizerMessagesScreen() {
       setRefreshing(false);
     }
   }, [eventId, t]);
+
+  // Leaving the inbox: re-count, so the tab dot clears once everything is read.
+  useEffect(() => () => void refreshOrganizerUnread(), []);
 
   useEffect(() => {
     load();
