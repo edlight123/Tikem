@@ -1540,6 +1540,13 @@ export default {
   },
 
   organizerAttendees: {
+    undoTitle: 'Undo check-in for {name}?',
+    undoFailed: "Couldn't undo the check-in. Try again.",
+    undoReasons: {
+      mistake: 'Tapped by mistake',
+      wrong_person: 'Wrong person',
+      testing: 'Testing',
+    },
     headerTitle: 'Attendees',
     headerCheckedInSuffix: 'checked in',
     loading: 'Loading attendees...',
