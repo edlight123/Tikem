@@ -201,8 +201,10 @@ export default function OrganizerEarningsHubScreen() {
   };
 
   const readyLine =
+    // Nothing ready: no line at all (the big 0 already says it; the old
+    // sentence explained holds — owner rule: no explanatory sentences).
     withBalance.length === 0
-      ? t('organizerEarningsHub.nothingReady')
+      ? ''
       : withBalance.length === 1
         ? t('organizerEarningsHub.readyFromOne')
         : t('organizerEarningsHub.readyFrom').replace('{n}', String(withBalance.length));
@@ -244,9 +246,11 @@ export default function OrganizerEarningsHubScreen() {
               .replace('{currency}', row.currency)}
           </Text>
         ))}
-        <Text style={styles.balanceMeta}>
-          {moneyFailed ? t('organizerEarningsHub.balanceUnavailable') : readyLine}
-        </Text>
+        {moneyFailed || readyLine ? (
+          <Text style={styles.balanceMeta}>
+            {moneyFailed ? t('organizerEarningsHub.balanceUnavailable') : readyLine}
+          </Text>
+        ) : null}
       </View>
     );
   };
@@ -287,11 +291,11 @@ export default function OrganizerEarningsHubScreen() {
             ) : (
               <>
                 {/* The one white primary action on this screen (POSH §2.2). */}
-                <WhitePillCTA
-                  label={t('organizerEarningsHub.withdraw')}
-                  onPress={onWithdraw}
-                  disabled={!moneyLoaded || withBalance.length === 0}
-                />
+                {/* Only when there is something to take out: a greyed-out
+                    Withdraw at 0 was a dead control. */}
+                {moneyLoaded && withBalance.length > 0 ? (
+                  <WhitePillCTA label={t('organizerEarningsHub.withdraw')} onPress={onWithdraw} />
+                ) : null}
 
                 <TouchableOpacity
                   style={styles.settingsLink}
@@ -574,9 +578,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
       minWidth: 0,
     },
+    // Event titles in the serif, as everywhere else (owner: "keep the serif").
     rowTitle: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontFamily: font.serif,
+      fontSize: 21,
+      lineHeight: 25,
       color: colors.text,
     },
     rowMeta: {
