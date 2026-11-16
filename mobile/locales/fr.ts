@@ -2763,6 +2763,7 @@ export default {
     errorGeneric: "Impossible d'envoyer votre message. Réessayez.",
   },
   organizerMessages: {
+    allEvents: 'Tous les événements',
     title: 'Messages',
     waitingCount: '{count} en attente de vous',
     loadFailed: 'Impossible de charger vos messages. Tirez pour réessayer.',

@@ -2731,6 +2731,7 @@ export default {
     errorGeneric: "Nou pa t ka voye mesaj ou. Eseye ankò.",
   },
   organizerMessages: {
+    allEvents: 'Tout evènman',
     title: 'Mesaj',
     waitingCount: '{count} k ap tann ou',
     loadFailed: 'Nou pa t ka chaje mesaj ou yo. Rale desann pou eseye ankò.',
