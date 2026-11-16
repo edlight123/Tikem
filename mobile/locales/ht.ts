@@ -1141,6 +1141,10 @@ export default {
   },
 
   export: {
+    title: 'Ekspòte lis la',
+    pdf: 'PDF',
+    csv: 'CSV',
+    short: 'Ekspòte',
     exportCSV: 'Ekspòte CSV',
     downloadStarted: 'Telechajman kòmanse',
     noAttendees: 'Pa gen patisipan pou ekspòte',

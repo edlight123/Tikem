@@ -1709,8 +1709,10 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const renderRegionTile = (key: PayoutRegion, title: string, sub: string, summary: { status: string; label: string }) => {
     const on = region === key
     return (
+      // Touchable styles its INNER view, so the equal-width flex lives on
+      // this wrapper (the tiles were unequal and short of the row).
+      <View key={key} style={styles.regionSlot}>
       <Touchable
-        key={key}
         scale={0.98}
         style={[styles.regionTile, on && styles.regionTileOn]}
         onPress={() => pickRegion(key)}
@@ -1725,6 +1727,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
         </View>
         {on ? <View style={styles.regionBar} /> : null}
       </Touchable>
+      </View>
     )
   }
 
@@ -2186,8 +2189,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     gap: 8,
   },
+  regionSlot: { flex: 1 },
   regionTile: {
-    flex: 1,
+    flexGrow: 1,
     minHeight: 96,
     paddingHorizontal: 14,
     paddingTop: 14,

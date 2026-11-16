@@ -130,6 +130,9 @@ export default function EventAttendeesScreen() {
   // Coming back to this screen (it stays mounted under the stack) reloads,
   // so a change made elsewhere (an undo, another door) never shows stale.
   const firstFocus = useRef(true);
+  // Has the server answered yet / was the last answer a success?
+  const serverSettled = useRef(false);
+  const serverOk = useRef(false);
   useFocusEffect(
     useCallback(() => {
       if (firstFocus.current) {
@@ -145,6 +148,9 @@ export default function EventAttendeesScreen() {
     // from the phone at once, then refresh. Keyed by uid + event.
     if (cacheKey && !attendeesCache.has(cacheKey)) {
       readPersisted<Attendee[]>(`attendees:${cacheKey}`).then((saved) => {
+        // Ignored once the server has answered (success OR refusal): a
+        // refused load must never be followed by the saved copy (fail closed).
+        if (serverSettled.current) return;
         if (saved && saved.length) {
           setAttendees((cur) => (cur.length ? cur : saved));
           setLoading(false);
@@ -158,7 +164,8 @@ export default function EventAttendeesScreen() {
   useEffect(() => {
     if (!loading && cacheKey) {
       attendeesCache.set(cacheKey, attendees);
-      writePersisted(`attendees:${cacheKey}`, attendees.map(slimAttendee));
+      // Only data that came from a successful server load goes to the phone.
+      if (serverOk.current) writePersisted(`attendees:${cacheKey}`, attendees.map(slimAttendee));
     }
   }, [attendees, loading, cacheKey]);
 
@@ -186,6 +193,7 @@ export default function EventAttendeesScreen() {
   }, [attendees, searchQuery, filterStatus]);
 
   const loadAttendees = async () => {
+    serverOk.current = false;
     try {
       const q = query(
         collection(db, 'tickets'),
@@ -198,11 +206,14 @@ export default function EventAttendeesScreen() {
         ...doc.data(),
       })) as Attendee[];
 
+      serverOk.current = true;
+      serverSettled.current = true;
       setAttendees(data);
     } catch (error) {
       console.error('Error loading attendees:', error);
       // Fail closed: a refused or failed load (e.g. access removed) must not
       // leave a cached list of names on screen.
+      serverSettled.current = true;
       if (cacheKey) {
         attendeesCache.delete(cacheKey);
         deletePersisted(`attendees:${cacheKey}`);

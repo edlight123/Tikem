@@ -1578,6 +1578,10 @@ export default {
   },
 
   export: {
+    title: 'Export the list',
+    pdf: 'PDF',
+    csv: 'CSV',
+    short: 'Export',
     exportCSV: 'Export CSV',
     downloadStarted: 'Download started',
     noAttendees: 'No attendees to export',

@@ -94,6 +94,8 @@ const USER_SCOPED_PREFIXES = [
   'payout_settings_cache_',
   'organizer_markets_',
   'scanner_manifest_',
+  // lib/persistentCache: attendee lists and stats kept for instant cold starts.
+  'tikem:pcache:',
   'door_list_',
   // "Add your number" re-ask counter, per account (lib/phonePromptPolicy.ts).
   'tikem_phone_prompt_',

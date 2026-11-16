@@ -1172,6 +1172,10 @@ export default {
   },
 
   export: {
+    title: 'Exporter la liste',
+    pdf: 'PDF',
+    csv: 'CSV',
+    short: 'Exporter',
     exportCSV: 'Exporter CSV',
     downloadStarted: 'Téléchargement démarré',
     noAttendees: 'Aucun participant à exporter',
