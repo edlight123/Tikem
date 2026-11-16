@@ -16,6 +16,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { backendJson } from '../lib/api/backend';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import {
   Bell,
@@ -110,6 +111,20 @@ export default function ProfileScreen() {
   const openAttendeeTab = useOpenAttendeeTab();
   const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  // Organizer replies the attendee hasn't opened yet, shown on the Messages row.
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.uid) return;
+      let live = true;
+      backendJson<{ unreadCount?: number }>('/api/messages')
+        .then((r) => live && setUnreadMessages(Number(r?.unreadCount) || 0))
+        .catch(() => live && setUnreadMessages(0));
+      return () => {
+        live = false;
+      };
+    }, [user?.uid])
+  );
   // "Add phone number" (WhatsApp code), behind the phone-auth flag; hidden
   // once the account has a verified phone.
   const phoneAuthOn = usePhoneAuthEnabled();
@@ -659,7 +674,12 @@ export default function ProfileScreen() {
             <ListRow icon={Users} title={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
             {/* The attendee's conversations with organizers (questions sent from
                 an event page and their answers). */}
-            <ListRow icon={MessageCircle} title={t('attendeeMessages.title')} onPress={() => navigation.navigate('Messages')} />
+            <ListRow
+              icon={MessageCircle}
+              title={t('attendeeMessages.title')}
+              value={unreadMessages > 0 ? String(unreadMessages) : undefined}
+              onPress={() => navigation.navigate('Messages')}
+            />
             {/* Publish-first: anyone can create an event; KYC is deferred to payout. */}
             <ListRow icon={Briefcase} title={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
             <ListRow

@@ -16,7 +16,7 @@ import { useAppAlert } from '../../components/AppAlert';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { RADIUS } from '../../config/brand';
-import { radius } from '../../theme/tokens';
+import { radius, colors as T } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
 import SectionHeader from '../../components/SectionHeader';
@@ -127,8 +127,21 @@ export default function OrganizerMessagesScreen() {
   };
 
   const open = useMemo(() => threads.find((th) => th.id === openId) ?? null, [threads, openId]);
-  const waiting = useMemo(() => threads.filter(needsReply), [threads]);
-  const answered = useMemo(() => threads.filter((th) => !needsReply(th)), [threads]);
+  // The all-events inbox (opened from the dashboard) can narrow to one event.
+  // Only offered when the threads actually span more than one event.
+  const [eventFilter, setEventFilter] = useState<string | null>(null);
+  const inboxEvents = useMemo(() => {
+    if (eventId) return [];
+    const seen = new Map<string, string>();
+    for (const th of threads) if (th.event_id && !seen.has(th.event_id)) seen.set(th.event_id, th.event_title || '');
+    return seen.size > 1 ? Array.from(seen, ([id, title]) => ({ id, title })) : [];
+  }, [threads, eventId]);
+  const shown = useMemo(
+    () => (eventFilter ? threads.filter((th) => th.event_id === eventFilter) : threads),
+    [threads, eventFilter]
+  );
+  const waiting = useMemo(() => shown.filter(needsReply), [shown]);
+  const answered = useMemo(() => shown.filter((th) => !needsReply(th)), [shown]);
 
   const topicLabel = (topic: string) => {
     if (topic === 'event') return t('organizerMessages.aboutEvent');
@@ -420,6 +433,31 @@ export default function OrganizerMessagesScreen() {
           />
         ) : (
           <>
+            {inboxEvents.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterRail}
+                contentContainerStyle={styles.filterRow}
+              >
+                {[{ id: null as string | null, title: t('organizerMessages.allEvents') }, ...inboxEvents].map((ev) => {
+                  const active = eventFilter === ev.id;
+                  return (
+                    <Touchable
+                      key={ev.id ?? 'all'}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setEventFilter(ev.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text numberOfLines={1} style={[styles.chipText, active && styles.chipTextActive]}>
+                        {ev.title}
+                      </Text>
+                    </Touchable>
+                  );
+                })}
+              </ScrollView>
+            )}
             {waiting.length > 0 && (
               <View style={styles.section}>
                 <SectionHeader title={t('organizerMessages.sectionWaiting')} />
@@ -446,6 +484,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
       backgroundColor: colors.background,
     },
+    filterRail: { marginHorizontal: -20, marginBottom: 8 },
+    filterRow: { paddingHorizontal: 20, gap: 8 },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: radius.button,
+      backgroundColor: T.surfaceRaised,
+      maxWidth: 220,
+    },
+    chipActive: { backgroundColor: T.white },
+    chipText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+    chipTextActive: { color: T.onWhite },
     scrollContent: {
       padding: 20,
       paddingBottom: 40,

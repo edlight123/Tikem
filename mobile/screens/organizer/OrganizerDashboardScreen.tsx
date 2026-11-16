@@ -34,7 +34,8 @@ import StatusChip from '../../components/StatusChip';
 import GettingStartedCard from '../../components/organizer/GettingStartedCard';
 import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import StatusBarBackdrop from '../../components/StatusBarBackdrop';
-import { Banknote, ChartColumn, Wallet, RotateCcw, Users, type LucideIcon } from 'lucide-react-native';
+import { Banknote, ChartColumn, Wallet, RotateCcw, Users, MessageCircle, type LucideIcon } from 'lucide-react-native';
+import { backendJson } from '../../lib/api/backend';
 import { displayCapacity } from '../../lib/ticketPricing';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
@@ -159,6 +160,23 @@ export default function OrganizerDashboardScreen() {
     }, [loadData])
   );
 
+  // Unread attendee messages for the Messages row. Staff can't read the inbox,
+  // so they never ask. A failed count just hides the number.
+  const canMessages = activeOrg.can('manage_events');
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (!canMessages) return;
+      let live = true;
+      backendJson<{ unreadCount?: number }>('/api/organizer/messages?limit=100')
+        .then((r) => live && setUnreadMessages(Number(r?.unreadCount) || 0))
+        .catch(() => live && setUnreadMessages(0));
+      return () => {
+        live = false;
+      };
+    }, [canMessages, activeOrg.orgId])
+  );
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
@@ -231,8 +249,16 @@ export default function OrganizerDashboardScreen() {
     </View>
   );
 
-  type ManageRow = { key: string; label: string; icon: LucideIcon; onPress: () => void };
-  const allActions: Array<ManageRow & { ownerOnly?: boolean; finance?: boolean }> = [
+  type ManageRow = { key: string; label: string; icon: LucideIcon; onPress: () => void; value?: string };
+  const allActions: Array<ManageRow & { ownerOnly?: boolean; finance?: boolean; messages?: boolean }> = [
+    {
+      messages: true,
+      key: 'messages',
+      label: t('organizerMessages.title'),
+      icon: MessageCircle,
+      value: unreadMessages > 0 ? String(unreadMessages) : undefined,
+      onPress: () => navigation.navigate('OrganizerMessages'),
+    },
     {
       finance: true,
       key: 'earnings',
@@ -271,8 +297,13 @@ export default function OrganizerDashboardScreen() {
   // Payouts (money out) are the owner's alone; Earnings also show to an admin
   // the owner granted read-only finances.
   const quickActions: ManageRow[] = allActions
-    .filter((a) => (!a.ownerOnly || activeOrg.can('owner_only')) && (!a.finance || financeView))
-    .map(({ ownerOnly: _ownerOnly, finance: _finance, ...row }) => row);
+    .filter(
+      (a) =>
+        (!a.ownerOnly || activeOrg.can('owner_only')) &&
+        (!a.finance || financeView) &&
+        (!a.messages || canMessages)
+    )
+    .map(({ ownerOnly: _ownerOnly, finance: _finance, messages: _messages, ...row }) => row);
 
   const renderPoster = (
     id: string,
@@ -547,7 +578,7 @@ export default function OrganizerDashboardScreen() {
           <SectionHeader title={t('organizerDashboard.manage')} />
           <ListGroup>
             {quickActions.map((row) => (
-              <ListRow key={row.key} icon={row.icon} title={row.label} onPress={row.onPress} />
+              <ListRow key={row.key} icon={row.icon} title={row.label} value={row.value} onPress={row.onPress} />
             ))}
           </ListGroup>
         </View>

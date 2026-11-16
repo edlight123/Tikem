@@ -2799,6 +2799,7 @@ export default {
     errorGeneric: "Couldn't send your message. Try again.",
   },
   organizerMessages: {
+    allEvents: 'All events',
     title: 'Messages',
     waitingCount: '{count} waiting on you',
     loadFailed: "Couldn't load your messages. Pull down to try again.",
