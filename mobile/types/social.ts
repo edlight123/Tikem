@@ -23,10 +23,10 @@ export interface PrivacySettings {
 }
 
 export const DEFAULT_PRIVACY: PrivacySettings = {
-  profile_visibility: 'private',
-  // Owner decision (2026-10): an UNSET attendance visibility reads as 'friends'
-  // (types/social.ts on the web is the same). An explicit 'nobody' still wins.
-  attendance_visibility: 'friends',
+  // Owner decision 2026-11-16: public by default (was private / friends,
+  // 2026-10). An explicit choice by the user always wins.
+  profile_visibility: 'public',
+  attendance_visibility: 'everyone',
   discoverable_by_phone: true,
 };
 
