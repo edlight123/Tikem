@@ -21,6 +21,7 @@ import { colors as T, font, radius } from '../theme/tokens';
 import { Touchable } from '../components/ui/Touchable';
 import WhitePillCTA from '../components/WhitePillCTA';
 import FollowButton from '../components/FollowButton';
+import { FEEDBACK_FACES } from '../components/FeedbackFace';
 
 /**
  * "How was it?" — opened from the morning-after notification. Three faces, an
@@ -33,12 +34,6 @@ type Payload = {
   canRate: boolean;
   feedback: { rating: number | null; comment: string } | null;
 };
-
-const FACES: Array<{ rating: 1 | 2 | 3; emoji: string; key: string }> = [
-  { rating: 1, emoji: '😕', key: 'eventFeedback.faces.meh' },
-  { rating: 2, emoji: '🙂', key: 'eventFeedback.faces.good' },
-  { rating: 3, emoji: '🤩', key: 'eventFeedback.faces.great' },
-];
 
 const COMMENT_MAX = 280;
 
@@ -151,23 +146,28 @@ export default function EventFeedbackScreen() {
               <>
                 <Text style={styles.heading}>{t('eventFeedback.howWasIt')}</Text>
                 <View style={styles.faces}>
-                  {FACES.map((f) => {
+                  {FEEDBACK_FACES.map((f) => {
                     const active = rating === f.rating;
+                    const Icon = f.Icon;
                     return (
-                      <Touchable
-                        key={f.rating}
-                        style={[styles.face, active && styles.faceActive]}
-                        onPress={() => {
-                          Haptics.selectionAsync().catch(() => {});
-                          setRating(f.rating);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active }}
-                        accessibilityLabel={t(f.key)}
-                      >
-                        <Text style={styles.emoji}>{f.emoji}</Text>
-                        <Text style={[styles.faceLabel, active && styles.faceLabelActive]}>{t(f.key)}</Text>
-                      </Touchable>
+                      // Touchable styles its INNER view; the outer cell takes the flex.
+                      <View key={f.rating} style={styles.faceCell}>
+                        <Touchable
+                          style={[styles.face, active && styles.faceActive]}
+                          onPress={() => {
+                            Haptics.selectionAsync().catch(() => {});
+                            setRating(f.rating);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          accessibilityLabel={t(f.key)}
+                        >
+                          <Icon size={30} strokeWidth={1.5} color={active ? T.onWhite : colors.text} />
+                          <Text style={[styles.faceLabel, active && styles.faceLabelActive]} numberOfLines={1}>
+                            {t(f.key)}
+                          </Text>
+                        </Touchable>
+                      </View>
                     );
                   })}
                 </View>
@@ -230,30 +230,30 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     eventTitle: {
       fontFamily: font.serif,
-      fontSize: 28,
+      fontSize: 30,
       color: colors.text,
       textAlign: 'center',
       marginTop: 16,
     },
     heading: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontFamily: font.serif,
+      fontSize: 24,
       color: colors.text,
       textAlign: 'center',
       marginTop: 28,
-      marginBottom: 16,
+      marginBottom: 18,
     },
-    faces: { flexDirection: 'row', gap: 10 },
+    faces: { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
+    faceCell: { flex: 1 },
     face: {
-      flex: 1,
+      height: 104,
       alignItems: 'center',
-      paddingVertical: 16,
+      justifyContent: 'center',
       borderRadius: radius.button,
       backgroundColor: T.surfaceRaised,
     },
     faceActive: { backgroundColor: T.white },
-    emoji: { fontSize: 34 },
-    faceLabel: { marginTop: 6, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    faceLabel: { marginTop: 10, fontSize: 13, fontWeight: '600', letterSpacing: 0.2, color: colors.textSecondary },
     faceLabelActive: { color: T.onWhite },
     input: {
       marginTop: 16,
@@ -270,11 +270,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     followRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 20,
+      justifyContent: 'center',
+      marginTop: 24,
       gap: 12,
     },
-    followName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+    followName: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: colors.text },
     cta: { marginTop: 24 },
     thanks: { alignItems: 'stretch' },
     muted: { marginTop: 32, fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
