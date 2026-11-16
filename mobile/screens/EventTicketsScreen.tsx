@@ -47,6 +47,11 @@ export default function EventTicketsScreen({ route, navigation }: any) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [ticketToTransfer, setTicketToTransfer] = useState<any>(null);
+  // Hooks for Cancel RSVP. They MUST sit up here, above the loading/empty
+  // early returns: declared below them, the first render skipped them and the
+  // next one crashed with "rendered more hooks" (opening the Scholars tickets).
+  const showAlert = useAppAlert();
+  const [cancelling, setCancelling] = useState(false);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -218,8 +223,6 @@ export default function EventTicketsScreen({ route, navigation }: any) {
 
   // Free RSVPs can be given back before the event starts (owner: "there's no
   // way to cancel my RSVP"). Paid tickets go through refunds instead.
-  const showAlert = useAppAlert();
-  const [cancelling, setCancelling] = useState(false);
   const startMs = event?.start_datetime
     ? (typeof event.start_datetime?.toDate === 'function' ? event.start_datetime.toDate() : new Date(event.start_datetime)).getTime()
     : NaN;
