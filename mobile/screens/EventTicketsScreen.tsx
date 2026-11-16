@@ -27,6 +27,8 @@ import { TicketPassSkeleton } from '../components/Skeleton';
 import { ticketQrValue } from '../lib/ticket';
 import { useMaxBrightnessWhileFocused } from '../lib/useMaxBrightness';
 import { colors as T, font } from '../theme/tokens';
+import { useAppAlert } from '../components/AppAlert';
+import { backendJson } from '../lib/api/backend';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -214,6 +216,42 @@ export default function EventTicketsScreen({ route, navigation }: any) {
     navigation.navigate('EventDetail', { eventId: event.id });
   };
 
+  // Free RSVPs can be given back before the event starts (owner: "there's no
+  // way to cancel my RSVP"). Paid tickets go through refunds instead.
+  const showAlert = useAppAlert();
+  const [cancelling, setCancelling] = useState(false);
+  const startMs = event?.start_datetime
+    ? (typeof event.start_datetime?.toDate === 'function' ? event.start_datetime.toDate() : new Date(event.start_datetime)).getTime()
+    : NaN;
+  const canCancelRsvp =
+    tickets.length > 0 &&
+    (!Number.isFinite(startMs) || startMs > Date.now()) &&
+    tickets.every((tk) => Number(tk.price_paid ?? 0) === 0) &&
+    tickets.some((tk) => !(tk.checked_in === true || tk.checked_in_at));
+  const confirmCancelRsvp = () => {
+    showAlert(t('tickets.cancelRsvp.title'), '', [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('tickets.cancelRsvp.confirm'),
+        style: 'destructive',
+        onPress: async () => {
+          setCancelling(true);
+          try {
+            await backendJson('/api/tickets/cancel-rsvp', {
+              method: 'POST',
+              body: JSON.stringify({ eventId: event?.id || route?.params?.eventId }),
+            });
+            navigation.goBack();
+          } catch {
+            showAlert(t('common.error'), t('tickets.cancelRsvp.failed'));
+          } finally {
+            setCancelling(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const handleTransferPress = (ticket: any) => {
     setTicketToTransfer(ticket);
     setTransferModalVisible(true);
@@ -240,6 +278,16 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           onViewEvent={handleViewEvent}
           onTransferPress={() => handleTransferPress(item)}
         />
+        {canCancelRsvp ? (
+          <TouchableOpacity
+            style={styles.cancelRsvp}
+            onPress={confirmCancelRsvp}
+            disabled={cancelling}
+            accessibilityRole="button"
+          >
+            <Text style={styles.cancelRsvpText}>{t('tickets.cancelRsvp.action')}</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -389,6 +437,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
+  cancelRsvp: { alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 20, marginTop: 8 },
+  cancelRsvpText: { fontSize: 14, fontWeight: '600', color: T.red },
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',

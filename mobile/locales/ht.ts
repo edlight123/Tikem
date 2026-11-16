@@ -830,6 +830,12 @@ export default {
     eventsCount: 'evènman',
   },
   tickets: {
+    cancelRsvp: {
+      action: 'Anile rezèvasyon an',
+      title: 'Anile rezèvasyon ou a?',
+      confirm: 'Wi, anile',
+      failed: 'Nou pa t ka anile l. Eseye ankò.',
+    },
     undated: 'San dat',
     title: 'Biyè mwen',
     loginRequiredBody: 'Tanpri konekte pou wè biyè ou yo',
@@ -1075,9 +1081,9 @@ export default {
       bodyPluralSuffix: ' patisipan',
     },
     fields: {
-      titleLabel: 'Tit mizajou a *',
+      titleLabel: 'Tit mizajou a',
       titlePlaceholder: 'eg.: Chanjman kote, Chanjman lè',
-      messageLabel: 'Mesaj *',
+      messageLabel: 'Mesaj',
       messagePlaceholder: 'Antre mesaj ou pou patisipan yo...',
     },
     examplesTitle: 'Egzanp mizajou:',
@@ -2809,6 +2815,18 @@ export default {
     sendFailed: 'Nou pa t ka voye l. Eseye ankò.',
   },
   eventRecap: {
+    of: "sou",
+    insight: {
+      sameAsUsual: "Prezans lan nòmal, menm jan ak {avg}% ou konn genyen.",
+      aboveUsual: "Plis moun vini pase {avg}% ou konn genyen.",
+      belowUsual: "Mwens moun vini pase {avg}% ou konn genyen.",
+      window: "Pifò moun te antre ant {from} ak {to}.",
+      noShows: "{n} moun ki te gen biyè pa t vini.",
+      noShowOne: "1 moun ki te gen biyè pa t vini.",
+      loved: "{n} sou {total} ki bay nòt te renmen l.",
+      followers: "{n} nouvo abòne depi evènman an.",
+      followerOne: "1 nouvo abòne depi evènman an.",
+    },
     title: 'Rezime',
     sold: 'Vann',
     came: 'Vini',
@@ -2820,6 +2838,23 @@ export default {
     ratings: 'nòt',
     noRatings: 'Poko gen nòt.',
     loadFailed: 'Nou pa t ka chaje rezime a. Rale anba pou eseye ankò.',
+  },
+  transferTicket: {
+    title: "Transfere",
+    sentTitle: "Voye",
+    note: "Lyen an ekspire nan 24 èdtan. Lè yo aksepte l, biyè a pou yo.",
+    noteCount: "Transfere {count} fwa sou 3. Lyen an ekspire nan 24 èdtan.",
+    maxReached: "Biyè sa a deja transfere 3 fwa, se limit lan.",
+    email: "Imèl li",
+    message: "Mesaj (si w vle)",
+    messagePlaceholder: "Ajoute yon ti mo",
+    send: "Voye biyè a",
+    sentBody: "Nou voye yon imèl bay {email}. Ou ka voye lyen an ba li tou.",
+    shareLink: "Pataje lyen an",
+    shareMessage: "Men biyè m pou {event}: {link}",
+    invalidEmail: "Mete yon adrès imèl ki bon.",
+    emailRequired: "Mete imèl li.",
+    failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
   organizerMessages: {
     allEvents: 'Tout evènman',
@@ -3088,6 +3123,7 @@ export default {
   },
 
   freeTicket: {
+    sheetTitle: 'rezève',
     ticketsLabel: 'Biyè',
     alreadyTitle: 'Ou prale',
     alreadyBody: {

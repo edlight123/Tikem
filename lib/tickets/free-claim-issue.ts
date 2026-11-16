@@ -587,6 +587,9 @@ export async function issueFreeClaim(
           price_paid: 0,
           currency: event.currency || 'HTG',
           payment_method: 'free',
+          // The seats behind this claim, so cancelling the RSVP can give them
+          // back (/api/tickets/cancel-rsvp → releaseSeats).
+          inventory_reservation_id: reservation.reservationId,
           purchased_at: FieldValue.serverTimestamp(),
           tier_name: claim.tierName || 'General Admission',
           tier_id: claim.tierId,
@@ -649,7 +652,11 @@ export async function issueFreeClaim(
   if (lockHeld) {
     try {
       await lockRef.set(
-        { issued_at: new Date().toISOString(), ticket_ids: createdTickets.map((t: any) => String(t.id)) },
+        {
+          issued_at: new Date().toISOString(),
+          ticket_ids: createdTickets.map((t: any) => String(t.id)),
+          reservation_id: reservation.reservationId,
+        },
         { merge: true }
       )
     } catch (e) {

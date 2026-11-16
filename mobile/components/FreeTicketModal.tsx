@@ -382,11 +382,11 @@ export default function FreeTicketModal({
           <View pointerEvents="none" style={styles.bottomFill} />
           <View style={styles.handle} />
 
-          {/* No heading: the buyer just tapped RSVP on this event, so a title and
-              the event name would repeat what they already know (owner feedback
-              2026-11-15). Only the free tier name, when one was picked, and close. */}
+          {/* A small serif title (the tier, when one was picked, beneath it) and
+              close. No event name: the buyer just tapped RSVP on it. */}
           <View style={styles.header}>
             <View style={styles.headerText}>
+              <Text style={styles.sheetTitle}>{tf('freeTicket.sheetTitle', 'rsvp')}</Text>
               {tierName ? (
                 <Text style={styles.eventLine} numberOfLines={1}>{tierName}</Text>
               ) : null}
@@ -454,31 +454,16 @@ export default function FreeTicketModal({
             </View>
           )}
 
-          {/* A quiet total line, not a filled box with a giant amount. */}
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>{t('freeTicket.total')}</Text>
-            <Text style={styles.totalValue}>{t('common.free')}</Text>
-          </View>
-
-          <View style={styles.actions}>
-            <TouchableOpacity
-              onPress={onClose}
-              disabled={loading}
-              style={styles.cancelButton}
-              accessibilityRole="button"
-            >
-              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-            <WhitePillCTA
-              compact
-              variant="rsvp"
-              label={pc('freeTicket.claimButton', claimQuantity)}
-              onPress={handleClaimTickets}
-              loading={loading}
-              disabled={remainingTickets <= 0}
-              style={styles.claimButton}
-            />
-          </View>
+          {/* One full-width action. No "Total: Free" line (it's an RSVP) and no
+              second Cancel next to the close button. */}
+          <WhitePillCTA
+            variant="rsvp"
+            label={pc('freeTicket.claimButton', claimQuantity)}
+            onPress={handleClaimTickets}
+            loading={loading}
+            disabled={remainingTickets <= 0}
+            style={styles.claimButtonFull}
+          />
         </View>
       </View>
     </Modal>
@@ -539,6 +524,8 @@ const getStyles = (_colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     fontSize: 13,
     color: T.textSecondary,
   },
+  sheetTitle: { fontFamily: font.serif, fontSize: 28, lineHeight: 32, color: T.textPrimary },
+  claimButtonFull: { marginTop: 20 },
   closeButton: {
     paddingTop: 6,
   },

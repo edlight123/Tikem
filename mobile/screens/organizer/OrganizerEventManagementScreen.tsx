@@ -568,7 +568,9 @@ export default function OrganizerEventManagementScreen() {
         {ticketData.ticketTypes.length > 0 && (
           <View style={styles.section}>
             <SectionHeader title={t('organizerEventManagement.sections.ticketTypes')} />
-            <View style={styles.group}>
+            {/* Compact rows (owner: "height too big — what if several ticket
+                types?"): name and count on one line, a hairline bar under. */}
+            <View style={styles.tierGroup}>
               {ticketData.ticketTypes.map((ticketType, index) => {
                 // The 1,000,000 "unlimited" sentinel is not a real cap: show
                 // just "22 sold" and no progress bar.
@@ -764,15 +766,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.xl,
     padding: 20,
   },
-  tierRow: {},
+  tierGroup: {
+    backgroundColor: T.surface,
+    borderRadius: radius.xl,
+    paddingHorizontal: 16,
+  },
+  tierRow: { paddingVertical: 13 },
   tierRowSpaced: {
-    marginTop: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: T.surfaceRaised,
   },
   tierInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 10,
   },
   tierName: {
     flex: 1,
@@ -787,7 +794,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontVariant: ['tabular-nums'],
   },
   tierTrack: {
-    height: 6,
+    marginTop: 8,
+    height: 3,
     backgroundColor: T.surfaceRaised,
     borderRadius: 3,
     overflow: 'hidden',

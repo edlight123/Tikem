@@ -5,8 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
-import WhitePillCTA from './WhitePillCTA';
-import { radius } from '../theme/tokens';
+
+import { radius, font } from '../theme/tokens';
 import { nationalDayText, type ActiveNationalDay } from '../lib/nationalDays';
 import { nationalDayArt } from '../lib/nationalDaysRemote';
 
@@ -30,7 +30,7 @@ export default function NationalDayBanner({ active, onSeeEvents, onDismiss }: Pr
   const { t, language } = useI18n();
   const { width, height } = useWindowDimensions();
   const art = nationalDayArt(active.day);
-  const { title, message } = nationalDayText(active.day, language);
+  const { title } = nationalDayText(active.day, language);
 
   const posterWidth = width - 32;
   // 4:5 like the art, but never more than ~55% of the screen, so the first
@@ -77,25 +77,27 @@ export default function NationalDayBanner({ active, onSeeEvents, onDismiss }: Pr
         >
           <X size={16} color="#FFFFFF" strokeWidth={2.2} />
         </Pressable>
-        <View style={styles.text}>
+        {/* Few words on the picture (owner: "still too many words, reads too
+            much"): when, the day's name in the serif, and one quiet link. The
+            whole card is the tap target. */}
+        <Pressable
+          style={styles.text}
+          onPress={onSeeEvents}
+          disabled={!onSeeEvents}
+          accessibilityRole="button"
+          accessibilityLabel={`${title}. ${t('home.nationalDay.seeEvents')}`}
+        >
           <View style={styles.captionRow}>
             <View style={[styles.dot, { backgroundColor: dot }]} />
             <Text style={styles.caption} numberOfLines={1}>
               {when.toUpperCase()}
-              {art?.place ? `  ·  ${art.place.toUpperCase()}` : ''}
             </Text>
           </View>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
           {onSeeEvents && (
-            <WhitePillCTA
-              label={t('home.nationalDay.seeEvents')}
-              onPress={onSeeEvents}
-              compact
-              style={styles.cta}
-            />
+            <Text style={styles.seeLink}>{`${t('home.nationalDay.seeEvents')}  →`}</Text>
           )}
-        </View>
+        </Pressable>
       </View>
     </View>
   );
@@ -148,10 +150,15 @@ const styles = StyleSheet.create({
   },
   // Fixed white: the words sit on the dark scrim in every theme.
   title: {
-    fontSize: 32,
-    lineHeight: 35,
-    fontWeight: '700',
-    letterSpacing: -0.6,
+    fontFamily: font.serif,
+    fontSize: 38,
+    lineHeight: 42,
+    color: '#FFFFFF',
+  },
+  seeLink: {
+    marginTop: 12,
+    fontSize: 15,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   message: {
