@@ -70,7 +70,7 @@ export function toDate(v: any): Date | null {
 }
 
 /** When the event ended: end_datetime, else start + DEFAULT_EVENT_HOURS. */
-export function eventEnd(event: { start_datetime?: any; end_datetime?: any }): Date | null {
+export function eventEnd(event: Record<string, any> | null | undefined): Date | null {
   const end = toDate(event?.end_datetime)
   if (end) return end
   const start = toDate(event?.start_datetime)
