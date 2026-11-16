@@ -4,6 +4,11 @@ import { claimReminder } from '@/lib/notifications/reminder-claim'
 import { marketTimezone } from '@/lib/notifications/policy'
 import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
+import { eventOrgId, teamSeatIn } from '@/lib/organizer/context'
+import { sendEmail } from '@/lib/email'
+import { appUrl } from '@/lib/email-kit/layout'
+import { resolveEmailLang } from '@/lib/email-kit/recipient'
+import { getEventRecapEmail } from '@/lib/email-templates/eventRecap'
 import { arrivalBuckets, eventEnd, followupDue, toDate } from './timing'
 
 /**
@@ -188,6 +193,41 @@ async function recentEvents(now: Date): Promise<Array<{ id: string } & Record<st
   return Array.from(byId.values())
 }
 
+/**
+ * Email one organizer-side recipient their recap. Ticket sales only for the org
+ * owner or an admin with the finance grant (managers get it without). Never
+ * throws: a failed email must not stop the run.
+ */
+async function emailRecap(
+  uid: string,
+  user: Record<string, any> | undefined,
+  event: { id: string } & Record<string, any>,
+  recap: EventRecap
+): Promise<void> {
+  try {
+    const to = typeof user?.email === 'string' ? user.email.trim() : ''
+    if (!to) return
+    const orgId = eventOrgId(event)
+    const includeRevenue =
+      !!orgId && (uid === orgId || (await teamSeatIn(orgId, uid).catch(() => null))?.financeView === true)
+    const lang = await resolveEmailLang({
+      explicit: user?.language || user?.preferred_language,
+      event: { country: event.country, city: event.city, timezone: event.timezone },
+    })
+    const { subject, html } = getEventRecapEmail({
+      lang,
+      event,
+      recap,
+      includeRevenue,
+      recapUrl: `${appUrl()}/organizer/events/${encodeURIComponent(event.id)}/recap`,
+    })
+    const res = await sendEmail({ to, subject, html })
+    if (!res?.success) console.error('[post-event] recap email not sent', event.id, uid, res?.error)
+  } catch (error) {
+    console.error('[post-event] recap email failed', event.id, uid, error)
+  }
+}
+
 export async function runPostEventFollowups(now = new Date()): Promise<FollowupRunResult> {
   const result: FollowupRunResult = { eventsChecked: 0, eventsSent: 0, attendeeAsks: 0, organizerRecaps: 0 }
   const events = await recentEvents(now)
@@ -250,7 +290,11 @@ export async function runPostEventFollowups(now = new Date()): Promise<FollowupR
         url: `/organizer/events/${event.id}/recap`,
         data: { eventId: event.id },
       })
-      if (ok) result.organizerRecaps += 1
+      if (ok) {
+        result.organizerRecaps += 1
+        // The same recap by email, behind the same opt-out/cap the push just passed.
+        await emailRecap(uid, users.get(uid), event, recap)
+      }
     }
 
     try {
