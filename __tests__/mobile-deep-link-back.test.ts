@@ -52,6 +52,7 @@ describe('linking config', () => {
       Notifications: 'notifications',
       TicketDetail: 'tickets/:ticketId',
       EventDetail: 'events/:eventId',
+      EventFeedback: 'events/:eventId/feedback',
       CategoryEvents: 'national-day/:nationalDay',
       // Push notification targets (lib/pushNotifications maps relative URLs to tikem://).
       EventTickets: 'tickets/event/:eventId',
@@ -64,6 +65,7 @@ describe('linking config', () => {
       // Approval lists: the organizer's 'New request' push opens the Requests screen.
       EventRequests: 'organizer/events/:eventId/requests',
       OrganizerEventManagement: 'organizer/events/:eventId',
+      OrganizerEventRecap: 'organizer/events/:eventId/recap',
       OrganizerEarningsHub: 'organizer/payouts',
       OrganizerPayoutSettings: 'organizer/settings/payouts',
       Main: { screens: { Discover: 'discover' } },
