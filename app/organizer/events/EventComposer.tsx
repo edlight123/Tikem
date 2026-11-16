@@ -55,6 +55,7 @@ import {
   isQuantityBelowSold,
   type ExistingTier,
 } from '@/lib/tickets/tier-reconcile'
+import { isRsvpEvent, rsvpTierFields, rsvpTierToKeep } from '@/lib/tickets/rsvp-tier'
 import { useToast } from '@/components/ui/Toast'
 import ImageUpload from '@/components/ImageUpload'
 import PosterTemplatePicker, { makePoster, type PosterFacts, type PosterSpec } from '@/components/organizer/PosterTemplatePicker'
@@ -572,7 +573,9 @@ export default function EventComposer({
 
   // Core
   const [sellMode, setSellMode] = useState<'tickets' | 'rsvp'>(
-    isEdit && event?.ticket_name === 'RSVP' ? 'rsvp' : 'tickets'
+    // `is_rsvp` when the event carries it (both composers write it now), else
+    // the web's older marker, `ticket_name: 'RSVP'`.
+    isEdit && isRsvpEvent(event) ? 'rsvp' : 'tickets'
   )
   const [title, setTitle] = useState(event?.title || '')
   const [summary, setSummary] = useState(event?.summary || '')
@@ -937,7 +940,7 @@ export default function EventComposer({
     }
     const s0 = splitISO(d.start_datetime)
     const e0 = splitISO(d.end_datetime)
-    if (d.ticket_name === 'RSVP') setSellMode('rsvp')
+    if (isRsvpEvent(d)) setSellMode('rsvp')
     setTitle(d.title || '')
     if (d.summary) {
       setSummary(d.summary)
@@ -1165,9 +1168,13 @@ export default function EventComposer({
   // Access code: required (min 6) when enabling protection on CREATE; on edit a
   // blank code keeps the existing hash, but a typed code must still be >= 6.
   const trimmedCode = accessCode.trim()
+  // A blank code keeps the stored hash only when the event was ALREADY
+  // protected: switching the gate on in an edit with no code left an event no
+  // one could ever unlock (accessCodeMatches refuses when no hash is stored).
+  const hasStoredCode = isEdit && !!event?.is_password_protected
   const accessCodeInvalid =
     passwordProtected &&
-    ((!isEdit && trimmedCode.length < 6) || (trimmedCode.length > 0 && trimmedCode.length < 6))
+    ((!hasStoredCode && trimmedCode.length < 6) || (trimmedCode.length > 0 && trimmedCode.length < 6))
 
   // The organizer's own UTC offset, shown beside the date fields so "8pm" is
   // unambiguous. Only the browser knows it — the server renders in its own zone
@@ -1310,7 +1317,12 @@ export default function EventComposer({
       // one back in before the write, so an edit never relabels an event).
       country,
       city: isOnline ? '' : city.trim() || defaultCityForCountry(country),
-      commune: '',
+      // The web has no commune field: keep the one the app stored while the
+      // city is unchanged, rather than erasing it on every web edit.
+      commune:
+        !isOnline && isEdit && city.trim() === String(event?.city || '').trim()
+          ? String(event?.commune || '')
+          : '',
       address: isOnline ? '' : address.trim(),
       start_datetime: composeISO(startDate, startTime),
       end_datetime: composeISO(endDate, endTime),
@@ -1318,7 +1330,9 @@ export default function EventComposer({
       // carrying a free tier, so it can NOT answer "is this event free" once free
       // and paid tiers coexist — `has_paid_tiers` is the authoritative signal for
       // every reader (see mobile/lib/ticketPricing.ts).
-      ticket_price: isRsvp ? 0 : firstTier.price,
+      // The LOWEST tier price (what mobile writes): the first tier's price
+      // printed "from 50" on an event whose second tier costs 10.
+      ticket_price: isRsvp || cleanTiers.length === 0 ? 0 : Math.min(...cleanTiers.map((t) => t.price)),
       has_paid_tiers: !isRsvp && cleanTiers.some((t) => Number(t.price || 0) > 0),
       total_tickets: isRsvp ? 0 : totalQty,
       // The sales gate reads max_tickets ?? capacity ?? total_tickets, and the
@@ -1327,6 +1341,8 @@ export default function EventComposer({
       capacity: isRsvp ? 0 : totalQty,
       total_capacity: isRsvp ? 0 : totalQty,
       ticket_name: isRsvp ? 'RSVP' : firstTier.name,
+      // The flag mobile reads (and lib/ticketPricing's free-event check).
+      is_rsvp: isRsvp,
       guestlist: cleanGuests,
       currency: normalizeEventCurrencyForCountry(country, currency),
       banner_image_url: bannerUrl || null,
@@ -1372,6 +1388,18 @@ export default function EventComposer({
         country === seedCountry &&
         (isOnline || !city.trim() || !defaultCity || city.trim().toLowerCase() === defaultCity.trim().toLowerCase())
       data.timezone = seed.timezone && atDefaultPlace ? seed.timezone : timezoneForEvent(country, isOnline ? '' : city)
+    } else {
+      // Edit: the stored zone stands while the event stays in the same city. A
+      // moved event (or one with no zone) is re-derived, and so is the blanket
+      // Port-au-Prince the app used to stamp on every event, wherever it was.
+      const stored = typeof event?.timezone === 'string' ? event.timezone : ''
+      const sameCity =
+        city.trim().toLowerCase() === String(event?.city || '').trim().toLowerCase() &&
+        !!event?.is_online === isOnline
+      const blanketHaiti = stored === 'America/Port-au-Prince' && country !== 'HT'
+      if (!stored || !sameCity || blanketHaiti) {
+        data.timezone = timezoneForEvent(country, isOnline ? '' : city)
+      }
     }
     return { data, cleanTiers, isRsvp }
   }
@@ -1453,16 +1481,22 @@ export default function EventComposer({
     const snap = await getDocs(query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId)))
     const existing: ExistingTier[] = snap.docs.map((d) => ({ ...(d.data() as any), id: d.id }))
 
-    // An RSVP event sells no tiers (the web composer has never written one).
+    // An RSVP event sells no tiers (the web composer has never written one) —
+    // except the free tier a mobile RSVP keeps its seats in, which is kept
+    // (lib/tickets/rsvp-tier.ts): archiving it refused every later RSVP.
+    const keepRsvp = isRsvp ? rsvpTierToKeep(existing as Array<ExistingTier & Record<string, any>>) : null
     const rows = isRsvp
-      ? []
+      ? keepRsvp
+        ? [{ id: keepRsvp.id as string | null, name: String(keepRsvp.name || 'RSVP'), ...rsvpTierFields(keepRsvp) }]
+      : []
       : cleanTiers.map((t, i) => ({
           id: (opts.docIds?.[i] || null) as string | null,
           name: t.name,
           quantity: t.quantity,
           fields: t,
         }))
-    if (opts.source) {
+    // RSVP rows already point at this event's own tier.
+    if (opts.source && !isRsvp) {
       const siblingIds = matchSiblingTierIds(rows, opts.source, existing)
       rows.forEach((r, i) => (r.id = siblingIds[i]))
     }
@@ -1659,7 +1693,7 @@ export default function EventComposer({
       showToast({
         type: 'error',
         title: t('composer.toasts.accessTitle', { defaultValue: 'Set an access code' }),
-        message: isEdit
+        message: hasStoredCode
           ? t('composer.accessCodeError', { defaultValue: 'Access codes must be at least 6 characters.' })
           : t('composer.toasts.accessMsgNew', {
               defaultValue: 'Protected events need an access code of at least 6 characters.',
@@ -3288,7 +3322,7 @@ export default function EventComposer({
                       value={accessCode}
                       onChange={(e) => setAccessCode(e.target.value)}
                       placeholder={
-                        isEdit
+                        hasStoredCode
                           ? t('composer.accessCodePlaceholderEdit', {
                               defaultValue: 'New access code (blank keeps current)',
                             })
