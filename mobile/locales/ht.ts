@@ -1103,6 +1103,13 @@ export default {
   },
 
   organizerAttendees: {
+    undoTitle: 'Retire antre {name}?',
+    undoFailed: 'Nou pa t ka retire antre a. Eseye ankò.',
+    undoReasons: {
+      mistake: 'Mwen te peze pa erè',
+      wrong_person: 'Se pa bon moun nan',
+      testing: 'Se te yon tès',
+    },
     headerTitle: 'Patisipan',
     headerCheckedInSuffix: 'antre',
     loading: 'Nap chaje patisipan yo...',

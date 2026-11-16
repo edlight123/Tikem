@@ -247,3 +247,24 @@ export function flushCheckInQueue(uid: string, eventId?: string): Promise<FlushR
     return report;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Undo a check-in (organizer side only; the server refuses door staff)
+// ---------------------------------------------------------------------------
+
+export type UndoCheckInReason = 'mistake' | 'wrong_person' | 'testing';
+
+/** True when the ticket is no longer in (also when it already wasn't). */
+export async function postUndoCheckIn(
+  eventId: string,
+  ticketId: string,
+  reason: UndoCheckInReason,
+): Promise<boolean> {
+  const res = await fetchWithTimeout(
+    `/api/staff/events/${encodeURIComponent(eventId)}/check-in/undo`,
+    { method: 'POST', body: JSON.stringify({ ticketId, reason }) },
+    CHECK_IN_TIMEOUT_MS,
+  );
+  if (res.ok || res.status === 409) return true;
+  return false;
+}

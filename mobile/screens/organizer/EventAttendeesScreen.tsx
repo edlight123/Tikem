@@ -15,7 +15,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { db } from '../../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { postCheckIn } from '../../lib/doorCheckIn';
+import { postCheckIn, postUndoCheckIn, type UndoCheckInReason } from '../../lib/doorCheckIn';
 import type { DoorVerdict } from '../../lib/doorList';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -267,6 +267,47 @@ export default function EventAttendeesScreen() {
     );
   };
 
+  // Undo a check-in: tap the green check. One tap on a reason both confirms
+  // and records why (the server keeps who/when/why; check-ins feed payouts).
+  const undoCheckIn = async (attendee: Attendee, reason: UndoCheckInReason) => {
+    setPendingIds((prev) => new Set(prev).add(attendee.id));
+    try {
+      const ok = await postUndoCheckIn(eventId, attendee.id, reason);
+      if (!ok) throw new Error('undo_refused');
+      setAttendees((prev) =>
+        prev.map((a) =>
+          a.id === attendee.id
+            ? {
+                ...a,
+                checked_in: false,
+                checked_in_at: null as any,
+                status: String(a.status || '').toLowerCase() === 'checked_in' ? 'valid' : a.status,
+              }
+            : a
+        )
+      );
+    } catch (error) {
+      console.error('Error undoing check-in:', error);
+      showAlert(t('organizerAttendees.undoFailed'));
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(attendee.id);
+        return next;
+      });
+    }
+  };
+
+  const handleUndoCheckIn = (attendee: Attendee) => {
+    const name = attendee.attendee_name || attendee.attendee_email || t('common.general');
+    showAlert(t('organizerAttendees.undoTitle').replace('{name}', name), '', [
+      { text: t('organizerAttendees.undoReasons.mistake'), onPress: () => undoCheckIn(attendee, 'mistake') },
+      { text: t('organizerAttendees.undoReasons.wrong_person'), onPress: () => undoCheckIn(attendee, 'wrong_person') },
+      { text: t('organizerAttendees.undoReasons.testing'), onPress: () => undoCheckIn(attendee, 'testing') },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
   // "Check in all" on the not-checked-in filter: every live ticket not yet in,
   // through the same server check-in as one row, a few at a time, then one
   // total.
@@ -341,12 +382,22 @@ export default function EventAttendeesScreen() {
         {!live ? (
           <Text style={styles.rowStateMuted}>{t('organizerAttendees.status.notValid')}</Text>
         ) : checkedIn ? (
-          <View style={styles.rowState}>
+          <Touchable
+            style={styles.rowState}
+            onPress={() => handleUndoCheckIn(item)}
+            disabled={pending || bulkRunning}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('organizerAttendees.undoTitle').replace(
+              '{name}',
+              item.attendee_name || item.attendee_email || ''
+            )}
+          >
             <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             {!!item.checked_in_at && (
               <Text style={styles.rowStateText}>{formatDate(item.checked_in_at, 'h:mm a')}</Text>
             )}
-          </View>
+          </Touchable>
         ) : (
           <Touchable
             style={[styles.checkInButton, (pending || bulkRunning) && styles.checkInButtonDisabled]}

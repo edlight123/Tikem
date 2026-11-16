@@ -1134,6 +1134,13 @@ export default {
   },
 
   organizerAttendees: {
+    undoTitle: 'Annuler l’entrée de {name} ?',
+    undoFailed: 'Impossible d’annuler l’entrée. Réessayez.',
+    undoReasons: {
+      mistake: 'Erreur de manip',
+      wrong_person: 'Mauvaise personne',
+      testing: 'Test',
+    },
     headerTitle: 'Participants',
     headerCheckedInSuffix: 'enregistrés',
     loading: 'Chargement des participants…',
