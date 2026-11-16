@@ -654,7 +654,8 @@
     "vision": "Vizyon",
     "language": "Lang",
     "instagram": "Tikèm sou Instagram",
-    "built_by": "Se {{labs}} ki bati l"
+    "built_by": "Se {{labs}} ki bati l",
+    "photo_credits": "Kredi foto"
   },
   "admin": {
     "search_placeholder": "Chèche evènman...",

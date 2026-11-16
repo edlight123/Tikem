@@ -654,7 +654,8 @@
     "vision": "Vision",
     "language": "Language",
     "instagram": "Tikèm on Instagram",
-    "built_by": "Built by {{labs}}"
+    "built_by": "Built by {{labs}}",
+    "photo_credits": "Photo credits"
   },
   "admin": {
     "search_placeholder": "Search events...",

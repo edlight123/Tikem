@@ -49,6 +49,7 @@ export default function Footer() {
     { href: '/support', label: t('footer.support', { defaultValue: 'Support' }) },
     { href: '/legal/privacy', label: t('footer.privacy', { defaultValue: 'Privacy' }) },
     { href: '/legal/terms', label: t('footer.terms', { defaultValue: 'Terms' }) },
+    { href: '/legal/photo-credits', label: t('footer.photo_credits', { defaultValue: 'Photo credits' }) },
     { href: '/legal/refunds', label: t('footer.refunds', { defaultValue: 'Refunds' }) },
   ]
 

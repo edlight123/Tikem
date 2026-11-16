@@ -67,7 +67,7 @@ export default function NationalDayBanner({
     setDismissed(readDismissed(storageKey))
   }, [storageKey])
 
-  const { title, message } = nationalDayText(day, (i18n.language || 'en').slice(0, 2))
+  const { title } = nationalDayText(day, (i18n.language || 'en').slice(0, 2))
   const art = nationalDayArt(day)
   const showCta = !day.lowKey || eventCount > 0
 
@@ -87,17 +87,12 @@ export default function NationalDayBanner({
       <p className="flex min-w-0 items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white/70">
         <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
         <span className="shrink-0 whitespace-nowrap">{when}</span>
-        {art.place && (
-          <>
-            <span aria-hidden className="shrink-0 text-white/30">·</span>
-            <span className="min-w-0 truncate text-white/55">{art.place}</span>
-          </>
-        )}
       </p>
-      <h2 className="mt-3 font-grotesk font-bold text-white text-balance !text-[clamp(32px,5vw,64px)] !leading-[0.95] tracking-[-0.03em]">
+      {/* Few words on the picture (owner 2026-11-16: "too many words, reads too
+          much"): when, the day's name in the serif, one action. */}
+      <h2 className="mt-3 font-display italic font-normal text-white text-balance !text-[clamp(38px,5.5vw,72px)] !leading-[0.95]">
         {title}
       </h2>
-      <p className="mt-3 max-w-xl text-[16px] leading-snug text-white/80 sm:text-[17px]">{message}</p>
       {showCta && (
         <Link
           href={href}
