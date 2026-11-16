@@ -54,7 +54,7 @@ export function membershipsCol(uid: string) {
   return adminDb.collection('users').doc(uid).collection('org_memberships')
 }
 
-function isPlatformAdmin(user: CurrentUser): boolean {
+export function isPlatformAdmin(user: CurrentUser): boolean {
   return user.role === 'admin' || user.role === 'super_admin'
 }
 
