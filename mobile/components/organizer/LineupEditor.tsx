@@ -16,6 +16,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import SectionHeader from '../SectionHeader';
 import LineupEntrySheet from './LineupEntrySheet';
+import { Touchable } from '../ui/Touchable';
 import {
   ROLE_LABEL_KEY,
   emptyLineupEntry,
@@ -68,7 +69,7 @@ export default function LineupEditor({ value, onChange }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <SectionHeader title={t(`${K}.title`)} subtitle={t(`${K}.hint`)} />
+      <SectionHeader title={t(`${K}.title`)} />
 
       {value.map((g, i) => {
         const when = lineupTimeRange(g.startTime, g.endTime);
@@ -138,10 +139,10 @@ export default function LineupEditor({ value, onChange }: Props) {
         );
       })}
 
-      <TouchableOpacity style={styles.addRow} onPress={openNew} activeOpacity={0.8}>
+      <Touchable style={styles.addRow} onPress={openNew} accessibilityRole="button">
         <Ionicons name="add" size={20} color={colors.text} />
         <Text style={styles.addText}>{t(`${K}.add`)}</Text>
-      </TouchableOpacity>
+      </Touchable>
 
       <LineupEntrySheet
         draft={draft}

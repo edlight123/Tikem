@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -22,6 +21,7 @@ import { Skeleton } from '../components/Skeleton';
 import { backendJson } from '../lib/api/backend';
 import { safeFormatForLanguage } from '../lib/dates';
 import { font, radius } from '../theme/tokens';
+import { Touchable } from '../components/ui/Touchable';
 
 /** Mirrors MAX_FOLLOWUP_LENGTH / MAX_REPLY_LENGTH in lib/organizer-messages.ts. */
 const MAX_ATTENDEE_LENGTH = 1000;
@@ -159,15 +159,14 @@ export default function MessageThreadScreen({ navigation, route }: any) {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header}>
-        <TouchableOpacity
+        <Touchable
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
           <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {title}
         </Text>
@@ -183,9 +182,9 @@ export default function MessageThreadScreen({ navigation, route }: any) {
       ) : status === 'error' || !thread ? (
         <View style={[styles.emptyWrap, { paddingTop: headerH }]}>
           <EmptyState icon={MessageCircle} title={t('attendeeMessages.threadFailed')} />
-          <TouchableOpacity style={styles.retry} onPress={load}>
+          <Touchable style={styles.retry} onPress={load} accessibilityRole="button">
             <Text style={styles.retryText}>{t('attendeeMessages.retry')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       ) : (
         <>
@@ -195,10 +194,10 @@ export default function MessageThreadScreen({ navigation, route }: any) {
             keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
           >
-            <TouchableOpacity
+            <Touchable
               style={styles.eventRow}
               onPress={() => navigation.navigate('EventDetail', { eventId: thread.event_id })}
-              activeOpacity={0.75}
+              scale={0.98}
               accessibilityRole="button"
               accessibilityLabel={thread.event_title}
             >
@@ -217,7 +216,7 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                   </Text>
                 ) : null}
               </View>
-            </TouchableOpacity>
+            </Touchable>
 
             {thread.messages.map((m) => {
               const mine = m.author_role === thread.viewer_role;
@@ -256,7 +255,7 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                   editable={!sending}
                   accessibilityLabel={t('attendeeMessages.replyLabel')}
                 />
-                <TouchableOpacity
+                <Touchable
                   style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
                   onPress={send}
                   disabled={sending || !draft.trim()}
@@ -268,7 +267,7 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                   ) : (
                     <ArrowUp size={20} color="#000" />
                   )}
-                </TouchableOpacity>
+                </Touchable>
               </View>
             )}
             {!blocked && !isOrganizer ? (
@@ -295,13 +294,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderRadius: radius.button,
       backgroundColor: colors.surface,
     },
-    retryText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+    retryText: { color: colors.text, fontSize: 15, fontWeight: '600' },
     eventRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
       padding: 12,
-      marginBottom: 18,
+      marginBottom: 24,
       borderRadius: radius.lg,
       backgroundColor: colors.surface,
     },
@@ -309,15 +308,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     posterFallback: {},
     eventTitle: { fontFamily: font.serif, fontSize: 18, color: colors.text },
     eventSub: { marginTop: 2, fontSize: 13, color: colors.textSecondary },
-    bubbleRow: { flexDirection: 'row', marginBottom: 10 },
+    bubbleRow: { flexDirection: 'row', marginBottom: 8 },
     bubbleRowMine: { justifyContent: 'flex-end' },
     bubbleRowTheirs: { justifyContent: 'flex-start' },
-    bubble: { maxWidth: '85%', borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11 },
+    bubble: { maxWidth: '85%', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 12 },
     // Mine: the brighter raised fill. Theirs: the quieter surface. Fills, not hairlines.
     bubbleMine: { backgroundColor: colors.surfaceRaised },
     bubbleTheirs: { backgroundColor: colors.surface },
     bubbleText: { fontSize: 15, lineHeight: 22, color: colors.text },
-    bubbleMeta: { marginTop: 6, fontSize: 11, color: colors.textTertiary },
+    bubbleMeta: { marginTop: 4, fontSize: 12, color: colors.textTertiary },
     composer: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: colors.background },
     composerNote: { fontSize: 13, lineHeight: 18, color: colors.textSecondary, marginBottom: 8, paddingHorizontal: 4 },
     errorText: { fontSize: 13, color: colors.error, marginBottom: 8, paddingHorizontal: 4 },
@@ -331,7 +330,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingHorizontal: 12,
       paddingTop: 12,
       paddingBottom: 12,
-      fontSize: 16,
+      fontSize: 15,
       color: colors.text,
     },
     sendButton: {
@@ -343,5 +342,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'center',
     },
     sendButtonDisabled: { opacity: 0.4 },
-    privacy: { marginTop: 8, fontSize: 11, lineHeight: 15, color: colors.textTertiary, paddingHorizontal: 4 },
+    privacy: { marginTop: 8, fontSize: 12, lineHeight: 16, color: colors.textTertiary, paddingHorizontal: 4 },
   });

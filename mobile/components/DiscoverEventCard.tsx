@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Share2, Bookmark } from 'lucide-react-native';
@@ -66,7 +67,7 @@ export default function DiscoverEventCard({
   return (
     <View style={styles.wrap}>
       {/* Poster */}
-      <TouchableOpacity activeOpacity={0.95} onPress={onPress} style={[styles.poster, { aspectRatio }]}>
+      <Touchable scale={0.98} onPress={onPress} style={[styles.poster, { aspectRatio }]}>
         {/* Fallback art only — behind a LOADING image this flashed the teal
             gradient between skeleton and poster (same bug as PosterEventCard). */}
         {!hasImage && (
@@ -95,14 +96,14 @@ export default function DiscoverEventCard({
             }}
           />
         )}
-      </TouchableOpacity>
+      </Touchable>
 
       {/* Title + organizer + meta, with share/save on the right */}
       <View style={styles.body}>
         <View style={styles.bodyText}>
-          <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
+          <Touchable scale={false} haptic={false} onPress={onPress}>
             <Text style={styles.title} numberOfLines={2}>{event.title}</Text>
-          </TouchableOpacity>
+          </Touchable>
           {!!organizer && (
             <View style={styles.orgRow}>
               <Text style={styles.org} numberOfLines={1}>{organizer}</Text>
@@ -116,12 +117,12 @@ export default function DiscoverEventCard({
           )}
         </View>
         <View style={styles.actions}>
-          <TouchableOpacity onPress={onShare} hitSlop={8} style={styles.actionBtn}>
+          <Touchable onPress={onShare} hitSlop={8} style={styles.actionBtn}>
             <Share2 size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onToggleSave} hitSlop={8} style={styles.actionBtn}>
+          </Touchable>
+          <Touchable onPress={onToggleSave} hitSlop={8} style={styles.actionBtn}>
             <Bookmark size={20} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : 'transparent'} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </View>
 
@@ -151,7 +152,7 @@ export default function DiscoverEventCard({
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     wrap: {
-      marginBottom: 28,
+      marginBottom: 32,
     },
     poster: {
       width: '100%',
@@ -172,19 +173,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     title: {
       fontFamily: font.serif,
-      fontSize: 26,
+      fontSize: 28,
       color: colors.text,
       letterSpacing: -0.3,
-      lineHeight: 28,
+      lineHeight: 30,
     },
     orgRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
-      marginTop: 5,
+      gap: 4,
+      marginTop: 4,
     },
     org: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '700',
       color: colors.text,
       flexShrink: 1,
@@ -198,13 +199,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     actions: {
       flexDirection: 'row',
-      gap: 14,
+      gap: 16,
       paddingTop: 4,
     },
     actionBtn: {
       padding: 2,
     },
     cta: {
-      marginTop: 14,
+      marginTop: 16,
     },
   });

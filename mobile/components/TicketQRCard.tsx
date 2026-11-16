@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#000000',
     textAlign: 'center',
     letterSpacing: -0.3,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   tier: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#000000',
     textAlign: 'center',

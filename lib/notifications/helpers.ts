@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import type { NotificationType } from '@/types/database'
 import { formatMoneyFromCents } from '@/lib/money'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 
 /**
  * SERVER-SIDE notification helpers using Firebase Admin SDK
@@ -170,8 +171,11 @@ export function organizerSaleCopy(
 }
 
 /**
- * Notify organizer when a ticket is sold or a free ticket is claimed.
+ * Notify the organization when a ticket is sold or a free ticket is claimed:
+ * the owner plus admins and managers (lib/notifications/orgRecipients.ts,
+ * kind event_ops). `organizerId` is the event's org (its organizer_id).
  * `amount` is what the buyer paid, in `currency` (major units); 0 = free.
+ * `buyerId`, when known, is never notified about their own purchase here.
  */
 export async function notifyOrganizerTicketSale(
   organizerId: string,
@@ -180,38 +184,55 @@ export async function notifyOrganizerTicketSale(
   ticketCount: number,
   amount: number,
   buyerName?: string,
-  currency?: string | null
+  currency?: string | null,
+  buyerId?: string | null
 ): Promise<void> {
   const copy = organizerSaleCopy(ticketCount, amount, currency)
   const free = !(Number.isFinite(amount) && amount > 0)
-  await createNotification(
-    organizerId,
-    'ticket_purchased',
-    copy.title,
-    copy.body(eventTitle, buyerName),
-    `/organizer/events/${eventId}/attendees`,
-    { eventId, ticketCount, revenue: free ? 0 : amount, currency: currency || null, free }
-  )
+  const recipients = await resolveOrgRecipients({
+    orgId: organizerId,
+    kind: 'event_ops',
+    eventId,
+    excludeUserIds: [buyerId],
+  })
+  if (recipients.length === 0) return
 
-  // Push only — same reason as the buyer path above: the trigger wrapper would
-  // write a SECOND in-app notification on top of the one just created.
-  try {
-    const { sendPushNotification } = await import('@/lib/notification-triggers')
-    // The organizer's "Ticket sales" push switch (organizer settings, web and
-    // mobile). This used to read the BUYER-side users.notify_ticket_purchase,
-    // so the switch the organizer could see did nothing.
-    if (await organizerWantsSalePush(organizerId)) {
-      await sendPushNotification(
-        organizerId,
-        `${free ? '🎟️ Free RSVP' : '🎫 New Sale'}: ${eventTitle}`,
-        copy.push,
-        `/organizer/events/${eventId}/attendees`,
-        { type: 'ticket_sale', eventId, ticketCount, revenue: free ? 0 : amount, free }
-      )
-    }
-  } catch (error) {
-    console.error('Failed to send push notification:', error)
-  }
+  // The org's "Ticket sales" push switch (organizer settings, web and mobile)
+  // applies to everyone on the org. This used to read the BUYER-side
+  // users.notify_ticket_purchase, so the switch the organizer could see did nothing.
+  const wantsPush = await organizerWantsSalePush(organizerId)
+
+  await Promise.all(
+    recipients.map(async (uid) => {
+      try {
+        await createNotification(
+          uid,
+          'ticket_purchased',
+          copy.title,
+          copy.body(eventTitle, buyerName),
+          `/organizer/events/${eventId}/attendees`,
+          { eventId, ticketCount, revenue: free ? 0 : amount, currency: currency || null, free, orgId: organizerId }
+        )
+      } catch (error) {
+        console.error('Failed to create organizer sale notification:', error)
+      }
+      if (!wantsPush) return
+      // Push only — the trigger wrapper would write a SECOND in-app
+      // notification on top of the one just created.
+      try {
+        const { sendPushNotification } = await import('@/lib/notification-triggers')
+        await sendPushNotification(
+          uid,
+          `${free ? '🎟️ Free RSVP' : '🎫 New Sale'}: ${eventTitle}`,
+          copy.push,
+          `/organizer/events/${eventId}/attendees`,
+          { type: 'ticket_sale', eventId, ticketCount, revenue: free ? 0 : amount, free }
+        )
+      } catch (error) {
+        console.error('Failed to send push notification:', error)
+      }
+    })
+  )
 }
 
 /** organizers/{id}/notificationPreferences/main → push_ticket_sales (default on). */

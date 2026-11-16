@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   RefreshControl,
   StatusBar,
   Share,
@@ -33,6 +32,9 @@ import { useLocaleFormat } from '../../lib/format';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
+import { Text as UIText } from '../../components/ui/Text';
+import { Switch } from '../../components/ui/Switch';
 import ActionTileGrid, { type ActionTile } from '../../components/organizer/ActionTileGrid';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -43,6 +45,10 @@ import SectionHeader from '../../components/SectionHeader';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { colors as T, radius } from '../../theme/tokens';
 import { eventRequiresApproval, getEventRequests } from '../../lib/attendRequests';
+import { displayCapacity } from '../../lib/ticketPricing';
+
+/** Pressed fill for the controls rows: one step up from their surfaceRaised group. */
+const ROW_PRESSED = 'rgba(255,255,255,0.06)';
 
 type RouteParams = {
   OrganizerEventManagement: {
@@ -307,7 +313,7 @@ export default function OrganizerEventManagementScreen() {
   // pinned under the status bar, over the poster backdrop.
   const renderFloatingControls = (withShare: boolean) => (
     <View style={[styles.floatingBar, { top: insets.top + 8 }]} pointerEvents="box-none">
-      <TouchableOpacity
+      <Touchable
         onPress={() => navigation.goBack()}
         style={styles.floatingButton}
         accessibilityRole="button"
@@ -315,9 +321,9 @@ export default function OrganizerEventManagementScreen() {
         hitSlop={6}
       >
         <Ionicons name="chevron-back" size={22} color={T.white} />
-      </TouchableOpacity>
+      </Touchable>
       {withShare && (
-        <TouchableOpacity
+        <Touchable
           onPress={handleShareEvent}
           style={styles.floatingButton}
           accessibilityRole="button"
@@ -325,7 +331,7 @@ export default function OrganizerEventManagementScreen() {
           hitSlop={6}
         >
           <Ionicons name="share-outline" size={20} color={T.white} />
-        </TouchableOpacity>
+        </Touchable>
       )}
     </View>
   );
@@ -372,7 +378,8 @@ export default function OrganizerEventManagementScreen() {
   const posterUri = event.cover_image_url || event.banner_image_url;
   const posterTheme = resolvePosterTheme(event, event.id || event.title, event.category);
 
-  const { ticketsSold, ticketsCheckedIn, capacity } = ticketData;
+  const { ticketsSold, ticketsCheckedIn } = ticketData;
+  const capacity = displayCapacity(ticketData.capacity);
   const isSoldOut = capacity > 0 && ticketsSold >= capacity;
   const sellThrough = capacity > 0 ? Math.round((ticketsSold / capacity) * 100) : null;
 
@@ -562,7 +569,7 @@ export default function OrganizerEventManagementScreen() {
               pinned "Open door scanner" button below already does it. */}
           {actionGroups.map((group) => (
             <View key={group.key} style={styles.actionGroup}>
-              <Text style={styles.groupEyebrow}>{group.label}</Text>
+              <UIText variant="eyebrow" style={styles.groupEyebrow}>{group.label}</UIText>
               <ActionTileGrid variant="compact" tiles={group.tiles} />
             </View>
           ))}
@@ -572,40 +579,40 @@ export default function OrganizerEventManagementScreen() {
         <View style={styles.section}>
           <SectionHeader title={t('organizerEventManagement.sections.eventControls')} />
           <View style={styles.controlsGroup}>
-            <TouchableOpacity style={styles.controlRow} onPress={handleEditEvent} activeOpacity={0.7}>
+            <Touchable scale={false} pressedColor={ROW_PRESSED} style={styles.controlRow} onPress={handleEditEvent}>
               <Text style={styles.controlText}>{t('organizerEventManagement.actions.editEvent')}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </Touchable>
             <View style={styles.divider} />
-            <TouchableOpacity style={styles.controlRow} onPress={handleSendUpdate} activeOpacity={0.7}>
+            <Touchable scale={false} pressedColor={ROW_PRESSED} style={styles.controlRow} onPress={handleSendUpdate}>
               <Text style={styles.controlText}>{t('organizerEventManagement.controls.sendUpdate')}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </Touchable>
             <View style={styles.divider} />
-            <TouchableOpacity
+            <Touchable
+              scale={false}
+              pressedColor={ROW_PRESSED}
               style={styles.controlRow}
               onPress={handleToggleSales}
-              activeOpacity={0.7}
               accessibilityRole="switch"
               accessibilityState={{ checked: isPaused }}
             >
               <Text style={styles.controlText}>
                 {t('organizerEventManagement.controls.pauseTicketSales')}
               </Text>
-              {/* Rounded-rect toggle (no stadium pills); on = sales paused. */}
-              <View style={[styles.toggleTrack, isPaused && styles.toggleTrackOn]}>
-                <View style={[styles.toggleThumb, isPaused && styles.toggleThumbOn]} />
-              </View>
-            </TouchableOpacity>
+              {/* On = sales paused. Controlled: it only flips once the
+                  confirmation lands and the event reloads. */}
+              <Switch value={isPaused} onValueChange={() => handleToggleSales()} />
+            </Touchable>
             {canCancel && (
               <>
                 <View style={styles.divider} />
-                <TouchableOpacity style={styles.controlRow} onPress={handleCancelEvent} activeOpacity={0.7}>
+                <Touchable scale={false} pressedColor={ROW_PRESSED} style={styles.controlRow} onPress={handleCancelEvent}>
                   <Text style={[styles.controlText, styles.dangerText]}>
                     {t('organizerEventManagement.controls.cancelEvent')}
                   </Text>
                   <Ionicons name="warning-outline" size={19} color={T.red} />
-                </TouchableOpacity>
+                </Touchable>
               </>
             )}
           </View>
@@ -632,16 +639,15 @@ export default function OrganizerEventManagementScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <TouchableOpacity
+        <Touchable
           style={styles.cta}
           onPress={handleScanTickets}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={t('organizerEventManagement.openScanner')}
         >
           <Ionicons name="scan-outline" size={22} color={T.black} />
           <Text style={styles.ctaText}>{t('organizerEventManagement.openScanner')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </View>
   );
@@ -689,7 +695,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   errorText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.error,
     fontWeight: '600',
     textAlign: 'center',
@@ -728,16 +734,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   actionGroup: {
     marginTop: 4,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   // Group label under the section rail (the profile screen's ACTIONS eyebrow).
   groupEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   group: {
     backgroundColor: T.surface,
@@ -756,7 +757,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   tierName: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: T.white,
     marginRight: 12,
@@ -793,8 +794,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   controlText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: '600',
     color: T.white,
   },
@@ -806,31 +807,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.06)',
     marginLeft: 14,
-  },
-  toggleTrack: {
-    width: 46,
-    height: 28,
-    borderRadius: radius.sm,
-    // A tint, not surfaceRaised: the group itself is surfaceRaised now.
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    padding: 3,
-    justifyContent: 'center',
-  },
-  toggleTrackOn: {
-    backgroundColor: T.accent,
-  },
-  // Off: a grey thumb resting left, so "off" doesn't read as a lit white
-  // switch (TestFlight: the white thumb on a dark track looked switched on).
-  // On: white thumb on the accent track, slid right.
-  toggleThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.sm,
-    backgroundColor: colors.textSecondary,
-  },
-  toggleThumbOn: {
-    alignSelf: 'flex-end',
-    backgroundColor: T.white,
   },
   ctaDock: {
     position: 'absolute',

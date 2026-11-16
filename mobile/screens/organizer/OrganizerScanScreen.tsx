@@ -11,14 +11,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { getTodayEvents, TodayEvent } from '../../lib/api/organizer';
-import { colors as T, radius } from '../../theme/tokens';
+import { colors as T, radius, font } from '../../theme/tokens';
 import EventSelectorSheet from '../../components/organizer/EventSelectorSheet';
 import EmptyState from '../../components/EmptyState';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import StatusChip from '../../components/StatusChip';
-import SectionHeader from '../../components/SectionHeader';
 import { Skeleton } from '../../components/Skeleton';
 
+import { Touchable } from '../../components/ui/Touchable';
 export default function OrganizerScanScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -78,17 +78,10 @@ export default function OrganizerScanScreen() {
       .filter(Boolean)
       .join(' · ');
 
-  const guideSteps = [
-    t('organizerScan.howStep1'),
-    t('organizerScan.howStep2'),
-    t('organizerScan.howStep3'),
-    t('organizerScan.howStep4'),
-  ];
-
   const header = (
     <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
       <Text style={styles.headerTitle} numberOfLines={1}>
-        {t('organizerScan.title')}
+        {t('organizerScan.title').toLowerCase()}
       </Text>
       {!loading && selectedEvent ? (
         <StatusChip status="live" label={t('organizerScan.offlineReadyShort')} />
@@ -160,24 +153,26 @@ export default function OrganizerScanScreen() {
                 </Text>
               </View>
               {todayEvents.length > 1 ? (
-                <TouchableOpacity
+                <Touchable
                   onPress={() => setShowEventSelector(true)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   accessibilityRole="button"
                 >
                   <Text style={styles.changeLink}>{t('organizerScan.changeEvent')}</Text>
-                </TouchableOpacity>
+                </Touchable>
               ) : null}
             </View>
 
-            {/* Check-in counter. */}
-            <View style={styles.counterCard}>
-              <Text style={styles.counterLabel}>{t('organizerScan.checkedIn')}</Text>
+            {/* Check-in count straight on the canvas: one line of figures and a
+                hairline progress track. The 92pt numeral in a filled card read
+                as a placeholder, not a premium door tool (owner, 2026-11-16). */}
+            <View style={styles.counterBlock}>
               <View style={styles.counterRow}>
-                <Text style={styles.counterNumber} adjustsFontSizeToFit numberOfLines={1}>
+                <Text style={styles.counterNumber} numberOfLines={1}>
                   {inCount.toLocaleString(locale)}
+                  <Text style={styles.counterTotal}> / {sold.toLocaleString(locale)}</Text>
                 </Text>
-                <Text style={styles.counterTotal}>/ {sold.toLocaleString(locale)}</Text>
+                <Text style={styles.counterLabel}>{t('organizerScan.checkedIn').toLowerCase()}</Text>
               </View>
               <View style={styles.track}>
                 <View style={[styles.trackFill, { width: `${Math.round(pct * 100)}%` }]} />
@@ -199,15 +194,14 @@ export default function OrganizerScanScreen() {
 
         {selectedEvent ? (
           <>
-            <TouchableOpacity
+            <Touchable
               style={styles.secondary}
               onPress={() => openScanner({ openLookup: true })}
               accessibilityRole="button"
-              activeOpacity={0.8}
             >
               <UserSearch size={18} color={colors.text} strokeWidth={1.75} />
               <Text style={styles.secondaryText}>{t('organizerScan.findGuest')}</Text>
-            </TouchableOpacity>
+            </Touchable>
             <TouchableOpacity
               style={styles.textAction}
               onPress={() => openScanner({ doorMode: true })}
@@ -215,23 +209,9 @@ export default function OrganizerScanScreen() {
             >
               <Text style={styles.textActionLabel}>{t('organizerScan.doorMode')}</Text>
             </TouchableOpacity>
-            <Text style={styles.offlineCaption}>
-              {t('organizerScan.offlineReady').replace('{n}', String(sold))}
-            </Text>
           </>
         ) : null}
 
-        <View style={styles.howWrap}>
-          <SectionHeader title={t('organizerScan.howTitle')} />
-          <View style={styles.stepsCard}>
-            {guideSteps.map((step, i) => (
-              <View key={i} style={styles.step}>
-                <Text style={styles.stepNum}>{String(i + 1).padStart(2, '0')}</Text>
-                <Text style={styles.stepText}>{step}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
       </ScrollView>
 
       <EventSelectorSheet
@@ -267,10 +247,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     headerTitle: {
       flexShrink: 1,
-      fontSize: 38,
-      lineHeight: 44,
-      fontWeight: '700',
-      letterSpacing: -0.8,
+      fontFamily: font.serif,
+      fontSize: 30,
+      lineHeight: 36,
       color: colors.text,
     },
     content: {
@@ -290,7 +269,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingVertical: 8,
     },
     thumb: {
-      width: 60,
+      width: 84,
       aspectRatio: 4 / 5,
       borderRadius: radius.poster,
       overflow: 'hidden',
@@ -304,7 +283,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
     },
     eventTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },
@@ -314,55 +293,45 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.textSecondary,
     },
     changeLink: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: T.accent,
     },
-    counterCard: {
-      marginTop: 16,
-      paddingTop: 24,
-      paddingBottom: 28,
-      paddingHorizontal: 24,
-      borderRadius: radius.xl,
-      backgroundColor: T.surface,
-      alignItems: 'center',
-    },
-    counterLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 1.4,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
+    counterBlock: {
+      marginTop: 24,
     },
     counterRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 4,
+      justifyContent: 'space-between',
+      gap: 12,
     },
     counterNumber: {
       flexShrink: 1,
-      fontSize: 92,
-      lineHeight: 104,
-      fontWeight: '800',
-      letterSpacing: -3,
+      fontSize: 40,
+      lineHeight: 46,
+      fontWeight: '700',
+      letterSpacing: -1,
       color: colors.text,
       fontVariant: ['tabular-nums'],
     },
     counterTotal: {
-      fontSize: 26,
+      fontSize: 22,
       fontWeight: '500',
+      letterSpacing: 0,
       color: colors.textSecondary,
-      fontVariant: ['tabular-nums'],
+    },
+    counterLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
     },
     track: {
       alignSelf: 'stretch',
-      height: 4,
+      height: 3,
       borderRadius: 2,
       backgroundColor: T.surfaceRaised,
       overflow: 'hidden',
-      marginTop: 16,
+      marginTop: 10,
     },
     trackFill: {
       height: '100%',
@@ -382,7 +351,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: T.surfaceRaised,
     },
     secondaryText: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '600',
       color: colors.text,
     },
@@ -394,40 +363,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     textActionLabel: {
       fontSize: 15,
       color: colors.textSecondary,
-    },
-    offlineCaption: {
-      marginTop: 8,
-      textAlign: 'center',
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    howWrap: {
-      marginTop: 36,
-    },
-    stepsCard: {
-      borderRadius: radius.lg,
-      backgroundColor: T.surface,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-    },
-    step: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 14,
-      paddingVertical: 10,
-    },
-    stepNum: {
-      minWidth: 20,
-      fontSize: 13,
-      fontWeight: '600',
-      lineHeight: 20,
-      color: colors.textTertiary,
-      fontVariant: ['tabular-nums'],
-    },
-    stepText: {
-      flex: 1,
-      fontSize: 14,
-      lineHeight: 20,
-      color: colors.text,
     },
   });

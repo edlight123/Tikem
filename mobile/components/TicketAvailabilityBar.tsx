@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
+import { displayCapacity } from '../lib/ticketPricing';
 
 export interface TicketAvailabilityBarProps {
   totalTickets: number;
@@ -10,10 +11,12 @@ export interface TicketAvailabilityBarProps {
 }
 
 export default function TicketAvailabilityBar({
-  totalTickets,
+  totalTickets: rawTotal,
   ticketsSold,
   style,
 }: TicketAvailabilityBarProps) {
+  // Unlimited (sentinel) reads as "no info": the public never sees a capacity.
+  const totalTickets = displayCapacity(rawTotal);
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { t } = useI18n();

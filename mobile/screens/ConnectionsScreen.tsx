@@ -28,6 +28,7 @@ import { useSocialFlags } from '../lib/socialFlags';
 import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
+import { Touchable } from '../components/ui/Touchable';
 import InviteContactsCard from '../components/InviteContactsCard';
 import { requestContactsPermission, syncContacts as readAndMatchContacts, type DeviceContact } from '../lib/contactSync';
 import { useAppAlert } from '../components/AppAlert';
@@ -163,11 +164,16 @@ export default function ConnectionsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <OverlayHeader onHeight={onHeaderHeight} style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={16}>
+        <Touchable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <ChevronLeft size={26} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.topTitle}>{t('connections.title')}</Text>
-        <View style={{ width: 26 }} />
+        </Touchable>
+        <Text style={styles.topTitle}>{t('connections.title').toLowerCase()}</Text>
+        <View style={styles.backBtn} />
       </OverlayHeader>
 
       {/* Tabs — the header floats above them, so they reserve its height. */}
@@ -224,14 +230,19 @@ function TabBtn({
 }) {
   const styles = getStyles(colors);
   return (
-    <TouchableOpacity style={[styles.tabBtn, active && styles.tabBtnActive]} onPress={onPress} activeOpacity={0.8}>
+    <Touchable
+      style={[styles.tabBtn, active && styles.tabBtnActive]}
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+    >
       <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{label}</Text>
       {count ? (
         <View style={[styles.badge, highlight && { backgroundColor: colors.error }]}>
           <Text style={styles.badgeText}>{count}</Text>
         </View>
       ) : null}
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -492,7 +503,7 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.syncBtn} onPress={startSync} disabled={contactLoading} activeOpacity={0.85}>
+        <Touchable style={styles.syncBtn} onPress={startSync} disabled={contactLoading} accessibilityRole="button">
           {contactLoading ? (
             <ActivityIndicator size="small" color="#000000" />
           ) : (
@@ -501,7 +512,7 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
               <Text style={styles.syncBtnText}>{t('connections.find.syncContacts')}</Text>
             </>
           )}
-        </TouchableOpacity>
+        </Touchable>
 
         {contactMatches !== null && (
           <View style={{ marginTop: 12 }}>
@@ -526,11 +537,11 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
       {/* Invite friends to Tikèm: the personal link (config/auth.invites).
           Hidden entirely while the switch is off, never a dead button. */}
       {flags.invites && (
-        <TouchableOpacity
+        <Touchable
           style={styles.contactCard}
           onPress={shareAppInvite}
           disabled={sharingInvite}
-          activeOpacity={0.85}
+          scale={0.98}
           accessibilityRole="button"
         >
           <View style={styles.contactHeader}>
@@ -546,7 +557,7 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
               <Text style={styles.contactSub}>{t('invites.appLinkSub')}</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </Touchable>
       )}
 
       {flags.invites && contactMatches !== null && (
@@ -574,23 +585,26 @@ const getStyles = (colors: any) =>
     // No fill and no hairline either: they would paint over the blur.
     topBar: {
       justifyContent: 'space-between',
-      paddingHorizontal: 12,
-      paddingBottom: 10,
+      paddingHorizontal: 8,
+      paddingBottom: 8,
     },
     backBtn: {
-      padding: 2,
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     topTitle: {
       fontFamily: font.serif,
-      fontSize: 34,
-      letterSpacing: -0.5,
+      fontSize: 30,
+      lineHeight: 36,
       color: colors.text,
     },
     tabs: {
       flexDirection: 'row',
       marginHorizontal: 16,
       marginBottom: 8,
-      backgroundColor: colors.borderLight,
+      backgroundColor: colors.surface,
       borderRadius: radius.md,
       padding: 4,
     },
@@ -605,16 +619,14 @@ const getStyles = (colors: any) =>
     },
     tabBtnActive: {
       backgroundColor: colors.surfaceRaised,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
     },
     tabBtnText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.textSecondary,
     },
     tabBtnTextActive: {
-      color: colors.primary,
+      color: colors.text,
     },
     badge: {
       minWidth: 20,
@@ -634,7 +646,7 @@ const getStyles = (colors: any) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      paddingHorizontal: 14,
+      paddingHorizontal: 16,
     },
     divider: {
       borderTopWidth: StyleSheet.hairlineWidth,
@@ -674,12 +686,14 @@ const getStyles = (colors: any) =>
       gap: 6,
       marginBottom: 8,
     },
+    // The one eyebrow style (components/ui/Text "eyebrow").
     sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: '600',
       color: colors.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.4,
+      letterSpacing: 0.8,
     },
     searchBox: {
       flexDirection: 'row',
@@ -696,13 +710,13 @@ const getStyles = (colors: any) =>
       color: colors.text,
     },
     noResults: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textSecondary,
       textAlign: 'center',
       marginTop: 14,
     },
     contactCard: {
-      marginTop: 20,
+      marginTop: 24,
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
       padding: 16,
@@ -740,11 +754,11 @@ const getStyles = (colors: any) =>
       backgroundColor: colors.white,
       borderRadius: radius.md,
       paddingVertical: 12,
-      marginTop: 14,
+      marginTop: 16,
     },
     syncBtnText: {
       color: '#000000',
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '700',
     },
   });

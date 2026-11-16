@@ -187,7 +187,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     initial: { fontFamily: font.serif, fontSize: 36, color: colors.text },
     name: {
       marginTop: 10,
-      fontSize: 14,
+      fontSize: 13,
       lineHeight: 18,
       fontWeight: '600',
       color: colors.text,

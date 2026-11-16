@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     color: T.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: T.textSecondary,
     marginTop: spacing.xs,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   stepText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: T.textPrimary,
   },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     // 16pt keeps iOS from zooming on focus and matches the app's fields.
-    fontSize: 16,
+    fontSize: 15,
     color: T.textPrimary,
   },
   textarea: {

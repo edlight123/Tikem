@@ -5,7 +5,7 @@
 // (AsyncStorage) are uploaded once, the first time this screen loads.
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link2, Plus, Share2, Trash2 } from 'lucide-react-native';
@@ -32,6 +32,7 @@ import { formatConversion } from '../../lib/attribution';
 import { formatCurrency } from '../../lib/currency';
 import { colors as T, font, radius, spacing } from '../../theme/tokens';
 
+import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
   OrganizerTrackingLinks: {
     eventId: string;
@@ -253,7 +254,7 @@ export default function OrganizerTrackingLinksScreen() {
                 </View>
 
                 <View style={styles.actionsRow}>
-                  <TouchableOpacity
+                  <Touchable
                     style={styles.actionButton}
                     onPress={() => handleShare(link)}
                     accessibilityRole="button"
@@ -261,16 +262,16 @@ export default function OrganizerTrackingLinksScreen() {
                   >
                     <Share2 size={15} color={colors.text} />
                     <Text style={styles.actionText}>{t('organizerTracking.share')}</Text>
-                  </TouchableOpacity>
+                  </Touchable>
                   <View style={{ flex: 1 }} />
-                  <TouchableOpacity
+                  <Touchable
                     style={styles.iconButton}
                     onPress={() => handleRemove(link)}
                     accessibilityRole="button"
                     accessibilityLabel={t('organizerTracking.removeA11y', { label: link.label })}
                   >
                     <Trash2 size={16} color={colors.textSecondary} />
-                  </TouchableOpacity>
+                  </Touchable>
                 </View>
               </View>
             ))}
@@ -318,7 +319,7 @@ export default function OrganizerTrackingLinksScreen() {
           {QUICK_SOURCES.map((s) => {
             const selected = source.trim().toLowerCase() === s;
             return (
-              <TouchableOpacity
+              <Touchable
                 key={s}
                 style={[styles.chip, selected && styles.chipSelected]}
                 onPress={() => setSource(s)}
@@ -326,7 +327,7 @@ export default function OrganizerTrackingLinksScreen() {
                 accessibilityState={{ selected }}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{s}</Text>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </View>
@@ -409,7 +410,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       minWidth: 0,
     },
     linkLabel: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },

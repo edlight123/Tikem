@@ -138,6 +138,7 @@ export async function POST(request: Request) {
         topic,
         message,
         followUp: false,
+        senderId: user.id,
         event: { country: event.country, city: event.city, timezone: event.timezone },
       })
     } catch (error) {

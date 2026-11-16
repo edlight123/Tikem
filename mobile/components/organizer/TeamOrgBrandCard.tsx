@@ -16,6 +16,7 @@ import SectionHeader from '../SectionHeader';
 import WhitePillCTA from '../WhitePillCTA';
 import FormSheet, { SheetInput, SheetLabel } from './FormSheet';
 import { useOrgLabel } from './OrgSwitcher';
+import { Touchable } from '../ui/Touchable';
 
 /**
  * The organization card for someone acting for ANOTHER person's org. An admin
@@ -116,7 +117,7 @@ export default function TeamOrgBrandCard({ style }: { style?: any }) {
     <View style={style}>
       <SectionHeader title={t('profile.organization.sectionTitle')} />
       <View style={styles.card}>
-        <TouchableOpacity
+        <Touchable
           style={styles.logo}
           onPress={changeLogo}
           disabled={!editable || uploading}
@@ -133,7 +134,7 @@ export default function TeamOrgBrandCard({ style }: { style?: any }) {
               <ActivityIndicator color="#FFFFFF" />
             </View>
           ) : null}
-        </TouchableOpacity>
+        </Touchable>
         <TouchableOpacity
           style={styles.meta}
           disabled={!editable}

@@ -5,7 +5,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -31,7 +30,7 @@ import {
   type PrefundingStatus,
 } from '../../lib/moncashPayout'
 import { RADIUS } from '../../config/brand'
-import { font, radius } from '../../theme/tokens'
+import { colors as T, font, radius } from '../../theme/tokens'
 import { Skeleton } from '../../components/Skeleton'
 import { useAppAlert } from '../../components/AppAlert'
 import StatusChip from '../../components/StatusChip'
@@ -54,6 +53,8 @@ import {
 import { Receipt, Wallet } from 'lucide-react-native'
 import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 
+import { Touchable } from '../../components/ui/Touchable';
+import { Switch } from '../../components/ui/Switch';
 type VerificationStatus = 'not_started' | 'pending' | 'verified' | 'failed'
 
 type BankDestination = {
@@ -126,19 +127,17 @@ function RegionSection({
   status: 'ready' | 'pending' | 'none'
   t: (key: string) => string
 }) {
+  // Dot + label (StatusChip), never a bare coloured word.
   const trailing =
     status === 'ready' ? null : (
-      <Text
-        style={{
-          fontSize: 11,
-          letterSpacing: 0.4,
-          color: status === 'pending' ? colors.warning ?? '#F5A524' : colors.textSecondary,
-        }}
-      >
-        {status === 'pending'
-          ? t('organizerPayoutSettings.regions.statusPending')
-          : t('organizerPayoutSettings.regions.statusNone')}
-      </Text>
+      <StatusChip
+        status={status === 'pending' ? 'pending' : 'neutral'}
+        label={
+          status === 'pending'
+            ? t('organizerPayoutSettings.regions.statusPending')
+            : t('organizerPayoutSettings.regions.statusNone')
+        }
+      />
     )
 
   return (
@@ -1014,11 +1013,11 @@ export default function OrganizerPayoutSettingsScreenV2() {
                 <View key={group.key}>
                   <Text style={styles.methodGroupHeading}>{group.heading}</Text>
                   {group.options.map((opt) => (
-                    <TouchableOpacity
+                    <Touchable
                       key={opt.key}
+                      scale={0.98}
                       style={styles.methodOption}
                       onPress={opt.onPress}
-                      activeOpacity={0.75}
                     >
                       <View style={styles.methodIcon}>
                         <Ionicons name={opt.icon as any} size={22} color={colors.text} />
@@ -1028,14 +1027,14 @@ export default function OrganizerPayoutSettingsScreenV2() {
                         <Text style={styles.methodDescription} numberOfLines={2}>{opt.description}</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                    </TouchableOpacity>
+                    </Touchable>
                   ))}
                 </View>
               ))}
 
-            <TouchableOpacity style={[styles.secondaryButton, { marginTop: 8 }]} onPress={() => setShowAddModal(false)}>
+            <Touchable style={[styles.secondaryButton, { marginTop: 8 }]} onPress={() => setShowAddModal(false)}>
               <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
         </View>
       </Modal>
@@ -1131,26 +1130,26 @@ export default function OrganizerPayoutSettingsScreenV2() {
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
             <Text style={styles.label}>{t('organizerPayoutSettings.moncashForm.provider')}</Text>
             <View style={styles.row}>
-              <TouchableOpacity
+              <Touchable
                 style={[styles.chip, moncashForm.provider === 'moncash' && styles.chipActive]}
                 onPress={() => setMoncashForm((s) => ({ ...s, provider: 'moncash' }))}
               >
                 <Text style={[styles.chipText, moncashForm.provider === 'moncash' && styles.chipTextActive]}>
                   MonCash
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
               {/* NatCash hidden for launch (MonCash-only). A previously saved
                   NatCash destination still renders in the list; only the
                   option to pick it for NEW methods is gated. */}
               {NATCASH_ENABLED && (
-                <TouchableOpacity
+                <Touchable
                   style={[styles.chip, moncashForm.provider === 'natcash' && styles.chipActive]}
                   onPress={() => setMoncashForm((s) => ({ ...s, provider: 'natcash' }))}
                 >
                   <Text style={[styles.chipText, moncashForm.provider === 'natcash' && styles.chipTextActive]}>
                     NatCash
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               )}
             </View>
 
@@ -1210,33 +1209,33 @@ export default function OrganizerPayoutSettingsScreenV2() {
 
             <Text style={[styles.label, { marginTop: 16 }]}>{t('organizerPayoutSettings.verifyModal.documentType')}</Text>
             <View style={styles.row}>
-              <TouchableOpacity
+              <Touchable
                 style={[styles.chip, verificationType === 'bank_statement' && styles.chipActive]}
                 onPress={() => setVerificationType('bank_statement')}
               >
                 <Text style={[styles.chipText, verificationType === 'bank_statement' && styles.chipTextActive]}>
                   {t('organizerPayoutSettings.verifyModal.bankStatement')}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Touchable>
+              <Touchable
                 style={[styles.chip, verificationType === 'void_check' && styles.chipActive]}
                 onPress={() => setVerificationType('void_check')}
               >
                 <Text style={[styles.chipText, verificationType === 'void_check' && styles.chipTextActive]}>
                   {t('organizerPayoutSettings.verifyModal.voidCheck')}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Touchable>
+              <Touchable
                 style={[styles.chip, verificationType === 'utility_bill' && styles.chipActive]}
                 onPress={() => setVerificationType('utility_bill')}
               >
                 <Text style={[styles.chipText, verificationType === 'utility_bill' && styles.chipTextActive]}>
                   {t('organizerPayoutSettings.verifyModal.utilityBill')}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             </View>
 
-            <TouchableOpacity
+            <Touchable
               style={[styles.secondaryButton, { marginTop: 16 }]}
               onPress={pickVerificationDocument}
             >
@@ -1244,7 +1243,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
               <Text style={styles.secondaryButtonText}>
                 {verificationAsset ? t('organizerPayoutSettings.verifyModal.changeDocument') : t('organizerPayoutSettings.verifyModal.chooseDocument')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
 
             {verificationAsset && (
               <View style={[styles.card, { marginTop: 12, backgroundColor: `${colors.success}10` }]}>
@@ -1427,7 +1426,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
   const renderStepHeader = (step: number) => (
     <View style={[styles.stepHeader, { paddingTop: insets.top + 8 }]}>
       <View style={styles.stepHeaderRow}>
-        <TouchableOpacity
+        <Touchable
           onPress={setupBack}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
@@ -1435,18 +1434,18 @@ export default function OrganizerPayoutSettingsScreenV2() {
           style={styles.stepHeaderSide}
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.stepCount}>
           {t('organizerPayoutSettings.setup.stepOf').replace('{n}', String(step)).replace('{total}', '3')}
         </Text>
-        <TouchableOpacity
+        <Touchable
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           style={[styles.stepHeaderSide, { alignItems: 'flex-end' }]}
         >
           <Text style={styles.stepCancel}>{t('organizerPayoutSettings.setup.cancel')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
       <View style={styles.stepSegments}>
         {[1, 2, 3].map((n) => (
@@ -1467,7 +1466,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
   )
 
   const identityRowIndicator = (status: string | undefined, isNext: boolean) => {
-    if (status === 'complete') return <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />
+    if (status === 'complete') return <Ionicons name="checkmark-circle-outline" size={22} color={T.emerald} />
     if (status === 'needs_attention') return <View style={[styles.stepDot, { backgroundColor: colors.warning }]} />
     return <View style={[styles.stepDot, isNext ? { backgroundColor: colors.primary } : null]} />
   }
@@ -1497,10 +1496,10 @@ export default function OrganizerPayoutSettingsScreenV2() {
               const isNext = !identityVerified && row.id === nextId
               const muted = !identityVerified && status !== 'complete' && !isNext
               return (
-                <TouchableOpacity
+                <Touchable
                   key={row.id}
+                  scale={0.98}
                   style={styles.numberedRow}
-                  activeOpacity={0.75}
                   disabled={identityVerified || identitySubmitted}
                   onPress={() => openIdentityStep(row.route)}
                   accessibilityRole="button"
@@ -1513,7 +1512,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                     <Text style={styles.numberedSub}>{t(`organizerPayoutSettings.setup.identity.${row.id}Sub`)}</Text>
                   </View>
                   {identityRowIndicator(status, isNext)}
-                </TouchableOpacity>
+                </Touchable>
               )
             })}
             <View style={styles.privacyNote}>
@@ -1568,9 +1567,9 @@ export default function OrganizerPayoutSettingsScreenV2() {
           {showHaitiRail ? (
             <>
               <Text style={styles.monoLabel}>{t('organizerPayoutSettings.setup.method.haitiLabel')}</Text>
-              <TouchableOpacity
+              <Touchable
+                scale={0.98}
                 style={[styles.methodPick, setupMethod === 'moncash' && styles.methodPickOn]}
-                activeOpacity={0.85}
                 onPress={() => setSetupMethod('moncash')}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: setupMethod === 'moncash' }}
@@ -1612,11 +1611,11 @@ export default function OrganizerPayoutSettingsScreenV2() {
                     />
                   </View>
                 ) : null}
-              </TouchableOpacity>
+              </Touchable>
 
-              <TouchableOpacity
+              <Touchable
+                scale={0.98}
                 style={[styles.methodPick, setupMethod === 'bank' && styles.methodPickOn]}
-                activeOpacity={0.85}
                 onPress={() => setSetupMethod('bank')}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: setupMethod === 'bank' }}
@@ -1630,7 +1629,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                     {setupMethod === 'bank' ? <View style={styles.radioDot} /> : null}
                   </View>
                 </View>
-              </TouchableOpacity>
+              </Touchable>
             </>
           ) : null}
 
@@ -1639,7 +1638,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
               <Text style={[styles.monoLabel, showHaitiRail && { marginTop: 24 }]}>
                 {t('organizerPayoutSettings.setup.method.stripeLabel').replace('{countries}', stripeLabel)}
               </Text>
-              <TouchableOpacity style={styles.methodPick} activeOpacity={0.85} onPress={handleAddStripe} accessibilityRole="button">
+              <Touchable scale={0.98} style={styles.methodPick} onPress={handleAddStripe} accessibilityRole="button">
                 <View style={styles.methodPickHead}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.methodPickTitle}>Stripe</Text>
@@ -1647,7 +1646,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                   </View>
                   <Text style={styles.connectLink}>{t('organizerPayoutSettings.setup.method.connect')}</Text>
                 </View>
-              </TouchableOpacity>
+              </Touchable>
             </>
           ) : null}
 
@@ -1660,7 +1659,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
         {renderStepFooter(t('organizerPayoutSettings.setup.finish'), finishSetup, {
           loading: savingMoncash,
           disabled: savingMoncash,
-          note: t('organizerPayoutSettings.setup.method.addMoreLater'),
         })}
       </>
     )
@@ -1722,7 +1720,8 @@ export default function OrganizerPayoutSettingsScreenV2() {
           <>
             {/* Identity, only while it still needs doing. */}
             {!identityVerified && (
-              <TouchableOpacity
+              <Touchable
+                scale={0.98}
                 style={styles.setupRow}
                 onPress={() => navigation.navigate('OrganizerVerification')}
                 accessibilityRole="button"
@@ -1736,7 +1735,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                   />
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
+              </Touchable>
             )}
 
             {/* Where you run events: the saved answer as one row. */}
@@ -1757,7 +1756,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
               >
                 {marketsSummary}
               </Text>
-              <TouchableOpacity
+              <Touchable
                 onPress={() => setMarketsSheetOpen(true)}
                 disabled={!marketsLoaded}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1769,7 +1768,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                     ? t('organizerPayoutSettings.markets.change')
                     : t('organizerPayoutSettings.markets.choose')}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             </View>
 
             {/* Cross-border advisory: one connected account, fixed country. */}
@@ -1818,7 +1817,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
                           )}
                         </View>
                       </View>
-                      <TouchableOpacity
+                      <Touchable
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         accessibilityRole="button"
                         onPress={() =>
@@ -1830,14 +1829,14 @@ export default function OrganizerPayoutSettingsScreenV2() {
                         <Text style={styles.changeLink}>
                           {stripeProfile.verified ? t('organizerPayoutSettings.summary.manage') : t('organizerPayoutSettings.summary.finish')}
                         </Text>
-                      </TouchableOpacity>
+                      </Touchable>
                     </View>
                   </View>
                 ) : (
-                  <TouchableOpacity style={styles.setupRow} onPress={handleAddStripe} accessibilityRole="button">
+                  <Touchable scale={0.98} style={styles.setupRow} onPress={handleAddStripe} accessibilityRole="button">
                     <Text style={[styles.setupRowHint, { flex: 1 }]}>{t('organizerPayoutSettings.regions.emptyInternational')}</Text>
                     <Text style={styles.changeLink}>{t('organizerPayoutSettings.setup.method.connect')}</Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 )}
               </>
             ) : null}
@@ -1865,10 +1864,10 @@ export default function OrganizerPayoutSettingsScreenV2() {
                   const chip = statusChip(dest.verificationStatus)
                   const isBank = dest.type === 'bank'
                   return (
-                    <TouchableOpacity
+                    <Touchable
                       key={dest.id}
+                      scale={0.98}
                       style={styles.destinationCard}
-                      activeOpacity={dest.verificationStatus !== 'verified' ? 0.75 : 1}
                       disabled={dest.verificationStatus === 'verified'}
                       accessibilityRole="button"
                       onPress={() => {
@@ -1910,15 +1909,15 @@ export default function OrganizerPayoutSettingsScreenV2() {
                             <StatusChip status={chip.status} label={chip.label} />
                           </View>
                         </View>
-                        <TouchableOpacity
+                        <Touchable
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           accessibilityRole="button"
                           onPress={() => openChangeMethod(dest)}
                         >
                           <Text style={styles.changeLink}>{t('organizerPayoutSettings.markets.change')}</Text>
-                        </TouchableOpacity>
+                        </Touchable>
                       </View>
-                    </TouchableOpacity>
+                    </Touchable>
                   )
                 })}
 
@@ -1942,9 +1941,6 @@ export default function OrganizerPayoutSettingsScreenV2() {
                           value={allowInstantMoncash}
                           onValueChange={toggleInstantMoncash}
                           disabled={instantState !== 'available' || savingInstant}
-                          trackColor={{ false: colors.border, true: colors.primary }}
-                          thumbColor={colors.white}
-                          ios_backgroundColor={colors.border}
                           accessibilityLabel={t('organizerPayoutSettings.instantMoncash.title')}
                         />
                       )}
@@ -1963,20 +1959,19 @@ export default function OrganizerPayoutSettingsScreenV2() {
             ) : null}
 
             {/* Adding a method is its own sub-flow (the sheet below). */}
-            <TouchableOpacity style={styles.addMethodRow} onPress={() => setShowAddModal(true)} accessibilityRole="button">
+            <Touchable style={styles.addMethodRow} onPress={() => setShowAddModal(true)} accessibilityRole="button">
               <Ionicons name="add" size={18} color={colors.text} />
               <Text style={styles.addMethodRowText}>{t('organizerPayoutSettings.addMethodRow')}</Text>
-            </TouchableOpacity>
+            </Touchable>
 
             {/* History is a row now, not a tab. */}
-            <TouchableOpacity style={[styles.setupRow, { marginTop: 10 }]} onPress={() => setActiveTab('history')} accessibilityRole="button">
+            <Touchable scale={0.98} style={[styles.setupRow, { marginTop: 10 }]} onPress={() => setActiveTab('history')} accessibilityRole="button">
               <Ionicons name="receipt-outline" size={20} color={colors.textSecondary} />
               <View style={styles.setupRowText}>
                 <Text style={styles.setupRowLabel}>{t('organizerPayoutSettings.payoutHistory.title')}</Text>
-                <Text style={styles.setupRowHint}>{t('organizerPayoutSettings.summary.historySub')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-            </TouchableOpacity>
+            </Touchable>
 
             {someRailHidden ? (
               <TouchableOpacity onPress={() => setShowAllRails(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'center' }}>
@@ -1994,9 +1989,9 @@ export default function OrganizerPayoutSettingsScreenV2() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t('organizerPayoutSettings.payoutHistory.errorTitle')}</Text>
             <Text style={styles.metaText}>{t('organizerPayoutSettings.payoutHistory.error')}</Text>
-            <TouchableOpacity style={[styles.secondaryButton, { marginTop: 12 }]} onPress={loadPayouts}>
+            <Touchable style={[styles.secondaryButton, { marginTop: 12 }]} onPress={loadPayouts}>
               <Text style={styles.secondaryButtonText}>{t('organizerPayoutSettings.payoutHistory.retry')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
         ) : payouts.length === 0 ? (
           <EmptyState
@@ -2047,16 +2042,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     width: 80,
   },
   stepCount: {
-    fontFamily: font.mono,
-    fontSize: 12,
-    letterSpacing: 2,
+    fontSize: 13,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
     color: colors.textSecondary,
   },
   stepCancel: {
-    fontFamily: font.mono,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   stepSegments: {
@@ -2106,8 +2099,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 10,
   },
   rowNumber: {
-    fontFamily: font.mono,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
     color: colors.textTertiary,
     alignSelf: 'flex-start',
     marginTop: 3,
@@ -2119,7 +2113,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   numberedSub: {
     marginTop: 3,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
   },
   mutedText: {
@@ -2141,27 +2135,28 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   privacyText: {
     flex: 1,
-    fontFamily: font.mono,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textSecondary,
   },
+  // The one eyebrow style (ui/Text "eyebrow"); mono is for identifiers only.
   monoLabel: {
-    fontFamily: font.mono,
     fontSize: 11,
-    letterSpacing: 1.6,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
     marginBottom: 12,
   },
   monoLabelSmall: {
-    fontFamily: font.mono,
     fontSize: 11,
-    letterSpacing: 1.2,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   methodPick: {
     padding: 18,
@@ -2189,16 +2184,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   methodPickSub: {
     marginTop: 4,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: colors.textSecondary,
   },
   recommended: {
-    fontFamily: font.mono,
     fontSize: 11,
-    letterSpacing: 1,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    color: colors.primary,
+    color: colors.textSecondary,
   },
   radio: {
     width: 22,
@@ -2208,14 +2204,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Selected radio: solid white with a black dot (same as the team role picker).
   radioOn: {
-    backgroundColor: 'rgba(20,184,166,0.18)',
+    backgroundColor: T.white,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.primary,
+    backgroundColor: T.onWhite,
   },
   inlineFields: {
     marginTop: 16,
@@ -2226,7 +2223,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 12,
     color: colors.text,
     backgroundColor: colors.surfaceRaised,
-    fontSize: 16,
+    fontSize: 15,
   },
   inlineInputMono: {
     fontFamily: font.mono,
@@ -2243,7 +2240,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   stepFooterNote: {
     textAlign: 'center',
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
     marginBottom: 12,
   },
@@ -2252,10 +2249,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 14,
   },
   stepLaterText: {
-    fontFamily: font.mono,
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   // ── Summary ──
@@ -2296,14 +2291,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 12,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },
   metaText: {
     marginTop: 6,
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 15,
   },
   metaHint: {
     color: colors.textSecondary,
@@ -2311,7 +2306,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   bulletPoint: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 15,
     marginLeft: 8,
     marginTop: 4,
   },
@@ -2328,9 +2323,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.text,
   },
   methodGroupHeading: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
     marginTop: 14,
@@ -2361,7 +2357,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   setupRowLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
   setupRowHint: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
   setupRowValue: { fontSize: 13, color: colors.text },
-  setupRowAction: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  setupRowAction: { fontSize: 13, fontWeight: '600', color: colors.text },
   instantCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.button,
@@ -2370,7 +2366,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 8,
   },
   instantBody: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
-  instantStateLabel: { fontSize: 11, letterSpacing: 0.4, color: colors.textSecondary },
+  instantStateLabel: { fontSize: 12, color: colors.textSecondary },
   addMethodRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2464,7 +2460,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   secondaryButtonText: {
     color: colors.text,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   modalOverlay: {
     flex: 1,
@@ -2489,12 +2485,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.3,
     color: colors.text,
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: colors.textSecondary,
     marginTop: 6,
@@ -2521,7 +2517,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
   },
   methodTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     letterSpacing: -0.2,
     color: colors.text,
@@ -2537,7 +2533,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 8,
     color: colors.text,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   input: {
     borderRadius: RADIUS.md,
@@ -2545,26 +2541,24 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 13,
     color: colors.text,
     backgroundColor: colors.surfaceRaised,
-    fontSize: 16,
+    fontSize: 15,
   },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.chip,
     backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
+  // Selected = solid white, black label (FilterPill convention), no outline.
   chipActive: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: colors.primary,
+    backgroundColor: T.white,
   },
   chipText: {
     color: colors.text,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   chipTextActive: {
-    color: colors.text,
+    color: T.onWhite,
   },
 })

@@ -267,7 +267,7 @@ const getStyles = (colors: any) =>
       marginTop: 14,
     },
     sub: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -292,7 +292,7 @@ const getStyles = (colors: any) =>
       maxWidth: 180,
     },
     chipName: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
       flexShrink: 1,

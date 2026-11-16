@@ -19,7 +19,7 @@ import {
   type EarningsHubSnapshot,
   type EventMoney,
 } from '../../lib/earningsHubCache';
-import { radius } from '../../theme/tokens';
+import { font, radius } from '../../theme/tokens';
 import { resolvePosterTheme } from '../../lib/posterGradient';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
@@ -31,6 +31,8 @@ import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHea
 import FormSheet from '../../components/organizer/FormSheet';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 
+import { Touchable } from '../../components/ui/Touchable';
+import { Text as UIText } from '../../components/ui/Text';
 /**
  * Org-level Earnings: leads with what the organizer can withdraw RIGHT NOW,
  * per currency (never summed across currencies), with one Withdraw action.
@@ -264,7 +266,7 @@ export default function OrganizerEarningsHubScreen() {
         }
       >
         <Text style={styles.screenTitle} accessibilityRole="header">
-          {t('organizerEarningsHub.title')}
+          {t('organizerEarningsHub.title').toLowerCase()}
         </Text>
         {!loaded ? (
           [0, 1, 2].map((i) => (
@@ -274,7 +276,7 @@ export default function OrganizerEarningsHubScreen() {
           <EmptyState icon={Wallet} title={t('organizerEarningsHub.empty')} compact />
         ) : (
           <>
-            <Text style={styles.eyebrow}>{t('organizerEarnings.availableToWithdraw')}</Text>
+            <UIText variant="eyebrow" style={styles.eyebrow}>{t('organizerEarnings.availableToWithdraw')}</UIText>
             {renderBalance()}
 
             {readOnly ? (
@@ -328,10 +330,10 @@ export default function OrganizerEarningsHubScreen() {
               const chip = eventStatus(m);
 
               return (
-                <TouchableOpacity
+                <Touchable
                   key={event.id}
+                  scale={0.98}
                   style={styles.row}
-                  activeOpacity={0.7}
                   onPress={() => navigation.navigate('OrganizerEventEarnings', { eventId: event.id })}
                 >
                   {/* Standalone 4:5 poster; the placeholder fill lives only inside its box. */}
@@ -380,7 +382,7 @@ export default function OrganizerEarningsHubScreen() {
                       ) : null}
                     </View>
                   ) : null}
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
 
@@ -438,10 +440,10 @@ export default function OrganizerEarningsHubScreen() {
         {withBalance.map((event) => {
           const m = money[event.id];
           return (
-            <TouchableOpacity
+            <Touchable
               key={event.id}
+              scale={0.98}
               style={styles.pickRow}
-              activeOpacity={0.75}
               onPress={() => startWithdraw(event.id)}
               accessibilityRole="button"
             >
@@ -452,7 +454,7 @@ export default function OrganizerEarningsHubScreen() {
                 {formatCurrency(m.availableMinor, m.currency, { fromCents: true })}
               </Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-            </TouchableOpacity>
+            </Touchable>
           );
         })}
       </FormSheet>
@@ -470,20 +472,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingHorizontal: 20,
       paddingBottom: 48,
     },
+    // Lowercase serif screen title, the same voice as My Events.
     screenTitle: {
-      fontSize: 38,
-      lineHeight: 44,
-      fontWeight: '800',
-      letterSpacing: -0.8,
+      fontFamily: font.serif,
+      fontSize: 30,
+      lineHeight: 36,
       color: colors.text,
-      marginBottom: 28,
+      marginBottom: 24,
     },
     eyebrow: {
-      fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 1.2,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
       marginBottom: 8,
     },
     balanceBlock: {
@@ -498,7 +495,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flexShrink: 1,
       fontSize: 54,
       lineHeight: 62,
-      fontWeight: '800',
+      fontWeight: '700',
       letterSpacing: -1.2,
       fontVariant: ['tabular-nums'],
       color: colors.text,
@@ -510,7 +507,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     balanceSecondary: {
       marginTop: 4,
-      fontSize: 16,
+      fontSize: 15,
       fontVariant: ['tabular-nums'],
       color: colors.textSecondary,
     },
@@ -537,7 +534,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     readOnlyText: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
       color: colors.textSecondary,
     },
@@ -579,13 +576,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       minWidth: 0,
     },
     rowTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },
     rowMeta: {
       marginTop: 4,
-      fontSize: 14,
+      fontSize: 15,
       color: colors.textSecondary,
     },
     rowRight: {
@@ -593,7 +590,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       maxWidth: 140,
     },
     rowNet: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
       color: colors.text,

@@ -268,7 +268,7 @@ const getStyles = (colors: any) =>
     },
     searchInput: {
       flex: 1,
-      fontSize: 16,
+      fontSize: 15,
       color: colors.text,
       paddingVertical: 0,
     },
@@ -325,7 +325,7 @@ const getStyles = (colors: any) =>
       paddingHorizontal: spacing.xl,
     },
     stateText: {
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
       textAlign: 'center',
       color: colors.textSecondary,
@@ -341,7 +341,7 @@ const getStyles = (colors: any) =>
       gap: spacing.sm,
     },
     uploadPillText: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       // Fixed near-black: the pill is white in every theme, so the label must
       // not follow a palette color that could also be light.

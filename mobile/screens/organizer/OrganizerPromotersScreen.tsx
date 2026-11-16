@@ -35,6 +35,7 @@ import { backendJson } from '../../lib/api/backend';
 import { formatCurrency } from '../../lib/currency';
 import { formatConversion } from '../../lib/attribution';
 
+import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
   OrganizerPromoters: {
     eventId: string;
@@ -416,18 +417,18 @@ export default function OrganizerPromotersScreen() {
                 </View>
 
                 <View style={styles.actionsRow}>
-                  <TouchableOpacity style={styles.actionButton} onPress={() => handleSend(p)}>
+                  <Touchable style={styles.actionButton} onPress={() => handleSend(p)}>
                     <Text style={styles.actionText}>{t('organizerPromoters.sendLink')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton} onPress={() => handleToggle(p)}>
+                  </Touchable>
+                  <Touchable style={styles.actionButton} onPress={() => handleToggle(p)}>
                     <Text style={styles.actionText}>
                       {p.isActive ? t('organizerPromoters.pause') : t('organizerPromoters.resume')}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                   {p.ordersCount === 0 && (
-                    <TouchableOpacity style={styles.actionButton} onPress={() => handleDelete(p)}>
+                    <Touchable style={styles.actionButton} onPress={() => handleDelete(p)}>
                       <Text style={[styles.actionText, { color: colors.error }]}>{t('organizerPromoters.delete.confirm')}</Text>
-                    </TouchableOpacity>
+                    </Touchable>
                   )}
                 </View>
               </View>
@@ -460,7 +461,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderColor: colors.border,
     },
     formTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: 'bold',
       color: colors.text,
       marginBottom: 4,
@@ -550,7 +551,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
     },
     promoterName: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },

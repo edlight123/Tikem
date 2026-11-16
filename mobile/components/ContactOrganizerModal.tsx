@@ -263,7 +263,7 @@ const getStyles = (colors: any) =>
       color: colors.text,
     },
     subtitle: {
-      fontSize: 14,
+      fontSize: 15,
       color: colors.textSecondary,
       marginTop: 4,
     },
@@ -301,7 +301,7 @@ const getStyles = (colors: any) =>
       backgroundColor: colors.white,
     },
     segmentText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
     },
@@ -315,7 +315,7 @@ const getStyles = (colors: any) =>
       backgroundColor: colors.surfaceRaised,
       padding: spacing.lg,
       paddingTop: spacing.lg,
-      fontSize: 16,
+      fontSize: 15,
       lineHeight: 22,
       color: colors.text,
     },
@@ -327,7 +327,7 @@ const getStyles = (colors: any) =>
     },
     error: {
       marginTop: spacing.md,
-      fontSize: 14,
+      fontSize: 13,
       color: colors.error,
     },
     submit: {
@@ -342,7 +342,7 @@ const getStyles = (colors: any) =>
       backgroundColor: colors.surfaceRaised,
     },
     submitText: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: '#000000',
     },

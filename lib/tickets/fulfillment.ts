@@ -793,7 +793,8 @@ export async function fulfillPaidOrder(params: {
             createdTickets.length || Number(pendingTx.quantity) || 1,
             Math.round(paid * 100) / 100,
             attendee?.full_name || undefined,
-            chargedCurrency
+            chargedCurrency,
+            pendingTx.user_id ? String(pendingTx.user_id) : null
           )
         } catch (error) {
           console.error(`${logPrefix} failed to notify the organizer`, error)

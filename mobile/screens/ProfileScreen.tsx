@@ -23,7 +23,6 @@ import {
   BookOpen,
   Briefcase,
   Camera,
-  ChevronRight,
   Compass,
   ExternalLink,
   FileText,
@@ -75,6 +74,10 @@ import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
 import { useActiveOrg } from '../lib/activeOrg';
 import { OrgSwitcherList } from '../components/organizer/OrgSwitcher';
 import TeamOrgBrandCard from '../components/organizer/TeamOrgBrandCard';
+import { Touchable } from '../components/ui/Touchable';
+import { Text as UIText } from '../components/ui/Text';
+import { ListGroup, ListRow } from '../components/ui/ListRow';
+import { Switch } from '../components/ui/Switch';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -392,31 +395,30 @@ export default function ProfileScreen() {
             icon here rather than a full-width button in the hero. Settings
             live further down this page. */}
         <View style={styles.topRow}>
-          <TouchableOpacity
+          <Touchable
             style={styles.headerIconButton}
             onPress={openEdit}
             accessibilityRole="button"
             accessibilityLabel={t('profile.editProfile')}
-            hitSlop={8}
           >
-            <Pencil size={21} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
+            <Pencil size={20} color={colors.text} strokeWidth={1.75} />
+          </Touchable>
+          <Touchable
             style={styles.headerIconButton}
             onPress={() => navigation.navigate('Notifications', { userId: user?.uid || '' })}
+            accessibilityRole="button"
             accessibilityLabel={t('profile.notificationsA11y')}
-            hitSlop={8}
           >
-            <Bell size={22} color={colors.text} />
-          </TouchableOpacity>
+            <Bell size={20} color={colors.text} strokeWidth={1.75} />
+          </Touchable>
         </View>
 
         {/* Identity */}
         <View style={styles.hero}>
-          <TouchableOpacity
+          <Touchable
             onPress={changePhoto}
             disabled={uploadingPhoto}
-            activeOpacity={0.85}
+            scale={0.98}
             accessibilityRole="button"
             accessibilityLabel={t('profile.photo.a11y')}
           >
@@ -438,7 +440,7 @@ export default function ProfileScreen() {
             <View style={styles.cameraBadge}>
               <Camera size={15} color={T.onWhite} />
             </View>
-          </TouchableOpacity>
+          </Touchable>
 
           <TouchableOpacity style={styles.nameRow} onPress={openEdit} activeOpacity={0.7} accessibilityRole="button">
             <Text style={styles.nameText} numberOfLines={2}>
@@ -460,7 +462,8 @@ export default function ProfileScreen() {
           ) : null}
         </View>
 
-        {/* Stats: big numerals, tiny captions, no rules between them. */}
+        {/* Stats: one quiet line under the name ("1 attended · 2 following ·
+            7 followers"). Big numerals read heavy (TestFlight 2026-11-14). */}
         <View style={styles.statsRow}>
           {[
             {
@@ -495,13 +498,12 @@ export default function ProfileScreen() {
                 accessibilityLabel={`${s.value} ${s.label}`}
               >
                 {statsLoaded ? (
-                  <Text style={styles.statValue}>{s.value}</Text>
+                  <Text style={styles.statLabel} numberOfLines={1}>
+                    <Text style={styles.statValue}>{s.value}</Text> {s.label.toLowerCase()}
+                  </Text>
                 ) : (
-                  <Skeleton width={32} height={24} radius={4} />
+                  <Skeleton width={64} height={14} radius={4} />
                 )}
-                <Text style={styles.statLabel} numberOfLines={2}>
-                  {s.label}
-                </Text>
               </TouchableOpacity>
             );
           })}
@@ -524,7 +526,7 @@ export default function ProfileScreen() {
                 .map((m) => {
                   const active = mode === m.key;
                   return (
-                    <TouchableOpacity
+                    <Touchable
                       key={m.key}
                       style={[styles.chip, active && styles.chipActive]}
                       onPress={() => setMode(m.key)}
@@ -532,15 +534,16 @@ export default function ProfileScreen() {
                       accessibilityState={{ selected: active }}
                     >
                       <Text style={[styles.chipText, active && styles.chipTextActive]}>{m.label}</Text>
-                    </TouchableOpacity>
+                    </Touchable>
                   );
                 })}
             </View>
-            {canUseOrganizerMode ? <Text style={styles.caption}>{t('profile.modeSwitchTip')}</Text> : null}
             {/* Someone who runs more than one org picks which one organizer mode acts for. */}
             {canUseOrganizerMode && activeOrg.options.length > 1 ? (
               <>
-                <Text style={styles.subLabel}>{t('orgTeam.switcher.label')}</Text>
+                <UIText variant="eyebrow" faint style={styles.subLabel}>
+                  {t('orgTeam.switcher.label')}
+                </UIText>
                 <OrgSwitcherList />
               </>
             ) : null}
@@ -556,8 +559,9 @@ export default function ProfileScreen() {
           <View style={styles.block}>
             <SectionHeader title={t('profile.organization.sectionTitle')} />
             <View style={styles.orgCard}>
-              <TouchableOpacity
+              <Touchable
                 style={styles.orgLogo}
+                scale={0.98}
                 onPress={changeLogo}
                 disabled={uploadingLogo}
                 accessibilityRole="button"
@@ -573,13 +577,10 @@ export default function ProfileScreen() {
                     <ActivityIndicator color="#FFFFFF" />
                   </View>
                 ) : null}
-              </TouchableOpacity>
+              </Touchable>
               <TouchableOpacity style={styles.orgMeta} onPress={openEdit} accessibilityRole="button">
                 <Text style={[styles.orgName, !orgName && styles.orgNameEmpty]} numberOfLines={1}>
                   {orgName || t('profile.organization.emptyName')}
-                </Text>
-                <Text style={styles.orgHint} numberOfLines={2}>
-                  {t('profile.organization.hint')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={changeLogo} disabled={uploadingLogo} hitSlop={10} accessibilityRole="button">
@@ -641,7 +642,7 @@ export default function ProfileScreen() {
             {(['en', 'fr', 'ht'] as const).map((lang) => {
               const active = language === lang;
               return (
-                <TouchableOpacity
+                <Touchable
                   key={lang}
                   style={[styles.chip, active && styles.chipActive]}
                   onPress={() => setLanguage(lang)}
@@ -649,65 +650,63 @@ export default function ProfileScreen() {
                   accessibilityState={{ selected: active }}
                 >
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>{lang.toUpperCase()}</Text>
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
           </View>
-          <View style={styles.listCard}>
-            <Row first icon={Heart} label={t('tabs.favorites')} onPress={() => navigation.navigate('Favorites')} />
-            <Row icon={Users} label={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
+          <ListGroup style={styles.listCard}>
+            <ListRow icon={Heart} title={t('tabs.favorites')} onPress={() => navigation.navigate('Favorites')} />
+            <ListRow icon={Users} title={t('profile.friends')} onPress={() => navigation.navigate('Connections')} />
             {/* The attendee's conversations with organizers (questions sent from
                 an event page and their answers). */}
-            <Row icon={MessageCircle} label={t('attendeeMessages.title')} onPress={() => navigation.navigate('Messages')} />
+            <ListRow icon={MessageCircle} title={t('attendeeMessages.title')} onPress={() => navigation.navigate('Messages')} />
             {/* Publish-first: anyone can create an event; KYC is deferred to payout. */}
-            <Row icon={Briefcase} label={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
-            <Row
+            <ListRow icon={Briefcase} title={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
+            <ListRow
               icon={Bell}
-              label={t('notificationSettings.title')}
+              title={t('notificationSettings.title')}
               onPress={() => navigation.navigate('NotificationSettings', { organizer: canUseOrganizerMode })}
             />
             {canAddPhone ? (
-              <Row icon={Phone} label={t('auth.phone.link.row')} onPress={() => setShowPhoneLink(true)} />
+              <ListRow icon={Phone} title={t('auth.phone.link.row')} onPress={() => setShowPhoneLink(true)} />
             ) : null}
-          </View>
+          </ListGroup>
         </View>
 
         <View style={styles.block}>
           <SectionHeader title={t('profile.help')} />
-          <View style={styles.listCard}>
-            <Row
-              first
+          <ListGroup style={styles.listCard}>
+            <ListRow
               icon={HelpCircle}
-              label={t('profile.helpCenter')}
+              title={t('profile.helpCenter')}
               onPress={() => navigation.navigate('ContentPage', { slug: 'support', title: t('profile.helpCenter') })}
             />
             {/* Step-by-step guides: the web /resources library, in-app. */}
-            <Row
+            <ListRow
               icon={BookOpen}
-              label={t('profile.guides')}
+              title={t('profile.guides')}
               onPress={() =>
                 navigation.navigate('InAppWebView', { url: 'https://www.tikem.co/resources', title: t('profile.guides') })
               }
             />
-            <Row
+            <ListRow
               icon={FileText}
-              label={t('profile.terms')}
+              title={t('profile.terms')}
               onPress={() => navigation.navigate('ContentPage', { slug: 'terms', title: t('profile.terms') })}
             />
-            <Row
+            <ListRow
               icon={Shield}
-              label={t('profile.privacy')}
+              title={t('profile.privacy')}
               onPress={() => navigation.navigate('ContentPage', { slug: 'privacy', title: t('profile.privacy') })}
             />
-            <Row
+            <ListRow
               icon={RotateCcw}
-              label={t('profile.refundPolicy')}
+              title={t('profile.refundPolicy')}
               onPress={() => navigation.navigate('ContentPage', { slug: 'refunds', title: t('profile.refundPolicy') })}
             />
-            <Row
+            <ListRow
               icon={Instagram}
-              label={t('profile.instagram')}
-              role="link"
+              title={t('profile.instagram')}
               onPress={openTikemInstagram}
               trailing={
                 <View style={styles.rowLeft}>
@@ -716,12 +715,12 @@ export default function ProfileScreen() {
                 </View>
               }
             />
-          </View>
+          </ListGroup>
         </View>
 
-        <View style={[styles.listCard, styles.signOutCard]}>
-          <Row first icon={LogOut} label={t('profile.signOut')} onPress={confirmSignOut} tone="danger" trailing={null} />
-        </View>
+        <ListGroup style={styles.signOutCard}>
+          <ListRow icon={LogOut} title={t('profile.signOut')} onPress={confirmSignOut} destructive chevron={false} />
+        </ListGroup>
 
         {/* Account deletion (App Store 5.1.1(v)): findable, never louder than Sign out. */}
         {!isDemoMode ? (
@@ -756,36 +755,6 @@ export default function ProfileScreen() {
   );
 }
 
-type ListRowProps = {
-  icon: any;
-  label: string;
-  onPress: () => void;
-  first?: boolean;
-  /** Replaces the chevron; null for none. */
-  trailing?: React.ReactNode;
-  tone?: 'danger';
-  role?: 'link' | 'button';
-};
-
-/** One row of a settings list: icon, label, chevron. */
-function Row({ icon: Icon, label, onPress, first, trailing, tone, role }: ListRowProps) {
-  const { colors } = useTheme();
-  const styles = getStyles(colors);
-  return (
-    <TouchableOpacity
-      style={[styles.rowButton, !first && styles.rowDivided]}
-      onPress={onPress}
-      accessibilityRole={role || 'button'}
-    >
-      <View style={styles.rowLeft}>
-        <Icon size={18} color={tone === 'danger' ? colors.error : colors.textSecondary} />
-        <Text style={[styles.rowText, tone === 'danger' && { color: colors.error }]}>{label}</Text>
-      </View>
-      {trailing === undefined ? <ChevronRight size={18} color={colors.textTertiary} /> : trailing}
-    </TouchableOpacity>
-  );
-}
-
 /**
  * Privacy, edited in place: each choice saves as it is made (optimistic, and
  * put back with an alert if the save fails). These are not part of "Edit
@@ -798,30 +767,23 @@ function SoundSection() {
   const { t } = useI18n();
   const on = useSongAutoplay();
   const trailers = useTrailerAutoplay();
-  const row = (label: string, hint: string, value: boolean, onPress: () => void) => (
-    <TouchableOpacity
-      style={styles.toggleRow}
-      onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={styles.toggleLabel}>{label}</Text>
-        <Text style={styles.toggleHint}>{hint}</Text>
-      </View>
-      <View style={[styles.switchTrack, value && styles.switchTrackOn]}>
-        <View style={[styles.switchThumb, value && styles.switchThumbOn]} />
-      </View>
-    </TouchableOpacity>
-  );
   return (
     <View style={styles.block}>
       <SectionHeader title={t('profile.sound.title')} />
-      <View style={styles.privacyCard}>
-        {row(t('profile.sound.autoplay'), t('profile.sound.autoplayHint'), on, () => setSongAutoplay(!on))}
-        {row(t('profile.sound.trailers'), t('profile.sound.trailersHint'), trailers, () => setTrailerAutoplay(!trailers))}
-      </View>
+      <ListGroup style={styles.listCard} inset={16}>
+        <ListRow
+          title={t('profile.sound.autoplay')}
+          trailing={
+            <Switch value={on} onValueChange={setSongAutoplay} accessibilityLabel={t('profile.sound.autoplay')} />
+          }
+        />
+        <ListRow
+          title={t('profile.sound.trailers')}
+          trailing={
+            <Switch value={trailers} onValueChange={setTrailerAutoplay} accessibilityLabel={t('profile.sound.trailers')} />
+          }
+        />
+      </ListGroup>
     </View>
   );
 }
@@ -877,7 +839,7 @@ function PrivacySection() {
       {options.map((o) => {
         const active = value === o.value;
         return (
-          <TouchableOpacity
+          <Touchable
             key={o.value}
             style={[styles.chip, styles.chipFlex, active && styles.chipActive]}
             onPress={() => !active && onPick(o.value)}
@@ -885,28 +847,20 @@ function PrivacySection() {
             accessibilityState={{ selected: active }}
           >
             <Text style={[styles.chipText, active && styles.chipTextActive]}>{o.label}</Text>
-          </TouchableOpacity>
+          </Touchable>
         );
       })}
     </View>
   );
 
   const toggle = (label: string, hint: string, on: boolean, onPress: () => void) => (
-    <TouchableOpacity
-      style={styles.toggleRow}
-      onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
-    >
+    <View style={styles.toggleRow}>
       <View style={{ flex: 1 }}>
         <Text style={styles.toggleLabel}>{label}</Text>
-        <Text style={styles.toggleHint}>{hint}</Text>
+        {hint ? <Text style={styles.toggleHint}>{hint}</Text> : null}
       </View>
-      <View style={[styles.switchTrack, on && styles.switchTrackOn]}>
-        <View style={[styles.switchThumb, on && styles.switchThumbOn]} />
-      </View>
-    </TouchableOpacity>
+      <Switch value={on} onValueChange={onPress} accessibilityLabel={label} />
+    </View>
   );
 
   return (
@@ -922,7 +876,6 @@ function PrivacySection() {
           ],
           (v) => commit({ profile_visibility: v }),
         )}
-        <Text style={styles.caption}>{t('profile.social.profileHint')}</Text>
 
         <Text style={styles.fieldLabel}>{t('profile.social.attendanceTitle')}</Text>
         {segment(
@@ -937,13 +890,13 @@ function PrivacySection() {
 
         {toggle(
           t('profile.social.discoverable'),
-          t('profile.social.discoverableHint'),
+          '',
           state.discoverable_by_phone,
           () => commit({ discoverable_by_phone: !state.discoverable_by_phone }),
         )}
         {toggle(
           t('profile.social.suggestable'),
-          t('profile.social.suggestableHint'),
+          '',
           state.discoverable,
           () => commit({ discoverable: !state.discoverable }),
         )}
@@ -958,7 +911,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     scroll: { flex: 1 },
     scrollContent: { paddingHorizontal: 16 },
     topRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 4 },
-    headerIconButton: { padding: 8 },
+    headerIconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
     hero: { alignItems: 'center', marginTop: 4 },
     avatar: {
@@ -1011,19 +964,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       textAlign: 'center',
     },
     locationRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    locationText: { fontSize: 14, color: colors.textSecondary },
+    locationText: { fontSize: 13, color: colors.textSecondary },
 
-    statsRow: { flexDirection: 'row', marginTop: 20 },
-    statItem: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-    statValue: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-    statLabel: {
-      marginTop: 4,
-      fontSize: 11,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      textAlign: 'center',
-      color: colors.textTertiary,
-    },
+    statsRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', columnGap: 16, marginTop: 10 },
+    statItem: { paddingVertical: 4 },
+    statValue: { fontWeight: '700', color: colors.text },
+    statLabel: { fontSize: 13, color: colors.textSecondary },
 
     block: { marginTop: 28 },
 
@@ -1057,14 +1003,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     privacyCard: { backgroundColor: T.surface, borderRadius: radius.lg, padding: 16, paddingTop: 4 },
     fieldLabel: { marginTop: 12, marginBottom: 8, fontSize: 13, fontWeight: '600', color: colors.text },
     caption: { marginTop: 8, fontSize: 12, lineHeight: 17, color: colors.textTertiary },
-    subLabel: {
-      marginTop: 20,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: colors.textTertiary,
-    },
+    subLabel: { marginTop: 24, marginBottom: 8 },
     chipRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
     chip: {
       paddingHorizontal: 14,
@@ -1079,32 +1018,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     chipText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
     chipTextActive: { color: T.onWhite },
     toggleRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
-    toggleLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
+    toggleLabel: { fontSize: 15, fontWeight: '500', color: colors.text },
     toggleHint: { marginTop: 2, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
-    switchTrack: {
-      width: 48,
-      height: 28,
-      borderRadius: radius.sm,
-      backgroundColor: T.surfaceRaised,
-      padding: 3,
-      justifyContent: 'center',
-    },
-    // A real toggle: teal here MEANS on.
-    switchTrackOn: { backgroundColor: colors.primary },
-    switchThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: T.white, alignSelf: 'flex-start' },
-    switchThumbOn: { alignSelf: 'flex-end' },
-
-    listCard: { marginTop: 10, backgroundColor: T.surface, borderRadius: radius.lg, overflow: 'hidden' },
-    signOutCard: { marginTop: 28 },
-    rowButton: {
-      paddingHorizontal: 16,
-      paddingVertical: 15,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    // A divider INSIDE a dense list, not a box outline.
-    rowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
+    listCard: { marginTop: 12 },
+    signOutCard: { marginTop: 24 },
     rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     rowText: { fontSize: 15, fontWeight: '500', color: colors.text },
     aboutHandle: { fontSize: 13, fontWeight: '500', color: colors.textTertiary },
@@ -1121,8 +1038,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     deleteAccountText: { fontSize: 13, fontWeight: '500', color: colors.error, opacity: 0.85 },
     colophon: { alignItems: 'center', paddingTop: 12, paddingBottom: 24, gap: 4 },
     colophonText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.4, color: colors.textSecondary },
-    colophonMeta: { fontSize: 11, color: colors.textTertiary },
+    colophonMeta: { fontSize: 12, color: colors.textTertiary },
     centerEmpty: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' },
-    emptyTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 8, textAlign: 'center' },
-    emptyBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8, textAlign: 'center' },
+    emptyBody: { fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
   });

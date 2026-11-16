@@ -7,12 +7,14 @@
 // /api/organizer/events/{id}/requests (backendJson attaches the token).
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from '../../components/AppAlert';
 import { useI18n } from '../../contexts/I18nContext';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
+import { Text as UIText } from '../../components/ui/Text';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import PersonAvatar from '../../components/PersonAvatar';
 import RequestStatusDot, { requestTone } from '../../components/RequestStatusDot';
@@ -212,26 +214,31 @@ export default function EventRequestsScreen() {
         )}
         {pending && (
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.declineBtn, busy && styles.dim]}
-              onPress={() => confirmDecline(item)}
-              disabled={busy}
-              accessibilityRole="button"
-            >
-              <Text style={styles.declineText}>{t('attendRequests.organizer.decline')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.approveBtn, busy && styles.dim]}
-              onPress={() => decide(item, 'approve')}
-              disabled={busy}
-              accessibilityRole="button"
-            >
-              {busyIds.has(item.id) ? (
-                <ActivityIndicator color={T.onWhite} />
-              ) : (
-                <Text style={styles.approveText}>{t('attendRequests.organizer.approve')}</Text>
-              )}
-            </TouchableOpacity>
+            {/* Flex shares on plain wrappers: Touchable styles its inner view. */}
+            <View style={styles.actionCell}>
+              <Touchable
+                style={[styles.declineBtn, busy && styles.dim]}
+                onPress={() => confirmDecline(item)}
+                disabled={busy}
+                accessibilityRole="button"
+              >
+                <Text style={styles.declineText}>{t('attendRequests.organizer.decline')}</Text>
+              </Touchable>
+            </View>
+            <View style={styles.actionCell}>
+              <Touchable
+                style={[styles.approveBtn, busy && styles.dim]}
+                onPress={() => decide(item, 'approve')}
+                disabled={busy}
+                accessibilityRole="button"
+              >
+                {busyIds.has(item.id) ? (
+                  <ActivityIndicator color={T.onWhite} />
+                ) : (
+                  <Text style={styles.approveText}>{t('attendRequests.organizer.approve')}</Text>
+                )}
+              </Touchable>
+            </View>
           </View>
         )}
       </View>
@@ -287,13 +294,13 @@ export default function EventRequestsScreen() {
         }
         ListHeaderComponent={
           <View>
-            <Text style={styles.stats}>
+            <UIText variant="eyebrow">
               {t('attendRequests.organizer.stats', {
                 pending: counts.pending,
                 approved: counts.approved,
                 declined: counts.declined,
               })}
-            </Text>
+            </UIText>
             {data && !data.requiresApproval && (
               <Text style={styles.notice}>{t('attendRequests.organizer.notEnabled')}</Text>
             )}
@@ -322,7 +329,6 @@ export default function EventRequestsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>{emptyText}</Text>
-            <Text style={styles.emptyHint}>{t('attendRequests.organizer.emptyHint')}</Text>
           </View>
         }
       />
@@ -332,13 +338,6 @@ export default function EventRequestsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.bg },
-  stats: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: T.textSecondary,
-  },
   notice: { marginTop: spacing.md, fontSize: 13, lineHeight: 18, color: T.amber },
   tabs: { marginTop: spacing.lg, marginBottom: spacing.lg },
   // A fill, never a ring around an empty box.
@@ -346,14 +345,14 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   rowBody: { flex: 1, minWidth: 0 },
   nameLine: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
-  name: { flexShrink: 1, fontSize: 16, fontWeight: '700', color: T.textPrimary },
+  name: { flexShrink: 1, fontSize: 15, fontWeight: '700', color: T.textPrimary },
   time: { fontSize: 12, color: T.textTertiary },
-  plusLine: { marginTop: 4, fontSize: 14, color: T.textSecondary },
-  note: { marginTop: spacing.md, fontSize: 14, lineHeight: 20, fontStyle: 'italic', color: T.textSecondary },
+  plusLine: { marginTop: 4, fontSize: 13, color: T.textSecondary },
+  note: { marginTop: spacing.md, fontSize: 13, lineHeight: 20, fontStyle: 'italic', color: T.textSecondary },
   lastError: { marginTop: spacing.sm, fontSize: 12, color: T.red },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  actionCell: { flex: 1 },
   declineBtn: {
-    flex: 1,
     height: 44,
     borderRadius: radius.button,
     backgroundColor: T.surfaceRaised,
@@ -362,7 +361,6 @@ const styles = StyleSheet.create({
   },
   declineText: { fontSize: 15, fontWeight: '600', color: T.textPrimary },
   approveBtn: {
-    flex: 1,
     height: 44,
     borderRadius: radius.button,
     backgroundColor: T.white,
@@ -373,5 +371,4 @@ const styles = StyleSheet.create({
   dim: { opacity: 0.45 },
   empty: { paddingVertical: spacing.xxl, alignItems: 'center' },
   emptyTitle: { fontFamily: font.serif, fontSize: 22, color: T.textPrimary },
-  emptyHint: { marginTop: spacing.sm, fontSize: 13, color: T.textSecondary, textAlign: 'center' },
 });

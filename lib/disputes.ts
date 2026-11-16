@@ -48,6 +48,7 @@ import {
 import { formatMoney, pickLang, type EmailLang } from '@/lib/email-kit/i18n'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { createNotification } from '@/lib/notifications/helpers'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { getAdminEmails } from '@/lib/admin'
 import type { NotificationType } from '@/types/database'
 
@@ -997,6 +998,37 @@ async function notifyOrganizer(record: DisputeRecord): Promise<{
       organizerId,
       message: err?.message,
     })
+  }
+
+  // Admins with read-only finances see it in-app too (orgRecipients, finance).
+  // Best-effort; `notified` and the email stay about the owner.
+  try {
+    const team = (await resolveOrgRecipients({ orgId: organizerId, kind: 'finance', eventId: a.eventId || null })).filter(
+      (uid) => uid !== organizerId
+    )
+    await Promise.all(
+      team.map((uid) =>
+        createNotification(
+          uid,
+          DISPUTE_NOTIFICATION_TYPE,
+          '⚠️ A buyer disputed a ticket payment',
+          `A buyer asked their bank to reverse a ${amount} payment for "${title}". We need your evidence to fight it.${deadlineNote}`,
+          a.eventId ? `/organizer/events/${a.eventId}/earnings` : '/support',
+          {
+            eventId: a.eventId || undefined,
+            ticketId: a.ticketId || undefined,
+            disputeId: record.disputeId,
+            amountMinor: record.amountMinor,
+            currency: record.currency,
+            evidenceDueBy: record.evidenceDueBy,
+          }
+        ).catch((err: any) => {
+          console.error('[disputes] team notification failed', { disputeId: record.disputeId, uid, message: err?.message })
+        })
+      )
+    )
+  } catch (err: any) {
+    console.error('[disputes] team notifications skipped', { disputeId: record.disputeId, message: err?.message })
   }
 
   if (a.organizerEmail) {

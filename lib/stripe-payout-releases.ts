@@ -23,6 +23,7 @@
  */
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { sendEmail } from '@/lib/email'
 import { renderEmail, title as titleBlock, p, gap, button, bigFigure, appUrl } from '@/lib/email-kit/layout'
@@ -369,6 +370,37 @@ export async function notifyOrganizerPayoutFailed(releaseDocId: string): Promise
       })
     } catch (err) {
       console.error('[payout-releases] push failed', { releaseDocId, err })
+    }
+
+    // Admins with read-only finances: in-app + push in their own language
+    // (orgRecipients, finance). The email below stays the owner's.
+    try {
+      const team = (await resolveOrgRecipients({ orgId: organizerId, kind: 'finance', eventId: row.eventId || null })).filter(
+        (uid) => uid !== organizerId
+      )
+      await Promise.all(
+        team.map(async (uid) => {
+          try {
+            const memberSnap = await adminDb.collection('users').doc(uid).get().catch(() => null as any)
+            const memberLang = langOf(memberSnap?.exists ? (memberSnap.data() as any)?.language : null)
+            const memberCopy = payoutFailedCopy(
+              memberLang,
+              formatAmount(toMinor(row.amountMinor), String(row.currency || ''), memberLang),
+              BANK_PROBLEM_CODES.has(String(row.failureCode || ''))
+            )
+            await createNotification(uid, 'withdrawal_update', memberCopy.title, memberCopy.body, actionUrl, meta)
+            await sendPushNotification(uid, memberCopy.title, memberCopy.body, actionUrl, {
+              type: 'withdrawal_update',
+              kind: 'stripe_payout_failed',
+              releaseDocId,
+            })
+          } catch (err) {
+            console.error('[payout-releases] team notice failed', { releaseDocId, uid, err })
+          }
+        })
+      )
+    } catch (err) {
+      console.error('[payout-releases] team notices skipped', { releaseDocId, err })
     }
 
     const email = typeof user.email === 'string' ? user.email : null

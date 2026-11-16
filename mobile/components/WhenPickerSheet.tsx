@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, Platform, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, Platform, Pressable, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'lucide-react-native';
@@ -41,41 +42,43 @@ export default function WhenPickerSheet({ visible, onClose, value, onSelect }: W
         <View style={styles.handle} />
         <View style={styles.header}>
           <Text style={styles.title}>{t('discover.when')}</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Touchable style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={20} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         {DATE_OPTIONS.map((option) => {
           const active = value === option.value;
           return (
-            <TouchableOpacity
+            <Touchable
               key={option.value}
+              scale={false}
+              pressedColor={active ? undefined : colors.surfaceRaised}
               style={[styles.row, active && styles.rowActive]}
               onPress={() => {
                 onSelect(option.value);
                 onClose();
               }}
-              activeOpacity={0.8}
             >
               <Text style={[styles.rowText, active && styles.rowTextActive]}>
                 {t(option.labelKey)}
               </Text>
               {active && <Check size={18} color={colors.background} />}
-            </TouchableOpacity>
+            </Touchable>
           );
         })}
 
-        <TouchableOpacity
+        <Touchable
+          scale={false}
+          pressedColor={value === 'pick-date' ? undefined : colors.surfaceRaised}
           style={[styles.row, value === 'pick-date' && styles.rowActive]}
           onPress={() => setShowCalendar((v) => !v)}
-          activeOpacity={0.8}
         >
           <Text style={[styles.rowText, value === 'pick-date' && styles.rowTextActive]}>
             {t('filters.dateOptions.pickDate')}
           </Text>
           {value === 'pick-date' && <Check size={18} color={colors.background} />}
-        </TouchableOpacity>
+        </Touchable>
 
         {showCalendar && (
           <DateTimePicker
@@ -134,7 +137,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'space-between',
       marginBottom: 14,
     },
-    title: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+    title: { fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
     closeBtn: {
       width: 36,
       height: 36,
@@ -147,8 +150,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 15,
-      paddingHorizontal: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
       borderRadius: RADIUS.md,
       marginBottom: 8,
       backgroundColor: colors.surfaceMuted,

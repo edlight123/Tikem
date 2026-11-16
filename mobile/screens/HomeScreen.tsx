@@ -48,6 +48,7 @@ import {
 } from '../lib/nationalDaysRemote';
 import { HomeFeedSkeleton } from '../components/Skeleton';
 import ChromeBlur from '../components/ChromeBlur';
+import { Touchable } from '../components/ui/Touchable';
 import { isBudgetFriendlyTicketPrice } from '../lib/pricing';
 import { isEventOver, type HomeFeed } from '../lib/homeFeeds';
 import { getCategoryLabel } from '../lib/categories';
@@ -468,19 +469,18 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
+          <Touchable
             style={styles.locationRow}
             onPress={() => setLocationSheetOpen(true)}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={locationLabel}
           >
-            <MapPin size={13} color={colors.primary} />
+            <MapPin size={13} color={colors.textSecondary} />
             <Text style={styles.locationText} numberOfLines={1}>
               {locationLabel}
             </Text>
-            <ChevronDown size={14} color={colors.textSecondary} />
-          </TouchableOpacity>
+            <ChevronDown size={13} color={colors.textSecondary} />
+          </Touchable>
         </View>
       </Animated.View>
 
@@ -518,10 +518,9 @@ export default function HomeScreen({ navigation }: any) {
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 7,
-                  marginHorizontal: 20,
-                  marginTop: 2,
-                  marginBottom: 6,
+                  gap: 8,
+                  marginHorizontal: 16,
+                  marginBottom: 8,
                 }}
               >
                 <CloudOff size={13} color={colors.textSecondary} />
@@ -565,7 +564,6 @@ export default function HomeScreen({ navigation }: any) {
               <View style={styles.firstSection}>
                 <EventRail
                   title={t('home.forYouTitle')}
-                  subtitle={t('home.forYouSubtitle')}
                   events={forYouEvents}
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
                   onViewAll={handleViewAllForYou}
@@ -599,7 +597,6 @@ export default function HomeScreen({ navigation }: any) {
               <View style={styles.section}>
                 <EventRail
                   title={t('home.nearYouTitle')}
-                  subtitle={t('home.nearYouSubtitle')}
                   events={nearYouEvents}
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
                   onViewAll={handleViewAllNearYou}
@@ -631,7 +628,6 @@ export default function HomeScreen({ navigation }: any) {
               <View style={styles.section}>
                 <EventRail
                   title={t('home.freeTitle')}
-                  subtitle={t('home.freeSubtitle')}
                   events={freeEvents}
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}
                   onViewAll={handleViewAllFree}
@@ -656,7 +652,6 @@ export default function HomeScreen({ navigation }: any) {
               <View style={styles.section}>
                 <EventRail
                   title={t('home.newTitle')}
-                  subtitle={t('home.newSubtitle')}
                   events={newEvents}
                   badge="New"
                   onEventPress={(eventId) => navigation.navigate('EventDetail', { eventId })}

@@ -33,6 +33,7 @@ import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeade
 import SectionHeader from '../components/SectionHeader';
 import SelectField from '../components/organizer/SelectField';
 import { useAppAlert } from '../components/AppAlert';
+import { Touchable } from '../components/ui/Touchable';
 
 /**
  * Edit profile: the form that used to sit inline under the avatar on Profile.
@@ -257,11 +258,16 @@ export default function EditProfileScreen() {
   return (
     <View style={styles.container}>
       <OverlayHeader onHeight={onHeaderHeight} style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={16} accessibilityRole="button" accessibilityLabel={t('common.back')}>
+        <Touchable
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <ChevronLeft size={26} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.topTitle}>{t('profile.editTitle')}</Text>
-        <View style={{ width: 26 }} />
+        <View style={styles.backBtn} />
       </OverlayHeader>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -270,11 +276,11 @@ export default function EditProfileScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Photo */}
-          <TouchableOpacity
+          <Touchable
             style={styles.photoWrap}
             onPress={changePhoto}
             disabled={uploadingPhoto}
-            activeOpacity={0.8}
+            scale={0.98}
             accessibilityRole="button"
             accessibilityLabel={t('profile.photo.a11y')}
           >
@@ -291,7 +297,7 @@ export default function EditProfileScreen() {
               ) : null}
             </View>
             <Text style={styles.photoAction}>{t('profile.changePhoto')}</Text>
-          </TouchableOpacity>
+          </Touchable>
 
           <SectionHeader title={t('profile.editSectionYou')} />
           <View style={styles.group}>
@@ -303,7 +309,7 @@ export default function EditProfileScreen() {
               {dialChips.map((d) => {
                 const active = d === dial;
                 return (
-                  <TouchableOpacity
+                  <Touchable
                     key={d}
                     style={[styles.dialChip, active && styles.dialChipActive]}
                     onPress={() => setDial(d)}
@@ -311,7 +317,7 @@ export default function EditProfileScreen() {
                     accessibilityState={{ selected: active }}
                   >
                     <Text style={[styles.dialChipText, active && styles.dialChipTextActive]}>+{d}</Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 );
               })}
             </View>
@@ -357,11 +363,12 @@ export default function EditProfileScreen() {
 
           {canEditOrganization ? (
             <>
-              <SectionHeader title={t('profile.organization.sectionTitle')} subtitle={t('profile.organization.hint')} subtitleLines={2} />
+              <SectionHeader title={t('profile.organization.sectionTitle')} />
               <View style={styles.group}>
                 <View style={styles.logoRow}>
-                  <TouchableOpacity
+                  <Touchable
                     style={styles.logoPreview}
+                    scale={0.98}
                     onPress={changeLogo}
                     disabled={uploadingLogo}
                     accessibilityRole="button"
@@ -377,7 +384,7 @@ export default function EditProfileScreen() {
                         <ActivityIndicator color="#FFFFFF" />
                       </View>
                     ) : null}
-                  </TouchableOpacity>
+                  </Touchable>
                   <View style={{ flex: 1, gap: 6 }}>
                     <Text style={styles.logoLabel}>{t('profile.organization.logoTitle')}</Text>
                     <View style={styles.logoActions}>
@@ -401,7 +408,7 @@ export default function EditProfileScreen() {
             </>
           ) : null}
 
-          <SectionHeader title={t('profile.social.sectionTitle')} subtitle={t('profile.social.handlesHint')} subtitleLines={2} />
+          <SectionHeader title={t('profile.social.sectionTitle')} />
           <View style={styles.group}>
             <Text style={styles.label}>{t('profile.social.bio')}</Text>
             {field({
@@ -432,15 +439,14 @@ export default function EditProfileScreen() {
 
         {/* Sticky Save: the one primary action on this screen. */}
         <View style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <TouchableOpacity
+          <Touchable
             style={[styles.saveBtn, busy && styles.saveBtnBusy]}
             onPress={save}
             disabled={busy}
-            activeOpacity={0.85}
             accessibilityRole="button"
           >
             {saving ? <ActivityIndicator color="#000000" /> : <Text style={styles.saveText}>{t('profile.save')}</Text>}
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -452,10 +458,11 @@ const AVATAR = 96;
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    topBar: { justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 10 },
+    topBar: { justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+    backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     topTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
     content: { paddingHorizontal: 16, paddingBottom: 32 },
-    photoWrap: { alignItems: 'center', marginBottom: 28, gap: 10 },
+    photoWrap: { alignItems: 'center', marginBottom: 32, gap: 12 },
     avatar: {
       width: AVATAR,
       height: AVATAR,
@@ -473,15 +480,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    photoAction: { fontSize: 14, fontWeight: '700', color: colors.text },
-    group: { marginBottom: 28 },
-    label: { marginTop: 12, marginBottom: 6, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    photoAction: { fontSize: 13, fontWeight: '600', color: colors.text },
+    group: { marginTop: 4, marginBottom: 32 },
+    label: { marginTop: 16, marginBottom: 8, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
     // A fill, no hairline (POSH ladder: a form field sits one step up).
     input: {
       borderRadius: radius.md,
       paddingHorizontal: 14,
-      paddingVertical: 13,
-      fontSize: 16,
+      paddingVertical: 14,
+      fontSize: 15,
       color: colors.text,
       backgroundColor: T.surfaceRaised,
     },
@@ -489,7 +496,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     // default hairline box, so the form reads as one set of controls.
     selectField: { borderWidth: 0, backgroundColor: T.surfaceRaised, minHeight: 50 },
     bioInput: { minHeight: 88, textAlignVertical: 'top' },
-    charCount: { marginTop: 4, fontSize: 11, color: colors.textTertiary, textAlign: 'right' },
+    charCount: { marginTop: 4, fontSize: 12, color: colors.textTertiary, textAlign: 'right' },
     dialRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
     dialChip: {
       paddingHorizontal: 14,
@@ -499,7 +506,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     // A chosen chip is the one pure white (POSH ladder), not a teal fill.
     dialChipActive: { backgroundColor: T.white },
-    dialChipText: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+    dialChipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
     dialChipTextActive: { color: T.onWhite },
     logoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4 },
     logoPreview: {
@@ -512,9 +519,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'center',
     },
     logoImage: { width: '100%', height: '100%' },
-    logoLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
-    logoActions: { flexDirection: 'row', gap: 18 },
-    textAction: { fontSize: 14, fontWeight: '700', color: colors.text },
+    logoLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
+    logoActions: { flexDirection: 'row', gap: 16 },
+    textAction: { fontSize: 13, fontWeight: '600', color: colors.text },
     textActionMuted: { color: colors.textTertiary },
     saveBar: { paddingHorizontal: 16, paddingTop: 12, backgroundColor: colors.background },
     saveBtn: {
@@ -525,5 +532,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'center',
     },
     saveBtnBusy: { opacity: 0.6 },
-    saveText: { color: T.onWhite, fontSize: 16, fontWeight: '700' },
+    saveText: { color: T.onWhite, fontSize: 17, fontWeight: '700' },
   });

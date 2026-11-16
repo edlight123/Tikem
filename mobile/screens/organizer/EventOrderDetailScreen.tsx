@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { useLocaleFormat } from '../../lib/format';
 import { colors as T, font, radius, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
 import EmptyState from '../../components/EmptyState';
 import SectionHeader from '../../components/SectionHeader';
 import StatTriplet from '../../components/StatTriplet';
@@ -329,17 +330,16 @@ export default function EventOrderDetailScreen() {
           ) : null}
 
           {canRefund ? (
-            <TouchableOpacity
+            <Touchable
               style={styles.refundBtn}
               onPress={() => setSheetOpen(true)}
               accessibilityRole="button"
-              activeOpacity={0.75}
             >
               <Ionicons name="return-down-back-outline" size={18} color={T.red} />
               <Text style={styles.refundText} numberOfLines={1}>
                 {t('organizerOrders.detail.refund')} · {formatMoneyLines(order.refund.totals)}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           ) : refundBlockReason && refundBlockReason !== 'free' ? (
             <Text style={styles.note}>{t(`organizerOrders.detail.refundNotPossible.${refundBlockReason}`)}</Text>
           ) : null}
@@ -423,14 +423,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     infoValue: {
       flexShrink: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '500',
       color: colors.text,
       textAlign: 'right',
     },
     mono: {
       fontFamily: font.mono,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '400',
     },
     ticketRow: {
@@ -453,7 +453,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     ticketId: {
       marginTop: 4,
       fontFamily: font.monoRegular,
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     ticketSide: {

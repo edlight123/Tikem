@@ -20,6 +20,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { resolvePayeeReason } from '@/lib/payouts/payee-reasons'
 import { createNotification } from '@/lib/notifications/helpers'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { isTransactional } from '@/lib/notifications/policy'
 import { sendEmail } from '@/lib/email'
@@ -433,6 +434,45 @@ export async function notifyWithdrawalOutcome(
       })
     } catch (err) {
       console.error('[withdrawal-outcome] push failed', { withdrawalId, outcome, err })
+    }
+
+    // An ORGANIZER withdrawal (never a promoter's): admins with read-only
+    // finances see the outcome in-app + push, in their own language
+    // (orgRecipients, finance). No MonCash number, even masked: payout
+    // destinations stay owner-only. The email stays the owner's.
+    if (!isPromoter) {
+      try {
+        const team = (await resolveOrgRecipients({ orgId: uid, kind: 'finance', eventId: row?.eventId || null })).filter(
+          (id) => id !== uid
+        )
+        await Promise.all(
+          team.map(async (memberId) => {
+            try {
+              const memberSnap = await adminDb.collection('users').doc(memberId).get().catch(() => null as any)
+              const memberLang = langOf(memberSnap?.exists ? (memberSnap.data() as any)?.language : null)
+              const memberCopy = withdrawalOutcomeCopy(outcome, memberLang, {
+                amount: amountFor(outcome, row, memberLang),
+                phone: '',
+                method: String(row?.method || '') === 'bank' ? 'bank' : 'moncash',
+                reason:
+                  outcome === 'admin_rejected' || outcome === 'failed'
+                    ? resolvePayeeReason(opts.reasonCode, opts.reasonText, memberLang)
+                    : null,
+              })
+              await createNotification(memberId, 'withdrawal_update', memberCopy.title, memberCopy.body, actionUrl, stripUndefined(meta))
+              await sendPushNotification(memberId, memberCopy.title, memberCopy.body, actionUrl, {
+                type: 'withdrawal_update',
+                withdrawalId,
+                outcome,
+              })
+            } catch (err) {
+              console.error('[withdrawal-outcome] team notice failed', { withdrawalId, outcome, memberId, err })
+            }
+          })
+        )
+      } catch (err) {
+        console.error('[withdrawal-outcome] team notices skipped', { withdrawalId, outcome, err })
+      }
     }
 
     const email = typeof user?.email === 'string' ? user.email : null

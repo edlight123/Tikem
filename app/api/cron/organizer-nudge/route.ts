@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { sendDiscretionary } from '@/lib/notifications/campaigns'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,20 +65,25 @@ export async function GET(request: Request) {
       if (ticketsSold / totalTickets >= SLOW_SALES_RATIO) continue
 
       const sold = ticketsSold
-      const sent = await sendDiscretionary({
-        userId: organizerId,
-        category: 'organizer_nudge',
-        capKey: `nudge:${event.id}`,
-        type: 'organizer_nudge',
-        title: `${event.title} needs a push`,
-        body:
-          sold === 0
-            ? 'No tickets sold yet. Share your promoter link to get the word out.'
-            : `Only ${sold} of ${totalTickets} tickets sold. Share your promoter link.`,
-        url: `/organizer/events/${event.id}/promoters`,
-        data: { eventId: event.id, ticketsSold: sold, totalTickets },
-      })
-      if (sent) notified++
+      // The owner plus admins and managers (orgRecipients, event_ops); each
+      // passes sendDiscretionary on their own opt-out, quiet hours and cap.
+      const recipients = await resolveOrgRecipients({ orgId: organizerId, kind: 'event_ops', eventId: event.id })
+      for (const userId of recipients) {
+        const sent = await sendDiscretionary({
+          userId,
+          category: 'organizer_nudge',
+          capKey: `nudge:${event.id}`,
+          type: 'organizer_nudge',
+          title: `${event.title} needs a push`,
+          body:
+            sold === 0
+              ? 'No tickets sold yet. Share your promoter link to get the word out.'
+              : `Only ${sold} of ${totalTickets} tickets sold. Share your promoter link.`,
+          url: `/organizer/events/${event.id}/promoters`,
+          data: { eventId: event.id, ticketsSold: sold, totalTickets },
+        })
+        if (sent) notified++
+      }
     }
 
     return NextResponse.json({

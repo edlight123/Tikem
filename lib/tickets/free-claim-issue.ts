@@ -762,7 +762,9 @@ export async function issueFreeClaim(
       event.title,
       ticketQuantity,
       0, // free event
-      identity.name
+      identity.name,
+      null,
+      identity.id
     )
   } catch (error) {
     console.error('Failed to send notification:', error)

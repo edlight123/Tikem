@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Animated, RefreshControl, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, RefreshControl, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { Skeleton } from '../components/Skeleton';
 import { backendJson } from '../lib/api/backend';
 import { safeFormatForLanguage } from '../lib/dates';
 import { font, radius } from '../theme/tokens';
+import { Touchable } from '../components/ui/Touchable';
 
 /** One row of GET /api/messages (lib/organizer-messages AttendeeThreadSummary). */
 export type AttendeeThreadSummary = {
@@ -80,15 +81,14 @@ export default function MessagesScreen({ navigation }: any) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
-        <TouchableOpacity
+        <Touchable
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
           <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.headerTitle}>{t('attendeeMessages.title')}</Text>
         <View style={styles.backButton} />
       </OverlayHeader>
@@ -113,9 +113,9 @@ export default function MessagesScreen({ navigation }: any) {
             subtitle={failed ? undefined : t('attendeeMessages.emptyBody')}
           />
           {failed ? (
-            <TouchableOpacity style={styles.retry} onPress={() => { setLoading(true); load(); }}>
+            <Touchable style={styles.retry} onPress={() => { setLoading(true); load(); }} accessibilityRole="button">
               <Text style={styles.retryText}>{t('attendeeMessages.retry')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           ) : null}
         </View>
       ) : (
@@ -142,11 +142,12 @@ export default function MessagesScreen({ navigation }: any) {
                     ? `${th.organizer_name}: `
                     : '';
               return (
-                <TouchableOpacity
+                <Touchable
                   key={th.id}
                   style={[styles.row, i > 0 && styles.rowDivided]}
                   onPress={() => open(th)}
-                  activeOpacity={0.7}
+                  scale={false}
+                  pressedColor={colors.surfaceRaised}
                   accessibilityRole="button"
                   accessibilityLabel={`${th.event_title}. ${who}${th.last_message_preview}${th.unread ? `. ${t('attendeeMessages.newReply')}` : ''}`}
                 >
@@ -172,7 +173,7 @@ export default function MessagesScreen({ navigation }: any) {
                       {th.unread ? <View style={styles.unreadDot} /> : null}
                     </View>
                   </View>
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
           </View>
@@ -196,10 +197,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderRadius: radius.button,
       backgroundColor: colors.surface,
     },
-    retryText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+    retryText: { color: colors.text, fontSize: 15, fontWeight: '600' },
     skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-    card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: 14 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
     rowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
     poster: { width: 48, height: 60, borderRadius: radius.poster, backgroundColor: colors.surfaceRaised },
     posterFallback: { alignItems: 'center', justifyContent: 'center' },
@@ -207,9 +208,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     rowHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
     rowTitle: { flex: 1, fontFamily: font.serif, fontSize: 18, color: colors.text },
     rowTitleRead: { color: colors.textSecondary },
-    rowWhen: { fontSize: 11, color: colors.textTertiary },
+    rowWhen: { fontSize: 12, color: colors.textTertiary },
     rowFoot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
     rowPreview: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.textTertiary },
     rowPreviewUnread: { color: colors.textSecondary },
-    unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+    unreadDot: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.primary },
   });

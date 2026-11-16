@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 30,
     lineHeight: 36,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.6,
     color: colors.textPrimary,
   },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   tier: {
     flexShrink: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: colors.textSecondary,
   },

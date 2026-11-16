@@ -14,6 +14,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { API_BASE_URL, backendJson } from '../../lib/api/backend';
 import { radius, spacing } from '../../theme/tokens';
+import { Touchable } from '../ui/Touchable';
+import { Text as UIText } from '../ui/Text';
+import { Skeleton } from '../Skeleton';
 
 /**
  * "Make a poster" (mobile twin of the web composer's PosterTemplatePicker).
@@ -170,19 +173,18 @@ export default function PosterTemplateSheet({
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{t('posterTemplates.title')}</Text>
-              <Text style={styles.hint}>{t('posterTemplates.hint')}</Text>
             </View>
-            <TouchableOpacity
+            <Touchable
               onPress={onClose}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityRole="button"
               accessibilityLabel={t('common.close')}
             >
               <X size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
-          <Text style={styles.label}>{t('posterTemplates.photo')}</Text>
+          <UIText variant="eyebrow" style={styles.label}>{t('posterTemplates.photo')}</UIText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoRow} contentContainerStyle={{ gap: 8 }}>
             {photos.map((p) => (
               <TouchableOpacity
@@ -199,9 +201,17 @@ export default function PosterTemplateSheet({
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: spacing.md }} showsVerticalScrollIndicator={false}>
             {templates.length === 0 && !error ? (
-              <View style={styles.state}>
-                <ActivityIndicator color={colors.textSecondary} />
-              </View>
+              // Template tiles still loading: their own shapes, not a spinner.
+              [0, 1].map((r) => (
+                <View key={`sk-${r}`} style={styles.gridRow}>
+                  <View style={{ flex: 1 }}>
+                    <Skeleton aspectRatio={4 / 5} radius={radius.sm} style={{ width: '100%' }} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Skeleton aspectRatio={4 / 5} radius={radius.sm} style={{ width: '100%' }} />
+                  </View>
+                </View>
+              ))
             ) : null}
             {rows.map((row, i) => (
               <View key={i} style={styles.gridRow}>
@@ -211,9 +221,9 @@ export default function PosterTemplateSheet({
                   const uri = `${API_BASE_URL}/api/posters/preview?${query(facts, spec, language)}`;
                   return (
                     <View key={tpl.id} style={{ flex: 1 }}>
-                      <TouchableOpacity
+                      <Touchable
+                        scale={0.98}
                         onPress={() => setSelected(tpl.id)}
-                        activeOpacity={0.9}
                         accessibilityRole="button"
                         accessibilityState={{ selected: on }}
                         style={[styles.tile, on && styles.tileOn]}
@@ -224,7 +234,7 @@ export default function PosterTemplateSheet({
                             <Check size={14} color="#0A0A0A" />
                           </View>
                         ) : null}
-                      </TouchableOpacity>
+                      </Touchable>
                       <View style={styles.swatches}>
                         {tpl.palettes.map((p, pi) => {
                           const active = paletteOf(tpl.id) === pi;
@@ -255,9 +265,9 @@ export default function PosterTemplateSheet({
           </ScrollView>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <TouchableOpacity style={[styles.use, saving && { opacity: 0.6 }]} onPress={use} disabled={saving || !selected} accessibilityRole="button">
+          <Touchable style={[styles.use, saving && { opacity: 0.6 }]} onPress={use} disabled={saving || !selected} accessibilityRole="button">
             {saving ? <ActivityIndicator color="#0A0A0A" /> : <Text style={styles.useText}>{t('posterTemplates.use')}</Text>}
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </View>
     </Modal>
@@ -284,15 +294,10 @@ const getStyles = (colors: any) =>
       marginTop: spacing.md,
       marginBottom: spacing.lg,
     },
-    header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg, marginBottom: spacing.lg },
+    header: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginBottom: spacing.lg },
     title: { fontSize: 20, fontWeight: '700', color: colors.text },
     hint: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
     label: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      color: colors.textTertiary,
       marginBottom: 8,
     },
     photoRow: { flexGrow: 0, marginBottom: spacing.lg },
@@ -320,10 +325,9 @@ const getStyles = (colors: any) =>
     swatchOn: { width: 20, height: 20 },
     swatchOff: { width: 14, height: 14, opacity: 0.6 },
     swatchHalf: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '50%' },
-    state: { paddingVertical: spacing.xl, alignItems: 'center' },
     error: { fontSize: 13, color: '#FCA5A5', marginBottom: 8 },
     use: {
-      height: 50,
+      height: 52,
       borderRadius: radius.md,
       backgroundColor: '#FFFFFF',
       alignItems: 'center',

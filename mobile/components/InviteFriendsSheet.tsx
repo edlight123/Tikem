@@ -682,10 +682,10 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
       marginTop: 2,
     },
-    subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 4, lineHeight: 19 },
+    subtitle: { fontSize: 15, color: colors.textSecondary, marginTop: 4, lineHeight: 19 },
     goingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
     pile: { flexDirection: 'row' },
-    goingText: { fontSize: 14, fontWeight: '600', color: colors.text },
+    goingText: { fontSize: 13, fontWeight: '600', color: colors.text },
     shareRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
     shareTile: {
       flex: 1,
@@ -707,7 +707,7 @@ const getStyles = (colors: any) =>
       paddingVertical: Platform.OS === 'ios' ? 12 : 4,
       marginTop: 14,
     },
-    searchInput: { flex: 1, fontSize: 16, color: colors.text },
+    searchInput: { flex: 1, fontSize: 15, color: colors.text },
     // Grows with its rows, shrinks (and scrolls) once the sheet hits its cap.
     list: { flexGrow: 0, flexShrink: 1, marginTop: 8 },
     sectionLabel: {
@@ -719,7 +719,7 @@ const getStyles = (colors: any) =>
       marginTop: 12,
       marginBottom: 4,
     },
-    empty: { fontSize: 14, color: colors.textSecondary, marginVertical: 14, lineHeight: 20 },
+    empty: { fontSize: 15, color: colors.textSecondary, marginVertical: 14, lineHeight: 20 },
     // Borderless rows. Selection is carried by the check circle alone; the
     // row itself never changes fill (owner: the highlighted row read as not
     // premium).
@@ -732,7 +732,7 @@ const getStyles = (colors: any) =>
       marginHorizontal: -10,
       borderRadius: radius.md,
     },
-    name: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+    name: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
     nameMuted: { color: colors.textTertiary || colors.textSecondary },
     // Radio-like circle (a true circle, so it stays round): an empty raised
     // fill when off, a small white fill with a black tick when on.
@@ -756,7 +756,7 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    initialText: { color: colors.text, fontWeight: '700', fontSize: 16 },
+    initialText: { color: colors.text, fontWeight: '700', fontSize: 15 },
     rowBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -796,8 +796,8 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
       marginBottom: 12,
     },
-    connectTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
-    connectBody: { fontSize: 14, color: colors.textSecondary, marginTop: 4, lineHeight: 20 },
+    connectTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+    connectBody: { fontSize: 15, color: colors.textSecondary, marginTop: 4, lineHeight: 20 },
     connectBtn: {
       marginTop: 14,
       alignSelf: 'flex-start',
@@ -807,7 +807,7 @@ const getStyles = (colors: any) =>
       height: 42,
       justifyContent: 'center',
     },
-    connectBtnText: { color: '#000000', fontSize: 14, fontWeight: '700' },
+    connectBtnText: { color: '#000000', fontSize: 15, fontWeight: '700' },
     footer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -825,7 +825,7 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
     },
     submitDisabled: { backgroundColor: colors.surfaceRaised },
-    submitText: { color: '#000000', fontSize: 14, fontWeight: '700' },
+    submitText: { color: '#000000', fontSize: 15, fontWeight: '700' },
     submitTextDisabled: { color: colors.textTertiary || colors.textSecondary },
     sentWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     entry: {

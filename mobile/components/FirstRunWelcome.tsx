@@ -181,7 +181,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingBottom: 4,
     },
     skipText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.textSecondary,
     },

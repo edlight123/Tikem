@@ -33,7 +33,7 @@ export default function InAppWebViewScreen() {
       <WebView ref={webViewRef} source={source} onLoadEnd={onLoadEnd} />
       {loading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="small" color={colors.textSecondary} />
         </View>
       ) : null}
     </View>
@@ -57,6 +57,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: colors.background,
   },
 })

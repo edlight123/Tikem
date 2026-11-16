@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   TextInput,
   KeyboardAvoidingView,
@@ -20,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { COUNTRIES, getFeaturedCities } from '../types/filters';
 import { METROS } from '../data/metros';
 import { RADIUS, SPACING } from '../config/brand';
+import { Touchable } from './ui/Touchable';
 
 // Accent/case-insensitive match so "petion" finds "Pétion-Ville" and "cote"
 // finds "Côte-des-Arcadins". Deliberately not locale-aware collation: strip
@@ -117,14 +117,17 @@ export default function LocationPickerSheet({
   const renderCityRow = (label: string, value: string, hint?: string) => {
     const active = selectedCity === value;
     return (
-      <TouchableOpacity
+      <Touchable
         key={value || '__all__'}
+        scale={false}
+        pressedColor={active ? undefined : colors.surfaceRaised}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
         style={[styles.cityRow, active && styles.cityRowActive]}
         onPress={() => {
           onSelect(value);
           persistToProfile({ default_country: userCountry, default_city: value });
         }}
-        activeOpacity={0.8}
       >
         <MapPin size={18} color={active ? colors.background : colors.textSecondary} />
         <View style={styles.cityTextWrap}>
@@ -136,7 +139,7 @@ export default function LocationPickerSheet({
           )}
         </View>
         {active && <Check size={18} color={colors.background} />}
-      </TouchableOpacity>
+      </Touchable>
     );
   };
 
@@ -153,11 +156,10 @@ export default function LocationPickerSheet({
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{t('location.title')}</Text>
-              <Text style={styles.subtitle}>{t('location.subtitle')}</Text>
             </View>
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Touchable style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('common.close')}>
               <X size={20} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           {/*
@@ -170,7 +172,7 @@ export default function LocationPickerSheet({
           */}
           <View style={styles.countryLine}>
             <Text style={styles.sectionLabel}>{t('location.country').toUpperCase()}</Text>
-            <TouchableOpacity
+            <Touchable
               onPress={() => setPickingCountry((v) => !v)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
@@ -178,7 +180,7 @@ export default function LocationPickerSheet({
               <Text style={styles.countryChange}>
                 {pickingCountry ? t('common.cancel') : t('location.changeCountry')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
           <Text style={styles.countryValue}>
             {COUNTRIES.find((c) => c.code === userCountry)?.name || ''}
@@ -201,14 +203,14 @@ export default function LocationPickerSheet({
               accessibilityLabel={t('location.searchPlaceholder')}
             />
             {areaQuery.length > 0 && (
-              <TouchableOpacity
+              <Touchable
                 onPress={() => setAreaQuery('')}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel={t('location.clearSearch')}
               >
                 <X size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </Touchable>
             )}
           </View>
 
@@ -224,8 +226,12 @@ export default function LocationPickerSheet({
           >
             {pickingCountry ? (
               COUNTRIES.map((c) => (
-                <TouchableOpacity
+                <Touchable
                   key={c.code}
+                  scale={false}
+                  pressedColor={userCountry === c.code ? undefined : colors.surfaceRaised}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: userCountry === c.code }}
                   style={[styles.cityRow, userCountry === c.code && styles.cityRowActive]}
                   onPress={() => {
                     // A new country has different towns, so a stale query would
@@ -240,7 +246,6 @@ export default function LocationPickerSheet({
                     );
                     setPickingCountry(false);
                   }}
-                  activeOpacity={0.8}
                 >
                   <MapPin size={18} color={userCountry === c.code ? colors.background : colors.textSecondary} />
                   <View style={styles.cityTextWrap}>
@@ -251,7 +256,7 @@ export default function LocationPickerSheet({
                     </Text>
                   </View>
                   {userCountry === c.code ? <Check size={18} color={colors.background} /> : null}
-                </TouchableOpacity>
+                </Touchable>
               ))
             ) : (
               <>
@@ -309,7 +314,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     title: {
       fontSize: 20,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
     },
@@ -326,12 +331,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // The one eyebrow style (ui/Text variant="eyebrow").
     sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
+      fontSize: 11,
+      fontWeight: '600',
       color: colors.textSecondary,
-      letterSpacing: 0.6,
-      marginBottom: 10,
+      letterSpacing: 0.8,
+      marginBottom: 8,
     },
     countryLine: {
       flexDirection: 'row',
@@ -347,8 +353,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     countryChange: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.primary,
-      marginBottom: 10,
+      color: colors.text,
+      marginBottom: 8,
     },
     countryRow: {
       flexDirection: 'row',
@@ -367,7 +373,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.white,
     },
     countryChipText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '700',
       color: colors.text,
     },
@@ -380,12 +386,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: 8,
       backgroundColor: colors.surfaceMuted,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      marginTop: 14,
-      marginBottom: 18,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      marginTop: 16,
+      marginBottom: 16,
     },
     searchInput: {
       flex: 1,

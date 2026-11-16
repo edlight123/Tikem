@@ -8,6 +8,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useLocaleFormat } from '../../lib/format';
 import { radius, spacing } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
+import { Text as UIText } from '../../components/ui/Text';
 import EmptyState from '../../components/EmptyState';
 import SectionHeader from '../../components/SectionHeader';
 import StatTriplet from '../../components/StatTriplet';
@@ -164,7 +165,6 @@ export default function EventAnalyticsScreen() {
                 label: tripletLabels.revenue,
                 value: formatMoneyLines([primaryRevenue ?? { currency, amount: 0 }]),
                 caption: otherRevenue.length ? otherRevenue.map((r) => `+ ${formatMoneyLines([r])}`).join('\n') : undefined,
-                tone: 'brand',
               },
               {
                 label: tripletLabels.sold,
@@ -203,9 +203,9 @@ export default function EventAnalyticsScreen() {
               />
               <View style={styles.card}>
                 {bestDay ? (
-                  <Text style={styles.cardEyebrow}>
+                  <UIText variant="eyebrow" style={styles.cardEyebrow}>
                     {t('organizerEventAnalytics.bestDay', { n: bestDay.count })} · {formatDate(`${bestDay.date}T12:00:00`, 'MMM d')}
-                  </Text>
+                  </UIText>
                 ) : null}
                 <DailySalesChart
                   points={a.salesByDay}
@@ -290,7 +290,7 @@ export default function EventAnalyticsScreen() {
                   </Text>
                 </View>
                 <View style={[styles.track, styles.trackTall]}>
-                  <View style={[styles.fill, { width: `${Math.max(a.checkInRate * 100, a.checkedIn > 0 ? 2 : 0)}%` }]} />
+                  <View style={[styles.fill, styles.fillAccent, { width: `${Math.max(a.checkInRate * 100, a.checkedIn > 0 ? 2 : 0)}%` }]} />
                 </View>
               </View>
             </View>
@@ -322,14 +322,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       padding: spacing.lg,
     },
     cardEyebrow: {
-      fontSize: 11,
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
-      marginBottom: 14,
+      marginBottom: 16,
     },
     cardNote: {
-      fontSize: 14,
+      fontSize: 13,
       lineHeight: 20,
       color: colors.textSecondary,
     },
@@ -354,12 +350,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     barName: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '500',
       color: colors.text,
     },
     barValue: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
       fontVariant: ['tabular-nums'],
@@ -384,9 +380,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       height: 8,
       borderRadius: 4,
     },
+    // White bars: teal is kept for the one bar that means something (check-in).
     fill: {
       height: '100%',
       borderRadius: 3,
+      backgroundColor: colors.text,
+    },
+    fillAccent: {
       backgroundColor: colors.primary,
     },
     // Cities are a ranking, not a status — kept neutral so teal stays scarce.

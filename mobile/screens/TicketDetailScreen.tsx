@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { ChevronLeft, Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, Send, Star, RotateCcw, CalendarPlus, Navigation } from 'lucide-react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { ChevronLeft, ChevronRight, Calendar, MapPin, User as UserIcon, Send, Star, RotateCcw, CalendarPlus, Navigation } from 'lucide-react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase';
@@ -22,6 +22,9 @@ import { useAppAlert } from '../components/AppAlert';
 import { useMaxBrightnessWhileFocused } from '../lib/useMaxBrightness';
 import { goBackOrHome } from '../lib/goBackOrHome';
 import { isActiveTicketStatus } from '../lib/orderDisplay';
+import SectionHeader from '../components/SectionHeader';
+import { Touchable } from '../components/ui/Touchable';
+import { Text as UIText } from '../components/ui/Text';
 
 export default function TicketDetailScreen({ route }: any) {
   const { colors } = useTheme();
@@ -237,15 +240,14 @@ export default function TicketDetailScreen({ route }: any) {
         <View style={styles.content}>
           {/* Header with Title */}
           <View style={styles.header}>
-            <TouchableOpacity
+            <Touchable
               onPress={() => goBackOrHome(navigation)}
-              hitSlop={12}
               style={styles.backBtn}
               accessibilityRole="button"
               accessibilityLabel={t('common.back')}
             >
               <ChevronLeft size={24} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
             <Text style={styles.eventTitle} numberOfLines={2}>{ticket.event_title}</Text>
           </View>
 
@@ -281,9 +283,7 @@ export default function TicketDetailScreen({ route }: any) {
               {pendingTransfer && (
                 <View style={styles.pendingTransferCard}>
                   <View style={styles.pendingTransferHeader}>
-                    <View style={styles.pendingTransferBadge}>
-                      <Text style={styles.pendingTransferBadgeText}>⏳ {t('ticketDetail.transfer.pending')}</Text>
-                    </View>
+                    <StatusChip status="pending" label={t('ticketDetail.transfer.pending')} />
                   </View>
                   <Text style={styles.pendingTransferEmail}>
                     {t('ticketDetail.transfer.sentTo')} <Text style={styles.pendingTransferEmailBold}>{pendingTransfer.to_email}</Text>
@@ -294,31 +294,35 @@ export default function TicketDetailScreen({ route }: any) {
                     </Text>
                   )}
                   <Text style={styles.pendingTransferExpiry}>{t('ticketDetail.transfer.newCodeNote')}</Text>
-                  <TouchableOpacity
+                  <Touchable
                     style={styles.cancelTransferButton}
                     onPress={handleCancelTransfer}
+                    accessibilityRole="button"
                   >
                     <Text style={styles.cancelTransferButtonText}>{t('ticketDetail.transfer.cancelButton')}</Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 </View>
               )}
 
               {/* Transfer Button - Only show if no pending transfer */}
               {!pendingTransfer && (
-                <TouchableOpacity
+                <Touchable
                   style={styles.transferButton}
+                  scale={0.98}
                   onPress={() => setShowTransferModal(true)}
+                  accessibilityRole="button"
                 >
                   <View style={styles.transferButtonContent}>
                     <View style={styles.transferButtonIcon}>
-                      <Send size={22} color={colors.white} />
+                      <Send size={20} color={colors.text} strokeWidth={1.75} />
                     </View>
                     <View style={styles.transferButtonTextContainer}>
                       <Text style={styles.transferButtonTitle}>{t('ticketDetail.transfer.buttonTitle')}</Text>
                       <Text style={styles.transferButtonSubtitle}>{t('ticketDetail.transfer.buttonSubtitle')}</Text>
                     </View>
+                    <ChevronRight size={18} color={colors.textTertiary} />
                   </View>
-                </TouchableOpacity>
+                </Touchable>
               )}
             </>
           )}
@@ -327,10 +331,10 @@ export default function TicketDetailScreen({ route }: any) {
           <View style={styles.infoCards}>
             <View style={styles.infoCard}>
               <View style={styles.infoCardIcon}>
-                <Calendar size={20} color={colors.primary} />
+                <Calendar size={18} color={colors.textSecondary} strokeWidth={1.75} />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>{t('ticketDetail.labels.dateTime')}</Text>
+                <UIText variant="eyebrow" style={styles.infoCardLabel}>{t('ticketDetail.labels.dateTime')}</UIText>
                 <Text style={styles.infoCardValue}>
                   {ticket.event_date && safeFormatForLanguage(ticket.event_date, 'MMM dd, yyyy', language)}
                 </Text>
@@ -340,36 +344,33 @@ export default function TicketDetailScreen({ route }: any) {
               </View>
             </View>
 
-            <View style={styles.infoCard}>
+            <View style={[styles.infoCard, styles.infoCardDivided]}>
               <View style={styles.infoCardIcon}>
-                <MapPin size={20} color={colors.primary} />
+                <MapPin size={18} color={colors.textSecondary} strokeWidth={1.75} />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>{t('ticketDetail.labels.venue')}</Text>
+                <UIText variant="eyebrow" style={styles.infoCardLabel}>{t('ticketDetail.labels.venue')}</UIText>
                 <Text style={styles.infoCardValue}>{ticket.venue_name}</Text>
                 <Text style={styles.infoCardSubvalue}>{ticket.city}</Text>
               </View>
             </View>
 
-            <View style={styles.infoCard}>
+            <View style={[styles.infoCard, styles.infoCardDivided]}>
               <View style={styles.infoCardIcon}>
-                <UserIcon size={20} color={colors.primary} />
+                <UserIcon size={18} color={colors.textSecondary} strokeWidth={1.75} />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>{t('ticketDetail.labels.attendee')}</Text>
+                <UIText variant="eyebrow" style={styles.infoCardLabel}>{t('ticketDetail.labels.attendee')}</UIText>
                 <Text style={styles.infoCardValue}>{ticket.user_name}</Text>
                 <Text style={styles.infoCardSubvalue}>{ticket.user_email}</Text>
               </View>
             </View>
           </View>
 
-          {/* Ticket Details Card */}
+          {/* Ticket Details */}
+          <SectionHeader title={t('ticketDetail.details.title')} />
           <View style={styles.detailsCard}>
-            <View style={styles.detailsHeader}>
-              <TicketIcon size={20} color={colors.primary} />
-              <Text style={styles.detailsTitle}>{t('ticketDetail.details.title')}</Text>
-            </View>
-            <View style={styles.detailRow}>
+            <View style={[styles.detailRow, styles.detailRowFirst]}>
               <Text style={styles.detailLabel}>{t('ticketDetail.details.type')}</Text>
               <Text style={styles.detailValue}>{ticket.ticket_type}</Text>
             </View>
@@ -423,8 +424,9 @@ export default function TicketDetailScreen({ route }: any) {
               />
 
               <View style={styles.postPurchaseRow}>
-                <TouchableOpacity
+                <Touchable
                   style={styles.postPurchaseButton}
+                  accessibilityRole="button"
                   onPress={() =>
                     addToCalendar({
                       title: ticket.event_title || 'Event',
@@ -434,13 +436,13 @@ export default function TicketDetailScreen({ route }: any) {
                       details: `Tikèm ticket · ${ticketOrderRef(ticket)}`,
                     })
                   }
-                  activeOpacity={0.8}
                 >
-                  <CalendarPlus size={18} color={colors.text} />
+                  <CalendarPlus size={18} color={colors.text} strokeWidth={1.75} />
                   <Text style={styles.postPurchaseText}>{t('ticketDetail.actions.addToCalendar') || 'Add to calendar'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </Touchable>
+                <Touchable
                   style={styles.postPurchaseButton}
+                  accessibilityRole="button"
                   onPress={() =>
                     openDirections({
                       venue: ticket.venue_name,
@@ -450,11 +452,10 @@ export default function TicketDetailScreen({ route }: any) {
                       lng: ticket.longitude ?? null,
                     })
                   }
-                  activeOpacity={0.8}
                 >
-                  <Navigation size={18} color={colors.text} />
+                  <Navigation size={18} color={colors.text} strokeWidth={1.75} />
                   <Text style={styles.postPurchaseText}>{t('ticketDetail.actions.getDirections') || 'Get directions'}</Text>
-                </TouchableOpacity>
+                </Touchable>
               </View>
             </View>
           )}
@@ -464,71 +465,68 @@ export default function TicketDetailScreen({ route }: any) {
             {/* Request Refund Button - Only show for upcoming events */}
             {!isExpired && isActive &&
              (!ticket.refund_status || ticket.refund_status === 'none') && (
-              <TouchableOpacity
+              <Touchable
                 style={styles.actionButton}
+                scale={0.98}
+                accessibilityRole="button"
                 onPress={() => navigation.navigate('RefundRequest', { ticketId: ticket.id })}
               >
-                <View style={[styles.actionButtonIcon, { backgroundColor: colors.error + '15' }]}>
-                  <RotateCcw size={20} color={colors.error} />
+                <View style={styles.actionButtonIcon}>
+                  <RotateCcw size={18} color={colors.textSecondary} strokeWidth={1.75} />
                 </View>
                 <View style={styles.actionButtonText}>
                   <Text style={styles.actionButtonTitle}>{t('ticketDetail.actions.requestRefund') || 'Request Refund'}</Text>
-                  <Text style={styles.actionButtonSubtitle}>{t('ticketDetail.actions.refundSubtitle') || 'Get your money back'}</Text>
                 </View>
-              </TouchableOpacity>
+                <ChevronRight size={18} color={colors.textTertiary} />
+              </Touchable>
             )}
 
             {/* Refund Status Badge */}
             {ticket.refund_status && ticket.refund_status !== 'none' && (
-              <View style={[styles.refundStatusBadge, 
-                ticket.refund_status !== 'approved' && ticket.refund_status !== 'denied' && styles.refundStatusPending,
-                ticket.refund_status === 'approved' && styles.refundStatusApproved,
-                ticket.refund_status === 'denied' && styles.refundStatusDenied,
-              ]}>
-                <RotateCcw size={16} color={
-                  ticket.refund_status === 'approved' ? colors.success :
-                  ticket.refund_status === 'denied' ? colors.error : colors.warning
-                } />
-                <Text style={[styles.refundStatusText,
-                  ticket.refund_status === 'approved' && { color: colors.success },
-                  ticket.refund_status === 'denied' && { color: colors.error },
-                ]}>
-                  {ticket.refund_status === 'admin_review' ? t('ticketDetail.refund.underReview') :
-                   ticket.refund_status === 'approved' ? (t('ticketDetail.refund.approved') || 'Refund Approved') :
-                   ticket.refund_status === 'denied' ? (t('ticketDetail.refund.denied') || 'Refund Denied') :
-                   (t('ticketDetail.refund.pending') || 'Refund Pending')}
-                </Text>
+              // Dot + label on a quiet fill (no tinted status box).
+              <View style={styles.refundStatusBadge}>
+                <RotateCcw size={18} color={colors.textSecondary} strokeWidth={1.75} />
+                <StatusChip
+                  status={
+                    ticket.refund_status === 'approved'
+                      ? 'success'
+                      : ticket.refund_status === 'denied'
+                        ? 'declined'
+                        : 'pending'
+                  }
+                  label={
+                    ticket.refund_status === 'admin_review' ? t('ticketDetail.refund.underReview') :
+                    ticket.refund_status === 'approved' ? (t('ticketDetail.refund.approved') || 'Refund Approved') :
+                    ticket.refund_status === 'denied' ? (t('ticketDetail.refund.denied') || 'Refund Denied') :
+                    (t('ticketDetail.refund.pending') || 'Refund Pending')
+                  }
+                />
               </View>
             )}
 
             {/* Leave Review Button - Only show for past events */}
             {isExpired && (isActive || ticket.status === 'used' || ticket.status === 'checked_in') && (
-              <TouchableOpacity
+              <Touchable
                 style={styles.actionButton}
+                scale={0.98}
+                accessibilityRole="button"
                 onPress={() => navigation.navigate('Review', { 
                   ticketId: ticket.id, 
                   eventId: ticket.event_id,
                   eventTitle: ticket.event_title 
                 })}
               >
-                <View style={[styles.actionButtonIcon, { backgroundColor: '#FFB800' + '20' }]}>
-                  <Star size={20} color="#FFB800" />
+                <View style={styles.actionButtonIcon}>
+                  <Star size={18} color={colors.textSecondary} strokeWidth={1.75} />
                 </View>
                 <View style={styles.actionButtonText}>
                   <Text style={styles.actionButtonTitle}>{t('ticketDetail.actions.leaveReview') || 'Leave a Review'}</Text>
-                  <Text style={styles.actionButtonSubtitle}>{t('ticketDetail.actions.reviewSubtitle') || 'Share your experience'}</Text>
                 </View>
-              </TouchableOpacity>
+                <ChevronRight size={18} color={colors.textTertiary} />
+              </Touchable>
             )}
           </View>
 
-          {/* Footer Note */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('ticketDetail.footer.keepSafe')}</Text>
-            <Text style={styles.footerSubtext}>
-              {t('ticketDetail.footer.qrEntryPass')}
-            </Text>
-          </View>
         </View>
       </ScrollView>
 
@@ -579,7 +577,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontFamily: font.serif,
     fontSize: 28,
     color: colors.text,
-    lineHeight: 30,
+    lineHeight: 34,
   },
   statusChipRow: {
     alignItems: 'center',
@@ -605,7 +603,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surfaceRaised,
   },
   postPurchaseText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },
@@ -615,23 +613,27 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     textAlign: 'center',
     fontWeight: '500',
   },
+  // One filled surface; hairlines only BETWEEN the rows.
   infoCards: {
-    gap: 16,
-    marginBottom: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: 16,
+    marginBottom: 32,
   },
   infoCard: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  infoCardDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   infoCardIcon: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.surfaceRaised,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -640,62 +642,43 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
   },
   infoCardLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
     marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
   },
   infoCardValue: {
-    fontSize: 14,
-    letterSpacing: 0.3,
+    fontSize: 15,
+    fontWeight: '500',
     color: colors.text,
     marginBottom: 2,
   },
   infoCardSubvalue: {
-    fontSize: 12,
-    letterSpacing: 0.3,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   detailsCard: {
     backgroundColor: colors.surface,
-    padding: 20,
+    paddingHorizontal: 16,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 24,
-  },
-  detailsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  detailsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
+    marginTop: 12,
+    marginBottom: 32,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  detailRowFirst: {
+    borderTopWidth: 0,
   },
   detailLabel: {
-    fontSize: 12,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    fontSize: 13,
     color: colors.textSecondary,
   },
   detailValue: {
     fontSize: 13,
-    letterSpacing: 0.3,
+    fontWeight: '500',
     color: colors.text,
     textAlign: 'right',
     maxWidth: '60%',
@@ -703,27 +686,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   ticketId: {
     fontFamily: font.monoRegular,
     fontSize: 12,
-  },
-  footer: {
-    backgroundColor: colors.primary + '10',
-    padding: 20,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
-    marginBottom: 40,
-  },
-  footerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  footerSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   walletSection: {
     marginBottom: 24,
@@ -733,100 +695,76 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     padding: 16,
     borderRadius: radius.md,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
   },
   pendingTransferHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  pendingTransferBadge: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.lg,
-  },
-  pendingTransferBadgeText: {
-    color: colors.white,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    marginBottom: 12,
   },
   pendingTransferEmail: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   pendingTransferEmailBold: {
     fontWeight: '700',
   },
   pendingTransferExpiry: {
-    fontSize: 12,
-    letterSpacing: 0.3,
+    fontSize: 13,
     color: colors.textSecondary,
     marginBottom: 12,
   },
   cancelTransferButton: {
     backgroundColor: colors.surfaceRaised,
-    padding: 12,
+    paddingVertical: 12,
     borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
     alignItems: 'center',
   },
   cancelTransferButtonText: {
-    color: '#F59E0B',
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
+  // A filled row like the other ticket actions: no teal slab, no glow.
   transferButton: {
-    backgroundColor: colors.primary,
-    padding: 18,
+    backgroundColor: colors.surface,
+    padding: 16,
     borderRadius: radius.lg,
     marginBottom: 32,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
-    borderWidth: 0,
   },
   transferButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   transferButtonIcon: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: colors.surfaceRaised,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   transferButtonTextContainer: {
     flex: 1,
   },
   transferButtonTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
-    marginBottom: 3,
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
   },
   transferButtonSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '500',
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textSecondary,
   },
   actionButtonsSection: {
-    marginBottom: 24,
-    gap: 12,
+    marginBottom: 40,
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',
@@ -834,56 +772,30 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     padding: 16,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   actionButtonIcon: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: radius.md,
+    backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   actionButtonText: {
     flex: 1,
   },
   actionButtonTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
-  },
-  actionButtonSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
   },
   refundStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
+    padding: 16,
     borderRadius: radius.md,
-    gap: 8,
-  },
-  refundStatusPending: {
-    backgroundColor: colors.warningLight,
-    borderWidth: 1,
-    borderColor: colors.warning + '40',
-  },
-  refundStatusApproved: {
-    backgroundColor: colors.successLight,
-    borderWidth: 1,
-    borderColor: colors.success + '40',
-  },
-  refundStatusDenied: {
-    backgroundColor: colors.errorLight,
-    borderWidth: 1,
-    borderColor: colors.error + '40',
-  },
-  refundStatusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.warning,
+    backgroundColor: colors.surface,
+    gap: 12,
   },
 });

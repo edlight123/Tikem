@@ -124,7 +124,7 @@ const getStyles = (colors: any) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
-    label: { fontSize: 16, fontWeight: '600', color: colors.text },
+    label: { fontSize: 15, fontWeight: '600', color: colors.text },
     row: {
       flexDirection: 'row',
       alignItems: 'center',

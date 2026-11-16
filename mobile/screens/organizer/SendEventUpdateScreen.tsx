@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,6 +21,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import InfoNotice from '../../components/organizer/InfoNotice';
 import OverlayHeader, { useOverlayHeaderInset } from '../../components/OverlayHeader';
 
+import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
   SendEventUpdate: {
     eventId: string;
@@ -113,15 +113,15 @@ export default function SendEventUpdateScreen() {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? colors.surface : colors.white} />
 
       <OverlayHeader style={styles.header} onHeight={onHeight}>
-        <TouchableOpacity
+        <Touchable
           onPress={() => navigation.goBack()}
           style={styles.backButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.headerTitle}>{t('organizerSendUpdate.headerTitle')}</Text>
-        <TouchableOpacity
+        <Touchable
           onPress={handleSend}
           disabled={sending || !title.trim() || !message.trim()}
           style={[
@@ -134,7 +134,7 @@ export default function SendEventUpdateScreen() {
           ) : (
             <Text style={styles.sendButtonText}>{t('common.send')}</Text>
           )}
-        </TouchableOpacity>
+        </Touchable>
       </OverlayHeader>
 
       <ScrollView
@@ -181,7 +181,7 @@ export default function SendEventUpdateScreen() {
 
         <View style={styles.examples}>
           <Text style={styles.examplesTitle}>{t('organizerSendUpdate.examplesTitle')}</Text>
-          <TouchableOpacity
+          <Touchable
             style={styles.exampleCard}
             onPress={() => {
               setTitle(t('organizerSendUpdate.examples.venueChange.title'));
@@ -194,9 +194,9 @@ export default function SendEventUpdateScreen() {
             <Text style={styles.exampleText} numberOfLines={2}>
               {t('organizerSendUpdate.examples.venueChange.cardPreview')}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
 
-          <TouchableOpacity
+          <Touchable
             style={styles.exampleCard}
             onPress={() => {
               setTitle(t('organizerSendUpdate.examples.timeUpdate.title'));
@@ -207,9 +207,9 @@ export default function SendEventUpdateScreen() {
             <Text style={styles.exampleText} numberOfLines={2}>
               {t('organizerSendUpdate.examples.timeUpdate.cardPreview')}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
 
-          <TouchableOpacity
+          <Touchable
             style={styles.exampleCard}
             onPress={() => {
               setTitle(t('organizerSendUpdate.examples.reminder.title'));
@@ -222,7 +222,7 @@ export default function SendEventUpdateScreen() {
             <Text style={styles.exampleText} numberOfLines={2}>
               {t('organizerSendUpdate.examples.reminder.cardPreview')}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -272,7 +272,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   sendButtonText: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
   content: {
@@ -291,7 +291,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 16,
   },
   label: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 8,
@@ -302,7 +302,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderColor: colors.border,
     borderRadius: radius.sm,
     padding: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
   },
   textArea: {
@@ -321,7 +321,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 24,
   },
   examplesTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 12,
@@ -336,7 +336,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderColor: colors.border,
   },
   exampleTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,

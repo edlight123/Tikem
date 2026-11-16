@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,6 +12,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useI18n } from '../../contexts/I18nContext'
 import { backendJson } from '../../lib/api/backend'
 
+import { Touchable } from '../../components/ui/Touchable';
 // DEEP import of the SDK's embedded-webview building block. On iOS the public
 // ConnectAccountOnboarding wraps this in NativeConnectAccountOnboardingView, a
 // native container inside which the content never painted on device (loader
@@ -189,7 +190,7 @@ export default function StripeOnboardingScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
       <View style={styles.header}>
-        <TouchableOpacity
+        <Touchable
           onPress={closeOnce}
           style={styles.headerButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -197,7 +198,7 @@ export default function StripeOnboardingScreen() {
           accessibilityLabel="Close"
         >
           <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {t('screens.stripeConnect.title')}
         </Text>
@@ -277,7 +278,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     headerTitle: {
       flex: 1,
       textAlign: 'center',
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },

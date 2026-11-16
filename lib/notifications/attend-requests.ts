@@ -12,6 +12,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { normalizeLang, type EmailLang } from '@/lib/email-kit/i18n'
 
 type Copy = { title: string; body: string }
@@ -71,6 +72,10 @@ export function declinedCopy(lang: EmailLang, eventTitle: string): Copy {
   }[lang]
 }
 
+/**
+ * A new request to join: the owner plus admins and managers (orgRecipients,
+ * event_ops), each in their own language. The requester is never notified here.
+ */
 export async function notifyOrganizerNewRequest(params: {
   organizerId: string
   eventId: string
@@ -78,14 +83,25 @@ export async function notifyOrganizerNewRequest(params: {
   requesterName: string
   quantity: number
   requestId: string
+  requesterId?: string | null
 }) {
-  const lang = await userLang(params.organizerId)
-  await deliver(
-    params.organizerId,
-    'attend_request',
-    newRequestCopy(lang, params.eventTitle, params.requesterName, params.quantity),
-    `/organizer/events/${params.eventId}/requests`,
-    { eventId: params.eventId, requestId: params.requestId }
+  const recipients = await resolveOrgRecipients({
+    orgId: params.organizerId,
+    kind: 'event_ops',
+    eventId: params.eventId,
+    excludeUserIds: [params.requesterId],
+  })
+  await Promise.all(
+    recipients.map(async (uid) => {
+      const lang = await userLang(uid)
+      await deliver(
+        uid,
+        'attend_request',
+        newRequestCopy(lang, params.eventTitle, params.requesterName, params.quantity),
+        `/organizer/events/${params.eventId}/requests`,
+        { eventId: params.eventId, requestId: params.requestId }
+      )
+    })
   )
 }
 

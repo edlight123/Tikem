@@ -34,6 +34,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useAuth } from '../../contexts/AuthContext';
 import WhitePillCTA from '../WhitePillCTA';
+import { Touchable } from '../ui/Touchable';
+import { Text as UIText } from '../ui/Text';
+import { select } from '../../lib/haptics';
 import { uploadLineupPhoto } from '../../lib/api/events';
 import { GUEST_ROLES, ROLE_LABEL_KEY, type LineupEntry } from '../../lib/lineup';
 import { colors as T, font, radius } from '../../theme/tokens';
@@ -187,7 +190,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
             <Text style={styles.title} numberOfLines={1}>
               {isNew ? t(`${K}.addTitle`) : t(`${K}.editTitle`)}
             </Text>
-            <TouchableOpacity
+            <Touchable
               style={styles.closeBtn}
               onPress={onCancel}
               accessibilityRole="button"
@@ -195,7 +198,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
               hitSlop={8}
             >
               <Ionicons name="close" size={18} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           {draft && (
@@ -207,10 +210,9 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
             >
               {/* Photo well + the two identity fields beside it */}
               <View style={styles.identity}>
-                <TouchableOpacity
+                <Touchable
                   style={styles.photoWell}
                   onPress={pickPhoto}
-                  activeOpacity={0.85}
                   accessibilityRole="button"
                   accessibilityLabel={draft.photoUrl ? t(`${K}.changePhoto`) : t(`${K}.addPhoto`)}
                 >
@@ -228,7 +230,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
                       <Ionicons name={draft.photoUrl ? 'camera' : 'add'} size={14} color={T.onWhite} />
                     </View>
                   )}
-                </TouchableOpacity>
+                </Touchable>
 
                 <View style={styles.identityFields}>
                   <TextInput
@@ -265,28 +267,31 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
 
               {!!uploadError && <Text style={styles.error}>{uploadError}</Text>}
 
-              <Text style={styles.label}>{t(`${K}.role`)}</Text>
+              <UIText variant="eyebrow" style={styles.label}>{t(`${K}.role`)}</UIText>
               <View style={styles.roles}>
                 {GUEST_ROLES.map((role) => {
                   const on = draft.role === role;
                   return (
-                    <TouchableOpacity
+                    <Touchable
                       key={role}
+                      haptic={false}
                       style={[styles.roleChip, on && styles.roleChipOn]}
-                      onPress={() => onPatch({ role })}
-                      activeOpacity={0.8}
+                      onPress={() => {
+                        if (!on) select();
+                        onPatch({ role });
+                      }}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
                     >
                       <Text style={[styles.roleText, on && styles.roleTextOn]}>
                         {t(`${K}.roles.${ROLE_LABEL_KEY[role]}`)}
                       </Text>
-                    </TouchableOpacity>
+                    </Touchable>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>{t(`${K}.description`)}</Text>
+              <UIText variant="eyebrow" style={styles.label}>{t(`${K}.description`)}</UIText>
               <TextInput
                 value={draft.description}
                 onChangeText={(description) => onPatch({ description })}
@@ -299,7 +304,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
                 textAlignVertical="top"
               />
 
-              <Text style={styles.label}>{t(`${K}.setTime`)}</Text>
+              <UIText variant="eyebrow" style={styles.label}>{t(`${K}.setTime`)}</UIText>
               <View style={styles.timeCard}>
                 {timeRow('start', t(`${K}.startTime`), draft.startTime, true)}
                 {timeRow('end', t(`${K}.endTime`), draft.endTime, false)}
@@ -308,9 +313,9 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
           )}
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
+            <Touchable style={styles.cancelBtn} onPress={onCancel} accessibilityRole="button">
               <Text style={styles.cancelText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
+            </Touchable>
             <WhitePillCTA label={t(`${K}.save`)} onPress={onSave} disabled={!canSave} style={styles.saveBtn} />
           </View>
         </View>
@@ -422,11 +427,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     label: {
       marginTop: 20,
       marginBottom: 8,
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
     },
     roles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     roleChip: {
@@ -437,7 +437,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     // A chosen chip is the one pure white (fill ladder top step).
     roleChipOn: { backgroundColor: colors.white },
-    roleText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
+    roleText: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
     roleTextOn: { color: T.onWhite, fontWeight: '700' },
 
     timeCard: { borderRadius: radius.md, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
@@ -479,6 +479,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    cancelText: { fontSize: 16, fontWeight: '600', color: colors.text },
+    cancelText: { fontSize: 15, fontWeight: '600', color: colors.text },
     saveBtn: { flex: 1 },
   });

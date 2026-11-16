@@ -13,6 +13,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { shouldRenotify } from '@/lib/events/connect-health'
 import type { DestinationUnreadyReason } from '@/lib/checkout/destination-readiness'
 import type { PublishGateBlockCode } from '@/lib/events/publish-gate'
@@ -46,7 +47,11 @@ export async function claimOrganizerNotice(organizerId: string, code: string, no
   }
 }
 
-/** In-app + push. Each half is best-effort and never throws. */
+/**
+ * In-app + push to the owner and to admins with read-only finances
+ * (orgRecipients, finance): fixing it is owner-only (Stripe/payout settings).
+ * Each half is best-effort and never throws.
+ */
 export async function sendPayoutBlockedNotice(params: {
   organizerId: string
   eventId: string
@@ -55,25 +60,30 @@ export async function sendPayoutBlockedNotice(params: {
   message: string
 }): Promise<void> {
   const { organizerId, eventId, code, title, message } = params
+  const recipients = await resolveOrgRecipients({ orgId: organizerId, kind: 'finance', eventId })
 
-  try {
-    await createNotification(organizerId, 'payout_account_blocked', title, message, PAYOUT_SETTINGS_URL, {
-      eventId,
-      code,
-    })
-  } catch (err) {
-    console.error('payout-health-notice: in-app notification failed', { organizerId, err })
-  }
+  await Promise.all(
+    recipients.map(async (uid) => {
+      try {
+        await createNotification(uid, 'payout_account_blocked', title, message, PAYOUT_SETTINGS_URL, {
+          eventId,
+          code,
+        })
+      } catch (err) {
+        console.error('payout-health-notice: in-app notification failed', { uid, err })
+      }
 
-  try {
-    await sendPushNotification(organizerId, `⚠️ ${title}`, message, PAYOUT_SETTINGS_URL, {
-      type: 'payout_account_blocked',
-      eventId,
-      code,
+      try {
+        await sendPushNotification(uid, `⚠️ ${title}`, message, PAYOUT_SETTINGS_URL, {
+          type: 'payout_account_blocked',
+          eventId,
+          code,
+        })
+      } catch (err) {
+        console.error('payout-health-notice: push notification failed', { uid, err })
+      }
     })
-  } catch (err) {
-    console.error('payout-health-notice: push notification failed', { organizerId, err })
-  }
+  )
 }
 
 /** Map a checkout readiness reason onto the publish-gate code the sweep uses, so both dedupe together. */

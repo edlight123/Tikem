@@ -86,7 +86,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.surface,
     },
     label: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '700',
       color: '#FFFFFF',
       letterSpacing: 0.2,

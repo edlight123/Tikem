@@ -327,7 +327,7 @@ const getStyles = (colors: any) =>
     introBody: {
       textAlign: 'center',
       color: 'rgba(255,255,255,0.75)',
-      fontSize: 14,
+      fontSize: 15,
       marginTop: 12,
       lineHeight: 20,
     },
@@ -338,7 +338,7 @@ const getStyles = (colors: any) =>
       paddingVertical: 16,
       borderRadius: radius.button,
     },
-    primaryButtonText: { color: '#000', fontWeight: '700', fontSize: 16 },
+    primaryButtonText: { color: '#000', fontWeight: '700', fontSize: 15 },
     cancelButton: { padding: 12 },
     cancelText: { color: 'rgba(255,255,255,0.8)', fontSize: 15 },
     recordingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -347,7 +347,7 @@ const getStyles = (colors: any) =>
     permissionTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginTop: 20 },
     consentBody: {
       color: colors.textSecondary,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 21,
       textAlign: 'center',
       marginTop: 12,

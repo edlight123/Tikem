@@ -6,9 +6,7 @@ import {
   Linking,
   StatusBar,
   StyleSheet,
-  Switch,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +26,9 @@ import { backendJson } from '../lib/api/backend';
 // confused with the web's two server-side notification modules.
 import { registerForPushNotificationsIfPossible } from '../lib/pushNotifications';
 import { colors, font, radius, spacing } from '../theme/tokens';
+import { Touchable } from '../components/ui/Touchable';
+import { Text as UIText } from '../components/ui/Text';
+import { Switch as UISwitch } from '../components/ui/Switch';
 
 /**
  * Notification preferences.
@@ -236,15 +237,14 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
-        <TouchableOpacity
+        <Touchable
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
           <ArrowLeft size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
+        </Touchable>
         <Text style={styles.headerTitle}>{t('notificationSettings.title')}</Text>
         <View style={styles.backButton} />
       </OverlayHeader>
@@ -263,10 +263,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
       >
         {/* This device */}
         <SectionHeader
-          title={t('notificationSettings.push.section')}
-          subtitle={t('notificationSettings.push.sectionBody')}
-          subtitleLines={3}
-        />
+          title={t('notificationSettings.push.section')} />
         <View style={styles.card}>
           <View style={styles.row}>
             <View style={styles.rowText}>
@@ -276,13 +273,13 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
               </View>
             </View>
             {pushState !== 'granted' && (
-              <TouchableOpacity style={styles.inlineAction} onPress={enablePush} accessibilityRole="button">
+              <Touchable style={styles.inlineAction} onPress={enablePush} accessibilityRole="button">
                 <Text style={styles.inlineActionText}>
                   {pushState === 'denied'
                     ? t('notificationSettings.push.openSettings')
                     : t('notificationSettings.push.turnOn')}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             )}
           </View>
         </View>
@@ -290,10 +287,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
         {/* Transactional — never a switch. */}
         <View style={styles.section}>
           <SectionHeader
-            title={t('notificationSettings.alwaysOn.section')}
-            subtitle={t('notificationSettings.alwaysOn.sectionBody')}
-            subtitleLines={3}
-          />
+            title={t('notificationSettings.alwaysOn.section')} />
           <View style={styles.card}>
             {alwaysOn.map((r, i) => (
               <View key={r.title} style={[styles.row, i > 0 && styles.rowDivided]}>
@@ -310,12 +304,9 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
         {/* Buyer discretionary */}
         <View style={styles.section}>
           <SectionHeader
-            title={t('notificationSettings.fromTikem.section')}
-            subtitle={t('notificationSettings.fromTikem.sectionBody')}
-            subtitleLines={3}
-          />
+            title={t('notificationSettings.fromTikem.section')} />
           {loading ? (
-            <Skeleton width="100%" height={204} radius={radius.lg} />
+            <Skeleton width="100%" height={204} radius={radius.lg} style={{ marginTop: spacing.md }} />
           ) : (
             <View style={styles.card}>
               <PrefRow
@@ -355,12 +346,9 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
           <>
             <View style={styles.section}>
               <SectionHeader
-                title={t('notificationSettings.organizer.section')}
-                subtitle={t('notificationSettings.organizer.sectionBody')}
-                subtitleLines={3}
-              />
+                title={t('notificationSettings.organizer.section')} />
               {loading ? (
-                <Skeleton width="100%" height={220} radius={radius.lg} />
+                <Skeleton width="100%" height={220} radius={radius.lg} style={{ marginTop: spacing.md }} />
               ) : orgUnavailable || !orgPrefs ? (
                 <View style={styles.card}>
                   <View style={styles.row}>
@@ -375,7 +363,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                       sale email, no reviews, no marketing email and no SMS
                       provider, so those switches are gone (the stored values
                       are left alone). Payouts are listed above as always on. */}
-                  <Text style={styles.groupLabel}>{t('notificationSettings.organizer.email')}</Text>
+                  <UIText variant="eyebrow" style={styles.groupLabel}>{t('notificationSettings.organizer.email')}</UIText>
                   <View style={styles.card}>
                     <PrefRow
                       title={t('notificationSettings.organizer.attendeeMessages')}
@@ -385,7 +373,7 @@ export default function NotificationSettingsScreen({ navigation, route }: any) {
                     />
                   </View>
 
-                  <Text style={styles.groupLabel}>{t('notificationSettings.organizer.push')}</Text>
+                  <UIText variant="eyebrow" style={styles.groupLabel}>{t('notificationSettings.organizer.push')}</UIText>
                   <View style={styles.card}>
                     <PrefRow
                       title={t('notificationSettings.organizer.ticketSales')}
@@ -444,14 +432,7 @@ function PrefRow({
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowBody}>{body}</Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: colors.border, true: colors.accent }}
-        thumbColor={colors.white}
-        ios_backgroundColor={colors.border}
-        accessibilityLabel={title}
-      />
+      <UISwitch value={value} onValueChange={onChange} accessibilityLabel={title} />
     </View>
   );
 }
@@ -463,12 +444,12 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', fontFamily: font.serif, fontSize: 22, color: colors.textPrimary },
   section: { marginTop: spacing.xxl },
   // Grouped surface card — a fill one step above the canvas, never a hairline box.
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: 14 },
+  card: { marginTop: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 14 },
   rowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   rowText: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  rowBody: { marginTop: 3, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
+  rowBody: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
   chipLine: { marginTop: 6 },
   inlineAction: {
     paddingHorizontal: 14,
@@ -477,13 +458,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceRaised,
   },
   inlineActionText: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-  groupLabel: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-  },
+  groupLabel: { marginTop: spacing.xl, marginBottom: -spacing.xs },
   footnote: { marginTop: spacing.sm, fontSize: 12, lineHeight: 17, color: colors.textTertiary },
 });

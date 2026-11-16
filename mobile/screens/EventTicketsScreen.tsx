@@ -355,19 +355,21 @@ const styles = StyleSheet.create({
   },
   eventInfoSection: {
     paddingHorizontal: 24,
-    paddingVertical: 5,
+    paddingVertical: 4,
     alignItems: 'center',
   },
   eventTitle: {
     fontFamily: font.serif,
-    fontSize: 26,
+    fontSize: 28,
     color: T.white,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
+  // The one eyebrow style (ui/Text variant="eyebrow").
   currentTicketIndicator: {
-    fontSize: 12,
-    letterSpacing: 0.6,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: 'rgba(255, 255, 255, 0.7)',
   },
@@ -411,7 +413,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: T.white,
   },
 });

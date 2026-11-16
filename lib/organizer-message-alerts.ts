@@ -33,6 +33,7 @@ import { sendEmail, getOrganizerNewMessageEmail, emailSubjects } from '@/lib/ema
 import { fallbackLangForEvent, normalizeLang, type EmailLang } from '@/lib/email-kit/i18n'
 import { withOrganizerNotificationDefaults } from '@/lib/organizer/notificationPreferences'
 import { claimOrganizerEmailSlot } from '@/lib/organizer-messages'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 
 /** Characters of a message carried in a push or a bell entry. */
 export const ALERT_EXCERPT = 140
@@ -122,8 +123,8 @@ export interface OrganizerAlertResult {
 }
 
 /**
- * Alert the organizer that an attendee wrote: a new thread (`followUp` false)
- * or a follow-up in an existing one.
+ * Alert the organization that an attendee wrote: a new thread (`followUp`
+ * false) or a follow-up in an existing one. `organizerId` is the event's org.
  */
 export async function alertOrganizerOfMessage(params: {
   threadId: string
@@ -135,6 +136,8 @@ export async function alertOrganizerOfMessage(params: {
   topic: string
   message: string
   followUp: boolean
+  /** The attendee who wrote: never alerted about their own message. */
+  senderId?: string | null
   /** Event location, for the language fallback when the organizer never chose one. */
   event?: { country?: unknown; city?: unknown; timezone?: unknown } | null
   now?: Date
@@ -149,40 +152,63 @@ export async function alertOrganizerOfMessage(params: {
   } catch (error) {
     console.error('organizer-message-alerts: organizer profile unreadable', error)
   }
-  const lang: EmailLang = normalizeLang(organizer.language) || fallbackLangForEvent(params.event || null)
+  const fallbackLang = fallbackLangForEvent(params.event || null)
+  const lang: EmailLang = normalizeLang(organizer.language) || fallbackLang
   const firstName = attendeeFirstName(params.senderName, lang)
-  const copy = ORGANIZER_COPY[lang]
-  const title = params.followUp
-    ? copy.titleAgain(firstName, params.eventTitle)
-    : copy.title(firstName, params.eventTitle)
   const body = excerpt(params.message, ALERT_EXCERPT)
-
-  try {
-    await createNotification(params.organizerId, 'organizer_message', title, body, path, {
-      eventId: params.eventId,
-      messageId: params.threadId,
-      topic: params.topic,
-      followUp: params.followUp,
-    })
-    result.inApp = true
-  } catch (error) {
-    console.error('organizer-message-alerts: in-app notification failed', error)
+  const titleIn = (l: EmailLang) => {
+    const copy = ORGANIZER_COPY[l]
+    const name = attendeeFirstName(params.senderName, l)
+    return params.followUp ? copy.titleAgain(name, params.eventTitle) : copy.title(name, params.eventTitle)
   }
 
+  // In-app and push go to the owner plus admins and managers (orgRecipients,
+  // event_ops), each in their own language. Email stays with the owner only:
+  // its one-per-thread cooldown is shared, and it goes to the org's address.
+  const recipients = await resolveOrgRecipients({
+    orgId: params.organizerId,
+    kind: 'event_ops',
+    eventId: params.eventId,
+    excludeUserIds: [params.senderId],
+  })
   const prefs = await readOrganizerPrefs(params.organizerId)
 
-  if (prefs.push_attendee_messages) {
-    try {
-      await sendPushNotification(params.organizerId, title, body, path, {
-        type: 'organizer_message',
-        eventId: params.eventId,
-        messageId: params.threadId,
-      })
-      result.push = true
-    } catch (error) {
-      console.error('organizer-message-alerts: push failed', error)
-    }
-  }
+  await Promise.all(
+    recipients.map(async (uid) => {
+      let recipientLang = lang
+      if (uid !== params.organizerId) {
+        try {
+          const snap = await adminDb.collection('users').doc(uid).get()
+          recipientLang = normalizeLang(snap.exists ? snap.data()?.language : null) || fallbackLang
+        } catch {
+          recipientLang = fallbackLang
+        }
+      }
+      const title = titleIn(recipientLang)
+      try {
+        await createNotification(uid, 'organizer_message', title, body, path, {
+          eventId: params.eventId,
+          messageId: params.threadId,
+          topic: params.topic,
+          followUp: params.followUp,
+        })
+        result.inApp = true
+      } catch (error) {
+        console.error('organizer-message-alerts: in-app notification failed', error)
+      }
+      if (!prefs.push_attendee_messages) return
+      try {
+        await sendPushNotification(uid, title, body, path, {
+          type: 'organizer_message',
+          eventId: params.eventId,
+          messageId: params.threadId,
+        })
+        result.push = true
+      } catch (error) {
+        console.error('organizer-message-alerts: push failed', error)
+      }
+    })
+  )
 
   if (!prefs.email_attendee_messages) return result
 

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   RefreshControl,
 } from 'react-native';
@@ -24,6 +23,7 @@ import { useAppAlert } from '../../components/AppAlert';
 import { colors as T, radius } from '../../theme/tokens';
 import { flushCheckInQueue } from '../../lib/doorCheckIn';
 
+import { Touchable } from '../../components/ui/Touchable';
 export default function StaffScanScreen() {
   const { colors } = useTheme();
   const showAlert = useAppAlert();
@@ -112,12 +112,11 @@ export default function StaffScanScreen() {
         ) : (
           <>
             {/* Event selector: one filled row; the whole row opens the picker. */}
-            <TouchableOpacity
+            <Touchable
               style={styles.eventRow}
               onPress={() => setShowEventSelector(true)}
               accessibilityRole="button"
               accessibilityLabel={t('staffScan.selectEvent')}
-              activeOpacity={0.8}
             >
               <View style={styles.thumb}>
                 <CalendarDays size={20} color={colors.textTertiary} strokeWidth={1.5} />
@@ -137,7 +136,7 @@ export default function StaffScanScreen() {
                 </Text>
               )}
               <Text style={styles.changeLink}>{t('organizerScan.changeEvent')}</Text>
-            </TouchableOpacity>
+            </Touchable>
 
             <View style={{ height: 20 }} />
 
@@ -200,7 +199,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   headerSub: {
     marginTop: 4,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
   },
   scroll: {
@@ -237,7 +236,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
   },
   eventTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },
@@ -251,7 +250,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.textSecondary,
   },
   changeLink: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: T.accent,
   },
@@ -283,7 +282,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   stepText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: colors.text,
   },

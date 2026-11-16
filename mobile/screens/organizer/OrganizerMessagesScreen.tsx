@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -27,6 +26,7 @@ import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { backendJson } from '../../lib/api/backend';
 import { safeFormatForLanguage } from '../../lib/dates';
 
+import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
   OrganizerMessages: {
     /** Omit for the organizer's whole inbox; pass to scope to one event. */
@@ -359,8 +359,9 @@ export default function OrganizerMessagesScreen() {
     const lastText = last ? last.body : thread.message;
     const lastFromMe = last ? last.author_role !== 'attendee' : false;
     return (
-    <TouchableOpacity
+    <Touchable
       key={thread.id}
+      scale={0.98}
       style={styles.card}
       onPress={() => handleOpen(thread)}
       accessibilityRole="button"
@@ -393,7 +394,7 @@ export default function OrganizerMessagesScreen() {
           {!needsReply(thread) ? ` · ${t('organizerMessages.answered')}` : ''}
         </Text>
       </View>
-    </TouchableOpacity>
+    </Touchable>
     );
   };
 
@@ -410,7 +411,7 @@ export default function OrganizerMessagesScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
         }
       >
         {threads.length === 0 ? (
@@ -482,17 +483,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     cardName: {
       flex: 1,
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },
     cardWhen: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     cardMessage: {
       marginTop: 8,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
       color: colors.textSecondary,
     },
@@ -503,8 +504,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: 8,
     },
     cardMeta: {
-      fontSize: 11,
-      letterSpacing: 0.3,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     cardMetaFlex: {
@@ -523,7 +523,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     needsReplyText: {
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: '600',
       letterSpacing: 0.8,
       textTransform: 'uppercase',
       color: colors.warning,
@@ -560,7 +560,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     bubbleMeta: {
       marginTop: 8,
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     composer: {
@@ -570,8 +570,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       minHeight: 120,
       backgroundColor: colors.surface,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
       paddingHorizontal: 12,
       paddingVertical: 12,
       fontSize: 15,
@@ -580,7 +578,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     counter: {
       alignSelf: 'flex-end',
       marginTop: 6,
-      fontSize: 11,
+      fontSize: 12,
+      fontVariant: ['tabular-nums'],
       color: colors.textTertiary,
     },
     errorText: {
@@ -593,7 +592,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     privacyNote: {
       marginTop: 12,
-      fontSize: 11,
+      fontSize: 12,
       lineHeight: 16,
       textAlign: 'center',
       color: colors.textTertiary,

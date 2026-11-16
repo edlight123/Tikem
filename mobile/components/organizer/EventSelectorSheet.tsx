@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Touchable } from '../ui/Touchable';
 
 export interface SelectableEvent {
   id: string;
@@ -42,19 +43,19 @@ export default function EventSelectorSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
           <View style={styles.grabber} />
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity
+            <Touchable
               onPress={onClose}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
               <Ionicons name="close" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           <FlatList
@@ -63,7 +64,9 @@ export default function EventSelectorSheet({
             renderItem={({ item }) => {
               const selected = item.id === selectedId;
               return (
-                <TouchableOpacity
+                <Touchable
+                  scale={false}
+                  pressedColor={colors.surfaceRaised}
                   style={styles.row}
                   onPress={() => onSelect(item)}
                   accessibilityRole="button"
@@ -83,7 +86,7 @@ export default function EventSelectorSheet({
                   {selected && (
                     <Ionicons name="checkmark-circle" size={22} color={colors.text} />
                   )}
-                </TouchableOpacity>
+                </Touchable>
               );
             }}
           />
@@ -128,7 +131,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
     },
     title: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },

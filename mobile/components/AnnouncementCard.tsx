@@ -113,7 +113,7 @@ const getStyles = (colors: any) =>
       color: colors.text,
       marginTop: 16,
     },
-    body: { fontSize: 14, lineHeight: 20, color: colors.textSecondary, marginTop: 6 },
+    body: { fontSize: 15, lineHeight: 20, color: colors.textSecondary, marginTop: 6 },
     actions: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 18 },
     primary: {
       backgroundColor: colors.white,
@@ -122,7 +122,7 @@ const getStyles = (colors: any) =>
       paddingHorizontal: 20,
       justifyContent: 'center',
     },
-    primaryText: { color: '#000000', fontSize: 14, fontWeight: '700' },
+    primaryText: { color: '#000000', fontSize: 15, fontWeight: '700' },
     secondary: { height: 42, justifyContent: 'center' },
-    secondaryText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+    secondaryText: { color: colors.textSecondary, fontSize: 15, fontWeight: '600' },
   });

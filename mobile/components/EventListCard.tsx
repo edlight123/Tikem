@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, MapPin } from 'lucide-react-native';
@@ -47,7 +48,7 @@ export default function EventListCard({ event, onPress }: EventListCardProps) {
   const location = [event.venue_name, event.city].filter(Boolean).join(', ');
 
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={styles.card}>
+    <Touchable scale={0.98} onPress={onPress} style={styles.card}>
       {/* LEFT: portrait poster with deterministic gradient fallback. */}
       <View style={styles.poster}>
         {/* Fallback art only — behind a LOADING image this flashed the teal
@@ -106,7 +107,7 @@ export default function EventListCard({ event, onPress }: EventListCardProps) {
           )}
         </View>
       </View>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -114,8 +115,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     card: {
       flexDirection: 'row',
-      paddingVertical: 10,
-      marginBottom: 4,
+      paddingVertical: 8,
+      marginBottom: 8,
       gap: 12,
       alignItems: 'center',
     },

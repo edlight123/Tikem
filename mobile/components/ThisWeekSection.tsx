@@ -22,7 +22,6 @@ export default function ThisWeekSection({ events, onEventPress, onViewAll }: Thi
     <View>
       <SectionHeader
         title={t('home.thisWeekTitle')}
-        subtitle={t('home.thisWeekSubtitle')}
         onViewAll={onViewAll}
       />
       <ScrollView

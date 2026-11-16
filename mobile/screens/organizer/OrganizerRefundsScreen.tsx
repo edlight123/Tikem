@@ -450,7 +450,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   eventTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     marginRight: 8,
@@ -464,7 +464,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   detailText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
     marginLeft: 8,
   },
@@ -481,7 +481,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 4,
   },
   reasonText: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
     lineHeight: 20,
   },
@@ -505,7 +505,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderColor: colors.error + '30',
   },
   denyButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.error,
   },
@@ -513,7 +513,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.success,
   },
   approveButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.white,
   },

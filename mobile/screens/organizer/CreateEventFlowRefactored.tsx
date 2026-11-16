@@ -1443,9 +1443,12 @@ export default function CreateEventFlowRefactored() {
             ...(rsvpSourceTier()?.id ? { id: rsvpSourceTier()!.id } : {}),
             name: 'RSVP',
             price: '0',
-            quantity: draft.capacity || '0',
+            // A cap at or above the unlimited sentinel IS unlimited: a typed
+            // 10^22 used to be stored raw and printed as "0/1e+22 sold".
+            ...(Number(draft.capacity) >= Number(UNLIMITED_SENTINEL)
+              ? { quantity: UNLIMITED_SENTINEL, unlimited: true }
+              : { quantity: draft.capacity || '0', unlimited: false }),
             description: '',
-            unlimited: false,
           },
         ],
       };
@@ -2299,7 +2302,7 @@ export default function CreateEventFlowRefactored() {
                     colors={colors}
                     placeholder={t('organizerCreateEvent.rsvp.capLabel') + ' *'}
                     value={eventDraft.capacity}
-                    onChangeText={(text) => updateDraft({ capacity: text })}
+                    onChangeText={(text) => updateDraft({ capacity: text.replace(/[^0-9]/g, '').slice(0, 7) })}
                     error={!!errors.capacity}
                     keyboardType="numeric"
                   />

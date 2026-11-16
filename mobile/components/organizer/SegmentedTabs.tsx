@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { radius } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Touchable } from '../ui/Touchable';
+import { select } from '../../lib/haptics';
 
 export interface SegmentedTab {
   key: string;
@@ -34,9 +36,13 @@ export default function SegmentedTabs({ tabs, value, onChange }: SegmentedTabsPr
       {tabs.map((tab) => {
         const active = tab.key === value;
         return (
-          <TouchableOpacity
+          <Touchable
             key={tab.key}
-            onPress={() => onChange(tab.key)}
+            haptic={false}
+            onPress={() => {
+              if (!active) select();
+              onChange(tab.key);
+            }}
             style={[styles.tab, active && styles.tabActive]}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
@@ -57,7 +63,7 @@ export default function SegmentedTabs({ tabs, value, onChange }: SegmentedTabsPr
                 </Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Touchable>
         );
       })}
     </ScrollView>

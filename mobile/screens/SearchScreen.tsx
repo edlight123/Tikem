@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -30,6 +29,7 @@ import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeade
 import SectionHeader from '../components/SectionHeader';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { Skeleton, ListSkeleton } from '../components/Skeleton';
+import { Touchable } from '../components/ui/Touchable';
 
 interface OrganizerResult {
   id: string;
@@ -276,7 +276,7 @@ export default function SearchScreen({ navigation }: any) {
     Icon: typeof User,
     onPress: () => void
   ) => (
-    <TouchableOpacity key={key} style={styles.row} onPress={onPress} activeOpacity={0.7}>
+    <Touchable key={key} style={styles.row} onPress={onPress} scale={false} pressedColor={colors.surface}>
       {photo ? (
         <Image source={{ uri: photo }} style={styles.avatar} contentFit="cover" cachePolicy="memory-disk" />
       ) : (
@@ -297,7 +297,7 @@ export default function SearchScreen({ navigation }: any) {
           </Text>
         )}
       </View>
-    </TouchableOpacity>
+    </Touchable>
   );
 
   return (
@@ -425,7 +425,15 @@ export default function SearchScreen({ navigation }: any) {
                 <View style={styles.section}>
                   <SectionHeader title={t('search.people')} />
                   {peopleLoading && people.length === 0 ? (
-                    <ActivityIndicator color={colors.primary} style={styles.inlineLoader} />
+                    // Skeleton rows in the shape of the result, not a spinner.
+                    [0, 1].map((i) => (
+                      <View key={i} style={styles.row}>
+                        <Skeleton width={46} height={46} radius={23} />
+                        <View style={styles.rowBody}>
+                          <Skeleton width="55%" height={13} />
+                        </View>
+                      </View>
+                    ))
                   ) : (
                     people.map((person) =>
                       renderPersonRow(
@@ -461,9 +469,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     // OverlayHeader's inset is the only one and adding a second would double
     // the gap. No fill and no hairline either: they would paint over the blur.
     header: {
-      gap: 10,
+      gap: 8,
       paddingHorizontal: 12,
-      paddingBottom: 10,
+      paddingBottom: 8,
     },
     backBtn: {
       padding: 4,
@@ -475,10 +483,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: 8,
       backgroundColor: colors.surface,
       borderRadius: radius.button,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
     },
     input: {
       flex: 1,
@@ -501,15 +507,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     section: {
       marginTop: 16,
     },
-    inlineLoader: {
-      alignSelf: 'flex-start',
-      marginVertical: 8,
-    },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 10,
+      paddingVertical: 8,
+      marginHorizontal: -8,
+      paddingHorizontal: 8,
+      borderRadius: radius.md,
     },
     avatar: {
       width: 46,
@@ -531,11 +536,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     rowNameLine: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
+      gap: 4,
     },
     rowName: {
       fontSize: 15,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.text,
       flexShrink: 1,
     },

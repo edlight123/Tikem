@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { isVisibleOnExplore } from '../lib/api/events';
 import { Animated, View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { Touchable } from '../components/ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, MapPin } from 'lucide-react-native';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -225,9 +226,8 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
   )
     .toString()
     .toLowerCase();
-  // The hero wears the category's WORLD art (Tikèm screenprints) when that
-  // world has some; a category with no world (religious, wellness) keeps its
-  // original photo. Seeded by the world key, so the page always looks the same.
+  // The hero wears the category's WORLD photo (lib/artLibrary WORLD_PHOTOS);
+  // a category with no world (religious, wellness) keeps its original photo.
   const heroArt = nationalDayDef
     ? nationalDayArt(nationalDayDef)?.source ?? artForWorld('kilti', 'kilti').source
     : world
@@ -326,7 +326,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
               {Hero}
               {isCategoryPage && (
                 <View style={styles.filterRow}>
-                  <TouchableOpacity
+                  <Touchable
                     style={[styles.filterChip, dateFilter !== 'any' && styles.filterChipActive]}
                     onPress={() => setShowWhenPicker(true)}
                     accessibilityRole="button"
@@ -334,8 +334,8 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
                     <Text style={[styles.filterChipText, dateFilter !== 'any' && styles.filterChipTextActive]} numberOfLines={1}>
                       {dateChipLabel}
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </Touchable>
+                  <Touchable
                     style={[styles.filterChip, !!priceRange && styles.filterChipActive]}
                     onPress={() => setShowPricePicker(true)}
                     accessibilityRole="button"
@@ -343,11 +343,11 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
                     <Text style={[styles.filterChipText, !!priceRange && styles.filterChipTextActive]} numberOfLines={1}>
                       {priceChipLabel}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                   {/* Not a filter — the app-wide browse location. Tapping it
                       moves every screen, which is the only way another market
                       ever appears. */}
-                  <TouchableOpacity
+                  <Touchable
                     style={[styles.filterChip, !!activeCity && styles.filterChipActive]}
                     onPress={() => setShowLocationPicker(true)}
                     accessibilityRole="button"
@@ -355,7 +355,7 @@ export default function CategoryEventsScreen({ navigation, route }: any) {
                     <Text style={[styles.filterChipText, !!activeCity && styles.filterChipTextActive]} numberOfLines={1}>
                       {activeCity ? locationCopy.locationName : t('filters.location')}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 </View>
               )}
             </View>
@@ -466,7 +466,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     heroTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
       paddingHorizontal: 24,
     },
     heroTitle: {
@@ -486,7 +486,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     heroBack: {
       position: 'absolute',
-      left: 14,
+      left: 16,
     },
     // Full-bleed: cancel the list's horizontal padding for the header row.
     heroListHeader: {

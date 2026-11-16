@@ -6,7 +6,6 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  Pressable,
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +17,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useLocaleFormat } from '../../lib/format';
 import { radius, spacing } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
 import EmptyState from '../../components/EmptyState';
 import StatusChip from '../../components/StatusChip';
 import StatTriplet from '../../components/StatTriplet';
@@ -198,9 +198,11 @@ export default function EventOrdersScreen() {
     const muted = item.status === 'refunded' || item.status === 'refund_pending' || item.status === 'cancelled';
 
     return (
-      <Pressable
+      <Touchable
+        scale={0.98}
+        pressedColor={colors.surfaceRaised}
         onPress={() => navigation.navigate('EventOrderDetail', { eventId, orderId: item.id })}
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        style={styles.row}
         accessibilityRole="button"
         accessibilityLabel={`${item.buyer.name || t('organizerOrders.unknownBuyer')}, ${formatMoneyLines(item.amounts) || t('organizerOrders.free')}`}
       >
@@ -228,7 +230,7 @@ export default function EventOrdersScreen() {
             {meta}
           </Text>
         </View>
-      </Pressable>
+      </Touchable>
     );
   };
 
@@ -360,9 +362,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderRadius: radius.lg,
       backgroundColor: colors.surface,
     },
-    rowPressed: {
-      backgroundColor: colors.surfaceRaised,
-    },
     rowTop: {
       flexDirection: 'row',
       alignItems: 'baseline',
@@ -371,12 +370,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     buyerName: {
       flex: 1,
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },
     amount: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: colors.text,
       fontVariant: ['tabular-nums'],

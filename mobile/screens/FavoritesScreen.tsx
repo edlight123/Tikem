@@ -4,11 +4,11 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
   StatusBar,
   Dimensions
 } from 'react-native';
+import { Touchable } from '../components/ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Heart, Share2, ArrowLeft } from 'lucide-react-native';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -176,9 +176,9 @@ export default function FavoritesScreen({ navigation }: any) {
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
         {navigation.canGoBack() && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
+          <Touchable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
             <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         )}
         <Text style={styles.headerTitle}>{t('favorites.title')}</Text>
       </OverlayHeader>
@@ -213,20 +213,20 @@ export default function FavoritesScreen({ navigation }: any) {
                 onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
                 overlay={
                   <View style={styles.cardActions}>
-                    <TouchableOpacity
+                    <Touchable
                       style={styles.cardActionBtn}
                       onPress={() => handleShare(event)}
                       hitSlop={8}
                     >
-                      <Share2 size={15} color={colors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                      <Share2 size={15} color={colors.white} />
+                    </Touchable>
+                    <Touchable
                       style={styles.cardActionBtn}
                       onPress={() => removeFavorite(event.id)}
                       hitSlop={8}
                     >
                       <Heart size={15} color={colors.error} fill={colors.error} />
-                    </TouchableOpacity>
+                    </Touchable>
                   </View>
                 }
               />
@@ -281,7 +281,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   cardActions: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
   cardActionBtn: {
     width: 32,

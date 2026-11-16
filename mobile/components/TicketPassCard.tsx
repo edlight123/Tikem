@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { CalendarPlus, MapPin, Send, ExternalLink } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -97,7 +98,7 @@ export default function TicketPassCard({
       </View>
 
       {/* The one shared ticket identity — white inverted stub. Tap to enlarge. */}
-      <TouchableOpacity activeOpacity={0.95} onPress={onQRPress}>
+      <Touchable scale={0.98} onPress={onQRPress} accessibilityRole="button">
         <TicketQRCard
           qrValue={ticketQrValue(ticket)}
           eventTitle={eventTitle}
@@ -106,7 +107,7 @@ export default function TicketPassCard({
           holderName={holder ? `${t('ticketPass.admit')} ${holder}` : undefined}
           orderRef={orderRef.replace(/^TKM-/, '')}
         />
-      </TouchableOpacity>
+      </Touchable>
       <Text style={styles.tapHint}>{t('ticketPass.tapHint')}</Text>
 
       {isUsed && ticket?.checked_in_at && (
@@ -207,7 +208,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.surfaceRaised,
     },
     secondaryButtonText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
     },

@@ -1,13 +1,12 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import PosterImage from './PosterImage';
+import { Touchable } from './ui/Touchable';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Users } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -67,7 +66,6 @@ export default function PosterEventCard({
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);
-  const scale = useRef(new Animated.Value(1)).current;
 
   const hasImage = Boolean(event.banner_image_url);
   const theme = resolvePosterTheme(event, event.id || event.title, event.category);
@@ -113,20 +111,9 @@ export default function PosterEventCard({
       ? `${friendsGoing} ${t(friendsGoing === 1 ? 'social.friendGoingSuffix' : 'social.friendsGoingSuffix')}`
       : '';
 
-  const pressIn = () =>
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
-  const pressOut = () =>
-    Animated.spring(scale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
-
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, width ? { width } : { flex: 1 }]}>
-      <TouchableOpacity
-        activeOpacity={0.95}
-        onPress={onPress}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-        style={styles.card}
-      >
+    <View style={width ? { width } : { flex: 1 }}>
+      <Touchable scale={0.98} onPress={onPress} style={styles.card}>
         <View style={{ paddingHorizontal: posterInsetX, paddingTop: posterInsetX }}>
           <View style={[styles.poster, { aspectRatio: 1 / ratio }]}>
             {/* The teal theme gradient is the PERMANENT art for events with no
@@ -195,8 +182,8 @@ export default function PosterEventCard({
             </View>
           )}
         </View>
-      </TouchableOpacity>
-    </Animated.View>
+      </Touchable>
+    </View>
   );
 }
 
@@ -225,7 +212,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     fallbackTitle: {
       fontFamily: font.serif,
-      fontSize: 26,
+      fontSize: 28,
       lineHeight: 28,
       textAlign: 'center',
       color: 'rgba(255,255,255,0.94)',

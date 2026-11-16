@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { Animated, View, Text, StyleSheet, StatusBar } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronRight, UserPlus, Users } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import WhitePillCTA from '../components/WhitePillCTA';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
 import { font, radius } from '../theme/tokens';
 import { useOpenAttendeeTab } from '../hooks/useOpenAttendeeTab';
+import { Touchable } from '../components/ui/Touchable';
 
 type Subscription = {
   id: string;
@@ -90,13 +91,14 @@ export default function SubscriptionsScreen({ navigation }: any) {
 
   const header = (
     <OverlayHeader onHeight={onHeaderHeight} style={styles.header} scrollY={scrollY}>
-      <TouchableOpacity
+      <Touchable
         style={styles.backButton}
         onPress={() => navigation.goBack()}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.back')}
       >
         <ArrowLeft size={24} color={colors.text} />
-      </TouchableOpacity>
+      </Touchable>
       <Text style={styles.headerTitle}>{t('subscriptions.title')}</Text>
       <View style={styles.backButton} />
     </OverlayHeader>
@@ -139,11 +141,13 @@ export default function SubscriptionsScreen({ navigation }: any) {
         >
           <View style={styles.card}>
             {items.map((s, i) => (
-              <TouchableOpacity
+              <Touchable
                 key={s.id}
                 style={[styles.row, i > 0 && styles.rowDivided]}
                 onPress={() => navigation.navigate('OrganizerProfile', { organizerId: s.id })}
-                activeOpacity={0.7}
+                scale={false}
+                pressedColor={colors.surfaceRaised}
+                accessibilityRole="button"
               >
                 {s.avatar ? (
                   <Image source={{ uri: s.avatar }} style={styles.avatar} contentFit="cover" />
@@ -159,7 +163,7 @@ export default function SubscriptionsScreen({ navigation }: any) {
                 </View>
                 {s.isVerified && <VerifiedBadge size="small" style={styles.rowVerified} />}
                 <ChevronRight size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
+              </Touchable>
             ))}
           </View>
         </Animated.ScrollView>
@@ -181,10 +185,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     headerTitle: { flex: 1, textAlign: 'center', fontFamily: font.serif, fontSize: 22, color: colors.text },
     emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
     emptyCta: { marginTop: 24, minWidth: 200 },
-    card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: 14 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
     rowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.borderLight },
+    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceRaised },
     avatarFallback: { alignItems: 'center', justifyContent: 'center' },
     rowText: { flex: 1 },
     rowName: { fontFamily: font.serif, fontSize: 17, color: colors.text },

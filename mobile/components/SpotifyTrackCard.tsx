@@ -329,7 +329,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'center',
     },
     text: { flex: 1, minWidth: 0, gap: 6 },
-    title: { fontSize: 16, lineHeight: 21, fontWeight: '600', color: colors.text },
+    title: { fontSize: 15, lineHeight: 21, fontWeight: '600', color: colors.text },
     sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     source: { fontSize: 12, color: colors.textSecondary },
     play: {

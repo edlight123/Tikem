@@ -43,6 +43,8 @@ import SegmentedTabs from '../../components/organizer/SegmentedTabs';
 import { Tag } from 'lucide-react-native';
 import { getEventById } from '../../lib/api/organizer';
 
+import { Touchable } from '../../components/ui/Touchable';
+import SectionHeader from '../../components/SectionHeader';
 type RouteParams = {
   OrganizerPromoCodes: {
     eventId: string;
@@ -371,7 +373,7 @@ export default function OrganizerPromoCodesScreen() {
           <View style={styles.section}>
             {/* Section label + "New code" pill on one row, like the loaded list. */}
             <View style={styles.sectionTitleRow}>
-              <Skeleton width={110} height={12} radius={4} />
+              <Skeleton width={120} height={20} radius={4} />
               <Skeleton width={104} height={32} radius={radius.button} />
             </View>
             {/* Active / Expired segmented pills. */}
@@ -510,14 +512,14 @@ export default function OrganizerPromoCodesScreen() {
                   <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
                 {expiresAt ? (
-                  <TouchableOpacity
+                  <Touchable
                     style={styles.dateClearButton}
                     onPress={() => setExpiresAt(null)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityLabel={t('common.remove')}
                   >
                     <Ionicons name="close" size={18} color={colors.textSecondary} />
-                  </TouchableOpacity>
+                  </Touchable>
                 ) : null}
               </View>
               {showExpiryPicker && (
@@ -554,10 +556,10 @@ export default function OrganizerPromoCodesScreen() {
         <View style={styles.section}>
           {/* Section label row with the create action beside it (moved down from
               the screen header per beta feedback). */}
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>{t('organizerPromoCodes.list.title')}</Text>
-            {!showForm && (
-              <TouchableOpacity
+          <SectionHeader
+            title={t('organizerPromoCodes.list.title')}
+            trailing={!showForm ? (
+              <Touchable
                 style={styles.newCodeButton}
                 onPress={() => setShowForm(true)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -566,9 +568,9 @@ export default function OrganizerPromoCodesScreen() {
               >
                 <Ionicons name="add" size={16} color={colors.text} />
                 <Text style={styles.newCodeButtonText}>{t('organizerPromoCodes.create.show')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+              </Touchable>
+            ) : undefined}
+          />
 
           {/* Active / Expired filter — past discounts stay reachable without
               stretching the default list. */}
@@ -643,22 +645,22 @@ export default function OrganizerPromoCodesScreen() {
                     </View>
 
                     <View style={styles.promoHeaderActions}>
-                      <TouchableOpacity
+                      <Touchable
                         style={styles.iconButton}
                         onPress={() => handleShare(promo)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         accessibilityLabel={t('organizerPromoCodes.share.action')}
                       >
-                        <Ionicons name="share-outline" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                        <Ionicons name="share-outline" size={18} color={colors.text} />
+                      </Touchable>
+                      <Touchable
                         style={styles.iconButton}
                         onPress={() => handleDelete(promo)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         accessibilityLabel={t('organizerPromoCodes.delete.confirm')}
                       >
                         <Ionicons name="trash-outline" size={18} color={colors.error} />
-                      </TouchableOpacity>
+                      </Touchable>
                     </View>
                   </View>
 
@@ -668,14 +670,14 @@ export default function OrganizerPromoCodesScreen() {
                         .filter(Boolean)
                         .join(' · ')}
                     </Text>
-                    <TouchableOpacity
+                    <Touchable
                       onPress={() => handleToggleActive(promo)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Text style={styles.inlineToggleText}>
                         {promo.is_active ? t('organizerPromoCodes.list.deactivate') : t('organizerPromoCodes.list.activate')}
                       </Text>
-                    </TouchableOpacity>
+                    </Touchable>
                   </View>
                   {capped && (
                     <View style={styles.progressBar}>
@@ -753,19 +755,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   newCodeButtonText: {
     color: colors.text,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
     marginLeft: 4,
   },
+  // Fill, not a hairline: the form is one surface step, its fields one more.
   formCard: {
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.xl,
     padding: 16,
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 24,
   },
   formEyebrow: {
     fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
@@ -773,25 +777,26 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   formTitle: {
     fontFamily: font.serif,
-    fontSize: 24,
+    fontSize: 22,
     color: colors.text,
     marginBottom: 10,
   },
   label: {
-    marginTop: 14,
-    marginBottom: 6,
+    marginTop: 16,
+    marginBottom: 8,
     fontSize: 11,
-    letterSpacing: 0.6,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
   },
   input: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
+    fontSize: 15,
     color: colors.text,
   },
   inputSpaced: {
@@ -810,11 +815,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   toggleButton: {
     flex: 1,
     borderRadius: radius.button,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   dateFieldRow: {
     flexDirection: 'row',
@@ -823,10 +826,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   dateField: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -836,6 +837,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   dateFieldText: {
     flex: 1,
+    fontSize: 15,
     color: colors.text,
   },
   dateFieldPlaceholder: {
@@ -847,20 +849,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
+  // Selected = solid white, black label (FilterPill convention); teal stays rare.
   toggleButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.white,
   },
   toggleButtonText: {
+    fontSize: 15,
     color: colors.textSecondary,
     fontWeight: '600',
   },
   toggleButtonTextActive: {
-    color: colors.white,
+    color: '#000000',
   },
   formActions: {
     flexDirection: 'row',
@@ -872,13 +873,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
   },
   promoCard: {
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     borderRadius: radius.button,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   promoCardClaimed: {
     opacity: 0.6,
@@ -908,7 +907,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   statusLabel: {
     fontSize: 11,
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
   },
@@ -919,7 +919,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   promoCode: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.5,
     color: colors.text,
   },
@@ -941,7 +941,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   claimedText: {
     flex: 1,
     fontSize: 12,
-    letterSpacing: 0.3,
     color: colors.textSecondary,
   },
   // Inline text toggle (Deactivate / Activate) — replaces the old tall
@@ -952,15 +951,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.textSecondary,
   },
   progressBar: {
-    height: 6,
-    backgroundColor: colors.background,
+    height: 4,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: 3,
     overflow: 'hidden',
     marginTop: 6,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
+    backgroundColor: colors.text,
+    borderRadius: 3,
   },
 });

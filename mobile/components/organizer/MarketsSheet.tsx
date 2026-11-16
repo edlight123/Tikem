@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'lucide-react-native';
 
@@ -10,6 +10,8 @@ import { colors as T } from '../../theme/tokens';
 import { countryName, countrySupport } from '../../lib/countrySupport';
 import { DECLARABLE_MARKETS, railsForMarkets } from '../../lib/organizerMarkets';
 import WhitePillCTA from '../WhitePillCTA';
+import { Touchable } from '../ui/Touchable';
+import { select } from '../../lib/haptics';
 
 interface MarketsSheetProps {
   visible: boolean;
@@ -126,12 +128,16 @@ export function MarketsPicker({ draft, onToggle, disabled = false, onCanvas = fa
         const on = draft.includes(code);
         const sub = railLabel(code);
         return (
-          <TouchableOpacity
+          <Touchable
             key={code}
+            scale={0.98}
+            haptic={false}
             style={[styles.row, onCanvas && styles.rowCanvas, on && styles.rowOn]}
-            onPress={() => onToggle(code)}
+            onPress={() => {
+              select();
+              onToggle(code);
+            }}
             disabled={disabled}
-            activeOpacity={0.8}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: on }}
           >
@@ -143,7 +149,7 @@ export function MarketsPicker({ draft, onToggle, disabled = false, onCanvas = fa
             <View style={styles.checkSlot}>
               {on ? <Check size={20} color={T.teal} strokeWidth={2.5} /> : null}
             </View>
-          </TouchableOpacity>
+          </Touchable>
         );
       })}
       {showHint ? <Text style={styles.hint}>{hint}</Text> : null}
@@ -187,7 +193,7 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
               <Text style={styles.title}>{t('organizerPayoutSettings.markets.title')}</Text>
               <Text style={styles.subtitle}>{t('organizerPayoutSettings.markets.subtitle')}</Text>
             </View>
-            <TouchableOpacity
+            <Touchable
               style={styles.closeBtn}
               onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -195,7 +201,7 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
               accessibilityLabel={t('common.close')}
             >
               <X size={20} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -245,7 +251,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     title: {
       fontSize: 20,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
     },
@@ -285,7 +291,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: 'rgba(255,255,255,0.08)',
     },
     rowTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },

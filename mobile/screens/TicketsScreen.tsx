@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
   StatusBar
 } from 'react-native';
@@ -30,6 +29,7 @@ import { safeFormatForLanguage } from '../lib/dates';
 import { useFocusEffect } from '@react-navigation/native';
 import { consumeTicketsRefreshHint } from '../lib/ticketsRefreshHint';
 import { font, radius } from '../theme/tokens';
+import { Touchable } from '../components/ui/Touchable';
 
 // Offline-first cache: the door-scan moment is exactly when signal is worst, so
 // we persist the resolved upcoming/past event lists per user and hydrate them
@@ -598,15 +598,16 @@ export default function TicketsScreen({ navigation }: any) {
                         const poster = event.banner_image_url || event.cover_image_url;
 
                         return (
-                          <TouchableOpacity
+                          <Touchable
                             key={event.id}
                             style={styles.row}
+                            scale={0.98}
+                            accessibilityRole="button"
                             onPress={() =>
                               navigation.navigate(isSaved ? 'EventDetail' : 'EventTickets', {
                                 eventId: event.id,
                               })
                             }
-                            activeOpacity={0.7}
                           >
                             <View style={styles.poster}>
                               {!poster && (
@@ -667,7 +668,7 @@ export default function TicketsScreen({ navigation }: any) {
                                 )}
                               </View>
                             </View>
-                          </TouchableOpacity>
+                          </Touchable>
                         );
                       })}
                     </View>
@@ -694,7 +695,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   headerTitle: {
     fontFamily: font.serif,
-    fontSize: 32,
+    fontSize: 30,
+    lineHeight: 36,
     letterSpacing: 0,
     color: colors.text,
   },
@@ -724,7 +726,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     right: -2,
     top: -6,
     fontSize: 66,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -2,
     color: 'rgba(255,255,255,0.05)',
   },
@@ -763,9 +765,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Editorial row — poster + type on the bare canvas, no box.
   row: {
     flexDirection: 'row',
-    gap: 14,
+    gap: 16,
     alignItems: 'flex-start',
-    marginBottom: 22,
+    marginBottom: 24,
   },
   poster: {
     width: POSTER_W,
@@ -790,13 +792,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 13,
     letterSpacing: 0.1,
     color: colors.textSecondary,
-    marginTop: 5,
+    marginTop: 4,
   },
   rowFoot: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    marginTop: 9,
+    gap: 8,
+    marginTop: 8,
   },
   countSep: {
     color: colors.textTertiary,

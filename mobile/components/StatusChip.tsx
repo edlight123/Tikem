@@ -114,7 +114,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    letterSpacing: 0.4,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
 });

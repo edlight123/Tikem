@@ -134,7 +134,7 @@ const getStyles = (colors: any) =>
       paddingVertical: Platform.OS === 'ios' ? 10 : 2,
       marginBottom: 10,
     },
-    searchInput: { flex: 1, fontSize: 16, color: colors.text },
+    searchInput: { flex: 1, fontSize: 15, color: colors.text },
     card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: 14 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
     divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
@@ -146,7 +146,7 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    initialText: { color: colors.text, fontWeight: '700', fontSize: 16 },
+    initialText: { color: colors.text, fontWeight: '700', fontSize: 15 },
     name: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
     inviteBtn: {
       flexDirection: 'row',

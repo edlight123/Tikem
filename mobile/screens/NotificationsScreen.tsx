@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import {
   View,
@@ -8,12 +8,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, Check, CheckCheck, ExternalLink } from 'lucide-react-native';
+import { Bell, CheckCheck } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
-import { radius } from '../theme/tokens';
+import { colors as T, radius } from '../theme/tokens';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -33,6 +36,7 @@ import { artByKey } from '../lib/artLibrary';
 import { NotificationsSkeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
 import type { Notification } from '../types/notifications';
+import { Touchable } from '../components/ui/Touchable';
 
 export default function NotificationsScreen() {
   const { colors } = useTheme();
@@ -43,6 +47,15 @@ export default function NotificationsScreen() {
   const { t, language } = useI18n();
   const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
   const showAlert = useAppAlert();
+  // "4:40 PM" today, "Nov 12" otherwise: one short token beside the title.
+  const shortTime = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const now = new Date();
+    return d.toDateString() === now.toDateString()
+      ? d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
+      : d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  };
   const [allNotifications, setNotifications] = useState<Notification[]>([]);
   // Notifications about a blocked organizer (e.g. "new event from …") are
   // hidden, not deleted — unblocking brings them back (App Store 1.2).
@@ -55,6 +68,51 @@ export default function NotificationsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  // Swipe-to-delete with Undo: the row leaves the list at once, the delete is
+  // committed after UNDO_MS unless Undo is tapped (TestFlight 2026-11-14).
+  const [pendingDelete, setPendingDelete] = useState<Notification | null>(null);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const commitDelete = useCallback(
+    (n: Notification) => {
+      if (user?.uid) deleteNotification(user.uid, n.id).catch(() => {});
+    },
+    [user?.uid],
+  );
+
+  // Leaving the screen commits whatever is still waiting on Undo.
+  useEffect(
+    () => () => {
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    },
+    [],
+  );
+
+  const handleSwipeDelete = (n: Notification) => {
+    // A second swipe commits the first one right away.
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    if (pendingDelete) commitDelete(pendingDelete);
+    setNotifications((prev) => prev.filter((x) => x.id !== n.id));
+    if (!n.isRead) setUnreadCount((c) => Math.max(0, c - 1));
+    setPendingDelete(n);
+    deleteTimer.current = setTimeout(() => {
+      commitDelete(n);
+      setPendingDelete(null);
+      deleteTimer.current = null;
+    }, UNDO_MS);
+  };
+
+  const handleUndo = () => {
+    if (!pendingDelete) return;
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    deleteTimer.current = null;
+    const n = pendingDelete;
+    setPendingDelete(null);
+    setNotifications((prev) =>
+      [...prev, n].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    );
+    if (!n.isRead) setUnreadCount((c) => c + 1);
+  };
 
   const getTransferToken = (notification: Notification): string | null => {
     const metadata: any = (notification as any)?.metadata || {};
@@ -334,32 +392,6 @@ export default function NotificationsScreen() {
     );
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'ticket_purchased':
-        return '🎫';
-      case 'event_updated':
-        return '📢';
-      case 'event_reminder_24h':
-      case 'event_reminder_3h':
-      case 'event_reminder_30min':
-        return '⏰';
-      case 'event_cancelled':
-        return '❌';
-      case 'staff_invite':
-        return '👥';
-      case 'organizer_message':
-      case 'organizer_reply':
-        return '💬';
-      case 'friend_invite':
-        return '💌';
-      case 'invite_joined':
-        return '🤝';
-      default:
-        return '🔔';
-    }
-  };
-
   const getNotificationLink = (notification: Notification): { screen: string; params?: any } | null => {
     if (notification.type === 'staff_invite') {
       const details = getInviteDetails(notification);
@@ -455,7 +487,7 @@ export default function NotificationsScreen() {
               activeOpacity={0.7}
               hitSlop={8}
             >
-              <CheckCheck size={16} color={colors.primary} />
+              <CheckCheck size={16} color={colors.text} />
               <Text style={styles.markAllText}>
                 {t('notifications.markAllRead')} ({unreadCount})
               </Text>
@@ -499,74 +531,63 @@ export default function NotificationsScreen() {
         ) : (
           <View style={styles.notificationsList}>
             {notifications.map((notification) => (
-              <TouchableOpacity
-                key={notification.id}
+              <SwipeRow key={notification.id} onDelete={() => handleSwipeDelete(notification)}>
+              <Touchable
                 onPress={() => handleNotificationClick(notification)}
-                style={[
-                  styles.notificationCard,
-                  !notification.isRead && styles.notificationCardUnread,
-                ]}
-                activeOpacity={0.7}
+                style={styles.row}
+                scale={false}
+                pressedColor={colors.surface}
+                accessibilityRole="button"
               >
-                {/* Icon */}
-                <View style={styles.iconContainer}>
-                  <Text style={styles.notificationIcon}>
-                    {getNotificationIcon(notification.type)}
-                  </Text>
-                </View>
+                {/* Unread: a small teal dot in the gutter; read rows keep the space. */}
+                <View style={[styles.unreadDot, notification.isRead && styles.unreadDotHidden]} />
 
-                {/* Content */}
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
                     <Text
-                      style={[
-                        styles.notificationTitle,
-                        !notification.isRead && styles.notificationTitleUnread,
-                      ]}
-                      numberOfLines={2}
+                      style={[styles.notificationTitle, !notification.isRead && styles.notificationTitleUnread]}
+                      numberOfLines={1}
                     >
                       {notification.title}
                     </Text>
-                    {!notification.isRead && <View style={styles.unreadDot} />}
+                    <Text style={styles.notificationTime}>{shortTime(notification.createdAt)}</Text>
                   </View>
 
                   {/* An organizer's reply is the whole point of its
-                      notification — the attendee asked a question and this is
-                      the answer, so it is shown in full instead of clipped to
-                      three lines with nowhere to go and read the rest. */}
+                      notification, so it is shown in full. */}
                   {notification.type === 'organizer_reply' ? (
                     <Text style={styles.notificationMessage}>
                       {(notification.metadata as any)?.replyBody || notification.message}
                     </Text>
                   ) : (
-                    <Text style={styles.notificationMessage} numberOfLines={3}>
+                    <Text style={styles.notificationMessage} numberOfLines={2}>
                       {notification.message}
                     </Text>
                   )}
 
                   {notification.type === 'staff_invite' && (
                     <View style={styles.staffInviteActions}>
-                      <TouchableOpacity
+                      <Touchable
                         onPress={(e) => {
                           e.stopPropagation();
                           acceptStaffInvite(notification);
                         }}
                         style={styles.staffInviteAcceptButton}
-                        activeOpacity={0.8}
+                        accessibilityRole="button"
                       >
                         <Text style={styles.staffInviteAcceptText}>{t('common.accept')}</Text>
-                      </TouchableOpacity>
+                      </Touchable>
 
-                      <TouchableOpacity
+                      <Touchable
                         onPress={(e) => {
                           e.stopPropagation();
                           declineStaffInvite(notification);
                         }}
                         style={styles.staffInviteDeclineButton}
-                        activeOpacity={0.8}
+                        accessibilityRole="button"
                       >
                         <Text style={styles.staffInviteDeclineText}>{t('common.decline')}</Text>
-                      </TouchableOpacity>
+                      </Touchable>
                     </View>
                   )}
 
@@ -589,68 +610,85 @@ export default function NotificationsScreen() {
 
                   {notification.type === 'ticket_transfer' && getTransferToken(notification) && (
                     <View style={styles.staffInviteActions}>
-                      <TouchableOpacity
+                      <Touchable
                         onPress={(e) => {
                           e.stopPropagation();
                           acceptTicketTransfer(notification);
                         }}
                         style={styles.staffInviteAcceptButton}
-                        activeOpacity={0.8}
+                        accessibilityRole="button"
                       >
                         <Text style={styles.staffInviteAcceptText}>{t('common.accept')}</Text>
-                      </TouchableOpacity>
+                      </Touchable>
 
-                      <TouchableOpacity
+                      <Touchable
                         onPress={(e) => {
                           e.stopPropagation();
                           declineTicketTransfer(notification);
                         }}
                         style={styles.staffInviteDeclineButton}
-                        activeOpacity={0.8}
+                        accessibilityRole="button"
                       >
                         <Text style={styles.staffInviteDeclineText}>{t('common.decline')}</Text>
-                      </TouchableOpacity>
+                      </Touchable>
                     </View>
                   )}
 
-                  <View style={styles.notificationFooter}>
-                    <Text style={styles.notificationTime}>
-                      {new Date(notification.createdAt).toLocaleDateString(locale, {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
-                    </Text>
-                    {getNotificationLink(notification) && (
-                      <View style={styles.viewDetailsContainer}>
-                        <Text style={styles.viewDetailsText}>{t('notifications.viewDetails')}</Text>
-                        <ExternalLink size={12} color={colors.primary} />
-                      </View>
-                    )}
-                  </View>
                 </View>
-
-                {/* Mark as read button */}
-                {!notification.isRead && (
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleMarkAsRead(notification.id);
-                    }}
-                    style={styles.markReadButton}
-                    activeOpacity={0.7}
-                    hitSlop={8}
-                  >
-                    <Check size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
+              </Touchable>
+              </SwipeRow>
             ))}
           </View>
         )}
       </ScrollView>
+
+      {pendingDelete ? (
+        <View style={styles.undoBar} accessibilityLiveRegion="polite">
+          <Text style={styles.undoText}>{t('notifications.deleted')}</Text>
+          <TouchableOpacity onPress={handleUndo} hitSlop={10} accessibilityRole="button">
+            <Text style={styles.undoAction}>{t('notifications.undo')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </SafeAreaView>
+  );
+}
+
+const UNDO_MS = 4000;
+const SWIPE_THRESHOLD = 90;
+
+/**
+ * Swipe left or right past SWIPE_THRESHOLD to remove a row; a shorter drag
+ * springs back. Built on PanResponder + Animated (core RN): the app has no
+ * GestureHandlerRootView, so RNGH's Swipeable is not an option here. Only a
+ * clearly horizontal drag is claimed, so vertical scrolling stays untouched.
+ */
+function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  const x = useRef(new Animated.Value(0)).current;
+  const width = Dimensions.get('window').width;
+  const responder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderMove: Animated.event([null, { dx: x }], { useNativeDriver: false }),
+      onPanResponderRelease: (_e, g) => {
+        if (Math.abs(g.dx) > SWIPE_THRESHOLD || Math.abs(g.vx) > 0.8) {
+          Animated.timing(x, { toValue: g.dx > 0 ? width : -width, duration: 180, useNativeDriver: false }).start(
+            () => onDelete(),
+          );
+        } else {
+          Animated.spring(x, { toValue: 0, useNativeDriver: false, bounciness: 4 }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(x, { toValue: 0, useNativeDriver: false }).start();
+      },
+    }),
+  ).current;
+  const opacity = x.interpolate({ inputRange: [-width, 0, width], outputRange: [0, 1, 0] });
+  return (
+    <Animated.View style={{ transform: [{ translateX: x }], opacity }} {...responder.panHandlers}>
+      {children}
+    </Animated.View>
   );
 }
 
@@ -670,15 +708,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.background,
   },
+  // Quiet text actions, no filled bar or rule under them.
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between', // Mark all read (left) + Clear all (right)
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12, // Reduced from 16 for minimal spacing
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   markAllButton: {
     flexDirection: 'row',
@@ -690,9 +727,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: 'transparent',
   },
   markAllText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.text,
   },
   clearAllButton: {
     paddingHorizontal: 12,
@@ -701,9 +738,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: 'transparent',
   },
   clearAllText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.error,
+    color: colors.textSecondary,
   },
   scrollView: {
     flex: 1,
@@ -719,47 +756,43 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingVertical: 64,
   },
   notificationsList: {
-    paddingHorizontal: 16,
-    paddingTop: 16, // 16px gap below header
-    paddingBottom: 32,
-    gap: 8,
+    paddingTop: 4,
+    paddingBottom: 96,
   },
-  // Elevation, not borders (POSH §1): a clean raised surface with soft shadow —
-  // no colored strips or 1px box. Unread state is signalled only by the small
-  // teal dot next to the title (a sparing accent).
-  notificationCard: {
+  // A plain row on the page (no card, no emoji tile): compact, one line of
+  // title, two of detail (TestFlight 2026-11-14: "cards way too big").
+  row: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.lg,
-    padding: 16,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 2,
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 10,
+    backgroundColor: colors.background,
   },
-  notificationCardUnread: {
-    shadowOpacity: 0.2,
-    elevation: 3,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
+  unreadDotHidden: { backgroundColor: 'transparent' },
+  undoBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 24,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceRaised,
   },
-  notificationIcon: {
-    fontSize: 24,
-  },
+  undoText: { fontSize: 15, color: colors.text },
+  undoAction: { fontSize: 15, fontWeight: '700', color: colors.text },
   notificationContent: {
     flex: 1,
-    gap: 6,
+    gap: 3,
   },
   notificationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'baseline',
     gap: 8,
   },
   notificationTitle: {
@@ -772,14 +805,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.text,
   },
   notificationMessage: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  notificationFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    lineHeight: 18,
   },
   staffInviteActions: {
     flexDirection: 'row',
@@ -788,23 +816,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 2,
   },
   staffInviteAcceptButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: radius.chip,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.white,
   },
   staffInviteAcceptText: {
-    color: colors.white,
+    color: T.onWhite,
     fontSize: 13,
     fontWeight: '700',
   },
   staffInviteDeclineButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: radius.chip,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   staffInviteDeclineText: {
     color: colors.text,
@@ -813,29 +839,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   notificationTime: {
     fontSize: 12,
-    color: colors.textSecondary,
-  },
-  viewDetailsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  viewDetailsText: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '500',
+    color: colors.textTertiary,
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 999,
     backgroundColor: colors.primary,
-    marginTop: 4,
-  },
-  markReadButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 6,
   },
 });

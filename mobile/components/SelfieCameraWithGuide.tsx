@@ -205,7 +205,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   instructionText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   controls: {
@@ -257,7 +257,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 12,
   },
   permissionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
@@ -271,7 +271,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   permissionButtonText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   cancelButton: {
@@ -279,6 +279,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   cancelButtonText: {
     color: colors.primary,
-    fontSize: 16,
+    fontSize: 15,
   },
 });

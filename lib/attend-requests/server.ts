@@ -221,6 +221,7 @@ export async function createAttendRequest(
       requesterName: name,
       quantity,
       requestId: ref.id,
+      requesterId: user.id,
     })
   }
   return { ok: true, created: result.kind === 'created', request: requesterView(ref.id, result.doc) }
