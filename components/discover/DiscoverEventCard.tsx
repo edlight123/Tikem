@@ -62,38 +62,32 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
       ? `${baseDate} · ${t('events.more_dates', { count: moreDates, defaultValue: '+{{count}} more dates' })}`
       : baseDate
 
-  // Poster overlay chips, stacked top-left: the status cue (Popular / Few tickets
-  // left, else category) plus a friends-going social-proof chip when relevant.
-  const badge = (
-    <div className="flex flex-col items-start gap-1">
-      <span
-        // 9px with 0.1em tracking was below readable on a phone, where this
-        // chip is often the only thing naming the event's type. 10px is still a
-        // micro-label but it can actually be read.
-        // A status cue reads as a dot + label on a dark scrim, never a filled
-        // pill (house rule); amber marks scarcity, white marks popularity.
-        className={`eyebrow inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] tracking-[0.1em] text-white backdrop-blur-md ${
-          cue ? 'bg-black/40' : 'bg-black/30'
-        }`}
-      >
+  // A status cue (Popular / Few tickets left) and friends going, as a dot +
+  // label after the price. The bare category is left out: it said "Other" on
+  // half the grid and, as a chip on the poster, covered the flyer's own date.
+  const status =
+    cue || friendsGoing > 0 ? (
+      <>
         {cue && (
-          <span
-            aria-hidden
-            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-              cue.variant === 'warning' ? 'bg-amber-400' : 'bg-white'
-            }`}
-          />
+          <>
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                cue.variant === 'warning' ? 'bg-amber-400' : 'bg-white/70'
+              }`}
+            />
+            <span className="truncate">{cue.label}</span>
+          </>
         )}
-        {cue ? cue.label : event.category}
-      </span>
-      {friendsGoing > 0 && (
-        <span className="label-mono inline-flex items-center gap-1 rounded-md bg-black/40 px-2 py-1 text-[9px] uppercase tracking-[0.1em] text-white/90 backdrop-blur-md">
-          <Users className="h-3 w-3" />
-          {friendsGoing} {friendsGoing === 1 ? 'friend' : 'friends'}
-        </span>
-      )}
-    </div>
-  )
+        {cue && friendsGoing > 0 && <span className="text-white/30">·</span>}
+        {friendsGoing > 0 && (
+          <span className="inline-flex shrink-0 items-center gap-1">
+            <Users aria-hidden className="h-3 w-3" />
+            {friendsGoing} {friendsGoing === 1 ? 'friend' : 'friends'}
+          </span>
+        )}
+      </>
+    ) : null
 
   return (
     <div className="relative h-full">
@@ -103,28 +97,27 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
         priceLabel={priceLabel}
         venue={venue}
         dateLabel={dateLabel}
-        badge={badge}
+        status={status}
+        reserveAction
         aspect="4/5"
         href={`/events/${event.id}`}
       />
 
-      {/* Bookmark overlay — sits above the PosterCard link so its own click
-          toggles the saved state instead of navigating. */}
-      <button
-        type="button"
-        onClick={handleBookmarkToggle}
-        aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-        // 44px on a phone, 32px above. The visible disc stays 32px either way
-        // — the extra size is transparent padding around it, so save doesn't
-        // become a thumb-sized black circle sitting on the poster art.
-        className="absolute right-2.5 top-2.5 z-20 grid h-11 w-11 place-items-center rounded transition-transform duration-200 active:scale-90 sm:h-8 sm:w-8"
-      >
-        {/* The disc moved in here so the button's larger hit area stays
-            invisible while the affordance keeps its original size. */}
-        <span className="grid h-8 w-8 place-items-center rounded bg-black/30 backdrop-blur-md">
-          <Bookmark className={`h-[15px] w-[15px] ${isBookmarked ? 'fill-white text-white' : 'text-white'}`} />
-        </span>
-      </button>
+      {/* Bookmark — beside the title, under the poster's right edge (as in
+          the app), not on the art. The frame mirrors the poster's 4:5 box so
+          the button lands just below it at any card width; it sits above the
+          PosterCard link so its click toggles instead of navigating. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[4/5]">
+        <button
+          type="button"
+          onClick={handleBookmarkToggle}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+          aria-pressed={isBookmarked}
+          className="pointer-events-auto absolute -right-2 top-full z-20 mt-1 grid h-10 w-10 place-items-center rounded text-white/55 transition-colors hover:text-white active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          <Bookmark className={`h-[17px] w-[17px] ${isBookmarked ? 'fill-white text-white' : ''}`} />
+        </button>
+      </div>
     </div>
   )
 }

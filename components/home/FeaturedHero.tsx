@@ -103,13 +103,14 @@ export default function FeaturedHero({ events, zone }: { events: HomeEvent[]; zo
               // A template poster already says the title, date, venue and
               // lineup in its art. Setting them again in 80px display type
               // just repeated the poster below itself (owner: "wasting
-              // space"), so the caption is the title at body-title size.
-              <h2 className="break-words font-grotesk text-[22px] font-bold leading-tight tracking-[-0.02em] text-white sm:text-[26px]">
+              // space"), so the caption is the title at body-title size,
+              // in the event-name voice (serif italic, as in the app).
+              <h2 className="break-words font-display !text-[32px] italic !leading-[1.05] text-white sm:!text-[40px]">
                 {ev.title}
               </h2>
             ) : (
               <>
-                <h2 className="break-words font-grotesk font-bold text-white text-balance !text-[clamp(36px,5.2vw,80px)] !leading-[0.95] tracking-[-0.035em]">
+                <h2 className="break-words font-display italic text-white text-balance !text-[clamp(44px,6vw,92px)] !leading-[0.95] tracking-[-0.01em]">
                   {ev.title}
                 </h2>
                 <p className="mt-5 truncate whitespace-nowrap font-mono !text-[10px] uppercase !leading-relaxed tracking-[0.04em] text-white/50 sm:!text-[11px] sm:tracking-[0.08em]">

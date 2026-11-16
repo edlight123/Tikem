@@ -1,3 +1,4 @@
+import { normalizeEventCategory } from '@/lib/filters/config'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
@@ -54,6 +55,16 @@ export default async function CategoryPage({
   const world = CULTURAL_CATEGORIES.find((c) => c.key === category.toLowerCase())
   if (world) {
     permanentRedirect(`/discover?${world.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}`)
+  }
+
+  // The stored categories are canonical English ("Concert"), and this page
+  // filters by the exact value, so /categories/concert (or "music") showed
+  // 0 events. Send any synonym / other casing to the canonical page.
+  if (!CATEGORIES.includes(category)) {
+    const canonical = normalizeEventCategory(category)
+    if (canonical && canonical !== 'Other' && canonical !== category) {
+      permanentRedirect(`/categories/${encodeURIComponent(canonical)}`)
+    }
   }
 
   const user = await getCurrentUser()

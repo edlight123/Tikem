@@ -14,8 +14,17 @@ interface PosterCardProps {
   priceLabel?: string
   venue?: string
   dateLabel?: string
-  /** Floating overlay node on the image (status pill, category, etc.). */
-  badge?: React.ReactNode
+  /**
+   * Quiet status after the price (dot + label: "Few tickets left", "3
+   * friends"). Nothing sits ON the poster: an overlay chip covered the date
+   * or title organizers set in the top corner of their flyer.
+   */
+  status?: React.ReactNode
+  /**
+   * Leaves room at the right of the title for an action the caller overlays
+   * there (DiscoverEventCard's bookmark).
+   */
+  reserveAction?: boolean
   /** Poster ratio. Default 4/5 (Tikèm's editorial portrait). */
   /** The house poster format is 4:5 and is the only shape offered — a
    *  second option here just let a caller drift off-format. */
@@ -53,7 +62,8 @@ export function PosterCard({
   priceLabel,
   venue,
   dateLabel,
-  badge,
+  status,
+  reserveAction = false,
   aspect = '4/5',
   href,
   onClick,
@@ -71,7 +81,7 @@ export function PosterCard({
 
   const inner = (
     <article
-      className="group flex h-full max-w-full flex-col transition-transform duration-200 ease-out hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="group flex h-full max-w-full flex-col [container-type:inline-size] transition-transform duration-200 ease-out hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       style={glow ? ({ ['--pg' as any]: accent } as React.CSSProperties) : undefined}
     >
       {/* ---------- Poster (4px corners: artwork, not chrome) ---------- */}
@@ -94,20 +104,26 @@ export function PosterCard({
             onError={() => setImgError(true)}
           />
         ) : (
-          // Text-only events still read as premium: title set large in bold grotesk.
+          // Text-only events still read as premium: the title in the event-name voice.
           <div className="absolute inset-0 flex items-center justify-center p-5 text-center">
-            <span className="font-grotesk text-2xl font-bold leading-[1.05] text-white line-clamp-4">
+            <span className="font-display text-[28px] italic leading-[1.05] text-white line-clamp-4">
               {title}
             </span>
           </div>
         )}
-
-        {badge && <div className="absolute left-2.5 top-2.5 z-10">{badge}</div>}
       </div>
 
-      {/* ---------- Caption: title / venue·date / price (teal = semantic) ---------- */}
-      <div className="px-0.5 pt-2.5">
-        <h3 className="truncate font-grotesk text-[15px] font-bold leading-tight text-white">
+      {/* ---------- Caption: title / venue·date / price ----------
+          Event names are the serif italic, as in the app (owner: event names
+          stay serif), sized to the card (cqw): ~21px in a rail, 28px on a
+          full-width phone card, as the app sets it. The price is caption grey, not teal: on a grid every
+          card carried a teal line, and teal is for state. */}
+      <div className="pt-2.5">
+        <h3
+          className={`truncate font-display text-[clamp(20px,8.5cqw,28px)] italic leading-[1.15] text-white ${
+            reserveAction ? 'pr-9' : ''
+          }`}
+        >
           {title}
         </h3>
         {(venue || dateLabel) && (
@@ -121,8 +137,12 @@ export function PosterCard({
             {dateLabel}
           </p>
         )}
-        {priceLabel && (
-          <p className="mt-1 truncate text-[13px] font-semibold text-brand-400">{priceLabel}</p>
+        {(priceLabel || status) && (
+          <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-[13px]">
+            {priceLabel && <span className="shrink-0 font-semibold text-white/85">{priceLabel}</span>}
+            {priceLabel && status && <span className="text-white/30">·</span>}
+            {status && <span className="flex min-w-0 items-center gap-1.5 truncate text-white/55">{status}</span>}
+          </p>
         )}
       </div>
     </article>
@@ -133,7 +153,7 @@ export function PosterCard({
       <Link
         href={href}
         onClick={onClick}
-        className={`block h-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
+        className={`block h-full rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
       >
         {inner}
       </Link>
@@ -145,7 +165,7 @@ export function PosterCard({
       <button
         type="button"
         onClick={onClick}
-        className={`block h-full w-full max-w-full rounded-2xl text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
+        className={`block h-full w-full max-w-full rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
       >
         {inner}
       </button>

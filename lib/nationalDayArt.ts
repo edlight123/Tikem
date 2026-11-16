@@ -32,7 +32,31 @@ export const NATIONAL_DAY_ART: Record<string, NationalDayArt> = {
   tontonnwel:    { src: '/art/national-days/tontonnwel.jpg',    alt: 'Tonton Nwèl handing out gifts on a porch as children carry glowing fanals', place: 'Tonton Nwèl' },
 }
 
+
+// Real photographs per day (mirrors mobile/lib/photoLibrary NATIONAL_DAY_PHOTOS,
+// owner 2026-11-16: "actual pictures instead of made up ones"). Credits live in
+// mobile/lib/photoCredits.ts. A day without one keeps its illustration.
+// prettier-ignore
+export const NATIONAL_DAY_PHOTOS: Record<string, NationalDayArt> = {
+  independence: { src: '/art/national-days/photos/independence.jpg', alt: "A bowl of soup joumou", place: "Soup joumou", scrim: 'strong' },
+  ancestors: { src: '/art/national-days/photos/ancestors.jpg', alt: "The Nèg Mawon statue blowing a conch on the Champ de Mars", place: "Nèg Mawon · Champ de Mars", scrim: 'strong' },
+  kanaval: { src: '/art/national-days/photos/kanaval.jpg', alt: "A horned papier-mâché mask at the Jacmel kanaval", place: "Kanaval · Jacmel" },
+  easter: { src: '/art/national-days/photos/easter.jpg', alt: "A bright kite flying over a green hillside", place: "Monte kap · Pak", scrim: 'strong' },
+  toussaint: { src: '/art/national-days/photos/toussaint.jpg', alt: "The statue of Toussaint Louverture in Allada", place: "Toussaint Louverture · Allada", scrim: 'strong' },
+  labour: { src: '/art/national-days/photos/labour.jpg', alt: "Farmers bringing in the rice harvest in the fields of Les Cayes", place: "Les Cayes", scrim: 'strong' },
+  flag: { src: '/art/national-days/photos/flag.jpg', alt: "A Haitian flag held up in a festival crowd" },
+  assumption: { src: '/art/national-days/photos/assumption.jpg', alt: "The white cathedral of Notre-Dame de l'Assomption in Les Cayes", place: "Cathédrale · Les Cayes", scrim: 'strong' },
+  dessalines: { src: '/art/national-days/photos/dessalines.jpg', alt: "The equestrian statue of Jean-Jacques Dessalines on the Champ de Mars", place: "Dessalines · Champ de Mars", scrim: 'strong' },
+  allsaints: { src: '/art/national-days/photos/allsaints.jpg', alt: "The cathedral dome of Cap-Haïtien seen down Rue 17", place: "Cathédrale · Cap-Haïtien" },
+  morts: { src: '/art/national-days/photos/morts.jpg', alt: "The cathedral dome of Cap-Haïtien seen down Rue 17", place: "Cathédrale · Cap-Haïtien" },
+  vertieres: { src: '/art/national-days/photos/vertieres.jpg', alt: "The monument to the heroes of Vertières, outside Cap-Haïtien", place: "Vertières · Cap-Haïtien", scrim: 'strong' },
+  discovery: { src: '/art/national-days/photos/discovery.jpg', alt: "Boats moored in the turquoise bay at Labadee", place: "Labadee" },
+  noel: { src: '/art/national-days/photos/noel.jpg', alt: "A family laughing together in front of a Christmas tree", place: "Nwèl" },
+}
+
 export function nationalDayArt(day: NationalDay): NationalDayArt {
+  const photo = NATIONAL_DAY_PHOTOS[day.key]
+  if (photo) return photo
   const key = nationalDayArtKey(day, (k) => k in NATIONAL_DAY_ART)
   return NATIONAL_DAY_ART[key] ?? NATIONAL_DAY_ART.vertieres
 }
