@@ -3104,6 +3104,7 @@ export default {
     successBody: 'Votre billet a été ajouté à votre wallet !',
     errorBody: 'Échec de l’ajout du billet au wallet. Veuillez réessayer.',
     downloadTitle: 'Télécharger le QR code',
+    savedTitle: 'Enregistré dans Photos',
     downloadBody: 'Faites une capture d’écran de ce billet pour enregistrer le QR code, ou utilisez la fonction « Ajouter au wallet » pour un accès facile.',
   },
 

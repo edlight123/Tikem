@@ -3141,6 +3141,7 @@ export default {
     successBody: 'Your ticket has been added to your wallet!',
     errorBody: 'Failed to add ticket to wallet. Please try again.',
     downloadTitle: 'Download QR Code',
+    savedTitle: 'Saved to Photos',
     downloadBody: 'Take a screenshot of this ticket to save the QR code, or use the "Add to Wallet" feature for easy access.',
   },
 
