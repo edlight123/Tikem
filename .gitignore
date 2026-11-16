@@ -66,3 +66,12 @@ store/app-store/demo.env
 *.key
 *.mobileprovision
 store/digicel/
+
+# Local-only: ASC credentials, raw tester feedback, rendered media
+pull-fb.sh
+testflight-feedback/*.png
+testflight-feedback-*/
+marketing/tikem-promo/out/
+marketing/tikem-promo/public/
+marketing/tikem-promo/node_modules/
+marketing/tutorials/
