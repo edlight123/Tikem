@@ -956,7 +956,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
               who is throwing it — with Follow (and Contact) right on the row.
               Owner feedback 2026-11-15 replaced the byline above the title and
               the duplicate "hosted by" card at the foot of the page. */}
-          <View style={styles.orgRow}>
+          <View style={styles.orgBlock}>
             <TouchableOpacity
               style={styles.orgRowMain}
               onPress={navigateToOrganizerProfile}
@@ -981,22 +981,31 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {(event.users?.is_verified || event.is_verified) && (
                 <VerifiedBadge size="small" label={t('eventDetail.verified')} />
               )}
+              <ChevronRight size={18} color={colors.textTertiary} style={styles.orgRowChevron} />
             </TouchableOpacity>
-            {/* Hidden on the organizer's own event — the server rejects it anyway. */}
-            {!!user && !!event.organizer_id && event.organizer_id !== user.uid && (
-              <TouchableOpacity
-                style={styles.orgRowIconBtn}
-                onPress={() => setShowContactOrganizer(true)}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={t('contactOrganizer.open')}
-                hitSlop={8}
-              >
-                <MessageCircle size={18} color={colors.text} />
-              </TouchableOpacity>
-            )}
-            {event.organizer_id && event.organizer_id !== user?.uid && (
-              <FollowButton organizerId={event.organizer_id} style={styles.followButtonInCard} />
+            {/* Two labelled, equal actions instead of a bare chat glyph next to a
+                status-looking "Following" chip (owner: "misleading"). Hidden on
+                the organizer's own event. */}
+            {!!event.organizer_id && event.organizer_id !== user?.uid && (
+              <View style={styles.orgActions}>
+                <View style={styles.orgActionSlot}>
+                  <FollowButton organizerId={event.organizer_id} style={styles.orgAction} />
+                </View>
+                {!!user && (
+                  <View style={styles.orgActionSlot}>
+                    <TouchableOpacity
+                      style={[styles.orgAction, styles.orgMessageBtn]}
+                      onPress={() => setShowContactOrganizer(true)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('contactOrganizer.open')}
+                    >
+                      <MessageCircle size={16} color={colors.text} />
+                      <Text style={styles.orgMessageText}>{t('contactOrganizer.short')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             )}
           </View>
 
@@ -1014,11 +1023,14 @@ export default function EventDetailScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {/* About Section */}
-          <View style={styles.section}>
-            <SectionHeader title={t('eventDetail.sections.about')} />
-            <Text style={styles.description}>{event.description}</Text>
-          </View>
+          {/* About: only when there is something to say (a blank or
+              whitespace-only description left an empty, tall section). */}
+          {!!String(event.description || '').trim() && (
+            <View style={styles.section}>
+              <SectionHeader title={t('eventDetail.sections.about')} />
+              <Text style={styles.description}>{String(event.description).trim()}</Text>
+            </View>
+          )}
 
           {/* Trailer: plays muted on the page when it is a YouTube/Vimeo link
               (TrailerCard); any other link keeps the plain row below. */}
@@ -1756,16 +1768,31 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.text,
     marginBottom: 2,
   },
-  orgRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    marginBottom: 14,
+  // Who's throwing it: one tappable identity row, then Follow / Message.
+  // Top hairline only: the next section draws its own top line, so a bottom
+  // border here doubled it (owner: "one extra line").
+  orgBlock: {
+    paddingTop: 16,
+    paddingBottom: 18,
+    gap: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
+  orgRowChevron: { marginLeft: 'auto' },
+  orgActions: { flexDirection: 'row', gap: 10 },
+  // Equal slots; the buttons fill them (FollowButton's own padding would
+  // otherwise skew a plain flex split).
+  orgActionSlot: { flex: 1 },
+  orgAction: { width: '100%', height: 42 },
+  orgMessageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceRaised,
+  },
+  orgMessageText: { fontSize: 13, fontWeight: '700', color: colors.text },
   orgRowMain: {
     flex: 1,
     flexDirection: 'row',
@@ -1779,14 +1806,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     color: colors.text,
   },
-  orgRowIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
+
   verifiedBadgeInline: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1806,9 +1826,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     flex: 1,
   },
-  followButtonInCard: {
-    marginLeft: 12,
-  },
+
   quickActionsRow: {
     flexDirection: 'row',
     gap: 12,

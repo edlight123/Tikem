@@ -558,7 +558,7 @@ export default function NotificationsScreen() {
           <View style={styles.emptyContainer}>
             <EmptyState
               icon={Bell}
-              art={artByKey('kafe')}
+              art={artByKey('photo-haiti-coast')}
               title={t('notifications.emptyTitle')}
             />
           </View>

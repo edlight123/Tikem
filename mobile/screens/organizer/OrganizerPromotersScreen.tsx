@@ -9,6 +9,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   Share,
@@ -19,7 +20,10 @@ import {
   View,
 } from 'react-native';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { Megaphone } from 'lucide-react-native';
+import { Megaphone, Plus, X } from 'lucide-react-native';
+import SectionHeader from '../../components/SectionHeader';
+import { ListGroup, ListRow } from '../../components/ui/ListRow';
+import { colors as T, font } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -94,6 +98,7 @@ export default function OrganizerPromotersScreen() {
   const [commissionType, setCommissionType] = useState<'percentage' | 'flat_per_ticket'>('percentage');
   const [commissionValue, setCommissionValue] = useState('10');
   const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -152,6 +157,7 @@ export default function OrganizerPromotersScreen() {
         }
       );
       setPromoters((prev) => [data.promoter, ...prev]);
+      setFormOpen(false);
       setName('');
       setContact('');
       setCode('');
@@ -225,21 +231,10 @@ export default function OrganizerPromotersScreen() {
           onHeight={onHeight}
         />
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
-          <Skeleton width="100%" height={64} radius={RADIUS.md} />
-          <View style={styles.formCard}>
-            <Skeleton width={150} height={16} radius={4} />
-            {[0, 1, 2].map((i) => (
-              <View key={i}>
-                <Skeleton width={110} height={12} radius={4} style={{ marginTop: 14, marginBottom: 6 }} />
-                <Skeleton width="100%" height={45} radius={RADIUS.md} />
-              </View>
-            ))}
-            <Skeleton width="100%" height={48} radius={4} style={{ marginTop: 20 }} />
-          </View>
+          <Skeleton width="100%" height={52} radius={RADIUS.md} />
           <View style={styles.section}>
-            <Skeleton width={140} height={18} radius={4} style={{ marginBottom: 12 }} />
             {[0, 1].map((i) => (
-              <View key={i} style={styles.promoterCard}>
+              <View key={i} style={[styles.promoterRow, i === 0 && styles.promoterRowFirst]}>
                 <Skeleton width="55%" height={15} radius={4} />
                 <Skeleton width="40%" height={13} radius={4} style={{ marginTop: 10 }} />
               </View>
@@ -250,8 +245,98 @@ export default function OrganizerPromotersScreen() {
     );
   }
 
+  const form = (
+    <>
+      <Text style={styles.label}>{t('organizerPromoters.fields.name')}</Text>
+      <TextInput
+        style={styles.input}
+        value={name}
+        onChangeText={(v) => {
+          setName(v);
+          if (!codeTouched) setCode(suggestCode(v));
+        }}
+        placeholder={t('organizerPromoters.placeholders.name')}
+        placeholderTextColor={colors.textTertiary}
+        selectionColor={colors.primary}
+        autoFocus
+      />
+
+      <Text style={styles.label}>{t('organizerPromoters.fields.contact')}</Text>
+      <TextInput
+        style={styles.input}
+        value={contact}
+        onChangeText={setContact}
+        placeholder={t('organizerPromoters.placeholders.contact')}
+        placeholderTextColor={colors.textTertiary}
+        selectionColor={colors.primary}
+        autoCapitalize="none"
+      />
+
+      <Text style={styles.label}>{t('organizerPromoters.fields.code')}</Text>
+      <TextInput
+        style={styles.input}
+        value={code}
+        onChangeText={(v) => {
+          setCodeTouched(true);
+          setCode(v.toUpperCase());
+        }}
+        placeholder={t('organizerPromoters.placeholders.code')}
+        placeholderTextColor={colors.textTertiary}
+        selectionColor={colors.primary}
+        autoCapitalize="characters"
+        autoCorrect={false}
+      />
+
+      <Text style={styles.label}>{t('organizerPromoters.fields.commission')}</Text>
+      <View style={styles.commissionRow}>
+        <TextInput
+          style={[styles.input, styles.commissionInput]}
+          value={commissionValue}
+          onChangeText={setCommissionValue}
+          keyboardType="numeric"
+          placeholderTextColor={colors.textTertiary}
+          selectionColor={colors.primary}
+        />
+        <View style={styles.typeToggle}>
+          {(
+            [
+              ['percentage', t('organizerPromoters.types.percentage')],
+              ['flat_per_ticket', t('organizerPromoters.types.flat').replace('{currency}', eventCurrency)],
+            ] as const
+          ).map(([value, label]) => (
+            <TouchableOpacity
+              key={value}
+              style={[styles.typeOption, commissionType === value && styles.typeOptionActive]}
+              onPress={() => setCommissionType(value)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: commissionType === value }}
+            >
+              <Text
+                style={[styles.typeOptionText, commissionType === value && styles.typeOptionTextActive]}
+                numberOfLines={1}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+      <View style={styles.submitWrap}>
+        <WhitePillCTA
+          label={submitting ? t('organizerPromoters.creating') : t('organizerPromoters.create')}
+          onPress={handleCreate}
+          loading={submitting}
+          disabled={submitting}
+        />
+      </View>
+    </>
+  );
+
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={styles.container}>
       <OrganizerScreenHeader
         title={t('organizerPromoters.title')}
         subtitle={eventTitle || undefined}
@@ -259,183 +344,112 @@ export default function OrganizerPromotersScreen() {
         overlay
         onHeight={onHeight}
       />
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
-        keyboardShouldPersistTaps="handled"
-      >
-
-        {/* Create form */}
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>{t('organizerPromoters.formTitle')}</Text>
-
-          <Text style={styles.label}>{t('organizerPromoters.fields.name')}</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={(v) => {
-              setName(v);
-              if (!codeTouched) setCode(suggestCode(v));
-            }}
-            placeholder={t('organizerPromoters.placeholders.name')}
-            placeholderTextColor={colors.textTertiary}
-            selectionColor={colors.primary}
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 8 }]}>
+        {promoters.length === 0 ? (
+          <EmptyState
+            icon={Megaphone}
+            title={t('organizerPromoters.empty')}
+            actionLabel={t('organizerPromoters.formTitle')}
+            onAction={() => setFormOpen(true)}
           />
+        ) : (
+          <>
+            {/* The list comes first; adding is one row that opens a sheet
+                (the always-open form card read heavy). */}
+            <ListGroup>
+              <ListRow icon={Plus} title={t('organizerPromoters.formTitle')} onPress={() => setFormOpen(true)} />
+            </ListGroup>
 
-          <Text style={styles.label}>{t('organizerPromoters.fields.contact')}</Text>
-          <TextInput
-            style={styles.input}
-            value={contact}
-            onChangeText={setContact}
-            placeholder={t('organizerPromoters.placeholders.contact')}
-            placeholderTextColor={colors.textTertiary}
-            selectionColor={colors.primary}
-            autoCapitalize="none"
-          />
+            <View style={styles.section}>
+              <SectionHeader title={t('organizerPromoters.listTitle').toLowerCase()} />
+              {promoters.map((p, i) => (
+                <View key={p.id} style={[styles.promoterRow, i === 0 && styles.promoterRowFirst]}>
+                  <View style={styles.promoterHeader}>
+                    <View style={styles.promoterHeaderLeft}>
+                      <Text style={styles.promoterName} numberOfLines={1}>
+                        {p.name}
+                      </Text>
+                      <Text style={styles.promoterMeta} numberOfLines={1}>
+                        {p.code} · {commissionLabel(p)}
+                      </Text>
+                    </View>
+                    <View style={styles.statusWrap}>
+                      <View
+                        style={[styles.statusDot, { backgroundColor: p.isActive ? colors.success : colors.textTertiary }]}
+                      />
+                      <Text style={styles.statusText}>
+                        {p.isActive ? t('organizerPromoters.active') : t('organizerPromoters.paused')}
+                      </Text>
+                    </View>
+                  </View>
 
-          <Text style={styles.label}>{t('organizerPromoters.fields.code')}</Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            onChangeText={(v) => {
-              setCodeTouched(true);
-              setCode(v.toUpperCase());
-            }}
-            placeholder={t('organizerPromoters.placeholders.code')}
-            placeholderTextColor={colors.textTertiary}
-            selectionColor={colors.primary}
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.label}>{t('organizerPromoters.fields.commission')}</Text>
-          <View style={styles.commissionRow}>
-            <TextInput
-              style={[styles.input, styles.commissionInput]}
-              value={commissionValue}
-              onChangeText={setCommissionValue}
-              keyboardType="numeric"
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-            />
-            <View style={styles.typeToggle}>
-              {(
-                [
-                  ['percentage', t('organizerPromoters.types.percentage')],
-                  ['flat_per_ticket', t('organizerPromoters.types.flat').replace('{currency}', eventCurrency)],
-                ] as const
-              ).map(([value, label]) => (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.typeOption, commissionType === value && styles.typeOptionActive]}
-                  onPress={() => setCommissionType(value)}
-                  accessibilityRole="button"
-                >
-                  <Text
-                    style={[styles.typeOptionText, commissionType === value && styles.typeOptionTextActive]}
-                    numberOfLines={1}
-                  >
-                    {label}
+                  <View style={styles.statsRow}>
+                    {[
+                      [String(p.ticketsSold), t('organizerPromoters.stats.tickets')],
+                      [fmtMoney(p.grossCents, p.currency), t('organizerPromoters.stats.sales')],
+                      [fmtMoney(p.commissionCents, p.currency), t('organizerPromoters.stats.owed')],
+                    ].map(([v, l]) => (
+                      <View key={l} style={styles.stat}>
+                        <Text style={styles.statValue} numberOfLines={1}>{v}</Text>
+                        <Text style={styles.statLabel} numberOfLines={1}>{l}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {/* Funnel in one quiet line: link visits → orders. */}
+                  <Text style={styles.funnelLine} numberOfLines={1}>
+                    {`${p.clicks || 0} ${t('organizerPromoters.stats.clicks').toLowerCase()} · ${p.ordersCount} ${t(
+                      'organizerPromoters.stats.orders'
+                    ).toLowerCase()} · ${formatConversion(p.ordersCount, p.clicks || 0)}`}
                   </Text>
-                </TouchableOpacity>
+
+                  <View style={styles.actionsRow}>
+                    <Touchable style={[styles.actionButton, styles.actionPrimary]} onPress={() => handleSend(p)}>
+                      <Text style={[styles.actionText, styles.actionPrimaryText]}>{t('organizerPromoters.sendLink')}</Text>
+                    </Touchable>
+                    <Touchable style={styles.actionButton} onPress={() => handleToggle(p)}>
+                      <Text style={styles.actionText}>
+                        {p.isActive ? t('organizerPromoters.pause') : t('organizerPromoters.resume')}
+                      </Text>
+                    </Touchable>
+                    {p.ordersCount === 0 && (
+                      <Touchable style={styles.actionButton} onPress={() => handleDelete(p)}>
+                        <Text style={[styles.actionText, { color: colors.error }]}>
+                          {t('organizerPromoters.delete.confirm')}
+                        </Text>
+                      </Touchable>
+                    )}
+                  </View>
+                </View>
               ))}
             </View>
-          </View>
-
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-          <View style={styles.submitWrap}>
-            <WhitePillCTA
-              label={submitting ? t('organizerPromoters.creating') : t('organizerPromoters.create')}
-              onPress={handleCreate}
-              loading={submitting}
-              disabled={submitting}
-            />
-          </View>
-        </View>
-
-        {/* Promoter list */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('organizerPromoters.listTitle')}</Text>
-          {promoters.length === 0 ? (
-            <EmptyState
-              icon={Megaphone}
-              title={t('organizerPromoters.empty')}
-              compact
-            />
-          ) : (
-            promoters.map((p) => (
-              <View key={p.id} style={styles.promoterCard}>
-                <View style={styles.promoterHeader}>
-                  <View style={styles.promoterHeaderLeft}>
-                    <Text style={styles.promoterName} numberOfLines={1}>
-                      {p.name}
-                    </Text>
-                    <Text style={styles.promoterMeta} numberOfLines={1}>
-                      {p.code} · {commissionLabel(p)}
-                    </Text>
-                  </View>
-                  <View style={styles.statusWrap}>
-                    <View style={[styles.statusDot, { backgroundColor: p.isActive ? colors.success : colors.textTertiary }]} />
-                    <Text style={styles.statusText}>
-                      {p.isActive ? t('organizerPromoters.active') : t('organizerPromoters.paused')}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.statsRow}>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{p.ticketsSold}</Text>
-                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.tickets')}</Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{fmtMoney(p.grossCents, p.currency)}</Text>
-                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.sales')}</Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{fmtMoney(p.commissionCents, p.currency)}</Text>
-                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.owed')}</Text>
-                  </View>
-                </View>
-
-                {/* Funnel: link visits → orders. */}
-                <View style={styles.funnelRow}>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{p.clicks || 0}</Text>
-                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.clicks')}</Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{p.ordersCount}</Text>
-                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.orders')}</Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{formatConversion(p.ordersCount, p.clicks || 0)}</Text>
-                    <Text style={styles.statLabel}>{t('organizerPromoters.stats.conversion')}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.actionsRow}>
-                  <Touchable style={styles.actionButton} onPress={() => handleSend(p)}>
-                    <Text style={styles.actionText}>{t('organizerPromoters.sendLink')}</Text>
-                  </Touchable>
-                  <Touchable style={styles.actionButton} onPress={() => handleToggle(p)}>
-                    <Text style={styles.actionText}>
-                      {p.isActive ? t('organizerPromoters.pause') : t('organizerPromoters.resume')}
-                    </Text>
-                  </Touchable>
-                  {p.ordersCount === 0 && (
-                    <Touchable style={styles.actionButton} onPress={() => handleDelete(p)}>
-                      <Text style={[styles.actionText, { color: colors.error }]}>{t('organizerPromoters.delete.confirm')}</Text>
-                    </Touchable>
-                  )}
-                </View>
-              </View>
-            ))
-          )}
-        </View>
-
-        <Text style={styles.footNote}>{t('organizerPromoters.footNote')}</Text>
+          </>
+        )}
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      <Modal
+        visible={formOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setFormOpen(false)}
+      >
+        <KeyboardAvoidingView style={styles.sheet} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{t('organizerPromoters.formTitle').toLowerCase()}</Text>
+            <Touchable
+              onPress={() => setFormOpen(false)}
+              style={styles.sheetClose}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <X size={20} color={colors.text} />
+            </Touchable>
+          </View>
+          <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
+            {form}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
   );
 }
 
@@ -449,20 +463,25 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       padding: 20,
       paddingBottom: 40,
     },
-    formCard: {
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.xl,
-      padding: 16,
-      marginTop: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
+    sheet: { flex: 1, backgroundColor: colors.background },
+    sheetHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 6,
     },
-    formTitle: {
-      fontSize: 17,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 4,
+    sheetTitle: { fontFamily: font.serif, fontSize: 28, color: colors.text },
+    sheetClose: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: T.surfaceRaised,
     },
+    sheetBody: { paddingHorizontal: 20, paddingBottom: 40 },
     label: {
       marginTop: 14,
       marginBottom: 6,
@@ -470,13 +489,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontWeight: '600',
       color: colors.textSecondary,
     },
+    // Fills, not bordered boxes.
     input: {
-      backgroundColor: colors.background,
+      backgroundColor: T.surface,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
+      fontSize: 16,
       color: colors.text,
     },
     commissionRow: {
@@ -490,20 +509,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     typeToggle: {
       flex: 1,
       flexDirection: 'row',
-      borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
+      gap: 6,
     },
     typeOption: {
       flex: 1,
-      paddingVertical: 12,
+      paddingVertical: 13,
       paddingHorizontal: 8,
       alignItems: 'center',
-      backgroundColor: colors.background,
+      borderRadius: RADIUS.md,
+      backgroundColor: T.surface,
     },
     typeOptionActive: {
-      backgroundColor: colors.surfaceRaised,
+      backgroundColor: T.white,
     },
     typeOptionText: {
       fontSize: 12,
@@ -511,7 +528,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.textSecondary,
     },
     typeOptionTextActive: {
-      color: colors.text,
+      color: T.onWhite,
     },
     errorText: {
       marginTop: 12,
@@ -530,14 +547,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.text,
       marginBottom: 12,
     },
-    promoterCard: {
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.xl,
-      padding: 14,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
+    // A plain list: rows separated by a hairline, no bordered cards.
+    promoterRow: {
+      paddingVertical: 16,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
     },
+    promoterRowFirst: { borderTopWidth: 0, paddingTop: 4 },
     promoterHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -576,21 +592,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     statsRow: {
       flexDirection: 'row',
-      marginTop: 12,
-      paddingTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      marginTop: 14,
+      gap: 12,
     },
-    funnelRow: {
-      flexDirection: 'row',
+    funnelLine: {
       marginTop: 10,
-      paddingVertical: 10,
-      borderRadius: RADIUS.md,
-      backgroundColor: colors.surfaceRaised,
+      fontSize: 13,
+      color: colors.textSecondary,
     },
     stat: {
       flex: 1,
-      alignItems: 'center',
     },
     statValue: {
       fontSize: 15,
@@ -610,23 +621,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 12,
     },
     actionButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 12,
+      paddingVertical: 9,
+      paddingHorizontal: 14,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.background,
+      backgroundColor: T.surfaceRaised,
     },
+    actionPrimary: { backgroundColor: T.white },
+    actionPrimaryText: { color: T.onWhite },
     actionText: {
       fontSize: 12,
       fontWeight: '600',
       color: colors.text,
-    },
-    footNote: {
-      marginTop: 20,
-      fontSize: 12,
-      lineHeight: 18,
-      color: colors.textTertiary,
-      textAlign: 'center',
     },
   });

@@ -12,6 +12,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useAppAlert } from './AppAlert';
 import { radius } from '../theme/tokens';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { backendFetch } from '../lib/api/backend';
 
 interface Attendee {
   id: string;
@@ -35,7 +38,7 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
   const { colors } = useTheme();
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [exporting, setExporting] = useState(false);
 
   const generateCSV = () => {
@@ -67,6 +70,47 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
     });
 
     return [headers.join(','), ...rows].join('\n');
+  };
+
+  // The branded, printable list (server-rendered: poster, event colour,
+  // wordmark, tick boxes). Saved to the cache and handed to the share sheet,
+  // where Save to Files / Print / AirDrop / Mail all work.
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      const res = await backendFetch(
+        `/api/organizer/events/${encodeURIComponent(eventId)}/attendees/pdf?lang=${encodeURIComponent(language)}`
+      );
+      if (!res.ok) throw new Error(`pdf_${res.status}`);
+      const blob = await res.blob();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('read_failed'));
+        reader.readAsDataURL(blob);
+      });
+      const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+      const fileUri = `${FileSystem.cacheDirectory}attendees-${eventId}.pdf`;
+      await FileSystem.writeAsStringAsync(fileUri, b64, { encoding: 'base64' });
+      await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+    } catch (error) {
+      console.error('Error exporting attendee PDF:', error);
+      showAlert(t('common.error'), t('export.error') || 'Failed to export attendees');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const chooseFormat = () => {
+    if (attendees.length === 0) {
+      showAlert(t('common.info') || 'Info', t('export.noAttendees') || 'No attendees to export');
+      return;
+    }
+    showAlert(t('export.title'), '', [
+      { text: t('export.pdf'), onPress: exportPdf },
+      { text: t('export.csv'), onPress: handleExport },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const handleExport = async () => {
@@ -117,17 +161,17 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
   return (
     <TouchableOpacity
       style={[styles.button, style]}
-      onPress={handleExport}
+      onPress={chooseFormat}
       disabled={exporting}
       accessibilityRole="button"
-      accessibilityLabel={t('export.exportCSV') || 'Export CSV'}
+      accessibilityLabel={t('export.title')}
     >
       {exporting ? (
         <ActivityIndicator size="small" color={colors.text} />
       ) : (
         <>
           <Ionicons name="download-outline" size={16} color={colors.text} />
-          <Text style={styles.buttonText}>CSV</Text>
+          <Text style={styles.buttonText}>{t('export.short')}</Text>
         </>
       )}
     </TouchableOpacity>

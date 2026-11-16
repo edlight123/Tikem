@@ -197,7 +197,7 @@ export default function FavoritesScreen({ navigation }: any) {
         {favoriteEvents.length === 0 ? (
           <EmptyState
             icon={Heart}
-            art={artByKey('tekemab')}
+            art={artByKey('photo-fanmi-shoulders')}
             title={t('favorites.emptyTitle')}
             actionLabel={t('favorites.explore')}
             onAction={() => openAttendeeTab('Discover')}

@@ -724,6 +724,7 @@ export default function ProfileScreen() {
               title={t('profile.refundPolicy')}
               onPress={() => navigation.navigate('ContentPage', { slug: 'refunds', title: t('profile.refundPolicy') })}
             />
+            <ListRow icon={Camera} title={t('profile.photoCredits')} onPress={() => navigation.navigate('PhotoCredits')} />
             <ListRow
               icon={Instagram}
               title={t('profile.instagram')}

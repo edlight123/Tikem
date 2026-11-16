@@ -34,13 +34,14 @@ import { font, radius } from '../../theme/tokens';
 import { formatCurrency } from '../../lib/currency';
 import { safeFormatForLanguage } from '../../lib/dates';
 import { Skeleton } from '../../components/Skeleton';
+import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import EmptyState from '../../components/EmptyState';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import SecondaryPill from '../../components/auth/SecondaryPill';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import SegmentedTabs from '../../components/organizer/SegmentedTabs';
-import { Tag } from 'lucide-react-native';
+import { Plus, Tag } from 'lucide-react-native';
 import { getEventById } from '../../lib/api/organizer';
 
 import { Touchable } from '../../components/ui/Touchable';
@@ -551,23 +552,13 @@ export default function OrganizerPromoCodesScreen() {
         )}
 
         <View style={styles.section}>
-          {/* Section label row with the create action beside it (moved down from
-              the screen header per beta feedback). */}
-          <SectionHeader
-            title={t('organizerPromoCodes.list.title')}
-            trailing={!showForm ? (
-              <Touchable
-                style={styles.newCodeButton}
-                onPress={() => setShowForm(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('organizerPromoCodes.create.show')}
-              >
-                <Ionicons name="add" size={16} color={colors.text} />
-                <Text style={styles.newCodeButtonText}>{t('organizerPromoCodes.create.show')}</Text>
-              </Touchable>
-            ) : undefined}
-          />
+          {/* No second "promo codes" heading under the title: creating is a
+              plain row (or the empty state's action). */}
+          {!showForm && promoCodes.length > 0 ? (
+            <ListGroup style={{ marginBottom: 16 }}>
+              <ListRow icon={Plus} title={t('organizerPromoCodes.create.show')} onPress={() => setShowForm(true)} />
+            </ListGroup>
+          ) : null}
 
           {/* Active / Expired filter — past discounts stay reachable without
               stretching the default list. */}
@@ -585,7 +576,14 @@ export default function OrganizerPromoCodesScreen() {
           )}
 
           {promoCodes.length === 0 ? (
-            <EmptyState icon={Tag} title={t('organizerPromoCodes.list.empty')} compact />
+            showForm ? null : (
+              <EmptyState
+                icon={Tag}
+                title={t('organizerPromoCodes.list.empty')}
+                actionLabel={t('organizerPromoCodes.create.show')}
+                onAction={() => setShowForm(true)}
+              />
+            )
           ) : visibleCodes.length === 0 ? (
             <EmptyState
               icon={Tag}

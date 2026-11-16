@@ -17,6 +17,7 @@ import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { useLocaleFormat } from '../../lib/format';
 import { backendFetch } from '../../lib/api/backend';
+import { readPersisted, writePersisted, deletePersisted } from '../../lib/persistentCache';
 import { RADIUS } from '../../config/brand';
 import { Skeleton } from '../../components/Skeleton';
 import { Touchable } from '../../components/ui/Touchable';
@@ -122,7 +123,7 @@ function compactMoney(amount: number, currency?: string): string {
 export default function OrganizerAnalyticsScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   // Acting org (own or a team's), not the signed-in uid: lib/activeOrg.ts.
   const { orgId } = useActiveOrg();
   const { t, language } = useI18n();
@@ -163,6 +164,14 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
     if (cached) {
       applyResult(cached);
       setLoading(false);
+    } else if (user?.uid && orgId) {
+      // Cold start: the last good figures from the phone, until the API answers.
+      readPersisted<AnalyticsResult>(`analytics:${user.uid}:${key}`).then((saved) => {
+        if (saved && wantedKey.current === key && !analyticsCache.has(key)) {
+          applyResult(saved);
+          setLoading(false);
+        }
+      });
     }
     loadData();
   }, [orgId, timeRange]);
@@ -191,7 +200,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           chartData: data.chartData || [],
           topEvents: data.topEvents || [],
         };
+        if (user?.uid) writePersisted(`analytics:${user.uid}:${key}`, result);
       } else {
+        // Refused or failing: never keep showing an on-phone copy.
+        if (user?.uid) deletePersisted(`analytics:${user.uid}:${key}`);
         // Fallback: Load from Firebase directly
         result = await loadFromFirebase();
       }

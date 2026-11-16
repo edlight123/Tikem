@@ -16,7 +16,7 @@ import type { PKPass as PKPassType } from 'passkit-generator'
 import type { AppleWalletConfig } from './config'
 import type { WalletTicket } from './ticket-access'
 import { appleAuthTokenFor, appleSerialFor, appleWebServiceUrl } from './apple-web-service'
-import { PASS_ICON } from './brandArt'
+import { PASS_ICON, PASS_LOGO } from './brandArt'
 
 export interface ApplePassOptions {
   /**
@@ -159,6 +159,11 @@ export async function buildApplePkpass(
       'icon.png': PASS_ICON.x1,
       'icon@2x.png': PASS_ICON.x2,
       'icon@3x.png': PASS_ICON.x3,
+      // The header wordmark as an image (owner 2026-11-16: "tikèm should be
+      // the logo, not text"). Same type and teal è as the app.
+      'logo.png': PASS_LOGO.x1,
+      'logo@2x.png': PASS_LOGO.x2,
+      'logo@3x.png': PASS_LOGO.x3,
       ...backgroundFiles,
     },
     {
@@ -180,9 +185,7 @@ export async function buildApplePkpass(
       ...(voided ? { voided: true } : {}),
       organizationName: config.organizationName,
       description: `${ticket.eventTitle} · ${ticket.tierName}`,
-      // The "t" mark plus the name beside it, the way airline passes pair a
-      // mark with a wordmark.
-      logoText: 'Tikèm',
+      // No logoText: the wordmark is logo.png (text beside it would repeat it).
       backgroundColor: 'rgb(10, 10, 10)',
       foregroundColor: 'rgb(255, 255, 255)',
       // A light teal: the poster background is darkened but tinted, and the

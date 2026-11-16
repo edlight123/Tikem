@@ -26,7 +26,9 @@ import SectionHeader from '../components/SectionHeader';
 import { suggestionReasonLabel } from '../components/PeopleYouMayKnowRail';
 import { useSocialFlags } from '../lib/socialFlags';
 import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
-import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
+import { useOverlayHeaderInset } from '../components/OverlayHeader';
+import OrganizerScreenHeader from '../components/organizer/OrganizerScreenHeader';
+import { ListGroup, ListRow } from '../components/ui/ListRow';
 import { PeopleRowsSkeleton } from '../components/Skeleton';
 import { Touchable } from '../components/ui/Touchable';
 import InviteContactsCard from '../components/InviteContactsCard';
@@ -162,19 +164,13 @@ export default function ConnectionsScreen() {
     // OverlayHeader pays the notch inset itself so the chrome reaches
     // behind the status bar.
     <View style={styles.container}>
-      {/* Header */}
-      <OverlayHeader onHeight={onHeaderHeight} style={styles.topBar}>
-        <Touchable
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back')}
-        >
-          <ChevronLeft size={26} color={colors.text} />
-        </Touchable>
-        <Text style={styles.topTitle}>{t('connections.title').toLowerCase()}</Text>
-        <View style={styles.backBtn} />
-      </OverlayHeader>
+      {/* Same header as every list page: back chevron + serif title, left. */}
+      <OrganizerScreenHeader
+        title={t('connections.title').toLowerCase()}
+        onBack={() => navigation.goBack()}
+        overlay
+        onHeight={onHeaderHeight}
+      />
 
       {/* Tabs — the header floats above them, so they reserve its height. */}
       <View style={[styles.tabs, { marginTop: headerH }]}>
@@ -233,15 +229,17 @@ function TabBtn({
     <Touchable
       style={[styles.tabBtn, active && styles.tabBtnActive]}
       onPress={onPress}
+      haptic={false}
+      scale={1}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
     >
-      <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{label}</Text>
-      {count ? (
-        <View style={[styles.badge, highlight && { backgroundColor: colors.error }]}>
-          <Text style={styles.badgeText}>{count}</Text>
-        </View>
-      ) : null}
+      <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
+        {label}
+        {count ? (
+          <Text style={[styles.tabCount, highlight && { color: colors.primary }]}>{`  ${count}`}</Text>
+        ) : null}
+      </Text>
     </Touchable>
   );
 }
@@ -488,73 +486,44 @@ function FindTab({ colors, onOpen, onChange, onRequireAuth, insets, autoSync, in
         </View>
       )}
 
-      {/* Contact sync */}
-      <View style={styles.contactCard}>
-        <View style={styles.contactHeader}>
-          <View style={styles.contactIcon}>
-            <Phone size={20} color={colors.textSecondary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.contactTitle}>{t('connections.find.contactTitle')}</Text>
-            {needsPhone ? (
-              <Text style={styles.contactSub}>{t('friendSuggestions.contactsNeedsPhone')}</Text>
-            ) : null}
-          </View>
-        </View>
-        <Touchable style={styles.syncBtn} onPress={startSync} disabled={contactLoading} accessibilityRole="button">
-          {contactLoading ? (
-            <ActivityIndicator size="small" color="#000000" />
+      {/* Contacts and invite: two plain rows (was two cards and a big white
+          button — owner: "this page looks weird"). */}
+      <ListGroup style={{ marginTop: 20 }}>
+        <ListRow
+          icon={Phone}
+          title={t('connections.find.contactTitle')}
+          trailing={contactLoading ? <ActivityIndicator size="small" color={colors.textSecondary} /> : undefined}
+          chevron={!contactLoading}
+          onPress={contactLoading ? undefined : startSync}
+        />
+        {flags.invites ? (
+          <ListRow
+            icon={Share2}
+            title={t('invites.shareInviteLink')}
+            trailing={sharingInvite ? <ActivityIndicator size="small" color={colors.textSecondary} /> : undefined}
+            chevron={!sharingInvite}
+            onPress={sharingInvite ? undefined : shareAppInvite}
+          />
+        ) : null}
+      </ListGroup>
+
+      {contactMatches !== null && (
+        <View style={{ marginTop: 20 }}>
+          {contactMatches.length === 0 ? (
+            <Text style={styles.noResults}>{t('connections.find.noContactMatches')}</Text>
           ) : (
             <>
-              <UserPlus size={16} color="#000000" />
-              <Text style={styles.syncBtnText}>{t('connections.find.syncContacts')}</Text>
+              <SectionHeader title={t('connections.find.onTikem').replace('{count}', String(contactMatches.length)).toLowerCase()} />
+              <View style={styles.card}>
+                {contactMatches.map((m, i) => (
+                  <View key={m.uid} style={i > 0 ? styles.divider : undefined}>
+                    <PersonRow user={m} state={m.friendship} colors={colors} onOpen={onOpen} onChange={onChange} onRequireAuth={onRequireAuth} />
+                  </View>
+                ))}
+              </View>
             </>
           )}
-        </Touchable>
-
-        {contactMatches !== null && (
-          <View style={{ marginTop: 12 }}>
-            {contactMatches.length === 0 ? (
-              <Text style={styles.noResults}>{t('connections.find.noContactMatches')}</Text>
-            ) : (
-              <View>
-                <Text style={styles.sectionLabel}>{t('connections.find.onTikem').replace('{count}', String(contactMatches.length))}</Text>
-                <View style={[styles.card, { marginTop: 8 }]}>
-                  {contactMatches.map((m, i) => (
-                    <View key={m.uid} style={i > 0 ? styles.divider : undefined}>
-                      <PersonRow user={m} state={m.friendship} colors={colors} onOpen={onOpen} onChange={onChange} onRequireAuth={onRequireAuth} />
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-
-      {/* Invite friends to Tikèm: the personal link (config/auth.invites).
-          Hidden entirely while the switch is off, never a dead button. */}
-      {flags.invites && (
-        <Touchable
-          style={styles.contactCard}
-          onPress={shareAppInvite}
-          disabled={sharingInvite}
-          scale={0.98}
-          accessibilityRole="button"
-        >
-          <View style={styles.contactHeader}>
-            <View style={styles.contactIcon}>
-              {sharingInvite ? (
-                <ActivityIndicator size="small" color={colors.textSecondary} />
-              ) : (
-                <Share2 size={20} color={colors.textSecondary} />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contactTitle}>{t('invites.shareInviteLink')}</Text>
-            </View>
-          </View>
-        </Touchable>
+        </View>
       )}
 
       {flags.invites && contactMatches !== null && (
@@ -597,54 +566,42 @@ const getStyles = (colors: any) =>
       lineHeight: 36,
       color: colors.text,
     },
+    // Underline tabs, like My events: plain labels, a 2pt line under the
+    // selected one, one hairline under the row.
     tabs: {
       flexDirection: 'row',
+      gap: 24,
       marginHorizontal: 16,
-      marginBottom: 8,
-      backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      padding: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
     },
     tabBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      borderRadius: radius.sm,
+      paddingTop: 6,
+      paddingBottom: 10,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+      marginBottom: -StyleSheet.hairlineWidth,
     },
     tabBtnActive: {
-      backgroundColor: colors.surfaceRaised,
+      borderBottomColor: colors.text,
     },
     tabBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '500',
       color: colors.textSecondary,
     },
     tabBtnTextActive: {
       color: colors.text,
+      fontWeight: '600',
     },
-    badge: {
-      minWidth: 20,
-      height: 20,
-      paddingHorizontal: 6,
-      borderRadius: 10,
-      backgroundColor: colors.textTertiary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    badgeText: {
-      color: colors.white,
-      fontSize: 11,
-      fontWeight: '700',
+    tabCount: {
+      fontWeight: '400',
+      color: colors.textSecondary,
+      fontVariant: ['tabular-nums'],
     },
     // Elevation, not borders (POSH §1).
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      paddingHorizontal: 16,
-    },
+    // A plain list, not a card (owner rule: lists are rows).
+    card: {},
     divider: {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
