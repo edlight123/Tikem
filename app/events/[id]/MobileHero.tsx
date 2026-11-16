@@ -19,6 +19,8 @@ interface MobileHeroProps {
   isTrending: boolean
   isSoldOut: boolean
   selloutSoon: boolean
+  /** Save + share, beside the organizer (they used to squeeze the buy row). */
+  actions?: React.ReactNode
 }
 
 export default function MobileHero({
@@ -31,7 +33,8 @@ export default function MobileHero({
   isVerified,
   isTrending,
   isSoldOut,
-  selloutSoon
+  selloutSoon,
+  actions
 }: MobileHeroProps) {
   const { t } = useTranslation('common')
   const posterTheme = getPosterTheme(title, category)
@@ -121,20 +124,23 @@ export default function MobileHero({
 
       {/* Title & Organizer - Below image */}
       <div className="px-4 py-4">
-        {/* Category: a quiet eyebrow, not a pill */}
-        <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
-          {category}
-        </p>
+        {/* Category: a quiet eyebrow, not a pill. "Other" says nothing. */}
+        {category && category.toLowerCase() !== 'other' && (
+          <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
+            {category}
+          </p>
+        )}
 
         {/* Title */}
         <h1 className="font-display italic !text-[36px] text-white mb-3 !leading-[1.02] break-words">
           {title}
         </h1>
 
-        {/* Organizer */}
+        {/* Organizer, with save + share on the same line */}
+        <div className="flex items-center gap-2">
         <a
           href={`/profile/organizer/${organizerId}`}
-          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+          className="flex min-w-0 flex-1 items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
           <OrganizerMark logoUrl={organizerLogo} className="h-10 w-10 rounded-xl" />
           <div className="min-w-0 flex-1">
@@ -149,6 +155,8 @@ export default function MobileHero({
             )}
           </div>
         </a>
+        {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+        </div>
       </div>
     </div>
   )

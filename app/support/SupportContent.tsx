@@ -257,14 +257,16 @@ export default function SupportContent() {
         {/* Still Need Help Section */}
         {/* Was a 2xl box outlined in white/10 with no fill behind it at all —
             the purest form of the defect. */}
-        <div className="mt-20 rounded-2xl bg-white/[0.03] p-8 sm:p-12">
-          <div className="max-w-2xl mb-8">
+        {/* On a phone the panel goes: its 32px padding put boxes inside a box
+            and squeezed the three cards. They sit on the page there. */}
+        <div className="mt-14 sm:mt-20 sm:rounded-2xl sm:bg-white/[0.03] sm:p-12">
+          <div className="max-w-2xl mb-5 sm:mb-8">
             <EditorialSectionHeading title={t('need_help.title')} />
           </div>
 
           {/* These cards sit ON the card above, so they take the next rung of
               the ladder — a 0.03 inside a 0.03 is invisible. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Email Support */}
             <a
               href="mailto:support@tikem.co"

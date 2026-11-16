@@ -10,10 +10,13 @@
 import { useTranslation } from 'react-i18next'
 import { dateLocaleFor, intlLocaleFor } from '@/lib/dateLocale'
 import { formatInZone } from '@/lib/home/format'
+import { dayKey } from '@/lib/home/feed'
 import { scarcityCopy, isUrgent, type Scarcity } from '@/lib/ticketScarcity'
 
 interface MobileKeyFactsProps {
   startDate: string
+  /** End instant, if any; equal-to-start or missing prints the start alone. */
+  endDate?: string
   /** The event's IANA zone (lib/home/feed eventZone): times print in it. */
   zone: string
   venueName: string
@@ -46,6 +49,7 @@ interface MobileKeyFactsProps {
 
 export default function MobileKeyFacts({
   startDate,
+  endDate,
   zone,
   venueName,
   city,
@@ -63,14 +67,21 @@ export default function MobileKeyFacts({
   const { t, i18n } = useTranslation('common')
   const dfLocale = dateLocaleFor(i18n.language)
 
-  const handleOpenMaps = () => {
-    const query = encodeURIComponent(address || `${venueName}, ${commune}, ${city}`)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    const mapsUrl = isIOS
-      ? `https://maps.apple.com/?q=${query}`
-      : `https://www.google.com/maps/search/?api=1&query=${query}`
-    window.open(mapsUrl, '_blank')
-  }
+  // The end time lives here now (the mobile "date & time" section that held
+  // it repeated this line). Same day: the time alone; another day: its date,
+  // or "2:00 PM – 2:00 AM" silently loses the overnight.
+  const startMs = new Date(startDate).getTime()
+  const endMs = endDate ? new Date(endDate).getTime() : NaN
+  const hasEnd = Number.isFinite(endMs) && endMs > startMs
+  const endLabel = !hasEnd
+    ? ''
+    : dayKey(startDate, zone) === dayKey(endDate!, zone)
+      ? formatInZone(endDate!, zone, 'h:mm a', { locale: dfLocale })
+      : formatInZone(endDate!, zone, 'EEE, MMM d · h:mm a', { locale: dfLocale })
+
+  // The place, once: venue and town. Directions and the map live in the venue
+  // section just below, so the "Open in Maps" link here was a second copy.
+  const place = [venueName, city].filter((p) => p && p.trim()).join(' · ')
 
   const priceLine = isFree
     ? t('common.free')
@@ -81,37 +92,22 @@ export default function MobileKeyFacts({
       {/* Printed in the event's zone, so the server and the browser agree. */}
       <p className="text-[15px] font-medium text-white">
         {formatInZone(startDate, zone, 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
+        {endLabel && ` – ${endLabel}`}
       </p>
 
-      {/* No venue, no address, no city: there is nowhere to open in Maps. */}
-      {(venueName || address || city) && (
-      <p className="mt-1.5 text-[14px] text-white/60">
-        {venueName}
-        {venueName && <span className="text-white/25"> · </span>}
-        {/* py-3/-my-3 grows the hit area past 44px without moving the line: the
-            padding is cancelled by the negative margin. It sits inline in a
-            sentence, so it cannot simply be made 44px tall, and at 21px it was
-            the smallest target on the page an organizer's guests actually
-            need, "how do I get there". */}
-        <button
-          onClick={handleOpenMaps}
-          className="inline-block -my-3 py-3 text-brand-400 hover:text-brand-300"
-        >
-          {t('events.open_in_maps')} →
-        </button>
-      </p>
-      )}
+      {place && <p className="mt-1.5 text-[14px] text-white/60">{place}</p>}
 
+      {/* A free event's button already says so; "Free" here was a repeat. */}
+      {!isFree && (
       <p className="mt-3 text-[15px] font-semibold text-white">
         {priceLine}
-        {!isFree && (
-          <span className="ml-1.5 text-[13px] font-normal text-white/45">
-            {feesIncluded
-              ? t('events.fees_included', { defaultValue: 'Fees included' })
-              : t('events.per_ticket', { defaultValue: 'per ticket' })}
-          </span>
-        )}
+        <span className="ml-1.5 text-[13px] font-normal text-white/45">
+          {feesIncluded
+            ? t('events.fees_included', { defaultValue: 'Fees included' })
+            : t('events.per_ticket', { defaultValue: 'per ticket' })}
+        </span>
       </p>
+      )}
 
       {/* Scarcity, not inventory. This printed "{{count}} remaining" on every
           event — "500 remaining" is an advert for the empty room, which is the
