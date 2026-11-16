@@ -121,6 +121,21 @@ export async function fetchEventSocial(eventId: string): Promise<EventSocialAtte
   return data;
 }
 
+/**
+ * The full guest list behind "View" (privacy-enforced server-side). The server
+ * answers `needsPhoto` instead of the list when the viewer shows no face.
+ */
+export async function fetchEventGuestlist(
+  eventId: string,
+): Promise<EventSocialAttendance & { needsPhoto?: boolean }> {
+  const res = await backendFetch(`/api/events/${eventId}/social?full=1`, { method: 'GET' });
+  const data = await readJson(res);
+  if (!res.ok || !data) {
+    return { totalGoing: 0, viewerIsGoing: false, friendsGoing: [], publicGoing: [] };
+  }
+  return data;
+}
+
 export interface SocialProfileUpdate {
   bio?: string;
   socialLinks?: SocialLinks;

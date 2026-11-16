@@ -1599,7 +1599,20 @@
     "lead_only": "{{name}} is going",
     "lead_and_one": "{{name}} and 1 other going",
     "lead_and_others_vague": "{{name}} and others are going",
-    "privacy_note_vague": "Attendees keep their attendance private."
+    "privacy_note_vague": "Attendees keep their attendance private.",
+    "guestlist": "Guestlist",
+    "see_whos_going": "See who's going",
+    "view": "View",
+    "gate_title": "see who's going",
+    "gate_sub": "Show your face to see theirs.",
+    "add_photo": "Add a photo",
+    "not_now": "Not now",
+    "list_title": "guestlist",
+    "friend": "Friend",
+    "more_guests": "+{{count}} more",
+    "more_private": "Others keep it private",
+    "no_faces": "No one shows their face yet.",
+    "sign_in_to_view": "Sign in to see who's going"
   },
   "follow": {
     "loading": "Loading...",

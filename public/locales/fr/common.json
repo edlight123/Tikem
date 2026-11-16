@@ -1599,7 +1599,20 @@
     "lead_only": "{{name}} y va",
     "lead_and_one": "{{name}} et 1 autre y vont",
     "lead_and_others_vague": "{{name}} et d'autres y vont",
-    "privacy_note_vague": "Les participants gardent leur présence privée."
+    "privacy_note_vague": "Les participants gardent leur présence privée.",
+    "guestlist": "Liste des invités",
+    "see_whos_going": "Voir qui y va",
+    "view": "Voir",
+    "gate_title": "voir qui y va",
+    "gate_sub": "Montrez votre visage pour voir les leurs.",
+    "add_photo": "Ajouter une photo",
+    "not_now": "Plus tard",
+    "list_title": "liste des invités",
+    "friend": "Ami·e",
+    "more_guests": "+{{count}} autres",
+    "more_private": "Les autres restent discrets",
+    "no_faces": "Personne ne montre encore son visage.",
+    "sign_in_to_view": "Connectez-vous pour voir qui y va"
   },
   "follow": {
     "loading": "Chargement...",

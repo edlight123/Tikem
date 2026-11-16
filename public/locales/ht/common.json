@@ -1599,7 +1599,20 @@
     "lead_only": "{{name}} ap vini",
     "lead_and_one": "{{name}} ak 1 lòt moun ap vini",
     "lead_and_others_vague": "{{name}} ak lòt moun ap vini",
-    "privacy_note_vague": "Moun k ap patisipe yo kenbe patisipasyon yo prive."
+    "privacy_note_vague": "Moun k ap patisipe yo kenbe patisipasyon yo prive.",
+    "guestlist": "Lis envite",
+    "see_whos_going": "Gade kiyès ki prale",
+    "view": "Gade",
+    "gate_title": "gade kiyès ki prale",
+    "gate_sub": "Montre figi w pou w wè pa yo.",
+    "add_photo": "Mete yon foto",
+    "not_now": "Pita",
+    "list_title": "lis envite",
+    "friend": "Zanmi",
+    "more_guests": "+{{count}} lòt",
+    "more_private": "Lòt yo kenbe sa prive",
+    "no_faces": "Pèsonn poko montre figi yo.",
+    "sign_in_to_view": "Konekte pou w wè kiyès ki prale"
   },
   "follow": {
     "loading": "Chajman...",

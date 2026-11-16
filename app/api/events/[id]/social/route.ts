@@ -5,7 +5,7 @@ import { getEventSocialAttendance } from '@/lib/firestore/social'
 export const runtime = 'nodejs'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -17,8 +17,16 @@ export async function GET(
     // Viewer is optional — anonymous users still see public attendees + count.
     const user = await getCurrentUser().catch(() => null)
 
-    const social = await getEventSocialAttendance(id, user?.id || null)
-    return NextResponse.json(social)
+    // ?full=1 is the guest list behind "View". It is for signed-in guests who
+    // show their own face (the Posh rule: see theirs by showing yours); anyone
+    // else gets the ordinary pile plus `needsPhoto`, which opens the
+    // add-a-photo step instead of the list.
+    const wantsFull = new URL(request.url).searchParams.get('full') === '1'
+    const hasPhoto = Boolean((user as any)?.photo_url || (user as any)?.photoURL)
+    const full = wantsFull && !!user && hasPhoto
+
+    const social = await getEventSocialAttendance(id, user?.id || null, { full })
+    return NextResponse.json(wantsFull && !full ? { ...social, needsPhoto: true } : social)
   } catch (error: any) {
     console.error('Error fetching event social attendance:', error)
     return NextResponse.json(
