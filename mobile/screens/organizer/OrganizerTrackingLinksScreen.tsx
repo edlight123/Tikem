@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import SectionHeader from '../../components/SectionHeader';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
+import PromoteTabs from '../../components/organizer/PromoteTabs';
 import FormSheet, { SheetInput, SheetLabel } from '../../components/organizer/FormSheet';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { getEventById } from '../../lib/api/organizer';
@@ -197,6 +198,7 @@ export default function OrganizerTrackingLinksScreen() {
           { paddingTop: headerH + spacing.lg, paddingBottom: insets.bottom + (hasLinks ? 112 : 32) },
         ]}
       >
+        <PromoteTabs active="links" eventId={eventId} />
 
         {!hasLinks ? (
           <EmptyState

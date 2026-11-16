@@ -10,11 +10,13 @@ import {
   ScrollView,
   Share,
 } from 'react-native';
-import { X, Send, Copy, AlertCircle } from 'lucide-react-native';
+import { X, Share2 } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { backendJson } from '../lib/api/backend';
 import { useAppAlert } from './AppAlert';
-import { radius } from '../theme/tokens';
+import { radius, colors as T, font } from '../theme/tokens';
+import { useI18n } from '../contexts/I18nContext';
+import WhitePillCTA from './WhitePillCTA';
 
 interface TransferTicketModalProps {
   visible: boolean;
@@ -34,6 +36,7 @@ export default function TransferTicketModal({
   onTransferSuccess,
 }: TransferTicketModalProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
   const [toEmail, setToEmail] = useState('');
@@ -51,7 +54,7 @@ export default function TransferTicketModal({
       return false;
     }
     if (!emailRegex.test(email)) {
-      setEmailError('Please enter a valid email address');
+      setEmailError(t('transferTicket.invalidEmail'));
       return false;
     }
     setEmailError('');
@@ -60,12 +63,12 @@ export default function TransferTicketModal({
 
   const handleTransfer = async () => {
     if (!toEmail.trim()) {
-      setError('Please enter recipient email');
+      setError(t('transferTicket.emailRequired'));
       return;
     }
 
     if (!validateEmail(toEmail)) {
-      setError('Please enter a valid email address');
+      setError(t('transferTicket.invalidEmail'));
       return;
     }
 
@@ -116,7 +119,7 @@ export default function TransferTicketModal({
         );
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to transfer ticket');
+      setError(err.message || t('transferTicket.failed'));
     } finally {
       setLoading(false);
     }
@@ -135,8 +138,8 @@ export default function TransferTicketModal({
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `I'm transferring my ticket for ${eventTitle} to you! Click here to accept: ${transferLink}\n\n⏰ This link expires in 24 hours.`,
-        title: `Ticket Transfer: ${eventTitle}`,
+        message: t('transferTicket.shareMessage').replace('{event}', eventTitle).replace('{link}', transferLink),
+        title: eventTitle,
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -156,167 +159,98 @@ export default function TransferTicketModal({
         <View style={styles.modalContainer}>
           <View style={styles.handle} />
           <View style={styles.header}>
-            <Text style={styles.title}>Transfer Ticket</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <X size={24} color={colors.text} />
+            <Text style={styles.sheetTitle}>{(showLink ? t('transferTicket.sentTitle') : t('transferTicket.title')).toLowerCase()}</Text>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <X size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {!showLink ? (
               <>
-                {/* Warning Box */}
-                {transferCount > 0 && (
-                  <View style={styles.warningBox}>
-                    <AlertCircle size={16} color="#F59E0B" />
-                    <Text style={styles.warningText}>
-                      This ticket has been transferred {transferCount} time(s). Maximum: 3 transfers
-                    </Text>
-                  </View>
-                )}
+                {/* One quiet line with what matters, no emoji info box. */}
+                <Text style={[styles.note, !canTransfer && { color: T.red }]}>
+                  {!canTransfer
+                    ? t('transferTicket.maxReached')
+                    : transferCount > 0
+                      ? t('transferTicket.noteCount').replace('{count}', String(transferCount))
+                      : t('transferTicket.note')}
+                </Text>
 
-                {!canTransfer && (
-                  <View style={[styles.warningBox, { backgroundColor: 'rgba(248, 113, 113, 0.12)', borderColor: 'rgba(248, 113, 113, 0.4)' }]}>
-                    <AlertCircle size={16} color="#F87171" />
-                    <Text style={[styles.warningText, { color: '#F87171' }]}>
-                      This ticket has reached the maximum transfer limit
-                    </Text>
-                  </View>
-                )}
+                <Text style={styles.label}>{t('transferTicket.email')}</Text>
+                <TextInput
+                  style={[styles.input, !!emailError && styles.inputError]}
+                  placeholder="friend@example.com"
+                  placeholderTextColor={colors.textTertiary}
+                  selectionColor={colors.primary}
+                  value={toEmail}
+                  onChangeText={(text) => {
+                    setToEmail(text);
+                    validateEmail(text);
+                  }}
+                  onBlur={() => validateEmail(toEmail)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={canTransfer}
+                />
+                {!!emailError && <Text style={styles.inputErrorText}>{emailError}</Text>}
 
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoText}>
-                    ⏰ Transfer links expire in 24 hours{'\n'}
-                    🔒 Once transferred, you will lose access to this ticket
-                  </Text>
-                </View>
+                <Text style={styles.label}>{t('transferTicket.message')}</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder={t('transferTicket.messagePlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  selectionColor={colors.primary}
+                  value={message}
+                  onChangeText={setMessage}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  editable={canTransfer}
+                />
 
-                {/* Email Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Recipient Email *</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      emailError && styles.inputError
-                    ]}
-                    placeholder="friend@example.com"
-                    placeholderTextColor={colors.textTertiary}
-                    selectionColor={colors.primary}
-                    value={toEmail}
-                    onChangeText={(text) => {
-                      setToEmail(text);
-                      validateEmail(text);
-                    }}
-                    onBlur={() => validateEmail(toEmail)}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    editable={canTransfer}
-                  />
-                  {emailError && (
-                    <Text style={styles.inputErrorText}>{emailError}</Text>
-                  )}
-                </View>
+                {!!error && <Text style={styles.inputErrorText}>{error}</Text>}
 
-                {/* Message Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Message (Optional)</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Add a personal message..."
-                    placeholderTextColor={colors.textTertiary}
-                    selectionColor={colors.primary}
-                    value={message}
-                    onChangeText={setMessage}
-                    multiline
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                    editable={canTransfer}
-                  />
-                </View>
-
-                {/* Error Message */}
-                {error && (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{error}</Text>
-                  </View>
-                )}
-
-                {/* Action Buttons */}
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={[styles.button, styles.cancelButton]}
-                    onPress={onClose}
-                    disabled={loading}
-                  >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      styles.transferButton,
-                      (!canTransfer || loading) && styles.buttonDisabled,
-                    ]}
-                    onPress={handleTransfer}
-                    disabled={!canTransfer || loading}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <>
-                        <Send size={18} color="#FFF" />
-                        <Text style={styles.transferButtonText}>Send Transfer</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                <WhitePillCTA
+                  label={t('transferTicket.send')}
+                  onPress={handleTransfer}
+                  loading={loading}
+                  disabled={!canTransfer || loading}
+                  style={styles.primaryAction}
+                />
               </>
             ) : (
               <>
-                {/* Transfer Success - Show Link */}
-                <View style={styles.successBox}>
-                  <Text style={styles.successIcon}>✅</Text>
-                  <Text style={styles.successTitle}>Transfer Initiated!</Text>
-                  <Text style={styles.successText}>
-                    Email sent to {toEmail}. You can also share this link:
-                  </Text>
-                </View>
+                <Text style={styles.note}>{t('transferTicket.sentBody').replace('{email}', toEmail)}</Text>
 
-                <View style={styles.linkBox}>
-                  <Text style={styles.linkText} numberOfLines={2}>
+                <TouchableOpacity style={styles.linkRow} onPress={handleCopyLink} accessibilityRole="button">
+                  <Text style={styles.linkText} numberOfLines={1}>
                     {transferLink}
                   </Text>
-                  <TouchableOpacity onPress={handleCopyLink} style={styles.copyButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Copy size={20} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoText}>
-                    ⏰ This link expires in 24 hours
-                  </Text>
-                </View>
-
-                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                  <Text style={styles.shareButtonText}>Share via WhatsApp / SMS</Text>
+                  <Share2 size={18} color={colors.text} />
                 </TouchableOpacity>
 
+                <WhitePillCTA label={t('transferTicket.shareLink')} onPress={handleShare} style={styles.primaryAction} />
+
                 <TouchableOpacity
-                  style={[styles.button, styles.doneButton]}
+                  style={styles.doneLink}
                   onPress={() => {
                     onClose();
                     setToEmail('');
                     setMessage('');
                     setShowLink(false);
                     setTransferLink('');
-                    
-                    // Notify parent to refresh
-                    if (onTransferSuccess) {
-                      onTransferSuccess();
-                    }
+                    if (onTransferSuccess) onTransferSuccess();
                   }}
+                  accessibilityRole="button"
                 >
-                  <Text style={styles.doneButtonText}>Done</Text>
+                  <Text style={styles.doneLinkText}>{t('common.done')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -405,21 +339,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textSecondary,
+    marginTop: 14,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: T.surface,
     borderRadius: radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
     color: colors.text,
   },
   inputError: {
-    borderColor: '#F87171',
+    borderWidth: 1,
+    borderColor: T.red,
   },
   inputErrorText: {
     fontSize: 12,
@@ -536,4 +470,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '600',
     color: '#FFF',
   },
+  // POSH pass (owner: "this is not polished"): serif title, one quiet line,
+  // filled fields, one white action.
+  sheetTitle: { fontFamily: font.serif, fontSize: 28, lineHeight: 32, color: colors.text },
+  note: { fontSize: 14, lineHeight: 20, color: colors.textSecondary, marginBottom: 18 },
+  primaryAction: { marginTop: 22 },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: radius.button,
+    backgroundColor: T.surface,
+  },
+  doneLink: { alignSelf: 'center', paddingVertical: 16 },
+  doneLinkText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
 });

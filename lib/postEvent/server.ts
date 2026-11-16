@@ -86,6 +86,12 @@ export interface EventRecap {
   arrivals: Array<{ at: string; count: number }>
   peakArrival: string | null
   newFollowers: number
+  /** Tickets held by people who never came in. */
+  noShows: number
+  /** The shortest run of half-hours that holds ~60% of arrivals. */
+  arrivalWindow: { from: string; to: string } | null
+  /** This organizer's earlier past events, for comparison (up to 8). */
+  previous: { events: number; avgTurnout: number | null }
   feedback: {
     total: number
     counts: { 1: number; 2: number; 3: number }
@@ -147,6 +153,30 @@ export async function loadEventRecap(eventId: string, event: Record<string, any>
   }
   comments.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
 
+  // ~60% of arrivals in the shortest contiguous window of half-hour slots.
+  let arrivalWindow: EventRecap['arrivalWindow'] = null
+  const totalIn = arrivals.reduce((n, b) => n + b.count, 0)
+  if (totalIn >= 3) {
+    const goal = Math.ceil(totalIn * 0.6)
+    let best: [number, number] | null = null
+    for (let i = 0; i < arrivals.length; i++) {
+      let sum = 0
+      for (let j = i; j < arrivals.length; j++) {
+        sum += arrivals[j].count
+        if (sum >= goal) {
+          if (!best || j - i < best[1] - best[0]) best = [i, j]
+          break
+        }
+      }
+    }
+    if (best) {
+      const end = new Date(new Date(arrivals[best[1]].at).getTime() + 30 * 60_000)
+      arrivalWindow = { from: arrivals[best[0]].at, to: end.toISOString() }
+    }
+  }
+
+  const previous = await previousTurnout(eventId, event, start)
+
   return {
     eventId,
     title: String(event.title || ''),
@@ -161,11 +191,53 @@ export async function loadEventRecap(eventId: string, event: Record<string, any>
     arrivals,
     peakArrival: peak && peak.count > 0 ? peak.at : null,
     newFollowers,
+    noShows: Math.max(0, sold - checkedIn),
+    arrivalWindow,
+    previous,
     feedback: {
       total: counts[1] + counts[2] + counts[3],
       counts,
       comments: comments.slice(0, 100),
     },
+  }
+}
+
+/** Average turnout of this organizer's earlier, past events (up to 8). */
+async function previousTurnout(
+  eventId: string,
+  event: Record<string, any>,
+  start: Date | null
+): Promise<EventRecap['previous']> {
+  const orgId = String(event.organizer_id || '')
+  if (!orgId || !start) return { events: 0, avgTurnout: null }
+  try {
+    const snap = await adminDb.collection('events').where('organizer_id', '==', orgId).limit(200).get()
+    const earlier = (snap.docs as any[])
+      .map((d) => ({ id: d.id, data: d.data() || {} }))
+      .filter((e) => e.id !== eventId && !e.data.seed_batch && String(e.data.status || '') !== 'cancelled')
+      .map((e) => ({ ...e, at: toDate(e.data.start_datetime) }))
+      .filter((e) => e.at && e.at < start)
+      .sort((a, b) => b.at!.getTime() - a.at!.getTime())
+      .slice(0, 8)
+    const rates: number[] = []
+    for (const e of earlier) {
+      const t = await adminDb.collection('tickets').where('event_id', '==', e.id).get()
+      let sold = 0
+      let came = 0
+      for (const d of t.docs as any[]) {
+        const x = d.data() || {}
+        const st = String(x.status || '').toLowerCase()
+        if (!isLiveTicketStatus(x.status) && st !== 'checked_in') continue
+        sold += 1
+        if (x.checked_in === true || x.checked_in_at) came += 1
+      }
+      if (sold >= 3) rates.push(came / sold)
+    }
+    if (rates.length === 0) return { events: 0, avgTurnout: null }
+    return { events: rates.length, avgTurnout: rates.reduce((a, b) => a + b, 0) / rates.length }
+  } catch (error) {
+    console.error('[recap] previous turnout failed', error)
+    return { events: 0, avgTurnout: null }
   }
 }
 

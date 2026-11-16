@@ -19,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { COUNTRIES, getFeaturedCities } from '../types/filters';
 import { METROS } from '../data/metros';
 import { RADIUS, SPACING } from '../config/brand';
+import { font } from '../theme/tokens';
 import { Touchable } from './ui/Touchable';
 
 // Accent/case-insensitive match so "petion" finds "Pétion-Ville" and "cote"
@@ -120,7 +121,7 @@ export default function LocationPickerSheet({
       <Touchable
         key={value || '__all__'}
         scale={false}
-        pressedColor={active ? undefined : colors.surfaceRaised}
+        pressedColor={colors.surfaceRaised}
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
         style={[styles.cityRow, active && styles.cityRowActive]}
@@ -129,7 +130,7 @@ export default function LocationPickerSheet({
           persistToProfile({ default_country: userCountry, default_city: value });
         }}
       >
-        <MapPin size={18} color={active ? colors.background : colors.textSecondary} />
+        <MapPin size={18} color={active ? colors.text : colors.textTertiary} />
         <View style={styles.cityTextWrap}>
           <Text style={[styles.cityText, active && styles.cityTextActive]}>{label}</Text>
           {!!hint && (
@@ -138,7 +139,7 @@ export default function LocationPickerSheet({
             </Text>
           )}
         </View>
-        {active && <Check size={18} color={colors.background} />}
+        {active && <Check size={18} color={colors.primary} />}
       </Touchable>
     );
   };
@@ -155,7 +156,7 @@ export default function LocationPickerSheet({
 
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{t('location.title')}</Text>
+              <Text style={styles.title}>{t('location.title').toLowerCase()}</Text>
             </View>
             <Touchable style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('common.close')}>
               <X size={20} color={colors.text} />
@@ -171,7 +172,9 @@ export default function LocationPickerSheet({
             header, where you tap where you are to change it.
           */}
           <View style={styles.countryLine}>
-            <Text style={styles.sectionLabel}>{t('location.country').toUpperCase()}</Text>
+            <Text style={styles.countryValue}>
+              {COUNTRIES.find((c) => c.code === userCountry)?.name || ''}
+            </Text>
             <Touchable
               onPress={() => setPickingCountry((v) => !v)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -182,9 +185,6 @@ export default function LocationPickerSheet({
               </Text>
             </Touchable>
           </View>
-          <Text style={styles.countryValue}>
-            {COUNTRIES.find((c) => c.code === userCountry)?.name || ''}
-          </Text>
 
           {/* Area search — scopes the list below it. Never auto-focused: the
               keyboard must not cover the towns the moment the sheet opens. */}
@@ -214,10 +214,7 @@ export default function LocationPickerSheet({
             )}
           </View>
 
-          {/* The list is either countries or areas — never both at once. */}
-          <Text style={styles.sectionLabel}>
-            {(pickingCountry ? t('location.country') : t('location.area')).toUpperCase()}
-          </Text>
+          {/* The list is either countries or areas, never both at once. */}
           <ScrollView
             style={styles.cityList}
             showsVerticalScrollIndicator={false}
@@ -229,7 +226,7 @@ export default function LocationPickerSheet({
                 <Touchable
                   key={c.code}
                   scale={false}
-                  pressedColor={userCountry === c.code ? undefined : colors.surfaceRaised}
+                  pressedColor={colors.surfaceRaised}
                   accessibilityRole="button"
                   accessibilityState={{ selected: userCountry === c.code }}
                   style={[styles.cityRow, userCountry === c.code && styles.cityRowActive]}
@@ -247,7 +244,7 @@ export default function LocationPickerSheet({
                     setPickingCountry(false);
                   }}
                 >
-                  <MapPin size={18} color={userCountry === c.code ? colors.background : colors.textSecondary} />
+                  <MapPin size={18} color={userCountry === c.code ? colors.text : colors.textTertiary} />
                   <View style={styles.cityTextWrap}>
                     <Text
                       style={[styles.cityText, userCountry === c.code && styles.cityTextActive]}
@@ -255,7 +252,7 @@ export default function LocationPickerSheet({
                       {c.name}
                     </Text>
                   </View>
-                  {userCountry === c.code ? <Check size={18} color={colors.background} /> : null}
+                  {userCountry === c.code ? <Check size={18} color={colors.primary} /> : null}
                 </Touchable>
               ))
             ) : (
@@ -290,14 +287,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       ...StyleSheet.absoluteFillObject,
     },
     sheet: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.background,
       borderTopLeftRadius: RADIUS.xl,
       borderTopRightRadius: RADIUS.xl,
       paddingHorizontal: SPACING.lg,
       paddingTop: 10,
       maxHeight: '80%',
-      borderTopWidth: 1,
-      borderColor: colors.border,
     },
     handle: {
       alignSelf: 'center',
@@ -312,11 +307,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'flex-start',
       marginBottom: 18,
     },
+    // Serif sheet title, like every page title (owner: "make this more premium").
     title: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontFamily: font.serif,
+      fontSize: 30,
+      lineHeight: 34,
       color: colors.text,
-      letterSpacing: -0.3,
     },
     subtitle: {
       fontSize: 13,
@@ -346,15 +342,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     countryValue: {
       fontSize: 17,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 14,
-    },
-    countryChange: {
-      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 8,
+    },
+    countryChange: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textDecorationLine: 'underline',
     },
     countryRow: {
       flexDirection: 'row',
@@ -421,27 +416,24 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 4,
       textAlign: 'center',
     },
+    // A plain list: hairline-separated rows, the chosen one marked by a teal
+    // check (not a white block).
     cityRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingVertical: 14,
-      paddingHorizontal: 14,
-      borderRadius: RADIUS.md,
-      marginBottom: 8,
-      backgroundColor: colors.surfaceMuted,
+      gap: 14,
+      paddingVertical: 15,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
     },
-    // White fill with black ink, same as the When sheet and the web chips.
-    cityRowActive: {
-      backgroundColor: colors.white,
-    },
+    cityRowActive: {},
     cityTextWrap: {
       flex: 1,
     },
     cityText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.textSecondary,
     },
     // The towns this area covers — the metro rule, stated plainly.
     cityHint: {
@@ -450,7 +442,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 2,
     },
     cityTextActive: {
-      color: colors.background,
+      color: colors.text,
       fontWeight: '700',
     },
   });

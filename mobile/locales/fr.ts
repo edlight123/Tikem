@@ -861,6 +861,12 @@ export default {
     eventsCount: 'événements',
   },
   tickets: {
+    cancelRsvp: {
+      action: 'Annuler ma réservation',
+      title: 'Annuler votre réservation ?',
+      confirm: 'Oui, annuler',
+      failed: 'Annulation impossible. Réessayez.',
+    },
     undated: 'Sans date',
     title: 'Mes billets',
     loginRequiredBody: 'Veuillez vous connecter pour voir vos billets',
@@ -1106,9 +1112,9 @@ export default {
       bodyPluralSuffix: ' participants',
     },
     fields: {
-      titleLabel: 'Titre de la mise à jour *',
+      titleLabel: 'Titre de la mise à jour',
       titlePlaceholder: 'ex. : Changement de lieu, changement d’horaire',
-      messageLabel: 'Message *',
+      messageLabel: 'Message',
       messagePlaceholder: 'Saisissez votre message pour les participants…',
     },
     examplesTitle: 'Exemples de mises à jour :',
@@ -2841,6 +2847,18 @@ export default {
     sendFailed: "Envoi impossible. Réessayez.",
   },
   eventRecap: {
+    of: "sur",
+    insight: {
+      sameAsUsual: "Présence dans votre moyenne de {avg} %.",
+      aboveUsual: "Meilleure présence que votre moyenne de {avg} %.",
+      belowUsual: "Présence plus faible que votre moyenne de {avg} %.",
+      window: "La plupart sont arrivés entre {from} et {to}.",
+      noShows: "{n} détenteurs de billet ne sont pas venus.",
+      noShowOne: "1 détenteur de billet n'est pas venu.",
+      loved: "{n} sur {total} ont adoré.",
+      followers: "{n} nouveaux abonnés depuis l’événement.",
+      followerOne: "1 nouvel abonné depuis l’événement.",
+    },
     title: 'Bilan',
     sold: 'Vendus',
     came: 'Venus',
@@ -2852,6 +2870,23 @@ export default {
     ratings: 'avis',
     noRatings: "Pas encore d'avis.",
     loadFailed: 'Impossible de charger le bilan. Tirez pour réessayer.',
+  },
+  transferTicket: {
+    title: "Transférer",
+    sentTitle: "Envoyé",
+    note: "Le lien expire dans 24 heures. Une fois accepté, le billet est à eux.",
+    noteCount: "Transféré {count} fois sur 3. Le lien expire dans 24 heures.",
+    maxReached: "Ce billet a été transféré 3 fois, la limite.",
+    email: "Son e-mail",
+    message: "Message (facultatif)",
+    messagePlaceholder: "Ajouter un mot",
+    send: "Envoyer le billet",
+    sentBody: "Nous avons écrit à {email}. Vous pouvez aussi lui envoyer le lien.",
+    shareLink: "Partager le lien",
+    shareMessage: "Voici mon billet pour {event} : {link}",
+    invalidEmail: "Saisissez une adresse e-mail valide.",
+    emailRequired: "Saisissez son e-mail.",
+    failed: "Transfert impossible. Réessayez.",
   },
   organizerMessages: {
     allEvents: 'Tous les événements',
@@ -3120,6 +3155,7 @@ export default {
   },
 
   freeTicket: {
+    sheetTitle: 'réserver',
     ticketsLabel: 'Billets',
     alreadyTitle: 'Vous y allez',
     alreadyBody: {

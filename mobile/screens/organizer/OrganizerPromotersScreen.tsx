@@ -22,6 +22,7 @@ import {
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Megaphone, Plus, X } from 'lucide-react-native';
 import SectionHeader from '../../components/SectionHeader';
+import PromoteTabs from '../../components/organizer/PromoteTabs';
 import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import { colors as T, font } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
@@ -345,6 +346,7 @@ export default function OrganizerPromotersScreen() {
         onHeight={onHeight}
       />
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 8 }]}>
+        <PromoteTabs active="promoters" eventId={eventId} />
         {promoters.length === 0 ? (
           <EmptyState
             icon={Megaphone}

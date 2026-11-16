@@ -142,9 +142,7 @@ export default function SendEventUpdateScreen() {
         contentContainerStyle={{ paddingTop: headerH, paddingBottom: insets.bottom + 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.eventInfoWrap}>
-          <InfoNotice icon="calendar-outline" text={eventTitle} />
-        </View>
+        <Text style={styles.eventLine} numberOfLines={1}>{eventTitle}</Text>
 
         <View style={styles.form}>
           <Text style={styles.label}>{t('organizerSendUpdate.fields.titleLabel')}</Text>
@@ -157,7 +155,7 @@ export default function SendEventUpdateScreen() {
             placeholderTextColor={colors.textTertiary}
             selectionColor={colors.primary}
           />
-          <Text style={styles.charCount}>{title.length}/100</Text>
+          {title.length > 80 ? <Text style={styles.charCount}>{title.length}/100</Text> : <View style={styles.fieldGap} />}
 
           <Text style={styles.label}>{t('organizerSendUpdate.fields.messageLabel')}</Text>
           <TextInput
@@ -172,53 +170,25 @@ export default function SendEventUpdateScreen() {
             placeholderTextColor={colors.textTertiary}
             selectionColor={colors.primary}
           />
-          <Text style={styles.charCount}>{message.length}/500</Text>
+          {message.length > 400 ? <Text style={styles.charCount}>{message.length}/500</Text> : <View style={styles.fieldGap} />}
         </View>
 
+        {/* Quick starts as chips (were three bordered cards under an
+            "EXAMPLE UPDATES:" eyebrow). One tap fills the title and message. */}
         <View style={styles.examples}>
-          <Text style={styles.examplesTitle}>{t('organizerSendUpdate.examplesTitle')}</Text>
-          <Touchable
-            style={styles.exampleCard}
-            onPress={() => {
-              setTitle(t('organizerSendUpdate.examples.venueChange.title'));
-              setMessage(
-                t('organizerSendUpdate.examples.venueChange.message')
-              );
-            }}
-          >
-            <Text style={styles.exampleTitle}>{t('organizerSendUpdate.examples.venueChange.cardTitle')}</Text>
-            <Text style={styles.exampleText} numberOfLines={2}>
-              {t('organizerSendUpdate.examples.venueChange.cardPreview')}
-            </Text>
-          </Touchable>
-
-          <Touchable
-            style={styles.exampleCard}
-            onPress={() => {
-              setTitle(t('organizerSendUpdate.examples.timeUpdate.title'));
-              setMessage(t('organizerSendUpdate.examples.timeUpdate.message'));
-            }}
-          >
-            <Text style={styles.exampleTitle}>{t('organizerSendUpdate.examples.timeUpdate.cardTitle')}</Text>
-            <Text style={styles.exampleText} numberOfLines={2}>
-              {t('organizerSendUpdate.examples.timeUpdate.cardPreview')}
-            </Text>
-          </Touchable>
-
-          <Touchable
-            style={styles.exampleCard}
-            onPress={() => {
-              setTitle(t('organizerSendUpdate.examples.reminder.title'));
-              setMessage(
-                t('organizerSendUpdate.examples.reminder.message')
-              );
-            }}
-          >
-            <Text style={styles.exampleTitle}>{t('organizerSendUpdate.examples.reminder.cardTitle')}</Text>
-            <Text style={styles.exampleText} numberOfLines={2}>
-              {t('organizerSendUpdate.examples.reminder.cardPreview')}
-            </Text>
-          </Touchable>
+          {(['venueChange', 'timeUpdate', 'reminder'] as const).map((k) => (
+            <Touchable
+              key={k}
+              style={styles.chip}
+              onPress={() => {
+                setTitle(t(`organizerSendUpdate.examples.${k}.title`));
+                setMessage(t(`organizerSendUpdate.examples.${k}.message`));
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.chipText}>{t(`organizerSendUpdate.examples.${k}.cardTitle`)}</Text>
+            </Touchable>
+          ))}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -252,10 +222,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     // No marginLeft: OverlayHeader's row already puts a 12pt gap between the
     // close button and the title.
   },
+  // The one white primary; a quiet fill until there is something to send.
   sendButton: {
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.white,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: radius.sm,
@@ -263,38 +232,40 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: colors.border,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   sendButtonText: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '600',
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
   },
-  eventInfoWrap: {
+  eventLine: {
     marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 22,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
+  fieldGap: { height: 18 },
   form: {
     paddingHorizontal: 16,
   },
   label: {
-    fontSize: 17,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textSecondary,
     marginBottom: 8,
   },
+  // Fills, not bordered boxes.
   input: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.sm,
-    padding: 12,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
     color: colors.text,
   },
   textArea: {
@@ -309,9 +280,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 20,
   },
   examples: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingTop: 4,
+    paddingBottom: 24,
   },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+  },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.text },
   examplesTitle: {
     fontSize: 13,
     fontWeight: '600',

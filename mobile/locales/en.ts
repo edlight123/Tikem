@@ -1207,6 +1207,12 @@ export default {
     eventsCount: 'events',
   },
   tickets: {
+    cancelRsvp: {
+      action: 'Cancel RSVP',
+      title: 'Cancel your RSVP?',
+      confirm: 'Yes, cancel',
+      failed: "Couldn't cancel. Try again.",
+    },
     undated: 'Undated',
     title: 'My Tickets',
     loginRequiredBody: 'Please login to view your tickets',
@@ -1512,9 +1518,9 @@ export default {
       bodyPluralSuffix: ' attendees',
     },
     fields: {
-      titleLabel: 'Update Title *',
+      titleLabel: 'Update Title',
       titlePlaceholder: 'e.g., Venue Change, Time Update',
-      messageLabel: 'Message *',
+      messageLabel: 'Message',
       messagePlaceholder: 'Enter your message to attendees...',
     },
     examplesTitle: 'Example Updates:',
@@ -2877,6 +2883,18 @@ export default {
     sendFailed: "Couldn't send. Try again.",
   },
   eventRecap: {
+    of: "of",
+    insight: {
+      sameAsUsual: "Turnout in line with your usual {avg}%.",
+      aboveUsual: "Better turnout than your usual {avg}%.",
+      belowUsual: "Lower turnout than your usual {avg}%.",
+      window: "Most people arrived between {from} and {to}.",
+      noShows: "{n} ticket holders didn't come.",
+      noShowOne: "1 ticket holder didn't come.",
+      loved: "{n} of {total} who rated loved it.",
+      followers: "{n} new followers since the event.",
+      followerOne: "1 new follower since the event.",
+    },
     title: 'Recap',
     sold: 'Sold',
     came: 'Came',
@@ -2888,6 +2906,23 @@ export default {
     ratings: 'ratings',
     noRatings: 'No ratings yet.',
     loadFailed: "Couldn't load the recap. Pull down to try again.",
+  },
+  transferTicket: {
+    title: "Transfer",
+    sentTitle: "Sent",
+    note: "The link expires in 24 hours. Once it's accepted, the ticket is theirs.",
+    noteCount: "Transferred {count} of 3 times. The link expires in 24 hours.",
+    maxReached: "This ticket has been transferred 3 times, the limit.",
+    email: "Their email",
+    message: "Message (optional)",
+    messagePlaceholder: "Add a note",
+    send: "Send ticket",
+    sentBody: "We emailed {email}. You can also send them the link.",
+    shareLink: "Share link",
+    shareMessage: "Here's my ticket for {event}: {link}",
+    invalidEmail: "Enter a valid email address.",
+    emailRequired: "Enter their email.",
+    failed: "Couldn't transfer the ticket. Try again.",
   },
   organizerMessages: {
     allEvents: 'All events',
@@ -3157,6 +3192,7 @@ export default {
   },
 
   freeTicket: {
+    sheetTitle: 'rsvp',
     ticketsLabel: 'Tickets',
     alreadyTitle: "You're going",
     alreadyBody: {
