@@ -111,6 +111,7 @@ export async function POST(
         topic: String(thread.topic || 'other'),
         message,
         followUp: true,
+        senderId: user.id,
         event: event ? { country: event.country, city: event.city, timezone: event.timezone } : null,
       })
     } catch (error) {

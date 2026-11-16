@@ -5,6 +5,7 @@ import { sendPushNotification } from '@/lib/notification-triggers'
 import { decideSend, type NotificationCategory } from '@/lib/notifications/policy'
 import type { NotificationType } from '@/types/database'
 import { isFillingFast, milestoneReached } from '@/lib/notifications/thresholds'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 
 export {
   isFillingFast,
@@ -214,6 +215,12 @@ export async function onSaleCompleted(params: {
   }
 }
 
+/**
+ * Sell-through milestones (50%, 75%, sold out) for the organization: the owner
+ * plus admins and managers (orgRecipients, event_ops). Each recipient passes
+ * sendDiscretionary on their own: their own opt-out, quiet hours and cap.
+ * True when at least one of them was told.
+ */
 export async function notifyOrganizerMilestone(params: {
   organizerId: string
   eventId: string
@@ -228,18 +235,24 @@ export async function notifyOrganizerMilestone(params: {
   const soldOut = milestone >= 1
   const pct = Math.round(milestone * 100)
 
-  return sendDiscretionary({
-    userId: organizerId,
-    category: 'organizer_milestone',
-    // Keyed by milestone as well as event, so 50% and sold-out are separate
-    // messages rather than the second being swallowed by the first's cap.
-    capKey: `milestone:${eventId}:${pct}`,
-    type: 'organizer_milestone',
-    title: soldOut ? `Sold out: ${eventTitle}` : `${pct}% sold: ${eventTitle}`,
-    body: soldOut
-      ? `All ${totalTickets} tickets are gone.`
-      : `${ticketsSold} of ${totalTickets} tickets sold.`,
-    url: `/organizer/events/${eventId}`,
-    data: { eventId, milestone: pct, ticketsSold, totalTickets },
-  })
+  const recipients = await resolveOrgRecipients({ orgId: organizerId, kind: 'event_ops', eventId })
+  const results = await Promise.all(
+    recipients.map((userId) =>
+      sendDiscretionary({
+        userId,
+        category: 'organizer_milestone',
+        // Keyed by milestone as well as event, so 50% and sold-out are separate
+        // messages rather than the second being swallowed by the first's cap.
+        capKey: `milestone:${eventId}:${pct}`,
+        type: 'organizer_milestone',
+        title: soldOut ? `Sold out: ${eventTitle}` : `${pct}% sold: ${eventTitle}`,
+        body: soldOut
+          ? `All ${totalTickets} tickets are gone.`
+          : `${ticketsSold} of ${totalTickets} tickets sold.`,
+        url: `/organizer/events/${eventId}`,
+        data: { eventId, milestone: pct, ticketsSold, totalTickets },
+      })
+    )
+  )
+  return results.some(Boolean)
 }

@@ -10,6 +10,7 @@
  */
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
+import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { sendEmail } from '@/lib/email'
 import { renderEmail, title as titleBlock, p, gap, button, appUrl } from '@/lib/email-kit/layout'
@@ -120,6 +121,39 @@ export async function notifyPayoutReviewOutcome(
       })
     } catch (err) {
       console.error('[payout-review-notice] push failed', { eventId, err })
+    }
+
+    // Admins with read-only finances: in-app + push in their own language
+    // (orgRecipients, finance). The email stays the owner's.
+    try {
+      const team = (await resolveOrgRecipients({ orgId: organizerId, kind: 'finance', eventId })).filter(
+        (uid) => uid !== organizerId
+      )
+      await Promise.all(
+        team.map(async (uid) => {
+          try {
+            const memberSnap = await adminDb.collection('users').doc(uid).get().catch(() => null)
+            const memberCopy = payoutReviewCopy(
+              outcome,
+              langOf(memberSnap?.exists ? (memberSnap.data() as any)?.language : null),
+              String(event?.title || '')
+            )
+            await createNotification(uid, 'withdrawal_update', memberCopy.title, memberCopy.body, actionUrl, {
+              eventId,
+              payoutReview: outcome,
+            })
+            await sendPushNotification(uid, memberCopy.title, memberCopy.body, actionUrl, {
+              type: 'withdrawal_update',
+              eventId,
+              payoutReview: outcome,
+            })
+          } catch (err) {
+            console.error('[payout-review-notice] team notice failed', { eventId, uid, err })
+          }
+        })
+      )
+    } catch (err) {
+      console.error('[payout-review-notice] team notices skipped', { eventId, err })
     }
     const email = typeof user?.email === 'string' ? user.email : null
     if (email) {

@@ -944,7 +944,8 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
           quantity,
           (Number(input.amountTotalCents) || 0) / 100,
           attendee?.full_name,
-          chargedCurrency
+          chargedCurrency,
+          input.buyerId ? String(input.buyerId) : null
         )
         await onSaleCompleted({ eventId, buyerId: attendee?.id ? String(attendee.id) : null })
       }

@@ -196,8 +196,10 @@ export async function recordRefundRequest(input: {
 }
 
 /**
- * Tell the organizer (existing refund-request email). Best-effort: the request
- * is recorded either way and shows in their refund queue.
+ * Tell the organization (existing refund-request email): the owner plus admins
+ * and managers, who may process refunds (orgRecipients, event_ops). Each gets
+ * it at their own address and in their own language. Best-effort: the request
+ * is recorded either way and shows in the refund queue.
  */
 export async function notifyOrganizerOfRefundRequest(input: {
   ticketId: string
@@ -213,30 +215,45 @@ export async function notifyOrganizerOfRefundRequest(input: {
     if (!organizerId) return
     const { sendEmail, getRefundRequestEmail, emailSubjects } = await import('@/lib/email')
     const { resolveEmailLang } = await import('@/lib/email-kit/recipient')
-    const orgSnap = await adminDb.collection('users').doc(organizerId).get()
-    const organizer = orgSnap.exists ? ((orgSnap.data() as any) ?? {}) : null
-    if (!organizer?.email) return
-    // The organizer's profile is already loaded: their language, else the event's region.
-    const lang = await resolveEmailLang({ explicit: organizer.language, event })
-    const eventTitle =
-      String(event.title || '').trim() || { en: 'your event', fr: 'votre événement', ht: 'evènman ou' }[lang]
+    const { resolveOrgRecipients } = await import('@/lib/notifications/orgRecipients')
+    const recipients = await resolveOrgRecipients({
+      orgId: organizerId,
+      kind: 'event_ops',
+      eventId,
+      excludeUserIds: [ticket.user_id, ticket.attendee_id],
+    })
     // price_paid is the face value in the ticket's (event) currency.
     const currency = String(ticket.currency || event.currency || '').trim() || undefined
-    await sendEmail({
-      to: organizer.email,
-      subject: emailSubjects.refundRequest(lang, eventTitle),
-      html: getRefundRequestEmail({
-        lang,
-        organizerName: organizer.full_name || '',
-        eventTitle,
-        attendeeEmail: requesterEmail || '—',
-        reason,
-        ticketId,
-        amount: Number(ticket.price_paid ?? ticket.price ?? 0) || 0,
-        currency,
-        eventId,
-      }),
-    })
+    await Promise.all(
+      recipients.map(async (uid) => {
+        try {
+          const snap = await adminDb.collection('users').doc(uid).get()
+          const person = snap.exists ? ((snap.data() as any) ?? {}) : null
+          if (!person?.email) return
+          // Their language, else the event's region.
+          const lang = await resolveEmailLang({ explicit: person.language, event })
+          const eventTitle =
+            String(event.title || '').trim() || { en: 'your event', fr: 'votre événement', ht: 'evènman ou' }[lang]
+          await sendEmail({
+            to: person.email,
+            subject: emailSubjects.refundRequest(lang, eventTitle),
+            html: getRefundRequestEmail({
+              lang,
+              organizerName: person.full_name || '',
+              eventTitle,
+              attendeeEmail: requesterEmail || '—',
+              reason,
+              ticketId,
+              amount: Number(ticket.price_paid ?? ticket.price ?? 0) || 0,
+              currency,
+              eventId,
+            }),
+          })
+        } catch (emailError) {
+          console.error('Failed to send refund-request notification:', { uid, emailError })
+        }
+      })
+    )
   } catch (emailError) {
     console.error('Failed to send organizer refund-request notification:', emailError)
   }
