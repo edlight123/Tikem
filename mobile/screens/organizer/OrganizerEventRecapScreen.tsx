@@ -16,6 +16,7 @@ import SectionHeader from '../../components/SectionHeader';
 import StatTriplet from '../../components/StatTriplet';
 import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import { Skeleton } from '../../components/Skeleton';
+import { faceIcon } from '../../components/FeedbackFace';
 
 /**
  * The morning-after recap for one event: sold vs came, when people arrived,
@@ -41,7 +42,6 @@ type Recap = {
   };
 };
 
-const FACE: Record<number, string> = { 1: '😕', 2: '🙂', 3: '🤩' };
 
 const recapCache = new Map<string, Recap>();
 
@@ -147,10 +147,12 @@ export default function OrganizerEventRecapScreen() {
                     </View>
                   ))}
                 </View>
-                <View style={styles.chartAxis}>
-                  <Text style={styles.axisText}>{time(recap.arrivals[0].at)}</Text>
-                  <Text style={styles.axisText}>{time(recap.arrivals[recap.arrivals.length - 1].at)}</Text>
-                </View>
+                {recap.arrivals.length > 1 ? (
+                  <View style={styles.chartAxis}>
+                    <Text style={styles.axisText}>{time(recap.arrivals[0].at)}</Text>
+                    <Text style={styles.axisText}>{time(recap.arrivals[recap.arrivals.length - 1].at)}</Text>
+                  </View>
+                ) : null}
               </View>
             )}
 
@@ -175,21 +177,28 @@ export default function OrganizerEventRecapScreen() {
               ) : (
                 <>
                   <View style={styles.faces}>
-                    {([3, 2, 1] as const).map((r) => (
-                      <View key={r} style={styles.face}>
-                        <Text style={styles.emoji}>{FACE[r]}</Text>
-                        <Text style={styles.faceCount}>{recap.feedback.counts[r]}</Text>
-                      </View>
-                    ))}
+                    {([3, 2, 1] as const).map((r) => {
+                      const Icon = faceIcon(r)!;
+                      return (
+                        <View key={r} style={styles.face}>
+                          <Icon size={24} strokeWidth={1.5} color={colors.text} />
+                          <Text style={styles.faceCount}>{recap.feedback.counts[r]}</Text>
+                        </View>
+                      );
+                    })}
                   </View>
-                  {recap.feedback.comments.map((c, i) => (
-                    <View key={`${c.at}-${i}`} style={styles.comment}>
-                      <Text style={styles.commentText}>
-                        {FACE[c.rating] || ''} {c.text}
-                      </Text>
-                      {c.name ? <Text style={styles.commentName}>{c.name}</Text> : null}
-                    </View>
-                  ))}
+                  {recap.feedback.comments.map((c, i) => {
+                    const Icon = faceIcon(c.rating);
+                    return (
+                      <View key={`${c.at}-${i}`} style={styles.comment}>
+                        <Text style={styles.commentText}>{c.text}</Text>
+                        <View style={styles.commentMeta}>
+                          {Icon ? <Icon size={14} strokeWidth={1.75} color={colors.textSecondary} /> : null}
+                          {c.name ? <Text style={styles.commentName}>{c.name}</Text> : null}
+                        </View>
+                      </View>
+                    );
+                  })}
                 </>
               )}
             </View>
@@ -206,7 +215,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     content: { paddingHorizontal: 20 },
     section: { marginTop: 28 },
     chart: { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 3, marginTop: 4 },
-    barCol: { flex: 1, height: '100%' },
+    // Slim columns: one busy half hour must not become a full-width block.
+    barCol: { flex: 1, maxWidth: 22, height: '100%' },
     barTrack: { flex: 1, justifyContent: 'flex-end' },
     bar: { width: '100%', borderRadius: 2 },
     chartAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
@@ -219,15 +229,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderRadius: radius.button,
       backgroundColor: T.surface,
     },
-    emoji: { fontSize: 28 },
-    faceCount: { marginTop: 4, fontSize: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+    faceCount: { marginTop: 6, fontSize: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
     comment: {
       paddingVertical: 14,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: T.surfaceRaised,
     },
     commentText: { fontSize: 15, color: colors.text, lineHeight: 21 },
-    commentName: { marginTop: 4, fontSize: 13, color: colors.textSecondary },
+    commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+    commentName: { fontSize: 13, color: colors.textSecondary },
     muted: { marginTop: 40, fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
     mutedLeft: { fontSize: 15, color: colors.textSecondary },
   });
