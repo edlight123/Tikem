@@ -214,7 +214,7 @@ const getStyles = (colors: any) =>
     },
     meta: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textSecondary,
     },
     countChip: {
@@ -263,7 +263,7 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
     },
     primaryText: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: colors.background,
     },

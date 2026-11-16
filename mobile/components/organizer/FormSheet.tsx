@@ -9,13 +9,14 @@ import {
   Text,
   TextInput,
   TextInputProps,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { radius, spacing, font } from '../../theme/tokens';
+import { Touchable } from '../ui/Touchable';
+import { Text as UIText } from '../ui/Text';
 
 interface FormSheetProps {
   visible: boolean;
@@ -64,7 +65,7 @@ export default function FormSheet({
             <Text style={styles.title} numberOfLines={2}>
               {title.toLowerCase()}
             </Text>
-            <TouchableOpacity
+            <Touchable
               style={styles.closeBtn}
               onPress={onClose}
               disabled={busy}
@@ -73,7 +74,7 @@ export default function FormSheet({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <X size={18} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           <ScrollView
@@ -95,7 +96,11 @@ export default function FormSheet({
 export function SheetLabel({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  return <Text style={styles.label}>{children}</Text>;
+  return (
+    <UIText variant="eyebrow" style={styles.label}>
+      {children}
+    </UIText>
+  );
 }
 
 /** A filled text field (surfaceRaised on the sheet's surface). */
@@ -139,7 +144,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: spacing.md,
       marginBottom: 4,
     },
-    title: { flex: 1, fontFamily: font.serif, fontSize: 26, color: colors.text },
+    title: { flex: 1, fontFamily: font.serif, fontSize: 28, lineHeight: 34, color: colors.text },
     closeBtn: {
       width: 36,
       height: 36,
@@ -153,11 +158,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     label: {
       marginTop: 18,
       marginBottom: 8,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: colors.textTertiary,
     },
     input: {
       borderRadius: radius.md,

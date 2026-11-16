@@ -158,7 +158,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   title: {
     fontFamily: font.serif,
-    fontSize: 24,
+    fontSize: 22,
     color: colors.text,
     lineHeight: 26,
     letterSpacing: -0.3,

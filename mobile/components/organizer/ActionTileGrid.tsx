@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import { radius } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Touchable } from '../ui/Touchable';
 
 /**
  * An icon may be:
@@ -72,19 +73,21 @@ export default function ActionTileGrid({ tiles, variant = 'row', columns = 3 }: 
         {rows.map((row) => (
           <View key={row.map((r) => r.key).join('|')} style={styles.compactRow}>
             {row.map((tile) => (
-              <TouchableOpacity
-                key={tile.key}
-                style={styles.tileCompact}
-                onPress={tile.onPress}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={tile.label}
-              >
-                <View style={styles.iconWrapCompact}>{renderIcon(tile.icon, colors.text)}</View>
-                <Text style={styles.labelCompact} numberOfLines={2}>
-                  {tile.label}
-                </Text>
-              </TouchableOpacity>
+              // Touchable styles its inner animated view, so the flex share
+              // lives on a plain wrapper.
+              <View key={tile.key} style={styles.compactCell}>
+                <Touchable
+                  style={styles.tileCompact}
+                  onPress={tile.onPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={tile.label}
+                >
+                  <View style={styles.iconWrapCompact}>{renderIcon(tile.icon, colors.text)}</View>
+                  <Text style={styles.labelCompact} numberOfLines={2}>
+                    {tile.label}
+                  </Text>
+                </Touchable>
+              </View>
             ))}
           </View>
         ))}
@@ -95,22 +98,24 @@ export default function ActionTileGrid({ tiles, variant = 'row', columns = 3 }: 
   return (
     <View style={[styles.grid, stacked && styles.gridStacked]}>
       {tiles.map((tile) => (
-        <TouchableOpacity
-          key={tile.key}
-          style={stacked ? [styles.tileStacked, { width: stackedWidth }, columns === 2 && styles.tileStackedWide] : styles.tile}
-          onPress={tile.onPress}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={tile.label}
-        >
-          <View style={styles.iconWrap}>{renderIcon(tile.icon, colors.text)}</View>
-          <Text
-            style={stacked ? (columns === 2 ? styles.labelStackedWide : styles.labelStacked) : styles.label}
-            numberOfLines={1}
+        // Width / flex sit on a plain wrapper: Touchable applies `style` to
+        // its inner animated view, which can't size against the grid.
+        <View key={tile.key} style={stacked ? { width: stackedWidth } : styles.tileCell}>
+          <Touchable
+            style={stacked ? [styles.tileStacked, columns === 2 && styles.tileStackedWide] : styles.tile}
+            onPress={tile.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={tile.label}
           >
-            {tile.label}
-          </Text>
-        </TouchableOpacity>
+            <View style={styles.iconWrap}>{renderIcon(tile.icon, colors.text)}</View>
+            <Text
+              style={stacked ? (columns === 2 ? styles.labelStackedWide : styles.labelStacked) : styles.label}
+              numberOfLines={1}
+            >
+              {tile.label}
+            </Text>
+          </Touchable>
+        </View>
       ))}
     </View>
   );
@@ -123,11 +128,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flexWrap: 'wrap',
       gap: 10,
     },
-    tile: {
-      // Two columns; a compact horizontal row (icon + label) instead of a tall
-      // stacked tile — reads tighter and more polished with 8+ actions.
+    // Two columns; a compact horizontal row (icon + label) instead of a tall
+    // stacked tile — reads tighter and more polished with 8+ actions.
+    tileCell: {
       width: '48%',
       flexGrow: 1,
+    },
+    tile: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.surfaceRaised,
@@ -188,8 +195,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     // Compact: a short filled tile, icon left and label right. minHeight (not a
     // fixed height) so a two-line label grows the tile instead of clipping.
-    tileCompact: {
+    compactCell: {
       flex: 1,
+    },
+    tileCompact: {
+      flexGrow: 1,
       minHeight: 58,
       flexDirection: 'row',
       alignItems: 'center',
@@ -206,14 +216,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     labelCompact: {
       flex: 1,
-      fontSize: 14,
-      lineHeight: 18,
+      fontSize: 15,
+      lineHeight: 20,
       fontWeight: '600',
       color: colors.text,
     },
     label: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },

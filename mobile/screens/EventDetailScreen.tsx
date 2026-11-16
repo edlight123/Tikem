@@ -932,36 +932,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.content}>
-          {/* Compact host byline — back above the title by request ("I want
-              both"): a small mark and the name, tappable to the profile. The
-              full organizer section, with Follow and Contact, lives at the
-              FOOT of the page — this line is identity, that one is actions. */}
-          <TouchableOpacity
-            style={styles.hostBylineTop}
-            onPress={navigateToOrganizerProfile}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-          >
-            <View style={styles.hostedByAvatar}>
-              {event.users?.organization_logo ? (
-                <ExpoImage
-                  source={{ uri: event.users.organization_logo }}
-                  style={styles.hostedByAvatarImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              ) : (
-                <OrgMark size={44} color={colors.text} />
-              )}
-            </View>
-            <Text style={styles.hostBylineTopName} numberOfLines={1}>
-              {event.users?.organization_name || event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
-            </Text>
-            {(event.users?.is_verified || event.is_verified) && (
-              <VerifiedBadge size="small" label={t('eventDetail.verified')} />
-            )}
-          </TouchableOpacity>
-
           {/* Title block — text-first, under the poster */}
           <Text style={styles.title}>{event.title}</Text>
 
@@ -996,12 +966,55 @@ export default function EventDetailScreen({ route, navigation }: any) {
               {endValid && ` – ${safeFormatForLanguage(endValid, 'h:mm a', language)}`}
             </Text>
 
-            {/* Kept — posh has no countdown, but urgency is genuinely useful on
-                a ticketing app. Demoted to one quiet line rather than its own row. */}
-            {startValid && startValid > new Date() && (
-              <CountdownTimer targetDate={startValid} label={startsInLabel} style={styles.factCountdown} />
-            )}
 
+          </View>
+
+          {/* Organizer row, posh order: event name first, then when/where, then
+              who is throwing it — with Follow (and Contact) right on the row.
+              Owner feedback 2026-11-15 replaced the byline above the title and
+              the duplicate "hosted by" card at the foot of the page. */}
+          <View style={styles.orgRow}>
+            <TouchableOpacity
+              style={styles.orgRowMain}
+              onPress={navigateToOrganizerProfile}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <View style={styles.hostedByAvatar}>
+                {event.users?.organization_logo ? (
+                  <ExpoImage
+                    source={{ uri: event.users.organization_logo }}
+                    style={styles.hostedByAvatarImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <OrgMark size={44} color={colors.text} />
+                )}
+              </View>
+              <Text style={styles.orgRowName} numberOfLines={1}>
+                {event.users?.organization_name || event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
+              </Text>
+              {(event.users?.is_verified || event.is_verified) && (
+                <VerifiedBadge size="small" label={t('eventDetail.verified')} />
+              )}
+            </TouchableOpacity>
+            {/* Hidden on the organizer's own event — the server rejects it anyway. */}
+            {!!user && !!event.organizer_id && event.organizer_id !== user.uid && (
+              <TouchableOpacity
+                style={styles.orgRowIconBtn}
+                onPress={() => setShowContactOrganizer(true)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('contactOrganizer.open')}
+                hitSlop={8}
+              >
+                <MessageCircle size={18} color={colors.text} />
+              </TouchableOpacity>
+            )}
+            {event.organizer_id && event.organizer_id !== user?.uid && (
+              <FollowButton organizerId={event.organizer_id} style={styles.followButtonInCard} />
+            )}
           </View>
 
           {/* Quick Actions - Calendar & Waitlist */}
@@ -1076,76 +1089,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
               style={styles.venueMap}
             />
           )}
-
-          {/* Organizer — back at the FOOT of the page, reversing the
-              byline-above-title experiment (tester ask): read the event first,
-              then who is throwing it, with Follow and Contact right here. */}
-          <View style={styles.hostByline}>
-            <SectionHeader title={t('eventDetail.sections.hostedBy')} />
-            <View style={styles.hostedByCard}>
-              <TouchableOpacity 
-                style={styles.hostedByMain}
-                onPress={navigateToOrganizerProfile}
-                activeOpacity={0.7}
-              >
-                <View style={styles.hostedByAvatar}>
-                  {event.users?.organization_logo ? (
-                    <ExpoImage
-                      source={{ uri: event.users.organization_logo }}
-                      style={styles.hostedByAvatarImage}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <OrgMark size={44} color={colors.text} />
-                  )}
-                </View>
-                <View style={styles.hostedByInfo}>
-                  <Text style={styles.hostedByName}>
-                    {event.users?.organization_name || event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
-                  </Text>
-                  {/* House rule: no filled status pills. Bare shield glyph + quiet
-                      teal label — no background, no border. VerifiedBadge without
-                      `showLabel` renders just the icon, so the shared badge stays
-                      untouched for the screens that still use its pill form. */}
-                  {(event.users?.is_verified || event.is_verified) && (
-                    <View
-                      style={styles.verifiedBadgeInline}
-                      accessible
-                      accessibilityRole="text"
-                      accessibilityLabel={t('eventDetail.verified')}
-                    >
-                      <VerifiedBadge size="small" label={t('eventDetail.verified')} />
-                      <Text style={styles.verifiedTextInline}>{t('eventDetail.verified')}</Text>
-                    </View>
-                  )}
-                </View>
-                <ChevronRight size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-              {event.organizer_id && (
-                <FollowButton
-                  organizerId={event.organizer_id}
-                  style={styles.followButtonInCard}
-                />
-              )}
-            </View>
-            {/* Hidden from the organizer's own event — messaging yourself just
-                fills your own inbox, and the server rejects it anyway. */}
-            {!!user && !!event.organizer_id && event.organizer_id !== user.uid && (
-              <TouchableOpacity
-                style={styles.contactOrganizerRow}
-                onPress={() => setShowContactOrganizer(true)}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-              >
-                <View style={styles.contactOrganizerIcon}>
-                  <MessageCircle size={17} color={colors.text} />
-                </View>
-                <Text style={styles.contactOrganizerText}>{t('contactOrganizer.open')}</Text>
-                <ChevronRight size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
 
           {/* Your own connections going (config/auth.friend_suggestions). Renders
               nothing when the flag is off, signed out, or no friend is going. */}
@@ -1727,6 +1670,37 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontWeight: '700',
     color: colors.text,
     marginBottom: 2,
+  },
+  orgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    marginBottom: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  orgRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
+  },
+  orgRowName: {
+    flexShrink: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  orgRowIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
   verifiedBadgeInline: {
     flexDirection: 'row',

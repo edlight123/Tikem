@@ -74,7 +74,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderColor: colors.primary,
     },
     chipText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '700',
       color: colors.text,
       letterSpacing: 0.2,

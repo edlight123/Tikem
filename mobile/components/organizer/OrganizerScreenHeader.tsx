@@ -1,10 +1,11 @@
 import React from 'react';
-import { Animated, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import ChromeBlur from '../ChromeBlur';
+import { Touchable } from '../ui/Touchable';
 
 interface OrganizerScreenHeaderProps {
   title: string;
@@ -75,7 +76,7 @@ export default function OrganizerScreenHeader({
       {overlay ? <ChromeBlur edge="top" restOpacity={restOpacity} /> : null}
       <View style={styles.row}>
         {onBack ? (
-          <TouchableOpacity
+          <Touchable
             onPress={onBack}
             style={styles.backButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -83,7 +84,7 @@ export default function OrganizerScreenHeader({
             accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={24} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         ) : null}
 
         <View style={styles.titleCol}>
@@ -144,7 +145,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     subtitle: {
       marginTop: 2,
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textSecondary,
     },
     right: {

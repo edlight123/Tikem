@@ -85,7 +85,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     title: {
       fontSize: 18,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
     },

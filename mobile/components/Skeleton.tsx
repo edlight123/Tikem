@@ -273,7 +273,7 @@ export function TicketDetailSkeleton() {
       <Skeleton width={'60%'} height={13} radius={4} style={{ alignSelf: 'center', marginTop: 16 } as ViewStyle} />
       <View style={styles.ticketInfoCards}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <View key={i} style={[styles.ticketInfoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View key={i} style={[styles.ticketInfoCard, { backgroundColor: colors.surface }]}>
             <Skeleton width={40} height={40} radius={4} />
             <View style={styles.ticketInfoText}>
               <Skeleton width={'40%'} height={11} radius={4} />
@@ -347,7 +347,7 @@ export function EarningsSkeleton() {
   const { colors } = useTheme();
   return (
     <View style={styles.earnings}>
-      <View style={[styles.earningsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.earningsCard, { backgroundColor: colors.surface }]}>
         <Skeleton width={'40%'} height={12} radius={4} />
         <Skeleton width={'62%'} height={34} radius={4} style={{ marginTop: 10 } as ViewStyle} />
         <Skeleton width={'50%'} height={12} radius={4} style={{ marginTop: 14 } as ViewStyle} />
@@ -414,13 +414,13 @@ export function ReviewSkeleton() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={[styles.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.reviewCard, { backgroundColor: colors.surface }]}>
         <Skeleton width={'80%'} height={18} radius={4} />
         <Skeleton width={'45%'} height={13} radius={4} style={{ marginTop: 8 } as ViewStyle} />
       </View>
 
       {Array.from({ length: 2 }).map((_, i) => (
-        <View key={i} style={[styles.reviewRatingBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View key={i} style={[styles.reviewRatingBlock, { backgroundColor: colors.surface }]}>
           <Skeleton width={'60%'} height={15} radius={4} />
           <View style={styles.reviewStarsRow}>
             {Array.from({ length: 5 }).map((__, s) => (
@@ -431,7 +431,7 @@ export function ReviewSkeleton() {
         </View>
       ))}
 
-      <View style={[styles.reviewRatingBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.reviewRatingBlock, { backgroundColor: colors.surface }]}>
         <Skeleton width={'70%'} height={15} radius={4} />
         <View style={styles.reviewRecommendRow}>
           <Skeleton width={110} height={48} radius={4} />
@@ -458,7 +458,7 @@ export function PaymentSkeleton() {
   const { colors } = useTheme();
   return (
     <View style={styles.payment}>
-      <View style={[styles.paymentSummary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.paymentSummary, { backgroundColor: colors.surface }]}>
         <View style={styles.paymentRow}>
           <Skeleton width={'46%'} height={14} radius={4} />
           <Skeleton width={72} height={22} radius={4} />
@@ -495,7 +495,6 @@ const styles = StyleSheet.create({
   },
   paymentSummary: {
     borderRadius: 4,
-    borderWidth: 1,
     padding: 18,
   },
   paymentRow: {
@@ -646,7 +645,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 4,
-    borderWidth: 1,
     gap: 12,
   },
   ticketInfoText: {
@@ -700,7 +698,6 @@ const styles = StyleSheet.create({
   earningsCard: {
     borderRadius: 4,
     padding: 20,
-    borderWidth: 1,
   },
 
   // OrganizerProfileScreen: hero (content-driven height, top-anchored identity
@@ -732,14 +729,12 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 16,
     borderRadius: 4,
-    borderWidth: 1,
   },
   reviewRatingBlock: {
     marginHorizontal: 16,
     marginTop: 8,
     padding: 20,
     borderRadius: 4,
-    borderWidth: 1,
     alignItems: 'center',
   },
   reviewStarsRow: {

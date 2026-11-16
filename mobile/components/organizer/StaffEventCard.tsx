@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { radius } from '../../theme/tokens';
+import { Touchable } from '../ui/Touchable';
 
 interface StaffEventCardProps {
   title: string;
@@ -54,10 +55,11 @@ export default function StaffEventCard({
     ) : null);
 
   return (
-    <TouchableOpacity
+    <Touchable
+      scale={0.98}
       style={[styles.card, isSurface && styles.cardSurface]}
       onPress={onPress}
-      activeOpacity={0.7}
+      disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
     >
@@ -92,7 +94,7 @@ export default function StaffEventCard({
         )}
       </View>
       {trailing ? <View style={styles.right}>{trailing}</View> : null}
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -127,7 +129,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
     },
     title: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: colors.text,
     },
@@ -141,7 +143,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       color: colors.textSecondary,
     },
     meta: {
-      marginTop: 3,
+      marginTop: 4,
       fontSize: 12,
       color: colors.textTertiary,
     },

@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
@@ -28,6 +27,8 @@ import {
   TodayEvent,
 } from '../../lib/api/organizer';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
+import { Text as UIText } from '../../components/ui/Text';
 import StatTriplet from '../../components/StatTriplet';
 import StatusChip from '../../components/StatusChip';
 import GettingStartedCard from '../../components/organizer/GettingStartedCard';
@@ -74,11 +75,13 @@ export default function OrganizerDashboardScreen() {
   // The tab bar is a translucent overlay, so reserve its height here or the
   // last row ends up sitting behind it.
   const tabBarSpace = useTabBarSpace();
-  // Tonight's poster frame. A full-width 4:5 flyer pushed the scan button
-  // (the day-of job) below the tab bar (TestFlight 2026-11-02), so the frame
-  // is square, and wider on short phones; the whole flyer still shows.
-  const { height: windowHeight } = useWindowDimensions();
-  const heroRatio = windowHeight < 760 ? 4 / 3 : 1;
+  // Tonight's poster frame is a true 4:5 flyer (owner, 2026-11-16: "this is
+  // not 4:5" — the old square frame letterboxed it). To keep the scan button
+  // above the tab bar (TestFlight 2026-11-02), the poster is capped at ~46% of
+  // the screen height and centred when that makes it narrower than the column.
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const heroRatio = 4 / 5;
+  const heroWidth = Math.min(windowWidth - 32, Math.round(windowHeight * 0.46 * heroRatio));
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
   const [allEvents, setAllEvents] = useState<OrganizerEvent[]>([]);
   const [stats, setStats] = useState<OrganizerStats | null>(null);
@@ -187,18 +190,17 @@ export default function OrganizerDashboardScreen() {
   const greeting = (
     <View style={[styles.greetingRow, { paddingTop: insets.top + 16 }]}>
       <View style={styles.greetingText}>
-        <Text style={styles.eyebrow} numberOfLines={1}>
+        <UIText variant="eyebrow" style={styles.eyebrow} numberOfLines={1}>
           {`${t('organizerDashboard.welcomeBack')},`}
-        </Text>
+        </UIText>
         <Text style={styles.screenTitle} numberOfLines={2}>
           {displayName}
         </Text>
         {showRoleLine ? (
-          <TouchableOpacity
+          <Touchable
             style={styles.roleLine}
             onPress={canSwitch ? () => setShowSwitcher(true) : undefined}
             disabled={!canSwitch}
-            activeOpacity={0.7}
             accessibilityRole={canSwitch ? 'button' : 'text'}
             accessibilityLabel={canSwitch ? t('orgTeam.switcher.title') : roleLabel(activeOrg.role)}
           >
@@ -207,7 +209,7 @@ export default function OrganizerDashboardScreen() {
               {canSwitch ? ` · ${t('orgTeam.switcher.switch')}` : ''}
             </Text>
             {canSwitch ? <Ionicons name="chevron-down" size={14} color={colors.textSecondary} /> : null}
-          </TouchableOpacity>
+          </Touchable>
         ) : null}
       </View>
       <View style={styles.avatar}>
@@ -319,13 +321,13 @@ export default function OrganizerDashboardScreen() {
     const progress = event.capacity > 0 ? Math.min(1, event.ticketsSold / event.capacity) : 0;
 
     return (
-      <TouchableOpacity
+      <Touchable
         key={event.id}
+        scale={0.98}
         style={styles.heroCard}
         onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
-        activeOpacity={0.85}
       >
-        <View style={[styles.heroPoster, { aspectRatio: heroRatio }]}>
+        <View style={[styles.heroPoster, { width: heroWidth, aspectRatio: heroRatio }]}>
           {event.posterUri ? (
             <PosterImage uri={event.posterUri} frameRatio={heroRatio} recyclingKey={event.id} />
           ) : (
@@ -362,9 +364,8 @@ export default function OrganizerDashboardScreen() {
         )}
 
         {/* Scanning is the day-of job: the screen's one primary action. */}
-        <TouchableOpacity
+        <Touchable
           style={styles.primaryButton}
-          activeOpacity={0.85}
           accessibilityRole="button"
           onPress={(e) => {
             e.stopPropagation();
@@ -373,8 +374,8 @@ export default function OrganizerDashboardScreen() {
         >
           <Ionicons name="qr-code-outline" size={20} color="#000" />
           <Text style={styles.primaryButtonText}>{t('organizerDashboard.openScanner')}</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </Touchable>
+      </Touchable>
     );
   };
 
@@ -383,11 +384,11 @@ export default function OrganizerDashboardScreen() {
   const renderTonightRow = (event: TodayEvent) => {
     const meta = [eventTime(event.start_datetime), event.location].filter(Boolean).join(' · ');
     return (
-      <TouchableOpacity
+      <Touchable
         key={event.id}
+        scale={0.98}
         style={styles.tonightRow}
         onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
-        activeOpacity={0.85}
       >
         <View style={styles.tonightRowPoster}>{renderPoster(event.id, event.posterUri, event, 12)}</View>
         <View style={styles.tonightRowBody}>
@@ -399,9 +400,8 @@ export default function OrganizerDashboardScreen() {
               : `${event.ticketsSold} ${t('common.sold')}`}
           </Text>
         </View>
-        <TouchableOpacity
+        <Touchable
           style={styles.secondaryButton}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={t('tabs.scan')}
           onPress={(e) => {
@@ -410,8 +410,8 @@ export default function OrganizerDashboardScreen() {
           }}
         >
           <Ionicons name="qr-code-outline" size={18} color={colors.text} />
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </Touchable>
+      </Touchable>
     );
   };
 
@@ -422,7 +422,7 @@ export default function OrganizerDashboardScreen() {
         {/* Tonight: a poster-led hero, poster straight on the canvas. */}
         <View style={styles.section}>
           <Skeleton width={110} height={22} radius={4} style={{ marginBottom: 12 }} />
-          <Skeleton width="100%" aspectRatio={heroRatio} radius={radius.poster} />
+          <Skeleton width={heroWidth} aspectRatio={heroRatio} radius={radius.poster} style={{ alignSelf: 'center' }} />
         </View>
         {/* This week: section title + the metric triplet (••• while loading). */}
         <View style={styles.section}>
@@ -476,8 +476,9 @@ export default function OrganizerDashboardScreen() {
             it as a caption (a 25 HTG sale once rendered as "$25.00"). */}
         <View style={styles.section}>
           <SectionHeader title={t('organizerDashboard.thisWeek')} />
-          <TouchableOpacity
-            activeOpacity={0.85}
+          <Touchable
+            scale={0.98}
+            accessibilityRole="button"
             onPress={() => navigation.navigate('OrganizerAnalytics')}
           >
             <StatTriplet
@@ -487,7 +488,7 @@ export default function OrganizerDashboardScreen() {
                 { label: t('organizerDashboard.upcomingEvents'), value: stats ? (stats.upcomingEvents || 0) : null },
               ]}
             />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         {/* Upcoming: portrait poster rail, hidden when there is nothing ahead. */}
@@ -508,10 +509,10 @@ export default function OrganizerDashboardScreen() {
                 const place = event.venue_name || event.city || event.location;
                 const meta = [shortDate(event.start_datetime), place].filter(Boolean).join(' · ');
                 return (
-                  <TouchableOpacity
+                  <Touchable
                     key={event.id}
+                    scale={0.98}
                     style={styles.railCard}
-                    activeOpacity={0.85}
                     onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
                   >
                     <View style={styles.railPoster}>
@@ -527,7 +528,7 @@ export default function OrganizerDashboardScreen() {
                     <Text style={styles.railSold} numberOfLines={1}>
                       {`${event.tickets_sold || 0} ${t('common.sold')}`}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 );
               })}
             </ScrollView>
@@ -563,11 +564,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
   },
   eyebrow: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
     marginBottom: 6,
   },
   roleLine: {
@@ -600,11 +596,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     marginBottom: 4,
   },
-  avatarInitial: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-  },
   section: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -616,7 +607,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   heroCard: {},
   // surfaceRaised is the poster's own placeholder while the image loads.
   heroPoster: {
-    width: '100%',
+    alignSelf: 'center',
     borderRadius: radius.poster,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
@@ -649,7 +640,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 12,
   },
   heroSoldText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   progressTrack: {
@@ -703,7 +694,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     gap: 3,
   },
   tonightRowTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
   },
@@ -744,18 +735,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     overflow: 'hidden',
   },
   railTitle: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: 8,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
   },
   railMeta: {
-    marginTop: 3,
-    fontSize: 14,
+    marginTop: 4,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   railSold: {
-    marginTop: 3,
+    marginTop: 4,
     fontSize: 13,
     color: T.textTertiary,
   },

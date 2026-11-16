@@ -59,6 +59,7 @@ import {
 } from '../../lib/doorCheckIn';
 import { Camera, DoorOpen, Search, Vibrate, VibrateOff } from 'lucide-react-native';
 
+import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
   TicketScanner: {
     eventId: string;
@@ -1252,19 +1253,19 @@ export default function TicketScannerScreen() {
       <View style={[styles.bottomChrome, { paddingBottom: insets.bottom }]}>
         {/* Header below camera */}
         <View style={styles.belowHeader}>
-          <TouchableOpacity
+          <Touchable
             style={styles.belowHeaderButton}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
             accessibilityLabel={t('common.close')}
           >
             <Ionicons name="close" size={26} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
           <View style={styles.belowHeaderTitleWrap}>
             <Text style={styles.belowHeaderTitle} numberOfLines={1}>{t('organizerTicketScanner.headerTitle')}</Text>
             {!!eventTitle && <Text style={styles.belowHeaderSubtitle} numberOfLines={1}>{eventTitle}</Text>}
           </View>
-          <TouchableOpacity
+          <Touchable
             style={styles.belowHeaderButton}
             onPress={() => setHapticsOn((v) => !v)}
             accessibilityRole="switch"
@@ -1276,15 +1277,15 @@ export default function TicketScannerScreen() {
             ) : (
               <VibrateOff size={20} color={colors.textTertiary} />
             )}
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Touchable>
+          <Touchable
             style={styles.belowHeaderButton}
             onPress={() => setFlashOn(!flashOn)}
             accessibilityRole="switch"
             accessibilityState={{ checked: flashOn }}
           >
             <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         {/* Tools: manual lookup + door mode. */}
@@ -1341,7 +1342,7 @@ export default function TicketScannerScreen() {
               {ENTRY_POINTS.map((e) => {
                 const active = e.value === entryPoint;
                 return (
-                  <TouchableOpacity
+                  <Touchable
                     key={e.value}
                     style={[styles.entryChip, active && styles.entryChipActive]}
                     onPress={() => setEntryPoint(e.value)}
@@ -1351,7 +1352,7 @@ export default function TicketScannerScreen() {
                     <Text style={[styles.entryChipText, active && styles.entryChipTextActive]}>
                       {t(e.labelKey)}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 );
               })}
             </ScrollView>
@@ -1482,12 +1483,12 @@ export default function TicketScannerScreen() {
                   // still admit via the explicit, less-prominent override.
                   <>
                     <WhitePillCTA label={t('organizerTicketScanner.actions.confirm')} disabled />
-                    <TouchableOpacity
+                    <Touchable
                       style={[styles.actionButton, styles.overrideButton]}
                       onPress={handleConfirmCheckIn}
                     >
                       <Text style={styles.overrideButtonText}>{overrideLabel}</Text>
-                    </TouchableOpacity>
+                    </Touchable>
                     <SecondaryPill label={t('common.cancel')} onPress={handleCloseSheet} />
                   </>
                 ) : (
@@ -1525,7 +1526,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   message: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
     textAlign: 'center',
     marginVertical: 20,
@@ -1563,7 +1564,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   belowHeaderTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
@@ -1594,7 +1595,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
   },
   toolText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.text,
     flexShrink: 1,
@@ -1652,7 +1653,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   recentName: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },
@@ -1750,7 +1751,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   instruction: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.white,
     textAlign: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -1794,14 +1795,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 24,
   },
   attendeeName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   tierName: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textSecondary,
     marginBottom: 16,
     textAlign: 'center',
@@ -1824,7 +1825,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   validityBlockText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.error,
   },

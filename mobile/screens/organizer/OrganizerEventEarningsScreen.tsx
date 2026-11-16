@@ -42,6 +42,7 @@ import { useAppAlert } from '../../components/AppAlert'
 import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 import { withdrawableMinor, type EventEarningsRow } from '../../lib/eventEarnings'
 
+import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
   OrganizerEventEarnings: {
     eventId: string
@@ -986,14 +987,14 @@ export default function OrganizerEventEarningsScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.withdrawTitle}>{t('organizerEarnings.modal.sheetTitle')}</Text>
-              <TouchableOpacity
+              <Touchable
                 onPress={() => setShowWithdraw(false)}
                 disabled={submitting}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
               >
                 <Text style={styles.withdrawCancel}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
+              </Touchable>
             </View>
 
             {/* The amount is the event's full withdrawable balance, the same
@@ -1086,7 +1087,7 @@ export default function OrganizerEventEarningsScreen() {
                     <Text style={styles.sectionHelp}>{t('organizerEarnings.moncash.processedWithin24')}</Text>
                   )}
                   {instantOffered ? (
-                    <TouchableOpacity
+                    <Touchable
                       onPress={() => {
                         setShowWithdraw(false)
                         navigation.navigate('OrganizerPayoutSettings')
@@ -1096,7 +1097,7 @@ export default function OrganizerEventEarningsScreen() {
                       <Text style={[styles.sectionHelp, { textDecorationLine: 'underline' }]}>
                         {t('organizerEarnings.moncash.instantOffered')}
                       </Text>
-                    </TouchableOpacity>
+                    </Touchable>
                   ) : null}
                 </View>
               ) : (
@@ -1104,33 +1105,34 @@ export default function OrganizerEventEarningsScreen() {
                   <Text style={styles.sectionTitle}>{t('organizerEarnings.bank.title')}</Text>
 
                   <View style={styles.radioRow}>
-                    <TouchableOpacity
+                    <Touchable
                       style={[styles.radioChip, bankMode === 'on_file' ? styles.radioChipActive : null]}
                       onPress={() => setBankMode('on_file')}
                       disabled={!bankDestinations?.some((d) => d.isPrimary)}
                     >
-                      <Text style={styles.radioChipText}>{t('organizerEarnings.bank.modes.onFile')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                      <Text style={[styles.radioChipText, bankMode === 'on_file' ? styles.radioChipTextActive : null]}>{t('organizerEarnings.bank.modes.onFile')}</Text>
+                    </Touchable>
+                    <Touchable
                       style={[styles.radioChip, bankMode === 'saved' ? styles.radioChipActive : null]}
                       onPress={() => setBankMode('saved')}
                       disabled={!bankDestinations || bankDestinations.length === 0}
                     >
-                      <Text style={styles.radioChipText}>{t('organizerEarnings.bank.modes.saved')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                      <Text style={[styles.radioChipText, bankMode === 'saved' ? styles.radioChipTextActive : null]}>{t('organizerEarnings.bank.modes.saved')}</Text>
+                    </Touchable>
+                    <Touchable
                       style={[styles.radioChip, bankMode === 'new' ? styles.radioChipActive : null]}
                       onPress={() => setBankMode('new')}
                     >
-                      <Text style={styles.radioChipText}>{t('organizerEarnings.bank.modes.new')}</Text>
-                    </TouchableOpacity>
+                      <Text style={[styles.radioChipText, bankMode === 'new' ? styles.radioChipTextActive : null]}>{t('organizerEarnings.bank.modes.new')}</Text>
+                    </Touchable>
                   </View>
 
                   {bankMode !== 'new' ? (
                     <View style={{ marginTop: 10 }}>
                       {(bankDestinations || []).map((d) => (
-                        <TouchableOpacity
+                        <Touchable
                           key={d.id}
+                          scale={0.98}
                           style={[styles.destinationRow, selectedBankDestinationId === d.id ? styles.destinationRowActive : null]}
                           onPress={() => setSelectedBankDestinationId(d.id)}
                         >
@@ -1145,7 +1147,7 @@ export default function OrganizerEventEarningsScreen() {
                             size={20}
                             color={selectedBankDestinationId === d.id ? colors.primary : colors.textSecondary}
                           />
-                        </TouchableOpacity>
+                        </Touchable>
                       ))}
                     </View>
                   ) : (
@@ -1191,10 +1193,10 @@ export default function OrganizerEventEarningsScreen() {
                         style={styles.input}
                       />
 
-                      <TouchableOpacity
+                      <Touchable
+                        scale={false}
                         style={styles.checkboxRow}
                         onPress={() => setSaveNewBankDestination((v) => !v)}
-                        activeOpacity={0.8}
                       >
                         <Ionicons
                           name={saveNewBankDestination ? 'checkbox' : 'square-outline'}
@@ -1202,7 +1204,7 @@ export default function OrganizerEventEarningsScreen() {
                           color={saveNewBankDestination ? colors.primary : colors.textSecondary}
                         />
                         <Text style={styles.checkboxText}>{t('organizerEarnings.bank.saveSecondAccount')}</Text>
-                      </TouchableOpacity>
+                      </Touchable>
                     </View>
                   )}
 
@@ -1239,38 +1241,35 @@ export default function OrganizerEventEarningsScreen() {
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   withdrawTitle: {
     fontFamily: font.serif,
-    fontSize: 26,
+    fontSize: 28,
     color: colors.text,
   },
   withdrawCancel: {
-    fontFamily: font.mono,
-    fontSize: 12,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   withdrawAmount: {
     marginTop: 18,
     fontSize: 44,
     lineHeight: 52,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -1,
     color: colors.text,
   },
   withdrawMeta: {
     marginTop: 8,
-    fontFamily: font.mono,
-    fontSize: 11,
-    lineHeight: 17,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
+  // The one eyebrow style (ui/Text "eyebrow").
   withdrawVia: {
-    marginTop: 18,
-    fontFamily: font.mono,
+    marginTop: 24,
     fontSize: 11,
-    letterSpacing: 1.6,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textSecondary,
   },
@@ -1292,13 +1291,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   cardLabel: {
     color: colors.textSecondary,
     fontSize: 11,
-    letterSpacing: 0.6,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   amountText: {
     marginTop: 8,
     fontSize: 34,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    fontVariant: ['tabular-nums'],
     color: colors.text,
   },
   rowBetween: {
@@ -1334,18 +1337,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'space-between',
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.text,
   },
   summaryBox: {
     marginTop: 12,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: RADIUS.lg,
     padding: 12,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 6,
@@ -1353,15 +1356,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   sectionHelp: {
     color: colors.textSecondary,
     fontSize: 12,
-    marginBottom: 10,
+    lineHeight: 16,
+    marginBottom: 12,
   },
+  // Fill, not a hairline: inputs sit one brightness step above the sheet.
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: RADIUS.md,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
+    paddingVertical: 12,
+    marginBottom: 8,
+    fontSize: 15,
     color: colors.text,
   },
   modalFooter: {
@@ -1375,7 +1380,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   secondaryButton: {
     flex: 1,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: RADIUS.md,
     // 56 = the system's primary-row height. This button shares the modal footer
     // row with a 56pt WhitePillCTA, so an off-scale 48 left the pair misaligned.
@@ -1386,7 +1391,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   secondaryButtonText: {
     color: colors.text,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
   },
   radioRow: {
     flexDirection: 'row',
@@ -1394,34 +1400,36 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   radioChip: {
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: radius.chip,
-    backgroundColor: colors.surfaceMuted,
-  },
-  radioChipActive: {
     backgroundColor: colors.surfaceRaised,
   },
+  // Selected = solid white, black label (same as FilterPill); teal stays rare.
+  radioChipActive: {
+    backgroundColor: tokenColors.white,
+  },
   radioChipText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.text,
+  },
+  radioChipTextActive: {
+    color: tokenColors.onWhite,
   },
   destinationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     padding: 12,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
     marginBottom: 8,
   },
-  destinationRowActive: {
-    borderColor: colors.textSecondary,
-    backgroundColor: colors.surfaceRaised,
-  },
+  // Selection reads from the filled check icon; no outline box.
+  destinationRowActive: {},
   destinationTitle: {
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text,
   },
   destinationSubtitle: {
@@ -1437,6 +1445,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   checkboxText: {
     color: colors.text,
-    fontWeight: '600',
+    fontSize: 15,
   },
 })

@@ -5,11 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AlertTriangle, ArrowLeft, Calendar, Info, Ticket as TicketIcon } from 'lucide-react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,10 +17,12 @@ import { useI18n } from '../contexts/I18nContext';
 import { RADIUS } from '../config/brand';
 import { backendFetch } from '../lib/api/backend';
 import { formatCurrency } from '../lib/currency';
-import { radius, font } from '../theme/tokens';
+import { radius, font, colors as T } from '../theme/tokens';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { Skeleton } from '../components/Skeleton';
 import { useAppAlert } from '../components/AppAlert';
+import SectionHeader from '../components/SectionHeader';
+import { Touchable } from '../components/ui/Touchable';
 
 /**
  * First-load placeholder that mirrors the refund form: header, ticket summary
@@ -194,11 +195,16 @@ export default function RefundRequestScreen({ route, navigation }: any) {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Header — a blurred overlay the form scrolls under. */}
       <OverlayHeader onHeight={onHeaderHeight} style={styles.headerBar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={8}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <Touchable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <ArrowLeft size={24} color={colors.text} />
+        </Touchable>
         <Text style={styles.headerTitle}>{t('refund.title') || 'Request Refund'}</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.backButton} />
       </OverlayHeader>
 
       <ScrollView
@@ -210,19 +216,19 @@ export default function RefundRequestScreen({ route, navigation }: any) {
         <View style={styles.ticketCard}>
           <Text style={styles.eventTitle}>{ticket.event_title}</Text>
           <View style={styles.ticketRow}>
-            <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+            <Calendar size={16} color={colors.textSecondary} strokeWidth={1.75} />
             <Text style={styles.ticketInfo}>
               {ticket.event_date && safeFormatForLanguage(ticket.event_date, 'EEEE, MMMM dd, yyyy', language)}
             </Text>
           </View>
           <View style={styles.ticketRow}>
-            <Ionicons name="ticket-outline" size={16} color={colors.textSecondary} />
+            <TicketIcon size={16} color={colors.textSecondary} strokeWidth={1.75} />
             <Text style={styles.ticketInfo}>
               {ticket.tier_name || t('refund.generalAdmission') || 'General Admission'}
             </Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>{t('refund.amountPaid') || 'Amount Paid'}:</Text>
+            <Text style={styles.priceLabel}>{t('refund.amountPaid') || 'Amount Paid'}</Text>
             <Text style={styles.priceValue}>
               {formatCurrency(Number(ticket.price_paid || ticket.price || 0), ticket.currency)}
             </Text>
@@ -231,7 +237,7 @@ export default function RefundRequestScreen({ route, navigation }: any) {
 
         {!canRefund ? (
           <View style={styles.warningCard}>
-            <Ionicons name="warning" size={24} color={colors.error} />
+            <AlertTriangle size={20} color={colors.error} strokeWidth={1.75} />
             <Text style={styles.warningText}>
               {t('refund.deadlinePassed') || 'Refund deadline has passed. Refunds must be requested at least 24 hours before the event.'}
             </Text>
@@ -240,15 +246,18 @@ export default function RefundRequestScreen({ route, navigation }: any) {
           <>
             {/* Reason Selection */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('refund.selectReasonTitle') || 'Why do you need a refund?'}</Text>
+              <SectionHeader title={t('refund.selectReasonTitle') || 'Why do you need a refund?'} />
               {predefinedReasons.map((item) => (
-                <TouchableOpacity
+                <Touchable
                   key={item.key}
                   style={[
                     styles.reasonOption,
                     selectedReason === item.key && styles.reasonOptionSelected,
                   ]}
+                  scale={0.98}
                   onPress={() => setSelectedReason(item.key)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedReason === item.key }}
                 >
                   <View style={[
                     styles.radioCircle,
@@ -262,14 +271,14 @@ export default function RefundRequestScreen({ route, navigation }: any) {
                   ]}>
                     {item.label}
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               ))}
             </View>
 
             {/* Additional Details */}
             {selectedReason && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('refund.additionalDetails') || 'Additional Details'}</Text>
+                <SectionHeader title={t('refund.additionalDetails') || 'Additional Details'} />
                 <TextInput
                   style={styles.textInput}
                   placeholder={t('refund.reasonPlaceholder') || 'Please explain your reason...'}
@@ -286,7 +295,7 @@ export default function RefundRequestScreen({ route, navigation }: any) {
 
             {/* Policy Note */}
             <View style={styles.policyCard}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+              <Info size={18} color={colors.textSecondary} strokeWidth={1.75} />
               <Text style={styles.policyText}>
                 {t('refund.policyNote') || 'Refund requests are reviewed by the event organizer. You will receive an email notification once your request has been processed.'}
                 {' '}
@@ -295,20 +304,18 @@ export default function RefundRequestScreen({ route, navigation }: any) {
             </View>
 
             {/* Submit Button */}
-            <TouchableOpacity
+            <Touchable
               style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
               onPress={handleSubmitRefund}
               disabled={submitting}
+              accessibilityRole="button"
             >
               {submitting ? (
-                <ActivityIndicator color={colors.white} />
+                <ActivityIndicator color={T.onWhite} />
               ) : (
-                <>
-                  <Ionicons name="send" size={20} color={colors.white} />
-                  <Text style={styles.submitButtonText}>{t('refund.submit') || 'Submit Request'}</Text>
-                </>
+                <Text style={styles.submitButtonText}>{t('refund.submit') || 'Submit Request'}</Text>
               )}
-            </TouchableOpacity>
+            </Touchable>
           </>
         )}
       </ScrollView>
@@ -330,7 +337,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textSecondary,
   },
   // In-flow header row — only the loading skeleton still uses this shape.
@@ -353,11 +360,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingBottom: 12,
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontFamily: font.serif,
-    fontSize: 20,
+    fontSize: 22,
     letterSpacing: 0,
     color: colors.text,
   },
@@ -366,12 +376,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     padding: 16,
     backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 24,
   },
   eventTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontFamily: font.serif,
+    fontSize: 22,
+    lineHeight: 26,
     color: colors.text,
     marginBottom: 12,
   },
@@ -381,7 +391,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 8,
   },
   ticketInfo: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
     marginLeft: 8,
   },
@@ -391,44 +401,36 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     marginTop: 12,
     paddingTop: 12,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   priceLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   priceValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
   },
   warningCard: {
     flexDirection: 'row',
     alignItems: 'center',
     margin: 16,
     padding: 16,
-    backgroundColor: colors.error + '10',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.error + '30',
   },
   warningText: {
     flex: 1,
-    fontSize: 14,
-    color: colors.error,
+    fontSize: 15,
+    color: colors.text,
     marginLeft: 12,
     lineHeight: 20,
   },
   section: {
     marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
+    marginBottom: 24,
   },
   reasonOption: {
     flexDirection: 'row',
@@ -437,12 +439,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     marginBottom: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
+  // Selected = the raised fill + the teal radio (no outline box).
   reasonOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
+    backgroundColor: colors.surfaceRaised,
   },
   radioCircle: {
     width: 22,
@@ -469,7 +469,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   reasonTextSelected: {
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.text,
   },
   textInput: {
     backgroundColor: colors.surface,
@@ -478,15 +478,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     fontSize: 15,
     color: colors.text,
     minHeight: 120,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   policyCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 16,
-    backgroundColor: colors.primary + '10',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
   },
   policyText: {
@@ -502,17 +501,16 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
     margin: 16,
     marginTop: 8,
-    padding: 16,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
+    height: 54,
+    backgroundColor: T.white,
+    borderRadius: radius.button,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-    marginLeft: 8,
+    fontSize: 17,
+    fontWeight: '700',
+    color: T.onWhite,
   },
 });

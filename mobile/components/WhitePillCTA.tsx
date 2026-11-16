@@ -1,13 +1,13 @@
 import React from 'react';
 import {
   Text,
-  Pressable,
   StyleSheet,
   ActivityIndicator,
   View,
   ViewStyle,
 } from 'react-native';
 import { colors, radius, spacing, type } from '../theme/tokens';
+import { Touchable } from './ui/Touchable';
 
 export type WhitePillVariant = 'paid' | 'rsvp' | 'default';
 
@@ -50,16 +50,15 @@ export default function WhitePillCTA({
   const isDisabled = disabled || loading;
 
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       accessibilityLabel={subLabel ? `${label}, ${subLabel}` : label}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         compact && styles.buttonCompact,
-        pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
@@ -79,7 +78,7 @@ export default function WhitePillCTA({
           ) : null}
         </>
       )}
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -98,10 +97,6 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: spacing.lg,
     gap: spacing.xs,
-  },
-  pressed: {
-    // Slight dim on press — no color shift, stays white.
-    opacity: 0.88,
   },
   disabled: {
     opacity: 0.45,

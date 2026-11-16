@@ -1242,6 +1242,8 @@ export default {
     removeError: 'Failed to remove favorite',
   },
   notifications: {
+    deleted: 'Notification deleted',
+    undo: 'Undo',
     clearAllButton: 'Clear all',
     markAllRead: 'Mark all read',
     clearAllTitle: 'Clear All Notifications',

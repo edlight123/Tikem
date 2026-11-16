@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useAppAlert } from '../../components/AppAlert';
@@ -19,12 +18,13 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { RADIUS } from '../../config/brand';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
+import SectionHeader from '../../components/SectionHeader';
 import EmptyState from '../../components/EmptyState';
 import StatusChip from '../../components/StatusChip';
 import WhitePillCTA from '../../components/WhitePillCTA';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
-import InfoNotice from '../../components/organizer/InfoNotice';
 import SelectField from '../../components/organizer/SelectField';
 import { getEventById } from '../../lib/api/organizer';
 import { backendJson } from '../../lib/api/backend';
@@ -230,25 +230,23 @@ export default function OrganizerCompsScreen() {
           onHeight={onHeight}
         />
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
-          {/* InfoNotice banner. */}
-          <Skeleton width="100%" height={64} radius={RADIUS.md} />
           {/* Issue form: title, then label + input pairs (inputs ≈45 tall:
               paddingVertical 12×2 + text), a stepper row, and the submit pill. */}
           <View style={styles.formCard}>
             <Skeleton width={150} height={16} radius={4} />
             {[0, 1, 2].map((i) => (
               <View key={i}>
-                <Skeleton width={110} height={12} radius={4} style={{ marginTop: 14, marginBottom: 6 }} />
+                <Skeleton width={110} height={13} radius={4} style={{ marginTop: 16, marginBottom: 8 }} />
                 <Skeleton width="100%" height={45} radius={RADIUS.md} />
               </View>
             ))}
-            <Skeleton width={90} height={12} radius={4} style={{ marginTop: 14, marginBottom: 6 }} />
+            <Skeleton width={90} height={13} radius={4} style={{ marginTop: 16, marginBottom: 8 }} />
             <Skeleton width={140} height={44} radius={RADIUS.md} />
             <Skeleton width="100%" height={48} radius={4} style={{ marginTop: 20 }} />
           </View>
           {/* Issued list: section title + recipient cards (name/chip + meta). */}
           <View style={styles.section}>
-            <Skeleton width={140} height={18} radius={4} style={{ marginBottom: 12 }} />
+            <Skeleton width={140} height={22} radius={4} style={{ marginBottom: 12 }} />
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.compCard}>
                 <View style={styles.compHeader}>
@@ -277,8 +275,6 @@ export default function OrganizerCompsScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
         keyboardShouldPersistTaps="handled"
       >
-        <InfoNotice text={t('organizerComps.infoNotice')} />
-
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>{t('organizerComps.formTitle')}</Text>
 
@@ -311,6 +307,8 @@ export default function OrganizerCompsScreen() {
               options={tierNames}
               placeholder={t('organizerComps.tierPlaceholder')}
               sheetTitle={t('organizerComps.tier')}
+              labelStyle={styles.label}
+              fieldStyle={styles.selectField}
               onSelect={(name) => {
                 const match = tiers.find((tt) => tt.name === name);
                 if (match) setTierId(match.id);
@@ -320,7 +318,7 @@ export default function OrganizerCompsScreen() {
 
           <Text style={styles.label}>{t('organizerComps.quantity')}</Text>
           <View style={styles.stepper}>
-            <TouchableOpacity
+            <Touchable
               style={[styles.stepperButton, quantity <= MIN_QTY && styles.stepperButtonDisabled]}
               onPress={() => adjustQuantity(-1)}
               disabled={quantity <= MIN_QTY}
@@ -328,9 +326,9 @@ export default function OrganizerCompsScreen() {
               accessibilityLabel={t('organizerComps.decrease')}
             >
               <Ionicons name="remove" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
             <Text style={styles.stepperValue}>{quantity}</Text>
-            <TouchableOpacity
+            <Touchable
               style={[styles.stepperButton, quantity >= MAX_QTY && styles.stepperButtonDisabled]}
               onPress={() => adjustQuantity(1)}
               disabled={quantity >= MAX_QTY}
@@ -338,7 +336,7 @@ export default function OrganizerCompsScreen() {
               accessibilityLabel={t('organizerComps.increase')}
             >
               <Ionicons name="add" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           <Text style={styles.label}>{t('organizerComps.note')}</Text>
@@ -364,7 +362,7 @@ export default function OrganizerCompsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('organizerComps.listTitle')}</Text>
+          <SectionHeader title={t('organizerComps.listTitle')} />
           {comps.length === 0 ? (
             <EmptyState icon={Gift} title={t('organizerComps.empty')} subtitle={t('organizerComps.emptySubtitle')} compact />
           ) : (
@@ -408,31 +406,32 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: colors.surface,
       borderRadius: RADIUS.xl,
       padding: 16,
-      marginTop: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
+      marginTop: 8,
     },
     formTitle: {
-      fontSize: 16,
-      fontWeight: 'bold',
+      fontSize: 17,
+      fontWeight: '700',
       color: colors.text,
       marginBottom: 4,
     },
     label: {
-      marginTop: 14,
-      marginBottom: 6,
-      fontSize: 12,
+      marginTop: 16,
+      marginBottom: 8,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.textSecondary,
     },
+    // Filled fields one step up from the card, never outlined boxes.
     input: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.surfaceRaised,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 12,
+      paddingHorizontal: 14,
       paddingVertical: 12,
+      fontSize: 16,
       color: colors.text,
+    },
+    selectField: {
+      backgroundColor: colors.surfaceRaised,
     },
     stepper: {
       flexDirection: 'row',
@@ -443,9 +442,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       width: 44,
       height: 44,
       borderRadius: RADIUS.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.background,
+      backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -454,7 +451,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     stepperValue: {
       fontSize: 20,
-      fontWeight: '800',
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
       color: colors.text,
       minWidth: 32,
       textAlign: 'center',
@@ -470,19 +468,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     section: {
       marginTop: 28,
     },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 12,
-    },
     compCard: {
       backgroundColor: colors.surface,
       borderRadius: RADIUS.xl,
-      padding: 14,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 8,
     },
     compHeader: {
       flexDirection: 'row',
@@ -494,7 +484,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
     },
     compName: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: colors.text,
     },

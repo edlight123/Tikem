@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Modal,
   FlatList,
   TextInput,
@@ -17,6 +16,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import SectionHeader from '../SectionHeader';
 import StatusChip from '../StatusChip';
 
+import { Touchable } from '../ui/Touchable';
 export interface DoorGuest {
   ticketId: string;
   name: string;
@@ -107,7 +107,7 @@ export default function ManualLookupSheet({
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <Touchable style={styles.backdrop} onPress={onClose} scale={false} haptic={false} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.sm }]}>
           <View style={styles.grabber} />
 
@@ -119,7 +119,7 @@ export default function ManualLookupSheet({
                 subtitleLines={2}
               />
             </View>
-            <TouchableOpacity
+            <Touchable
               onPress={onClose}
               style={styles.closeBtn}
               hitSlop={12}
@@ -127,7 +127,7 @@ export default function ManualLookupSheet({
               accessibilityLabel={t('common.close')}
             >
               <X size={20} color={colors.textPrimary} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           <View style={styles.searchField}>
@@ -149,9 +149,9 @@ export default function ManualLookupSheet({
               }}
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
+              <Touchable onPress={() => setQuery('')} hitSlop={10}>
                 <X size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </Touchable>
             )}
           </View>
 
@@ -162,7 +162,7 @@ export default function ManualLookupSheet({
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={
               offerCode ? (
-                <TouchableOpacity
+                <Touchable
                   style={[styles.row, styles.codeRow]}
                   onPress={() => pick(trimmed)}
                   accessibilityRole="button"
@@ -174,7 +174,7 @@ export default function ManualLookupSheet({
                       {trimmed}
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </Touchable>
               ) : null
             }
             ListEmptyComponent={
@@ -194,7 +194,7 @@ export default function ManualLookupSheet({
               )
             }
             renderItem={({ item }) => (
-              <TouchableOpacity
+              <Touchable
                 style={styles.row}
                 onPress={() => pick(item.ticketId)}
                 accessibilityRole="button"
@@ -216,7 +216,7 @@ export default function ManualLookupSheet({
                 ) : item.checkedIn ? (
                   <StatusChip status="pending" label={t('doorScanner.lookup.checkedIn')} />
                 ) : null}
-              </TouchableOpacity>
+              </Touchable>
             )}
           />
         </View>
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textPrimary,
     // 16pt floor so iOS doesn't zoom on focus.
-    fontSize: 16,
+    fontSize: 15,
     paddingVertical: 0,
   },
   listContent: {
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   rowName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.textPrimary,
   },
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     textAlign: 'center',
     color: colors.textSecondary,

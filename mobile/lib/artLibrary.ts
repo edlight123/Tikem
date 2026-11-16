@@ -178,19 +178,41 @@ export function artForWorld(world: string | null | undefined, seed?: string | nu
 }
 
 /**
- * A world's page hero. The hashed pick suits tiles, but the hero is the first
- * thing a world page shows, so a world can pin the piece that reads as it at a
- * glance: "lavi lannwit" landed on the kanaval float, which reads as carnival,
- * not a night out (2026-10-12 feedback: "make it more night life"). The home
- * world rail uses this too, so the card and the page always match.
+ * Real photographs for the eight worlds (2026-11-14 feedback: the illustrated
+ * tiles "read very AI"; the owner asked for "actual pictures of black people
+ * that read genuine"). These carry the world tiles, the world page heroes and
+ * the sign-in backdrop. The illustrations stay for flyers and empty states.
+ *
+ * Source: Unsplash (Unsplash License: free to use, no attribution required).
+ * Photo ids, for swapping one later: mizik UFlO384euRI, lavi-lannwit
+ * b7IkZFcCRDI, kilti iVTwE98CslM, espo d-f7hjdjNjw, gastronomi iu5u3JrguHU,
+ * biznis OsuDfn4vtLA, fanmi YFItC9nQK7o, eksperyans UygW_kIv2A4.
+ * Kept OUT of ART on purpose so a stock photo never becomes an event flyer.
  */
-const WORLD_HERO: Partial<Record<WorldKey, string>> = {
-  'lavi-lannwit': 'banboch',
+// prettier-ignore
+export const WORLD_PHOTOS: Record<WorldKey, ArtPiece> = {
+  'mizik':        { key: 'photo-mizik',        source: require('../assets/photos/mizik.jpg'),        alt: 'A singer on stage with a trumpet player behind her', worlds: ['mizik'] },
+  'lavi-lannwit': { key: 'photo-lavi-lannwit', source: require('../assets/photos/lavi-lannwit.jpg'), alt: 'Friends dancing at a crowded party', worlds: ['lavi-lannwit'] },
+  'kilti':        { key: 'photo-kilti',        source: require('../assets/photos/kilti.jpg'),        alt: 'A carnival drummer in costume and paint', worlds: ['kilti'] },
+  'espo':         { key: 'photo-espo',         source: require('../assets/photos/espo.jpg'),         alt: 'A young footballer dribbling on a pitch', worlds: ['espo'] },
+  'gastronomi':   { key: 'photo-gastronomi',   source: require('../assets/photos/gastronomi.jpg'),   alt: 'Friends laughing over dinner and drinks', worlds: ['gastronomi'] },
+  'biznis':       { key: 'photo-biznis',       source: require('../assets/photos/biznis.jpg'),       alt: 'People talking at a networking reception', worlds: ['biznis'] },
+  'fanmi':        { key: 'photo-fanmi',        source: require('../assets/photos/fanmi.jpg'),        alt: 'A family in white holding their children on a bridge', worlds: ['fanmi'] },
+  'eksperyans':   { key: 'photo-eksperyans',   source: require('../assets/photos/eksperyans.jpg'),   alt: 'A group of friends cheering on a dune under a blue sky', worlds: ['eksperyans'] },
 };
 
+/** The sign-in rotation: the photos with a crowd or a moment in them. */
+const AUTH_PHOTO_WORLDS: WorldKey[] = ['mizik', 'lavi-lannwit', 'gastronomi', 'fanmi', 'eksperyans'];
+export function authPhotos(): ArtPiece[] {
+  return AUTH_PHOTO_WORLDS.map((w) => WORLD_PHOTOS[w]);
+}
+
+/**
+ * A world's page hero and home tile: its photograph. An unknown world (or
+ * none) falls back to the seeded illustration, so this always returns a piece.
+ */
 export function heroArtForWorld(world: string | null | undefined): ArtPiece {
-  const pinned = WORLD_HERO[world as WorldKey];
-  return (pinned && ART.find((a) => a.key === pinned)) || artForWorld(world, world);
+  return WORLD_PHOTOS[world as WorldKey] || artForWorld(world, world);
 }
 
 /** True when the world has its own art (tiles use a dark neutral otherwise). */
@@ -261,8 +283,8 @@ export function artForCategory(category: string | null | undefined, seed?: strin
  */
 export function tileArtForCategory(category: string | null | undefined): ArtPiece | null {
   const world = worldForCategory(category);
-  if (!world || !worldHasArt(world)) return null;
-  return artForWorld(world, String(category || '').trim().toLowerCase());
+  if (!world) return null;
+  return heroArtForWorld(world);
 }
 
 /** Dark neutral used behind a world tile that has no art (canvas → surface). */

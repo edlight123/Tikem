@@ -4,12 +4,13 @@ import {
   Text,
   Modal,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Platform,
-    PanResponder,
-  LayoutChangeEvent
+  PanResponder,
+  LayoutChangeEvent,
+  TouchableOpacity,
 } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { X } from 'lucide-react-native';
@@ -207,13 +208,13 @@ export default function EventFiltersSheet() {
               </View>
             )}
           </View>
-          <TouchableOpacity
+          <Touchable
             style={styles.closeButton}
             onPress={closeFiltersModal}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <X size={24} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         {/* Scrollable Content */}
@@ -261,7 +262,7 @@ export default function EventFiltersSheet() {
                   />
                 )}
                 {draftFilters.pickedDate && !showDatePicker && (
-                  <TouchableOpacity 
+                  <Touchable 
                     style={styles.selectedDateContainer}
                     onPress={() => setShowDatePicker(true)}
                   >
@@ -269,7 +270,7 @@ export default function EventFiltersSheet() {
                       {t('filters.selected')}: {new Date(draftFilters.pickedDate).toLocaleDateString(locale)}
                     </Text>
                     <Text style={styles.selectedDateHint}>{t('filters.tapToChange')}</Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 )}
               </>
             )}
@@ -495,7 +496,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: radius.pill,
   },
   activeBadgeText: {
-    color: '#FFF',
+    color: colors.onPrimary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -513,12 +514,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
   },
+  // The one eyebrow style (ui/Text variant="eyebrow").
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.textTertiary,
+    fontWeight: '600',
+    color: colors.textSecondary,
     marginBottom: 12,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   // Justified wrap: chips keep their natural (label-sized) width for the purpose
   // of line-breaking, then flexGrow shares each line's leftover space between
@@ -634,7 +636,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     justifyContent: 'center',
   },
   applyButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.background,
   },
@@ -646,7 +648,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   selectedDateText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
@@ -673,9 +675,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   priceRangeCaption: {
     fontSize: 11,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: 0.8,
-    color: colors.textTertiary,
+    color: colors.textSecondary,
   },
   priceRangeValue: {
     fontSize: 15,

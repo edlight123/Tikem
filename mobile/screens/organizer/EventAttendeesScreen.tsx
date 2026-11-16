@@ -22,8 +22,8 @@ import { useLocaleFormat } from '../../lib/format';
 import ExportAttendeesButton from '../../components/ExportAttendeesButton';
 import { SPACING, RADIUS } from '../../config/brand';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
 import EmptyState from '../../components/EmptyState';
-import StatusChip from '../../components/StatusChip';
 import MoneyText from '../../components/MoneyText';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -232,65 +232,56 @@ export default function EventAttendeesScreen() {
     );
   };
 
+  // One plain list row per attendee (owner, 2026-11-16: "it should be a
+  // list, why is each name a card?"). Name, then tier and email on one quiet
+  // line — never "N/A" or a 0 HTG price on a free ticket — and the door state
+  // on the right: a check + time once in, a small Verify button before.
   const renderAttendee = ({ item }: { item: Attendee }) => {
     const checkedIn = isCheckedIn(item);
     const live = isLive(item);
     const pending = pendingIds.has(item.id);
+    const paid = Number(item.price_paid) > 0;
+    const sub = [item.tier_name, item.attendee_email].filter(Boolean).join(' · ');
 
     return (
-      <View style={styles.attendeeCard}>
-        <View style={styles.attendeeHeader}>
-          <View style={styles.attendeeInfo}>
-            <Text style={styles.attendeeName} numberOfLines={1}>{item.attendee_name || t('common.na')}</Text>
-            <Text style={styles.attendeeEmail} numberOfLines={1}>{item.attendee_email || t('common.na')}</Text>
-          </View>
-          {live ? (
-            <StatusChip
-              status={checkedIn ? 'success' : 'pending'}
-              label={checkedIn ? t('organizerAttendees.status.checkedIn') : t('organizerAttendees.status.notCheckedIn')}
-            />
-          ) : (
-            <StatusChip status="neutral" label={t('organizerAttendees.status.notValid')} />
+      <View style={styles.row}>
+        <View style={styles.rowMain}>
+          <Text style={[styles.attendeeName, !live && styles.rowMuted]} numberOfLines={1}>
+            {item.attendee_name || item.attendee_email || t('common.general')}
+          </Text>
+          {(!!sub || paid) && (
+            <Text style={styles.rowSub} numberOfLines={1}>
+              {sub}
+              {paid ? (
+                <>
+                  {sub ? ' · ' : ''}
+                  <MoneyText amount={item.price_paid || 0} currency={item.currency as any} style={styles.rowSub} />
+                </>
+              ) : null}
+            </Text>
           )}
         </View>
 
-        <View style={styles.attendeeDetails}>
-          <View style={styles.detailRow}>
-            <Ionicons name="ticket-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.detailText}>{item.tier_name || t('common.general')}</Text>
+        {!live ? (
+          <Text style={styles.rowStateMuted}>{t('organizerAttendees.status.notValid')}</Text>
+        ) : checkedIn ? (
+          <View style={styles.rowState}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            {!!item.checked_in_at && (
+              <Text style={styles.rowStateText}>{formatDate(item.checked_in_at, 'h:mm a')}</Text>
+            )}
           </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="cash-outline" size={16} color={colors.textSecondary} />
-            <MoneyText amount={item.price_paid || 0} currency={item.currency as any} style={styles.priceText} />
-          </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.detailText}>
-              {formatDate(item.purchased_at)}
-            </Text>
-          </View>
-        </View>
-
-        {live && checkedIn && item.checked_in_at && (
-          <View style={styles.checkedInInfo}>
-            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-            <Text style={styles.checkedInText}>
-              {t('organizerAttendees.checkedInPrefix')}{formatDate(item.checked_in_at, 'MMM d, yyyy • h:mm a')}
-            </Text>
-          </View>
-        )}
-
-        {live && !checkedIn && (
-          <TouchableOpacity
+        ) : (
+          <Touchable
             style={[styles.checkInButton, pending && styles.checkInButtonDisabled]}
             onPress={() => handleManualCheckIn(item)}
             disabled={pending}
+            hitSlop={6}
             accessibilityRole="button"
             accessibilityState={{ disabled: pending }}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color={colors.text} />
             <Text style={styles.checkInButtonText}>{t('organizerAttendees.checkIn')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         )}
       </View>
     );
@@ -308,7 +299,7 @@ export default function EventAttendeesScreen() {
           <Skeleton width="100%" height={44} radius={RADIUS.md} style={{ marginBottom: SPACING.md }} />
           <Skeleton width="70%" height={32} radius={RADIUS.md} style={{ marginBottom: SPACING.md }} />
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} width="100%" height={96} radius={RADIUS.lg} style={{ marginBottom: SPACING.md }} />
+            <Skeleton key={i} width="100%" height={48} radius={RADIUS.sm} style={{ marginBottom: SPACING.md }} />
           ))}
         </View>
       </View>
@@ -414,13 +405,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
     margin: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   searchInput: {
     flex: 1,
@@ -435,83 +424,62 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-  attendeeCard: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-  },
-  attendeeHeader: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 60,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  attendeeInfo: {
+  rowMain: {
     flex: 1,
-    marginRight: 12,
+    minWidth: 0,
   },
   attendeeName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
   },
-  attendeeEmail: {
-    fontSize: 14,
+  rowMuted: {
+    color: colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  rowSub: {
+    marginTop: 2,
+    fontSize: 13,
     color: colors.textSecondary,
   },
-  attendeeDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  detailText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginLeft: 4,
-  },
-  priceText: {
-    fontSize: 14,
-    marginLeft: 4,
-    color: colors.textSecondary,
-  },
-  checkedInInfo: {
+  rowState: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    gap: 4,
   },
-  checkedInText: {
-    fontSize: 12,
-    color: colors.success,
-    marginLeft: 4,
+  rowStateText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
+  rowStateMuted: {
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
+  // A raised fill on the card's surface, not an outlined box.
   checkInButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surfaceRaised,
   },
   checkInButtonDisabled: {
     opacity: 0.45,
   },
   checkInButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },

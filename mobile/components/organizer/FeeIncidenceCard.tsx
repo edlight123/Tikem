@@ -10,7 +10,8 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, Switch } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Switch } from '../ui/Switch';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import StatTriplet from '../StatTriplet';
@@ -54,9 +55,6 @@ export default function FeeIncidenceCard({ country, currency, feeIncidence, paid
         <Switch
           value={passToBuyer}
           onValueChange={(v) => onChange(v ? 'buyer' : 'organizer')}
-          trackColor={{ false: colors.border, true: colors.primary }}
-          thumbColor={colors.white}
-          ios_backgroundColor={colors.border}
           accessibilityLabel={t('organizerCreateEventFlow.canvas.fee.passTitle')}
         />
       </View>

@@ -119,13 +119,15 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
       style={[styles.button, style]}
       onPress={handleExport}
       disabled={exporting}
+      accessibilityRole="button"
+      accessibilityLabel={t('export.exportCSV') || 'Export CSV'}
     >
       {exporting ? (
-        <ActivityIndicator size="small" color={colors.primary} />
+        <ActivityIndicator size="small" color={colors.text} />
       ) : (
         <>
-          <Ionicons name="download-outline" size={18} color={colors.primary} />
-          <Text style={styles.buttonText}>{t('export.exportCSV') || 'Export CSV'}</Text>
+          <Ionicons name="download-outline" size={16} color={colors.text} />
+          <Text style={styles.buttonText}>CSV</Text>
         </>
       )}
     </TouchableOpacity>
@@ -137,17 +139,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    // Quiet raised fill, not a teal outlined box (fill-not-hairline rule;
+    // owner, 2026-11-16). "CSV" alone — the download glyph says "export".
+    height: 36,
+    paddingHorizontal: 12,
     borderRadius: radius.md,
-    backgroundColor: colors.primary + '10',
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
+    backgroundColor: colors.surfaceRaised,
     gap: 6,
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.text,
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LucideIcon } from 'lucide-react-native';
+import { Inbox, LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import WhitePillCTA from './WhitePillCTA';
 import type { ArtPiece } from '../lib/artLibrary';
@@ -107,10 +107,10 @@ export default function EmptyState({
 
   return (
     <View style={[styles.container, compact && styles.compact]}>
-      {Icon ? (
-        <Icon size={40} color={colors.textSecondary} strokeWidth={1.5} style={styles.icon} />
+      {Icon || !emoji ? (
+        React.createElement(Icon || Inbox, { size: 40, color: colors.textSecondary, strokeWidth: 1.5, style: styles.icon })
       ) : (
-        <Text style={styles.emoji}>{emoji || '✨'}</Text>
+        <Text style={styles.emoji}>{emoji}</Text>
       )}
       <Text style={styles.title}>{title}</Text>
       {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}

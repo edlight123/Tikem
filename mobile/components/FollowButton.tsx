@@ -198,7 +198,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surfaceRaised,
   },
   buttonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#000000',
   },

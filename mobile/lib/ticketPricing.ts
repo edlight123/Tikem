@@ -71,6 +71,22 @@ export function tierPrice(tier: TierPriceLike | null | undefined): number {
 export const MAX_FREE_TICKETS_PER_PERSON = 2;
 
 /**
+ * Quantities at or above this mean "no cap" (the composers store 1,000,000 for
+ * an unlimited tier; web lib/ticketScarcity UNLIMITED_QTY is the same number).
+ */
+export const UNLIMITED_QTY = 1_000_000;
+
+/**
+ * A real, displayable capacity, or 0 for "no cap". Unlimited sentinels and
+ * absurd typed values (an RSVP cap of 10^22 printed as "0/1e+22 sold") are
+ * not a capacity anyone should read.
+ */
+export function displayCapacity(raw: unknown): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n < UNLIMITED_QTY ? Math.floor(n) : 0;
+}
+
+/**
  * The organizer's "Limit purchase quantity" on a tier (`max_per_order`) as a
  * positive whole number, or null when the tier has no limit. Server routes
  * refuse a line above it (lib/tickets/purchasable tierOrderLimitRefusal); the

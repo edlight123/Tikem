@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,6 +25,7 @@ import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import FormSheet from '../../components/organizer/FormSheet';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 
+import { Touchable } from '../../components/ui/Touchable';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type TeamRole = 'admin' | 'manager' | 'staff';
@@ -149,14 +150,14 @@ export default function OrganizerTeamHubScreen() {
       overlay
       onHeight={onHeight}
       right={
-        <TouchableOpacity
+        <Touchable
           onPress={() => setShowInfo(true)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel={t('organizerTeamHub.infoTitle')}
         >
           <Ionicons name="information-circle-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
       }
     />
   );
@@ -219,22 +220,21 @@ export default function OrganizerTeamHubScreen() {
             <SectionHeader
               title={t('organizerTeamHub.teamSection')}
               trailing={
-                <TouchableOpacity
+                <Touchable
                   onPress={() => navigation.navigate('OrganizerOrgTeam')}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityLabel={t('organizerTeamHub.manageTeam')}
                 >
                   <Text style={styles.textLink}>{t('organizerTeamHub.manageTeam')}</Text>
-                </TouchableOpacity>
+                </Touchable>
               }
             />
             {members.map((m) => (
-              <TouchableOpacity
+              <Touchable
                 key={m.id}
                 style={styles.memberRow}
                 onPress={() => navigation.navigate('OrganizerOrgTeam')}
-                activeOpacity={0.75}
               >
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>
@@ -253,7 +253,7 @@ export default function OrganizerTeamHubScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
+              </Touchable>
             ))}
           </>
         )}
@@ -275,10 +275,9 @@ export default function OrganizerTeamHubScreen() {
             const poster = event.banner_image_url || event.cover_image_url || null;
             const count = staffLine(event.id);
             return (
-              <TouchableOpacity
+              <Touchable
                 key={event.id}
                 style={styles.eventRow}
-                activeOpacity={0.75}
                 accessibilityRole="button"
                 accessibilityLabel={event.title}
                 onPress={() => navigation.navigate('OrganizerEventStaff', { eventId: event.id })}
@@ -305,7 +304,7 @@ export default function OrganizerTeamHubScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
+              </Touchable>
             );
           })
         )}
@@ -403,7 +402,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     memberAvatarText: {
       color: colors.text,
       fontWeight: '700',
-      fontSize: 14,
+      fontSize: 13,
     },
     memberBody: { flex: 1 },
     memberName: {
@@ -418,7 +417,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     staffingHeader: { marginTop: 28 },
     mutedLine: {
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
       color: colors.textSecondary,
     },
@@ -429,7 +428,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginBottom: 6,
     },
     sheetBody: {
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 21,
       color: colors.textSecondary,
     },

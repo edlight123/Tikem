@@ -6,7 +6,6 @@ import {
   Text, 
   ScrollView, 
   StyleSheet, 
-  TouchableOpacity,
     Image,
   RefreshControl,
   Animated,
@@ -23,6 +22,7 @@ import { persistFeedCache, restoreFeedCache } from '../lib/feedCache';
 import { filterBlockedEvents, useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
+import { Touchable } from '../components/ui/Touchable';
 import EventFiltersSheet from '../components/EventFiltersSheet';
 import EmptyState from '../components/EmptyState';
 import { artByKey, artForPlace } from '../lib/artLibrary';
@@ -587,40 +587,46 @@ export default function DiscoverScreen({ navigation, route }: any) {
           {/* The active location, always visible: browsing is scoped to it, so
               the screen has to say which market you are in — and let you leave
               it in one tap. */}
-          <TouchableOpacity
+          <View style={styles.locationWrap}>
+          <Touchable
             style={styles.locationRow}
             onPress={() => setWhereSheetOpen(true)}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={locationCopy.locationName}
           >
-            <MapPin size={13} color={colors.primary} />
+            <MapPin size={13} color={colors.textSecondary} />
             <Text style={styles.locationText} numberOfLines={1}>
               {locationCopy.locationName}
             </Text>
-            <ChevronDown size={14} color={colors.textSecondary} />
-          </TouchableOpacity>
+            <ChevronDown size={13} color={colors.textSecondary} />
+          </Touchable>
+          </View>
 
           <View style={styles.searchRow}>
             {/* Tapping the search pill opens the dedicated full-screen Search. */}
-            <TouchableOpacity
+            {/* Touchable styles its INNER view, so the row's flex:1 lives on a
+                wrapper — on the pill itself it would collapse to its label. */}
+            <View style={styles.searchPillWrap}>
+            <Touchable
+              scale={0.98}
               style={styles.searchPill}
               onPress={() => navigation.navigate('Search')}
-              activeOpacity={0.75}
+              accessibilityRole="search"
             >
               <Search size={20} color={colors.textSecondary} />
               <Text style={styles.searchPlaceholder} numberOfLines={1}>
                 {t('discover.searchPlaceholder')}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterBtn} onPress={openFiltersModal} activeOpacity={0.7}>
+            </Touchable>
+            </View>
+            <Touchable style={styles.filterBtn} onPress={openFiltersModal}>
               <SlidersHorizontal size={20} color={colors.text} />
               {countActiveFilters() > 0 && (
                 <View style={styles.filterCountBadge}>
                   <Text style={styles.filterCountText}>{countActiveFilters()}</Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           <View style={styles.tabsRow}>
@@ -629,11 +635,17 @@ export default function DiscoverScreen({ navigation, route }: any) {
               { key: 'following', label: t('discover.tabs.following') },
               { key: 'saved', label: t('discover.tabs.saved') },
             ] as const).map((tab) => (
-              <TouchableOpacity key={tab.key} onPress={() => setDiscoverTab(tab.key)} hitSlop={8}>
+              <Touchable
+                key={tab.key}
+                onPress={() => setDiscoverTab(tab.key)}
+                hitSlop={8}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: discoverTab === tab.key }}
+              >
                 <Text style={[styles.tabText, discoverTab === tab.key && styles.tabTextActive]}>
                   {tab.label}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             ))}
           </View>
         </Animated.View>
@@ -643,21 +655,20 @@ export default function DiscoverScreen({ navigation, route }: any) {
           style={[styles.collapsedRow, { top: insets.top + 8, opacity: collapsedOpacity }]}
           pointerEvents={isCollapsed ? 'box-none' : 'none'}
         >
-          <TouchableOpacity
+          <Touchable
             style={styles.filterBtn}
             onPress={() => navigation.navigate('Search')}
-            activeOpacity={0.7}
           >
             <Search size={20} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterBtn} onPress={openFiltersModal} activeOpacity={0.7}>
+          </Touchable>
+          <Touchable style={styles.filterBtn} onPress={openFiltersModal}>
             <SlidersHorizontal size={20} color={colors.text} />
             {countActiveFilters() > 0 && (
               <View style={styles.filterCountBadge}>
                 <Text style={styles.filterCountText}>{countActiveFilters()}</Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Touchable>
         </Animated.View>
       </View>
 
@@ -818,18 +829,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   // Active-location chip above the search pill (matches Home's header chip).
+  // Sized to the chip, so the empty width beside it isn't a hidden tap target.
+  locationWrap: {
+    alignSelf: 'flex-start',
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 4,
     paddingBottom: 8,
   },
@@ -840,15 +854,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.textSecondary,
     maxWidth: 200,
   },
-  searchPill: {
+  searchPillWrap: {
     flex: 1,
+  },
+  searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     backgroundColor: colors.surface,
     borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -864,8 +878,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   // Active-filter COUNT badge on the round filter button (replaces the bare dot).
   filterCountBadge: {
@@ -874,24 +886,23 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     right: 2,
     minWidth: 18,
     height: 18,
-    paddingHorizontal: 5,
-    borderRadius: 10,
+    paddingHorizontal: 4,
+    borderRadius: radius.pill,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.background,
   },
+  // Count badge: teal here means "filters are on" (semantic, not decoration).
   filterCountText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '800',
+    color: colors.onPrimary,
+    fontSize: 11,
+    fontWeight: '700',
   },
   // Smaller, tighter segment tabs (POSH — compact, understated).
   tabsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 18,
+    gap: 24,
     paddingTop: 12,
     paddingBottom: 2,
   },

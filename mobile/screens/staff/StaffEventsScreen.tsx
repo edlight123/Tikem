@@ -15,6 +15,7 @@ import StaffEventCard from '../../components/organizer/StaffEventCard';
 import SectionHeader from '../../components/SectionHeader';
 import { Skeleton } from '../../components/Skeleton';
 
+import { Touchable } from '../../components/ui/Touchable';
 /** Firestore Timestamp | {seconds} | ISO string | Date → Date (or null). */
 function toDate(value: any): Date | null {
   if (!value) return null;
@@ -123,16 +124,15 @@ export default function StaffEventsScreen() {
             {meta}
           </Text>
         )}
-        <TouchableOpacity
+        <Touchable
           style={styles.primary}
           onPress={() => openScanner(item.id)}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={t('staffEvents.openScanner')}
         >
           <ScanLine size={20} color="#000000" strokeWidth={2} />
           <Text style={styles.primaryText}>{t('staffEvents.openScanner')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     );
   };
@@ -267,7 +267,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   title: {
     fontSize: 36,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.8,
     color: colors.text,
   },
@@ -294,13 +294,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   featuredTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.4,
     color: colors.text,
   },
   featuredMeta: {
     marginTop: 6,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: colors.textSecondary,
   },
@@ -341,14 +341,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   emptyTitle: {
     marginTop: 16,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.3,
     color: colors.text,
     textAlign: 'center',
   },
   emptyBody: {
     marginTop: 6,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 20,
     color: colors.textSecondary,
     textAlign: 'center',

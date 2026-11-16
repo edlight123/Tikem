@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocialFlags } from '../lib/socialFlags';
 import { fetchInviteSummary, type InviteSummary as Summary } from '../lib/api/invites';
 import SectionHeader from './SectionHeader';
-import StatTriplet from './StatTriplet';
 
 /**
  * "Your invites" on Profile (web lib/invites): invites sent, friends who joined
@@ -18,6 +18,7 @@ import StatTriplet from './StatTriplet';
  */
 export default function InviteSummary({ style }: { style?: StyleProp<ViewStyle> }) {
   const { t } = useI18n();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const flags = useSocialFlags();
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -43,13 +44,20 @@ export default function InviteSummary({ style }: { style?: StyleProp<ViewStyle> 
   return (
     <View style={style}>
       <SectionHeader title={t('invites.summaryTitle')} />
-      <StatTriplet
-        items={[
+      {/* One quiet line, like the profile stats: three big numerals read heavy
+          (TestFlight 2026-11-14). */}
+      <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+        {[
           { label: t('invites.summarySent'), value: summary.sent },
           { label: t('invites.summaryJoined'), value: summary.joined },
           { label: t('invites.summaryBought'), value: summary.purchased },
-        ]}
-      />
+        ].map((item, i) => (
+          <Text key={item.label}>
+            {i > 0 ? '   ·   ' : ''}
+            <Text style={{ fontWeight: '700', color: colors.text }}>{item.value}</Text> {item.label.toLowerCase()}
+          </Text>
+        ))}
+      </Text>
     </View>
   );
 }

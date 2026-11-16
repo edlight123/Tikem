@@ -896,6 +896,8 @@ export default {
     removeError: 'Impossible de retirer le favori',
   },
   notifications: {
+    deleted: 'Notification supprimée',
+    undo: 'Annuler',
     clearAllButton: 'Tout effacer',
     markAllRead: 'Tout marquer comme lu',
     clearAllTitle: 'Tout effacer',

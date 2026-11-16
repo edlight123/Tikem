@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useActiveOrg, type OrgOption } from '../../lib/activeOrg';
 import { colors as T, radius } from '../../theme/tokens';
 import FormSheet from './FormSheet';
+import { Touchable } from '../ui/Touchable';
 
 /** "Org name · Role", the one way an acting org is named in the app. */
 export function useOrgLabel() {
@@ -39,10 +40,10 @@ export function OrgSwitcherList({
       {options.map((o, i) => {
         const active = o.orgId === orgId;
         return (
-          <TouchableOpacity
+          <Touchable
             key={o.orgId}
+            scale={0.98}
             style={[styles.row, i > 0 && styles.rowGap, (active || onSheet) && styles.rowActive]}
-            activeOpacity={0.75}
             accessibilityRole="radio"
             accessibilityState={{ selected: active }}
             accessibilityLabel={`${orgLabel(o)}, ${roleLabel(o.role)}`}
@@ -75,7 +76,7 @@ export function OrgSwitcherList({
                 {active ? <View style={styles.radioDot} /> : null}
               </View>
             )}
-          </TouchableOpacity>
+          </Touchable>
         );
       })}
     </View>

@@ -39,7 +39,7 @@ export function fillDays(points: DailyPoint[], maxDays: number): DailyPoint[] {
 
 /**
  * Tickets sold per day, drawn with react-native-svg. Same voice as the
- * organizer-wide analytics chart: teal bars, the best day at full strength and
+ * organizer-wide analytics chart: white bars (teal is reserved for meaning), the best day at full strength and
  * every other day dimmed, a hairline baseline, and only the first / last day
  * labelled so the axis never crowds.
  */
@@ -74,8 +74,8 @@ export default function DailySalesChart({ points, formatDay, maxDays = 30, heigh
                 width={barW}
                 height={h}
                 rx={Math.min(4, barW / 2)}
-                fill={d.count > 0 ? T.teal : T.border}
-                opacity={d.count > 0 && !isPeak ? 0.38 : 1}
+                fill={d.count > 0 ? T.white : T.border}
+                opacity={d.count > 0 && !isPeak ? 0.28 : 1}
               />
             );
           })}
@@ -83,7 +83,7 @@ export default function DailySalesChart({ points, formatDay, maxDays = 30, heigh
             <SvgText
               x={offsetX + peakIndex * (barW + gap) + barW / 2}
               y={height - Math.max(4, plotH - 4) - 6}
-              fill={T.teal}
+              fill={T.white}
               fontSize={11}
               fontWeight="700"
               textAnchor="middle"

@@ -135,9 +135,12 @@ const getStyles = (colors: any) =>
       maxWidth: 380,
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
       padding: spacing.xl,
+      shadowColor: '#000',
+      shadowOpacity: 0.5,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 12,
     },
     title: {
       fontSize: 18,
@@ -164,9 +167,7 @@ const getStyles = (colors: any) =>
       backgroundColor: colors.text,
     },
     buttonCancel: {
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: colors.surfaceRaised,
     },
     buttonText: {
       fontSize: 16,

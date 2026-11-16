@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { ArrowRight } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
-import { colors as T, type as TYPE, font } from '../theme/tokens';
+import { type as TYPE, font } from '../theme/tokens';
 
 interface SectionHeaderProps {
   title: string;
@@ -23,8 +24,9 @@ interface SectionHeaderProps {
 
 /**
  * Editorial section header: a lowercase eyebrow label ("for you", "upcoming
- * events") with a teal "see all →" link aligned right. Subtitles are optional
- * and kept tight.
+ * events") with a quiet grey "see all →" link aligned right — teal is kept
+ * for semantic state, and eight teal links down the home feed read as
+ * decoration. Subtitles are optional and kept tight.
  */
 export default function SectionHeader({
   title,
@@ -50,10 +52,10 @@ export default function SectionHeader({
         )}
       </View>
       {onViewAll ? (
-        <TouchableOpacity style={styles.viewAll} onPress={onViewAll} hitSlop={8}>
+        <Touchable style={styles.viewAll} onPress={onViewAll} hitSlop={8}>
           <Text style={styles.viewAllText}>{t('common.viewAll').toLowerCase()}</Text>
-          <ArrowRight size={15} color={T.teal} />
-        </TouchableOpacity>
+          <ArrowRight size={15} color={colors.textSecondary} />
+        </Touchable>
       ) : (
         trailing ?? null
       )}
@@ -67,7 +69,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 14,
+      marginBottom: 12,
       gap: 12,
     },
     titleWrap: {
@@ -87,19 +89,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       fontSize: 13,
       letterSpacing: 0.4,
       color: colors.textSecondary,
-      marginTop: 3,
+      marginTop: 4,
     },
     viewAll: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
       paddingVertical: 4,
       paddingLeft: 8,
     },
     viewAllText: {
       fontSize: 13,
       letterSpacing: 0.4,
-      color: T.teal,
+      color: colors.textSecondary,
     },
   });
 

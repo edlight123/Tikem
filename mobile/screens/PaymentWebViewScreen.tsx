@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -15,6 +15,7 @@ import { PaymentSkeleton } from '../components/Skeleton'
 import { useAppAlert } from '../components/AppAlert';
 import { radius, font } from '../theme/tokens';
 
+import { Touchable } from '../components/ui/Touchable';
 type Params = {
   url: string
   title?: string
@@ -549,14 +550,14 @@ export default function PaymentWebViewScreen() {
   // Shared header: close (with cancel-confirm) + a secure-payment trust cue.
   const header = (
     <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-      <TouchableOpacity
+      <Touchable
         style={styles.headerButton}
         onPress={handleRequestClose}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityLabel={t('common.close')}
       >
         <Ionicons name="close" size={24} color={colors.text} />
-      </TouchableOpacity>
+      </Touchable>
       <View style={styles.headerCenter}>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {title || t('screens.payment.headerTitle')}
@@ -593,24 +594,22 @@ export default function PaymentWebViewScreen() {
         <Text style={styles.failureBody}>
           {failure.reason || t('screens.payment.failedBody')}
         </Text>
-        <TouchableOpacity
+        <Touchable
           style={styles.failurePrimaryButton}
           onPress={handleTryAgain}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={t('screens.payment.tryAgain')}
         >
           <Text style={styles.failurePrimaryButtonText}>{t('screens.payment.tryAgain')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Touchable>
+        <Touchable
           style={styles.failureGhostButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={t('screens.payment.backToEvent')}
         >
           <Text style={styles.failureGhostButtonText}>{t('screens.payment.backToEvent')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </View>
   ) : null
@@ -726,7 +725,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },
@@ -760,20 +759,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 28,
     backgroundColor: colors.background,
   },
+  // Stretch (not center) so the full-width buttons below get a real width:
+  // Touchable puts its style on an inner view inside a shrink-wrapping Pressable.
   failureContent: {
     width: '100%',
     maxWidth: 360,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   failureIconRing: {
+    alignSelf: 'center',
     width: 96,
     height: 96,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.errorLight,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.error,
     marginBottom: 24,
   },
   failureTitle: {
@@ -801,7 +801,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 12,
   },
   failurePrimaryButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#0A0A0A',
   },

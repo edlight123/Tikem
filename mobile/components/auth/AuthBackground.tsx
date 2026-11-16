@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { generalArt } from '../../lib/artLibrary';
+import { authPhotos } from '../../lib/artLibrary';
 import { themedArt } from '../../lib/nationalDaysRemote';
 
 /**
- * The auth (login / sign-up) backdrop is a rotating piece of Haitian artwork —
- * konpa nights, Jacmel streets, a tap-tap at sunset — so every entry into the
- * app opens on a moment of Haitian culture. A different piece shows each time
- * the auth screen mounts.
+ * The auth (login / sign-up) backdrop is a rotating real photograph of people
+ * out together: a concert, a party, a dinner, a family, friends on a trip
+ * (2026-11-14: the illustrated backdrops "read very AI"). A different photo
+ * shows each time the auth screen mounts.
  *
  * The art keeps its own colours (each piece is different), unified by:
  *  1. a top+bottom darkening scrim so the wordmark (top) and form (bottom) stay
  *     legible over any image, and
  *  2. a faint upper-left teal wash — the POSH brand accent, sparing.
  *
- * All pieces are BUNDLED assets, so the screen works offline and on first
- * launch; nothing streams. The rotation is the art library's general pool
- * (lib/artLibrary.ts), so a piece added there joins the login screen too.
+ * All photos are BUNDLED assets, so the screen works offline and on first
+ * launch; nothing streams. The rotation is authPhotos() in lib/artLibrary.ts.
  */
-const ART = generalArt();
+const ART = authPhotos();
 
 export function AuthBackground({ children }: { children?: React.ReactNode }) {
   // Pick one piece per mount so users see the collection rotate across opens.

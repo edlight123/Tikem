@@ -4,8 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-    RefreshControl,
+  RefreshControl,
 } from 'react-native';
 import { radius } from '../../theme/tokens';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,8 @@ import { useLocaleFormat } from '../../lib/format';
 import { backendFetch } from '../../lib/api/backend';
 import { RADIUS } from '../../config/brand';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
+import SectionHeader from '../../components/SectionHeader';
 import StatTriplet from '../../components/StatTriplet';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
@@ -308,8 +309,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
             />
           </View>
           {/* Sales chart card: title, 120-tall bar area, hairline baseline. */}
+          <View style={styles.sectionHead}>
+            <Skeleton width={130} height={22} radius={4} style={{ marginBottom: 12 }} />
+          </View>
           <View style={styles.chartCard}>
-            <Skeleton width={130} height={16} radius={4} style={{ marginBottom: 20 }} />
             <View style={styles.chartSkeletonRow}>
               {[46, 78, 60, 100, 34, 88, 52].map((h, i) => (
                 <Skeleton key={i} width={24} height={h} radius={4} />
@@ -318,8 +321,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
             <View style={styles.chartBaseline} />
           </View>
           {/* Top events card: title + rank-circle rows. */}
+          <View style={styles.sectionHead}>
+            <Skeleton width={170} height={22} radius={4} style={{ marginBottom: 12 }} />
+          </View>
           <View style={styles.sectionCard}>
-            <Skeleton width={170} height={16} radius={4} style={{ marginBottom: 16 }} />
             {[0, 1, 2].map((i) => (
               <View key={i} style={styles.eventRow}>
                 <Skeleton width={32} height={32} radius={radius.lg} style={{ marginRight: 12 }} />
@@ -368,13 +373,12 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
           />
         </View>
 
-        {/* Stats — the POSH metric grid (§2.3): neutral raised surface, teal only
-            as the revenue numeral accent. */}
+        {/* Stats — the POSH metric grid (§2.3): white numerals; teal is kept for meaning. */}
         <View style={styles.statsWrap}>
           <StatTriplet
             columns={2}
             items={[
-              { label: t('analytics.totalRevenue') || 'Total Revenue', ...totalRevenueCell(), tone: 'brand' },
+              { label: t('analytics.totalRevenue') || 'Total Revenue', ...totalRevenueCell() },
               { label: t('analytics.ticketsSold') || 'Tickets Sold', value: stats.totalTicketsSold },
               { label: t('analytics.totalEvents') || 'Total Events', value: stats.totalEvents },
               { label: t('analytics.published') || 'Published', value: stats.publishedEvents },
@@ -383,8 +387,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
         </View>
 
         {/* Sales Chart */}
+        <View style={styles.sectionHead}>
+          <SectionHeader title={t('analytics.salesOverTime') || 'Sales Over Time'} />
+        </View>
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>{t('analytics.salesOverTime') || 'Sales Over Time'}</Text>
           {chartData.every((d) => (d.sales || 0) === 0) ? (
             <Text style={styles.chartEmpty}>{t('analytics.noSalesInRange') || 'No sales yet in this range'}</Text>
           ) : (
@@ -445,8 +451,10 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
         )}
 
         {/* Top Events */}
+        <View style={styles.sectionHead}>
+          <SectionHeader title={t('analytics.topEvents') || 'Top Performing Events'} />
+        </View>
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{t('analytics.topEvents') || 'Top Performing Events'}</Text>
           {topEvents.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="bar-chart-outline" size={48} color={colors.textSecondary} />
@@ -454,9 +462,11 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
             </View>
           ) : (
             topEvents.map((event, index) => (
-              <TouchableOpacity
+              <Touchable
                 key={event.id}
-                style={styles.eventRow}
+                scale={false}
+                pressedColor={colors.surfaceRaised}
+                style={[styles.eventRow, index < topEvents.length - 1 && styles.eventRowDivider]}
                 onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
               >
                 <View style={styles.eventRank}>
@@ -468,8 +478,8 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
                     {event.ticketCount} {t('analytics.tickets') || 'tickets'} • {formatMoney(event.revenueCents / 100, event.currency)}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </Touchable>
             ))
           )}
         </View>
@@ -516,14 +526,12 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginHorizontal: 16,
     marginBottom: 14,
     padding: 20,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.xl,
   },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 20,
+  sectionHead: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
   chartContainer: {
     flexDirection: 'row',
@@ -541,17 +549,17 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   chartBar: {
     width: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.text,
     borderRadius: radius.sm,
     minHeight: 3,
   },
   chartBarDim: {
-    opacity: 0.35,
+    opacity: 0.28,
   },
   chartPeakValue: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
     marginBottom: 4,
   },
   chartBaseline: {
@@ -560,7 +568,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginTop: 8,
   },
   chartEmpty: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 32,
@@ -573,22 +581,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   sectionCard: {
     marginHorizontal: 16,
     marginBottom: 14,
-    padding: 16,
-    backgroundColor: colors.surfaceRaised,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.xl,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 16,
+    overflow: 'hidden',
   },
   emptyState: {
     alignItems: 'center',
     padding: 32,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
     marginTop: 12,
   },
@@ -596,14 +600,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    // Bleeds to the card edge so the pressed fill spans the row.
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  eventRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   eventRank: {
     width: 32,
     height: 32,
     borderRadius: radius.lg,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -611,7 +620,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   eventRankText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.textSecondary,
   },
   eventInfo: {
     flex: 1,

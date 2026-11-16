@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native'
+import { StyleSheet, Text, View, ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,6 +11,7 @@ import { Skeleton } from '../components/Skeleton'
 import { useAppAlert } from '../components/AppAlert';
 import { radius, font } from '../theme/tokens';
 
+import { Touchable } from '../components/ui/Touchable';
 type Params = {
   url: string
   /** Bearer for the EMBEDDED onboarding page on our own domain. Never sent to
@@ -148,7 +149,7 @@ export default function StripeConnectWebViewScreen() {
 
   const header = (
     <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-      <TouchableOpacity
+      <Touchable
         onPress={handleRequestClose}
         style={styles.headerButton}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -156,7 +157,7 @@ export default function StripeConnectWebViewScreen() {
         accessibilityLabel="Close"
       >
         <Ionicons name="close" size={24} color={colors.text} />
-      </TouchableOpacity>
+      </Touchable>
       <View style={styles.headerCenter}>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {t('screens.stripeConnect.title')}
@@ -205,24 +206,22 @@ export default function StripeConnectWebViewScreen() {
         </View>
         <Text style={styles.failureTitle}>{t('screens.stripeConnect.failedTitle')}</Text>
         <Text style={styles.failureBody}>{t('screens.stripeConnect.failedBody')}</Text>
-        <TouchableOpacity
+        <Touchable
           style={styles.failurePrimaryButton}
           onPress={handleTryAgain}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={t('screens.stripeConnect.tryAgain')}
         >
           <Text style={styles.failurePrimaryButtonText}>{t('screens.stripeConnect.tryAgain')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Touchable>
+        <Touchable
           style={styles.failureGhostButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={t('screens.stripeConnect.backToPayouts')}
         >
           <Text style={styles.failureGhostButtonText}>{t('screens.stripeConnect.backToPayouts')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </View>
   ) : null
@@ -310,7 +309,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },
@@ -350,19 +349,21 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 28,
     backgroundColor: colors.background,
   },
+  // Stretch (not center) so the full-width buttons below get a real width:
+  // Touchable puts its style on an inner view inside a shrink-wrapping Pressable.
   failureContent: {
     width: '100%',
     maxWidth: 360,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   failureIconRing: {
+    alignSelf: 'center',
     width: 88,
     height: 88,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    backgroundColor: colors.surface,
     marginBottom: 24,
   },
   failureTitle: {
@@ -390,7 +391,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     marginBottom: 12,
   },
   failurePrimaryButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.background,
   },

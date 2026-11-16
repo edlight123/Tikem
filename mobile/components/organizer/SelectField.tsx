@@ -3,9 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Modal,
   FlatList,
+  Pressable,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../theme/tokens';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Touchable } from '../ui/Touchable';
+import { select } from '../../lib/haptics';
 
 interface SelectFieldProps {
   /** Optional label rendered above the field. */
@@ -63,10 +65,10 @@ export default function SelectField({
     <>
       {!!label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
 
-      <TouchableOpacity
+      <Touchable
+        scale={0.98}
         style={[styles.field, fieldStyle]}
         onPress={() => setOpen(true)}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={label || placeholder}
         accessibilityValue={{ text: value || placeholder }}
@@ -78,7 +80,7 @@ export default function SelectField({
           {value || placeholder}
         </Text>
         <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-      </TouchableOpacity>
+      </Touchable>
 
       <Modal
         visible={open}
@@ -87,23 +89,19 @@ export default function SelectField({
         onRequestClose={() => setOpen(false)}
       >
         <View style={styles.overlay}>
-          <TouchableOpacity
-            style={styles.backdrop}
-            activeOpacity={1}
-            onPress={() => setOpen(false)}
-          />
+          <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
           <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
             <View style={styles.grabber} />
             <View style={styles.header}>
               <Text style={styles.title}>{sheetTitle || label || 'Select'}</Text>
-              <TouchableOpacity
+              <Touchable
                 onPress={() => setOpen(false)}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
                 <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
+              </Touchable>
             </View>
 
             <FlatList
@@ -112,9 +110,15 @@ export default function SelectField({
               renderItem={({ item }) => {
                 const selected = item === value;
                 return (
-                  <TouchableOpacity
+                  <Touchable
+                    scale={false}
+                    haptic={false}
+                    pressedColor={colors.surfaceRaised}
                     style={styles.row}
-                    onPress={() => handleSelect(item)}
+                    onPress={() => {
+                      select();
+                      handleSelect(item);
+                    }}
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                     accessibilityLabel={item}
@@ -125,7 +129,7 @@ export default function SelectField({
                     {selected && (
                       <Ionicons name="checkmark-circle" size={22} color={colors.text} />
                     )}
-                  </TouchableOpacity>
+                  </Touchable>
                 );
               }}
             />
@@ -143,11 +147,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginBottom: 8,
       color: colors.text,
       fontWeight: '600',
-      fontSize: 14,
+      fontSize: 13,
     },
+    // A fill, never an outlined box.
     field: {
-      borderWidth: 1,
-      borderColor: colors.border,
       borderRadius: radius.md,
       paddingHorizontal: 14,
       paddingVertical: 12,
@@ -199,7 +202,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
     },
     title: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
     },

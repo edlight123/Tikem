@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { backendFetch, backendJson } from '../../lib/api/backend';
 import { getOrganizerEvents } from '../../lib/api/organizer';
+import { Touchable } from '../ui/Touchable';
+import { Text as UIText } from '../ui/Text';
 
 const hideKey = (uid: string) => `tikem_org_checklist_hidden_${uid}`;
 const cacheKey = (uid: string) => `tikem_org_checklist_${uid}`;
@@ -166,27 +168,28 @@ export default function GettingStartedCard() {
   return (
     <View style={styles.section}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{t('gettingStarted.title')}</Text>
+        <UIText variant="eyebrow" style={styles.title}>{t('gettingStarted.title')}</UIText>
         <Text style={styles.progress}>
           {doneCount}/{rows.length}
         </Text>
-        <TouchableOpacity
+        <Touchable
           onPress={dismiss}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('gettingStarted.hide')}
         >
           <Text style={styles.hide}>{t('gettingStarted.hide')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
 
       {rows.map((row, i) => (
-        <TouchableOpacity
+        <Touchable
           key={row.key}
+          scale={false}
+          pressedColor={colors.surface}
           style={[styles.row, i > 0 && styles.rowDivider]}
           onPress={row.onPress}
           disabled={row.done}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityState={{ checked: row.done }}
         >
@@ -199,7 +202,7 @@ export default function GettingStartedCard() {
             {row.label}
           </Text>
           {!row.done && <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
-        </TouchableOpacity>
+        </Touchable>
       ))}
     </View>
   );
@@ -221,10 +224,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     title: {
       flex: 1,
-      fontSize: 12,
-      letterSpacing: 1,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
     },
     progress: {
       fontSize: 12,

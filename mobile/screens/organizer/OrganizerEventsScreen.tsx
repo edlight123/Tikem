@@ -24,12 +24,15 @@ import { useActiveOrg } from '../../lib/activeOrg';
 import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 import { resolvePosterTheme } from '../../lib/posterGradient';
-import { radius, colors as tokenColors } from '../../theme/tokens';
+import { radius, colors as tokenColors, font } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
+import { Touchable } from '../../components/ui/Touchable';
+import { select as hapticSelect } from '../../lib/haptics';
 import EmptyState from '../../components/EmptyState';
 import { artByKey } from '../../lib/artLibrary';
 import StatusChip from '../../components/StatusChip';
 import { TikemWordmark } from '../../components/TikemWordmark';
+import { displayCapacity } from '../../lib/ticketPricing';
 
 type EventStatus =
   | 'on_sale'
@@ -139,7 +142,8 @@ export default function OrganizerEventsScreen() {
     if (!event.is_published) return event.status === 'draft' ? 'draft' : 'unpublished';
     // `total_tickets > 0` guard: an event with no capacity set used to read
     // as sold out because 0 >= 0.
-    if (event.total_tickets > 0 && (event.tickets_sold || 0) >= event.total_tickets) return 'sold_out';
+    const cap = displayCapacity(event.total_tickets);
+    if (cap > 0 && (event.tickets_sold || 0) >= cap) return 'sold_out';
     return isPast ? 'completed' : 'on_sale';
   };
 
@@ -191,9 +195,9 @@ export default function OrganizerEventsScreen() {
     <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
-          {t('organizerEvents.title')}
+          {t('organizerEvents.title').toLowerCase()}
         </Text>
-        <TouchableOpacity
+        <Touchable
           style={styles.createButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={() => navigation.navigate('CreateEvent')}
@@ -201,13 +205,13 @@ export default function OrganizerEventsScreen() {
           accessibilityLabel={t('organizerEvents.create')}
         >
           <Ionicons name="add" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
       </View>
 
       {/* Rounded-rectangle segmented control: surface track, raised fill on
           the selected half. Never a pill. */}
       {loading ? (
-        <Skeleton width="100%" height={46} radius={radius.md} />
+        <Skeleton width="60%" height={30} radius={radius.sm} />
       ) : (
         <View style={styles.segmentTrack} accessibilityRole="tablist">
           {([
@@ -219,7 +223,11 @@ export default function OrganizerEventsScreen() {
               <TouchableOpacity
                 key={tab.key}
                 style={[styles.segment, active && styles.segmentActive]}
-                onPress={() => setEventTab(tab.key)}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (!active) hapticSelect();
+                  setEventTab(tab.key);
+                }}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`${tab.label}, ${tab.count}`}
@@ -228,7 +236,7 @@ export default function OrganizerEventsScreen() {
                   style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}
                   numberOfLines={1}
                 >
-                  {`${tab.label} · ${tab.count}`}
+                  {tab.label}  <Text style={styles.segmentCount}>{tab.count}</Text>
                 </Text>
               </TouchableOpacity>
             );
@@ -281,9 +289,9 @@ export default function OrganizerEventsScreen() {
         {/* One slim notice instead of an amber label on every card. Filled
             surface, amber dot, the fix one tap away. */}
         {eventTab === 'upcoming' && blockedCount > 0 ? (
-          <TouchableOpacity
+          <Touchable
+            scale={0.98}
             style={styles.payoutBanner}
-            activeOpacity={0.8}
             // Payout setup is the org owner's; a team member just sees the notice.
             onPress={canSetUpPayouts ? () => navigation.navigate('OrganizerPayoutSettings') : undefined}
             disabled={!canSetUpPayouts}
@@ -298,11 +306,8 @@ export default function OrganizerEventsScreen() {
             <Text style={styles.payoutBannerText} numberOfLines={1}>
               {payoutBannerLabel}
             </Text>
-            <Text style={styles.payoutBannerAction} numberOfLines={1}>
-              {canSetUpPayouts ? t('organizerEvents.payoutBanner.action') : t('orgTeam.ownerSetsUpPayouts')}
-            </Text>
             {canSetUpPayouts ? <Ionicons name="chevron-forward" size={14} color={colors.text} /> : null}
-          </TouchableOpacity>
+          </Touchable>
         ) : null}
 
         {events.length === 0 ? (
@@ -354,7 +359,7 @@ export default function OrganizerEventsScreen() {
             const metaLabel = [dateLabel, venueLabel].filter(Boolean).join(' · ');
 
             const sold = event.tickets_sold || 0;
-            const capacity = event.total_tickets || 0;
+            const capacity = displayCapacity(event.total_tickets);
             const soldRatio = capacity > 0 ? Math.min(1, sold / capacity) : 0;
             const salesLabel = capacity > 0
               ? `${sold}/${capacity} ${t('common.sold')}`
@@ -366,10 +371,10 @@ export default function OrganizerEventsScreen() {
             const showBlockedOnCard = payoutBlocked && !allLiveBlocked;
 
             return (
-              <TouchableOpacity
+              <Touchable
                 key={event.id}
+                scale={0.98}
                 style={styles.eventCard}
-                activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={[
                   event.title,
@@ -433,7 +438,7 @@ export default function OrganizerEventsScreen() {
                     </View>
                   ) : null}
                 </View>
-              </TouchableOpacity>
+              </Touchable>
             );
           })
         )}
@@ -457,40 +462,43 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 18,
+    marginBottom: 12,
   },
+  // Editorial serif title, the same voice as the section rails, instead of
+  // a 36pt heavy grotesk (TestFlight 2026-11-12: "don't like the header style").
   title: {
     flex: 1,
-    fontSize: 36,
-    lineHeight: 42,
-    fontWeight: '800',
-    letterSpacing: -0.8,
+    fontFamily: font.serif,
+    fontSize: 26,
+    lineHeight: 32,
     color: colors.text,
   },
   // Small filled square, not a pill and not a text button.
   createButton: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Plain text tabs with a short underline on the selected one, posh-style.
+  // The boxed segmented track read heavy under the title (owner, 2026-11-16).
   segmentTrack: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: 4,
+    gap: 24,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   segment: {
-    flex: 1,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
+    paddingTop: 4,
+    paddingBottom: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    marginBottom: -StyleSheet.hairlineWidth,
   },
   segmentActive: {
-    backgroundColor: colors.surfaceRaised,
+    borderBottomColor: colors.text,
   },
   segmentLabel: {
     fontSize: 15,
@@ -498,11 +506,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   segmentLabelActive: {
     color: colors.text,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  segmentCount: {
+    color: colors.textSecondary,
+    fontWeight: '400',
   },
   segmentLabelInactive: {
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -575,7 +587,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
   },
   payoutBannerDot: {
     width: 6,
@@ -587,11 +599,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     fontSize: 13,
     fontWeight: '500',
-    color: colors.text,
-  },
-  payoutBannerAction: {
-    fontSize: 13,
-    fontWeight: '700',
     color: colors.text,
   },
 });

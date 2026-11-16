@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -37,14 +38,15 @@ export function DateChips({ currentDate, onDateChange }: DateChipsProps) {
         {DATE_OPTIONS.map((option) => {
           const isActive = currentDate === option.value;
           return (
-            <TouchableOpacity
+            <Touchable
               key={option.value}
               style={[
                 styles.chip,
                 isActive && styles.chipActive
               ]}
               onPress={() => onDateChange(option.value)}
-              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
             >
               <Text style={[
                 styles.chipText,
@@ -52,7 +54,7 @@ export function DateChips({ currentDate, onDateChange }: DateChipsProps) {
               ]}>
                 {t(option.labelKey)}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           );
         })}
       </ScrollView>
@@ -72,20 +74,18 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: radius.chip,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    // A fill, not a hairline box; selected = the white pill (same as FilterPill).
+    backgroundColor: colors.surfaceRaised,
   },
   chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.white,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   chipTextActive: {
-    color: colors.onPrimary,
+    color: '#000000',
   },
 });

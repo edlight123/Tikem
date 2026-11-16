@@ -14,7 +14,7 @@ import { useAppAlert } from './AppAlert';
 import { colors as T, radius, spacing, font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
 import type { Attribution } from '../lib/attribution';
-import { freeClaimCap } from '../lib/ticketPricing';
+import { displayCapacity, freeClaimCap } from '../lib/ticketPricing';
 import { PlusOneFields, plusOnesPayload, resizePlusOnes, type PlusOneDraft } from './AttendRequestSheet';
 
 /**
@@ -138,9 +138,8 @@ export default function FreeTicketModal({
   const tf = (key: string, fallback: string) => (t(key) === key ? fallback : t(key));
 
   const isLocked = typeof lockedQuantity === 'number' && lockedQuantity > 0;
-  // The web stores total_tickets 0 (or leaves it unset) to mean UNLIMITED, so
-  // only a positive cap limits the claim.
-  const totalCap = Number(event.total_tickets) || 0;
+  // 0 / unset AND the unlimited sentinel (1,000,000+) both mean no cap.
+  const totalCap = displayCapacity(event.total_tickets);
   const isUnlimited = totalCap <= 0;
   const remainingTickets = isUnlimited
     ? Infinity
@@ -383,18 +382,14 @@ export default function FreeTicketModal({
           <View pointerEvents="none" style={styles.bottomFill} />
           <View style={styles.handle} />
 
-          {/* Editorial header: serif lowercase title, the event quietly beneath. */}
+          {/* No heading: the buyer just tapped RSVP on this event, so a title and
+              the event name would repeat what they already know (owner feedback
+              2026-11-15). Only the free tier name, when one was picked, and close. */}
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
-                {t('freeTicket.title').toLowerCase()}
-              </Text>
-              {/* On a mixed free+paid event name the free tier the buyer picked;
-                  the generic "free event" line would be a lie there. */}
-              <Text style={styles.eventLine} numberOfLines={1}>
-                {eventTitle}
-                {tierName ? `  ·  ${tierName}` : ''}
-              </Text>
+              {tierName ? (
+                <Text style={styles.eventLine} numberOfLines={1}>{tierName}</Text>
+              ) : null}
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -411,7 +406,9 @@ export default function FreeTicketModal({
           <View style={styles.stepperRow}>
             <View style={styles.stepperLabelWrap}>
               <Text style={styles.stepperLabel}>{tf('freeTicket.ticketsLabel', 'Tickets')}</Text>
-              {!isUnlimited && (
+              {/* Scarcity only: a count is shown when few are left, never the
+                  size of the room (and never anything for an unlimited event). */}
+              {!isUnlimited && remainingTickets > 0 && remainingTickets < 10 && (
                 <Text style={styles.stepperMeta}>{rc('freeTicket.availableCount', remainingTickets)}</Text>
               )}
             </View>

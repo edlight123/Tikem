@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -25,6 +25,8 @@ import FormSheet, { SheetInput, SheetLabel } from '../../components/organizer/Fo
 import WhitePillCTA from '../../components/WhitePillCTA'
 import { useOrgLabel } from '../../components/organizer/OrgSwitcher'
 
+import { Touchable } from '../../components/ui/Touchable';
+import { Switch } from '../../components/ui/Switch';
 type MemberStatus = 'active' | 'invited'
 type TaskStatus = 'todo' | 'in_progress' | 'done'
 
@@ -347,7 +349,7 @@ export default function OrganizerOrgTeamScreen() {
   )
 
   const addButton = (
-    <TouchableOpacity
+    <Touchable
       style={styles.addButton}
       onPress={tab === 'team' ? openInvite : openNewTask}
       accessibilityRole="button"
@@ -357,7 +359,7 @@ export default function OrganizerOrgTeamScreen() {
       <Text style={styles.addButtonText}>
         {tab === 'team' ? t('orgTeam.team.invite') : t('organizerOrgTeam.newTask')}
       </Text>
-    </TouchableOpacity>
+    </Touchable>
   )
 
   const title = orgLabel({ orgName: activeOrg.orgName, role: activeOrg.role || 'owner' })
@@ -399,12 +401,12 @@ export default function OrganizerOrgTeamScreen() {
     status?: MemberStatus
     onPress?: () => void
   }) => (
-    <TouchableOpacity
+    <Touchable
       key={opts.key}
+      scale={0.98}
       style={styles.personRow}
       onPress={opts.onPress}
       disabled={!opts.onPress}
-      activeOpacity={0.75}
       accessibilityRole={opts.onPress ? 'button' : 'text'}
     >
       <View style={styles.monogram}>
@@ -426,7 +428,7 @@ export default function OrganizerOrgTeamScreen() {
         />
       ) : null}
       {opts.onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} /> : null}
-    </TouchableOpacity>
+    </Touchable>
   )
 
   return (
@@ -438,7 +440,7 @@ export default function OrganizerOrgTeamScreen() {
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />}
       >
         {tab === 'team' ? (
           <>
@@ -499,11 +501,11 @@ export default function OrganizerOrgTeamScreen() {
           />
         ) : (
           tasks.map((task) => (
-            <TouchableOpacity
+            <Touchable
               key={task.id}
+              scale={0.98}
               style={styles.personRow}
               onPress={() => setActiveTask(task)}
-              activeOpacity={0.75}
               accessibilityRole="button"
             >
               <View style={styles.personBody}>
@@ -520,7 +522,7 @@ export default function OrganizerOrgTeamScreen() {
                 </Text>
               </View>
               <StatusChip status={taskChipStatus(task.status)} label={taskStatusLabel(task.status)} />
-            </TouchableOpacity>
+            </Touchable>
           ))
         )}
       </ScrollView>
@@ -575,7 +577,7 @@ export default function OrganizerOrgTeamScreen() {
               disabled={submitting || !memberChanged}
               loading={submitting}
             />
-            <TouchableOpacity
+            <Touchable
               style={styles.textAction}
               onPress={() => activeMember && removeMember(activeMember)}
               accessibilityRole="button"
@@ -583,7 +585,7 @@ export default function OrganizerOrgTeamScreen() {
               <Text style={styles.textActionDanger}>
                 {activeMember?.status === 'invited' ? t('orgTeam.team.cancelInvite') : t('organizerOrgTeam.removeMember')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           </>
         }
       >
@@ -655,13 +657,13 @@ export default function OrganizerOrgTeamScreen() {
         onClose={() => setActiveTask(null)}
         closeLabel={t('common.close')}
         footer={
-          <TouchableOpacity
+          <Touchable
             style={styles.textAction}
             onPress={() => activeTask && removeTask(activeTask)}
             accessibilityRole="button"
           >
             <Text style={styles.textActionDanger}>{t('organizerOrgTeam.removeTask')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         }
       >
         {activeTask?.assignee_name ? <Text style={styles.personMeta}>{activeTask.assignee_name}</Text> : null}
@@ -687,10 +689,10 @@ function FinanceSwitch({ value, onChange }: { value: boolean; onChange: (next: b
   const styles = getStyles(colors)
   const { t } = useI18n()
   return (
-    <TouchableOpacity
+    <Touchable
+      scale={0.98}
       style={styles.financeRow}
       onPress={() => onChange(!value)}
-      activeOpacity={0.8}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       accessibilityLabel={`${t('orgTeam.finance.toggleLabel')}. ${t('orgTeam.finance.toggleBody')}`}
@@ -699,15 +701,8 @@ function FinanceSwitch({ value, onChange }: { value: boolean; onChange: (next: b
         <Text style={styles.roleOptionName}>{t('orgTeam.finance.toggleLabel')}</Text>
         <Text style={styles.roleOptionBlurb}>{t('orgTeam.finance.toggleBody')}</Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        // Off track one step lighter than the row it sits on, so it reads.
-        trackColor={{ false: 'rgba(255,255,255,0.18)', true: '#FFFFFF' }}
-        thumbColor={value ? '#000000' : '#D4D4D4'}
-        ios_backgroundColor="rgba(255,255,255,0.18)"
-      />
-    </TouchableOpacity>
+      <Switch value={value} onValueChange={onChange} />
+    </Touchable>
   )
 }
 
@@ -730,11 +725,11 @@ function RolePicker({
       {TEAM_ROLES.map((r) => {
         const on = r === value
         return (
-          <TouchableOpacity
+          <Touchable
             key={r}
+            scale={0.98}
             style={styles.roleOption}
             onPress={() => onChange(r)}
-            activeOpacity={0.8}
             accessibilityRole="radio"
             accessibilityState={{ selected: on }}
             accessibilityLabel={`${label(r)}. ${blurb(r)}`}
@@ -744,7 +739,7 @@ function RolePicker({
               <Text style={styles.roleOptionName}>{label(r)}</Text>
               <Text style={styles.roleOptionBlurb}>{blurb(r)}</Text>
             </View>
-          </TouchableOpacity>
+          </Touchable>
         )
       })}
     </View>
@@ -789,7 +784,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    monogramText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+    monogramText: { color: colors.text, fontWeight: '700', fontSize: 13 },
     personBody: { flex: 1, minWidth: 0 },
     personName: { fontSize: 15, fontWeight: '700', color: colors.text },
     personYou: { fontSize: 12, fontWeight: '600', color: colors.textTertiary },
@@ -810,7 +805,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       borderRadius: radius.md,
       backgroundColor: T.surfaceRaised,
     },
-    roleExplainName: { fontSize: 14, fontWeight: '700', color: colors.text },
+    roleExplainName: { fontSize: 13, fontWeight: '700', color: colors.text },
     roleExplainBody: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
 
     rolePicker: { gap: 8 },
@@ -844,8 +839,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 18,
       marginBottom: 8,
       fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.6,
+      fontWeight: '600',
+      letterSpacing: 0.8,
       textTransform: 'uppercase',
       color: colors.textTertiary,
     },
@@ -853,5 +848,5 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     statusTabs: { marginHorizontal: -16 },
 
     textAction: { alignItems: 'center', paddingVertical: 10 },
-    textActionDanger: { color: colors.error, fontWeight: '700', fontSize: 14 },
+    textActionDanger: { color: colors.error, fontWeight: '700', fontSize: 13 },
   })

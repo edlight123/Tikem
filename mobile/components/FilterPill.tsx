@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { ChevronDown, X } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius } from '../theme/tokens';
@@ -15,8 +16,8 @@ interface FilterPillProps {
 }
 
 /**
- * Compact, Posh-style dropdown filter pill. Neutral on a dark surface; flips to
- * solid teal with the chosen value when active.
+ * Compact, Posh-style dropdown filter pill. A quiet fill when empty; flips to
+ * solid white with the chosen value when active (teal stays a rare accent).
  */
 export default function FilterPill({ label, value, onPress, onClear }: FilterPillProps) {
   const { colors } = useTheme();
@@ -24,10 +25,11 @@ export default function FilterPill({ label, value, onPress, onClear }: FilterPil
   const active = !!value;
 
   return (
-    <TouchableOpacity
+    <Touchable
       style={[styles.pill, active && styles.pillActive]}
       onPress={onPress}
-      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={active ? `${label}: ${value}` : label}
     >
       <Text style={[styles.text, active && styles.textActive]} numberOfLines={1}>
         {active ? value : label}
@@ -38,12 +40,12 @@ export default function FilterPill({ label, value, onPress, onClear }: FilterPil
           hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
           style={styles.clearBtn}
         >
-          <X size={14} color={colors.onPrimary} />
+          <X size={14} color="#000000" />
         </TouchableOpacity>
       ) : (
-        <ChevronDown size={15} color={active ? colors.onPrimary : colors.textSecondary} />
+        <ChevronDown size={15} color={active ? '#000000' : colors.textSecondary} />
       )}
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -56,22 +58,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: radius.chip,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: colors.surfaceRaised,
     },
     pillActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
+      backgroundColor: '#FFFFFF',
     },
     text: {
       fontSize: 13,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.textSecondary,
       maxWidth: 150,
     },
     textActive: {
-      color: colors.onPrimary,
+      color: '#000000',
     },
     clearBtn: {
       marginLeft: -1,

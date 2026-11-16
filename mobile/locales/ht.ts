@@ -865,6 +865,8 @@ export default {
     removeError: 'Pa t kapab retire favori a',
   },
   notifications: {
+    deleted: 'Notifikasyon an efase',
+    undo: 'Anile',
     clearAllButton: 'Efase tout',
     markAllRead: 'Make tout kòm li',
     clearAllTitle: 'Efase tout notifikasyon',

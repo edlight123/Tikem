@@ -22,7 +22,6 @@ export default function TrendingSection({ events, onEventPress, onViewAll }: Tre
     <View>
       <SectionHeader
         title={t('home.trendingTitle')}
-        subtitle={t('home.trendingSubtitle')}
         onViewAll={onViewAll}
       />
       <ScrollView

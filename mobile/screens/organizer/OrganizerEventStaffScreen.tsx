@@ -3,10 +3,8 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native'
 import { radius } from '../../theme/tokens'
@@ -26,11 +24,13 @@ import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHea
 import { useOverlayHeaderInset } from '../../components/OverlayHeader'
 import StaffEventCard from '../../components/organizer/StaffEventCard'
 import StatusChip from '../../components/StatusChip'
-import InfoNotice from '../../components/organizer/InfoNotice'
 import SegmentedTabs from '../../components/organizer/SegmentedTabs'
 import WhitePillCTA from '../../components/WhitePillCTA'
 import { SecondaryPill } from '../../components/auth/SecondaryPill'
 
+import { Touchable } from '../../components/ui/Touchable';
+import { Switch } from '../../components/ui/Switch';
+import SectionHeader from '../../components/SectionHeader';
 type RouteParams = {
   OrganizerEventStaff: {
     eventId: string
@@ -260,7 +260,7 @@ export default function OrganizerEventStaffScreen() {
   }
 
   const inviteButton = (
-    <TouchableOpacity
+    <Touchable
       style={[styles.inviteButton, authLoading ? styles.buttonDisabled : null]}
       onPress={openInviteModal}
       disabled={authLoading}
@@ -269,7 +269,7 @@ export default function OrganizerEventStaffScreen() {
     >
       <Ionicons name="add" size={18} color={colors.text} />
       <Text style={styles.inviteButtonText}>{t('organizerStaff.inviteButton')}</Text>
-    </TouchableOpacity>
+    </Touchable>
   )
 
   if (loading) {
@@ -315,10 +315,6 @@ export default function OrganizerEventStaffScreen() {
           { paddingTop: headerH, paddingBottom: 32 + insets.bottom },
         ]}
       >
-        <View style={styles.notice}>
-          <InfoNotice icon="people-outline" text={t('organizerStaff.staffInfo')} />
-        </View>
-
         {isEmpty ? (
           <EmptyState
             icon={Users}
@@ -330,10 +326,10 @@ export default function OrganizerEventStaffScreen() {
         ) : (
           <>
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('organizerStaff.membersTitle')}</Text>
-                {members.length > 0 ? <Text style={styles.sectionCount}>{members.length}</Text> : null}
-              </View>
+              <SectionHeader
+                title={t('organizerStaff.membersTitle')}
+                trailing={members.length > 0 ? <Text style={styles.sectionCount}>{members.length}</Text> : undefined}
+              />
               {members.length === 0 ? (
                 <EmptyState icon={Users} title={t('organizerStaff.emptyMembers')} compact />
               ) : (
@@ -354,7 +350,7 @@ export default function OrganizerEventStaffScreen() {
                           <View style={styles.rightCol}>
                             <StatusChip status="live" label={t('organizerStaff.inviteStatus.active')} />
                             {!isOwner && (
-                              <TouchableOpacity
+                              <Touchable
                                 onPress={() => removeMember(m.id)}
                                 style={[styles.dangerButton, authLoading ? styles.buttonDisabled : null]}
                                 disabled={authLoading}
@@ -362,7 +358,7 @@ export default function OrganizerEventStaffScreen() {
                                 accessibilityLabel={t('organizerStaff.remove')}
                               >
                                 <Text style={styles.dangerButtonText}>{t('organizerStaff.remove')}</Text>
-                              </TouchableOpacity>
+                              </Touchable>
                             )}
                           </View>
                         }
@@ -372,7 +368,6 @@ export default function OrganizerEventStaffScreen() {
                       <View style={styles.permRow}>
                         <View style={styles.permTextCol}>
                           <Text style={styles.permTitle}>{t('organizerStaff.canCheckIn')}</Text>
-                          <Text style={styles.permHelp}>{t('organizerStaff.canCheckInHelp')}</Text>
                         </View>
                         <Text style={styles.permAlways}>{t('common.yes')}</Text>
                       </View>
@@ -380,14 +375,11 @@ export default function OrganizerEventStaffScreen() {
                         <View style={styles.permRow}>
                           <View style={styles.permTextCol}>
                             <Text style={styles.permTitle}>{t('organizerStaff.canViewAttendees')}</Text>
-                            <Text style={styles.permHelp}>{t('organizerStaff.viewAttendeesHelp')}</Text>
                           </View>
                           <Switch
                             value={!!m.permissions?.viewAttendees}
                             onValueChange={(v) => toggleMemberPermission(m.id, v)}
                             disabled={busy || authLoading}
-                            trackColor={{ false: colors.surfaceMuted, true: colors.primary }}
-                            thumbColor={colors.white}
                           />
                         </View>
                       )}
@@ -398,10 +390,10 @@ export default function OrganizerEventStaffScreen() {
             </View>
 
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('organizerStaff.invitesTitle')}</Text>
-                {invites.length > 0 ? <Text style={styles.sectionCount}>{invites.length}</Text> : null}
-              </View>
+              <SectionHeader
+                title={t('organizerStaff.invitesTitle')}
+                trailing={invites.length > 0 ? <Text style={styles.sectionCount}>{invites.length}</Text> : undefined}
+              />
               {invites.length === 0 ? (
                 <EmptyState icon={Mail} title={t('organizerStaff.emptyInvites')} compact />
               ) : (
@@ -420,7 +412,7 @@ export default function OrganizerEventStaffScreen() {
                           <View style={styles.rightCol}>
                             <StatusChip status={state.key} label={state.label} />
                             {canRevoke ? (
-                              <TouchableOpacity
+                              <Touchable
                                 onPress={() => revokeInvite(inv.id)}
                                 style={[styles.dangerButton, authLoading ? styles.buttonDisabled : null]}
                                 disabled={authLoading}
@@ -428,7 +420,7 @@ export default function OrganizerEventStaffScreen() {
                                 accessibilityLabel={t('organizerStaff.revokeShort')}
                               >
                                 <Text style={styles.dangerButtonText}>{t('organizerStaff.revokeShort')}</Text>
-                              </TouchableOpacity>
+                              </Touchable>
                             ) : null}
                           </View>
                         }
@@ -447,14 +439,14 @@ export default function OrganizerEventStaffScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('organizerStaff.createInviteTitle')}</Text>
-              <TouchableOpacity
+              <Touchable
                 onPress={() => setShowInviteModal(false)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel={t('common.cancel')}
               >
                 <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
+              </Touchable>
             </View>
 
             <Text style={styles.label}>{t('organizerStaff.methodLabel')}</Text>
@@ -508,9 +500,6 @@ export default function OrganizerEventStaffScreen() {
               <Switch
                 value={viewAttendees}
                 onValueChange={setViewAttendees}
-                trackColor={{ false: colors.border, true: colors.text }}
-                thumbColor={colors.white}
-                ios_backgroundColor={colors.border}
               />
             </View>
 
@@ -538,38 +527,28 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: RADIUS.md,
     gap: 6,
   },
-  inviteButtonText: { color: colors.text, fontWeight: '700' },
+  inviteButtonText: { color: colors.text, fontSize: 15, fontWeight: '600' },
 
   buttonDisabled: { opacity: 0.6 },
 
-  notice: { marginBottom: 4 },
-
-  section: { marginTop: 16 },
+  section: { marginTop: 24 },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
   sectionCount: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
     color: colors.textSecondary,
-    backgroundColor: colors.surfaceRaised,
-    minWidth: 22,
-    textAlign: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: radius.chip,
-    overflow: 'hidden',
   },
 
   cardWrap: { marginBottom: SPACING.md },
@@ -584,7 +563,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   permTextCol: { flex: 1 },
   permTitle: { color: colors.text, fontWeight: '600', fontSize: 13 },
-  permHelp: { color: colors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 2 },
   permAlways: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
 
   dangerButton: {
@@ -593,7 +571,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderRadius: RADIUS.sm,
     backgroundColor: colors.errorLight,
   },
-  dangerButtonText: { color: colors.error, fontWeight: '700', fontSize: 12 },
+  dangerButtonText: { color: colors.error, fontWeight: '600', fontSize: 13 },
 
   modalOverlay: {
     flex: 1,
@@ -608,21 +586,19 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.surface,
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
 
-  label: { marginTop: 12, marginBottom: 6, fontWeight: '700', color: colors.text },
+  label: { marginTop: 16, marginBottom: 8, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  // Fill, not a hairline: one brightness step above the sheet.
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: 12,
     paddingVertical: 12,
+    fontSize: 15,
     color: colors.text,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surfaceRaised,
   },
 
   // SegmentedTabs pads itself horizontally; pull it back to the card edge.
@@ -638,7 +614,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     padding: 14,
   },
   toggleText: { flex: 1 },
-  toggleTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  toggleTitle: { color: colors.text, fontWeight: '600', fontSize: 15 },
   toggleHelp: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 },
 
   modalActions: { gap: 10, marginTop: 16 },

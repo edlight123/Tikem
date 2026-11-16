@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Text,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   View,
@@ -9,6 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing, type } from '../theme/tokens';
+import { Touchable } from './ui/Touchable';
 
 interface PrimaryButtonProps {
   label: string;
@@ -20,7 +20,7 @@ interface PrimaryButtonProps {
   /**
    * 'solid' (teal), 'outline' (teal text on transparent), or 'white' (solid
    * white pill, black label — the POSH primary that keeps teal off the CTA).
-   * Default stays 'solid' so existing call sites are unaffected.
+   * Default is 'white' (POSH: teal is a sparing accent, not the CTA).
    */
   variant?: 'solid' | 'outline' | 'white';
   /**
@@ -32,8 +32,8 @@ interface PrimaryButtonProps {
 }
 
 /**
- * The single primary call-to-action. Solid teal background, dark on-teal text,
- * full-width, large radius. The conversion moment — identical everywhere.
+ * The single primary call-to-action: a solid white button with black text by
+ * default (teal on request). Spring + haptic press via Touchable.
  */
 export default function PrimaryButton({
   label,
@@ -41,7 +41,7 @@ export default function PrimaryButton({
   disabled = false,
   loading = false,
   icon,
-  variant = 'solid',
+  variant = 'white',
   sticky = false,
   style,
 }: PrimaryButtonProps) {
@@ -54,9 +54,8 @@ export default function PrimaryButton({
   const spinnerColor = isOutline ? colors.teal : isWhite ? colors.onWhite : colors.onTeal;
 
   const button = (
-    <TouchableOpacity
+    <Touchable
       onPress={onPress}
-      activeOpacity={0.85}
       disabled={disabled || loading}
       style={[
         styles.button,
@@ -75,7 +74,7 @@ export default function PrimaryButton({
           </Text>
         </>
       )}
-    </TouchableOpacity>
+    </Touchable>
   );
 
   if (!sticky) return button;

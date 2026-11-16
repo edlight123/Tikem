@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { Touchable } from './ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -71,14 +72,13 @@ export default function PricePickerSheet({
         <View style={styles.handle} />
         <View style={styles.header}>
           <Text style={styles.title}>{t('filters.priceRange')}</Text>
-          <TouchableOpacity
+          <Touchable
             style={styles.closeBtn}
             onPress={onClose}
-            activeOpacity={0.8}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <X size={20} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         <Text style={styles.readout}>{readout}</Text>
@@ -156,7 +156,7 @@ const getStyles = (colors: any) =>
       justifyContent: 'space-between',
       marginBottom: 6,
     },
-    title: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+    title: { fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
     closeBtn: {
       width: 36,
       height: 36,
