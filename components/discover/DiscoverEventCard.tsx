@@ -29,9 +29,11 @@ interface DiscoverEventCardProps {
    * 27,000px scroll of one poster per screen. The feed keeps its posters.
    */
   rowOnPhone?: boolean
+  /** First cards of the feed: load the poster with the page. */
+  priority?: boolean
 }
 
-export function DiscoverEventCard({ event, rowOnPhone = false }: DiscoverEventCardProps) {
+export function DiscoverEventCard({ event, rowOnPhone = false, priority = false }: DiscoverEventCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(false)
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export function DiscoverEventCard({ event, rowOnPhone = false }: DiscoverEventCa
     <div className={`relative h-full ${rowOnPhone ? 'hidden min-[420px]:block' : ''}`}>
       <PosterCard
         imageUrl={event.banner_image_url ?? undefined}
+        priority={priority}
         title={event.title}
         priceLabel={priceLabel}
         venue={venue}

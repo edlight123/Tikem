@@ -14,8 +14,10 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { Check, MessageSquare, Search, Share2, UserPlus, Users, X } from 'lucide-react-native';
+import { Check, MessageSquare, Search, Share2, User, UserPlus, Users, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
+import { defaultAvatar } from '../lib/defaultAvatar';
+import { Image } from 'expo-image';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +35,7 @@ import {
 import { contactPhoneE164, matchedContactIds, openWhatsAppInvite, smsUrl } from '../lib/inviteLink';
 import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
 import type { ContactMatch } from '../types/social';
+import SectionHeader from './SectionHeader';
 import PersonAvatar from './PersonAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from './AppAlert';
@@ -54,6 +57,35 @@ export interface InviteEventInfo {
   title?: string | null;
   /** "Sat, Oct 24 · Place Boyer": goes into the shared message. */
   details?: string | null;
+}
+
+const WHATSAPP_GREEN = '#25D366';
+
+/** A real first letter ("Mom" → M), or null for "# Mom" / "09-Daana". */
+function firstLetter(name: string): string | null {
+  const m = cleanName(name).match(/^\p{L}/u);
+  return m ? m[0].toUpperCase() : null;
+}
+/** "# Mom" → "Mom", "09-Daana Henry" → "Daana Henry": address-book sort prefixes off. */
+function cleanName(name: string): string {
+  const cleaned = (name || '').replace(/^[^\p{L}]+/u, '').trim();
+  return cleaned || (name || '').trim();
+}
+/**
+ * "+15085550101" → "+1 508 555 0101", "+50937000001" → "+509 3700 0001",
+ * "+33612345678" → "+33 6 12 34 56 78". Display only; anything unrecognised
+ * is shown as the address book has it.
+ */
+function prettyPhone(raw: string): string {
+  const p = (raw || '').replace(/[^\d+]/g, '');
+  let m;
+  if ((m = p.match(/^\+1(\d{3})(\d{3})(\d{4})$/))) return `+1 ${m[1]} ${m[2]} ${m[3]}`;
+  if ((m = p.match(/^\+509(\d{4})(\d{4})$/))) return `+509 ${m[1]} ${m[2]}`;
+  if ((m = p.match(/^\+33(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/))) return `+33 ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]}`;
+  return raw;
+}
+function startsWithLetter(name: string): boolean {
+  return /^\p{L}/u.test((name || '').trim());
 }
 
 /** WhatsApp's glyph (the share row's first action). */
@@ -192,9 +224,11 @@ export function InviteFriendsSheet({
       people: contacts.matches
         .filter((m) => m.friendship !== 'friends' && m.friendship !== 'self')
         .filter((m) => !q || m.displayName.toLowerCase().includes(q)),
+      // Names that start with a letter first; "# Mom", "09-Daana" after.
       others: contacts.contacts
         .filter((c) => !matched.has(c.id))
         .filter((c) => !q || c.name.toLowerCase().includes(q))
+        .sort((a, b) => Number(!firstLetter(a.name)) - Number(!firstLetter(b.name)))
         .slice(0, MAX_CONTACT_ROWS),
     };
   }, [contacts, q]);
@@ -348,27 +382,29 @@ export function InviteFriendsSheet({
               </View>
             )}
 
+            {/* One slim row (owner, 2026-11-17: the three big tiles read
+                heavy): the label on the left, compact square actions right. */}
             <View style={styles.shareRow}>
+              <Text style={styles.shareRowLabel} numberOfLines={1}>
+                {t('invites.shareLinkRow')}
+              </Text>
               {(
                 [
-                  { via: 'whatsapp', label: t('invites.shareWhatsApp'), icon: <WhatsAppGlyph color={colors.text} /> },
-                  { via: 'sms', label: t('invites.shareMessages'), icon: <MessageSquare size={20} color={colors.text} /> },
-                  { via: 'more', label: t('invites.shareMore'), icon: <Share2 size={20} color={colors.text} /> },
+                  { via: 'whatsapp', label: t('invites.shareWhatsApp'), icon: <WhatsAppGlyph size={19} color={WHATSAPP_GREEN} /> },
+                  { via: 'sms', label: t('invites.shareMessages'), icon: <MessageSquare size={19} color={colors.text} /> },
+                  { via: 'more', label: t('invites.shareMore'), icon: <Share2 size={19} color={colors.text} /> },
                 ] as const
               ).map((a) => (
                 <TouchableOpacity
                   key={a.via}
-                  style={styles.shareTile}
+                  style={styles.shareBtn}
                   onPress={() => shareVia(a.via)}
                   disabled={!!busyKey}
-                  activeOpacity={0.8}
+                  activeOpacity={0.75}
                   accessibilityRole="button"
                   accessibilityLabel={a.label}
                 >
-                  <View style={styles.shareIcon}>
-                    {busyKey === `share:${a.via}` ? <ActivityIndicator size="small" color={colors.text} /> : a.icon}
-                  </View>
-                  <Text style={styles.shareLabel}>{a.label}</Text>
+                  {busyKey === `share:${a.via}` ? <ActivityIndicator size="small" color={colors.text} /> : a.icon}
                 </TouchableOpacity>
               ))}
             </View>
@@ -388,7 +424,11 @@ export function InviteFriendsSheet({
             </View>
 
             <ScrollView style={styles.list} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={styles.sectionLabel}>{t('invites.sectionFriends')}</Text>
+              {/* No Tikèm friends yet: skip the section rather than print a
+                  line saying so; the contacts below are the way in. */}
+              {friends !== null && !failed && !hasFriends ? null : (
+                <>
+              <SectionHeader title={t('invites.sectionFriends').toLowerCase()} />
               {friends === null ? (
                 <ActivityIndicator style={{ marginVertical: 20 }} color={colors.textSecondary} />
               ) : failed ? (
@@ -435,19 +475,29 @@ export function InviteFriendsSheet({
                   );
                 })
               )}
+                </>
+              )}
 
-              <Text style={[styles.sectionLabel, { marginTop: 22 }]}>{t('invites.sectionContacts')}</Text>
+              <View style={{ marginTop: 14 }}>
+                <SectionHeader title={t('invites.sectionContacts').toLowerCase()} />
+              </View>
               {contacts.kind === 'checking' || contacts.kind === 'loading' ? (
                 <ActivityIndicator style={{ marginVertical: 20 }} color={colors.textSecondary} />
               ) : contacts.kind === 'idle' || contacts.kind === 'denied' ? (
+                // Editorial invitation, not a boxed form: a small pile of the
+                // house silhouette, a serif line, one sentence, one button.
                 <View style={styles.connectCard}>
-                  <View style={styles.connectIcon}>
-                    <Users size={20} color={colors.text} />
+                  <View style={styles.connectPile}>
+                    {[0, 1, 2].map((i) => (
+                      <View key={i} style={[styles.connectPileItem, { marginLeft: i === 0 ? 0 : -12, zIndex: 3 - i }]}>
+                        <Image source={defaultAvatar(String(i))} style={styles.connectPileImg} />
+                      </View>
+                    ))}
                   </View>
-                  <Text style={styles.connectTitle}>{t('invites.contactsCardTitle')}</Text>
-                  {contacts.kind === 'denied' ? (
-                    <Text style={styles.connectBody}>{t('invites.contactsDenied')}</Text>
-                  ) : null}
+                  <Text style={styles.connectTitle}>{t('invites.contactsCardTitle').toLowerCase()}</Text>
+                  <Text style={styles.connectBody}>
+                    {contacts.kind === 'denied' ? t('invites.contactsDenied') : t('invites.contactsCardBody')}
+                  </Text>
                   <TouchableOpacity
                     style={styles.connectBtn}
                     onPress={() => (contacts.kind === 'denied' ? Linking.openSettings().catch(() => {}) : connectContacts())}
@@ -499,31 +549,41 @@ export function InviteFriendsSheet({
                     );
                   })}
                   {others.map((c) => (
-                    <View key={c.id} style={styles.row}>
+                    // The whole row invites; the square is the visible cue.
+                    <TouchableOpacity
+                      key={c.id}
+                      style={styles.row}
+                      onPress={() => inviteContact(c)}
+                      disabled={!!busyKey}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('invites.invite')} ${c.name}`}
+                    >
                       <View style={styles.initial}>
-                        <Text style={styles.initialText}>{(c.name || '?').charAt(0).toUpperCase()}</Text>
-                      </View>
-                      <Text style={styles.name} numberOfLines={1}>
-                        {c.name}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.rowBtn}
-                        onPress={() => inviteContact(c)}
-                        disabled={!!busyKey}
-                        activeOpacity={0.85}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${t('invites.invite')} ${c.name}`}
-                      >
-                        {busyKey === `contact:${c.id}` ? (
-                          <ActivityIndicator size="small" color="#000000" />
+                        {firstLetter(c.name) ? (
+                          <Text style={styles.initialText}>{firstLetter(c.name)}</Text>
                         ) : (
-                          <>
-                            <WhatsAppGlyph size={13} color="#000000" />
-                            <Text style={styles.rowBtnText}>{t('invites.invite')}</Text>
-                          </>
+                          <User size={18} color={colors.textSecondary} />
                         )}
-                      </TouchableOpacity>
-                    </View>
+                      </View>
+                      <View style={styles.contactText}>
+                        <Text style={styles.contactName} numberOfLines={1}>
+                          {cleanName(c.name)}
+                        </Text>
+                        {c.phone ? (
+                          <Text style={styles.contactSub} numberOfLines={1}>
+                            {prettyPhone(c.phone)}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.waSquare}>
+                        {busyKey === `contact:${c.id}` ? (
+                          <ActivityIndicator size="small" color={colors.text} />
+                        ) : (
+                          <WhatsAppGlyph size={18} color={WHATSAPP_GREEN} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
                   ))}
                 </>
               )}
@@ -680,17 +740,27 @@ const getStyles = (colors: any) =>
     goingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
     pile: { flexDirection: 'row' },
     goingText: { fontSize: 13, fontWeight: '600', color: colors.text },
-    shareRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
-    shareTile: {
-      flex: 1,
+    // One slim row: label + three compact square actions (4px, fills).
+    shareRow: {
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      marginTop: 18,
+      paddingLeft: 14,
+      paddingRight: 6,
+      height: 52,
+      borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
-      borderRadius: radius.lg,
-      paddingVertical: 14,
     },
-    shareIcon: { height: 22, alignItems: 'center', justifyContent: 'center' },
-    shareLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
+    shareRowLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+    shareBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.md,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     searchBox: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -751,18 +821,20 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
     },
     initialText: { color: colors.text, fontWeight: '700', fontSize: 15 },
+    // Quiet per-contact action: a raised fill with WhatsApp's own green
+    // mark. White is kept for the sheet's one primary action (the footer).
     rowBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      backgroundColor: colors.white,
+      backgroundColor: colors.surfaceRaised,
       borderRadius: radius.chip,
       paddingHorizontal: 14,
       height: 34,
       minWidth: 88,
     },
-    rowBtnText: { color: '#000000', fontSize: 13, fontWeight: '700' },
+    rowBtnText: { color: colors.text, fontSize: 13, fontWeight: '700' },
     rowBtnQuiet: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -775,33 +847,41 @@ const getStyles = (colors: any) =>
       minWidth: 88,
     },
     rowBtnQuietText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+    // Editorial card: fill, no outline; serif lowercase line like every
+    // section title; one full-width white action.
     connectCard: {
       backgroundColor: colors.surfaceRaised,
       borderRadius: radius.lg,
-      padding: 18,
-      marginTop: 6,
+      paddingHorizontal: 18,
+      paddingTop: 20,
+      paddingBottom: 18,
+      marginTop: 4,
     },
-    connectIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.md,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 12,
-    },
-    connectTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
-    connectBody: { fontSize: 15, color: colors.textSecondary, marginTop: 4, lineHeight: 20 },
+    connectPile: { flexDirection: 'row', marginBottom: 14 },
+    connectPileItem: { borderRadius: 18, borderWidth: 2, borderColor: colors.surfaceRaised },
+    connectPileImg: { width: 32, height: 32, borderRadius: 16 },
+    connectTitle: { fontFamily: font.serif, fontSize: 26, lineHeight: 30, color: colors.text },
+    connectBody: { fontSize: 15, color: colors.textSecondary, marginTop: 6, lineHeight: 21 },
     connectBtn: {
-      marginTop: 14,
-      alignSelf: 'flex-start',
+      marginTop: 18,
       backgroundColor: colors.white,
       borderRadius: radius.button,
-      paddingHorizontal: 18,
-      height: 42,
+      height: 46,
+      alignItems: 'center',
       justifyContent: 'center',
     },
     connectBtnText: { color: '#000000', fontSize: 15, fontWeight: '700' },
+    contactText: { flex: 1, minWidth: 0, justifyContent: 'center' },
+    contactName: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.text },
+    contactSub: { fontSize: 13, lineHeight: 17, color: colors.textTertiary || colors.textSecondary, marginTop: 1, fontVariant: ['tabular-nums'] },
+    waSquare: {
+      width: 38,
+      height: 38,
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     footer: {
       flexDirection: 'row',
       alignItems: 'center',

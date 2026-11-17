@@ -3755,6 +3755,7 @@ export default {
     summaryBought: "Bought tickets",
     friendsGoing: "{count} friends going",
     friendsGoingOne: "1 friend going",
+    shareLinkRow: "Share your invite link",
     shareWhatsApp: "WhatsApp",
     shareMessages: "Messages",
     shareMore: "More",

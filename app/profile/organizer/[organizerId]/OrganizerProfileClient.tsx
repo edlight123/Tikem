@@ -208,7 +208,10 @@ export default function OrganizerProfileClient({
               src={backdrop}
               alt=""
               fill
-              sizes="100vw"
+              // It is blurred to a wash, so a thumbnail looks identical and
+              // arrives far sooner than a full-width image (speed pass
+              // 2026-11-17: this was the page's main paint at ~1.7s).
+              sizes="96px"
               quality={40}
               priority
               className="scale-110 object-cover opacity-30 blur-2xl"

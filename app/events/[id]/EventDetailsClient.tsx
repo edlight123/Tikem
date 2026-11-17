@@ -159,9 +159,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               alt=""
               aria-hidden
               fill
-              sizes="100vw"
+              // Blurred to a wash: the smallest candidate looks identical, and
+              // no priority, so the sharp poster gets the bandwidth (same as
+              // MobileHero; speed pass 2026-11-17).
+              sizes="32px"
+              quality={20}
               className="object-cover scale-125 blur-3xl opacity-70"
-              priority
             />
             <div className="absolute inset-0 bg-gradient-to-b from-gray-950/45 via-gray-950/65 to-gray-950/90" />
           </div>

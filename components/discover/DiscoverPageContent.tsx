@@ -110,8 +110,10 @@ export function DiscoverPageContent({
   const renderFeed = (list: any[]) =>
     list.length > 0 ? (
       <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6">
-        {list.map((event) => (
-          <DiscoverEventCard key={event.id} event={event} />
+        {list.map((event, i) => (
+          // The first two are on screen at load: their posters are the
+          // page's main paint, so they download with it, not lazily.
+          <DiscoverEventCard key={event.id} event={event} priority={i < 2} />
         ))}
       </div>
     ) : null
