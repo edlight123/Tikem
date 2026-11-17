@@ -3742,6 +3742,7 @@ export default {
     summaryBought: "Achte tikè",
     friendsGoing: "{count} zanmi ap vini",
     friendsGoingOne: "1 zanmi ap vini",
+    shareLinkRow: "Pataje lyen envitasyon w",
     shareWhatsApp: "WhatsApp",
     shareMessages: "Mesaj",
     shareMore: "Plis",

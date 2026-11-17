@@ -7,6 +7,8 @@ import PosterImage from '@/components/ui/PosterImage'
 import { usePosterAccent } from '@/components/ui/usePosterAccent'
 
 interface PosterCardProps {
+  /** Above-the-fold card: fetch its poster with the page instead of lazily (speed pass 2026-11-17). */
+  priority?: boolean
   /** Portrait poster image. When absent, a teal→black gradient carries the title. */
   imageUrl?: string
   title: string
@@ -57,6 +59,7 @@ interface PosterCardProps {
  * />
  */
 export function PosterCard({
+  priority,
   imageUrl,
   title,
   priceLabel,
@@ -101,6 +104,7 @@ export function PosterCard({
             className="transition-transform duration-200 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             quality={78}
+            priority={priority}
             onError={() => setImgError(true)}
           />
         ) : (

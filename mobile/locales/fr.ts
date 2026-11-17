@@ -3774,6 +3774,7 @@ export default {
     summaryBought: "Ont acheté",
     friendsGoing: "{count} amis y vont",
     friendsGoingOne: "1 ami y va",
+    shareLinkRow: "Partager votre lien d'invitation",
     shareWhatsApp: "WhatsApp",
     shareMessages: "Messages",
     shareMore: "Plus",
