@@ -22,14 +22,20 @@ interface FollowButtonProps {
   onFollowChange?: (isFollowing: boolean) => void;
 }
 
+// Follow state per (viewer, organizer) for this session, so a page the
+// person has seen before draws the right button at once instead of a blank
+// box while the query runs (owner, 2026-11-17: skeletons on the event page).
+const followCache = new Map<string, boolean>();
+
 export default function FollowButton({ organizerId, style, compact = false, onFollowChange }: FollowButtonProps) {
   const { colors } = useTheme();
   const showAlert = useAppAlert();
   const styles = getStyles(colors);
   const { user, userProfile } = useAuth();
   const { t } = useI18n();
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `${user?.uid || ''}:${organizerId}`;
+  const [isFollowing, setIsFollowing] = useState(() => followCache.get(cacheKey) ?? false);
+  const [loading, setLoading] = useState(() => !followCache.has(cacheKey));
   const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
@@ -55,6 +61,7 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
         where('organizer_id', '==', organizerId)
       );
       const snapshot = await getDocs(followsQuery);
+      followCache.set(cacheKey, !snapshot.empty);
       setIsFollowing(!snapshot.empty);
     } catch (error) {
       console.error('Error checking follow status:', error);
@@ -90,6 +97,7 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
       }
 
       const newFollowingState = data.isFollowing;
+      followCache.set(cacheKey, !!newFollowingState);
       setIsFollowing(newFollowingState);
       onFollowChange?.(newFollowingState);
 
@@ -113,13 +121,9 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
     return null;
   }
 
-  if (loading) {
-    return (
-      <TouchableOpacity style={[styles.button, styles.loadingButton, style]} disabled>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </TouchableOpacity>
-    );
-  }
+  // While the first check runs, draw the real "Follow" button (taps wait),
+  // never a blank grey box that reads as a broken skeleton.
+  const checking = loading;
 
   if (compact) {
     return (
@@ -130,7 +134,7 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
           style,
         ]}
         onPress={handleToggleFollow}
-        disabled={toggling}
+        disabled={toggling || checking}
         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       >
         {toggling ? (
@@ -154,7 +158,7 @@ export default function FollowButton({ organizerId, style, compact = false, onFo
         style,
       ]}
       onPress={handleToggleFollow}
-      disabled={toggling}
+      disabled={toggling || checking}
     >
       {toggling ? (
         <ActivityIndicator size="small" color={isFollowing ? colors.text : '#000000'} />

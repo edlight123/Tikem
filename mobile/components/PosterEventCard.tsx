@@ -18,6 +18,7 @@ import { advertisedPrice } from '../lib/buyerPricing';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { font, radius } from '../theme/tokens';
 import type { BadgeStatus } from '../theme/badges';
+import { primeEventPreview } from '../lib/eventPreviewCache';
 
 interface PosterEventCardProps {
   event: any;
@@ -63,6 +64,8 @@ export default function PosterEventCard({
   posterInsetX = 0,
   userCity,
 }: PosterEventCardProps) {
+  // Opening this event is instant: the page paints from this copy (lib/eventPreviewCache).
+  primeEventPreview(event);
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);

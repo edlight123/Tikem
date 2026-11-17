@@ -14,6 +14,7 @@ import { resolveEventPricing } from '../lib/ticketPricing';
 import { radius, font } from '../theme/tokens';
 import WhitePillCTA from './WhitePillCTA';
 import VerifiedBadge from './VerifiedBadge';
+import { primeEventPreview } from '../lib/eventPreviewCache';
 
 
 interface DiscoverEventCardProps {
@@ -35,6 +36,8 @@ export default function DiscoverEventCard({
   onToggleSave,
   saved,
 }: DiscoverEventCardProps) {
+  // Opening this event is instant: the page paints from this copy (lib/eventPreviewCache).
+  primeEventPreview(event);
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);

@@ -62,6 +62,7 @@ import WhosGoing from '../components/WhosGoing';
 import SectionHeader from '../components/SectionHeader';
 import { guestlistVisibilityFrom } from '../lib/guestlistVisibility';
 import ContactOrganizerModal from '../components/ContactOrganizerModal';
+import { getEventPreview, primeEventPreview } from '../lib/eventPreviewCache';
 import ReportContentModal from '../components/ReportContentModal';
 import { useBlockedOrganizers } from '../lib/blockedOrganizers';
 import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
@@ -103,6 +104,36 @@ const HEADER_BAR = 52;
 // Dictionary key for the compact countdown prefix ("Starts in").
 const STARTS_IN_KEY = 'eventDetail.startsIn';
 
+/** Organizer display fields from its public profile (never PII). */
+function organizerFields(profile: any) {
+  return {
+    full_name: profile?.full_name || '',
+    // Organization brand overrides the personal name wherever the organizer
+    // is shown (falls back to full_name when unset).
+    organization_name: profile?.organization_name || '',
+    organization_logo: profile?.organization_logo || '',
+    is_verified: profile?.is_verified ?? false,
+  };
+}
+
+const toDateOrNull = (v: any) => (v?.toDate ? v.toDate() : v ? new Date(v) : null);
+
+/**
+ * One shape for the screen whether the data came from a list preview or the
+ * event document: Dates for the datetimes, and `users` from the organizer's
+ * profile when we have it (else whatever was already shown, else blanks).
+ */
+function normalizeEvent(data: any, profile: any | null, previousUsers?: any) {
+  return {
+    ...data,
+    start_datetime: toDateOrNull(data.start_datetime),
+    end_datetime: toDateOrNull(data.end_datetime),
+    users: profile
+      ? organizerFields(profile)
+      : previousUsers || data.users || organizerFields(null),
+  };
+}
+
 export default function EventDetailScreen({ route, navigation }: any) {
   const openAttendeeTab = useOpenAttendeeTab();
   const { eventId } = route.params;
@@ -142,8 +173,15 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const showAlert = useAppAlert();
-  const [event, setEvent] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  // Instant open (owner, 2026-11-17): paint from the copy the tapped card
+  // already had (lib/eventPreviewCache), then refresh from Firestore. `fresh`
+  // gates everything money-related (the buy bar) on the real document.
+  const [event, setEvent] = useState<any>(() => {
+    const preview = getEventPreview(eventId);
+    return preview ? normalizeEvent(preview, null) : null;
+  });
+  const [loading, setLoading] = useState(() => !getEventPreview(eventId));
+  const [fresh, setFresh] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -199,14 +237,14 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   // Animate floating bar entrance
   useEffect(() => {
-    if (event) {
+    if (event && fresh) {
       Animated.timing(floatingBarAnim, {
         toValue: 1,
         duration: 250,
         useNativeDriver: true,
       }).start();
     }
-  }, [event]);
+  }, [event, fresh]);
 
   // Once the event (and its is_password_protected flag) is loaded, check whether
   // the signed-in user already holds an access grant. Access proof is the mere
@@ -337,49 +375,40 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   const fetchEventDetails = async () => {
     try {
-      const eventDoc = await getDoc(doc(db, 'events', eventId));
-      if (eventDoc.exists()) {
-        const data = eventDoc.data();
-        
-        // Fetch organizer data
-        let organizerData = null;
-        if (data.organizer_id) {
-          try {
-            // H4: cross-user read of the organizer's SAFE public projection
-            // (not users/{uid}). Falls back to a placeholder below if the
-            // projection isn't backfilled yet.
-            const organizerDoc = await getDoc(doc(db, 'public_profiles', data.organizer_id));
-            if (organizerDoc.exists()) {
-              organizerData = organizerDoc.data();
-            }
-          } catch (err) {
+      // The organizer's public profile is read IN PARALLEL with the event when
+      // the preview already told us who it is (the common case); otherwise it
+      // follows, but the event paints first instead of waiting for both.
+      const knownOrganizer: string | undefined = getEventPreview(eventId)?.organizer_id;
+      const readProfile = (uid: string) =>
+        // H4: cross-user read of the organizer's SAFE public projection (not users/{uid}).
+        getDoc(doc(db, 'public_profiles', uid))
+          .then((d) => (d.exists() ? d.data() : null))
+          .catch((err) => {
             console.error('Error fetching organizer:', err);
-          }
+            return null;
+          });
+      const [eventDoc, earlyProfile] = await Promise.all([
+        getDoc(doc(db, 'events', eventId)),
+        knownOrganizer ? readProfile(knownOrganizer) : Promise.resolve(undefined),
+      ]);
+      if (eventDoc.exists()) {
+        const data: any = { id: eventDoc.id, ...eventDoc.data() };
+        primeEventPreview(data);
+        const sameOrganizer = earlyProfile !== undefined && data.organizer_id === knownOrganizer;
+        setEvent((prev: any) => normalizeEvent(data, sameOrganizer ? earlyProfile : null, prev?.users));
+        setFresh(true);
+        setLoading(false);
+        if (!sameOrganizer && data.organizer_id) {
+          const profile = await readProfile(data.organizer_id);
+          if (profile) setEvent((prev: any) => (prev ? { ...prev, users: organizerFields(profile) } : prev));
         }
-        
-        setEvent({ 
-          id: eventDoc.id, 
-          ...data,
-          start_datetime: data.start_datetime?.toDate ? data.start_datetime.toDate() : data.start_datetime ? new Date(data.start_datetime) : null,
-          end_datetime: data.end_datetime?.toDate ? data.end_datetime.toDate() : data.end_datetime ? new Date(data.end_datetime) : null,
-          users: organizerData ? {
-            full_name: organizerData.full_name || '',
-            // Organization brand overrides the personal name wherever the
-            // organizer is shown (falls back to full_name when unset).
-            organization_name: organizerData.organization_name || '',
-            organization_logo: organizerData.organization_logo || '',
-            is_verified: organizerData.is_verified ?? false
-          } : {
-            full_name: '',
-            organization_name: '',
-            organization_logo: '',
-            is_verified: false
-          }
-        });
+      } else {
+        setEvent(null);
       }
     } catch (error) {
       console.error('Error fetching event:', error);
-      showAlert(t('common.error'), t('eventDetail.loadError'));
+      // A preview on screen beats an error: only alert when there is nothing to show.
+      if (!getEventPreview(eventId)) showAlert(t('common.error'), t('eventDetail.loadError'));
     } finally {
       setLoading(false);
     }
@@ -1185,8 +1214,10 @@ export default function EventDetailScreen({ route, navigation }: any) {
         </View>
       </View>
 
-      {/* Floating Bottom CTA Pill Card */}
-      <Animated.View 
+      {/* Floating Bottom CTA Pill Card. Untappable until the fresh event
+          document has landed: a list preview never drives a purchase. */}
+      <Animated.View
+        pointerEvents={fresh ? 'auto' : 'none'}
         style={[
           styles.floatingBottomCard,
           {

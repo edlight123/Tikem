@@ -11,6 +11,7 @@ import { resolvePosterTheme } from '../lib/posterGradient';
 import { font } from '../theme/tokens';
 
 import { formatDateForLanguage } from '../lib/dates';
+import { primeEventPreviews } from '../lib/eventPreviewCache';
 
 interface Event {
   id: string;
@@ -36,6 +37,8 @@ const { width } = Dimensions.get('window');
 const POSTER_H = 420;
 
 export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarouselProps) {
+  // Opening this event is instant: the page paints from this copy (lib/eventPreviewCache).
+  primeEventPreviews(events);
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { t, language } = useI18n();
