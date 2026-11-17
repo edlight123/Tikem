@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 /**
  * MonCash Payment Integration for Haiti
  * 
@@ -74,14 +75,25 @@ let preferredTokenAttempt = 0
  * time: ~10s of "Continue to payment" on a cold path. firestore.rules deny
  * this collection to every client (default deny); only the Admin SDK reads it.
  */
-const SHARED_TOKEN_DOC = ['server_cache', 'moncash_gateway_token'] as const
+/**
+ * One shared doc PER MonCash mode and client: local dev runs MONCASH_MODE=sandbox
+ * against the same Firebase project, so a single fixed doc would let a sandbox
+ * token be served to production (audit 2026-11-17). The id carries the mode and
+ * a hash of the client id, never the id itself.
+ */
+function sharedTokenDocId(): string {
+  const mode = (process.env.MONCASH_MODE || 'sandbox').trim().toLowerCase()
+  const clientId = String(process.env.MONCASH_CLIENT_ID || '').trim()
+  const hash = createHash('sha256').update(clientId).digest('hex').slice(0, 16)
+  return `moncash_gateway_token_${mode}_${hash}`
+}
 /** A shared token must have at least this long left to be worth reusing. */
 const SHARED_TOKEN_MIN_LIFE_MS = 8_000
 
 async function readSharedToken(): Promise<{ token: string; expiresAt: number } | null> {
   try {
     const { adminDb } = await import('@/lib/firebase/admin')
-    const snap = await adminDb.collection(SHARED_TOKEN_DOC[0]).doc(SHARED_TOKEN_DOC[1]).get()
+    const snap = await adminDb.collection('server_cache').doc(sharedTokenDocId()).get()
     const d = snap.exists ? (snap.data() as any) : null
     if (d && typeof d.token === 'string' && typeof d.expiresAt === 'number' && d.expiresAt - Date.now() > SHARED_TOKEN_MIN_LIFE_MS) {
       return { token: d.token, expiresAt: d.expiresAt }
@@ -95,18 +107,26 @@ async function readSharedToken(): Promise<{ token: string; expiresAt: number } |
 function writeSharedToken(entry: { token: string; expiresAt: number }): void {
   import('@/lib/firebase/admin')
     .then(({ adminDb }) =>
-      adminDb.collection(SHARED_TOKEN_DOC[0]).doc(SHARED_TOKEN_DOC[1]).set({ ...entry, updated_at: Date.now() })
+      adminDb.collection('server_cache').doc(sharedTokenDocId()).set({ ...entry, updated_at: Date.now() })
     )
     .catch((e) => console.warn('[MonCash] shared token write failed', e))
 }
 
-/** Set when Digicel rejected the cached token: the next mint skips the shared copy (it is the same token). */
-let skipSharedToken = false
+/** Tokens Digicel rejected on this instance: never adopt one again from the shared doc. */
+const rejectedTokens = new Set<string>()
+/**
+ * Bumped on every rejection. A token fetch that started BEFORE the bump must
+ * not be joined or trusted by a retry after it (audit 2026-11-17: the retry
+ * could join an in-flight read and get the rejected token straight back).
+ */
+let tokenGeneration = 0
+let inFlightGeneration = -1
 
-/** Drop the cached token after a 401, here AND for the shared copy. */
+/** Drop the cached token after a 401: locally, and never re-adopt it from the shared copy. */
 function invalidateToken(): void {
+  if (cachedToken) rejectedTokens.add(cachedToken.token)
   cachedToken = null
-  skipSharedToken = true
+  tokenGeneration += 1
 }
 
 async function getAccessToken(): Promise<string> {
@@ -116,11 +136,13 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.token
   }
 
-  if (!tokenInFlight) {
-    tokenInFlight = (async () => {
-      const shared = skipSharedToken ? null : await readSharedToken()
-      skipSharedToken = false
-      if (shared) {
+  if (!tokenInFlight || inFlightGeneration !== tokenGeneration) {
+    const generation = tokenGeneration
+    inFlightGeneration = generation
+    const run = (async () => {
+      const shared = await readSharedToken()
+      // A rejected token (here, or a rejection that happened while we read) is never reused.
+      if (shared && !rejectedTokens.has(shared.token) && generation === tokenGeneration) {
         cachedToken = shared
         return shared.token
       }
@@ -128,8 +150,9 @@ async function getAccessToken(): Promise<string> {
       if (cachedToken) writeSharedToken(cachedToken)
       return token
     })().finally(() => {
-      tokenInFlight = null
+      if (tokenInFlight === run) tokenInFlight = null
     })
+    tokenInFlight = run
   }
   return tokenInFlight
 }
