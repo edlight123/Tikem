@@ -405,7 +405,9 @@ async function handleMonCashButtonReturn(request: Request): Promise<NextResponse
     // quantities, reserves inventory atomically, and stamps fee incidence from the
     // ORDER (so a fee passed on to the buyer is recorded as such). This handler used
     // to carry its own copy of all of that, which had drifted.
-    const gatewayTransactionId = transactionId || payment?.transNumber || payment?.transactionId || null
+    // The VERIFIED gateway answer first (payment audit, 2026-11-17): the query
+    // string is buyer-editable, so it only fills in when Digicel omits the id.
+    const gatewayTransactionId = payment?.transNumber || payment?.transactionId || transactionId || null
     const result = await fulfillPaidOrder({
       orderId,
       paymentMethod: normalizedPaymentMethod,

@@ -16,7 +16,6 @@ import { adminDb } from '@/lib/firebase/admin'
 import {
   buildTierSoldIncrements,
   convertSeatHold,
-  releaseInventoryReservation,
 } from '@/lib/tickets/inventory'
 import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { addTicketToEarnings } from '@/lib/earnings'
@@ -607,15 +606,11 @@ export async function fulfillPaidOrder(params: {
 
       if (insertResult.error) {
         console.error(`${logPrefix} failed to create ticket`, insertResult.error)
-        // Return the inventory we reserved (above) and release the claim so a later retry can
-        // re-reserve and re-attempt fulfillment for this paid order.
-        await releaseInventoryReservation({
-          reservationId,
-          eventId: String(pendingTx.event_id),
-          quantity: issuedQuantity,
-          tierIncrements,
-          logPrefix,
-        })
+        // Keep the seats: the tickets already written hold some of them, and the
+        // retry converts the same reservation idempotently, adopts the written
+        // tickets (deterministic ids) and writes only the rest. Releasing here
+        // let a written, scannable ticket's seat sell twice (audit, 2026-11-17).
+        // Only the claim is released, so the retry can run.
         await releaseOrderClaim(orderId)
         return { outcome: 'ticket_creation_failed', ticketId: null }
       }

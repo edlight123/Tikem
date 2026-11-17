@@ -523,6 +523,10 @@ export async function flagRepeatedPayoutFailures(params: {
         {
           status: 'pending',
           reason: REPEATED_FAILURE_REASON,
+          // Needs a fresh decision: an earlier approval no longer counts.
+          consumedAt: null,
+          approvedAmountMinor: null,
+          approvedUntil: null,
           previousResolution: {
             status: existing.status || null,
             resolvedAt: existing.resolvedAt || null,

@@ -168,14 +168,19 @@ export async function GET() {
     }
 
     // An abandoned `processing` claim may have died AFTER issuing some tickets.
-    // Re-running fulfilment would issue a second full set, so if any ticket already
-    // carries this payment, leave the order for a human instead.
+    // Tickets issued since 2026-11-17 have ids derived from the order (mm_…,
+    // lib/tickets/fulfillment orderTicketId): a re-run ADOPTS them and issues
+    // only the missing ones, so those orders are finished here. Only a ticket
+    // from the old random-id pipeline means a re-run could issue a second set;
+    // that order is left for a human.
     if (kind === 'processing') {
       const paymentIds = Array.from(new Set([orderId, payment.transactionId].filter(Boolean))) as string[]
       let alreadyIssued = false
       for (const pid of paymentIds) {
-        const { data: issued } = await supabase.from('tickets').select('id').eq('payment_id', pid).limit(1)
-        if (Array.isArray(issued) && issued.length > 0) alreadyIssued = true
+        const { data: issued } = await supabase.from('tickets').select('id').eq('payment_id', pid)
+        if (Array.isArray(issued) && issued.some((t: any) => !String(t?.id || '').startsWith('mm_'))) {
+          alreadyIssued = true
+        }
       }
       if (alreadyIssued) {
         summary.needsReview += 1

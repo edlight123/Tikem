@@ -129,6 +129,20 @@ export async function GET(request: Request) {
         return new NextResponse('MonCash is not configured', { status: 500 })
       }
 
+      // Re-opened checkout (back button, a second tap, a refreshed WebView): send
+      // the buyer back to the payment Digicel already created for this order
+      // while it is still open, instead of creating a second one for the same
+      // order (payment audit, 2026-11-17).
+      const openRedirect = String((pending as any).moncash_gateway_redirect_url || '')
+      const openUntil = Date.parse(String((pending as any).moncash_token_expires_at || ''))
+      if (openRedirect.startsWith('https://') && Number.isFinite(openUntil) && openUntil - Date.now() > 90_000) {
+        console.info('[moncash_button] checkout: reusing the open gateway payment', { orderHash })
+        const reused = NextResponse.redirect(openRedirect, 303)
+        reused.headers.set('Cache-Control', 'no-store')
+        setCorrelationCookies(reused)
+        return reused
+      }
+
       const gatewayStart = Date.now()
       const { redirectUrl, token, expiresAt } = await createMonCashGatewayPayment({ amount, orderId })
       // gatewayMs: Digicel token + CreatePayment, the part the buyer waits on
@@ -154,6 +168,7 @@ export async function GET(request: Request) {
               moncash_button_token: token,
               moncash_button_token_variants: buildTokenVariants(token),
               moncash_token_expires_at: expiresAt,
+              moncash_gateway_redirect_url: redirectUrl,
             })
             .eq('order_id', orderId)
         } catch {
