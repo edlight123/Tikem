@@ -49,7 +49,7 @@ const nextConfig = {
   // jsPDF renders the Digicel prefunding letter server-side. Load its own node
   // build at runtime instead of bundling it (its optional browser deps,
   // html2canvas/canvg/dompurify, are never needed on the server).
-  serverExternalPackages: ['jspdf'],
+  serverExternalPackages: ['jspdf', 'exceljs'],
 
   // Performance optimizations
   experimental: {

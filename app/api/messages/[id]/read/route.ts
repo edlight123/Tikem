@@ -8,8 +8,8 @@
  */
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { getThreadForViewer } from '@/lib/messages/threadViewer'
 import {
-  getThreadForParticipant,
   markThreadRead,
   markThreadReadByAttendee,
 } from '@/lib/organizer-messages'
@@ -30,7 +30,7 @@ export async function POST(
       )
     }
 
-    const record = await getThreadForParticipant(threadId, user.id)
+    const record = await getThreadForViewer(threadId, user.id)
     if (!record) {
       return NextResponse.json(
         { error: 'Message not found.', code: 'thread_not_found' },

@@ -99,8 +99,16 @@ export interface OrganizerMessageReply {
   id: string
   body: string
   author_role: AuthorRole
+  /** What the ATTENDEE sees: the organization's name for every team reply. */
   author_name: string
   created_at: string | null
+  /**
+   * INTERNAL, organizer side only: which team member wrote an organizer reply
+   * (their uid, and the first name the team sees). Stripped from everything an
+   * attendee receives: externally the org answers, never a person.
+   */
+  author_id?: string
+  sent_by?: string
 }
 
 export interface OrganizerMessageThread {
@@ -121,6 +129,10 @@ export interface OrganizerMessageThread {
   unread: boolean
   /** Organizer replies AND attendee follow-ups, oldest first. */
   replies: OrganizerMessageReply[]
+  /** The event's poster (inbox thumbnail). */
+  event_poster?: string | null
+  /** The attendee's public profile photo, when they have one. Never PII. */
+  sender_photo?: string | null
 }
 
 function toIso(value: unknown): string | null {
@@ -159,6 +171,47 @@ function mapReply(doc: QueryDocumentSnapshot): OrganizerMessageReply {
     author_role: role,
     author_name: String(d.author_name || (role === 'attendee' ? 'An attendee' : 'The organizer')),
     created_at: toIso(d.created_at),
+    ...(role === 'organizer' && d.author_id ? { author_id: String(d.author_id) } : {}),
+  }
+}
+
+/**
+ * First names of the team members who wrote replies, for the ORGANIZER side
+ * only ("Marie" under a teammate's bubble, "You" for your own). Public profile
+ * name first, then the users doc; never email or phone.
+ */
+async function teamNames(ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  const unique = Array.from(new Set(ids.filter(Boolean)))
+  if (!unique.length) return out
+  try {
+    const [pub, users] = await Promise.all([
+      adminDb.getAll(...unique.map((id) => adminDb.collection('public_profiles').doc(id))),
+      adminDb.getAll(...unique.map((id) => adminDb.collection('users').doc(id))),
+    ])
+    const fromUsers = new Map<string, string>()
+    for (const u of users as any[]) {
+      if (u?.exists) fromUsers.set(u.id, String(u.data()?.full_name || u.data()?.display_name || '').trim())
+    }
+    for (const p of pub as any[]) {
+      const full = (p?.exists ? String(p.data()?.full_name || '').trim() : '') || fromUsers.get(p.id) || ''
+      const first = full.split(/\s+/)[0] || ''
+      if (first) out.set(p.id, first)
+    }
+  } catch (error) {
+    console.warn('organizer-messages: team name lookup failed', error)
+  }
+  return out
+}
+
+/** Label every organizer reply with the teammate who wrote it (organizer side). */
+async function labelTeamReplies(replies: OrganizerMessageReply[]): Promise<void> {
+  const names = await teamNames(replies.map((r) => r.author_id || ''))
+  for (const r of replies) {
+    if (r.author_role === 'organizer' && r.author_id) {
+      const name = names.get(r.author_id)
+      if (name) r.sent_by = name
+    }
   }
 }
 
@@ -236,6 +289,41 @@ export async function listThreadsForOrganizer(options: {
       return mapThread(doc.id, data, replies)
     })
   )
+
+  // Posters and public profile photos for the inbox rows: one batched read per
+  // collection for the whole page, best effort (a row without either still
+  // reads fine; the app falls back to the default silhouette).
+  try {
+    const eventIds = Array.from(new Set(threads.map((t) => t.event_id).filter(Boolean)))
+    const senderIds = Array.from(
+      new Set(snap.docs.map((d: QueryDocumentSnapshot) => String(d.data().sender_id || '')).filter(Boolean))
+    ) as string[]
+    const [events, profiles] = await Promise.all([
+      eventIds.length ? adminDb.getAll(...eventIds.map((id) => adminDb.collection('events').doc(id))) : [],
+      senderIds.length ? adminDb.getAll(...senderIds.map((id) => adminDb.collection('public_profiles').doc(id))) : [],
+    ])
+    const posters = new Map<string, string>()
+    for (const e of events as any[]) {
+      const url = e?.exists ? String(e.data()?.banner_image_url || e.data()?.cover_image_url || '').trim() : ''
+      if (url) posters.set(e.id, url)
+    }
+    const photos = new Map<string, string>()
+    for (const p of profiles as any[]) {
+      const url = p?.exists ? String(p.data()?.photo_url || '').trim() : ''
+      if (url) photos.set(p.id, url)
+    }
+    const senderOf = new Map<string, string>(
+      snap.docs.map((d: QueryDocumentSnapshot) => [d.id, String(d.data().sender_id || '')] as [string, string])
+    )
+    for (const t of threads) {
+      t.event_poster = posters.get(t.event_id) ?? null
+      t.sender_photo = photos.get(senderOf.get(t.id) || '') ?? null
+    }
+  } catch (error) {
+    console.warn('organizer-messages: inbox art lookup failed', error)
+  }
+
+  await labelTeamReplies(threads.flatMap((t) => t.replies))
 
   return threads.sort((a, b) => {
     const at = a.last_activity_at ? Date.parse(a.last_activity_at) : 0
@@ -323,6 +411,18 @@ async function eventPoster(eventId: string): Promise<string | null> {
   }
 }
 
+/** A user's public profile photo (public_profiles only, never PII), or null. */
+async function publicPhoto(userId: string): Promise<string | null> {
+  if (!userId) return null
+  try {
+    const snap = await adminDb.collection('public_profiles').doc(userId).get()
+    const url = String((snap.exists && (snap.data() as any)?.photo_url) || '').trim()
+    return url || null
+  } catch {
+    return null
+  }
+}
+
 /** One message of a conversation as either participant sees it. */
 export type ConversationMessage = OrganizerMessageReply
 
@@ -345,6 +445,8 @@ export interface ConversationView {
   awaiting_organizer: boolean
   /** Opening message first, then every reply in order. */
   messages: ConversationMessage[]
+  /** The OTHER side's public profile photo (the attendee for an organizer viewer, the organizer for an attendee). */
+  other_photo?: string | null
 }
 
 /** The full conversation for one of its participants. */
@@ -353,15 +455,26 @@ export async function buildConversationView(
 ): Promise<ConversationView> {
   const { data } = record
   const replyCount = typeof data.reply_count === 'number' ? data.reply_count : 0
-  const [replies, poster] = await Promise.all([
+  const otherId = String((record.role === 'organizer' ? data.sender_id : data.organizer_id) || '')
+  const [replies, poster, otherPhoto] = await Promise.all([
     replyCount > 0 ? loadReplies(record.id) : Promise.resolve([] as OrganizerMessageReply[]),
     eventPoster(String(data.event_id || '')),
+    publicPhoto(otherId),
   ])
   const attendeeName = String(data.sender_name || 'An attendee')
   const organizerName =
     String(data.organizer_name || '').trim() ||
     [...replies].reverse().find((r) => r.author_role === 'organizer')?.author_name ||
     ''
+  if (record.role === 'organizer') {
+    await labelTeamReplies(replies)
+  } else {
+    // The attendee hears from the org, never from a named team member.
+    for (const r of replies) {
+      delete r.author_id
+      delete r.sent_by
+    }
+  }
   const opener: ConversationMessage = {
     id: 'opening',
     body: String(data.message || ''),
@@ -383,6 +496,7 @@ export async function buildConversationView(
     closed: replyCount >= MAX_REPLIES_PER_THREAD,
     awaiting_organizer: attendeeStreak(data) >= MAX_ATTENDEE_STREAK,
     messages: [opener, ...replies],
+    other_photo: otherPhoto,
   }
 }
 

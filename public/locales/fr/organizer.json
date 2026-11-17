@@ -1,4 +1,10 @@
 {
+  "exports": {
+    "pdf": "PDF",
+    "excel": "Excel",
+    "group": "Exporter",
+    "failed": "Échec de l’export"
+  },
   "event_tools": {
     "col_attendee": "Participant",
     "col_status": "Statut",
@@ -950,7 +956,7 @@
     "email_verification": "Vérification par e-mail",
     "new_bank_needs_verification_long": "L'ajout d'un nouveau compte bancaire nécessite une vérification par e-mail. Le nom du titulaire doit correspondre à votre nom d'organisateur.",
     "available_for_withdrawal": "Disponible au retrait :",
-    "download_audit_csv": "Télécharger l'audit (CSV)",
+    "sales_audit": "Audit des ventes",
     "moncash_phone_number": "Numéro de téléphone MonCash",
     "save_second_bank": "Enregistrer comme deuxième compte bancaire",
     "prefunding_instant_note": "Ce retrait sera envoyé instantanément grâce au préfinancement de la plateforme.",
@@ -1011,7 +1017,6 @@
     "check_in": "Enregistrement",
     "checked_in": "Enregistré",
     "email_all": "Envoyer à tous",
-    "export_csv": "Exporter en CSV",
     "not_checked_in": "Non enregistré",
     "pending": "En attente",
     "price_paid": "Prix payé",
@@ -1691,7 +1696,6 @@
     "payout_history_title": "historique des versements",
     "payout_history_desc": "Les derniers retraits de cette organisation.",
     "payout_history_empty": "Aucun versement pour l’instant.",
-    "export_csv": "Exporter en CSV",
     "method_bank": "Virement bancaire",
     "method_moncash": "MonCash",
     "status_completed": "Payé",

@@ -16,6 +16,7 @@ import { buildEventJsonLd, serializeJsonLd } from './eventJsonLd'
 import { CANONICAL_SITE_URL } from '@/lib/site-url'
 import { cookies } from 'next/headers'
 import { intlLocaleFor } from '@/lib/dateLocale'
+import { marketTimezone } from '@/lib/notifications/policy'
 import { ticketScarcity, isUrgent } from '@/lib/ticketScarcity'
 import { isSocialFlagOn } from '@/lib/social/flags'
 
@@ -46,12 +47,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The og:title/description language follows the visitor's cookie-set language,
   // same signal app/layout.tsx uses to SSR the rest of the page in fr/ht.
   const lang = (await cookies()).get('i18nextLng')?.value?.slice(0, 2)
-  const eventDate = new Date(event.start_datetime).toLocaleDateString(intlLocaleFor(lang), {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  // The one line under the share card (owner, 2026-11-17: poster first, text
+  // kept to a minimum): "Tue, Dec 29 · Port-au-Prince", in the event's own
+  // timezone. The event's long description stays on the page, not the preview.
+  const tz =
+    (typeof event.timezone === 'string' && event.timezone) || marketTimezone(event.country) || 'America/New_York'
+  let shortDate = ''
+  try {
+    const d = new Date(event.start_datetime)
+    if (!isNaN(d.getTime())) {
+      shortDate = d.toLocaleDateString(intlLocaleFor(lang), { weekday: 'short', month: 'short', day: 'numeric', timeZone: tz })
+    }
+  } catch {
+    shortDate = ''
+  }
+  const shareLine = [shortDate, event.city || event.venue_name].filter(Boolean).join(' · ')
 
   // NOTE: no `images` here, deliberately. An explicit openGraph.images OVERRIDES
   // the opengraph-image.tsx file convention, and this used to point straight at
@@ -67,7 +77,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     alternates: { canonical: `/events/${id}` },
     openGraph: {
       title: event.title,
-      description: event.description || `Join us for ${event.title}`,
+      description: shareLine || undefined,
       type: 'website',
       siteName: 'Tikèm',
       url: `/events/${id}`,
@@ -75,7 +85,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     twitter: {
       card: 'summary_large_image',
       title: event.title,
-      description: event.description || `Join us for ${event.title}`,
+      description: shareLine || undefined,
     },
   }
 }

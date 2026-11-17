@@ -8,9 +8,16 @@ import { getPlatformSettings } from '@/lib/admin/platform-settings'
 import { fixedFeeMinorFor, locationFeesForCountry } from '@/types/platform-settings'
 import { defaultCurrencyForCountry } from '@/lib/country-support'
 import { ticketFeeIncidence } from '@/lib/payouts/fee-incidence'
-import { csvRow } from '@/lib/csv'
+import { isoDay, parseExportFormat } from '@/lib/exports/fileName'
+import { EXPORT_LABELS } from '@/lib/exports/labels'
+import { eventHeader } from '@/lib/exports/eventHeader'
+import { loadEventArt } from '@/lib/exports/eventArt'
+import { exportResponse } from '@/lib/exports/respond'
+import type { ExportReport, ExportSection } from '@/lib/exports/types'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
@@ -49,8 +56,8 @@ function centsFromMajor(maybeMajor: unknown): number {
   return Math.round(value * 100)
 }
 
-function majorFromCents(cents: number): string {
-  return (Math.round(cents) / 100).toFixed(2)
+function majorFromCents(cents: number): number {
+  return Math.round(cents) / 100
 }
 
 type TicketRow = {
@@ -100,6 +107,8 @@ export async function GET(
   if (mode !== 'full' && mode !== 'summary') {
     return adminError('Invalid mode', 400, 'mode must be full or summary')
   }
+  const format = parseExportFormat(url.searchParams.get('format') || 'xlsx')
+  if (!format) return adminError('Invalid format', 400, 'format must be xlsx or pdf')
 
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
   if (!eventDoc.exists) return adminError('Event not found', 404)
@@ -264,34 +273,8 @@ export async function GET(
 
     const chargedTotalsString = Array.from(chargedTotalsByCurrency.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([cur, cents]) => `${cur} ${majorFromCents(cents)}`)
+      .map(([cur, cents]) => `${cur} ${majorFromCents(cents).toFixed(2)}`)
       .join(' | ')
-
-    const headers = [
-      'eventId',
-      'eventTitle',
-      'eventCurrency',
-      'ticketsCount',
-      'paymentCount',
-      'grossEventAmount',
-      'platformFeeAmount',
-      'processingFeeAmount',
-      'organizerNetAmount',
-      'chargedTotals',
-    ]
-
-    const row = [
-      eventId,
-      eventTitle,
-      eventCurrency,
-      tickets.length,
-      groups.size,
-      majorFromCents(grossEventTotal),
-      majorFromCents(platformFeeTotal),
-      majorFromCents(processingFeeTotal),
-      majorFromCents(netTotal),
-      chargedTotalsString,
-    ]
 
     await logAdminAction({
       action: 'event.export_financials',
@@ -299,20 +282,35 @@ export async function GET(
       adminEmail: user.email || '',
       resourceId: eventId,
       resourceType: 'event',
-      details: { mode: 'summary', ticketsCount: tickets.length, paymentCount: groups.size },
+      details: { mode: 'summary', format, ticketsCount: tickets.length, paymentCount: groups.size },
     })
 
-    const csv = [csvRow(headers), csvRow(row)].join('\n')
-    const filename = `event_${eventId}_summary_${new Date().toISOString().split('T')[0]}.csv`
+    const m = (cents: number) => ({ amount: majorFromCents(cents), currency: eventCurrency })
+    const summarySection: ExportSection = {
+      name: 'Summary',
+      columns: [
+        { key: 'item', header: 'Item', width: 30 },
+        { key: 'value', header: 'Amount', kind: 'money', width: 18 },
+        { key: 'detail', header: 'Detail', width: 40 },
+      ],
+      rows: [
+        { item: 'Gross (event currency)', value: m(grossEventTotal), detail: '' },
+        { item: 'Platform fee', value: m(platformFeeTotal), detail: `${eventCountry} market terms` },
+        { item: 'Processing fee (absorbed by Tikèm)', value: m(processingFeeTotal), detail: 'Reported for the books, not deducted' },
+        { item: 'Organizer net', value: m(netTotal), detail: '' },
+        { item: 'Charged totals', value: null, detail: chargedTotalsString },
+      ],
+    }
 
-    return new NextResponse(csv, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': 'no-store',
-      },
-    })
+    return exportResponse(
+      await adminReport(event, eventId, 'Financial summary', [summarySection], [
+        { label: 'Tickets', value: String(tickets.length) },
+        { label: 'Payments', value: String(groups.size) },
+        { label: 'Organizer net', value: `${majorFromCents(netTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${eventCurrency}` },
+      ]),
+      format,
+      { title: eventTitle || eventId, label: 'Financial summary', day: isoDay(new Date()) }
+    )
   }
 
   // Full export: allocate per-payment fees down to ticket rows proportionally.
@@ -356,52 +354,51 @@ export async function GET(
     }
   }
 
-  const headers = [
-    'ticketId',
-    'status',
-    'purchasedAt',
-    'attendeeId',
-    'attendeeName',
-    'attendeeEmail',
-    'tierId',
-    'tierName',
-    'paymentId',
-    'paymentMethod',
-    'eventCurrency',
-    'grossEventAmount',
-    'chargedCurrency',
-    'chargedAmount',
-    'fxRate',
-    'platformFeeAmount',
-    'processingFeeAmount',
-    'organizerNetAmount',
-  ]
-
-  const rows = tickets
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((t) => {
-      const alloc = allocationsByTicketId.get(t.id) || { platformFee: 0, processingFee: 0, organizerNet: 0 }
-      return [
-        t.id,
-        t.status,
-        t.purchasedAtIso,
-        t.attendeeId,
-        t.attendeeName,
-        t.attendeeEmail,
-        t.tierId,
-        t.tierName,
-        t.paymentId,
-        t.paymentMethod,
-        eventCurrency,
-        majorFromCents(t.grossEventCents),
-        t.chargedCurrency,
-        majorFromCents(t.chargedAmountCents),
-        t.fxRate ?? '',
-        majorFromCents(alloc.platformFee),
-        majorFromCents(alloc.processingFee),
-        majorFromCents(alloc.organizerNet),
-      ]
-    })
+  const fullSection: ExportSection = {
+    name: 'Tickets',
+    totals: true,
+    columns: [
+      { key: 'purchasedAt', header: 'Purchased', kind: 'datetime' },
+      { key: 'attendeeName', header: 'Attendee', width: 22 },
+      { key: 'attendeeEmail', header: 'Email', width: 26, pdf: false },
+      { key: 'tierName', header: 'Ticket type', width: 16 },
+      { key: 'status', header: 'Status', width: 10, pdf: false },
+      { key: 'paymentMethod', header: 'Method', width: 12 },
+      { key: 'grossEventAmount', header: `Gross (${eventCurrency})`, kind: 'money', currency: eventCurrency, total: true },
+      { key: 'chargedAmount', header: 'Charged', kind: 'money' },
+      { key: 'fxRate', header: 'FX rate', kind: 'number', width: 9 },
+      { key: 'platformFeeAmount', header: 'Platform fee', kind: 'money', currency: eventCurrency, total: true },
+      { key: 'processingFeeAmount', header: 'Processing (absorbed)', kind: 'money', currency: eventCurrency, total: true },
+      { key: 'organizerNetAmount', header: 'Organizer net', kind: 'money', currency: eventCurrency, total: true },
+      { key: 'ticketId', header: 'Ticket ID', width: 22, pdf: false },
+      { key: 'attendeeId', header: 'Attendee ID', width: 22, pdf: false },
+      { key: 'tierId', header: 'Tier ID', width: 16, pdf: false },
+      { key: 'paymentId', header: 'Payment ID', width: 24, pdf: false },
+    ],
+    rows: tickets
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((t) => {
+        const alloc = allocationsByTicketId.get(t.id) || { platformFee: 0, processingFee: 0, organizerNet: 0 }
+        return {
+          ticketId: t.id,
+          status: t.status,
+          purchasedAt: t.purchasedAtIso || null,
+          attendeeId: t.attendeeId,
+          attendeeName: t.attendeeName,
+          attendeeEmail: t.attendeeEmail,
+          tierId: t.tierId,
+          tierName: t.tierName,
+          paymentId: t.paymentId,
+          paymentMethod: t.paymentMethod,
+          grossEventAmount: majorFromCents(t.grossEventCents),
+          chargedAmount: { amount: majorFromCents(t.chargedAmountCents), currency: t.chargedCurrency || eventCurrency },
+          fxRate: t.fxRate ?? null,
+          platformFeeAmount: majorFromCents(alloc.platformFee),
+          processingFeeAmount: majorFromCents(alloc.processingFee),
+          organizerNetAmount: majorFromCents(alloc.organizerNet),
+        }
+      }),
+  }
 
   await logAdminAction({
     action: 'event.export_financials',
@@ -409,18 +406,40 @@ export async function GET(
     adminEmail: user.email || '',
     resourceId: eventId,
     resourceType: 'event',
-    details: { mode: 'full', ticketsCount: tickets.length, paymentCount: groups.size },
+    details: { mode: 'full', format, ticketsCount: tickets.length, paymentCount: groups.size },
   })
 
-  const csv = [csvRow(headers), ...rows.map(csvRow)].join('\n')
-  const filename = `event_${eventId}_financials_${new Date().toISOString().split('T')[0]}.csv`
+  return exportResponse(
+    await adminReport(event, eventId, 'Financials', [fullSection], [
+      { label: 'Tickets', value: String(tickets.length) },
+      { label: 'Payments', value: String(groups.size) },
+    ]),
+    format,
+    { title: eventTitle || eventId, label: 'Financials', day: isoDay(new Date()) }
+  )
+}
 
-  return new NextResponse(csv, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-store',
-    },
-  })
+/** The admin export's header: the event's own header, English, staff-facing. */
+async function adminReport(
+  event: Record<string, any>,
+  eventId: string,
+  reportLabel: string,
+  sections: ExportSection[],
+  stats: ExportReport['stats']
+): Promise<ExportReport> {
+  const head = eventHeader(event, 'en')
+  const art = await loadEventArt(event)
+  return {
+    title: head.title || eventId,
+    reportLabel,
+    subtitle: [...head.subtitle, `Event ${eventId}`],
+    organizerName: head.organizerName,
+    tone: art.tone,
+    poster: art.poster,
+    stats,
+    sections,
+    locale: 'en-US',
+    timeZone: head.timeZone,
+    labels: EXPORT_LABELS.en,
+  }
 }

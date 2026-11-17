@@ -9,6 +9,8 @@ import { useToast } from '@/components/ui/Toast'
 import { ConsoleButton, ConsoleState, consoleTone } from '@/components/admin/console'
 import { AdminReportsPanel } from './AdminReportsPanel'
 import { EMPTY_VALUE } from '@/lib/format'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadExport } from '@/lib/exports/download'
 
 // Guard against missing/malformed dates: date-fns `format` throws
 // "RangeError: Invalid time value" on an Invalid Date, which would crash the
@@ -65,7 +67,6 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
   const { showToast } = useToast()
   const [reason, setReason] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isExporting, setIsExporting] = useState<'full' | 'summary' | null>(null)
 
   if (!isOpen || !event) return null
 
@@ -96,35 +97,15 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
     setShowDeleteConfirm(false)
   }
 
-  const downloadCsv = async (mode: 'full' | 'summary') => {
-    try {
-      setIsExporting(mode)
-      const res = await fetch(`/api/admin/events/${encodeURIComponent(event.id)}/export?mode=${mode}`, {
-        method: 'GET',
-      })
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(text || `Export failed (${res.status})`)
-      }
-
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `event_${event.id}_${mode}_financials_${new Date().toISOString().split('T')[0]}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e: any) {
-      showToast({
-        type: 'error',
-        title: 'Action failed',
-        message: e?.message || 'Failed to download CSV',
-      })
-    } finally {
-      setIsExporting(null)
-    }
-  }
+  // Financial exports (Excel or PDF), rendered server-side with the event's header.
+  const exportFinancials = (mode: 'full' | 'summary') => (format: 'pdf' | 'xlsx') =>
+    downloadExport(
+      `/api/admin/events/${encodeURIComponent(event.id)}/export?mode=${mode}&format=${format}`,
+      undefined,
+      `event_${event.id}_${mode}.${format}`
+    )
+  const exportFailed = (e: any) =>
+    showToast({ type: 'error', title: 'Export failed', message: e?.message || 'Could not build the file' })
 
   return (
     <>
@@ -364,21 +345,15 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction, onRepo
             {event.featured ? t('admin.unfeature') : t('admin.feature')}
           </button>
 
-          <div className="flex items-center gap-2">
-            <ConsoleButton
-              onClick={() => downloadCsv('full')}
-              disabled={isExporting !== null}
-              className="flex-1"
-            >
-              {isExporting === 'full' ? 'Downloading…' : 'Download Financials CSV'}
-            </ConsoleButton>
-            <ConsoleButton
-              onClick={() => downloadCsv('summary')}
-              disabled={isExporting !== null}
-              className="flex-1"
-            >
-              {isExporting === 'summary' ? 'Downloading…' : 'Download Summary CSV'}
-            </ConsoleButton>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[13px] font-semibold text-console-mut">Financials (per ticket)</span>
+              <ExportButtons variant="console" onExport={exportFinancials('full')} onError={exportFailed} labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export financials' }} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[13px] font-semibold text-console-mut">Summary</span>
+              <ExportButtons variant="console" onExport={exportFinancials('summary')} onError={exportFailed} labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export summary' }} />
+            </div>
           </div>
 
           <a

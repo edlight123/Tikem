@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  Share,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -16,22 +14,57 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { backendFetch } from '../lib/api/backend';
 
-interface Attendee {
-  id: string;
-  attendee_name: string;
-  attendee_email: string;
-  tier_name?: string;
-  price_paid?: number;
-  purchased_at?: any;
-  checked_in_at?: any;
-  checked_in?: boolean;
-  status?: string;
-}
+/**
+ * Export the attendee list as a file in the share sheet (Save to Files,
+ * Print, AirDrop, Mail). Both formats are rendered by the server, so the app
+ * and the web hand out the same files (owner, 2026-11-16: Excel + PDF, no CSV):
+ *   - PDF: the branded, printable door sheet (poster, event colour, wordmark,
+ *     tick boxes);
+ *   - Excel: the full list, typed and sortable, refunds included with their state.
+ */
+type Format = 'pdf' | 'xlsx';
+
+const FORMATS: Record<Format, { path: (id: string) => string; mimeType: string; UTI: string; fallback: string }> = {
+  pdf: {
+    path: (id) => `/api/organizer/events/${encodeURIComponent(id)}/attendees/pdf`,
+    mimeType: 'application/pdf',
+    UTI: 'com.adobe.pdf',
+    fallback: 'Attendees.pdf',
+  },
+  xlsx: {
+    path: (id) => `/api/organizer/events/${encodeURIComponent(id)}/export-attendees?format=xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    UTI: 'org.openxmlformats.spreadsheetml.sheet',
+    fallback: 'Attendees.xlsx',
+  },
+};
 
 interface ExportAttendeesButtonProps {
   eventId: string;
-  attendees: Attendee[];
+  /** Only its length is read: an empty list shows a notice instead of exporting. */
+  attendees: ReadonlyArray<unknown>;
   style?: any;
+}
+
+/** The filename from a Content-Disposition header (RFC 6266), preferring filename*. */
+function fileNameFrom(header: string | null, format: Format): string {
+  const h = header || '';
+  let name = '';
+  const star = /filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/.exec(h);
+  if (star) {
+    try {
+      name = decodeURIComponent(star[1].trim());
+    } catch {
+      name = '';
+    }
+  }
+  if (!name) {
+    const plain = /filename\s*=\s*"([^"]+)"/.exec(h) || /filename\s*=\s*([^;]+)/.exec(h);
+    name = plain ? plain[1].trim() : '';
+  }
+  name = name.replace(/[\u0000-\u001f/\\:*?"<>|]+/g, ' ').trim();
+  if (!name) return FORMATS[format].fallback;
+  return name.toLowerCase().endsWith(`.${format}`) ? name : `${name}.${format}`;
 }
 
 export default function ExportAttendeesButton({ eventId, attendees, style }: ExportAttendeesButtonProps) {
@@ -41,47 +74,17 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
   const { t, language } = useI18n();
   const [exporting, setExporting] = useState(false);
 
-  const generateCSV = () => {
-    // CSV header
-    const headers = ['Name', 'Email', 'Ticket Type', 'Price', 'Purchase Date', 'Check-in Status', 'Check-in Time'];
-    
-    // CSV rows
-    const rows = attendees.map(attendee => {
-      const purchaseDate = attendee.purchased_at?.toDate 
-        ? attendee.purchased_at.toDate().toISOString() 
-        : attendee.purchased_at || '';
-      
-      const isCheckedIn = !!attendee.checked_in_at || attendee.checked_in === true || 
-        String(attendee.status || '').toLowerCase() === 'checked_in';
-      
-      const checkInTime = attendee.checked_in_at?.toDate 
-        ? attendee.checked_in_at.toDate().toISOString() 
-        : attendee.checked_in_at || '';
-
-      return [
-        attendee.attendee_name || '',
-        attendee.attendee_email || '',
-        attendee.tier_name || 'General',
-        attendee.price_paid?.toFixed(2) || '0.00',
-        purchaseDate,
-        isCheckedIn ? 'Checked In' : 'Not Checked In',
-        checkInTime,
-      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
-    });
-
-    return [headers.join(','), ...rows].join('\n');
-  };
-
-  // The branded, printable list (server-rendered: poster, event colour,
-  // wordmark, tick boxes). Saved to the cache and handed to the share sheet,
-  // where Save to Files / Print / AirDrop / Mail all work.
-  const exportPdf = async () => {
+  // Fetch the server-rendered file, save it to the cache under the server's
+  // readable name ("Event – Attendees – 2026-12-31.xlsx") and hand it to the
+  // share sheet. Each export gets its own folder so the name can stay clean
+  // without colliding with an earlier export.
+  const exportFile = async (format: Format) => {
+    const spec = FORMATS[format];
     setExporting(true);
     try {
-      const res = await backendFetch(
-        `/api/organizer/events/${encodeURIComponent(eventId)}/attendees/pdf?lang=${encodeURIComponent(language)}`
-      );
-      if (!res.ok) throw new Error(`pdf_${res.status}`);
+      const sep = spec.path(eventId).includes('?') ? '&' : '?';
+      const res = await backendFetch(`${spec.path(eventId)}${sep}lang=${encodeURIComponent(language)}`);
+      if (!res.ok) throw new Error(`${format}_${res.status}`);
       const blob = await res.blob();
       const dataUrl: string = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -90,11 +93,14 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
         reader.readAsDataURL(blob);
       });
       const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-      const fileUri = `${FileSystem.cacheDirectory}attendees-${eventId}.pdf`;
+      const fileName = fileNameFrom(res.headers.get('content-disposition'), format);
+      const dir = `${FileSystem.cacheDirectory}attendee-exports/${Date.now()}/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      const fileUri = dir + encodeURIComponent(fileName);
       await FileSystem.writeAsStringAsync(fileUri, b64, { encoding: 'base64' });
-      await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+      await Sharing.shareAsync(fileUri, { mimeType: spec.mimeType, UTI: spec.UTI });
     } catch (error) {
-      console.error('Error exporting attendee PDF:', error);
+      console.error(`Error exporting attendee ${format}:`, error);
       showAlert(t('common.error'), t('export.error') || 'Failed to export attendees');
     } finally {
       setExporting(false);
@@ -107,55 +113,10 @@ export default function ExportAttendeesButton({ eventId, attendees, style }: Exp
       return;
     }
     showAlert(t('export.title'), '', [
-      { text: t('export.pdf'), onPress: exportPdf },
-      { text: t('export.csv'), onPress: handleExport },
+      { text: t('export.pdf'), onPress: () => exportFile('pdf') },
+      { text: t('export.excel'), onPress: () => exportFile('xlsx') },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
-  };
-
-  const handleExport = async () => {
-    if (attendees.length === 0) {
-      showAlert(
-        t('common.info') || 'Info',
-        t('export.noAttendees') || 'No attendees to export'
-      );
-      return;
-    }
-
-    setExporting(true);
-    try {
-      const csvData = generateCSV();
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `attendees_${timestamp}.csv`;
-
-      if (Platform.OS === 'web') {
-        // Web: Download directly
-        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showAlert(t('common.success'), t('export.downloadStarted') || 'Download started');
-      } else {
-        // Mobile: Share the CSV content via Share API
-        await Share.share({
-          message: csvData,
-          title: filename,
-        });
-      }
-    } catch (error: any) {
-      console.error('Error exporting attendees:', error);
-      showAlert(
-        t('common.error'),
-        error.message || t('export.error') || 'Failed to export attendees'
-      );
-    } finally {
-      setExporting(false);
-    }
   };
 
   return (
@@ -184,7 +145,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
     // Quiet raised fill, not a teal outlined box (fill-not-hairline rule;
-    // owner, 2026-11-16). "CSV" alone — the download glyph says "export".
+    // owner, 2026-11-16). The download glyph says "export".
     height: 36,
     paddingHorizontal: 12,
     borderRadius: radius.md,

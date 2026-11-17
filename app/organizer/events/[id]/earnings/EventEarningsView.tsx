@@ -16,6 +16,8 @@ import {
   type MoncashMinimumInfo,
 } from '@/lib/payouts/moncash-withdrawal-minimum'
 import { countrySupport } from '@/lib/country-support'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadExport } from '@/lib/exports/download'
 
 /** Haiti bank-transfer floor, as enforced by /api/organizer/withdraw-bank (unchanged). */
 const BANK_MIN_WITHDRAWAL_MINOR = 5000
@@ -35,7 +37,7 @@ interface EventEarningsViewProps {
 }
 
 export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown, moncashMinimum, readOnly = false }: EventEarningsViewProps) {
-  const { t } = useTranslation('organizer')
+  const { t, i18n } = useTranslation('organizer')
   const router = useRouter()
   const { showToast } = useToast()
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
@@ -520,12 +522,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
             <p className="text-sm text-white/60">{t('event_earnings.totals_note')}</p>
           </div>
           <div className="flex items-center gap-3">
-            <a
-              href={`/api/organizer/events/${event.id}/earnings/audit?format=csv`}
-              className="text-sm text-brand-300 hover:underline"
-            >
-              {t('event_earnings.download_audit_csv')}
-            </a>
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-white/50 sm:inline">
+              {t('event_earnings.sales_audit')}
+            </span>
+            <ExportButtons
+              size="sm"
+              onExport={(format) =>
+                downloadExport(
+                  `/api/organizer/events/${encodeURIComponent(event.id)}/earnings/audit?format=${format}&lang=${encodeURIComponent((i18n.language || 'en').slice(0, 2))}`,
+                  undefined,
+                  `${event.title || 'Tikem'}.${format}`
+                )
+              }
+              labels={{ pdf: t('exports.pdf'), excel: t('exports.excel'), group: t('event_earnings.sales_audit') }}
+              onError={(e: any) => showToast({ type: 'error', title: t('exports.failed'), message: e?.message || '' })}
+            />
           </div>
         </div>
 

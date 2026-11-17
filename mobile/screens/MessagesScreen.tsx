@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import EmptyState from '../components/EmptyState';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { Skeleton } from '../components/Skeleton';
+import { refreshAttendeeUnread } from '../lib/attendeeUnread';
 import { backendJson } from '../lib/api/backend';
 import { safeFormatForLanguage } from '../lib/dates';
 import { font, radius } from '../theme/tokens';
@@ -54,6 +55,8 @@ export default function MessagesScreen({ navigation }: any) {
       const res = await backendJson<{ threads: AttendeeThreadSummary[] }>('/api/messages');
       setThreads(res?.threads || []);
       setFailed(false);
+      // Keep the Profile tab's dot in step with what this list shows.
+      refreshAttendeeUnread();
     } catch (e) {
       console.warn('Failed to load messages', e);
       setFailed(true);

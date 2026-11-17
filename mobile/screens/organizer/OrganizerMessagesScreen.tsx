@@ -1,60 +1,54 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { MessageSquare } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppAlert } from '../../components/AppAlert';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
-import { RADIUS } from '../../config/brand';
-import { radius, colors as T } from '../../theme/tokens';
+import { useAuth } from '../../contexts/AuthContext';
+import { colors as T, font, radius } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
-import SectionHeader from '../../components/SectionHeader';
-import WhitePillCTA from '../../components/WhitePillCTA';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
+import { Touchable } from '../../components/ui/Touchable';
 import { backendJson } from '../../lib/api/backend';
 import { refreshOrganizerUnread } from '../../lib/organizerUnread';
-import { safeFormatForLanguage } from '../../lib/dates';
+import { defaultAvatar } from '../../lib/defaultAvatar';
+import { inboxTime } from '../../lib/messageTime';
+import { select as hapticSelect } from '../../lib/haptics';
+import { useTabBarSpace } from '../../hooks/useTabBarSpace';
 
-import { Touchable } from '../../components/ui/Touchable';
 type RouteParams = {
-  OrganizerMessages: {
-    /** Omit for the organizer's whole inbox; pass to scope to one event. */
-    eventId?: string;
-    eventTitle?: string;
-    /** Open this conversation on arrival (the "new message" push and email). */
-    thread?: string;
-  } | undefined;
+  OrganizerMessages:
+    | {
+        /** Omit for the organizer's whole inbox; pass to scope to one event. */
+        eventId?: string;
+        eventTitle?: string;
+        /** Open this conversation on arrival (the "new message" push and email). */
+        thread?: string;
+      }
+    | undefined;
 };
-
-/** Mirrors MAX_REPLY_LENGTH in lib/organizer-messages.ts — the server rejects more. */
-const MAX_REPLY_LENGTH = 2000;
 
 type Reply = {
   id: string;
   body: string;
-  /** 'attendee' = a follow-up from the person who asked; older replies are all 'organizer'. */
   author_role?: 'attendee' | 'organizer';
-  author_name: string;
   created_at: string | null;
+  /** The teammate who wrote an organizer reply (team-only). */
+  author_id?: string;
+  sent_by?: string;
 };
 
 type Thread = {
   id: string;
   event_id: string;
   event_title: string;
+  event_poster?: string | null;
   sender_name: string;
+  sender_photo?: string | null;
   topic: string;
   message: string;
   status: 'open' | 'replied';
@@ -67,579 +61,448 @@ type Thread = {
   replies: Reply[];
 };
 
-const needsReply = (th: Thread) =>
-  typeof th.needs_reply === 'boolean' ? th.needs_reply : th.reply_count === 0;
+const needsReply = (th: Thread) => (typeof th.needs_reply === 'boolean' ? th.needs_reply : th.reply_count === 0);
+
+const AVATAR = 52;
+const POSTER_W = 22;
+const POSTER_H = 28;
 
 /**
- * The organizer's side of attendee messaging: read the questions people send
- * before buying and answer them. Somebody asking "is this real?" is a sale
- * waiting on a reply, so the threads waiting on the organizer (a new question,
- * or a follow-up after their answer) sort to the top under their own heading.
- * Attendee follow-ups appear in the conversation on the left, the organizer's
- * own replies on the right.
+ * The organizer's inbox: questions attendees send from an event page, and the
+ * conversations that follow. Two homes:
  *
- * Reads and writes go through our API, never Firestore directly —
- * `organizer_messages` replies are server-only by design (see firestore.rules).
+ * - the organizer Messages TAB (`asTab`): every event, big serif title, no back;
+ * - pushed from one event (OrganizerMessages with `eventId`): that event only,
+ *   with the standard back header.
+ *
+ * Laid out like a messaging app rather than a card stack: the person's photo
+ * (or the house silhouette) with the event's poster tucked into its corner,
+ * name and time on one line, the last message under it. "Needs reply" is the
+ * default view whenever anything is waiting, because somebody asking "is this
+ * legit?" is a sale waiting on an answer. Opening a row pushes the shared
+ * conversation screen (MessageThread), which both sides use.
+ *
+ * Reads go through our API, never Firestore: replies are server-only.
  */
-export default function OrganizerMessagesScreen() {
+export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boolean }) {
   const { colors } = useTheme();
-  const styles = getStyles(colors);
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const route = useRoute<RouteProp<RouteParams, 'OrganizerMessages'>>();
   const navigation = useNavigation<any>();
-  const eventId = route.params?.eventId;
-  const eventTitle = route.params?.eventTitle;
-  const initialThread = route.params?.thread;
-  const openedInitial = React.useRef(false);
+  const eventId = asTab ? undefined : route.params?.eventId;
+  const eventTitle = asTab ? undefined : route.params?.eventTitle;
+  const initialThread = asTab ? undefined : route.params?.thread;
   const { height: headerH, onHeight } = useOverlayHeaderInset();
   const insets = useSafeAreaInsets();
-
+  const tabBarSpace = useTabBarSpace();
   const { t, language } = useI18n();
-  const showAlert = useAppAlert();
+  const { user } = useAuth();
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [reply, setReply] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [segment, setSegment] = useState<'waiting' | 'all' | null>(null);
+  const [eventFilter, setEventFilter] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const qs = eventId ? `?eventId=${encodeURIComponent(eventId)}` : '';
       const res = await backendJson<{ threads: Thread[] }>(`/api/organizer/messages${qs}`);
       setThreads(res?.threads || []);
+      setFailed(false);
     } catch (e) {
-      console.error('Failed to load organizer messages', e);
-      showAlert(t('common.error'), t('organizerMessages.loadFailed'));
+      console.warn('Failed to load organizer messages', e);
+      setFailed(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [eventId, t]);
+    // Keep the tab badge in step with what this list shows.
+    refreshOrganizerUnread();
+  }, [eventId]);
 
-  // Leaving the inbox: re-count, so the tab dot clears once everything is read.
-  useEffect(() => () => void refreshOrganizerUnread(), []);
+  // Refetch on every focus: coming back from a conversation moves it to
+  // "answered" and clears its dot.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
+  // A push or email that names a thread: go straight into it, once.
+  const openedInitial = useRef(false);
   useEffect(() => {
-    load();
-  }, [load]);
+    if (openedInitial.current || !initialThread) return;
+    openedInitial.current = true;
+    navigation.navigate('MessageThread', { threadId: initialThread });
+  }, [initialThread, navigation]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
-
-  const open = useMemo(() => threads.find((th) => th.id === openId) ?? null, [threads, openId]);
-  // The all-events inbox (opened from the dashboard) can narrow to one event.
-  // Only offered when the threads actually span more than one event.
-  const [eventFilter, setEventFilter] = useState<string | null>(null);
   const inboxEvents = useMemo(() => {
     if (eventId) return [];
     const seen = new Map<string, string>();
     for (const th of threads) if (th.event_id && !seen.has(th.event_id)) seen.set(th.event_id, th.event_title || '');
     return seen.size > 1 ? Array.from(seen, ([id, title]) => ({ id, title })) : [];
   }, [threads, eventId]);
-  const shown = useMemo(
+
+  const scoped = useMemo(
     () => (eventFilter ? threads.filter((th) => th.event_id === eventFilter) : threads),
-    [threads, eventFilter]
+    [threads, eventFilter],
   );
-  const waiting = useMemo(() => shown.filter(needsReply), [shown]);
-  const answered = useMemo(() => shown.filter((th) => !needsReply(th)), [shown]);
+  const waiting = useMemo(() => scoped.filter(needsReply), [scoped]);
+  // Until the organizer picks, open on "Needs reply" whenever something waits.
+  const activeSegment = segment ?? (waiting.length > 0 ? 'waiting' : 'all');
+  const shown = activeSegment === 'waiting' ? waiting : scoped;
 
-  const topicLabel = (topic: string) => {
-    if (topic === 'event') return t('organizerMessages.aboutEvent');
-    if (topic === 'ticket') return t('organizerMessages.aboutTicket');
-    return t('organizerMessages.aboutOther');
+  const open = (thread: Thread) => {
+    setThreads((prev) => prev.map((th) => (th.id === thread.id ? { ...th, unread: false } : th)));
+    navigation.navigate('MessageThread', { threadId: thread.id, eventTitle: thread.event_title });
   };
 
-  const when = (iso: string | null) =>
-    iso ? safeFormatForLanguage(iso, 'MMM dd, yyyy h:mm a', language) : '';
-
-  /** Opening a thread is acknowledging it — the question is on screen. */
-  const handleOpen = async (thread: Thread) => {
-    setOpenId(thread.id);
-    setReply('');
-    setError(null);
-    if (!thread.unread) return;
-    setThreads((prev) =>
-      prev.map((th) => (th.id === thread.id ? { ...th, unread: false } : th))
-    );
-    try {
-      await backendJson(`/api/organizer/messages/${thread.id}/read`, { method: 'POST' });
-    } catch {
-      // The badge is a convenience, not a record: a failed acknowledgement just
-      // means the thread reads as unread again after the next refresh.
-    }
+  const onRefresh = () => {
+    setRefreshing(true);
+    load();
   };
 
-  // Arriving from a push or email that names a thread: open it once loaded.
-  useEffect(() => {
-    if (openedInitial.current || loading || !initialThread) return;
-    const target = threads.find((th) => th.id === initialThread);
-    if (target) {
-      openedInitial.current = true;
-      handleOpen(target);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, threads, initialThread]);
+  const timeLabels = { yesterday: t('attendeeMessages.yesterday') };
 
-  const handleSend = async () => {
-    if (!open) return;
-    const body = reply.trim();
-    if (!body) {
-      setError(t('organizerMessages.errorEmpty'));
-      return;
-    }
-    setError(null);
-    setSending(true);
-    try {
-      const res = await backendJson<{ ok: boolean; reply: Reply }>(
-        `/api/organizer/messages/${open.id}/reply`,
-        { method: 'POST', body: JSON.stringify({ message: body }) }
-      );
-      const saved: Reply =
-        res?.reply ?? {
-          id: `local-${Date.now()}`,
-          body,
-          author_role: 'organizer',
-          author_name: t('organizerMessages.you'),
-          created_at: new Date().toISOString(),
-        };
-      const threadId = open.id;
-      setThreads((prev) =>
-        prev.map((th) =>
-          th.id === threadId
-            ? {
-                ...th,
-                status: 'replied',
-                needs_reply: false,
-                unread: false,
-                reply_count: th.reply_count + 1,
-                last_activity_at: saved.created_at,
-                replies: [...th.replies, saved],
-              }
-            : th
-        )
-      );
-      setReply('');
-      showAlert(
-        t('organizerMessages.sentTitle'),
-        t('organizerMessages.sentBody').replace('{name}', open.sender_name)
-      );
-    } catch (e: any) {
-      // The server's message is English prose meant for logs, so localize off
-      // the code and keep the raw text as the last resort.
-      const code = e?.code as string | undefined;
-      const message =
-        code === 'thread_reply_limit'
-          ? t('organizerMessages.errorReplyLimit')
-          : code === 'message_too_long'
-            ? t('organizerMessages.errorTooLong')
-            : t('organizerMessages.errorGeneric');
-      setError(message);
-      showAlert(t('common.error'), message);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const headerTitle = t('organizerMessages.title');
-  const headerSubtitle = open
-    ? open.sender_name
-    : eventTitle ||
-      // "Waiting on you" counts UNANSWERED threads, not merely unopened ones —
-      // reading a question without answering it does not clear the debt.
-      (waiting.length > 0
-        ? t('organizerMessages.waitingCount').replace('{count}', String(waiting.length))
-        : undefined);
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        {/* Same overlay header as the loaded branch so the chrome doesn't jump. */}
-        <OrganizerScreenHeader
-          title={headerTitle}
-          subtitle={eventTitle || undefined}
-          onBack={() => navigation.goBack()}
-          overlay
-          onHeight={onHeight}
-        />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
-          <Skeleton width={160} height={22} radius={4} style={{ marginBottom: 14 }} />
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={styles.card}>
-              <View style={styles.cardHead}>
-                <Skeleton width="45%" height={15} radius={4} />
-                <Skeleton width={90} height={11} radius={4} />
-              </View>
-              <Skeleton width="100%" height={13} radius={4} style={{ marginTop: 10 }} />
-              <Skeleton width="70%" height={13} radius={4} style={{ marginTop: 6 }} />
-              <Skeleton width={120} height={11} radius={4} style={{ marginTop: 10 }} />
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }
-
-  // ---- One conversation -----------------------------------------------------
-  if (open) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <OrganizerScreenHeader
-          title={headerTitle}
-          subtitle={headerSubtitle}
-          onBack={() => setOpenId(null)}
-          overlay
-          onHeight={onHeight}
-        />
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* The heading is the label, not the person: SectionHeader lowercases
-              its title by design, which is right for an eyebrow and wrong for
-              somebody's name. The name sits in the screen header instead. */}
-          <SectionHeader
-            title={t('organizerMessages.questionHeading')}
-            subtitle={`${topicLabel(open.topic)} · ${when(open.created_at)}`}
-          />
-
-          <View style={styles.bubbleThem}>
-            <Text style={styles.bubbleThemText}>{open.message}</Text>
-          </View>
-
-          {open.replies.map((r) =>
-            r.author_role === 'attendee' ? (
-              // A follow-up from the attendee: their side, with their name.
-              <View key={r.id} style={styles.bubbleThem}>
-                <Text style={styles.bubbleThemText}>{r.body}</Text>
-                <Text style={styles.bubbleMeta}>
-                  {open.sender_name} · {when(r.created_at)}
-                </Text>
-              </View>
-            ) : (
-              <View key={r.id} style={styles.bubbleMineWrap}>
-                <View style={styles.bubbleMine}>
-                  <Text style={styles.bubbleMineText}>{r.body}</Text>
-                  <Text style={styles.bubbleMeta}>
-                    {t('organizerMessages.you')} · {when(r.created_at)}
-                  </Text>
-                </View>
-              </View>
-            )
-          )}
-
-          <View style={styles.composer}>
-            <SectionHeader title={t('organizerMessages.replyHeading')} />
-            <TextInput
-              style={styles.input}
-              value={reply}
-              onChangeText={(v) => setReply(v.slice(0, MAX_REPLY_LENGTH))}
-              placeholder={t('organizerMessages.replyPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
-              multiline
-              textAlignVertical="top"
-              maxLength={MAX_REPLY_LENGTH}
-              editable={!sending}
-            />
-            <Text style={styles.counter}>
-              {reply.length}/{MAX_REPLY_LENGTH}
+  // ---- Header -------------------------------------------------------------
+  const segments = (
+    <View style={styles.segmentTrack} accessibilityRole="tablist">
+      {(
+        [
+          { key: 'waiting', label: t('organizerMessages.segmentWaiting'), count: waiting.length },
+          { key: 'all', label: t('organizerMessages.segmentAll'), count: scoped.length },
+        ] as const
+      ).map((s) => {
+        const active = activeSegment === s.key;
+        return (
+          <TouchableOpacity
+            key={s.key}
+            style={[styles.segment, active && styles.segmentActive]}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (!active) hapticSelect();
+              setSegment(s.key);
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={`${s.label}, ${s.count}`}
+          >
+            <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}>
+              {s.label}
+              {'  '}
+              <Text style={[styles.segmentCount, s.key === 'waiting' && s.count > 0 && styles.segmentCountHot]}>
+                {s.count}
+              </Text>
             </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
 
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
+  const eventRail =
+    inboxEvents.length > 0 ? (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRail}
+        contentContainerStyle={styles.filterRow}
+      >
+        {[{ id: null as string | null, title: t('organizerMessages.allEvents') }, ...inboxEvents].map((ev) => {
+          const active = eventFilter === ev.id;
+          return (
+            <Touchable
+              key={ev.id ?? 'all'}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => {
+                if (!active) hapticSelect();
+                setEventFilter(ev.id);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={t('organizerMessages.filterA11y').replace('{event}', ev.title)}
+            >
+              <Text numberOfLines={1} style={[styles.chipText, active && styles.chipTextActive]}>
+                {ev.title}
+              </Text>
+            </Touchable>
+          );
+        })}
+      </ScrollView>
+    ) : null;
 
-            <WhitePillCTA
-              label={sending ? t('organizerMessages.sending') : t('organizerMessages.send')}
-              onPress={handleSend}
-              loading={sending}
-              disabled={sending || reply.trim().length === 0}
-              style={styles.submit}
-            />
-          </View>
-
-          <View style={{ height: 40 + insets.bottom }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  // ---- Inbox ----------------------------------------------------------------
-  const renderCard = (thread: Thread) => {
+  // ---- Rows ---------------------------------------------------------------
+  const renderRow = (thread: Thread) => {
     const last = thread.replies[thread.replies.length - 1];
     const lastText = last ? last.body : thread.message;
-    const lastFromMe = last ? last.author_role !== 'attendee' : false;
+    const lastFromTeam = last ? last.author_role !== 'attendee' : false;
+    // "You:" for your own last reply, "Marie:" for a teammate's.
+    const lastBy =
+      lastFromTeam && last
+        ? last.author_id && user?.uid && last.author_id !== user.uid && last.sent_by
+          ? last.sent_by
+          : t('organizerMessages.you')
+        : '';
+    const waitingOnMe = needsReply(thread);
+    const unread = thread.unread;
     return (
-    <Touchable
-      key={thread.id}
-      scale={0.98}
-      style={styles.card}
-      onPress={() => handleOpen(thread)}
-      accessibilityRole="button"
-      accessibilityLabel={`${thread.sender_name}: ${thread.message}`}
-    >
-      <View style={styles.cardHead}>
-        <View style={styles.cardHeadLeft}>
-          {thread.unread && <View style={styles.unreadDot} />}
-          <Text style={styles.cardName} numberOfLines={1}>
-            {thread.sender_name}
-          </Text>
+      <Touchable
+        key={thread.id}
+        scale={0.985}
+        style={styles.row}
+        onPress={() => open(thread)}
+        accessibilityRole="button"
+        accessibilityLabel={`${thread.sender_name}, ${thread.event_title}. ${lastText}`}
+      >
+        <View style={styles.avatarWrap}>
+          <Image
+            source={thread.sender_photo ? { uri: thread.sender_photo } : defaultAvatar(thread.id)}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            accessibilityIgnoresInvertColors
+          />
+          {!eventId && (
+            <View style={styles.posterBadge}>
+              {thread.event_poster ? (
+                <Image
+                  source={{ uri: thread.event_poster }}
+                  style={styles.posterImg}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View style={[styles.posterImg, { backgroundColor: colors.surfaceRaised }]} />
+              )}
+            </View>
+          )}
         </View>
-        <Text style={styles.cardWhen}>{when(thread.last_activity_at)}</Text>
-      </View>
-      <Text style={styles.cardMessage} numberOfLines={2}>
-        {lastFromMe ? `${t('organizerMessages.you')}: ` : ''}
-        {lastText}
-      </Text>
-      <View style={styles.cardMetaRow}>
-        {needsReply(thread) ? (
-          // Dot + label, never a filled pill (house rule).
-          <View style={styles.needsReply}>
-            <View style={styles.needsReplyDot} />
-            <Text style={styles.needsReplyText}>{t('organizerMessages.needsReply')}</Text>
+
+        <View style={styles.rowBody}>
+          <View style={styles.rowTop}>
+            <Text style={[styles.name, unread && styles.nameUnread]} numberOfLines={1}>
+              {thread.sender_name}
+            </Text>
+            <Text style={[styles.time, unread && styles.timeUnread]}>
+              {inboxTime(thread.last_activity_at, language, timeLabels)}
+            </Text>
           </View>
-        ) : null}
-        <Text style={[styles.cardMeta, styles.cardMetaFlex]} numberOfLines={1}>
-          {topicLabel(thread.topic)}
-          {!eventId && thread.event_title ? ` · ${thread.event_title}` : ''}
-          {!needsReply(thread) ? ` · ${t('organizerMessages.answered')}` : ''}
-        </Text>
-      </View>
-    </Touchable>
+
+          <View style={styles.previewRow}>
+            <Text style={[styles.preview, unread && styles.previewUnread]} numberOfLines={2}>
+              {lastBy ? <Text style={styles.previewYou}>{lastBy}: </Text> : null}
+              {lastText}
+            </Text>
+            {unread ? <View style={styles.unreadDot} accessibilityLabel={t('attendeeMessages.newReply')} /> : null}
+          </View>
+
+          <View style={styles.metaRow}>
+            {waitingOnMe && activeSegment === 'all' ? (
+              // Dot + label, never a filled pill (house rule). Only in "All":
+              // inside "Needs reply" every row would say it.
+              <View style={styles.needsReply}>
+                <View style={styles.needsReplyDot} />
+                <Text style={styles.needsReplyText}>{t('organizerMessages.needsReply')}</Text>
+              </View>
+            ) : null}
+            {!eventId ? (
+              <Text style={styles.meta} numberOfLines={1}>
+                {waitingOnMe && activeSegment === 'all' ? '·  ' : ''}
+                {thread.event_title}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </Touchable>
     );
   };
+
+  // ---- Body ---------------------------------------------------------------
+  const skeleton = (
+    <View style={styles.list}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <View key={i} style={styles.row}>
+          <Skeleton width={AVATAR} height={AVATAR} radius={AVATAR / 2} />
+          <View style={[styles.rowBody, { gap: 9, paddingTop: 4 }]}>
+            <View style={styles.rowTop}>
+              <Skeleton width="42%" height={15} radius={radius.sm} />
+              <Skeleton width={40} height={11} radius={radius.sm} />
+            </View>
+            <Skeleton width="92%" height={13} radius={radius.sm} />
+            <Skeleton width="55%" height={11} radius={radius.sm} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const body = loading ? (
+    skeleton
+  ) : failed && threads.length === 0 ? (
+    <View style={styles.emptyWrap}>
+      <EmptyState icon={MessageSquare} title={t('organizerMessages.loadFailed')} />
+    </View>
+  ) : threads.length === 0 ? (
+    <View style={styles.emptyWrap}>
+      <EmptyState
+        icon={MessageSquare}
+        title={t('organizerMessages.empty')}
+        subtitle={t('organizerMessages.emptySubtitle')}
+      />
+    </View>
+  ) : shown.length === 0 ? (
+    <View style={styles.emptyWrap}>
+      <EmptyState
+        icon={MessageSquare}
+        title={t('organizerMessages.caughtUpTitle')}
+        subtitle={t('organizerMessages.caughtUpBody')}
+        compact
+      />
+    </View>
+  ) : (
+    <View style={styles.list}>{shown.map(renderRow)}</View>
+  );
+
+  const showSegments = !loading && threads.length > 0;
+
+  if (asTab) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.tabHeader, { paddingTop: insets.top + 12 }]}>
+          <Text style={styles.tabTitle} accessibilityRole="header">
+            {t('organizerMessages.title').toLowerCase()}
+          </Text>
+          {showSegments ? segments : loading ? <Skeleton width="55%" height={26} radius={radius.sm} /> : null}
+        </View>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={{ paddingBottom: tabBarSpace + 24 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
+          }
+        >
+          {showSegments ? eventRail : null}
+          {body}
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <OrganizerScreenHeader
-        title={headerTitle}
-        subtitle={headerSubtitle}
+        title={t('organizerMessages.title')}
+        subtitle={eventTitle || undefined}
         onBack={() => navigation.goBack()}
         overlay
         onHeight={onHeight}
       />
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
+        style={styles.flex}
+        contentContainerStyle={{ paddingTop: headerH + 4, paddingBottom: 40 + insets.bottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
         }
       >
-        {threads.length === 0 ? (
-          <EmptyState
-            icon={MessageSquare}
-            title={t('organizerMessages.empty')}
-          />
-        ) : (
-          <>
-            {inboxEvents.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterRail}
-                contentContainerStyle={styles.filterRow}
-              >
-                {[{ id: null as string | null, title: t('organizerMessages.allEvents') }, ...inboxEvents].map((ev) => {
-                  const active = eventFilter === ev.id;
-                  return (
-                    <Touchable
-                      key={ev.id ?? 'all'}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setEventFilter(ev.id)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                    >
-                      <Text numberOfLines={1} style={[styles.chipText, active && styles.chipTextActive]}>
-                        {ev.title}
-                      </Text>
-                    </Touchable>
-                  );
-                })}
-              </ScrollView>
-            )}
-            {waiting.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader title={t('organizerMessages.sectionWaiting')} />
-                {waiting.map(renderCard)}
-              </View>
-            )}
-            {answered.length > 0 && (
-              <View style={styles.section}>
-                <SectionHeader title={t('organizerMessages.sectionAnswered')} />
-                {answered.map(renderCard)}
-              </View>
-            )}
-          </>
-        )}
-        <View style={{ height: 40 + insets.bottom }} />
+        {showSegments ? <View style={styles.stackSegments}>{segments}</View> : null}
+        {body}
       </ScrollView>
     </View>
   );
 }
 
+/** The Messages tab of the organizer bar. */
+export function OrganizerInboxTab() {
+  return <OrganizerMessagesScreen asTab />;
+}
+
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
+    container: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+
+    // Same header as the Events tab: big serif title, underline segments.
+    tabHeader: { paddingHorizontal: 16, paddingBottom: 8, backgroundColor: colors.background },
+    tabTitle: {
+      fontFamily: font.serif,
+      fontSize: 26,
+      lineHeight: 32,
+      color: colors.text,
+      marginBottom: 12,
+    },
+    stackSegments: { paddingHorizontal: 16, marginBottom: 8 },
+    segmentTrack: {
+      flexDirection: 'row',
+      gap: 24,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    segment: {
+      paddingTop: 4,
+      paddingBottom: 10,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+      marginBottom: -StyleSheet.hairlineWidth,
+    },
+    segmentActive: { borderBottomColor: colors.text },
+    segmentLabel: { fontSize: 15, fontVariant: ['tabular-nums'] },
+    segmentLabelActive: { color: colors.text, fontWeight: '600' },
+    segmentLabelInactive: { color: colors.textSecondary, fontWeight: '500' },
+    segmentCount: { color: colors.textSecondary, fontWeight: '400' },
+    segmentCountHot: { color: colors.primary, fontWeight: '600' },
+
+    // Quiet filter: small fills that sit under the segments, not a second
+    // row of buttons competing with them.
+    filterRail: { marginTop: 14, marginBottom: 2 },
+    filterRow: { paddingHorizontal: 16, gap: 6 },
+    chip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: radius.chip,
+      backgroundColor: colors.surface,
+      maxWidth: 200,
+    },
+    chipActive: { backgroundColor: colors.white },
+    chipText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2, color: colors.textSecondary },
+    chipTextActive: { color: T.onWhite },
+
+    // Rows: no card fill, separated by rhythm, never a hairline.
+    list: { paddingHorizontal: 16, paddingTop: 12 },
+    row: { flexDirection: 'row', gap: 14, paddingVertical: 12 },
+    avatarWrap: { width: AVATAR, height: AVATAR },
+    avatar: { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2, backgroundColor: colors.surfaceRaised },
+    // The event's poster tucked into the avatar's corner, ringed in the page
+    // colour so it reads as a separate object.
+    posterBadge: {
+      position: 'absolute',
+      right: -6,
+      bottom: -4,
+      padding: 2,
+      borderRadius: radius.poster + 2,
       backgroundColor: colors.background,
     },
-    filterRail: { marginHorizontal: -20, marginBottom: 8 },
-    filterRow: { paddingHorizontal: 20, gap: 8 },
-    chip: {
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-      borderRadius: radius.button,
-      backgroundColor: T.surfaceRaised,
-      maxWidth: 220,
-    },
-    chipActive: { backgroundColor: T.white },
-    chipText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
-    chipTextActive: { color: T.onWhite },
-    scrollContent: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    section: {
-      marginTop: 8,
-      marginBottom: 20,
-    },
-    // Fill, not a hairline (house rule).
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.xl,
-      padding: 14,
-      marginBottom: 10,
-    },
-    cardHead: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-    },
-    cardHeadLeft: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    unreadDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.primary,
-    },
-    cardName: {
-      flex: 1,
-      fontSize: 17,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    cardWhen: {
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    cardMessage: {
-      marginTop: 8,
-      fontSize: 15,
-      lineHeight: 20,
-      color: colors.textSecondary,
-    },
-    cardMetaRow: {
-      marginTop: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    cardMeta: {
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    cardMetaFlex: {
-      flexShrink: 1,
-    },
-    needsReply: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    needsReplyDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.warning,
-    },
-    needsReplyText: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      color: colors.warning,
-    },
-    bubbleThem: {
-      alignSelf: 'flex-start',
-      maxWidth: '92%',
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.xl,
-      borderTopLeftRadius: radius.sm,
-      padding: 14,
-      marginBottom: 12,
-    },
-    bubbleThemText: {
-      fontSize: 15,
-      lineHeight: 22,
-      color: colors.text,
-    },
-    bubbleMineWrap: {
-      alignItems: 'flex-end',
-    },
-    bubbleMine: {
-      maxWidth: '92%',
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: RADIUS.xl,
-      borderTopRightRadius: radius.sm,
-      padding: 14,
-      marginBottom: 12,
-    },
-    bubbleMineText: {
-      fontSize: 15,
-      lineHeight: 22,
-      color: colors.text,
-    },
-    bubbleMeta: {
-      marginTop: 8,
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    composer: {
-      marginTop: 20,
-    },
-    input: {
-      minHeight: 120,
-      backgroundColor: colors.surface,
-      borderRadius: RADIUS.md,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      fontSize: 15,
-      color: colors.text,
-    },
-    counter: {
-      alignSelf: 'flex-end',
-      marginTop: 6,
-      fontSize: 12,
-      fontVariant: ['tabular-nums'],
-      color: colors.textTertiary,
-    },
-    errorText: {
-      marginTop: 10,
-      fontSize: 13,
-      color: colors.error,
-    },
-    submit: {
-      marginTop: 16,
-    },
+    posterImg: { width: POSTER_W, height: POSTER_H, borderRadius: radius.poster },
+    rowBody: { flex: 1, minWidth: 0 },
+    rowTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+    name: { flex: 1, fontSize: 16, lineHeight: 21, fontWeight: '600', color: colors.text },
+    nameUnread: { fontWeight: '700' },
+    time: { fontSize: 12, color: colors.textTertiary, fontVariant: ['tabular-nums'] },
+    timeUnread: { color: colors.primary, fontWeight: '600' },
+    previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 3 },
+    preview: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+    previewUnread: { color: colors.text },
+    previewYou: { color: colors.textTertiary },
+    unreadDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: colors.primary },
+    metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 },
+    meta: { flexShrink: 1, fontSize: 12, color: colors.textTertiary },
+    needsReply: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    needsReplyDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.warning },
+    needsReplyText: { fontSize: 12, fontWeight: '600', color: colors.warning },
+
+    emptyWrap: { paddingTop: 48, paddingHorizontal: 24 },
   });

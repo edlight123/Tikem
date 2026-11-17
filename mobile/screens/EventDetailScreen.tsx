@@ -21,7 +21,6 @@ import {
       Share2, 
   Heart, 
         ExternalLink,
-  ChevronRight,
   MessageCircle,
   ChevronLeft,
   PlayCircle,
@@ -443,8 +442,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   const shareEventSheet = async () => {
     try {
+      // Minimal on purpose (owner, 2026-11-17): the link's preview card is the
+      // poster, so the message is just the name, the date and the link.
+      const when = event.start_datetime ? safeFormatForLanguage(event.start_datetime, 'EEE, MMM d', language) : '';
       await Share.share({
-        message: `${t('eventDetail.share.checkOut')} ${event.title}!\n\n${event.description?.substring(0, 100)}...\n\n${t('eventDetail.share.date')}: ${event.start_datetime && safeFormatForLanguage(event.start_datetime, 'EEEE, MMMM dd, yyyy', language)}\n${t('eventDetail.share.venue')}: ${event.venue_name}\n${t('eventDetail.share.organizer')}: ${event.users?.organization_name || event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}\n\nhttps://www.tikem.co/events/${eventId}`,
+        message: `${[event.title, when].filter(Boolean).join(' · ')}\nhttps://www.tikem.co/events/${eventId}`,
         title: event.title,
       });
     } catch (error) {
@@ -849,7 +851,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Animated.ScrollView 
+      <Animated.ScrollView
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -957,55 +959,53 @@ export default function EventDetailScreen({ route, navigation }: any) {
               Owner feedback 2026-11-15 replaced the byline above the title and
               the duplicate "hosted by" card at the foot of the page. */}
           <View style={styles.orgBlock}>
-            <TouchableOpacity
-              style={styles.orgRowMain}
-              onPress={navigateToOrganizerProfile}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-            >
-              <View style={styles.hostedByAvatar}>
-                {event.users?.organization_logo ? (
-                  <ExpoImage
-                    source={{ uri: event.users.organization_logo }}
-                    style={styles.hostedByAvatarImage}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <OrgMark size={44} color={colors.text} />
-                )}
-              </View>
-              <Text style={styles.orgRowName} numberOfLines={1}>
-                {event.users?.organization_name || event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
-              </Text>
-              {(event.users?.is_verified || event.is_verified) && (
-                <VerifiedBadge size="small" label={t('eventDetail.verified')} />
-              )}
-              <ChevronRight size={18} color={colors.textTertiary} style={styles.orgRowChevron} />
-            </TouchableOpacity>
-            {/* Two labelled, equal actions instead of a bare chat glyph next to a
-                status-looking "Following" chip (owner: "misleading"). Hidden on
-                the organizer's own event. */}
-            {!!event.organizer_id && event.organizer_id !== user?.uid && (
-              <View style={styles.orgActions}>
-                <View style={styles.orgActionSlot}>
-                  <FollowButton organizerId={event.organizer_id} style={styles.orgAction} />
+            {/* Identity and Follow share ONE line, posh-style (owner,
+                2026-11-17: "following should be on the line"). The name side
+                opens the organizer's profile; Follow sits at the line's end. */}
+            <View style={styles.orgLine}>
+              <TouchableOpacity
+                style={styles.orgRowMain}
+                onPress={navigateToOrganizerProfile}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+              >
+                <View style={styles.hostedByAvatar}>
+                  {event.users?.organization_logo ? (
+                    <ExpoImage
+                      source={{ uri: event.users.organization_logo }}
+                      style={styles.hostedByAvatarImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <OrgMark size={44} color={colors.text} />
+                  )}
                 </View>
-                {!!user && (
-                  <View style={styles.orgActionSlot}>
-                    <TouchableOpacity
-                      style={[styles.orgAction, styles.orgMessageBtn]}
-                      onPress={() => setShowContactOrganizer(true)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('contactOrganizer.open')}
-                    >
-                      <MessageCircle size={16} color={colors.text} />
-                      <Text style={styles.orgMessageText}>{t('contactOrganizer.short')}</Text>
-                    </TouchableOpacity>
-                  </View>
+                <Text style={styles.orgRowName} numberOfLines={1}>
+                  {event.users?.organization_name || event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
+                </Text>
+                {(event.users?.is_verified || event.is_verified) && (
+                  <VerifiedBadge size="small" label={t('eventDetail.verified')} />
                 )}
-              </View>
+              </TouchableOpacity>
+              {!!event.organizer_id && event.organizer_id !== user?.uid && (
+                <FollowButton organizerId={event.organizer_id} style={styles.orgFollow} />
+              )}
+            </View>
+            {/* Message: a real full-width button, not a half-width chip
+                (owner, 2026-11-17: "message should be more like a button").
+                Hidden on the organizer's own event and when signed out. */}
+            {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && (
+              <TouchableOpacity
+                style={styles.orgMessageBtn}
+                onPress={() => setShowContactOrganizer(true)}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={t('contactOrganizer.open')}
+              >
+                <MessageCircle size={18} color={colors.text} />
+                <Text style={styles.orgMessageText}>{t('contactOrganizer.title')}</Text>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -1778,21 +1778,20 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  orgRowChevron: { marginLeft: 'auto' },
-  orgActions: { flexDirection: 'row', gap: 10 },
-  // Equal slots; the buttons fill them (FollowButton's own padding would
-  // otherwise skew a plain flex split).
-  orgActionSlot: { flex: 1 },
-  orgAction: { width: '100%', height: 42 },
+  orgLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Follow at the end of the identity line: its own white / "Following"
+  // fills (FollowButton), sized to sit level with the 44pt avatar.
+  orgFollow: { height: 36, minWidth: 96, paddingHorizontal: 16 },
   orgMessageBtn: {
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     borderRadius: 4,
     backgroundColor: colors.surfaceRaised,
   },
-  orgMessageText: { fontSize: 13, fontWeight: '700', color: colors.text },
+  orgMessageText: { fontSize: 15, fontWeight: '600', color: colors.text },
   orgRowMain: {
     flex: 1,
     flexDirection: 'row',

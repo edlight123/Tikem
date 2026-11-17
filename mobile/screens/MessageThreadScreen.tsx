@@ -14,13 +14,17 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowUp, MessageCircle } from 'lucide-react-native';
 import { useI18n } from '../contexts/I18nContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import EmptyState from '../components/EmptyState';
 import OverlayHeader, { useOverlayHeaderInset } from '../components/OverlayHeader';
 import { Skeleton } from '../components/Skeleton';
 import { backendJson } from '../lib/api/backend';
-import { safeFormatForLanguage } from '../lib/dates';
-import { font, radius } from '../theme/tokens';
+import { clockTime, dayLabel, sameDay } from '../lib/messageTime';
+import { defaultAvatar } from '../lib/defaultAvatar';
+import { refreshAttendeeUnread } from '../lib/attendeeUnread';
+import { refreshOrganizerUnread } from '../lib/organizerUnread';
+import { colors as T, font, radius } from '../theme/tokens';
 import { Touchable } from '../components/ui/Touchable';
 
 /** Mirrors MAX_FOLLOWUP_LENGTH / MAX_REPLY_LENGTH in lib/organizer-messages.ts. */
@@ -33,6 +37,9 @@ type Message = {
   author_role: 'attendee' | 'organizer';
   author_name: string;
   created_at: string | null;
+  /** Organizer side only: the teammate who wrote it (never sent to attendees). */
+  author_id?: string;
+  sent_by?: string;
 };
 
 /** GET /api/messages/[id] (lib/organizer-messages ConversationView). */
@@ -50,7 +57,12 @@ type Conversation = {
   closed: boolean;
   awaiting_organizer: boolean;
   messages: Message[];
+  /** The other side's public profile photo. */
+  other_photo?: string | null;
 };
+
+/** Messages from one author this close together read as one run. */
+const RUN_GAP_MS = 5 * 60 * 1000;
 
 /**
  * One attendee ↔ organizer conversation: the opening question, the organizer's
@@ -67,6 +79,7 @@ export default function MessageThreadScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const { t, language } = useI18n();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { height: headerH, onHeight: onHeaderHeight } = useOverlayHeaderInset();
   const scrollRef = useRef<ScrollView>(null);
@@ -88,7 +101,11 @@ export default function MessageThreadScreen({ navigation, route }: any) {
       setThread(res.thread);
       setStatus('ready');
       // Best-effort: a failed acknowledgement only means the dot returns next load.
-      backendJson(`/api/messages/${encodeURIComponent(threadId)}/read`, { method: 'POST' }).catch(() => {});
+      // The tab badges follow once the server has the acknowledgement.
+      const role = res.thread?.viewer_role;
+      backendJson(`/api/messages/${encodeURIComponent(threadId)}/read`, { method: 'POST' })
+        .then(() => (role === 'organizer' ? refreshOrganizerUnread() : refreshAttendeeUnread()))
+        .catch(() => {});
     } catch (e) {
       console.warn('Failed to load conversation', e);
       setStatus('error');
@@ -99,7 +116,7 @@ export default function MessageThreadScreen({ navigation, route }: any) {
     load();
   }, [load]);
 
-  const when = (iso: string | null) => (iso ? safeFormatForLanguage(iso, 'MMM d, h:mm a', language) : '');
+  const dayLabels = { today: t('attendeeMessages.today'), yesterday: t('attendeeMessages.yesterday') };
 
   const isOrganizer = thread?.viewer_role === 'organizer';
   const maxLength = isOrganizer ? MAX_ORGANIZER_LENGTH : MAX_ATTENDEE_LENGTH;
@@ -153,7 +170,16 @@ export default function MessageThreadScreen({ navigation, route }: any) {
     }
   };
 
-  const title = thread?.event_title || route?.params?.eventTitle || t('attendeeMessages.title');
+  // The person is the title; the event is the context under it.
+  const title = otherName || thread?.event_title || route?.params?.eventTitle || t('attendeeMessages.title');
+  const subtitle = thread?.event_title || route?.params?.eventTitle || '';
+  const topicLabel = (topic: string) =>
+    topic === 'event'
+      ? t('organizerMessages.aboutEvent')
+      : topic === 'ticket'
+        ? t('organizerMessages.aboutTicket')
+        : t('organizerMessages.aboutOther');
+  const hasOrganizerReply = !!thread?.messages.some((m) => m.author_role === 'organizer');
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -167,17 +193,45 @@ export default function MessageThreadScreen({ navigation, route }: any) {
         >
           <ArrowLeft size={24} color={colors.text} />
         </Touchable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        <View style={styles.backButton} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle && subtitle !== title ? (
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.backButton}>
+          {thread ? (
+            <Image
+              source={thread.other_photo ? { uri: thread.other_photo } : defaultAvatar(thread.id)}
+              style={styles.headerAvatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              accessibilityIgnoresInvertColors
+            />
+          ) : null}
+        </View>
       </OverlayHeader>
 
       {status === 'loading' ? (
-        <View style={{ paddingTop: headerH + 16, paddingHorizontal: 16, gap: 12 }}>
-          <Skeleton width="70%" height={18} radius={4} />
-          <Skeleton width="80%" height={64} radius={radius.md} />
-          <Skeleton width="60%" height={48} radius={radius.md} style={{ alignSelf: 'flex-end' }} />
+        // Mirrors the loaded layout: event card, a day label, their bubble,
+        // then mine, so nothing jumps when the conversation arrives.
+        <View style={{ paddingTop: headerH + 12, paddingHorizontal: 16 }}>
+          <View style={styles.eventRow}>
+            <Skeleton width={44} height={55} radius={radius.poster} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <Skeleton width="70%" height={17} radius={radius.sm} />
+              <Skeleton width="40%" height={12} radius={radius.sm} />
+            </View>
+          </View>
+          <Skeleton width={64} height={11} radius={radius.sm} style={{ alignSelf: 'center', marginBottom: 14 }} />
+          <Skeleton width="78%" height={66} radius={radius.md} style={{ marginBottom: 6 }} />
+          <Skeleton width={56} height={10} radius={radius.sm} style={{ marginBottom: 16 }} />
+          <Skeleton width="58%" height={44} radius={radius.md} style={{ alignSelf: 'flex-end', marginBottom: 6 }} />
+          <Skeleton width={56} height={10} radius={radius.sm} style={{ alignSelf: 'flex-end' }} />
         </View>
       ) : status === 'error' || !thread ? (
         <View style={[styles.emptyWrap, { paddingTop: headerH }]}>
@@ -210,25 +264,57 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                 <Text style={styles.eventTitle} numberOfLines={2}>
                   {thread.event_title}
                 </Text>
-                {otherName ? (
-                  <Text style={styles.eventSub} numberOfLines={1}>
-                    {otherName}
-                  </Text>
-                ) : null}
+                <Text style={styles.eventSub} numberOfLines={1}>
+                  {isOrganizer ? topicLabel(thread.topic) : otherName}
+                </Text>
               </View>
             </Touchable>
 
-            {thread.messages.map((m) => {
+            {thread.messages.map((m, i) => {
+              const prev = thread.messages[i - 1];
+              const next = thread.messages[i + 1];
+              // "Our side" (right) is by role; WHO on the team wrote it is a
+              // label only the team sees: "You", or the teammate's first name.
               const mine = m.author_role === thread.viewer_role;
-              const name = mine ? t('attendeeMessages.you') : m.author_name || otherName;
+              const byTeammate = mine && isOrganizer && !!m.author_id && !!user?.uid && m.author_id !== user.uid;
+              const newDay = !prev || !sameDay(prev.created_at, m.created_at);
+              const gap = (a?: Message, b?: Message) =>
+                !!a && !!b && !!a.created_at && !!b.created_at
+                  ? Math.abs(Date.parse(b.created_at) - Date.parse(a.created_at))
+                  : Infinity;
+              // Same author, same day, minutes apart: one run. Time goes under
+              // the run's last bubble only.
+              const joinsPrev = !newDay && !!prev && prev.author_role === m.author_role && gap(prev, m) < RUN_GAP_MS;
+              const endsRun =
+                !next ||
+                next.author_role !== m.author_role ||
+                !sameDay(m.created_at, next.created_at) ||
+                gap(m, next) >= RUN_GAP_MS;
               return (
-                <View key={m.id} style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-                  <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                    <Text style={styles.bubbleText}>{m.body}</Text>
-                    <Text style={styles.bubbleMeta}>
-                      {name} · {when(m.created_at)}
-                    </Text>
+                <View key={m.id}>
+                  {newDay ? <Text style={styles.dayLabel}>{dayLabel(m.created_at, language, dayLabels)}</Text> : null}
+                  <View
+                    style={[
+                      styles.bubbleRow,
+                      mine ? styles.bubbleRowMine : styles.bubbleRowTheirs,
+                      joinsPrev && styles.bubbleRowJoined,
+                    ]}
+                  >
+                    <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{m.body}</Text>
+                    </View>
                   </View>
+                  {endsRun ? (
+                    <Text style={[styles.bubbleMeta, mine && styles.bubbleMetaMine]}>
+                      {byTeammate
+                        ? m.sent_by || thread.organizer_name || m.author_name
+                        : mine
+                          ? t('attendeeMessages.you')
+                          : m.author_name || otherName}
+                      {'  ·  '}
+                      {clockTime(m.created_at, language)}
+                    </Text>
+                  ) : null}
                 </View>
               );
             })}
@@ -239,6 +325,11 @@ export default function MessageThreadScreen({ navigation, route }: any) {
               <Text style={styles.composerNote}>{t('attendeeMessages.closed')}</Text>
             ) : !isOrganizer && thread.awaiting_organizer ? (
               <Text style={styles.composerNote}>{t('attendeeMessages.awaiting')}</Text>
+            ) : null}
+            {isOrganizer && !hasOrganizerReply && !thread.closed ? (
+              <Text style={styles.composerNote}>
+                {t('attendeeMessages.deliveredNote').replace('{name}', otherName)}
+              </Text>
             ) : null}
             {!!error && <Text style={styles.errorText}>{error}</Text>}
             {!blocked && (
@@ -256,16 +347,16 @@ export default function MessageThreadScreen({ navigation, route }: any) {
                   accessibilityLabel={t('attendeeMessages.replyLabel')}
                 />
                 <Touchable
-                  style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
+                  style={[styles.sendButton, !sending && !draft.trim() && styles.sendButtonDisabled]}
                   onPress={send}
                   disabled={sending || !draft.trim()}
                   accessibilityRole="button"
                   accessibilityLabel={t('attendeeMessages.send')}
                 >
                   {sending ? (
-                    <ActivityIndicator size="small" color="#000" />
+                    <ActivityIndicator size="small" color={T.onWhite} />
                   ) : (
-                    <ArrowUp size={20} color="#000" />
+                    <ArrowUp size={20} color={draft.trim() ? T.onWhite : colors.textTertiary} strokeWidth={2.25} />
                   )}
                 </Touchable>
               </View>
@@ -282,7 +373,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     container: { flex: 1, backgroundColor: colors.background },
     header: { paddingHorizontal: 8 },
     backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { flex: 1, textAlign: 'center', fontFamily: font.serif, fontSize: 20, color: colors.text },
+    headerCenter: { flex: 1, alignItems: 'center', minWidth: 0 },
+    headerTitle: { fontSize: 16, lineHeight: 21, fontWeight: '600', color: colors.text },
+    headerSubtitle: { marginTop: 1, fontSize: 12, lineHeight: 16, color: colors.textTertiary },
+    headerAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.surfaceRaised },
     emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
     retry: {
       marginTop: 20,
@@ -297,25 +391,37 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
       gap: 12,
       padding: 12,
-      marginBottom: 24,
+      marginBottom: 20,
       borderRadius: radius.lg,
       backgroundColor: colors.surface,
     },
     poster: { width: 44, height: 55, borderRadius: radius.poster, backgroundColor: colors.surfaceRaised },
     posterFallback: {},
-    eventTitle: { fontFamily: font.serif, fontSize: 18, color: colors.text },
-    eventSub: { marginTop: 2, fontSize: 13, color: colors.textSecondary },
-    bubbleRow: { flexDirection: 'row', marginBottom: 8 },
+    eventTitle: { fontFamily: font.serif, fontSize: 18, lineHeight: 22, color: colors.text },
+    eventSub: { marginTop: 3, fontSize: 13, color: colors.textSecondary },
+    dayLabel: {
+      alignSelf: 'center',
+      marginTop: 4,
+      marginBottom: 12,
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    bubbleRow: { flexDirection: 'row', marginTop: 10 },
+    bubbleRowJoined: { marginTop: 3 },
     bubbleRowMine: { justifyContent: 'flex-end' },
     bubbleRowTheirs: { justifyContent: 'flex-start' },
-    bubble: { maxWidth: '85%', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 12 },
-    // Mine: the brighter raised fill. Theirs: the quieter surface. Fills, not hairlines.
-    bubbleMine: { backgroundColor: colors.surfaceRaised },
-    bubbleTheirs: { backgroundColor: colors.surface },
-    bubbleText: { fontSize: 15, lineHeight: 22, color: colors.text },
-    bubbleMeta: { marginTop: 4, fontSize: 12, color: colors.textTertiary },
+    bubble: { maxWidth: '82%', borderRadius: radius.md, paddingHorizontal: 13, paddingVertical: 10 },
+    // Mine: solid white with black text, the app's primary-action pairing.
+    // Theirs: the raised dark fill. Fills, never hairlines.
+    bubbleMine: { backgroundColor: T.white },
+    bubbleTheirs: { backgroundColor: colors.surfaceRaised },
+    bubbleText: { fontSize: 15, lineHeight: 21, color: colors.text },
+    bubbleTextMine: { color: T.onWhite },
+    bubbleMeta: { marginTop: 5, marginBottom: 4, fontSize: 11, color: colors.textTertiary },
+    bubbleMetaMine: { alignSelf: 'flex-end' },
     composer: { paddingHorizontal: 12, paddingTop: 10, backgroundColor: colors.background },
-    composerNote: { fontSize: 13, lineHeight: 18, color: colors.textSecondary, marginBottom: 8, paddingHorizontal: 4 },
+    composerNote: { fontSize: 12, lineHeight: 17, color: colors.textTertiary, marginBottom: 8, paddingHorizontal: 4 },
     errorText: { fontSize: 13, color: colors.error, marginBottom: 8, paddingHorizontal: 4 },
     inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
     input: {
@@ -324,7 +430,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       maxHeight: 140,
       borderRadius: radius.md,
       backgroundColor: colors.surface,
-      paddingHorizontal: 12,
+      paddingHorizontal: 14,
       paddingTop: 12,
       paddingBottom: 12,
       fontSize: 15,
@@ -334,9 +440,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       width: 44,
       height: 44,
       borderRadius: radius.button,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: T.white,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    sendButtonDisabled: { opacity: 0.4 },
+    // Empty draft: a quiet raised square, not a faded white one.
+    sendButtonDisabled: { backgroundColor: colors.surfaceRaised },
   });

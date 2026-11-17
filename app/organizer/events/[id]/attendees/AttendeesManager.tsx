@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Download, Mail, User, CreditCard, Calendar, Check, AlertCircle, QrCode, AlertTriangle, Send } from 'lucide-react'
+import { Mail, User, CreditCard, Calendar, Check, AlertCircle, QrCode, AlertTriangle, Send } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 import { useToast } from '@/components/ui/Toast'
@@ -18,7 +18,8 @@ import {
   StatusChip,
 } from '@/components/organizer/ui'
 import type { OrgColumn } from '@/components/organizer/ui'
-import { toCsv } from '@/lib/csv'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadExport } from '@/lib/exports/download'
 import { EMPTY_VALUE } from '@/lib/format'
 import {
   ticketDisplayKey,
@@ -146,7 +147,8 @@ const buildColumns = (tx: (k: string) => string): OrgColumn<Ticket>[] => [
 ]
 
 export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = false }: AttendeesManagerProps) {
-  const { t: tx } = useTranslation('organizer')
+  const { t: tx, i18n } = useTranslation('organizer')
+  const { showToast } = useToast()
 
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
@@ -194,32 +196,17 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
   }, [tickets])
   const [composeOpen, setComposeOpen] = useState(false)
 
-  const handleExportCSV = () => {
-    const csv = toCsv([
-      ['Name', 'Email', 'Phone', 'Ticket ID', 'Status', 'Checked In', 'Purchase Date'],
-      ...filteredTickets.map((t) => [
-        t.attendee?.full_name || 'N/A',
-        t.attendee?.email || 'N/A',
-        t.attendee?.phone_number || 'N/A',
-        t.id,
-        tx(ticketDisplayLabelKey(keyOf(t))),
-        t.checked_in_at
-          ? format(new Date(t.checked_in_at), 'MMM d, yyyy h:mm a')
-          : 'Not checked in',
-        format(new Date(t.purchased_at), 'MMM d, yyyy'),
-      ]),
-    ])
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${eventTitle}-attendees-${format(new Date(), 'yyyy-MM-dd')}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
-  }
+  // Excel = the full list (every ticket, with its state); PDF = the printable
+  // door sheet. Both are rendered on the server and saved under its file name.
+  const lang = (i18n.language || 'en').slice(0, 2)
+  const handleExport = (format: 'pdf' | 'xlsx') =>
+    downloadExport(
+      format === 'pdf'
+        ? `/api/organizer/events/${encodeURIComponent(eventId)}/attendees/pdf?lang=${encodeURIComponent(lang)}`
+        : `/api/organizer/events/${encodeURIComponent(eventId)}/export-attendees?format=xlsx&lang=${encodeURIComponent(lang)}`,
+      undefined,
+      `${eventTitle || 'Tikem'}.${format}`
+    )
 
   const mobileCard = (t: Ticket) => (
     <button
@@ -286,14 +273,12 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
           className="flex-1"
         />
         <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.08] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">{tx('attendees.export_csv')}</span>
-          </button>
+          <ExportButtons
+            onExport={handleExport}
+            disabled={tickets.length === 0}
+            labels={{ pdf: tx('exports.pdf'), excel: tx('exports.excel'), group: tx('exports.group') }}
+            onError={(e: any) => showToast({ type: 'error', title: tx('exports.failed'), message: e?.message || tx('event_tools.generic_error') })}
+          />
           <button
             type="button"
             onClick={() => setComposeOpen(true)}

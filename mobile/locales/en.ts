@@ -303,6 +303,7 @@ export default {
     },
   },
   tabs: {
+    messages: 'Messages',
     home: 'Home',
     discover: 'Discover',
     create: 'Create',
@@ -315,6 +316,13 @@ export default {
     events: 'Events',
   },
   profile: {
+    hostEvents: {
+      row: 'Host events on Tikèm',
+      title: 'Host events on Tikèm',
+      body: 'Create events, sell tickets, scan at the door and answer guests from organizer mode. Free to start. Verify your identity before your first payout.',
+      cta: 'Start hosting',
+      failed: "Couldn't open organizer mode. Try again.",
+    },
     title: 'Profile',
     memberSince: 'Member since',
     profileInfo: 'Profile Information',
@@ -690,6 +698,12 @@ export default {
   },
 
   organizerCreateEventFlow: {
+    firstEvent: {
+      title: "You're an organizer now",
+      body: 'Your event is live. Track sales, scan tickets at the door and answer guests from organizer mode. Verify your identity any time before your first payout.',
+      draftBody: 'Your draft is saved. Finish and publish it from organizer mode. Verify your identity any time before your first payout.',
+      cta: 'Got it',
+    },
     steps: {
       basics: 'Basics',
       location: 'Location',
@@ -1600,10 +1614,8 @@ export default {
   export: {
     title: 'Export the list',
     pdf: 'PDF',
-    csv: 'CSV',
+    excel: 'Excel',
     short: 'Export',
-    exportCSV: 'Export CSV',
-    downloadStarted: 'Download started',
     noAttendees: 'No attendees to export',
     error: 'Failed to export attendees',
   },
@@ -2654,6 +2666,7 @@ export default {
     hide: 'Hide',
     create: 'Create your first event',
     publish: 'Publish it',
+    verify: 'Verify your identity to get paid',
     payouts: 'Set up payouts',
     team: 'Invite your door team',
   },
@@ -2865,6 +2878,9 @@ export default {
   // The other half of contactOrganizer: the organizer reading those questions
   // and answering them.
   attendeeMessages: {
+    today: "Today",
+    yesterday: "Yesterday",
+    deliveredNote: "{name} gets this in the app and by email. Your email stays private.",
     title: "Messages",
     you: "You",
     organizer: "The organizer",
@@ -2938,6 +2954,11 @@ export default {
     failed: "Couldn't transfer the ticket. Try again.",
   },
   organizerMessages: {
+    segmentWaiting: 'Needs reply',
+    segmentAll: 'All',
+    caughtUpTitle: "You're all caught up",
+    caughtUpBody: 'Every question has an answer. New ones land here, and on your lock screen.',
+    filterA11y: 'Show messages for {event}',
     allEvents: 'All events',
     title: 'Messages',
     waitingCount: '{count} waiting on you',

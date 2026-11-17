@@ -3,8 +3,9 @@ import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { canOnEvent } from '@/lib/organizer/context'
 import { isLiveTicketStatus } from '@/lib/tickets/status'
-import { fetchOwnPoster } from '@/lib/posters/hosts'
-import { toneFrom } from '@/lib/posters/tone'
+import { loadEventArt } from '@/lib/exports/eventArt'
+import { exportFileName, isoDay } from '@/lib/exports/fileName'
+import { fileResponse } from '@/lib/exports/respond'
 import { marketTimezone } from '@/lib/notifications/policy'
 import { renderAttendeeListPdf, type PdfAttendee } from '@/lib/attendees/attendeeListPdf'
 import { toDate } from '@/lib/postEvent/timing'
@@ -23,15 +24,15 @@ export const maxDuration = 60
 const L = {
   en: {
     tickets: 'Tickets', checkedIn: 'Checked in', name: 'Name', ticket: 'Ticket', in: 'In',
-    notValid: 'not valid', generated: 'Generated', page: (n: number, t: number) => `Page ${n} of ${t}`, locale: 'en-US',
+    notValid: 'not valid', generated: 'Generated', file: 'Attendees', page: (n: number, t: number) => `Page ${n} of ${t}`, locale: 'en-US',
   },
   fr: {
     tickets: 'Billets', checkedIn: 'Entrés', name: 'Nom', ticket: 'Billet', in: 'Entrée',
-    notValid: 'non valide', generated: 'Généré le', page: (n: number, t: number) => `Page ${n} sur ${t}`, locale: 'fr-FR',
+    notValid: 'non valide', generated: 'Généré le', file: 'Participants', page: (n: number, t: number) => `Page ${n} sur ${t}`, locale: 'fr-FR',
   },
   ht: {
     tickets: 'Biyè', checkedIn: 'Antre', name: 'Non', ticket: 'Biyè', in: 'Antre',
-    notValid: 'pa valab', generated: 'Fèt', page: (n: number, t: number) => `Paj ${n} sou ${t}`, locale: 'fr-HT',
+    notValid: 'pa valab', generated: 'Fèt', file: 'Patisipan', page: (n: number, t: number) => `Paj ${n} sou ${t}`, locale: 'fr-HT',
   },
 } as const
 
@@ -70,27 +71,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // Poster (thumbnail) + the event's colour from it. Best effort.
-    let poster: Buffer | null = null
-    let tone = '#141414'
-    const posterUrl = event.banner_image_url || event.cover_image_url || null
-    try {
-      const buf = posterUrl ? await fetchOwnPoster(posterUrl) : null
-      if (buf) {
-        const { default: sharp } = await import('sharp')
-        poster = await sharp(buf, { limitInputPixels: 50_000_000 })
-          .resize(320, 400, { fit: 'cover' })
-          .jpeg({ quality: 82 })
-          .toBuffer()
-        const { data } = await sharp(buf, { limitInputPixels: 50_000_000 })
-          .resize(1, 1, { fit: 'fill' })
-          .removeAlpha()
-          .raw()
-          .toBuffer({ resolveWithObject: true })
-        tone = toneFrom(data[0], data[1], data[2])
-      }
-    } catch {
-      poster = null
-    }
+    const { poster, tone } = await loadEventArt(event)
 
     const start = toDate(event.start_datetime)
     const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => {
@@ -126,14 +107,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       timeOf: (d) => fmt(d, { hour: 'numeric', minute: '2-digit' }),
     })
 
-    const safe = String(event.title || 'attendees').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'attendees'
-    return new NextResponse(Buffer.from(pdf), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${safe}-attendees.pdf"`,
-        'Cache-Control': 'private, no-store',
-      },
-    })
+    // "Konpa Night 2026 – Attendees – 2026-12-31.pdf" (lib/exports/fileName).
+    const fileName = exportFileName({ title: String(event.title || ''), label: l.file, day: start ? isoDay(start, tz) : '', ext: 'pdf' })
+    return fileResponse(pdf, 'pdf', fileName)
   } catch (error) {
     console.error('[attendees/pdf] failed', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

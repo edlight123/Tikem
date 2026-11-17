@@ -74,6 +74,7 @@ import {
 } from '../../lib/countrySupport';
 import { orderCountriesByMarkets, useDeclaredMarkets } from '../../lib/organizerMarkets';
 import { backendFetch, backendJson } from '../../lib/api/backend';
+import { useAppMode } from '../../contexts/AppModeContext';
 import StatusChip from '../../components/StatusChip';
 import FeeIncidenceCard from '../../components/organizer/FeeIncidenceCard';
 import LineupEditor from '../../components/organizer/LineupEditor';
@@ -422,7 +423,8 @@ export default function CreateEventFlowRefactored() {
   // 48 = the header's own paddingTop 12 + 24pt glyph + paddingBottom 12; it
   // carries no safe-area inset (the SafeAreaView above already does).
   const { height: headerH, onHeight } = useOverlayHeaderInset(48);
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshUserProfile } = useAuth();
+  const { mode, setMode } = useAppMode();
   // New events belong to the org being acted for (own, or a team the person
   // runs as admin/manager); created_by stays the person (lib/api/events.ts).
   const activeOrg = useActiveOrg();
@@ -1651,14 +1653,57 @@ export default function CreateEventFlowRefactored() {
         const newEventId = await createEvent(eventOrgId || userProfile.id, eventData, options);
         console.log('Event created with ID:', newEventId);
 
+        // Publish-first: the first event someone saves for THEMSELVES makes
+        // them an organizer (owner, 2026-11-17). Before this, an attendee could
+        // publish (SANTA PIANO) and then had no way into organizer mode to see
+        // sales, scan or answer messages. Team members creating for someone
+        // else's org, and existing organizers/admins, skip this.
+        const firstEvent =
+          userProfile.role === 'attendee' && (eventOrgId || userProfile.id) === userProfile.id;
+        let nowOrganizer = false;
+        if (firstEvent) {
+          try {
+            await backendJson('/api/account/become-organizer', { method: 'POST', body: JSON.stringify({}) });
+            // The tab set is chosen from the profile, so it must say
+            // "organizer" before the mode flips.
+            await refreshUserProfile();
+            nowOrganizer = true;
+          } catch (e) {
+            // Non-fatal: the event is saved. Profile > Host events retries.
+            console.warn('become-organizer failed', e);
+          }
+        }
+
         setConfirmVisible(false);
-        showAlert(
-          t('common.success'),
-          options.publish === false
-            ? t('organizerCreateEventFlow.draftSuccessBody')
-            : t('organizerCreateEventFlow.createSuccessBody'),
-          [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
-        );
+        // After saving an event of their own from attendee mode, take the
+        // person straight to the organizer side (owner, 2026-11-17), landing
+        // on Events where it sits on top. The alert provider lives above the
+        // navigator, so the message shows over the organizer side.
+        const ownEvent = (eventOrgId || userProfile.id) === userProfile.id;
+        const canOrganize =
+          nowOrganizer || userProfile.role === 'organizer' || userProfile.role === 'admin';
+        if (mode !== 'organizer' && ownEvent && canOrganize) {
+          setMode('organizer', { landingTab: 'MyEvents' });
+          showAlert(
+            nowOrganizer ? t('organizerCreateEventFlow.firstEvent.title') : t('common.success'),
+            nowOrganizer
+              ? options.publish === false
+                ? t('organizerCreateEventFlow.firstEvent.draftBody')
+                : t('organizerCreateEventFlow.firstEvent.body')
+              : options.publish === false
+                ? t('organizerCreateEventFlow.draftSuccessBody')
+                : t('organizerCreateEventFlow.createSuccessBody'),
+            [{ text: t('organizerCreateEventFlow.firstEvent.cta') }]
+          );
+        } else {
+          showAlert(
+            t('common.success'),
+            options.publish === false
+              ? t('organizerCreateEventFlow.draftSuccessBody')
+              : t('organizerCreateEventFlow.createSuccessBody'),
+            [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
+          );
+        }
       }
     } catch (error: any) {
       console.error('Event save error:', error);

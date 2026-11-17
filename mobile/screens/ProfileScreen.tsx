@@ -16,7 +16,6 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { backendJson } from '../lib/api/backend';
 import { useTabBarSpace } from '../hooks/useTabBarSpace';
 import {
   Bell,
@@ -80,6 +79,8 @@ import { Text as UIText } from '../components/ui/Text';
 import { ListGroup, ListRow } from '../components/ui/ListRow';
 import { Switch } from '../components/ui/Switch';
 import StatusBarBackdrop from '../components/StatusBarBackdrop';
+import { refreshAttendeeUnread, useAttendeeUnread } from '../lib/attendeeUnread';
+import { backendJson } from '../lib/api/backend';
 
 // Tikèm's own accounts, and the studio that builds it. EdLight Labs is the
 // technology division of EdLight Initiative, not a separate company. The
@@ -111,18 +112,12 @@ export default function ProfileScreen() {
   const openAttendeeTab = useOpenAttendeeTab();
   const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  // Organizer replies the attendee hasn't opened yet, shown on the Messages row.
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  // Organizer replies the attendee hasn't opened yet: the Messages row's count,
+  // from the same store as the Profile tab's dot (lib/attendeeUnread).
+  const unreadMessages = useAttendeeUnread({ enabled: !!user?.uid });
   useFocusEffect(
     useCallback(() => {
-      if (!user?.uid) return;
-      let live = true;
-      backendJson<{ unreadCount?: number }>('/api/messages')
-        .then((r) => live && setUnreadMessages(Number(r?.unreadCount) || 0))
-        .catch(() => live && setUnreadMessages(0));
-      return () => {
-        live = false;
-      };
+      if (user?.uid) refreshAttendeeUnread();
     }, [user?.uid])
   );
   // "Add phone number" (WhatsApp code), behind the phone-auth flag; hidden
@@ -354,6 +349,33 @@ export default function ProfileScreen() {
 
   // EditProfile's organization fields write the person's OWN brand.
   const openEdit = () => navigation.navigate('EditProfile', { organizer: isOwnOrganizer });
+
+  // Profile > "Host events on Tikèm": become an organizer without creating an
+  // event first, then land on the organizer Dashboard.
+  const [hostingBusy, setHostingBusy] = useState(false);
+  const startHosting = () => {
+    if (hostingBusy) return;
+    showAlert(t('profile.hostEvents.title'), t('profile.hostEvents.body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('profile.hostEvents.cta'),
+        onPress: async () => {
+          setHostingBusy(true);
+          try {
+            await backendJson('/api/account/become-organizer', { method: 'POST', body: JSON.stringify({}) });
+            // The organizer tab set is chosen from the profile, so refresh first.
+            await refreshUserProfile();
+            setMode('organizer', { landingTab: 'Dashboard' });
+          } catch (e) {
+            console.warn('become-organizer failed', e);
+            showAlert(t('common.error'), t('profile.hostEvents.failed'));
+          } finally {
+            setHostingBusy(false);
+          }
+        },
+      },
+    ]);
+  };
 
   const confirmSignOut = useCallback(() => {
     showAlert(t('profile.signOutTitle'), t('profile.signOutBody'), [
@@ -681,7 +703,19 @@ export default function ProfileScreen() {
               onPress={() => navigation.navigate('Messages')}
             />
             {/* Publish-first: anyone can create an event; KYC is deferred to payout. */}
-            <ListRow icon={Briefcase} title={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
+            {isOwnOrganizer || activeOrg.hasTeamAccess ? (
+              <ListRow icon={Briefcase} title={t('profile.createEvent')} onPress={() => navigation.navigate('CreateEvent')} />
+            ) : (
+              // Not an organizer yet: one tap opens organizer mode, no event
+              // needed first (owner, 2026-11-17). Same server step as the web's
+              // "create your organization"; ID checks stay at payout.
+              <ListRow
+                icon={Briefcase}
+                title={t('profile.hostEvents.row')}
+                value={hostingBusy ? '…' : undefined}
+                onPress={startHosting}
+              />
+            )}
             <ListRow
               icon={Bell}
               title={t('notificationSettings.title')}

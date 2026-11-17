@@ -1,7 +1,9 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
-import { Download } from 'lucide-react'
+import { useToast } from '@/components/ui/Toast'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadExport } from '@/lib/exports/download'
 import { SectionHeader } from '@/components/organizer/ui'
 import { formatCurrency } from '@/lib/fees'
 
@@ -31,11 +33,12 @@ function asCode(c: string): 'HTG' | 'USD' | 'CAD' | 'EUR' {
 /**
  * The org's recent payouts, read-only: amount, how, when, state. Shown on the
  * finance page to the owner and to admins the owner granted read-only
- * finances (the export is the same /api/organizer/export-payouts CSV, gated by
+ * finances (the export is /api/organizer/export-payouts, Excel or PDF, gated by
  * requireFinanceView). No destination details ever reach this component.
  */
 export default function FinancePayoutHistory({ payouts }: { payouts: FinancePayoutRow[] }) {
   const { t, i18n } = useTranslation('organizer')
+  const { showToast } = useToast()
 
   return (
     <section className="mt-10">
@@ -44,13 +47,18 @@ export default function FinancePayoutHistory({ payouts }: { payouts: FinancePayo
         description={t('finance_view.payout_history_desc')}
         actions={
           payouts.length > 0 ? (
-            <a
-              href="/api/organizer/export-payouts?format=csv"
-              className="inline-flex h-10 items-center gap-2 rounded bg-white/[0.08] px-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              {t('finance_view.export_csv')}
-            </a>
+            <ExportButtons
+              size="sm"
+              onExport={(format) =>
+                downloadExport(
+                  `/api/organizer/export-payouts?format=${format}&lang=${encodeURIComponent((i18n.language || 'en').slice(0, 2))}`,
+                  undefined,
+                  `Tikem payouts.${format}`
+                )
+              }
+              labels={{ pdf: t('exports.pdf'), excel: t('exports.excel'), group: t('finance_view.payout_history_title') }}
+              onError={(e: any) => showToast({ type: 'error', title: t('exports.failed'), message: e?.message || '' })}
+            />
           ) : null
         }
       />
