@@ -194,6 +194,10 @@
               "answer": "Oui. En cas d’annulation, vous êtes généralement éligible à un remboursement sur le moyen de paiement d’origine. Le traitement prend souvent 5 à 10 jours ouvrables. Les frais de service sont aussi remboursés."
             },
             {
+              "question": "Mon paiement n’a pas abouti, mais l’argent a quitté mon compte",
+              "answer": "Ne payez pas une deuxième fois. Un paiement mobile peut prendre quelques minutes à être confirmé. Nous continuons de vérifier auprès de MonCash et, si votre paiement est passé, votre billet apparaît automatiquement dans Mes billets. S’il n’apparaît pas dans l’heure, contactez le support avec votre numéro de transaction MonCash."
+            },
+            {
               "question": "Dans quelle devise les prix sont-ils affichés ?",
               "answer": "Les prix sont affichés dans la devise choisie par l’organisateur (souvent HTG ou USD). La devise est indiquée sur la page de l’événement et au paiement."
             }
@@ -282,6 +286,14 @@
             {
               "question": "Que se passe-t-il avec les frais si j’effectue un remboursement ?",
               "answer": "Les frais Tikèm ne sont pas remboursables : un remboursement que vous émettez, ou une demande d’acheteur que vous approuvez, rembourse la valeur faciale du billet et les frais restent déduits. Tikèm ne rembourse ses frais que si l’événement est annulé. Les remboursements pour les événements en Haïti sont examinés par Tikèm avant tout mouvement d’argent."
+            },
+            {
+              "question": "Que se passe-t-il si je rembourse un billet après avoir été payé ?",
+              "answer": "La place est remise en vente. Si vous avez déjà retiré cet argent, le montant remboursé est déduit de votre prochain versement dans la même devise."
+            },
+            {
+              "question": "Que se passe-t-il si un acheteur conteste un paiement par carte ?",
+              "answer": "Les versements de cet événement sont suspendus pendant l’examen de la banque, et le billet contesté ne peut plus servir à l’entrée. Si la banque donne raison à l’acheteur, le montant est retiré de vos gains (ou de votre prochain versement). Si elle vous donne raison, le billet redevient valide et les versements reprennent après vérification par notre équipe."
             },
             {
               "question": "Puis-je voir le détail de mes gains ?",
