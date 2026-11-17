@@ -1430,6 +1430,7 @@ export default {
       cancelKeep: 'Keep paying',
       tryAgain: 'Try again',
       backToEvent: 'Back to event',
+      viewMyTickets: 'View My Tickets',
     },
   },
 

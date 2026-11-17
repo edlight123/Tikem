@@ -12,6 +12,7 @@
 // Load environment variables
 import 'dotenv/config'
 import { adminDb } from '../lib/firebase/admin'
+import { liveTicketStatusesForQuery } from '../lib/tickets/status'
 import { eventHasInventoryShards } from '../lib/tickets/inventoryShards'
 
 async function fixTicketsSold() {
@@ -38,7 +39,7 @@ async function fixTicketsSold() {
         const ticketsSnapshot = await adminDb
           .collection('tickets')
           .where('event_id', '==', eventId)
-          .where('status', 'in', ['valid', 'confirmed'])
+          .where('status', 'in', liveTicketStatusesForQuery())
           .get()
         
         const actualCount = ticketsSnapshot.size

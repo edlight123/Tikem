@@ -35,6 +35,7 @@ import {
 import { getUsdToHtgBaseRate, isFxRateUnavailableError, type UsdToHtgBaseRateResult } from '@/lib/fx/usd-htg'
 import {
   INSTANT_MONCASH_DAYS_COLLECTION,
+  otherRailSentTodayInTx,
   dailyCapAllows,
   instantDayKey,
   loadMoncashTransferCaps,
@@ -597,6 +598,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
     await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
       const dailySnap = instant ? await tx.get(dailyRef) : null
+      const adminSentToday = instant ? await otherRailSentTodayInTx(tx, 'instant', instantDayKey()) : 0
       const walletNow = snap.exists ? ((snap.data() as any) ?? {}) : {}
       // The destination checked above must still be the saved, payable one.
       const holdNow = Date.parse(String(walletNow.moncash_phone_hold_until || ''))
@@ -613,7 +615,7 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
       // request over it is filed for the manual queue instead (no fee).
       if (instant) {
         const sentToday = Math.max(0, Number(dailySnap?.exists ? (dailySnap.data() as any)?.totalHtgCents : 0) || 0)
-        if (dailyCapAllows(sentToday, instantPricing.poolDebitHtgCents, caps)) {
+        if (dailyCapAllows(sentToday + adminSentToday, instantPricing.poolDebitHtgCents, caps)) {
           tx.set(
             dailyRef,
             {

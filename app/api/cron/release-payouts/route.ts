@@ -40,6 +40,7 @@ import {
   recordCreatedPayout,
   releaseAttemptDocId,
   type ReconcileSummary,
+  reviewApprovalCovers,
 } from '@/lib/stripe-payout-releases'
 
 export const runtime = 'nodejs'
@@ -770,6 +771,11 @@ export async function GET(request: Request) {
         )
 
         const payable = Number.isFinite(amountMinor) && amountMinor > 0
+        // An approval covers the amount the admin saw, until it expires; a
+        // bigger payout or a stale approval goes back to the queue.
+        const reviewData = reviewSnap.exists ? (reviewSnap.data() as any) : null
+        const approvalCovers = reviewApprovalCovers(reviewData, Math.max(0, amountMinor), account.currency, now)
+        const approvalLapsed = reviewReleased && !approvalCovers
 
         // Auto-eligible but the caps left nothing to send (already released, or
         // the balance moved). Nothing to record — it reports as a hold.
@@ -786,7 +792,7 @@ export async function GET(request: Request) {
           continue
         }
 
-        if ((decision.release === 'review' && !reviewReleased) || reviewPending) {
+        if ((decision.release === 'review' && !approvalCovers) || reviewPending) {
           const reason =
             decision.release === 'auto' ? `${decision.reason}+awaiting_admin_review` : decision.reason
 
@@ -812,13 +818,16 @@ export async function GET(request: Request) {
               createdAt: nowIso,
               updatedAt: nowIso,
             })
-          } else if (reviewStatus === 'pending') {
+          } else if (reviewStatus === 'pending' || (reviewStatus === 'released' && approvalLapsed)) {
             await reviewRef.set(
               {
                 amountMinor: Math.max(0, amountMinor),
                 currency: account.currency,
                 reason,
                 tier: decision.tier,
+                ...(reviewStatus === 'released'
+                  ? { status: 'pending', reopenedAt: nowIso, reopenedBy: 'cron:approval_lapsed' }
+                  : {}),
                 updatedAt: nowIso,
               },
               { merge: true }

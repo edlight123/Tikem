@@ -575,6 +575,9 @@ export async function fulfillPaidOrder(params: {
         buyer_fee_charged_amount: perTicketBuyerFee,
         payment_method: paymentMethod,
         payment_id: transactionId || orderId,
+        // The inventory reservation this seat is counted under, so a refund can
+        // give the seat back (lib/tickets/seatReturn).
+        reservation_id: reservationId,
         // Promoter attribution: opaque ids only; the commission economics live in
         // the server-only promoter_sales ledger.
         promoter_id: pendingTx.promoter_id || null,

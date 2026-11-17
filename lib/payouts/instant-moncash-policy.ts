@@ -30,6 +30,21 @@ export const INSTANT_MONCASH_DAYS_COLLECTION = 'instant_moncash_transfer_days'
 
 export type MoncashTransferCaps = { perCall: number; daily: number }
 
+/** Daily running total of prefunded transfers an ADMIN sent by hand (moncash-prefunded/transfer). */
+export const ADMIN_MONCASH_DAYS_COLLECTION = 'admin_moncash_transfer_days'
+
+/**
+ * Both rails draw on ONE pool and ONE daily cap (payment audit, 2026-11-17):
+ * each rail keeps its own day counter, so each check must add the other rail's
+ * total or the two together could send twice the cap. Read inside the caller's
+ * transaction, before any write.
+ */
+export async function otherRailSentTodayInTx(tx: any, rail: 'instant' | 'admin', day: string): Promise<number> {
+  const col = rail === 'instant' ? ADMIN_MONCASH_DAYS_COLLECTION : INSTANT_MONCASH_DAYS_COLLECTION
+  const snap = await tx.get(adminDb.collection(col).doc(day))
+  return Math.max(0, Number(snap?.exists ? (snap.data() as any)?.totalHtgCents : 0) || 0)
+}
+
 export function capsFromConfig(raw: any): MoncashTransferCaps {
   const caps = raw?.adminTransferCaps
   const pick = (value: unknown, fallback: number) => {

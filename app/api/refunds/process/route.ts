@@ -1,3 +1,4 @@
+import { returnSeatForRefundedTicket } from '@/lib/tickets/seatReturn'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminReviewMessage, refundTicket, reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { adminDb } from '@/lib/firebase/admin'
@@ -171,6 +172,7 @@ export async function POST(request: Request) {
       // Retired without money moving; refundTicket only reverses commission on
       // refunded/queued outcomes, so this branch does it itself.
       await reversePromoterCommission(String(ticketId), 'organizer_refund_free')
+      await returnSeatForRefundedTicket(String(ticketId), { logPrefix: '[refunds/process]' })
     } else if (res.outcome === 'skipped' && res.reason === 'checked_in') {
       return Response.json(
         {

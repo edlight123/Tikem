@@ -58,6 +58,7 @@ import { attachTicketsToGuestOrder } from '@/lib/guest/identity'
 import type { GuestOrderRecipient } from '@/lib/guest/checkout'
 import { buildTierSoldIncrements, convertSeatHold } from '@/lib/tickets/inventory'
 import { releaseSeatHold } from '@/lib/tickets/seatHolds'
+import { returnSeatForRefundedTicket } from '@/lib/tickets/seatReturn'
 import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
 import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
@@ -709,6 +710,9 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
     // money back from the organizer's connected account.
     payment_method: paymentMethod,
     payment_id: input.paymentId,
+    // The inventory reservation this seat is counted under, so a refund can
+    // give the seat back (lib/tickets/seatReturn).
+    reservation_id: stripeReservationId(m, input.paymentId),
     promoter_id: m.promoterId || null,
     promoter_code: m.promoterCode || null,
     ...ticketAttributionFields(attribution),
@@ -1119,7 +1123,10 @@ export async function applyStripeChargeRefund(charge: any, opts?: { logPrefix?: 
       )
       return true
     })
-    if (marked) result.markedRefunded.push(t.id)
+    if (marked) {
+      result.markedRefunded.push(t.id)
+      await returnSeatForRefundedTicket(t.id, { logPrefix: '[stripe-charge-refunded]' })
+    }
   }
 
   // The promoter's commission goes with each refunded ticket. Reversal is per

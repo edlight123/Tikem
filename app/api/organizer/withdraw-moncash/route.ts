@@ -47,6 +47,7 @@ import { payoutProfileInactiveReason } from '@/lib/payouts/profile-readiness'
 import { loadKycLegalNames, moncashNumberOtpVerified } from '@/lib/payouts/payee-identity'
 import {
   INSTANT_MONCASH_DAYS_COLLECTION,
+  otherRailSentTodayInTx,
   dailyCapAllows,
   decideInstantMoncash,
   instantDayKey,
@@ -447,10 +448,11 @@ export async function POST(req: NextRequest) {
       let fellBackToManual = false
       try {
         await adminDb.runTransaction(async (tx: any) => {
-          const [earningsSnap, withdrawalSnap, dailySnap] = await Promise.all([
+          const [earningsSnap, withdrawalSnap, dailySnap, adminSentToday] = await Promise.all([
             tx.get(earningsRef),
             tx.get(withdrawalRef),
             tx.get(dailyRef),
+            otherRailSentTodayInTx(tx, 'instant', instantDayKey(now)),
           ])
           const debt = await readDebtInTransaction(tx, user.id)
 
@@ -499,7 +501,7 @@ export async function POST(req: NextRequest) {
 
           // Daily instant cap, counted in the transaction that reserves.
           const sentToday = Math.max(0, Number(dailySnap?.exists ? (dailySnap.data() as any)?.totalHtgCents : 0) || 0)
-          if (caps && !dailyCapAllows(sentToday, instantPricing.poolDebitHtgCents, caps)) {
+          if (caps && !dailyCapAllows(sentToday + adminSentToday, instantPricing.poolDebitHtgCents, caps)) {
             throw new InstantDailyCapReached()
           }
 
