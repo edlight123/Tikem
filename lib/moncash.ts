@@ -66,6 +66,49 @@ let tokenInFlight: Promise<string> | null = null
  */
 let preferredTokenAttempt = 0
 
+/**
+ * The token is also kept in ONE server-only Firestore doc, shared by every
+ * serverless function (speed pass 2026-11-17). In memory alone, the token the
+ * quote/initiate functions warmed was invisible to the checkout function (a
+ * separate instance on Vercel), so checkout minted its own from Digicel every
+ * time: ~10s of "Continue to payment" on a cold path. firestore.rules deny
+ * this collection to every client (default deny); only the Admin SDK reads it.
+ */
+const SHARED_TOKEN_DOC = ['server_cache', 'moncash_gateway_token'] as const
+/** A shared token must have at least this long left to be worth reusing. */
+const SHARED_TOKEN_MIN_LIFE_MS = 8_000
+
+async function readSharedToken(): Promise<{ token: string; expiresAt: number } | null> {
+  try {
+    const { adminDb } = await import('@/lib/firebase/admin')
+    const snap = await adminDb.collection(SHARED_TOKEN_DOC[0]).doc(SHARED_TOKEN_DOC[1]).get()
+    const d = snap.exists ? (snap.data() as any) : null
+    if (d && typeof d.token === 'string' && typeof d.expiresAt === 'number' && d.expiresAt - Date.now() > SHARED_TOKEN_MIN_LIFE_MS) {
+      return { token: d.token, expiresAt: d.expiresAt }
+    }
+  } catch (e) {
+    console.warn('[MonCash] shared token read failed (minting instead)', e)
+  }
+  return null
+}
+
+function writeSharedToken(entry: { token: string; expiresAt: number }): void {
+  import('@/lib/firebase/admin')
+    .then(({ adminDb }) =>
+      adminDb.collection(SHARED_TOKEN_DOC[0]).doc(SHARED_TOKEN_DOC[1]).set({ ...entry, updated_at: Date.now() })
+    )
+    .catch((e) => console.warn('[MonCash] shared token write failed', e))
+}
+
+/** Set when Digicel rejected the cached token: the next mint skips the shared copy (it is the same token). */
+let skipSharedToken = false
+
+/** Drop the cached token after a 401, here AND for the shared copy. */
+function invalidateToken(): void {
+  cachedToken = null
+  skipSharedToken = true
+}
+
 async function getAccessToken(): Promise<string> {
   // Return cached token if still valid
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
@@ -74,7 +117,17 @@ async function getAccessToken(): Promise<string> {
   }
 
   if (!tokenInFlight) {
-    tokenInFlight = fetchAccessToken().finally(() => {
+    tokenInFlight = (async () => {
+      const shared = skipSharedToken ? null : await readSharedToken()
+      skipSharedToken = false
+      if (shared) {
+        cachedToken = shared
+        return shared.token
+      }
+      const token = await fetchAccessToken()
+      if (cachedToken) writeSharedToken(cachedToken)
+      return token
+    })().finally(() => {
       tokenInFlight = null
     })
   }
@@ -279,7 +332,7 @@ export async function createMonCashPayment({
 
       // Retry once with a fresh token if the cached one expired.
       if (shouldRetryWithFreshToken(response.status, errorText)) {
-        cachedToken = null
+        invalidateToken()
         response = await doRequest()
         console.log('[MonCash] Payment retry response status:', response.status)
         if (!response.ok) {
@@ -345,7 +398,7 @@ export async function initiateMonCashPayment({
       // the RETRIED response, or the error is masked by "Body is unusable".
       let errorText2 = await response.text()
       if (shouldRetryWithFreshToken(response.status, errorText2)) {
-        cachedToken = null
+        invalidateToken()
         response = await doRequest()
         if (!response.ok) errorText2 = await response.text()
       }
@@ -410,7 +463,7 @@ export async function checkPaymentStatus(
       // Read each Response body once (see initiateMonCashPayment).
       let errorText2 = await response.text()
       if (shouldRetryWithFreshToken(response.status, errorText2)) {
-        cachedToken = null
+        invalidateToken()
         response = await doRequest()
         if (!response.ok) errorText2 = await response.text()
       }
@@ -520,7 +573,7 @@ export async function createMonCashGatewayPayment({
     // "Body is unusable" and hid Digicel's real error message.
     let errorText2 = await response.text()
     if (shouldRetryWithFreshToken(response.status, errorText2)) {
-      cachedToken = null
+      invalidateToken()
       response = await doRequest()
       if (!response.ok) errorText2 = await response.text()
     }
@@ -612,7 +665,7 @@ async function retrieveGatewayPayment(
     // logged every such order as "gateway unreachable" and left it pending.
     let errorText2 = await response.text()
     if (shouldRetryWithFreshToken(response.status, errorText2)) {
-      cachedToken = null
+      invalidateToken()
       response = await doRequest()
       if (!response.ok) errorText2 = await response.text()
     }
@@ -850,7 +903,7 @@ async function monCashRestRequest(path: string, init: RequestInit & { method: st
     if (shouldRetryWithFreshToken(response.status, text)) {
       // Clear whichever cache produced the rejected token.
       if (usePrefunded) cachedPrefundedToken = null
-      else cachedToken = null
+      else invalidateToken()
       response = await doRequest()
       if (!response.ok) {
         const text2 = await response.text()

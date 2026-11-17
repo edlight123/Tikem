@@ -69,8 +69,6 @@ import { AFTER_ALERT_MS, promptBlockToggle } from '../lib/moderationActions';
 import PurchaseSuccessSheet from '../components/PurchaseSuccessSheet';
 import FriendsGoingRow from '../components/FriendsGoingRow';
 import InviteFriendsRow from '../components/InviteFriendsSheet';
-import { useSocialFlags } from '../lib/socialFlags';
-import { fetchInviteLink } from '../lib/api/invites';
 import { requestPhonePrompt } from '../lib/phonePrompt';
 import { useAppAlert } from '../components/AppAlert';
 import ChromeBlur from '../components/ChromeBlur';
@@ -191,7 +189,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const [showContactOrganizer, setShowContactOrganizer] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const blockedOrganizers = useBlockedOrganizers();
-  const socialFlags = useSocialFlags();
   // Set the moment a purchase or free claim lands; carries the count so the
   // confirmation can say "2 tickets" rather than a generic success message.
   const [successQuantity, setSuccessQuantity] = useState<number | null>(null);
@@ -483,30 +480,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
     }
   };
 
-  // The personal invite link (config/auth.invites): friends who join Tikèm
-  // from it are connected to the sharer, and it opens this event.
-  const shareInviteLink = async () => {
-    const link = await fetchInviteLink(eventId);
-    if (!link) {
-      showAlert(t('invites.errorTitle'), t('invites.linkError'));
-      return;
-    }
-    try {
-      await Share.share({ message: t('invites.messageEvent', { event: event?.title || '', link }) });
-    } catch (error) {
-      console.error('Error sharing invite link:', error);
-    }
-  };
 
   const handleShare = () => {
-    if (socialFlags.invites && user) {
-      showAlert(t('invites.shareChoiceTitle'), undefined, [
-        { text: t('invites.shareEvent'), onPress: () => { shareEventSheet(); } },
-        { text: t('invites.shareInviteLink'), onPress: () => { shareInviteLink(); } },
-        { text: t('common.cancel'), style: 'cancel' },
-      ]);
-      return;
-    }
+    // Straight to the share sheet (owner, 2026-11-17: the "Share this event /
+    // Invite friends to Tikèm" menu was two plain buttons in the way). The
+    // event link's preview is the poster; the personal invite link lives in
+    // the Invite friends sheet ("Share your invite link").
     shareEventSheet();
   };
 

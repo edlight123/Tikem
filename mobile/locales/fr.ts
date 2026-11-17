@@ -3096,6 +3096,7 @@ export default {
     ticketsAvailable: 'billets disponibles',
     soldOut: 'Complet',
     onSaleFrom: 'En vente le {date}',
+    saleSoonTitle: 'Les billets seront en vente',
     salesEnded: 'Ventes terminées',
     promoTitle: 'Code promo (optionnel)',
     havePromoCode: 'Vous avez un code promo ?',

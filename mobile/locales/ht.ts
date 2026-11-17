@@ -3064,6 +3064,7 @@ export default {
     ticketsAvailable: 'biyè disponib',
     soldOut: 'Fini',
     onSaleFrom: 'An vant {date}',
+    saleSoonTitle: 'Tikè yo ap disponib',
     salesEnded: 'Vant fini',
     promoTitle: 'Kòd pwomo (opsyonèl)',
     havePromoCode: 'Ou gen yon kòd pwomo?',

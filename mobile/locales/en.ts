@@ -3132,6 +3132,7 @@ export default {
     ticketsAvailable: 'tickets available',
     soldOut: 'Sold Out',
     onSaleFrom: 'On sale {date}',
+    saleSoonTitle: 'Tickets go on sale',
     salesEnded: 'Sales ended',
     promoTitle: 'Promo Code (Optional)',
     // Collapsed-toggle label. promoTitle stays for the expanded section header.

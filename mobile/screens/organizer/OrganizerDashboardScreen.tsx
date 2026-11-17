@@ -36,6 +36,7 @@ import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import StatusBarBackdrop from '../../components/StatusBarBackdrop';
 import { Banknote, ChartColumn, Wallet, RotateCcw, Users, type LucideIcon } from 'lucide-react-native';
 import { refreshOrganizerUnread } from '../../lib/organizerUnread';
+import { readPersisted, writePersisted } from '../../lib/persistentCache';
 import { displayCapacity } from '../../lib/ticketPricing';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
@@ -66,6 +67,15 @@ function revenueCell(stats: OrganizerStats | null): { value: string | null; capt
       ? rest.map((r) => `+ ${formatPrice(r.amount, r.currency)}`).join('\n')
       : undefined,
   };
+}
+
+/** Cached events come back from JSON with ISO strings; the screen expects Dates. */
+function reviveDates(list: any[] | undefined): any[] {
+  return (list || []).map((e) => ({
+    ...e,
+    start_datetime: e?.start_datetime ? new Date(e.start_datetime) : e?.start_datetime ?? null,
+    end_datetime: e?.end_datetime ? new Date(e.end_datetime) : e?.end_datetime ?? null,
+  }));
 }
 
 export default function OrganizerDashboardScreen() {
@@ -117,12 +127,27 @@ export default function OrganizerDashboardScreen() {
     };
   }, [orgId, isOwner]);
 
-  // A different org: drop the previous org's numbers before loading.
+  // A different org: drop the previous org's numbers, then paint this org's
+  // last-seen dashboard at once (speed pass, 2026-11-17) while the live
+  // numbers load behind it. Only the skeleton is skipped; nothing is trusted
+  // for money, and loadData overwrites every field.
   useEffect(() => {
     setLoading(true);
     setTodayEvents([]);
     setAllEvents([]);
     setStats(null);
+    if (!orgId) return;
+    let cancelled = false;
+    readPersisted<{ today: any[]; stats: any; events: any[] }>(`orgDash:${orgId}`).then((c) => {
+      if (cancelled || !c) return;
+      setTodayEvents(reviveDates(c.today));
+      setStats(c.stats);
+      setAllEvents(reviveDates(c.events));
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [orgId]);
 
   const loadData = useCallback(async () => {
@@ -141,6 +166,7 @@ export default function OrganizerDashboardScreen() {
       setTodayEvents(eventsData);
       setStats(statsData);
       setAllEvents(organizerEvents);
+      writePersisted(`orgDash:${orgId}`, { today: eventsData, stats: statsData, events: organizerEvents }).catch(() => {});
     } catch (error) {
       console.error('Error loading organizer dashboard:', error);
     } finally {

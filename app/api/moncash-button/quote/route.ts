@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
+import { prewarmMonCashAccessToken } from '@/lib/moncash'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
@@ -48,6 +49,11 @@ export const dynamic = 'force-dynamic'
  * (`quantity` + `tierId` mirror initiate's single-line form, which the app uses.)
  */
 export async function POST(request: Request) {
+  // The payment sheet asks for this quote the moment it opens, seconds before
+  // "Continue to payment". Mint the MonCash token now (shared across functions
+  // via lib/moncash) so the checkout step finds it ready instead of paying
+  // Digicel's round trip while the buyer waits (speed pass 2026-11-17).
+  after(() => prewarmMonCashAccessToken())
   try {
     const body = (await request.json().catch(() => null)) as {
       eventId?: string
