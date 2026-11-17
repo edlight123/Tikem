@@ -219,7 +219,7 @@ export default function PayoutReviewQueue() {
         : action === 'release'
         ? {
             title: `Approve release of ${amount}?`,
-            description: `This lifts the review hold on “${item.eventTitle || item.eventId}” for ${who}. The hourly release run pays it out on its next pass, nothing moves from this page.`,
+            description: `This approves ONE payout of up to ${amount} for “${item.eventTitle || item.eventId}” (${who}), valid for 14 days. The hourly release run pays it on its next pass; nothing moves from this page. A larger amount, a later payout or an approval that expires comes back here. You cannot approve a payout to your own account.`,
             confirmLabel: 'Approve release',
             variant: 'default',
           }
@@ -256,7 +256,7 @@ export default function PayoutReviewQueue() {
         type: 'success',
         text:
           action === 'release'
-            ? `Release approved, ${amount} is queued for the next payout run.`
+            ? `Approved: one payout of up to ${amount}, sent on the next payout run.`
             : action === 'reopen'
             ? 'Reopened: the review is pending again.'
             : action === 'refund_buyers'
@@ -329,8 +329,9 @@ export default function PayoutReviewQueue() {
         <ShieldQuestion className="mt-0.5 h-5 w-5 flex-shrink-0 text-console-faint" />
         <p className="text-sm text-console-mut">
           The hourly release job sends an event here when something about it wants human eyes, and a queued event is{' '}
-          <span className="text-console-text">not paid</span> while it sits here. Approving lifts that hold so the next
-          run pays it; dismissing closes it and pays nothing. Neither button moves money by itself, the release job
+          <span className="text-console-text">not paid</span> while it sits here. Approving lets the next run pay{' '}
+          <span className="text-console-text">one payout of up to the amount shown, within 14 days</span>; dismissing
+          closes it and pays nothing. Neither button moves money by itself, the release job
           does, on its own schedule, with the balance and idempotency checks it already has. The thresholds that decide
           what lands here live in{' '}
           <Link
@@ -547,9 +548,10 @@ export default function PayoutReviewQueue() {
 
       <p className="flex items-start gap-1.5 text-xs text-console-faint">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-        Approving does not itself send money: it clears the block, and the release job pays the event on its next run
-        once its own rules allow. If an event keeps re-appearing here, the condition that flagged it is still true, 
-        change the organizer&rsquo;s settings or the platform thresholds rather than re-approving.
+        Approving does not itself send money: the release job pays the event on its next run once its own rules allow,
+        and that payout uses the approval up. New sales on the same event come back here for a fresh decision. If an
+        event keeps re-appearing, the condition that flagged it is still true; change the organizer&rsquo;s settings
+        or the platform thresholds rather than re-approving.
       </p>
     </div>
   )

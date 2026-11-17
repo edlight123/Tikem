@@ -4,8 +4,12 @@ import { requireSuperAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
-import { executePrefundedTransfer, normalizeMoncashReceiver } from '@/lib/payouts/moncash-prefunded'
-import { ADMIN_MONCASH_DAYS_COLLECTION, otherRailSentTodayInTx } from '@/lib/payouts/instant-moncash-policy'
+import { DIGICEL_PREFUNDED_FEE_PERCENT, executePrefundedTransfer, normalizeMoncashReceiver } from '@/lib/payouts/moncash-prefunded'
+import {
+  ADMIN_MONCASH_DAYS_COLLECTION,
+  otherRailSentTodayInTx,
+  returnDailyCapForRejectedTransfer,
+} from '@/lib/payouts/instant-moncash-policy'
 import { finalizeWithdrawalCompleted } from '@/lib/payouts/withdrawal-finalize'
 import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
@@ -74,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     let receiver = ''
     let amountHtgCents = 0
+    let poolDebitHtgCents = 0
     try {
       await adminDb.runTransaction(async (tx: any) => {
         const [snap, dailySnap, instantSentToday] = await Promise.all([
@@ -93,19 +98,23 @@ export async function POST(request: NextRequest) {
         if (!to) throw new Refused('The withdrawal has no valid MonCash number')
         const amount = Math.round(Number(row?.payoutAmountHtgCents ?? (row?.currency === 'HTG' ? row?.amount : NaN)))
         if (!Number.isFinite(amount) || amount <= 0) throw new Refused('The withdrawal has no HTG payout amount')
-        if (amount > caps.perCall) {
-          throw new Refused(`Above the per-transfer cap of ${(caps.perCall / 100).toFixed(2)} HTG; pay it by hand`)
+        // What actually leaves the pool: the transfer plus Digicel's 3% fee,
+        // counted exactly like the instant rails count it (owner, 2026-11-17).
+        const poolDebit = amount + Math.round(amount * DIGICEL_PREFUNDED_FEE_PERCENT)
+        if (poolDebit > caps.perCall) {
+          throw new Refused(`Above the per-transfer cap of ${(caps.perCall / 100).toFixed(2)} HTG (including Digicel's 3% fee); pay it by hand`)
         }
         const sentToday = Math.max(0, Number(dailySnap.exists ? (dailySnap.data() as any)?.totalHtgCents : 0) || 0)
-        if (sentToday + instantSentToday + amount > caps.daily) {
-          throw new Refused(`Today's admin transfer cap of ${(caps.daily / 100).toFixed(2)} HTG would be exceeded`)
+        if (sentToday + instantSentToday + poolDebit > caps.daily) {
+          throw new Refused(`Today's prefunded cap of ${(caps.daily / 100).toFixed(2)} HTG would be exceeded`)
         }
         const now = new Date()
         tx.set(
           dailyRef,
-          { totalHtgCents: sentToday + amount, count: (Number(dailySnap.data?.()?.count) || 0) + 1, updatedAt: now },
+          { totalHtgCents: sentToday + poolDebit, count: (Number(dailySnap.data?.()?.count) || 0) + 1, updatedAt: now },
           { merge: true }
         )
+        poolDebitHtgCents = poolDebit
         // From here the row is an instant transfer in flight: the reconcile
         // cron and the admin fail path treat it as possibly paid.
         tx.set(
@@ -160,8 +169,9 @@ export async function POST(request: NextRequest) {
       return adminOk({ success: true, outcome: 'unconfirmed', message: 'Sent but not confirmed; the reconcile job will settle it.' })
     }
 
-    // Rejected: nothing moved. Back to an approved manual row (the daily total
-    // is not refunded, deliberately conservative).
+    // Rejected: nothing moved. Back to an approved manual row, and its share of
+    // the day's cap is given back (once).
+    await returnDailyCapForRejectedTransfer({ withdrawalRef, dailyRef, poolDebitHtgCents })
     await withdrawalRef.set(
       { prefundingUsed: false, adminTransferAt: null, adminTransferRejectedReason: outcome.reason, updatedAt: new Date() },
       { merge: true }

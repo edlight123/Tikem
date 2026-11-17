@@ -63,6 +63,37 @@ export async function loadMoncashTransferCaps(): Promise<MoncashTransferCaps> {
   return capsFromConfig(snap?.exists ? snap.data() : null)
 }
 
+/**
+ * MonCash definitively REJECTED a prefunded transfer: no money left the pool,
+ * so its share of the day's cap is given back (owner, 2026-11-17: a run of
+ * rejections used to exhaust the cap with nothing sent). Once per withdrawal,
+ * guarded by `dailyCapReturnedAt` on the row in the same transaction. Only for
+ * a definitive rejection — never for an unconfirmed transfer. Never throws.
+ */
+export async function returnDailyCapForRejectedTransfer(params: {
+  withdrawalRef: any
+  dailyRef: any
+  poolDebitHtgCents: number
+}): Promise<boolean> {
+  const debit = Math.max(0, Math.round(Number(params.poolDebitHtgCents) || 0))
+  if (debit <= 0) return false
+  try {
+    return await adminDb.runTransaction(async (tx: any) => {
+      const [row, day] = await Promise.all([tx.get(params.withdrawalRef), tx.get(params.dailyRef)])
+      if (!row.exists || row.data()?.dailyCapReturnedAt) return false
+      const total = Math.max(0, Number(day.exists ? day.data()?.totalHtgCents : 0) || 0)
+      const count = Math.max(0, Number(day.exists ? day.data()?.count : 0) || 0)
+      const now = new Date()
+      tx.set(params.dailyRef, { totalHtgCents: Math.max(0, total - debit), count: Math.max(0, count - 1), updatedAt: now }, { merge: true })
+      tx.set(params.withdrawalRef, { dailyCapReturnedAt: now, dailyCapReturnedHtgCents: debit }, { merge: true })
+      return true
+    })
+  } catch (err: any) {
+    console.error('[prefunded] could not give back the daily cap of a rejected transfer', { message: err?.message })
+    return false
+  }
+}
+
 export function instantDayKey(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10)
 }

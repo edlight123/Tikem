@@ -36,6 +36,7 @@ import { getUsdToHtgBaseRate, isFxRateUnavailableError, type UsdToHtgBaseRateRes
 import {
   INSTANT_MONCASH_DAYS_COLLECTION,
   otherRailSentTodayInTx,
+  returnDailyCapForRejectedTransfer,
   dailyCapAllows,
   instantDayKey,
   loadMoncashTransferCaps,
@@ -748,6 +749,9 @@ export async function executePromoterWithdrawal(uid: string, rawPhone: string): 
       payoutHtgCents: payoutCents,
     }
   }
+
+  // Nothing left the pool, so its share of today's cap goes back (once).
+  await returnDailyCapForRejectedTransfer({ withdrawalRef, dailyRef, poolDebitHtgCents: instantPricing.poolDebitHtgCents })
 
   // Definitively rejected by MonCash: nothing moved, put the money back —
   // exactly the recorded walletDebits, once, in the same transaction that flips
