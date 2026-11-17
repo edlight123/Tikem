@@ -3291,7 +3291,7 @@ export default {
     },
     payment: {
       reasons: {
-        payment_failed: 'Le paiement n’a pas abouti. Vous n’avez pas été débité.',
+        payment_failed: 'Le paiement n’a pas abouti. Si un montant a quand même été prélevé, votre billet apparaîtra dans Mes billets d’ici quelques minutes — vérifiez avant de payer à nouveau.',
         sold_out: 'Les billets ont été épuisés avant la fin de votre paiement. Tout montant débité sera remboursé.',
         capacity_exceeded: 'Les billets ont été épuisés avant la fin de votre paiement. Tout montant débité sera remboursé.',
         amount_mismatch: 'Le montant payé ne correspond pas à la commande. Contactez le support si vous avez été débité.',

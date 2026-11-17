@@ -72,6 +72,14 @@ export function seatHoldMs(env: Record<string, string | undefined> = process.env
 
 export const SEAT_HOLD_MS = seatHoldMs()
 
+/**
+ * Mobile money (MonCash, SogePay) holds for longer: the buyer leaves for the
+ * wallet's own page, whose payment window is ~10 minutes. An 8-minute hold could
+ * lapse while they were still paying, so a sell-out in that gap charged them
+ * with no seat left (payment audit, 2026-11-17). Never shorter than the card hold.
+ */
+export const MOBILE_MONEY_SEAT_HOLD_MS = Math.max(SEAT_HOLD_MS, 12 * 60_000)
+
 /** 128 random bits: a hold id is never derived from anything guessable. */
 export function newSeatHoldId(): string {
   return `hold_${randomUUID().replace(/-/g, '')}`

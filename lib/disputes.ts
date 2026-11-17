@@ -50,6 +50,7 @@ import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { createNotification } from '@/lib/notifications/helpers'
 import { resolveOrgRecipients } from '@/lib/notifications/orgRecipients'
 import { getAdminEmails } from '@/lib/admin'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 import type { NotificationType } from '@/types/database'
 
 export const DISPUTES_COLLECTION = 'disputes'
@@ -1106,6 +1107,51 @@ async function emailAdmins(record: DisputeRecord, eventType: string): Promise<bo
  *                        (older Stripe API versions), since only the caller holds
  *                        the Stripe client.
  */
+/** Ticket status while a chargeback is open or was lost. Not live: refused at the door, out of payouts. */
+export const DISPUTED_TICKET_STATUS = 'disputed'
+
+/**
+ * Hold or give back the tickets of a disputed payment. Open / lost: every live
+ * ticket becomes 'disputed' (its previous status kept). Won / inquiry closed:
+ * tickets this dispute held go back to what they were. Idempotent; never throws.
+ */
+export async function applyDisputeToTickets(
+  disputeId: string,
+  outcome: DisputeOutcome,
+  ticketIds: string[]
+): Promise<{ held: number; restored: number }> {
+  const out = { held: 0, restored: 0 }
+  const hold = outcome === 'open' || outcome === 'lost'
+  const restore = outcome === 'won' || outcome === 'inquiry_closed'
+  if (!hold && !restore) return out
+  for (const id of ticketIds.slice(0, 50)) {
+    try {
+      const ref = adminDb.collection('tickets').doc(String(id))
+      const changed = await adminDb.runTransaction(async (tx: any) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists) return null
+        const t = snap.data() || {}
+        const status = String(t.status || '').toLowerCase()
+        const nowIso = new Date().toISOString()
+        if (hold && isLiveTicketStatus(t.status)) {
+          tx.set(ref, { status: DISPUTED_TICKET_STATUS, pre_dispute_status: t.status || 'valid', dispute_id: disputeId, disputed_at: nowIso, updated_at: nowIso }, { merge: true })
+          return 'held'
+        }
+        if (restore && status === DISPUTED_TICKET_STATUS && t.dispute_id === disputeId) {
+          tx.set(ref, { status: t.pre_dispute_status || 'valid', dispute_restored_at: nowIso, updated_at: nowIso }, { merge: true })
+          return 'restored'
+        }
+        return null
+      })
+      if (changed === 'held') out.held += 1
+      if (changed === 'restored') out.restored += 1
+    } catch (err: any) {
+      console.error('[disputes] could not update a disputed ticket', { disputeId, ticketId: id, message: err?.message })
+    }
+  }
+  return out
+}
+
 export async function handleStripeDisputeEvent(params: {
   dispute: any
   eventType: string
@@ -1181,6 +1227,15 @@ export async function handleStripeDisputeEvent(params: {
     organizerNotified: false,
     organizerEmailed: false,
     adminEmailed: false,
+  }
+
+  // The disputed tickets follow the dispute (payment audit, 2026-11-17): while
+  // the bank has the money back, the ticket neither scans at the door nor counts
+  // toward the organizer's balance — so a loss after a withdrawal becomes their
+  // debt through the normal deficit sync (lib/payouts/organizer-debt) instead of
+  // Tikèm's. A dispute won (or an inquiry closed) gives the ticket back.
+  if (!recorded.stale && record.attribution.attributed && record.attribution.ticketIds.length > 0) {
+    await applyDisputeToTickets(disputeId, record.outcome, record.attribution.ticketIds)
   }
 
   if (recorded.shouldNotifyOrganizer) {

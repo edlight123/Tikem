@@ -10,6 +10,7 @@
 // IMPORTANT: callers MUST verify the payment with the provider BEFORE calling fulfillPaidOrder.
 // This module does not talk to any payment gateway; it trusts that the order is paid.
 
+import { createHmac } from 'node:crypto'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import {
@@ -113,6 +114,61 @@ export async function claimOrderForFulfillment(orderId: string): Promise<Fulfill
     })
     return { outcome: 'claimed' } as FulfillmentClaim
   })
+}
+
+/** Deterministic, unguessable id for the n-th ticket of a mobile-money order. */
+export function orderTicketId(orderId: string, index: number): string {
+  const secret = process.env.TICKET_ID_SECRET || process.env.MONCASH_SECRET_KEY || process.env.STRIPE_SECRET_KEY || 'tikem'
+  const tag = createHmac('sha256', secret).update(`order:${orderId}:${index}`).digest('hex').slice(0, 16)
+  const safe = String(orderId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60) || 'order'
+  return `mm_${safe}_${index}_${tag}`
+}
+
+/**
+ * Write one ticket under its deterministic id. A ticket that already exists
+ * (written by an earlier, interrupted run) is adopted as it is.
+ */
+async function writeOrderTicket(
+  id: string,
+  ticketData: Record<string, any>
+): Promise<{ data: Record<string, any> | null; error: any }> {
+  try {
+    const ref = adminDb.collection('tickets').doc(id)
+    const created = await adminDb.runTransaction(async (tx: any) => {
+      const existing = await tx.get(ref)
+      if (existing.exists) return { id, ...(existing.data() || {}), qr_code_data: existing.data()?.qr_code_data || id }
+      const nowIso = new Date().toISOString()
+      const doc = { ...ticketData, id, qr_code_data: id, created_at: nowIso, updated_at: nowIso }
+      tx.set(ref, doc)
+      return doc
+    })
+    return { data: created, error: null }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+/**
+ * Take a one-time bookkeeping step for an order (earnings, promo redemption).
+ * True exactly once per order and step; never throws (false on error, so a
+ * failure under-counts rather than double-counts).
+ */
+async function takeOrderStep(orderId: string, step: 'earnings' | 'promo'): Promise<boolean> {
+  try {
+    const snap = await adminDb.collection('pending_transactions').where('order_id', '==', orderId).limit(1).get()
+    if (snap.empty) return false
+    const ref = snap.docs[0].ref
+    return await adminDb.runTransaction(async (tx: any) => {
+      const doc = await tx.get(ref)
+      const field = `fulfillment_step_${step}`
+      if (doc.data()?.[field]) return false
+      tx.set(ref, { [field]: new Date().toISOString() }, { merge: true })
+      return true
+    })
+  } catch (err: any) {
+    console.error(`[fulfillment] could not take the ${step} step`, { orderId, message: err?.message })
+    return false
+  }
 }
 
 /**
@@ -477,10 +533,15 @@ export async function fulfillPaidOrder(params: {
 
   const createdTickets: any[] = []
   const createdFreeTicketIds: string[] = []
+  // Position of the ticket within the order: its id is derived from it, so a
+  // retry after a partial failure (or a stale-claim re-run) finds the tickets
+  // already written and adopts them instead of issuing a second set.
+  let ticketIndex = 0
 
   for (const selection of issuedSelections) {
     const selectionQty = selection.quantity || 0
     for (let i = 0; i < selectionQty; i++) {
+      const ticketId = orderTicketId(orderId, ticketIndex++)
       const organizerUnitPrice = (() => {
         if (eventCurrency === 'USD') {
           const raw = selection.originalUnitPrice
@@ -539,7 +600,7 @@ export async function fulfillPaidOrder(params: {
           : {}),
       }
 
-      const insertResult = await supabase.from('tickets').insert([ticketData]).select()
+      const insertResult = await writeOrderTicket(ticketId, ticketData)
 
       if (insertResult.error) {
         console.error(`${logPrefix} failed to create ticket`, insertResult.error)
@@ -556,10 +617,8 @@ export async function fulfillPaidOrder(params: {
         return { outcome: 'ticket_creation_failed', ticketId: null }
       }
 
-      const createdTicket = insertResult.data?.[0]
+      const createdTicket = insertResult.data
       if (createdTicket) {
-        await supabase.from('tickets').update({ qr_code_data: createdTicket.id }).eq('id', createdTicket.id)
-        createdTicket.qr_code_data = createdTicket.id
         createdTickets.push(createdTicket)
         if (isFreeSelection(selection)) createdFreeTicketIds.push(String(createdTicket.id))
 
@@ -635,7 +694,7 @@ export async function fulfillPaidOrder(params: {
   // pendingTx.promo_code_id is the resolved promo doc id, stamped at initiate only when a discount
   // was applied. If the "first N buyers" cap filled between initiate and confirm we keep the
   // issued tickets and only log the over-cap; redemption never throws.
-  if (createdTickets.length > 0 && pendingTx.promo_code_id) {
+  if (createdTickets.length > 0 && pendingTx.promo_code_id && (await takeOrderStep(orderId, 'promo'))) {
     try {
       const redeem = await redeemPromoInTransaction({
         promoId: String(pendingTx.promo_code_id),
@@ -713,8 +772,10 @@ export async function fulfillPaidOrder(params: {
     })
   }
 
-  // Update Firestore earnings in event currency.
-  try {
+  // Update Firestore earnings in event currency — once per order, even when a
+  // stale claim re-runs fulfilment (the step is taken BEFORE booking: a crash
+  // in between under-counts, which an admin can see, rather than paying out twice).
+  if (await takeOrderStep(orderId, 'earnings')) try {
     const grossEventCents = Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100)
     await addTicketToEarnings(pendingTx.event_id, grossEventCents, issuedQuantity || 1, {
       currency: eventCurrency,

@@ -61,7 +61,7 @@ import { releaseSeatHold } from '@/lib/tickets/seatHolds'
 import { isDestinationCharge, processStripeRefund } from '@/lib/refunds'
 import { reversePromoterCommission } from '@/lib/tickets/refundExecution'
 import { refundFaceAmount } from '@/lib/tickets/refundPlan'
-import { parseTicketQuantity } from '@/lib/tickets/purchasable'
+import { NO_END_TIME_SALES_GRACE_MS, parseTicketQuantity } from '@/lib/tickets/purchasable'
 import { decodeCardOrderLines, type CardOrderLine } from '@/lib/checkout/card-order-lines'
 import { recordFreeClaimTickets, releaseUnusedFreeClaimForOrder, takeFreeClaimForOrder } from '@/lib/tickets/free-claim-policy'
 
@@ -237,6 +237,40 @@ async function flagReconcile(orderRef: any, step: StepName, logPrefix: string, p
     needs_reconcile: true,
     [`reconcile_${step}`]: true,
   }).catch(() => undefined)
+}
+
+// ── The event is gone ───────────────────────────────────────────────────────
+
+/** Stripe can deliver a webhook late; an event that ended within this is still honoured. */
+export const ENDED_EVENT_FULFILMENT_GRACE_MS = 6 * 60 * 60 * 1000
+
+/**
+ * 'event_cancelled' / 'event_ended' / 'event_not_found' when a paid order for
+ * this event must be refunded instead of issued, else null. Deliberately
+ * narrower than checkEventPurchasable: an unpublished or payout-frozen event
+ * still happens, so a buyer who paid keeps their ticket.
+ */
+export function eventGoneForFulfilment(event: Record<string, any> | null | undefined, now: Date = new Date()): string | null {
+  if (!event) return 'event_not_found'
+  const status = String(event.status ?? '').toLowerCase()
+  if (status === 'cancelled' || status === 'canceled' || event.cancelled_at) return 'event_cancelled'
+  const end = toDate(event.end_datetime ?? event.endDatetime)
+  const start = toDate(event.start_datetime ?? event.startDatetime)
+  const cutoff = end ?? (start ? new Date(start.getTime() + NO_END_TIME_SALES_GRACE_MS) : null)
+  if (cutoff && cutoff.getTime() + ENDED_EVENT_FULFILMENT_GRACE_MS < now.getTime()) return 'event_ended'
+  return null
+}
+
+function toDate(value: unknown): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  if (typeof (value as any)?.toDate === 'function') return (value as any).toDate()
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  const seconds = (value as any)?.seconds ?? (value as any)?._seconds
+  return typeof seconds === 'number' ? new Date(seconds * 1000) : null
 }
 
 // ── Refund on sell-out ──────────────────────────────────────────────────────
@@ -548,6 +582,25 @@ export async function fulfillStripeOrder(input: StripeOrderInput): Promise<Strip
   const guest = input.guestRecipient
   const tierId = String(m.tierId || '')
   const tierName = String(m.tierName || 'General Admission')
+
+  // ── 0. The event must still be on ──
+  // A buyer can open checkout, the organizer cancels, and the buyer pays a
+  // minute later (payment audit, 2026-11-17). Issuing then sent the money to a
+  // cancelled event with a ticket for nothing. A paid order for an event that
+  // was cancelled, or ended more than a webhook-delay ago, is refunded through
+  // the same path as a sell-out instead. Only before any seat was converted:
+  // an order already past this point was decided while the event was on.
+  if (!initial.steps?.inventory?.done_at && !initial.tickets_issued_at && eventId) {
+    const liveSnap = await adminDb.collection('events').doc(eventId).get()
+    const gone = eventGoneForFulfilment(liveSnap.exists ? liveSnap.data() : null)
+    if (gone) {
+      console.error(`${logPrefix} paid order for an event that is ${gone} — refunding`, {
+        paymentId: input.paymentId,
+        eventId,
+      })
+      return refundSoldOutOrder(input, orderRef, gone, gone)
+    }
+  }
 
   // ── 1. Inventory: the authoritative oversell gate, reserved exactly once ──
   // The seats were HELD when the PaymentIntent was created (seatHoldId); the
