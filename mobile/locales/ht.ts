@@ -3293,6 +3293,7 @@ export default {
       cancelKeep: 'Kontinye',
       tryAgain: 'Eseye ankò',
       backToEvent: 'Retounen nan evènman an',
+      viewMyTickets: 'Wè tikè mwen yo',
     },
   },
 

@@ -299,6 +299,11 @@ export async function POST(req: NextRequest) {
       if (action === 'fail') {
         if (beforeStatus === 'failed') return { idempotent: true, afterStatus: beforeStatus }
         if (beforeStatus === 'completed') return { conflict: true, beforeStatus }
+        // Re-checked on THIS snapshot (payment audit, 2026-11-17): a super admin
+        // may have started the prefunded transfer after the pre-read above. A
+        // row whose Transfert may be in flight is failed only through the
+        // MonCash status check, never by crediting the reservation back here.
+        if (isPrefundedInFlight(withdrawal)) return { inFlight: true, beforeStatus }
         await setFailedWithRefund(payeeReasonEn || 'The payout could not be completed.')
       }
 
@@ -313,6 +318,14 @@ export async function POST(req: NextRequest) {
 
     if ((txResult as any)?.notFound) {
       return adminError('Withdrawal not found', 404)
+    }
+
+    if ((txResult as any)?.inFlight) {
+      return adminError(
+        'This instant MonCash withdrawal was just sent',
+        409,
+        'Check the transfer in MonCash, then retry with confirmNotPaid: true.'
+      )
     }
 
     if ((txResult as any)?.conflict) {

@@ -37,7 +37,7 @@ async function fixEvent() {
   const ticketsSnapshot = await db
     .collection('tickets')
     .where('event_id', '==', eventId)
-    .where('status', 'in', ['valid', 'confirmed'])
+    .where('status', 'in', ['valid', 'confirmed', 'active'])
     .get()
   
   const actualCount = ticketsSnapshot.size

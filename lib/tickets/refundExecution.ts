@@ -17,6 +17,7 @@ import {
 } from '@/lib/tickets/refundApprovalPolicy'
 import { reversePromoterSaleForTicket } from '@/lib/promoters'
 import { syncEventDeficitAfterRefund } from '@/lib/payouts/organizer-debt'
+import { returnSeatForRefundedTicket } from '@/lib/tickets/seatReturn'
 import {
   notifyAdminsOfQueuedRefunds,
   notifyAdminsOfRefundReview,
@@ -664,6 +665,8 @@ export async function refundTicket(ticketId: string, options: RefundTicketOption
       { eventId: event.id, amount: p.amount, currency: p.currency, refundId, actorId, reason }
     )
     await reversePromoterCommission(ticketId, reason)
+    // The seat goes back on sale (a cancelled event sells nothing anyway).
+    if (!cancellation) await returnSeatForRefundedTicket(ticketId, { logPrefix: '[refund]' })
     // A refund after the event was paid out is organizer debt (netted from
     // their next withdrawal). A cancellation sweep syncs once at its end.
     if (!cancellation) await syncEventDeficitAfterRefund(String(event.id), event.organizer_id || null)

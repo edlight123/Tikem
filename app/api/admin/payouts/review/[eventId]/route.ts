@@ -1,3 +1,4 @@
+import { PAYOUT_REVIEW_APPROVAL_TTL_MS } from '@/lib/stripe-payout-releases'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAdmin } from '@/lib/auth'
@@ -102,6 +103,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (currentStatus !== requiredStatus) {
         return { conflict: true, item: { eventId, ...data } }
       }
+      // Nobody approves a payout to themselves (payment audit, 2026-11-17).
+      if (action === 'release' && String(data.organizerId || '') === String(user.id)) {
+        return { selfDealing: true, item: { eventId, ...data } }
+      }
 
       const now = new Date().toISOString()
       const patch =
@@ -124,6 +129,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           : {
               status: nextStatus,
               resolution: action,
+              // A release approves THIS amount for a limited time (payment
+              // audit, 2026-11-17): the release cron honours it only up to the
+              // amount shown to the admin and until approvedUntil.
+              ...(action === 'release'
+                ? {
+                    approvedAmountMinor: Math.max(0, Math.round(Number(data.amountMinor) || 0)),
+                    approvedCurrency: data.currency || null,
+                    approvedUntil: new Date(Date.now() + PAYOUT_REVIEW_APPROVAL_TTL_MS).toISOString(),
+                  }
+                : {}),
               resolvedAt: now,
               resolvedBy: user.id,
               resolvedByEmail: user.email || '',
@@ -134,6 +149,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       return { idempotent: false, before: data, item: { eventId, ...data, ...patch } }
     })
+
+    if ((result as any)?.selfDealing) {
+      return adminError('You cannot release a payout to your own account', 403, 'Ask another admin.')
+    }
 
     if ((result as any)?.conflict) {
       const status = String((result as any)?.item?.status || 'unknown')

@@ -129,10 +129,11 @@ export async function GET(request: Request) {
     switch (result.outcome) {
       case 'already_completed':
         return NextResponse.redirect(new URL(`/purchase/success?ticketId=${result.ticketId || ''}`, request.url))
-      case 'in_progress':
-        return NextResponse.redirect(new URL('/purchase/success', request.url))
       case 'capacity_exceeded':
         return NextResponse.redirect(new URL('/purchase/failed?reason=sold_out', request.url))
+      // Another request is issuing the ticket right now: wait for it, never a
+      // success screen with no ticket behind it.
+      case 'in_progress':
       case 'confirming':
         return NextResponse.redirect(
           new URL(

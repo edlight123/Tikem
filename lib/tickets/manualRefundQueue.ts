@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
+import { returnSeatForRefundedTicket } from '@/lib/tickets/seatReturn'
 import { getAdminEmails } from '@/lib/admin'
 import { sendEmail } from '@/lib/email'
 import { renderEmail, title, p, gap, button, metric, rowsBlock, quote, appUrl, C, FONT } from '@/lib/email-kit/layout'
@@ -487,7 +488,8 @@ export async function resolveRefundQueueItem(input: {
         : null
   if (!ref) throw new RefundQueueError('Invalid item kind', 400)
 
-  return adminDb.runTransaction(async (tx: any) => {
+  let paidTicketId: string | null = null
+  const out = await adminDb.runTransaction(async (tx: any) => {
     const snap = await tx.get(ref)
     if (!snap.exists) throw new RefundQueueError('Item not found', 404)
     const data = (snap.data() as any) || {}
@@ -502,6 +504,7 @@ export async function resolveRefundQueueItem(input: {
     let ticketRef: any = null
     let ticketData: Record<string, any> = {}
     if (kind === 'ticket' && action === 'paid' && data.ticketId) {
+      paidTicketId = String(data.ticketId)
       ticketRef = adminDb.collection('tickets').doc(String(data.ticketId))
       // Read before any write: Firestore transactions require all reads first.
       const ticketSnap = await tx.get(ticketRef)
@@ -545,6 +548,9 @@ export async function resolveRefundQueueItem(input: {
     }
     return { status: action }
   })
+  // A refund paid by hand gives the seat back too (lib/tickets/seatReturn).
+  if (paidTicketId) await returnSeatForRefundedTicket(paidTicketId, { logPrefix: '[refund-queue]' })
+  return out
 }
 
 // ── Reconciliation ──────────────────────────────────────────────────────────

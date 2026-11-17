@@ -33,6 +33,35 @@ export const PAYOUT_RELEASES_COLLECTION = 'payout_releases'
 export const PAYOUT_RELEASE_NOTICES_COLLECTION = 'payout_release_notices'
 export const PAYOUT_REVIEW_QUEUE_COLLECTION = 'payout_review_queue'
 
+/** How long an admin's release approval stays good. */
+export const PAYOUT_REVIEW_APPROVAL_TTL_MS = 14 * 24 * 60 * 60 * 1000
+
+/**
+ * Does an admin's 'released' review still cover a payout of `amountMinor`?
+ * One approval pays out once (it is consumed by the release cron).
+ * Only up to the amount the admin was shown, in the same currency, and only
+ * until it expires. An approval from before amounts were recorded covers the
+ * row's own amountMinor for TTL after it was resolved.
+ */
+export function reviewApprovalCovers(
+  review: Record<string, any> | null | undefined,
+  amountMinor: number,
+  currency: string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  if (!review || String(review.status || '') !== 'released') return false
+  // One approval, one payout: a release already sent under it used it up.
+  if (review.consumedAt) return false
+  const approved = Number(review.approvedAmountMinor ?? review.amountMinor)
+  if (!Number.isFinite(approved) || approved <= 0 || amountMinor > approved) return false
+  const approvedCurrency = String(review.approvedCurrency ?? review.currency ?? '').toUpperCase()
+  if (approvedCurrency && currency && approvedCurrency !== String(currency).toUpperCase()) return false
+  const until = Date.parse(String(review.approvedUntil || ''))
+  const resolved = Date.parse(String(review.resolvedAt || ''))
+  const expiry = Number.isFinite(until) ? until : Number.isFinite(resolved) ? resolved + PAYOUT_REVIEW_APPROVAL_TTL_MS : NaN
+  return Number.isFinite(expiry) && now.getTime() <= expiry
+}
+
 /** Stripe-side failures of one event's payouts before a human must look. */
 export const MAX_STRIPE_PAYOUT_FAILURES = 3
 /** A payout still pending / in transit after this long is re-checked with Stripe. */

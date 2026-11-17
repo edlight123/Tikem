@@ -3325,6 +3325,7 @@ export default {
       cancelKeep: 'Continuer',
       tryAgain: 'Réessayer',
       backToEvent: 'Retour à l’événement',
+      viewMyTickets: 'Voir mes billets',
     },
   },
 

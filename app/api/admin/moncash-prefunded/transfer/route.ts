@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
 import { executePrefundedTransfer, normalizeMoncashReceiver } from '@/lib/payouts/moncash-prefunded'
+import { ADMIN_MONCASH_DAYS_COLLECTION, otherRailSentTodayInTx } from '@/lib/payouts/instant-moncash-policy'
 import { finalizeWithdrawalCompleted } from '@/lib/payouts/withdrawal-finalize'
 import { reviewWithdrawalDestination } from '@/lib/firestore/payout'
 import { notifyWithdrawalOutcome } from '@/lib/notifications/withdrawal-outcome'
@@ -69,13 +70,17 @@ export async function POST(request: NextRequest) {
 
     const caps = await loadCaps()
     const day = new Date().toISOString().slice(0, 10)
-    const dailyRef = adminDb.collection('admin_moncash_transfer_days').doc(day)
+    const dailyRef = adminDb.collection(ADMIN_MONCASH_DAYS_COLLECTION).doc(day)
 
     let receiver = ''
     let amountHtgCents = 0
     try {
       await adminDb.runTransaction(async (tx: any) => {
-        const [snap, dailySnap] = await Promise.all([tx.get(withdrawalRef), tx.get(dailyRef)])
+        const [snap, dailySnap, instantSentToday] = await Promise.all([
+          tx.get(withdrawalRef),
+          tx.get(dailyRef),
+          otherRailSentTodayInTx(tx, 'admin', day),
+        ])
         if (!snap.exists) throw new Refused('Withdrawal not found', 404)
         const row = snap.data() as any
         if (String(row?.method || '') !== 'moncash') throw new Refused('Not a MonCash withdrawal')
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
           throw new Refused(`Above the per-transfer cap of ${(caps.perCall / 100).toFixed(2)} HTG; pay it by hand`)
         }
         const sentToday = Math.max(0, Number(dailySnap.exists ? (dailySnap.data() as any)?.totalHtgCents : 0) || 0)
-        if (sentToday + amount > caps.daily) {
+        if (sentToday + instantSentToday + amount > caps.daily) {
           throw new Refused(`Today's admin transfer cap of ${(caps.daily / 100).toFixed(2)} HTG would be exceeded`)
         }
         const now = new Date()

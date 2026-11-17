@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAdmin } from '@/lib/auth'
+import { requireSuperAdmin } from '@/lib/auth'
 import { FieldValue } from 'firebase-admin/firestore'
 import { adminError, adminOk } from '@/lib/api/admin-response'
 import { logAdminAction } from '@/lib/admin/audit-log'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAdmin()
+    // Turning prefunding on lets withdrawals pay out of Tikèm's own MonCash pool,
+    // so it is a super-admin switch, like the prefunded transfer itself.
+    const { user, error } = await requireSuperAdmin()
     if (error || !user) {
       return adminError(error || 'Unauthorized', 401)
     }

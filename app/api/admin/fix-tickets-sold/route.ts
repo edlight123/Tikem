@@ -1,3 +1,4 @@
+import { liveTicketStatusesForQuery } from '@/lib/tickets/status'
 /**
  * Admin API to fix tickets_sold counts
  * POST /api/admin/fix-tickets-sold
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       const ticketsSnapshot = await adminDb
         .collection('tickets')
         .where('event_id', '==', eventId)
-        .where('status', 'in', ['valid', 'confirmed'])
+        .where('status', 'in', liveTicketStatusesForQuery())
         .get()
       
       const actualCount = ticketsSnapshot.size
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
           const ticketsSnapshot = await adminDb
             .collection('tickets')
             .where('event_id', '==', eventId)
-            .where('status', 'in', ['valid', 'confirmed'])
+            .where('status', 'in', liveTicketStatusesForQuery())
             .get()
           
           const actualCount = ticketsSnapshot.size

@@ -359,6 +359,19 @@ function isTrustedPaymentUrl(raw: string | undefined | null): boolean {
   }
 }
 
+
+/** Failure codes after which the buyer may have paid: send them to My Tickets, not a retry. */
+const PAID_FAILURE_CODES = new Set([
+  'sold_out',
+  'capacity_exceeded',
+  'ticket_creation_failed',
+  'refund_pending',
+  'refused',
+  'invalid_order',
+  'amount_mismatch',
+  'processing_error',
+])
+
 export default function PaymentWebViewScreen() {
   const { colors } = useTheme();
   const showAlert = useAppAlert();
@@ -382,7 +395,7 @@ export default function PaymentWebViewScreen() {
   const webViewRef = useRef<WebView>(null)
   const [loading, setLoading] = useState(true)
   const [handledTerminal, setHandledTerminal] = useState(false)
-  const [failure, setFailure] = useState<{ reason?: string } | null>(null)
+  const [failure, setFailure] = useState<{ reason?: string; paid?: boolean } | null>(null)
   const [resolvedAuthToken, setResolvedAuthToken] = useState<string | null>(authToken || null)
 
   // The Firebase ID token may ONLY be attached to our own trusted hosts, never
@@ -450,15 +463,14 @@ export default function PaymentWebViewScreen() {
   }, [handledTerminal, mode, navigation, setMode, t])
 
   const finishWithFailure = useCallback(
-    (message?: string) => {
+    (message?: string, paid?: boolean) => {
       if (handledTerminal) return
       setHandledTerminal(true)
 
       clearPendingPayment().catch(() => {})
 
-      // Show a branded in-screen failure state instead of a bare alert. We keep
-      // the user on the checkout screen so they can retry the same URL or exit.
-      setFailure({ reason: message })
+      // Show a branded in-screen failure state instead of a bare alert.
+      setFailure({ reason: message, paid })
     },
     [handledTerminal]
   )
@@ -494,13 +506,23 @@ export default function PaymentWebViewScreen() {
     [t]
   )
 
+  // "Try again" starts a NEW checkout from the event. Reloading the WebView
+  // only reloaded the failure page (payment audit, 2026-11-17), and the old
+  // order is closed anyway: a fresh one takes a fresh seat hold.
   const handleTryAgain = useCallback(() => {
-    setFailure(null)
-    setHandledTerminal(false)
-    setLoading(true)
-    // Retry the same checkout URL in the existing WebView.
-    webViewRef.current?.reload()
-  }, [])
+    navigation.goBack()
+  }, [navigation])
+
+  // When money may have moved (sold out after paying, ticket still being
+  // issued, refund pending) the way forward is My Tickets, never paying again.
+  const handleViewTickets = useCallback(() => {
+    setTicketsRefreshHint({ reason: 'payment', createdAt: Date.now() }).catch(() => {})
+    if (mode === 'attendee') {
+      navigation.reset({ index: 0, routes: [{ name: 'Main', params: { screen: 'Tickets' } }] })
+    } else {
+      setMode('attendee', { landingTab: 'Tickets' })
+    }
+  }, [mode, navigation, setMode])
 
   // Closing mid-payment could drop an in-flight ticket purchase, so confirm
   // first (unless the flow already reached a terminal success/failure).
@@ -541,7 +563,7 @@ export default function PaymentWebViewScreen() {
             return ''
           }
         })()
-        finishWithFailure(failureReasonMessage(reason))
+        finishWithFailure(failureReasonMessage(reason), PAID_FAILURE_CODES.has(reason.trim().toLowerCase()))
       }
     },
     [failureReasonMessage, finishWithFailure, finishWithSuccess, handledTerminal]
@@ -596,20 +618,24 @@ export default function PaymentWebViewScreen() {
         </Text>
         <Touchable
           style={styles.failurePrimaryButton}
-          onPress={handleTryAgain}
+          onPress={failure.paid ? handleViewTickets : handleTryAgain}
           accessibilityRole="button"
-          accessibilityLabel={t('screens.payment.tryAgain')}
+          accessibilityLabel={t(failure.paid ? 'screens.payment.viewMyTickets' : 'screens.payment.tryAgain')}
         >
-          <Text style={styles.failurePrimaryButtonText}>{t('screens.payment.tryAgain')}</Text>
+          <Text style={styles.failurePrimaryButtonText}>
+            {t(failure.paid ? 'screens.payment.viewMyTickets' : 'screens.payment.tryAgain')}
+          </Text>
         </Touchable>
-        <Touchable
-          style={styles.failureGhostButton}
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel={t('screens.payment.backToEvent')}
-        >
-          <Text style={styles.failureGhostButtonText}>{t('screens.payment.backToEvent')}</Text>
-        </Touchable>
+        {failure.paid ? (
+          <Touchable
+            style={styles.failureGhostButton}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel={t('screens.payment.backToEvent')}
+          >
+            <Text style={styles.failureGhostButtonText}>{t('screens.payment.backToEvent')}</Text>
+          </Touchable>
+        ) : null}
       </View>
     </View>
   ) : null

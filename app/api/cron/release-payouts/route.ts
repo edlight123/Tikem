@@ -40,6 +40,7 @@ import {
   recordCreatedPayout,
   releaseAttemptDocId,
   type ReconcileSummary,
+  reviewApprovalCovers,
 } from '@/lib/stripe-payout-releases'
 
 export const runtime = 'nodejs'
@@ -770,6 +771,11 @@ export async function GET(request: Request) {
         )
 
         const payable = Number.isFinite(amountMinor) && amountMinor > 0
+        // An approval covers the amount the admin saw, until it expires; a
+        // bigger payout or a stale approval goes back to the queue.
+        const reviewData = reviewSnap.exists ? (reviewSnap.data() as any) : null
+        const approvalCovers = reviewApprovalCovers(reviewData, Math.max(0, amountMinor), account.currency, now)
+        const approvalLapsed = reviewReleased && !approvalCovers
 
         // Auto-eligible but the caps left nothing to send (already released, or
         // the balance moved). Nothing to record — it reports as a hold.
@@ -786,7 +792,7 @@ export async function GET(request: Request) {
           continue
         }
 
-        if ((decision.release === 'review' && !reviewReleased) || reviewPending) {
+        if ((decision.release === 'review' && !approvalCovers) || reviewPending) {
           const reason =
             decision.release === 'auto' ? `${decision.reason}+awaiting_admin_review` : decision.reason
 
@@ -812,13 +818,24 @@ export async function GET(request: Request) {
               createdAt: nowIso,
               updatedAt: nowIso,
             })
-          } else if (reviewStatus === 'pending') {
+          } else if (reviewStatus === 'pending' || (reviewStatus === 'released' && approvalLapsed && payable)) {
             await reviewRef.set(
               {
                 amountMinor: Math.max(0, amountMinor),
                 currency: account.currency,
                 reason,
                 tier: decision.tier,
+                ...(reviewStatus === 'released'
+                  ? {
+                      status: 'pending',
+                      reopenedAt: nowIso,
+                      reopenedBy: 'cron:approval_lapsed',
+                      // A fresh approval starts unconsumed.
+                      consumedAt: null,
+                      approvedAmountMinor: null,
+                      approvedUntil: null,
+                    }
+                  : {}),
                 updatedAt: nowIso,
               },
               { merge: true }
@@ -890,6 +907,17 @@ export async function GET(request: Request) {
           // key, so if that failure was only a lost response Stripe replays the
           // original payout instead of making a new one.
           await releaseRef.set({ ...releaseDoc, createdAt: existing?.createdAt || nowIso }, { merge: true })
+        }
+
+        // A payout sent on an admin's approval USES it up (security review,
+        // 2026-11-17): consumed before Stripe is asked, so the same approval can
+        // never pay a second time — later sales on a flagged event go back to
+        // the admin. A payout that then fails needs a fresh approval (safe side).
+        if (decision.release === 'review' && approvalCovers) {
+          await reviewRef.set(
+            { consumedAt: nowIso, consumedByRelease: releaseDocId, consumedAmountMinor: amountMinor, updatedAt: nowIso },
+            { merge: true }
+          )
         }
 
         try {
