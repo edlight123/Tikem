@@ -30,7 +30,7 @@ export async function POST(
       )
     }
 
-    const record = await getThreadForViewer(threadId, user.id)
+    const record = await getThreadForViewer(threadId, user)
     if (!record) {
       return NextResponse.json(
         { error: 'Message not found.', code: 'thread_not_found' },

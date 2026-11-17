@@ -14,14 +14,14 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
-import { orgDisplayName, requireOrg } from '@/lib/organizer/context'
+import { orgDisplayName } from '@/lib/organizer/context'
+import { getThreadForOrgMember } from '@/lib/messages/threadViewer'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendEmail, getOrganizerReplyEmail, emailSubjects } from '@/lib/email'
 import { resolveEmailLang } from '@/lib/email-kit/recipient'
 import { attendeeThreadPath, pushAttendeeOfReply } from '@/lib/organizer-message-alerts'
 import {
   appendOrganizerReply,
-  getThreadForOrganizer,
   MAX_REPLIES_PER_THREAD,
   MAX_REPLY_LENGTH,
 } from '@/lib/organizer-messages'
@@ -67,10 +67,12 @@ export async function POST(
     // A thread that does not exist and a thread belonging to another organizer
     // return the same 404 — replying must not double as a way to discover which
     // message ids are real.
-    const org = await requireOrg('manage_events')
-    if (!org.ok) return org.response
-    const thread = await getThreadForOrganizer(threadId, org.value.orgId)
+    // Authorized by the THREAD'S own org (its account, or a team member who
+    // may run its events), not the org the app is acting for: a member of
+    // several orgs must be able to answer on any of them (lib/messages/threadViewer).
+    const thread = await getThreadForOrgMember(threadId, user, 'manage_events')
     if (!thread) return fail('Message not found.', 'thread_not_found', 404)
+    const org = { value: { orgId: thread.orgId, isOwner: thread.isOwner } }
 
     const replyCount =
       typeof thread.data.reply_count === 'number' ? thread.data.reply_count : 0
