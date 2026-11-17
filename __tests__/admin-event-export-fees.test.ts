@@ -26,15 +26,26 @@ jest.mock('@/lib/admin/platform-settings', () => {
 
 import { GET } from '@/app/api/admin/events/[eventId]/export/route'
 
+import ExcelJS from 'exceljs'
+
+/** The summary workbook as { 'Platform fee': '2.19', … } (2-dp strings, as the CSV gave). */
 async function summary(eventId: string) {
-  const res = await GET(new Request(`http://x/api/admin/events/${eventId}/export?mode=summary`), {
+  const res = await GET(new Request(`http://x/api/admin/events/${eventId}/export?mode=summary&format=xlsx`), {
     params: Promise.resolve({ eventId }),
   })
-  const [header, row] = (await res.text()).split('\n')
-  const unquote = (line: string) => line.split('","').map((c) => c.replace(/^"|"$/g, ''))
-  const cols = unquote(header)
-  const vals = unquote(row)
-  return Object.fromEntries(cols.map((c, i) => [c, vals[i]]))
+  expect(res.headers.get('content-type')).toContain('spreadsheetml')
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(Buffer.from(await res.arrayBuffer()) as any)
+  const out: Record<string, string> = {}
+  wb.worksheets[0].eachRow((row) => {
+    const label = row.getCell(1).value
+    const value = row.getCell(2).value
+    if (typeof label === 'string' && typeof value === 'number') out[label] = value.toFixed(2)
+  })
+  return {
+    platformFeeAmount: out['Platform fee'],
+    organizerNetAmount: out['Organizer net'],
+  }
 }
 
 beforeEach(() => db.store.clear())

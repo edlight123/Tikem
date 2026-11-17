@@ -14,7 +14,7 @@ import { useAppMode } from '../contexts/AppModeContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { COLORS } from '../config/brand';
 import { LINKING_CONFIG, WEB_LINK_PREFIXES } from './linkingConfig';
-import { withAlpha } from '../theme/tokens';
+import { withAlpha, colors as T } from '../theme/tokens';
 import { getVerificationRequest } from '../lib/verification';
 import { useActiveOrg } from '../lib/activeOrg';
 import { withFinanceAccess, withOrgAccess } from '../components/organizer/OrgAccessGate';
@@ -60,7 +60,8 @@ import OrganizerPromotersScreen from '../screens/organizer/OrganizerPromotersScr
 import OrganizerGuestListScreen from '../screens/organizer/OrganizerGuestListScreen';
 import EventRequestsScreen from '../screens/organizer/EventRequestsScreen';
 import OrganizerTrackingLinksScreen from '../screens/organizer/OrganizerTrackingLinksScreen';
-import OrganizerMessagesScreen from '../screens/organizer/OrganizerMessagesScreen';
+import OrganizerMessagesScreen, { OrganizerInboxTab } from '../screens/organizer/OrganizerMessagesScreen';
+import { useAttendeeUnread } from '../lib/attendeeUnread';
 import MessagesScreen from '../screens/MessagesScreen';
 import MessageThreadScreen from '../screens/MessageThreadScreen';
 import EventFeedbackScreen from '../screens/EventFeedbackScreen';
@@ -216,6 +217,7 @@ export type AttendeeTabParamList = {
 export type OrganizerTabParamList = {
   Dashboard: undefined;
   MyEvents: undefined;
+  Inbox: undefined;
   Scan: undefined;
   Profile: undefined;
 };
@@ -247,7 +249,7 @@ interface TabBarProps {
   state: any;
   descriptors: any;
   navigation: any;
-  tabs: Array<{ name: string; label: string; icon: string; activeIcon: string; isCreate?: boolean; dot?: boolean }>;
+  tabs: Array<{ name: string; label: string; icon: string; activeIcon: string; isCreate?: boolean; dot?: boolean; badge?: number }>;
 }
 
 // Whether the signed-in account can use organizer mode. Computed once in
@@ -431,7 +433,7 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityState={{ selected: isFocused }}
-            accessibilityLabel={tab.label}
+            accessibilityLabel={tab.badge ? `${tab.label}, ${tab.badge}` : tab.label}
           >
             {/* Icon-only bar (owner call, 2026-08-29, reversing the earlier
                 labels-for-first-timers decision). accessibilityLabel above
@@ -444,6 +446,15 @@ function CustomTabBar({ state, descriptors, navigation, tabs }: TabBarProps) {
                 color={iconColor}
               />
               {tab.dot ? <View style={[tabBarStyles.dot, { backgroundColor: colors.primary }]} /> : null}
+              {tab.badge && tab.badge > 0 ? (
+                // Count badge (organizer Messages: questions not yet opened).
+                // Ringed in the canvas colour so it cuts cleanly into the icon.
+                <View style={[tabBarStyles.badge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
+                  <Text style={[tabBarStyles.badgeText, { color: T.onTeal }]}>
+                    {tab.badge > 9 ? '9+' : String(tab.badge)}
+                  </Text>
+                </View>
+              ) : null}
             </Animated.View>
           </TouchableOpacity>
         );
@@ -503,6 +514,24 @@ const TAB_BAR_SCRIM_EXTRA = 64;
 const TAB_BAR_SCRIM_SEAM_ALPHA = 0.8;
 
 const tabBarStyles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -7,
+    left: 31,
+    minWidth: 19,
+    height: 19,
+    paddingHorizontal: 5,
+    borderRadius: 9.5,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
   // Unread dot on a tab icon (organizer Dashboard: attendee messages waiting).
   dot: {
     position: 'absolute',
@@ -584,6 +613,8 @@ const tabBarStyles = StyleSheet.create({
 
 function AttendeeTabNavigator() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const unreadReplies = useAttendeeUnread({ enabled: !!user?.uid, poll: true, userKey: user?.uid });
   // Center "Create" is an emphasized action (not a tab screen) that launches
   // the event-create flow — makes hosting one tap away for any user
   // (publish-first). Favorites moved into Profile.
@@ -592,7 +623,9 @@ function AttendeeTabNavigator() {
     { name: 'Discover', label: t('tabs.discover'), icon: 'search-outline', activeIcon: 'search' },
     { name: 'Create', label: t('tabs.create'), icon: 'add', activeIcon: 'add', isCreate: true },
     { name: 'Tickets', label: t('tabs.tickets'), icon: 'ticket-outline', activeIcon: 'ticket' },
-    { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person' },
+    // A dot when an organizer has replied and the attendee hasn't opened it.
+    // Push and email deliver the reply; this is the "you missed it" fallback.
+    { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person', dot: unreadReplies > 0 },
   ];
   return (
     <AttendeeTab.Navigator
@@ -609,22 +642,30 @@ function AttendeeTabNavigator() {
 
 function OrganizerTabNavigator() {
   const { t } = useI18n();
-  // Unread attendee messages: a dot on the Dashboard tab, wherever you are.
+  // Attendee questions get their own tab (owner, 2026-11-16): an unanswered
+  // question is a sale waiting, so it gets a badge on the bar, not a dot buried
+  // on the Dashboard. Only for roles that can answer; door staff never see it.
   const activeOrg = useActiveOrg();
+  const canMessage = activeOrg.can('manage_events');
   const unreadMessages = useOrganizerUnread({
-    enabled: activeOrg.can('manage_events'),
+    enabled: canMessage,
     poll: true,
     orgKey: activeOrg.orgId,
   });
   const organizerTabs = [
-    {
-      name: 'Dashboard',
-      label: t('tabs.dashboard'),
-      icon: 'stats-chart-outline',
-      activeIcon: 'stats-chart',
-      dot: unreadMessages > 0,
-    },
+    { name: 'Dashboard', label: t('tabs.dashboard'), icon: 'stats-chart-outline', activeIcon: 'stats-chart' },
     { name: 'MyEvents', label: t('tabs.myEvents'), icon: 'calendar-outline', activeIcon: 'calendar' },
+    ...(canMessage
+      ? [
+          {
+            name: 'Inbox',
+            label: t('tabs.messages'),
+            icon: 'chatbubble-outline',
+            activeIcon: 'chatbubble',
+            badge: unreadMessages,
+          },
+        ]
+      : []),
     { name: 'Scan', label: t('tabs.scan'), icon: 'qr-code-outline', activeIcon: 'qr-code' },
     { name: 'Profile', label: t('tabs.profile'), icon: 'person-outline', activeIcon: 'person' },
   ];
@@ -635,6 +676,7 @@ function OrganizerTabNavigator() {
     >
       <OrganizerTab.Screen name="Dashboard" component={OrganizerDashboardScreen} />
       <OrganizerTab.Screen name="MyEvents" component={OrganizerEventsScreen} options={{ title: t('tabs.myEvents') }} />
+      {canMessage ? <OrganizerTab.Screen name="Inbox" component={OrganizerInboxTab} /> : null}
       <OrganizerTab.Screen name="Scan" component={OrganizerScanScreen} />
       <OrganizerTab.Screen name="Profile" component={ProfileScreen} />
     </OrganizerTab.Navigator>

@@ -4,7 +4,6 @@ import path from 'node:path'
 import { ImageResponse } from 'next/og'
 import { getEventById } from '@/lib/data/events'
 import { getPosterTheme } from '@/lib/posterGradient'
-import { resolveEventPricing } from '@/lib/ticketPricing'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAllowedPosterUrl } from '@/lib/posters/hosts'
 
@@ -33,15 +32,15 @@ export const alt = 'Event on Tikèm'
 // optically centred: pinning the poster flush left left ~700px of near-black
 // doing nothing, which made the card read as mostly empty.
 const POSTER_W = 504 // 630 * 4/5
-const MARGIN = 112
-const GAP = 60
-const TEXT_X = MARGIN + POSTER_W + GAP
-const TEXT_W = 1200 - TEXT_X - MARGIN
+// The poster IS the card (owner, 2026-11-17: "make the poster the main
+// focus"): centred, full height, nothing beside it. The words live UNDER the
+// image, where every chat app prints og:title and a one-line og:description
+// (see generateMetadata in page.tsx), so the card carries no caption at all.
+const POSTER_X = (1200 - POSTER_W) / 2
 
 const CANVAS = '#0a0a0a'
 const INK = '#f5f4f1'
 const MUTED = '#a8a39a'
-const FAINT = '#6f6a61'
 const TEAL = '#2dd4bf'
 
 // Satori renders only png/apng/jpeg/gif/svg, and it THROWS on webp/avif rather
@@ -85,21 +84,6 @@ async function ambientFill(url: string | null): Promise<string | null> {
   }
 }
 
-function formatDate(raw: unknown): string | null {
-  // start_datetime is an ISO string for docs stored as Timestamps and a raw
-  // string for legacy ones, so this can genuinely be Invalid Date.
-  const d = new Date(String(raw ?? ''))
-  if (isNaN(d.getTime())) return null
-  return d
-    .toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
-    })
-    .toUpperCase()
-}
-
 export default async function OpengraphImage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
@@ -126,19 +110,6 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
   const theme = getPosterTheme(event?.id || title, event?.category)
   const poster = await usablePoster(event?.banner_image_url)
   const fill = await ambientFill(poster)
-
-  const date = formatDate(event?.start_datetime)
-  const place = [event?.venue_name, event?.city].filter(Boolean).join(', ')
-
-  // Price is the lowest tier and is 0 for a free tier sitting alongside paid
-  // ones, so it cannot decide freeness on its own — resolveEventPricing is the
-  // single source of truth the rest of the app uses.
-  const pricing = resolveEventPricing(event)
-  const lowest = pricing.lowestPaidPrice ?? (Number(event?.ticket_price) || 0)
-  const currency = String(event?.currency || 'HTG').toUpperCase()
-  const priceLabel = !pricing.hasPaidTier
-    ? 'Free entry'
-    : `${pricing.hasFreeTier ? 'From ' : ''}${new Intl.NumberFormat('en-US').format(lowest)} ${currency}`
 
   const png = new ImageResponse(
     (
@@ -167,10 +138,8 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
           }}
         />
 
-        {/* Two scrims rather than one. The flat pass keeps the wash dark enough
-            to be a background everywhere; the ramp adds what the caption side
-            needs on its own, so the poster's colour still reads on the left
-            instead of the whole card going to mud. */}
+        {/* One even scrim: the wash stays a background on both sides of the
+            poster instead of competing with it. */}
         <div
           style={{
             display: 'flex',
@@ -179,156 +148,80 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'rgba(10,10,10,0.60)',
-          }}
-        />
-        <div
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundImage:
-              'linear-gradient(90deg, rgba(10,10,10,0.10) 0%, rgba(10,10,10,0.25) 40%, rgba(10,10,10,0.72) 62%, rgba(10,10,10,0.80) 100%)',
+            background: 'rgba(10,10,10,0.66)',
           }}
         />
 
-        {/* Poster — the art, uncropped, and the thing the eye lands on first. */}
+        {/* The poster, uncropped, centred, full height. */}
         <div
           style={{
             display: 'flex',
             position: 'absolute',
             top: 0,
-            left: MARGIN,
+            left: POSTER_X,
             width: POSTER_W,
             height: '100%',
             backgroundImage: theme.bg,
-            boxShadow: '0 30px 90px rgba(0,0,0,0.6)',
+            boxShadow: '0 30px 120px rgba(0,0,0,0.65)',
           }}
         >
           {poster ? (
             <img src={poster} width={POSTER_W} height={size.height} style={{ objectFit: 'cover' }} alt="" />
           ) : (
-            // No poster: the deterministic gradient stands in for the artwork,
-            // as a plain colour field. The app paints the title over this
-            // gradient, but here the caption alongside already carries the
-            // title — printing it twice on one card just reads as a mistake.
+            // No poster: the gradient stands in for the artwork, and the title
+            // goes ON it (the one case where the card has to say what it is).
             <div
               style={{
                 display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',
                 width: '100%',
                 height: '100%',
-                alignItems: 'flex-end',
                 padding: 44,
               }}
             >
-              <div style={{ display: 'flex', width: 64, height: 3, background: theme.accent }} />
+              <div style={{ display: 'flex', width: 56, height: 3, background: theme.accent, marginBottom: 18 }} />
+              <div
+                style={{
+                  fontFamily: 'Instrument',
+                  fontStyle: 'italic',
+                  fontSize: title.length > 24 ? 44 : 54,
+                  lineHeight: 1.04,
+                  color: INK,
+                  display: 'flex',
+                  lineClamp: 4,
+                }}
+              >
+                {title}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Caption. Deliberately small and kept in one flowing stack — this is a
-            caption on a poster, not a headline with a picture next to it. */}
+        {/* A quiet signature in the wash, bottom right: the only words on the card. */}
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             position: 'absolute',
-            left: TEXT_X,
-            top: 0,
-            width: TEXT_W,
-            height: '100%',
-            justifyContent: 'center',
+            right: 40,
+            bottom: 30,
           }}
         >
-          {date ? (
-            <div
-              style={{
-                fontFamily: 'Instrument',
-                fontSize: 17,
-                letterSpacing: '0.2em',
-                color: TEAL,
-                marginBottom: 14,
-              }}
-            >
-              {date}
-            </div>
-          ) : null}
-
+          <div style={{ fontFamily: 'Instrument', fontStyle: 'italic', fontSize: 30, color: MUTED, lineHeight: 1.1 }}>
+            tikèm
+          </div>
           <div
             style={{
-              fontFamily: 'Instrument',
-              fontStyle: 'italic',
-              fontSize: title.length > 28 ? 32 : 38,
-              lineHeight: 1.08,
-              letterSpacing: '-0.01em',
-              color: INK,
-              // The wrap IS the editorial look — clamp rather than truncate.
               display: 'flex',
-              lineClamp: 3,
+              width: 6,
+              height: 6,
+              borderRadius: 6,
+              background: TEAL,
+              marginLeft: 6,
+              marginBottom: 12,
             }}
-          >
-            {title}
-          </div>
-
-          {place ? (
-            <div
-              style={{
-                fontFamily: 'Instrument',
-                fontSize: 20,
-                lineHeight: 1.3,
-                color: MUTED,
-                marginTop: 18,
-                display: 'flex',
-                lineClamp: 2,
-              }}
-            >
-              {place}
-            </div>
-          ) : null}
-
-          <div
-            style={{
-              fontFamily: 'Instrument',
-              fontSize: 18,
-              letterSpacing: '0.06em',
-              color: FAINT,
-              marginTop: 8,
-            }}
-          >
-            {priceLabel}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', marginTop: 40 }}>
-            <div style={{ fontFamily: 'Instrument', fontSize: 17, color: FAINT }}>
-              Tickets on
-            </div>
-            <div
-              style={{
-                fontFamily: 'Instrument',
-                fontStyle: 'italic',
-                fontSize: 26,
-                color: MUTED,
-                lineHeight: 1.1,
-                marginLeft: 9,
-              }}
-            >
-              tikèm
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                width: 6,
-                height: 6,
-                borderRadius: 6,
-                background: TEAL,
-                marginLeft: 6,
-                marginBottom: 10,
-              }}
-            />
-          </div>
+          />
         </div>
       </div>
     ),

@@ -330,6 +330,7 @@ export default {
     },
   },
   tabs: {
+    messages: 'Messages',
     home: 'Accueil',
     discover: 'Découvrir',
     create: 'Créer',
@@ -342,6 +343,13 @@ export default {
     events: 'Événements',
   },
   profile: {
+    hostEvents: {
+      row: 'Organiser des événements sur Tikèm',
+      title: 'Organiser sur Tikèm',
+      body: "Créez des événements, vendez des billets, scannez à l'entrée et répondez à vos invités depuis le mode organisateur. Gratuit pour commencer. Vérifiez votre identité avant votre premier paiement.",
+      cta: 'Commencer',
+      failed: "Impossible d'ouvrir le mode organisateur. Réessayez.",
+    },
     title: 'Profil',
     memberSince: 'Membre depuis',
     profileInfo: 'Informations du profil',
@@ -1194,10 +1202,8 @@ export default {
   export: {
     title: 'Exporter la liste',
     pdf: 'PDF',
-    csv: 'CSV',
+    excel: 'Excel',
     short: 'Exporter',
-    exportCSV: 'Exporter CSV',
-    downloadStarted: 'Téléchargement démarré',
     noAttendees: 'Aucun participant à exporter',
     error: 'Échec de l’exportation des participants',
   },
@@ -2245,6 +2251,7 @@ export default {
     hide: 'Masquer',
     create: 'Créez votre premier événement',
     publish: 'Publiez-le',
+    verify: 'Vérifiez votre identité pour être payé',
     payouts: 'Configurez vos paiements',
     team: 'Invitez votre équipe d’entrée',
   },
@@ -2435,6 +2442,12 @@ export default {
   },
 
   organizerCreateEventFlow: {
+    firstEvent: {
+      title: 'Vous êtes organisateur',
+      body: "Votre événement est en ligne. Suivez les ventes, scannez les billets à l'entrée et répondez à vos invités depuis le mode organisateur. Vérifiez votre identité quand vous voulez avant votre premier paiement.",
+      draftBody: 'Votre brouillon est enregistré. Terminez-le et publiez-le depuis le mode organisateur. Vérifiez votre identité quand vous voulez avant votre premier paiement.',
+      cta: 'Compris',
+    },
     steps: {
       basics: 'Bases',
       location: 'Lieu',
@@ -2829,6 +2842,9 @@ export default {
   // L'autre moitié de contactOrganizer : l'organisateur lit ces questions et y
   // répond.
   attendeeMessages: {
+    today: "Aujourd'hui",
+    yesterday: "Hier",
+    deliveredNote: "{name} le reçoit dans l'application et par e-mail. Votre e-mail reste privé.",
     title: "Messages",
     you: "Vous",
     organizer: "L'organisateur",
@@ -2902,6 +2918,11 @@ export default {
     failed: "Transfert impossible. Réessayez.",
   },
   organizerMessages: {
+    segmentWaiting: 'À répondre',
+    segmentAll: 'Tous',
+    caughtUpTitle: 'Vous êtes à jour',
+    caughtUpBody: "Chaque question a sa réponse. Les nouvelles arrivent ici, et sur votre écran verrouillé.",
+    filterA11y: 'Afficher les messages pour {event}',
     allEvents: 'Tous les événements',
     title: 'Messages',
     waitingCount: '{count} en attente de vous',

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { useToast } from '@/components/ui/Toast'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadAdminTable } from '@/lib/exports/download'
 import PayoutReceiptUpload from '@/components/admin/PayoutReceiptUpload'
 import { formatCurrency as formatMoney, type Currency } from '@/lib/currency'
 import { ConsoleButton, ConsolePanel, ConsoleState, consoleTone } from '@/components/admin/console'
@@ -40,6 +42,7 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
   const [declineReason, setDeclineReason] = useState('')
   const [paymentNotes, setPaymentNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const { showToast } = useToast()
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
 
   // Payout amounts are stored in cents. Delegate to the shared formatter (major
@@ -182,28 +185,47 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
     }
   }
 
-  const exportCSV = () => {
-    const headers = ['Organizer Name', 'Email', 'Amount', 'Currency', 'Method', 'Requested Date', 'Scheduled Date', 'Tickets Count', 'Period']
-    const rows = payouts.map(p => [
-      p.organizer.name,
-      p.organizer.email,
-      (p.amount / 100).toFixed(2),
-      p.currency || 'HTG',
-      p.method === 'mobile_money' ? 'MonCash/Natcash' : 'Bank Transfer',
-      new Date(p.createdAt).toLocaleDateString(),
-      new Date(p.scheduledDate).toLocaleDateString(),
-      p.ticketIds?.length || 0,
-      p.periodStart && p.periodEnd ? `${new Date(p.periodStart).toLocaleDateString()} - ${new Date(p.periodEnd).toLocaleDateString()}` : 'N/A',
-    ])
-
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `payouts_${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-  }
+  // The queue as Excel / PDF (rendered by /api/admin/exports/render).
+  const exportQueue = (format: 'pdf' | 'xlsx') =>
+    downloadAdminTable(
+      format,
+      {
+        title: 'Payout queue',
+        reportLabel: 'Disbursements',
+        subtitle: [`${pendingCount} pending · ${approvedCount} awaiting payment`],
+        sections: [
+          {
+            name: 'Payout queue',
+            totals: true,
+            columns: [
+              { key: 'organizer', header: 'Organizer', width: 22 },
+              { key: 'email', header: 'Email', width: 26 },
+              { key: 'amount', header: 'Amount', kind: 'money', total: true },
+              { key: 'method', header: 'Method', width: 16 },
+              { key: 'status', header: 'Status', kind: 'status' },
+              { key: 'requested', header: 'Requested', kind: 'date' },
+              { key: 'scheduled', header: 'Scheduled', kind: 'date' },
+              { key: 'tickets', header: 'Tickets', kind: 'integer' },
+              { key: 'periodStart', header: 'Period from', kind: 'date', pdf: false },
+              { key: 'periodEnd', header: 'Period to', kind: 'date', pdf: false },
+            ],
+            rows: payouts.map((p) => ({
+              organizer: p.organizer.name,
+              email: p.organizer.email,
+              amount: { amount: p.amount / 100, currency: p.currency || 'HTG' },
+              method: p.method === 'mobile_money' ? 'MonCash/NatCash' : 'Bank transfer',
+              status: { label: p.status === 'approved' ? 'Awaiting payment' : p.status === 'pending' ? 'Pending' : p.status, tone: p.status === 'approved' ? 'warning' : p.status === 'pending' ? 'warning' : 'neutral' },
+              requested: p.createdAt,
+              scheduled: p.scheduledDate,
+              tickets: p.ticketIds?.length || 0,
+              periodStart: p.periodStart || null,
+              periodEnd: p.periodEnd || null,
+            })),
+          },
+        ],
+      },
+      'Payout queue'
+    )
 
   return (
     <div className="space-y-4">
@@ -225,13 +247,13 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
             </p>
           </div>
         </div>
-        <ConsoleButton
-          onClick={exportCSV}
+        <ExportButtons
+          variant="console"
+          onExport={exportQueue}
           disabled={payouts.length === 0}
-          className="inline-flex items-center justify-center gap-1.5"
-        >
-          <Download className="h-4 w-4" /> Export CSV
-        </ConsoleButton>
+          onError={(e: any) => showToast({ type: 'error', title: 'Export failed', message: e?.message || 'Could not build the file' })}
+          labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export payout queue' }}
+        />
       </div>
 
       {/* Payouts Table */}

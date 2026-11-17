@@ -34,8 +34,8 @@ import StatusChip from '../../components/StatusChip';
 import GettingStartedCard from '../../components/organizer/GettingStartedCard';
 import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import StatusBarBackdrop from '../../components/StatusBarBackdrop';
-import { Banknote, ChartColumn, Wallet, RotateCcw, Users, MessageCircle, type LucideIcon } from 'lucide-react-native';
-import { refreshOrganizerUnread, useOrganizerUnread } from '../../lib/organizerUnread';
+import { Banknote, ChartColumn, Wallet, RotateCcw, Users, type LucideIcon } from 'lucide-react-native';
+import { refreshOrganizerUnread } from '../../lib/organizerUnread';
 import { displayCapacity } from '../../lib/ticketPricing';
 import SectionHeader from '../../components/SectionHeader';
 import { TikemWordmark } from '../../components/TikemWordmark';
@@ -160,10 +160,9 @@ export default function OrganizerDashboardScreen() {
     }, [loadData])
   );
 
-  // Unread attendee messages for the Messages row. Staff can't read the inbox,
-  // so they never ask. A failed count just hides the number.
+  // Keep the Messages tab's badge fresh whenever the dashboard comes into view.
+  // Staff can't read the inbox, so they never ask.
   const canMessages = activeOrg.can('manage_events');
-  const unreadMessages = useOrganizerUnread({ enabled: canMessages });
   useFocusEffect(
     useCallback(() => {
       if (canMessages) refreshOrganizerUnread();
@@ -244,14 +243,7 @@ export default function OrganizerDashboardScreen() {
 
   type ManageRow = { key: string; label: string; icon: LucideIcon; onPress: () => void; value?: string };
   const allActions: Array<ManageRow & { ownerOnly?: boolean; finance?: boolean; messages?: boolean }> = [
-    {
-      messages: true,
-      key: 'messages',
-      label: t('organizerMessages.title'),
-      icon: MessageCircle,
-      value: unreadMessages > 0 ? String(unreadMessages) : undefined,
-      onPress: () => navigation.navigate('OrganizerMessages'),
-    },
+    // Messages moved to its own tab in the organizer bar (2026-11-16).
     {
       finance: true,
       key: 'earnings',

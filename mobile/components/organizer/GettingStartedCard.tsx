@@ -8,6 +8,7 @@ import { db } from '../../config/firebase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
+import { getVerificationRequest } from '../../lib/verification';
 import { backendFetch, backendJson } from '../../lib/api/backend';
 import { getOrganizerEvents } from '../../lib/api/organizer';
 import { Touchable } from '../ui/Touchable';
@@ -19,6 +20,8 @@ const cacheKey = (uid: string) => `tikem_org_checklist_${uid}`;
 type Steps = {
   create: boolean;
   publish: boolean;
+  /** Identity submitted (pending review) or approved. Needed before a payout, never before publishing. */
+  verify: boolean;
   payouts: boolean;
   team: boolean;
 };
@@ -27,7 +30,7 @@ type Steps = {
 // it differs from what we last stored (the AsyncStorage cache doubles as the
 // dedupe key) — a focus-driven recheck must not spam writes. Fire-and-forget.
 function logActivation(uid: string, steps: Steps) {
-  const completed = steps.create && steps.publish && steps.payouts && steps.team;
+  const completed = steps.create && steps.publish && steps.verify && steps.payouts && steps.team;
   setDoc(
     doc(db, 'organizer_activation', uid),
     {
@@ -76,12 +79,13 @@ export default function GettingStartedCard() {
             setHidden(false);
           }
 
-          const [eventsRes, bankRes, haitiRes, stripeRes, teamRes] = await Promise.allSettled([
+          const [eventsRes, bankRes, haitiRes, stripeRes, teamRes, verifyRes] = await Promise.allSettled([
             getOrganizerEvents(uid, 5),
             backendFetch('/api/organizer/payout-destinations/bank').then((r) => (r.ok ? r.json() : null)),
             backendFetch('/api/organizer/payout-profiles/haiti').then((r) => (r.ok ? r.json() : null)),
             backendFetch('/api/organizer/stripe/status').then((r) => (r.ok ? r.json() : null)),
             backendJson<{ members?: any[] }>('/api/organizer/team'),
+            getVerificationRequest(uid),
           ]);
 
           const events = eventsRes.status === 'fulfilled' ? eventsRes.value || [] : [];
@@ -89,11 +93,18 @@ export default function GettingStartedCard() {
           const haiti = haitiRes.status === 'fulfilled' ? haitiRes.value : null;
           const stripe = stripeRes.status === 'fulfilled' ? stripeRes.value : null;
           const team = teamRes.status === 'fulfilled' ? teamRes.value : null;
+          const verification = verifyRes.status === 'fulfilled' ? (verifyRes.value as any) : null;
+          const verifyStatus = String(verification?.status || '');
 
           const mm = haiti?.profile?.mobileMoneyDetails;
           const next: Steps = {
             create: events.length > 0,
             publish: events.some((e) => e.is_published),
+            verify:
+              verifyStatus === 'approved' ||
+              verifyStatus === 'pending' ||
+              verifyStatus === 'in_review' ||
+              Boolean((userProfile as any)?.is_verified),
             payouts:
               (bank?.destinations || []).length > 0 ||
               Boolean(mm && (mm.phoneNumber || mm.accountName)) ||
@@ -103,7 +114,7 @@ export default function GettingStartedCard() {
 
           if (!alive) return;
 
-          if (next.create && next.publish && next.payouts && next.team) {
+          if (next.create && next.publish && next.verify && next.payouts && next.team) {
             // Fully activated — log the completion, retire the card permanently.
             logActivation(uid, next);
             setHidden(true);
@@ -149,6 +160,14 @@ export default function GettingStartedCard() {
       done: steps.publish,
       label: t('gettingStarted.publish'),
       onPress: () => navigation.navigate('Main', { screen: 'MyEvents' }),
+    },
+    {
+      // Not a gate: publishing never waits on it. It is what the first
+      // payout needs, so new organizers hear about it here, early.
+      key: 'verify',
+      done: !!steps.verify,
+      label: t('gettingStarted.verify'),
+      onPress: () => navigation.navigate('OrganizerVerification'),
     },
     {
       key: 'payouts',

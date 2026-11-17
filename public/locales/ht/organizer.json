@@ -1,4 +1,10 @@
 {
+  "exports": {
+    "pdf": "PDF",
+    "excel": "Excel",
+    "group": "Ekspòte",
+    "failed": "Ekspòtasyon an echwe"
+  },
   "event_tools": {
     "col_attendee": "Patisipan",
     "col_status": "Estati",
@@ -950,7 +956,7 @@
     "email_verification": "Verifikasyon imel",
     "new_bank_needs_verification_long": "Pou ajoute yon nouvo kont bankè, ou dwe verifye imel ou. Non moun ki gen kont lan dwe menm ak non òganizatè ou.",
     "available_for_withdrawal": "Disponib pou retire:",
-    "download_audit_csv": "Telechaje odit la (CSV)",
+    "sales_audit": "Odit lavant",
     "moncash_phone_number": "Nimewo telefòn MonCash",
     "save_second_bank": "Sove sa a kòm yon dezyèm kont bankè",
     "prefunding_instant_note": "Retrè sa a ap voye touswit gras ak prefinansman platfòm nan.",
@@ -1011,7 +1017,6 @@
     "check_in": "Anrejistreman",
     "checked_in": "Anrejistre",
     "email_all": "Voye imel bay tout moun",
-    "export_csv": "Ekspòte CSV",
     "not_checked_in": "Poko anrejistre",
     "pending": "Annatant",
     "price_paid": "Pri peye",
@@ -1691,7 +1696,6 @@
     "payout_history_title": "istorik peman",
     "payout_history_desc": "Dènye retrè òganizasyon sa a fè.",
     "payout_history_empty": "Poko gen peman.",
-    "export_csv": "Ekspòte CSV",
     "method_bank": "Transfè labank",
     "method_moncash": "MonCash",
     "status_completed": "Peye",

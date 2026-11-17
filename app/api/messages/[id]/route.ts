@@ -2,8 +2,9 @@
  * GET /api/messages/[id]
  *
  * One conversation, in order: the attendee's opening message, then every reply
- * and follow-up from either side. Readable by its TWO participants only (the
- * attendee who opened it and the organizer it is addressed to). Anybody else,
+ * and follow-up from either side. Readable by its two participants (the attendee
+ * who opened it and the organizer it is addressed to) and by that organizer's
+ * team (lib/messages/threadViewer). Anybody else,
  * and a thread that does not exist, get the same 404 so the endpoint can't be
  * used to probe which ids are real.
  *
@@ -15,7 +16,8 @@
  */
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { buildConversationView, getThreadForParticipant } from '@/lib/organizer-messages'
+import { buildConversationView } from '@/lib/organizer-messages'
+import { getThreadForViewer } from '@/lib/messages/threadViewer'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +35,7 @@ export async function GET(
       )
     }
 
-    const record = await getThreadForParticipant(threadId, user.id)
+    const record = await getThreadForViewer(threadId, user.id)
     if (!record) {
       return NextResponse.json(
         { error: 'Message not found.', code: 'thread_not_found' },

@@ -2,7 +2,50 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { canViewEventFinances } from '@/lib/organizer/financeAccess'
-import { csvCell } from '@/lib/csv'
+import { parseExportFormat } from '@/lib/exports/fileName'
+import { EXPORT_LABELS, exportLang } from '@/lib/exports/labels'
+import { eventHeader } from '@/lib/exports/eventHeader'
+import { loadEventArt } from '@/lib/exports/eventArt'
+import { exportResponse } from '@/lib/exports/respond'
+import type { ExportReport } from '@/lib/exports/types'
+import { paymentMethodLabel } from '@/lib/exports/cells'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
+/**
+ * GET /api/organizer/events/:id/earnings/audit?format=xlsx|pdf&lang=en|fr|ht
+ *
+ * The sales audit: every counted ticket at its listed price, then the price
+ * levels per tier. Excel (typed, sortable, totals) or a printable PDF.
+ */
+const L = {
+  en: {
+    file: 'Sales audit', tickets: 'Tickets', breakdown: 'Price breakdown',
+    note: 'Tier price at purchase time. No FX, no spread.',
+    id: 'Ticket ID', status: 'Status', purchased: 'Purchased', tierId: 'Tier ID', tier: 'Ticket type',
+    price: 'Listed price', method: 'Payment method', paymentId: 'Payment ID',
+    sold: 'Tickets sold', gross: 'Gross (listed)', first: 'First sale', last: 'Last sale',
+    statSold: 'Tickets sold', statGross: 'Gross sales', statLevels: 'Price levels', valid: 'Valid',
+  },
+  fr: {
+    file: 'Audit des ventes', tickets: 'Billets', breakdown: 'Détail des prix',
+    note: 'Prix du billet au moment de l’achat. Sans change ni marge.',
+    id: 'N° de billet', status: 'Statut', purchased: 'Acheté le', tierId: 'ID du tarif', tier: 'Type de billet',
+    price: 'Prix affiché', method: 'Moyen de paiement', paymentId: 'ID du paiement',
+    sold: 'Billets vendus', gross: 'Brut (affiché)', first: 'Première vente', last: 'Dernière vente',
+    statSold: 'Billets vendus', statGross: 'Ventes brutes', statLevels: 'Niveaux de prix', valid: 'Valide',
+  },
+  ht: {
+    file: 'Odit lavant', tickets: 'Biyè', breakdown: 'Detay pri yo',
+    note: 'Pri biyè a lè yo te achte l. San chanj, san maj.',
+    id: 'Nimewo biyè', status: 'Estati', purchased: 'Achte', tierId: 'ID tarif', tier: 'Kalite biyè',
+    price: 'Pri afiche', method: 'Mwayen peman', paymentId: 'ID peman',
+    sold: 'Biyè vann', gross: 'Brit (afiche)', first: 'Premye vant', last: 'Dènye vant',
+    statSold: 'Biyè vann', statGross: 'Lavant brit', statLevels: 'Nivo pri', valid: 'Valab',
+  },
+} as const
 
 type AuditTicketRow = {
   ticketId: string
@@ -46,8 +89,6 @@ function toIso(value: any): string {
   }
 }
 
-const csvEscape = csvCell
-
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, error } = await requireAuth()
@@ -69,10 +110,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const url = new URL(request.url)
-    const format = (url.searchParams.get('format') || 'csv').toLowerCase()
-    if (format !== 'csv') {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const format = parseExportFormat(url.searchParams.get('format') || 'xlsx')
+    if (!format) {
+      return NextResponse.json({ error: 'format must be xlsx or pdf' }, { status: 400 })
     }
+    const lang = exportLang(url.searchParams.get('lang'))
+    const l = L[lang]
 
     const tickets: AuditTicketRow[] = []
     const buckets = new Map<string, PriceBucketRow>()
@@ -172,80 +215,94 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return a.listedUnitPriceCents - b.listedUnitPriceCents
     })
 
-    const eventTitleSafe = String(event.title || 'event')
-      .replace(/[^a-z0-9]/gi, '_')
-      .slice(0, 80)
+    const head = eventHeader(event, lang)
+    const art = await loadEventArt(event)
+    const money = (amount: number, currency: string) => ({ amount, currency })
 
-    const rows: string[] = []
+    // Gross per currency for the headline ("312,500.00 HTG · 1,200.00 USD").
+    const grossByCurrency = new Map<string, number>()
+    for (const b of priceBuckets) grossByCurrency.set(b.listedCurrency, (grossByCurrency.get(b.listedCurrency) || 0) + b.grossSalesCents)
+    const fmtMoney = (cents: number, cur: string) => {
+      try {
+        return `${new Intl.NumberFormat(head.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100)} ${cur}`
+      } catch {
+        return `${(cents / 100).toFixed(2)} ${cur}`
+      }
+    }
+    const grossLine =
+      Array.from(grossByCurrency.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([cur, cents]) => fmtMoney(cents, cur))
+        .join(' · ') || '0'
 
-    rows.push(
-      [
-        'Ticket ID',
-        'Status',
-        'Purchased At',
-        'Tier ID',
-        'Tier Name',
-        'Listed Unit Price',
-        'Listed Currency',
-        'Payment Method',
-        'Payment ID',
-      ]
-        .map(csvEscape)
-        .join(',')
-    )
-
-    for (const t of tickets) {
-      rows.push(
-        [
-          t.ticketId,
-          t.status,
-          t.purchasedAt,
-          t.tierId || '',
-          t.tierName,
-          t.listedUnitPrice.toFixed(2),
-          t.listedCurrency,
-          t.paymentMethod || '',
-          t.paymentId || '',
-        ]
-          .map(csvEscape)
-          .join(',')
-      )
+    const report: ExportReport = {
+      title: head.title,
+      reportLabel: l.file,
+      subtitle: head.subtitle,
+      organizerName: head.organizerName,
+      tone: art.tone,
+      poster: art.poster,
+      stats: [
+        { label: l.statSold, value: String(tickets.length) },
+        { label: l.statGross, value: grossLine },
+        { label: l.statLevels, value: String(priceBuckets.length) },
+      ],
+      sections: [
+        {
+          name: l.tickets,
+          totals: true,
+          columns: [
+            { key: 'purchasedAt', header: l.purchased, kind: 'datetime' },
+            { key: 'tierName', header: l.tier, width: 20 },
+            { key: 'status', header: l.status, kind: 'status', width: 11 },
+            { key: 'price', header: l.price, kind: 'money', total: true },
+            { key: 'paymentMethod', header: l.method, width: 14 },
+            { key: 'ticketId', header: l.id, width: 22 },
+            { key: 'tierId', header: l.tierId, width: 16, pdf: false },
+            { key: 'paymentId', header: l.paymentId, width: 24, pdf: false },
+          ],
+          rows: tickets.map((t) => ({
+            ticketId: t.ticketId,
+            // Only valid/confirmed tickets reach this list.
+            status: { label: l.valid, tone: 'positive' as const },
+            purchasedAt: t.purchasedAt || null,
+            tierId: t.tierId || '',
+            tierName: t.tierName,
+            price: money(t.listedUnitPrice, t.listedCurrency),
+            paymentMethod: paymentMethodLabel(t.paymentMethod),
+            paymentId: t.paymentId || '',
+          })),
+        },
+        {
+          name: l.breakdown,
+          note: l.note,
+          totals: true,
+          columns: [
+            { key: 'tierName', header: l.tier, width: 22 },
+            { key: 'price', header: l.price, kind: 'money' },
+            { key: 'sold', header: l.sold, kind: 'integer', total: true },
+            { key: 'gross', header: l.gross, kind: 'money', total: true },
+            { key: 'first', header: l.first, kind: 'datetime' },
+            { key: 'last', header: l.last, kind: 'datetime' },
+            { key: 'tierId', header: l.tierId, width: 16, pdf: false },
+          ],
+          rows: priceBuckets.map((b) => ({
+            tierId: b.tierId || '',
+            tierName: b.tierName,
+            price: money(b.listedUnitPrice, b.listedCurrency),
+            sold: b.ticketsSold,
+            gross: money(b.grossSalesCents / 100, b.listedCurrency),
+            first: b.firstPurchaseAt || null,
+            last: b.lastPurchaseAt || null,
+          })),
+        },
+      ],
+      locale: head.locale,
+      timeZone: head.timeZone,
+      labels: EXPORT_LABELS[lang],
     }
 
-    // Add a summary table at the end (still CSV) showing each distinct price level per tier.
-    rows.push('')
-    rows.push(csvEscape('LISTED PRICE BREAKDOWN (Tier price at purchase time, NO FX / NO SPREAD)'))
-    rows.push(
-      ['Tier ID', 'Tier Name', 'Listed Unit Price', 'Listed Currency', 'Tickets Sold', 'Gross Sales (listed cents)', 'First Purchase At', 'Last Purchase At']
-        .map(csvEscape)
-        .join(',')
-    )
-
-    for (const b of priceBuckets) {
-      rows.push(
-        [
-          b.tierId || '',
-          b.tierName,
-          b.listedUnitPrice.toFixed(2),
-          b.listedCurrency,
-          String(b.ticketsSold),
-          String(b.grossSalesCents),
-          b.firstPurchaseAt,
-          b.lastPurchaseAt,
-        ]
-          .map(csvEscape)
-          .join(',')
-      )
-    }
-
-    const csvContent = rows.join('\n')
-
-    return new Response(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${eventTitleSafe}_earnings_audit.csv"`,
-      },
-    })
+    return await exportResponse(report, format, { title: head.title, label: l.file, day: head.day })
   } catch (e: any) {
     console.error('Earnings audit export error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

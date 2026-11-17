@@ -1,4 +1,10 @@
 {
+  "exports": {
+    "pdf": "PDF",
+    "excel": "Excel",
+    "group": "Export",
+    "failed": "Export failed"
+  },
   "event_tools": {
     "col_attendee": "Attendee",
     "col_status": "Status",
@@ -950,7 +956,7 @@
     "email_verification": "Email verification",
     "new_bank_needs_verification_long": "Adding a new bank account requires email verification. The account holder name should match your organizer name.",
     "available_for_withdrawal": "Available for withdrawal:",
-    "download_audit_csv": "Download audit (CSV)",
+    "sales_audit": "Sales audit",
     "moncash_phone_number": "MonCash Phone Number",
     "save_second_bank": "Save this as a second bank account",
     "prefunding_instant_note": "This withdrawal will be sent instantly using platform prefunding.",
@@ -1011,7 +1017,6 @@
     "check_in": "Check-In",
     "checked_in": "Checked In",
     "email_all": "Email All",
-    "export_csv": "Export CSV",
     "not_checked_in": "Not checked in",
     "pending": "Pending",
     "price_paid": "Price Paid",
@@ -1691,7 +1696,6 @@
     "payout_history_title": "payout history",
     "payout_history_desc": "Recent withdrawals from this organization.",
     "payout_history_empty": "No payouts yet.",
-    "export_csv": "Export CSV",
     "method_bank": "Bank transfer",
     "method_moncash": "MonCash",
     "status_completed": "Paid",

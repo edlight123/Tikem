@@ -311,7 +311,7 @@
             },
             {
               "question": "Can I export my attendee list?",
-              "answer": "Yes. Open your event dashboard, go to Attendees, and export to CSV for names, emails, ticket types, and check-in status."
+              "answer": "Yes. Open your event dashboard, go to Attendees, and export the list as Excel or PDF (names, emails, ticket types and check-in status)."
             },
             {
               "question": "How do group discounts work?",

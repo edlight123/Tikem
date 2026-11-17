@@ -1,26 +1,8 @@
-import { csvCell, toCsv } from '@/lib/csv'
 import { escapeICSText, generateICSFile } from '@/lib/calendar'
 import { phoneToE164 } from '@/types/social'
 import { hashPhoneVerificationCode, phoneVerificationCodeMatches } from '@/lib/phone-verification-code'
 
-describe('csvCell', () => {
-  it('quotes and doubles inner quotes', () => {
-    expect(csvCell('a "b", c')).toBe('"a ""b"", c"')
-  })
-  it('neutralises formula leads', () => {
-    for (const lead of ['=', '+', '-', '@', '\t', '\r']) {
-      expect(csvCell(`${lead}HYPERLINK("x")`).startsWith(`"'${lead}`)).toBe(true)
-    }
-  })
-  it('leaves numbers numeric', () => {
-    expect(csvCell(-12.5)).toBe('"-12.5"')
-    expect(csvCell('-12.50')).toBe('"-12.50"')
-    expect(csvCell(null)).toBe('""')
-  })
-  it('joins rows with CRLF', () => {
-    expect(toCsv([['a'], ['b']])).toBe('"a"\r\n"b"')
-  })
-})
+// CSV cell escaping moved with the exports to Excel/PDF: see __tests__/exports.test.ts.
 
 describe('ICS escaping', () => {
   it('stops CRLF from injecting properties', () => {

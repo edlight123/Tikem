@@ -8,8 +8,9 @@ import VerifyOrganizerForm from './VerifyOrganizerForm'
 import { ConsoleButton } from '@/components/admin/console'
 import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { useToast } from '@/components/ui/Toast'
-import { Search, Download, Check, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
-import { toCsv } from '@/lib/csv'
+import { Search, Check, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadAdminTable } from '@/lib/exports/download'
 
 type AdminVerifyClientProps = {
   requestsWithUsers: any[]
@@ -161,25 +162,44 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
     }
   }
 
-  const handleExportCSV = () => {
-    const headers = ['Name', 'Email', 'Status', 'Country', 'Submitted Date', 'Request ID']
-    const rows = filteredRequests.map((r: any) => [
-      r.user?.full_name || '',
-      r.user?.email || '',
-      r.status || '',
-      r.steps?.organizerInfo?.fields?.country || '',
-      r.submittedAt || r.submitted_at || r.createdAt || r.created_at || '',
-      r.id,
-    ])
-
-    const csvContent = toCsv([headers, ...rows])
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `verification-requests-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-  }
+  // The filtered requests as Excel / PDF (rendered by /api/admin/exports/render).
+  const handleExport = (format: 'pdf' | 'xlsx') =>
+    downloadAdminTable(
+      format,
+      {
+        title: 'Organizer verification',
+        reportLabel: 'Verification requests',
+        subtitle: [`${filteredRequests.length} request${filteredRequests.length === 1 ? '' : 's'}`],
+        sections: [
+          {
+            name: 'Requests',
+            columns: [
+              { key: 'name', header: 'Name', width: 24 },
+              { key: 'email', header: 'Email', width: 28 },
+              { key: 'status', header: 'Status', kind: 'status' },
+              { key: 'country', header: 'Country', width: 10 },
+              { key: 'submitted', header: 'Submitted', kind: 'datetime' },
+              { key: 'id', header: 'Request ID', width: 24, pdf: false },
+            ],
+            rows: filteredRequests.map((r: any) => {
+              const st = String(r.status || '')
+              return {
+                name: r.user?.full_name || '',
+                email: r.user?.email || '',
+                status: {
+                  label: st ? st.charAt(0).toUpperCase() + st.slice(1).replace(/_/g, ' ') : '',
+                  tone: st === 'approved' ? 'positive' : st === 'rejected' ? 'negative' : st === 'pending' || st === 'in_review' ? 'warning' : 'neutral',
+                },
+                country: r.steps?.organizerInfo?.fields?.country || '',
+                submitted: r.submittedAt || r.submitted_at || r.createdAt || r.created_at || null,
+                id: r.id,
+              }
+            }),
+          },
+        ],
+      },
+      'Verification requests'
+    )
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredRequests.length) {
@@ -300,14 +320,13 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
               {sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
             </button>
 
-            <ConsoleButton
-              onClick={handleExportCSV}
+            <ExportButtons
+              variant="console"
+              onExport={handleExport}
               disabled={filteredRequests.length === 0}
-              className="inline-flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </ConsoleButton>
+              onError={(e: any) => showToast({ type: 'error', title: 'Export failed', message: e?.message || 'Could not build the file' })}
+              labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export verification requests' }}
+            />
           </div>
         </div>
 

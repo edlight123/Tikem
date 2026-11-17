@@ -311,7 +311,7 @@
             },
             {
               "question": "Puis-je exporter la liste des participants ?",
-              "answer": "Oui. Ouvrez votre tableau de bord événement, allez dans Participants et exportez en CSV (noms, emails, types de billets, statut check-in)."
+              "answer": "Oui. Ouvrez votre tableau de bord événement, allez dans Participants et exportez la liste en Excel ou en PDF (noms, emails, types de billets, statut check-in)."
             },
             {
               "question": "Comment fonctionnent les réductions de groupe ?",

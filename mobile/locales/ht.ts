@@ -302,6 +302,7 @@ export default {
     },
   },
   tabs: {
+    messages: 'Mesaj',
     home: 'Akèy',
     discover: 'Dekouvri',
     create: 'Kreye',
@@ -314,6 +315,13 @@ export default {
     events: 'Evènman',
   },
   profile: {
+    hostEvents: {
+      row: 'Òganize evènman sou Tikèm',
+      title: 'Òganize sou Tikèm',
+      body: 'Kreye evènman, vann tikè, eskane nan pòt la epi reponn envite yo nan mòd òganizatè. Li gratis pou kòmanse. Verifye idantite w anvan premye peman w.',
+      cta: 'Kòmanse',
+      failed: 'Nou pa t ka louvri mòd òganizatè. Eseye ankò.',
+    },
     title: 'Pwofil',
     memberSince: 'Manm depi',
     profileInfo: 'Enfòmasyon Pwofil',
@@ -1163,10 +1171,8 @@ export default {
   export: {
     title: 'Ekspòte lis la',
     pdf: 'PDF',
-    csv: 'CSV',
+    excel: 'Excel',
     short: 'Ekspòte',
-    exportCSV: 'Ekspòte CSV',
-    downloadStarted: 'Telechajman kòmanse',
     noAttendees: 'Pa gen patisipan pou ekspòte',
     error: 'Ekspòtasyon patisipan yo echwe',
   },
@@ -2214,6 +2220,7 @@ export default {
     hide: 'Kache',
     create: 'Kreye premye evènman w',
     publish: 'Pibliye li',
+    verify: 'Verifye idantite w pou w ka touche',
     payouts: 'Konfigire peman ou',
     team: 'Envite ekip pòt ou a',
   },
@@ -2404,6 +2411,12 @@ export default {
   },
 
   organizerCreateEventFlow: {
+    firstEvent: {
+      title: 'Ou se yon òganizatè kounye a',
+      body: 'Evènman w lan an liy. Swiv lavant, eskane tikè yo nan pòt la epi reponn envite yo nan mòd òganizatè. Verifye idantite w nenpòt lè anvan premye peman w.',
+      draftBody: 'Bouyon w lan anrejistre. Fini l epi pibliye l nan mòd òganizatè. Verifye idantite w nenpòt lè anvan premye peman w.',
+      cta: 'Mwen konprann',
+    },
     steps: {
       basics: 'Debaz',
       location: 'Kote',
@@ -2797,6 +2810,9 @@ export default {
 
   // Lòt bò contactOrganizer: òganizatè a li kesyon yo epi li reponn.
   attendeeMessages: {
+    today: "Jodi a",
+    yesterday: "Yè",
+    deliveredNote: "{name} ap resevwa l nan aplikasyon an ak nan imel. Imel ou rete prive.",
     title: "Mesaj",
     you: "Ou menm",
     organizer: "Òganizatè a",
@@ -2870,6 +2886,11 @@ export default {
     failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
   organizerMessages: {
+    segmentWaiting: 'Pou reponn',
+    segmentAll: 'Tout',
+    caughtUpTitle: 'Ou a jou',
+    caughtUpBody: 'Chak kesyon gen repons li. Nouvo yo ap rive isit la, ak sou ekran telefòn ou.',
+    filterA11y: 'Montre mesaj pou {event}',
     allEvents: 'Tout evènman',
     title: 'Mesaj',
     waitingCount: '{count} k ap tann ou',

@@ -9,7 +9,6 @@ import { ConsoleButton, ConsoleState, consoleTone } from '@/components/admin/con
 import {
   Search,
   Filter,
-  Download,
   X,
   CreditCard,
   Smartphone,
@@ -21,7 +20,10 @@ import {
   Ticket,
   QrCode,
 } from 'lucide-react'
-import { toCsv } from '@/lib/csv'
+import { useToast } from '@/components/ui/Toast'
+import { ExportButtons } from '@/components/exports/ExportButtons'
+import { downloadAdminTable } from '@/lib/exports/download'
+import { isLiveTicketStatus } from '@/lib/tickets/status'
 
 interface Order {
   id: string
@@ -155,7 +157,7 @@ export function AdminOrdersClient() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-  const [exporting, setExporting] = useState(false)
+  const { showToast } = useToast()
 
   const fetchOrders = useCallback(async (page: number = 1) => {
     setLoading(true)
@@ -251,61 +253,82 @@ export function AdminOrdersClient() {
     }))
   }
 
-  const handleExport = async () => {
-    setExporting(true)
-    try {
-      // Fetch all orders matching current filters (up to 1000)
-      const params = new URLSearchParams({
-        page: '1',
-        pageSize: '1000',
-        sortBy: filters.sortBy,
-      })
+  // Every order matching the current filters (up to 1000), as Excel / PDF.
+  const handleExport = async (format: 'pdf' | 'xlsx') => {
+    const params = new URLSearchParams({
+      page: '1',
+      pageSize: '1000',
+      sortBy: filters.sortBy,
+    })
 
-      if (filters.status !== 'all') params.set('status', filters.status)
-      if (filters.paymentMethod !== 'all') params.set('paymentMethod', filters.paymentMethod)
-      if (filters.currency !== 'all') params.set('currency', filters.currency)
-      if (filters.search) params.set('search', filters.search)
-      if (filters.startDate) params.set('startDate', filters.startDate)
-      if (filters.endDate) params.set('endDate', filters.endDate)
+    if (filters.status !== 'all') params.set('status', filters.status)
+    if (filters.paymentMethod !== 'all') params.set('paymentMethod', filters.paymentMethod)
+    if (filters.currency !== 'all') params.set('currency', filters.currency)
+    if (filters.search) params.set('search', filters.search)
+    if (filters.startDate) params.set('startDate', filters.startDate)
+    if (filters.endDate) params.set('endDate', filters.endDate)
 
-      const res = await fetch(`/api/admin/orders?${params}`)
-      const data = await res.json()
+    const res = await fetch(`/api/admin/orders?${params}`)
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not load orders')
+    if (!data.orders.length) throw new Error('No orders match these filters')
 
-      if (data.ok && data.orders.length > 0) {
-        // Create CSV
-        const headers = ['Order ID', 'Event', 'Attendee Email', 'Attendee Name', 'Status', 'Amount', 'Currency', 'Payment Method', 'Ticket Type', 'Checked In', 'Purchase Date']
-        const rows = data.orders.map((o: Order) => [
-          o.id,
-          o.event_name || '',
-          o.attendee_email || o.attendeeEmail || o.email || '',
-          o.attendee_name || o.attendeeName || '',
-          o.status || '',
-          o.price_paid || o.pricePaid || 0,
-          o.currency || 'USD',
-          o.payment_method || o.paymentMethod || '',
-          o.ticket_type || o.ticketType || '',
-          (o.checked_in || o.checkedIn) ? 'Yes' : 'No',
-          o.purchased_at || o.purchasedAt || '',
-        ])
-
-        const csvContent = toCsv([headers, ...rows])
-
-        // Download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `orders-export-${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-      }
-    } catch (e) {
-      console.error('Export failed:', e)
-    } finally {
-      setExporting(false)
+    const statusCell = (raw: string) => {
+      const s = String(raw || '').toLowerCase()
+      const label = s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ') : ''
+      const tone = isLiveTicketStatus(s) || s === 'checked_in' ? 'positive' : s === 'pending' || s === 'refund_pending' ? 'warning' : s === 'refunded' || s === 'cancelled' ? 'negative' : 'neutral'
+      return { label, tone }
     }
+
+    await downloadAdminTable(
+      format,
+      {
+        title: 'Orders',
+        reportLabel: 'Orders',
+        subtitle: [
+          [
+            filters.status !== 'all' ? `Status: ${filters.status}` : '',
+            filters.paymentMethod !== 'all' ? `Method: ${filters.paymentMethod}` : '',
+            filters.currency !== 'all' ? `Currency: ${filters.currency}` : '',
+            filters.search ? `Search: “${filters.search}”` : '',
+            filters.startDate || filters.endDate ? `${filters.startDate || '…'} → ${filters.endDate || '…'}` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ') || 'All orders',
+        ],
+        stats: [{ label: 'Orders', value: String(data.orders.length) }],
+        sections: [
+          {
+            name: 'Orders',
+            columns: [
+              { key: 'purchased', header: 'Purchased', kind: 'datetime' },
+              { key: 'event', header: 'Event', width: 24 },
+              { key: 'name', header: 'Attendee', width: 20 },
+              { key: 'email', header: 'Email', width: 26 },
+              { key: 'status', header: 'Status', kind: 'status' },
+              { key: 'amount', header: 'Amount', kind: 'money' },
+              { key: 'method', header: 'Method', width: 12 },
+              { key: 'ticket', header: 'Ticket type', width: 16 },
+              { key: 'checkedIn', header: 'Checked in', width: 10 },
+              { key: 'id', header: 'Order ID', width: 22, pdf: false },
+            ],
+            rows: data.orders.map((o: Order) => ({
+              id: o.id,
+              event: o.event_name || '',
+              email: o.attendee_email || o.attendeeEmail || o.email || '',
+              name: o.attendee_name || o.attendeeName || '',
+              status: statusCell(o.status || ''),
+              amount: { amount: Number(o.price_paid || o.pricePaid || 0), currency: o.currency || 'USD' },
+              method: o.payment_method || o.paymentMethod || '',
+              ticket: o.ticket_type || o.ticketType || '',
+              checkedIn: o.checked_in || o.checkedIn ? 'Yes' : 'No',
+              purchased: o.purchased_at || o.purchasedAt || null,
+            })),
+          },
+        ],
+      },
+      'Orders'
+    )
   }
 
   const resetFilters = () => {
@@ -559,15 +582,13 @@ export function AdminOrdersClient() {
             )}
           </button>
 
-          {/* Export Button */}
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded bg-console-raise text-sm font-medium text-console-mut hover:text-console-text transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            {exporting ? 'Exporting...' : 'Export'}
-          </button>
+          {/* Export */}
+          <ExportButtons
+            variant="console"
+            onExport={handleExport}
+            onError={(e: any) => showToast({ type: 'error', title: 'Export failed', message: e?.message || 'Could not build the file' })}
+            labels={{ pdf: 'PDF', excel: 'Excel', group: 'Export orders' }}
+          />
         </div>
 
         {/* Extended Filters Panel */}
