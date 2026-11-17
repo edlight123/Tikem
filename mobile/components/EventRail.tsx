@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import PosterEventCard from './PosterEventCard';
 import SectionHeader from './SectionHeader';
 import type { BadgeStatus } from '../theme/badges';
+import { primeEventPreviews } from '../lib/eventPreviewCache';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(248, width * 0.62);
@@ -36,6 +37,8 @@ export default function EventRail({
   badge,
   userCity,
 }: EventRailProps) {
+  // Opening this event is instant: the page paints from this copy (lib/eventPreviewCache).
+  primeEventPreviews(events);
   if (!events || events.length === 0) return null;
 
   return (

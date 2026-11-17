@@ -12,6 +12,7 @@ import { formatPrice } from '../lib/currency';
 import { advertisedPrice } from '../lib/buyerPricing';
 import { resolveEventPricing } from '../lib/ticketPricing';
 import { font, radius } from '../theme/tokens';
+import { primeEventPreview } from '../lib/eventPreviewCache';
 
 interface EventListCardProps {
   event: any;
@@ -24,6 +25,8 @@ interface EventListCardProps {
  * fallback (deterministic teal gradient) and formatting conventions.
  */
 export default function EventListCard({ event, onPress }: EventListCardProps) {
+  // Opening this event is instant: the page paints from this copy (lib/eventPreviewCache).
+  primeEventPreview(event);
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);

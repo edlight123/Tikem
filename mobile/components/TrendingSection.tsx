@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { useI18n } from '../contexts/I18nContext';
 import PosterEventCard from './PosterEventCard';
 import SectionHeader from './SectionHeader';
+import { primeEventPreviews } from '../lib/eventPreviewCache';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(248, width * 0.62);
@@ -15,6 +16,8 @@ interface TrendingSectionProps {
 }
 
 export default function TrendingSection({ events, onEventPress, onViewAll }: TrendingSectionProps) {
+  // Opening this event is instant: the page paints from this copy (lib/eventPreviewCache).
+  primeEventPreviews(events);
   const { t } = useI18n();
   if (events.length === 0) return null;
 
