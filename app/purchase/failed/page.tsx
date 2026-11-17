@@ -32,7 +32,7 @@ export default async function PurchaseFailedPage({
       title: t('purchase.failed.payment_failed.title', 'Payment Failed'),
       description: t(
         'purchase.failed.payment_failed.description',
-        'Your payment was not successful. Please check your payment method and try again.'
+        "Your payment didn't go through. If money left your account anyway, your ticket will appear in My Tickets within a few minutes — check there before paying again."
       ),
     },
     sold_out: {

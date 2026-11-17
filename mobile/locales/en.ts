@@ -1396,7 +1396,7 @@ export default {
     },
     payment: {
       reasons: {
-        payment_failed: 'The payment was not completed. You were not charged.',
+        payment_failed: 'The payment did not go through. If money left your account anyway, your ticket will appear in My Tickets within a few minutes — check there before paying again.',
         sold_out: 'Tickets sold out before your payment went through. Any charge will be refunded.',
         capacity_exceeded: 'Tickets sold out before your payment went through. Any charge will be refunded.',
         amount_mismatch: 'The amount paid did not match the order. Contact support if you were charged.',

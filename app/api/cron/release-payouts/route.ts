@@ -705,9 +705,13 @@ export async function GET(request: Request) {
 
         // How much the organizer is actually owed for THIS event, net of fees and
         // of anything already withdrawn through the legacy manual payout paths.
+        // Refunds come off it too (payment audit, 2026-11-17): the stored
+        // netAmount is never decremented on a refund, so without this an event
+        // with refunds was released its full pre-refund net. `refundedMinor` is
+        // already zero when the earnings were derived from live tickets only.
         const netEntitlementMinor = Math.max(
           0,
-          toMinor(earnings.netAmount) - Math.max(0, toMinor(earnings.withdrawnAmount))
+          toMinor(earnings.netAmount) - Math.max(0, toMinor(earnings.withdrawnAmount)) - refundedMinor
         )
         // Failed / canceled payouts do not count (the money is back in the
         // balance); `reserved` rows do (the payout may exist).

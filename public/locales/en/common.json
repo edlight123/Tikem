@@ -1007,7 +1007,7 @@
       },
       "payment_failed": {
         "title": "Payment Failed",
-        "description": "Your payment was not successful. Please check your payment method and try again."
+        "description": "Your payment didn't go through. If money left your account anyway, your ticket will appear in My Tickets within a few minutes — check there before paying again."
       },
       "sold_out": {
         "title": "Sold Out",

@@ -17,6 +17,7 @@ import { capacityFromEvent } from '@/lib/capacity'
 import { buildTierSoldIncrements } from '@/lib/tickets/inventory'
 import {
   capacityPrecheckRefusal,
+  MOBILE_MONEY_SEAT_HOLD_MS,
   createSeatHold,
   releaseSeatHold,
   seatHoldForClient,
@@ -387,6 +388,7 @@ export async function POST(request: Request) {
     // availability until it expires or the order converts it at fulfillment. Sold out (or not
     // enough left) is a 409 here, with no pending order created.
     const seatHold = await createSeatHold({
+      holdMs: MOBILE_MONEY_SEAT_HOLD_MS,
       eventId: String(eventId),
       quantity: totalQuantity,
       tierIncrements: buildTierSoldIncrements(chargeSelections),

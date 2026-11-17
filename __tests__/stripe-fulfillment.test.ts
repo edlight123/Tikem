@@ -304,6 +304,38 @@ describe('sold out after payment', () => {
   })
 })
 
+describe('event cancelled or over before the payment landed', () => {
+  it('a payment completed after the organizer cancelled is refunded, never issued', async () => {
+    mockFake.seed('events', 'evt1', { title: 'Soirée', organizer_id: 'org1', currency: 'EUR', status: 'cancelled' })
+    const res = await fulfillStripeOrder(order({ destinationCharge: true }, { seatHoldId: 'hold1' }))
+    expect(res.outcome).toBe('capacity_refunded')
+    expect(processStripeRefund).toHaveBeenCalledWith('pi_1', undefined, expect.objectContaining({ reverseTransfer: true }))
+    expect(convertSeatHold).not.toHaveBeenCalled()
+    expect(tickets()).toHaveLength(0)
+    expect(addTicketToEarnings).not.toHaveBeenCalled()
+    expect(mockFake.get('stripe_orders', 'pi_1')!.refund_reason).toBe('event_cancelled')
+  })
+
+  it('an event that ended long ago is refunded; one that ended an hour ago (late webhook) still issues', async () => {
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
+    mockFake.seed('events', 'evt1', { title: 'Soirée', organizer_id: 'org1', currency: 'EUR', end_datetime: hoursAgo(30) })
+    expect((await fulfillStripeOrder(order())).outcome).toBe('capacity_refunded')
+
+    mockFake.reset()
+    mockFake.seed('events', 'evt1', { title: 'Soirée', organizer_id: 'org1', currency: 'EUR', end_datetime: hoursAgo(1) })
+    mockFake.seed('users', 'u1', { email: 'u@x.com', full_name: 'U' })
+    expect((await fulfillStripeOrder(order({ paymentId: 'pi_2', paymentIntentId: 'pi_2' }))).outcome).toBe('fulfilled')
+  })
+
+  it('cancelling after the tickets were issued does not refund on a re-run (the cancel sweep owns that)', async () => {
+    expect((await fulfillStripeOrder(order())).outcome).toBe('fulfilled')
+    mockFake.seed('events', 'evt1', { title: 'Soirée', organizer_id: 'org1', currency: 'EUR', status: 'cancelled' })
+    const again = await fulfillStripeOrder(order())
+    expect(again.outcome).toBe('fulfilled')
+    expect(processStripeRefund).not.toHaveBeenCalled()
+  })
+})
+
 describe('charge.refunded', () => {
   const seedTickets = () => {
     mockFake.seed('tickets', 't0', { payment_id: 'pi_9', status: 'valid', charged_amount: 20, charged_currency: 'USD' })

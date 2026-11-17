@@ -1007,7 +1007,7 @@
       },
       "payment_failed": {
         "title": "Le paiement a échoué",
-        "description": "Votre paiement n'a pas abouti. Vérifiez votre moyen de paiement et réessayez."
+        "description": "Votre paiement n'a pas abouti. Si un montant a quand même été prélevé, votre billet apparaîtra dans Mes billets d'ici quelques minutes — vérifiez avant de payer à nouveau."
       },
       "sold_out": {
         "title": "Complet",

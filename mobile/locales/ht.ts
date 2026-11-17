@@ -3259,7 +3259,7 @@ export default {
     },
     payment: {
       reasons: {
-        payment_failed: 'Peman an pa t fèt. Yo pa retire lajan sou ou.',
+        payment_failed: 'Peman an pa t pase. Si lajan an soti sou kont ou kanmenm, tikè w ap parèt nan Tikè mwen nan kèk minit — verifye la anvan ou peye ankò.',
         sold_out: 'Tikè yo fin vann anvan peman ou an pase. Si yo retire lajan, y ap ranbouse ou.',
         capacity_exceeded: 'Tikè yo fin vann anvan peman ou an pase. Si yo retire lajan, y ap ranbouse ou.',
         amount_mismatch: 'Montan ou peye a pa koresponn ak kòmand lan. Kontakte sipò si yo retire lajan sou ou.',
