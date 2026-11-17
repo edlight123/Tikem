@@ -8,7 +8,7 @@ Code: `lib/tickets/inventoryShards.ts` (capacity gate), `lib/tickets/seatHolds.t
 1. **Vercel env:** set `SEAT_HOLD_SECRET` (any long random string) in Production
    and Preview. It signs the token that lets a client release its own hold.
    Without it the code falls back to other secrets, which works but couples
-   them. Optional: `SEAT_HOLD_MINUTES` (default 8), `SEAT_HOLD_MAX_PER_BUYER`
+   them. Optional: `SEAT_HOLD_MINUTES` (default 8; MonCash/SogePay holds are never shorter than 12 because the wallet's own payment window is ~10), `SEAT_HOLD_MAX_PER_BUYER`
    (default 3), `SEAT_HOLD_MAX_PER_IP` (guests only, default 100 holds) and
    `SEAT_HOLD_MAX_SEATS_PER_IP` (guests only, default 200 seats).
 2. **Stripe webhook:** subscribe the endpoint to `payment_intent.canceled`.
@@ -51,3 +51,6 @@ script for those.
 - `too_many_holds` (429): a buyer (3 live holds or 50 held seats per event) or a
   guest network (100 live holds per event) hit its cap. Holds free on release,
   conversion or expiry.
+- A refunded ticket gives its seat back automatically, once per ticket
+  (`lib/tickets/seatReturn.ts`, stamped `seat_returned_at` on the ticket). A
+  cancelled event's refunds do not return seats (nothing is on sale).

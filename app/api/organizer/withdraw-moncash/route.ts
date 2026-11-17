@@ -48,6 +48,7 @@ import { loadKycLegalNames, moncashNumberOtpVerified } from '@/lib/payouts/payee
 import {
   INSTANT_MONCASH_DAYS_COLLECTION,
   otherRailSentTodayInTx,
+  returnDailyCapForRejectedTransfer,
   dailyCapAllows,
   decideInstantMoncash,
   instantDayKey,
@@ -634,6 +635,12 @@ export async function POST(req: NextRequest) {
 
       // outcome === 'rejected': MonCash definitively refused, no money moved.
       const failureReason = outcome.reason
+      // Nothing left the pool, so its share of today's cap goes back (once).
+      await returnDailyCapForRejectedTransfer({
+        withdrawalRef,
+        dailyRef: adminDb.collection(INSTANT_MONCASH_DAYS_COLLECTION).doc(instantDayKey(now)),
+        poolDebitHtgCents: instantPricing.poolDebitHtgCents,
+      })
 
       // Give the reservation back — once, in a transaction that refuses unless
       // the row is still 'processing' (the same seam the reconcile cron uses).
