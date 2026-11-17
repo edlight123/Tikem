@@ -137,6 +137,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     approvedAmountMinor: Math.max(0, Math.round(Number(data.amountMinor) || 0)),
                     approvedCurrency: data.currency || null,
                     approvedUntil: new Date(Date.now() + PAYOUT_REVIEW_APPROVAL_TTL_MS).toISOString(),
+                    // A fresh approval is unused, whatever an earlier one did.
+                    consumedAt: null,
                   }
                 : {}),
               resolvedAt: now,

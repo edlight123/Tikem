@@ -104,11 +104,13 @@ async function readSharedToken(): Promise<{ token: string; expiresAt: number } |
   return null
 }
 
-function writeSharedToken(entry: { token: string; expiresAt: number }): void {
-  import('@/lib/firebase/admin')
+/** Awaited by the minter, so a function frozen right after minting has still shared it. */
+function writeSharedToken(entry: { token: string; expiresAt: number }): Promise<void> {
+  return import('@/lib/firebase/admin')
     .then(({ adminDb }) =>
       adminDb.collection('server_cache').doc(sharedTokenDocId()).set({ ...entry, updated_at: Date.now() })
     )
+    .then(() => undefined)
     .catch((e) => console.warn('[MonCash] shared token write failed', e))
 }
 
@@ -147,7 +149,7 @@ async function getAccessToken(): Promise<string> {
         return shared.token
       }
       const token = await fetchAccessToken()
-      if (cachedToken) writeSharedToken(cachedToken)
+      if (cachedToken) await writeSharedToken(cachedToken)
       return token
     })().finally(() => {
       if (tokenInFlight === run) tokenInFlight = null

@@ -399,6 +399,13 @@ async function loadTicketFacts(
       facts.refundedMinor += ticketRefundedFaceMinor(data, eventCurrency)
       continue
     }
+    // A chargeback took this sale back (lib/disputes: 'disputed' while open or
+    // lost). The stored netAmount still includes it, so it comes off like a
+    // refund — a lost dispute is never released to the organizer.
+    if (status === 'disputed') {
+      facts.refundedMinor += ticketRefundedFaceMinor(data, eventCurrency)
+      continue
+    }
 
     if (!isLiveTicketStatus(status)) continue
 
