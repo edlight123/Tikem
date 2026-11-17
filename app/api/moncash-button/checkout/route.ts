@@ -129,8 +129,11 @@ export async function GET(request: Request) {
         return new NextResponse('MonCash is not configured', { status: 500 })
       }
 
+      const gatewayStart = Date.now()
       const { redirectUrl, token, expiresAt } = await createMonCashGatewayPayment({ amount, orderId })
-      console.info('[moncash_button] checkout: redirecting to MonCash gateway', { orderHash, amount })
+      // gatewayMs: Digicel token + CreatePayment, the part the buyer waits on
+      // (speed pass 2026-11-17: was ~10s cold before the shared token cache).
+      console.info('[moncash_button] checkout: redirecting to MonCash gateway', { orderHash, amount, gatewayMs: Date.now() - gatewayStart })
 
       // Persist the gateway token so the Return handler can correlate back to this order
       // even if cookies are dropped on the cross-site round trip. (Best effort.)

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -264,8 +265,21 @@ export default function TieredTicketSelector({
     if (!iso) return '';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+    // Day AND time: "Nov 17, 12:00 AM". A date alone left buyers guessing
+    // whether "Nov 17" meant now (SANTA PIANO, 2026-11-17).
+    return d.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
+
+  /** The earliest upcoming sale start among active tiers, when NOTHING can be bought yet. */
+  const nextSaleStart = (() => {
+    if (!tiers.length || tiers.some((tt) => isTierAvailable(tt))) return null;
+    const now = Date.now();
+    const starts = tiers
+      .filter((tt) => tt.is_active !== false && tt.sales_start && new Date(tt.sales_start).getTime() > now)
+      .map((tt) => new Date(tt.sales_start as string).getTime())
+      .sort((a, b) => a - b);
+    return starts.length ? new Date(starts[0]).toISOString() : null;
+  })();
 
   const getAvailableQuantity = (tier: TicketTier): number => {
     return tier.total_quantity - tier.sold_quantity;
@@ -431,6 +445,18 @@ export default function TieredTicketSelector({
                 <View style={[styles.tierRow, styles.tierRowLast]} accessibilityRole="text">
                   <View style={{ flex: 1 }}>
                     <Text style={styles.tierName}>{t('ticketSelector.noTiers')}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Nothing is on sale yet: say when, plainly, above the rows,
+                  instead of a sheet of greyed-out tiers that reads as broken. */}
+              {!loadError && nextSaleStart && (
+                <View style={styles.saleSoon} accessibilityRole="text">
+                  <Ionicons name="time-outline" size={20} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.saleSoonTitle}>{t('ticketSelector.saleSoonTitle')}</Text>
+                    <Text style={styles.saleSoonWhen}>{formatOnSaleDate(nextSaleStart)}</Text>
                   </View>
                 </View>
               )}
@@ -775,9 +801,22 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   tierRowLast: {
     borderBottomWidth: 0,
   },
+  // Unavailable rows recede, but stay readable: opacity on a tertiary
+  // colour read as broken (owner, 2026-11-17).
   tierRowDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
+  saleSoon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceRaised,
+  },
+  saleSoonTitle: { fontSize: 13, color: colors.textSecondary },
+  saleSoonWhen: { fontSize: 17, fontWeight: '700', color: colors.text, marginTop: 2 },
   tierMain: {
     flex: 1,
     minWidth: 0,
@@ -796,7 +835,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     color: colors.text,
   },
   tierNameDisabled: {
-    color: colors.textTertiary,
+    color: colors.textSecondary,
   },
   tierPrice: {
     fontSize: 15,
