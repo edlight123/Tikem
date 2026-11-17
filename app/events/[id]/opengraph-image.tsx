@@ -13,7 +13,9 @@ import { isAllowedPosterUrl } from '@/lib/posters/hosts'
 export const runtime = 'nodejs'
 export const revalidate = 300
 
-export const size = { width: 1200, height: 630 }
+// The poster's own shape (4:5), owner 2026-11-17: "make sure it is the actual
+// size, the width fills the entire thing". No landscape card, no side wash.
+export const size = { width: 1080, height: 1350 }
 // JPEG, not the PNG ImageResponse produces natively. A 1200x630 card carrying a
 // photographic poster comes out ~345KB as PNG, and WhatsApp — the way most of
 // these links actually get shared — gets unreliable with big images. The same
@@ -21,27 +23,17 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/jpeg'
 export const alt = 'Event on Tikèm'
 
-// Posters are portrait (~4:5), social cards are landscape — which is the whole
-// reason this route exists: handing a raw 1080x1350 poster to a
-// summary_large_image card made every platform centre-crop the art to nothing.
-//
-// So the poster is shown uncropped at the largest 4:5 this height allows, and a
-// blurred copy of it fills the rest of the frame. The card then reads as the
-// artwork at the thumbnail size a chat app actually renders, with the billing
-// demoted to a caption beside it. The poster and caption are inset together and
-// optically centred: pinning the poster flush left left ~700px of near-black
-// doing nothing, which made the card read as mostly empty.
-const POSTER_W = 504 // 630 * 4/5
-// The poster IS the card (owner, 2026-11-17: "make the poster the main
-// focus"): centred, full height, nothing beside it. The words live UNDER the
-// image, where every chat app prints og:title and a one-line og:description
-// (see generateMetadata in page.tsx), so the card carries no caption at all.
-const POSTER_X = (1200 - POSTER_W) / 2
+// The share image IS the poster, at its own 4:5 proportions, edge to edge.
+// Earlier versions built a 1200x630 landscape card (poster beside a caption,
+// then poster centred on a blurred wash); the owner wanted the poster alone
+// at full width. The words live under the image, where chat apps print
+// og:title and the one-line og:description (generateMetadata in page.tsx).
+// Trade-off: apps that force a wide preview (WhatsApp, X) may trim it.
+const POSTER_W = size.width
+const POSTER_X = 0
 
 const CANVAS = '#0a0a0a'
 const INK = '#f5f4f1'
-const MUTED = '#a8a39a'
-const TEAL = '#2dd4bf'
 
 // Satori renders only png/apng/jpeg/gif/svg, and it THROWS on webp/avif rather
 // than skipping — which would fail the whole route and leave the share with no
@@ -55,30 +47,6 @@ async function usablePoster(url: string | undefined): Promise<string | null> {
     if (!res.ok) return null
     const type = (res.headers.get('content-type') || '').toLowerCase()
     return /^image\/(png|apng|jpeg|jpg|gif|svg\+xml)/.test(type) ? url : null
-  } catch {
-    return null
-  }
-}
-
-// The fill behind the card. A cover-scaled copy of the poster at full size
-// showed recognisable-but-cropped shapes — a half a face, a cut-off word — which
-// reads as a mistake rather than as atmosphere. Downsampling to thumbnail size
-// and blurring turns it into an ambient wash of the poster's own colour instead.
-// It has to happen here because satori implements no filter: blur().
-async function ambientFill(url: string | null): Promise<string | null> {
-  if (!isAllowedPosterUrl(url)) return null
-  try {
-    const res = await fetch(url, { redirect: 'error' })
-    if (!res.ok) return null
-    const { default: sharp } = await import('sharp')
-    const buf = await sharp(Buffer.from(await res.arrayBuffer()))
-      .resize(64, 34, { fit: 'cover' })
-      .blur(3)
-      .jpeg({ quality: 62 })
-      .toBuffer()
-    // 64x34 is ~2KB, so inlining it costs nothing and saves satori a second
-    // trip to the CDN for an image it would only smear anyway.
-    return `data:image/jpeg;base64,${buf.toString('base64')}`
   } catch {
     return null
   }
@@ -109,7 +77,6 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
   const title = String(event?.title || 'Event')
   const theme = getPosterTheme(event?.id || title, event?.category)
   const poster = await usablePoster(event?.banner_image_url)
-  const fill = await ambientFill(poster)
 
   const png = new ImageResponse(
     (
@@ -123,36 +90,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
           alignItems: 'center',
         }}
       >
-        {/* Ambient fill — the blurred poster, or its deterministic gradient. */}
-        <div
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            ...(fill
-              ? { backgroundImage: `url(${fill})`, backgroundSize: '1200px 630px' }
-              : { backgroundImage: theme.bg }),
-          }}
-        />
-
-        {/* One even scrim: the wash stays a background on both sides of the
-            poster instead of competing with it. */}
-        <div
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(10,10,10,0.66)',
-          }}
-        />
-
-        {/* The poster, uncropped, centred, full height. */}
+        {/* The poster, full bleed. */}
         <div
           style={{
             display: 'flex',
@@ -162,7 +100,6 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
             width: POSTER_W,
             height: '100%',
             backgroundImage: theme.bg,
-            boxShadow: '0 30px 120px rgba(0,0,0,0.65)',
           }}
         >
           {poster ? (
@@ -177,15 +114,15 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
                 justifyContent: 'flex-end',
                 width: '100%',
                 height: '100%',
-                padding: 44,
+                padding: 88,
               }}
             >
-              <div style={{ display: 'flex', width: 56, height: 3, background: theme.accent, marginBottom: 18 }} />
+              <div style={{ display: 'flex', width: 96, height: 5, background: theme.accent, marginBottom: 32 }} />
               <div
                 style={{
                   fontFamily: 'Instrument',
                   fontStyle: 'italic',
-                  fontSize: title.length > 24 ? 44 : 54,
+                  fontSize: title.length > 24 ? 88 : 108,
                   lineHeight: 1.04,
                   color: INK,
                   display: 'flex',
@@ -198,31 +135,6 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
           )}
         </div>
 
-        {/* A quiet signature in the wash, bottom right: the only words on the card. */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            position: 'absolute',
-            right: 40,
-            bottom: 30,
-          }}
-        >
-          <div style={{ fontFamily: 'Instrument', fontStyle: 'italic', fontSize: 30, color: MUTED, lineHeight: 1.1 }}>
-            tikèm
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: 6,
-              height: 6,
-              borderRadius: 6,
-              background: TEAL,
-              marginLeft: 6,
-              marginBottom: 12,
-            }}
-          />
-        </div>
       </div>
     ),
     { ...size, fonts }
