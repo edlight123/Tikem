@@ -194,6 +194,10 @@
               "answer": "Yes. If an event is cancelled, you’re generally eligible for a refund to the original payment method. Processing typically takes 5 to 10 business days. The service fee is refunded too."
             },
             {
+              "question": "My payment didn't go through, but money left my account",
+              "answer": "Don't pay again. Mobile money payments can take a few minutes to confirm. We keep checking with MonCash, and if your payment went through, your ticket appears in My Tickets automatically. If it hasn't appeared within an hour, contact support with your MonCash transaction number."
+            },
+            {
               "question": "What currency are prices shown in?",
               "answer": "Prices are shown in the currency selected by the organizer (commonly HTG or USD). The currency is displayed on the event page and during checkout."
             }
@@ -282,6 +286,14 @@
             {
               "question": "What happens to fees if I issue a refund?",
               "answer": "Tikèm's fee is non-refundable: a refund you issue, or a buyer's request you approve, returns the ticket's face value and the fee stays deducted. Tikèm returns its fee only when the event is cancelled. Refunds for events in Haiti are reviewed by Tikèm before any money moves."
+            },
+            {
+              "question": "What if I refund a ticket after I've been paid?",
+              "answer": "The seat goes back on sale. If you already withdrew that money, the refunded amount is deducted from your next payout in the same currency."
+            },
+            {
+              "question": "What happens if a buyer disputes a card payment?",
+              "answer": "Payouts for that event pause while the bank reviews it, and the disputed ticket can't be used for entry. If the bank rules for the buyer, the amount comes out of your earnings (or your next payout). If it rules for you, the ticket works again and payouts resume once our team has reviewed it."
             },
             {
               "question": "Can I see a breakdown of my earnings?",

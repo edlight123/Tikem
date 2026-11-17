@@ -194,6 +194,10 @@
               "answer": "Wi. Lè yon evènman anile, ou nòmalman kalifye pou yon ranbousman sou metòd peman orijinal la. Sa souvan pran 5 a 10 jou ouvrab. Yo ranbouse frè sèvis la tou."
             },
             {
+              "question": "Peman mwen pa t pase, men lajan an soti sou kont mwen",
+              "answer": "Pa peye yon dezyèm fwa. Yon peman mobil ka pran kèk minit pou konfime. N ap kontinye verifye ak MonCash, epi si peman w lan te pase, tikè w ap parèt otomatikman nan Tikè mwen. Si li pa parèt nan inèdtan, kontakte sipò a avèk nimewo tranzaksyon MonCash ou."
+            },
+            {
               "question": "Nan ki lajan yo montre pri yo?",
               "answer": "Pri yo parèt nan lajan òganizatè a chwazi (souvan HTG oswa USD). Ou ap wè lajan an sou paj evènman an ak pandan peman an."
             }
@@ -282,6 +286,14 @@
             {
               "question": "Kisa k ap pase ak frè yo si mwen fè ranbousman?",
               "answer": "Frè Tikèm yo pa ranbousab: yon ranbousman ou fè, oswa yon demann achtè ou apwouve, remèt valè tikè a epi frè a rete dedwi. Tikèm remèt frè li sèlman lè evènman an anile. Tikèm egzamine ranbousman pou evènman ann Ayiti anvan okenn lajan deplase."
+            },
+            {
+              "question": "Kisa k ap pase si mwen ranbouse yon tikè apre yo fin peye m?",
+              "answer": "Plas la retounen an vant. Si ou te deja retire lajan sa a, montan ranbousman an ap retire sou pwochen peman ou nan menm lajan an."
+            },
+            {
+              "question": "Kisa k ap pase si yon achtè konteste yon peman ak kat?",
+              "answer": "Peman pou evènman sa a kanpe pandan bank lan ap egzamine l, epi tikè yo konteste a pa ka sèvi pou antre. Si bank lan bay achtè a rezon, montan an ap retire sou lajan ou fè (oswa sou pwochen peman ou). Si li ba ou rezon, tikè a vin bon ankò epi peman yo rekòmanse apre ekip nou an fin verifye."
             },
             {
               "question": "Èske mwen ka wè detay revni mwen?",
