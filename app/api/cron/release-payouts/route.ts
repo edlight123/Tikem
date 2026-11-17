@@ -818,7 +818,7 @@ export async function GET(request: Request) {
               createdAt: nowIso,
               updatedAt: nowIso,
             })
-          } else if (reviewStatus === 'pending' || (reviewStatus === 'released' && approvalLapsed)) {
+          } else if (reviewStatus === 'pending' || (reviewStatus === 'released' && approvalLapsed && payable)) {
             await reviewRef.set(
               {
                 amountMinor: Math.max(0, amountMinor),
@@ -826,7 +826,15 @@ export async function GET(request: Request) {
                 reason,
                 tier: decision.tier,
                 ...(reviewStatus === 'released'
-                  ? { status: 'pending', reopenedAt: nowIso, reopenedBy: 'cron:approval_lapsed' }
+                  ? {
+                      status: 'pending',
+                      reopenedAt: nowIso,
+                      reopenedBy: 'cron:approval_lapsed',
+                      // A fresh approval starts unconsumed.
+                      consumedAt: null,
+                      approvedAmountMinor: null,
+                      approvedUntil: null,
+                    }
                   : {}),
                 updatedAt: nowIso,
               },
@@ -899,6 +907,17 @@ export async function GET(request: Request) {
           // key, so if that failure was only a lost response Stripe replays the
           // original payout instead of making a new one.
           await releaseRef.set({ ...releaseDoc, createdAt: existing?.createdAt || nowIso }, { merge: true })
+        }
+
+        // A payout sent on an admin's approval USES it up (security review,
+        // 2026-11-17): consumed before Stripe is asked, so the same approval can
+        // never pay a second time — later sales on a flagged event go back to
+        // the admin. A payout that then fails needs a fresh approval (safe side).
+        if (decision.release === 'review' && approvalCovers) {
+          await reviewRef.set(
+            { consumedAt: nowIso, consumedByRelease: releaseDocId, consumedAmountMinor: amountMinor, updatedAt: nowIso },
+            { merge: true }
+          )
         }
 
         try {

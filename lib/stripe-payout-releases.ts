@@ -38,6 +38,7 @@ export const PAYOUT_REVIEW_APPROVAL_TTL_MS = 14 * 24 * 60 * 60 * 1000
 
 /**
  * Does an admin's 'released' review still cover a payout of `amountMinor`?
+ * One approval pays out once (it is consumed by the release cron).
  * Only up to the amount the admin was shown, in the same currency, and only
  * until it expires. An approval from before amounts were recorded covers the
  * row's own amountMinor for TTL after it was resolved.
@@ -49,6 +50,8 @@ export function reviewApprovalCovers(
   now: Date = new Date()
 ): boolean {
   if (!review || String(review.status || '') !== 'released') return false
+  // One approval, one payout: a release already sent under it used it up.
+  if (review.consumedAt) return false
   const approved = Number(review.approvedAmountMinor ?? review.amountMinor)
   if (!Number.isFinite(approved) || approved <= 0 || amountMinor > approved) return false
   const approvedCurrency = String(review.approvedCurrency ?? review.currency ?? '').toUpperCase()

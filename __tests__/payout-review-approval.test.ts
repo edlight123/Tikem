@@ -33,3 +33,7 @@ it('only a released review approves anything', () => {
   expect(reviewApprovalCovers({ ...approved, status: 'pending' }, 1, 'USD', now)).toBe(false)
   expect(reviewApprovalCovers(null, 1, 'USD', now)).toBe(false)
 })
+
+it('an approval a payout already used covers nothing more', () => {
+  expect(reviewApprovalCovers({ ...approved, consumedAt: now.toISOString() }, 1, 'USD', now)).toBe(false)
+})
