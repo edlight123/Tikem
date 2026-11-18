@@ -118,9 +118,16 @@ export async function POST(request: NextRequest) {
 
       // The recipient may not have an account yet: their profile language if they
       // do (looked up by the address the transfer was sent to), else the event's region.
-      const lang = await resolveEmailLang({ email: transfer.to_email, event: eventData })
-      await sendEmail({
-        to: transfer.to_email,
+      // Friend transfers store no email: resolve it from the recipient's account.
+      const toUserId = String(transfer?.to_user_id || '')
+      let recipientEmail = String(transfer?.to_email || '')
+      if (!recipientEmail && toUserId) {
+        const u = await adminDb.collection('users').doc(toUserId).get()
+        recipientEmail = String((u.data() as any)?.email || '')
+      }
+      const lang = await resolveEmailLang({ email: recipientEmail, event: eventData })
+      if (recipientEmail) await sendEmail({
+        to: recipientEmail,
         subject: emailSubjects.transferCancelled(lang, eventTitle),
         html: getTicketTransferCancelledEmail({
           lang,
@@ -132,14 +139,16 @@ export async function POST(request: NextRequest) {
 
       // If the recipient has an account, also create an in-app notification
       try {
-        const recipientQuery = await adminDb
-          .collection('users')
-          .where('email', '==', String(transfer.to_email || '').toLowerCase())
-          .limit(1)
-          .get()
+        const recipientDoc = toUserId
+          ? { id: toUserId }
+          : await adminDb
+              .collection('users')
+              .where('email', '==', recipientEmail.toLowerCase())
+              .limit(1)
+              .get()
+              .then((q: any) => (q.empty ? null : q.docs[0]))
 
-        if (!recipientQuery.empty) {
-          const recipientDoc = recipientQuery.docs[0]
+        if (recipientDoc) {
           await createNotification(
             recipientDoc.id,
             'ticket_transfer',

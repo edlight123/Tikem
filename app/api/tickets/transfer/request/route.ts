@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     const { ticketId, toUserId, message } = validation.data
     let toEmail = validation.data.toEmail || ''
+    let toName = ''
 
     if (toUserId) {
       if (toUserId === user.id) {
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
         )
       }
       toEmail = friendEmail
+      const fd = friendDoc.data() || {}
+      toName = String(fd.full_name || fd.display_name || fd.displayName || fd.name || '').trim()
     }
 
     // Prevent self-transfer
@@ -163,8 +166,12 @@ export async function POST(request: NextRequest) {
       id: transferId,
       ticket_id: ticketId,
       from_user_id: user.id,
-      to_email: toEmail.toLowerCase(),
+      // A friend transfer stores the friend's uid and public name, never their
+      // email: the sender can read this doc (firestore.rules), and the picker
+      // only ever showed them public fields.
+      to_email: toUserId ? '' : toEmail.toLowerCase(),
       to_user_id: toUserId || null,
+      to_name: toUserId ? toName || null : null,
       status: 'pending',
       message: message || null,
       transfer_token: transferToken,
@@ -286,6 +293,7 @@ export async function POST(request: NextRequest) {
         status: transfer.status,
         // A friend's email stays private to the sender.
         toEmail: toUserId ? null : transfer.to_email,
+        toName: transfer.to_name,
         transferToken: transfer.transfer_token,
         expiresAt: transfer.expires_at
       }

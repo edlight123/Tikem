@@ -58,7 +58,7 @@ beforeEach(() => {
   sent.length = 0
   db.tickets = { t1: { attendee_id: 'u1', status: 'valid', event_id: 'e1' } }
   db.events = { e1: { title: 'Show', start_datetime: '2099-01-01T20:00:00.000Z' } }
-  db.users = { u2: { email: 'Friend@X.com' }, u3: { email: 'stranger@x.com' }, u4: {} }
+  db.users = { u2: { email: 'Friend@X.com', full_name: 'Mika Joseph' }, u3: { email: 'stranger@x.com' }, u4: {} }
   db.connections = {
     u1_u2: { status: 'accepted' },
     u1_u4: { status: 'accepted' },
@@ -73,8 +73,11 @@ describe('transfer to a friend by uid', () => {
     expect(data.transfer.toEmail).toBeNull()
     expect(sent).toEqual(['Friend@X.com'])
     const t = Object.values(db.ticket_transfers)[0] as Doc
-    expect(t.to_email).toBe('friend@x.com')
+    // The sender can read this doc: no email stored, uid + public name only.
+    expect(t.to_email).toBe('')
     expect(t.to_user_id).toBe('u2')
+    expect(t.to_name).toBe('Mika Joseph')
+    expect(JSON.stringify(t)).not.toMatch(/friend@x\.com/i)
   })
 
   it('refuses a user who is not a friend', async () => {

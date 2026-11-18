@@ -82,7 +82,10 @@ export async function POST(request: NextRequest) {
         const transfer = transferSnap.data() as any
 
         const toEmail = String(transfer?.to_email || '').toLowerCase()
-        if (!toEmail || toEmail !== (user.email || '').toLowerCase()) {
+        // Friend transfers are addressed by uid (no stored email).
+        const toUserId = String(transfer?.to_user_id || '')
+        const forMe = toUserId ? toUserId === user.id : !!toEmail && toEmail === (user.email || '').toLowerCase()
+        if (!forMe) {
           const err: any = new Error('This transfer is not for you')
           err.status = 403
           throw err

@@ -782,7 +782,8 @@ service cloud.firestore {
     match /ticket_transfers/{transferId} {
       allow read: if isSignedIn() && (
         resource.data.from_user_id == request.auth.uid ||
-        resource.data.to_email == request.auth.token.email
+        resource.data.to_email == request.auth.token.email ||
+        resource.data.get('to_user_id', null) == request.auth.uid
       );
       allow create: if false;
       allow update: if isSignedIn()

@@ -29,7 +29,6 @@ type ApiTeamMember = {
   uid: string
   role: string
   name: string | null
-  email: string | null
   photo_url: string | null
 }
 
@@ -66,7 +65,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     // The event's OWN org (not the acting-org header): its team is who can be
     // assigned here without an invite (/api/staff/members/assign).
-    const orgId = eventOrgId(eventData)
+    // Only those who may assign people see the team list (staff with 'view'
+    // get the event's own staff, not the whole org roster).
+    const canAssign = (await canOnEvent(user, eventData, 'manage_events')).allowed
+    const orgId = canAssign ? eventOrgId(eventData) : null
     const [invitesSnap, membersSnap, teamSnap] = await Promise.all([
       adminDb.collection('events').doc(eventId).collection('invites').orderBy('createdAt', 'desc').get(),
       adminDb.collection('events').doc(eventId).collection('members').orderBy('createdAt', 'desc').get(),
@@ -118,8 +120,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return {
         uid: d.id,
         role: String(x.role),
+        // Name, photo and role are all the Assign list needs: no emails.
         name: p?.full_name || (x.name ? String(x.name) : null),
-        email: p?.email || (x.email ? String(x.email) : null),
         photo_url: p?.photo_url || null,
       }
     })

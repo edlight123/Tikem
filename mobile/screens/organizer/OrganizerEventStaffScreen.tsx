@@ -77,7 +77,7 @@ type ApiTeamMember = {
   uid: string
   role: string
   name: string | null
-  email: string | null
+  email?: string | null
   photo_url: string | null
 }
 
@@ -190,7 +190,7 @@ export default function OrganizerEventStaffScreen() {
             role: 'staff',
             permissions: { checkin: true, viewAttendees: false },
             createdAt: new Date().toISOString(),
-            profile: { email: m.email, full_name: m.name, photo_url: m.photo_url },
+            profile: { email: m.email ?? null, full_name: m.name, photo_url: m.photo_url },
           },
           ...prev.filter((x) => x.id !== m.uid),
         ])
