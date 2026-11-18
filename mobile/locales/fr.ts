@@ -2970,6 +2970,7 @@ export default {
     failed: "Transfert impossible. Réessayez.",
   },
   organizerMessages: {
+    showAllSent: "Tout afficher ({count})",
     noEventsYet: "Pas encore d'événement",
     tabQuestions: "Questions",
     tabAnnouncements: "Annonces",

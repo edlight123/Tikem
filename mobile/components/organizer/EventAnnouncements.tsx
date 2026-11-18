@@ -21,6 +21,9 @@ type Update = { id: string; title: string; message: string; createdAt: string | 
 type Auto = { type: string; at: string | null; sentAt: string | null };
 type Data = { updates: Update[]; automatic: Auto[] };
 
+/** Newest sends shown before "Show all". */
+const SENT_PREVIEW = 5;
+
 const AUTO_ICON: Record<string, any> = {
   event_reminder_24h: Bell,
   event_reminder_3h: Clock,
@@ -40,6 +43,7 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
   const navigation: any = useNavigation();
   const [data, setData] = useState<Data | null>(null);
   const [failed, setFailed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -74,34 +78,8 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
         style={styles.cta}
       />
 
-      <SectionHeader title={t('organizerMessages.sentSection')} />
-      {!data && !failed ? (
-        <Skeleton width="100%" height={52} />
-      ) : (data?.updates || []).length === 0 ? (
-        <Text style={styles.quiet}>{t('organizerMessages.nothingSent')}</Text>
-      ) : (
-        <ListGroup>
-          {data!.updates.map((u) => (
-            <ListRow
-              key={u.id}
-              icon={Send}
-              title={u.title}
-              subtitle={[
-                u.createdAt ? inboxTime(u.createdAt, language, { yesterday: t('attendeeMessages.yesterday') }) : '',
-                u.recipients == null
-                  ? ''
-                  : u.recipients === 1
-                    ? t('organizerMessages.recipientsOne')
-                    : t('organizerMessages.recipients', { count: u.recipients }),
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            />
-          ))}
-        </ListGroup>
-      )}
-
-      <View style={styles.gap} />
+      {/* Automatic first: four fixed rows that stay in reach however long
+          the sent history grows (owner, 2026-11-18). */}
       <SectionHeader title={t('organizerMessages.automaticTitle')} />
       <ListGroup>
         {(data?.automatic || [
@@ -130,6 +108,42 @@ export default function EventAnnouncements({ eventId, eventTitle }: { eventId: s
           );
         })}
       </ListGroup>
+
+      <View style={styles.gap} />
+      <SectionHeader title={t('organizerMessages.sentSection')} />
+      {!data && !failed ? (
+        <Skeleton width="100%" height={52} />
+      ) : (data?.updates || []).length === 0 ? (
+        <Text style={styles.quiet}>{t('organizerMessages.nothingSent')}</Text>
+      ) : (
+        <ListGroup>
+          {(showAll ? data!.updates : data!.updates.slice(0, SENT_PREVIEW)).map((u) => (
+            <ListRow
+              key={u.id}
+              icon={Send}
+              title={u.title}
+              subtitle={[
+                u.createdAt ? inboxTime(u.createdAt, language, { yesterday: t('attendeeMessages.yesterday') }) : '',
+                u.recipients == null
+                  ? ''
+                  : u.recipients === 1
+                    ? t('organizerMessages.recipientsOne')
+                    : t('organizerMessages.recipients', { count: u.recipients }),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            />
+          ))}
+        </ListGroup>
+      )}
+      {(data?.updates.length || 0) > SENT_PREVIEW && !showAll ? (
+        <Touchable style={styles.showAll} onPress={() => setShowAll(true)} accessibilityRole="button">
+          <Text style={styles.showAllText}>
+            {t('organizerMessages.showAllSent', { count: data!.updates.length })}
+          </Text>
+        </Touchable>
+      ) : null}
+
     </View>
   );
 }
@@ -139,6 +153,8 @@ const styles = StyleSheet.create({
   cta: { alignSelf: 'flex-start', marginBottom: 24 },
   quiet: { fontSize: 13, color: T.textSecondary },
   gap: { height: 28 },
+  showAll: { paddingVertical: 12, alignSelf: 'flex-start' },
+  showAllText: { fontSize: 13, fontWeight: '600', color: T.textSecondary },
   dotRow: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 160 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   dotLabel: { fontSize: 12 },

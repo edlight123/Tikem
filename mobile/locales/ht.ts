@@ -2938,6 +2938,7 @@ export default {
     failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
   organizerMessages: {
+    showAllSent: "Montre tout ({count})",
     noEventsYet: "Poko gen evènman",
     tabQuestions: "Kesyon",
     tabAnnouncements: "Anons",

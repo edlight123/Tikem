@@ -3007,6 +3007,7 @@ export default {
     failed: "Couldn't transfer the ticket. Try again.",
   },
   organizerMessages: {
+    showAllSent: "Show all ({count})",
     noEventsYet: "No events yet",
     tabQuestions: "Questions",
     tabAnnouncements: "Announcements",
