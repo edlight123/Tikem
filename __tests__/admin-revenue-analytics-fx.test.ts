@@ -14,7 +14,7 @@ let tickets: Array<Record<string, any>> = []
 jest.mock('@/lib/firebase/admin', () => {
   const query: any = {
     where: () => query,
-    get: async () => ({ docs: tickets.map((t, i) => ({ id: `t${i}`, data: () => t })) }),
+    get: async () => ({ docs: tickets.map((t, i) => ({ id: `t${i}`, ref: { path: `tickets/t${i}` }, data: () => t })) }),
   }
   return { adminDb: { collection: () => query } }
 })
