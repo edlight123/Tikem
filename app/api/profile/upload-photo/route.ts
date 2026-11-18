@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb, adminStorage } from '@/lib/firebase/admin'
 import { sniffRasterImage } from '@/lib/security/sniffImage'
 import { downloadUrl } from '@/lib/firebase/downloadUrl'
+import { syncPublicProfileAdmin } from '@/lib/firestore/public-profile'
 
 /**
  * The signed-in reader's own avatar. Mirrors the organization-logo upload, but
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
       { photo_url: publicUrl, updated_at: FieldValue.serverTimestamp() },
       { merge: true }
     )
+    // Everyone else reads the avatar from public_profiles: without this the
+    // owner saw their photo and every other viewer saw the silhouette.
+    await syncPublicProfileAdmin(user.id, { photo_url: publicUrl })
 
     return NextResponse.json({ success: true, photo_url: publicUrl })
   } catch (error) {

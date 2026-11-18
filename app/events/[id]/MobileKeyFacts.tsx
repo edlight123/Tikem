@@ -81,7 +81,12 @@ export default function MobileKeyFacts({
 
   // The place, once: venue and town. Directions and the map live in the venue
   // section just below, so the "Open in Maps" link here was a second copy.
-  const place = [venueName, city].filter((p) => p && p.trim()).join(' · ')
+  // The neighbourhood people say ("Pétion-Ville") before the city, and never
+  // a repeat of what the venue name already says (same as the app).
+  const area = (commune && commune.trim()) || city
+  const place = [venueName, venueName && area && venueName.includes(area) ? '' : area]
+    .filter((p) => p && p.trim())
+    .join(' · ')
 
   const priceLine = isFree
     ? t('common.free')

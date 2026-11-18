@@ -400,6 +400,21 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         scarcity={scarcity}
       />
 
+      <div className="mx-auto max-w-7xl md:px-6 md:pt-6 lg:px-8">
+          {/* Who's going, right under the date and place (owner, 2026-11-18):
+            nobody scrolls to the foot of the page to see it. */}
+          <WhosGoing
+            eventId={event.id}
+            currentUserId={user?.id || null}
+            visibility={guestlistVisibilityFrom(event as any)}
+            capacity={(event as any).total_tickets}
+            showGoingCount={(event as any).show_going_count === true}
+            viewerName={(user as any)?.full_name ?? null}
+            viewerPhotoUrl={(user as any)?.photo_url ?? null}
+            className="mt-4 md:mt-0"
+          />
+      </div>
+
       <MobileSections
         description={event.description}
         videoUrl={(event as any).video_url}
@@ -719,18 +734,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           enabled={invitesEnabled}
           currentUserId={user?.id || null}
           className="mt-4"
-        />
-
-        {/* Who's Going - social attendance */}
-        <WhosGoing
-          eventId={event.id}
-          currentUserId={user?.id || null}
-          visibility={guestlistVisibilityFrom(event as any)}
-          capacity={(event as any).total_tickets}
-          showGoingCount={(event as any).show_going_count === true}
-          viewerName={(user as any)?.full_name ?? null}
-          viewerPhotoUrl={(user as any)?.photo_url ?? null}
-          className="mt-8"
         />
 
         {/* Report — quiet, but on every event page (App Store 1.2). Hidden
