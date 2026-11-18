@@ -831,6 +831,8 @@ export default function EventComposer({
     guestlistVisibilityFrom((event ?? {}) as any)
   )
   const [showOnExplore, setShowOnExplore] = useState(event?.show_on_explore ?? true)
+  // "Show how many are going": print the count whatever the capacity (lib/socialProof).
+  const [showGoingCount, setShowGoingCount] = useState<boolean>(event?.show_going_count === true)
   // Password gate — public flag on the doc; the secret lives hashed in the
   // private/access subdoc, never on the event doc. The code input stays blank in
   // edit mode (the hash is write-only), so a blank code on save keeps it.
@@ -1003,6 +1005,7 @@ export default function EventComposer({
     if (d.guestlist_visibility || d.show_guestlist === false)
       setGuestlistVisibility(guestlistVisibilityFrom(d))
     if (d.show_on_explore === false) setShowOnExplore(false)
+    if (d.show_going_count === true) setShowGoingCount(true)
     // The access CODE is never persisted (secret) — restoring the flag makes
     // accessCodeInvalid demand a fresh code before create, instead of silently
     // creating a public event the guest believed was protected.
@@ -1361,6 +1364,7 @@ export default function EventComposer({
       // than to "everyone's faces are public".
       show_guestlist: showGuestlistFor(guestlistVisibility),
       show_on_explore: showOnExplore,
+      show_going_count: guestlistVisibility !== 'hidden' && showGoingCount,
       is_password_protected: passwordProtected,
       // Approval lists: never on an event with a paid tier (rules refuse it too).
       requires_approval:
@@ -3130,6 +3134,18 @@ export default function EventComposer({
                 onChange={setGuestlistVisibility}
                 faces={guests.map((g) => ({ id: g.id, name: g.name, photoUrl: g.photoUrl }))}
               />
+              {guestlistVisibility !== 'hidden' && (
+                <div className="flex items-center justify-between rounded bg-white/[0.03] px-4 py-3.5">
+                  <span className="text-[15px] text-white/80">
+                    {t('composer.showGoingCount', { defaultValue: 'Show how many are going' })}
+                  </span>
+                  <Toggle
+                    on={showGoingCount}
+                    onChange={setShowGoingCount}
+                    label={t('composer.showGoingCount', { defaultValue: 'Show how many are going' })}
+                  />
+                </div>
+              )}
 
               <div className="h-px bg-white/[0.07]" />
 

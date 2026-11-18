@@ -28,6 +28,9 @@ interface WhosGoingProps {
   /** Ticket capacity: the count only prints once half of it is taken
    *  (shouldShowGoingCount). Unset means faces and names, no number. */
   capacity?: number | null
+  /** The organizer's "Show how many are going" (event.show_going_count):
+   *  the number prints whatever the capacity. */
+  showGoingCount?: boolean
   /** The viewer's own name and photo: the photo decides the "show your face"
    *  step before the full list. */
   viewerName?: string | null
@@ -65,6 +68,7 @@ export default function WhosGoing({
   visibility = 'faces',
   className = '',
   capacity,
+  showGoingCount = false,
   viewerName,
   viewerPhotoUrl,
 }: WhosGoingProps) {
@@ -114,8 +118,12 @@ export default function WhosGoing({
 
   const { totalGoing, viewerIsGoing, friendsGoing, publicGoing } = data
   // A small number talks people out of going, so it only prints once the
-  // event is at least half full (same rule as the app).
-  const showCount = shouldShowGoingCount(totalGoing, capacity)
+  // event is at least half full, or when the organizer chose to always show
+  // it (same rule as the app).
+  const showCount = shouldShowGoingCount(totalGoing, capacity, showGoingCount)
+  // Someone already going sees the real number ("You, Mika and 84 others",
+  // owner 2026-11-18): the half-capacity rule protects those still deciding.
+  const sayCount = showCount || viewerIsGoing
 
   // 'count' — the number, and nothing that identifies anyone. No avatars, no
   // names, no friend row: those are exactly what this mode exists to withhold.
@@ -145,32 +153,70 @@ export default function WhosGoing({
   }
 
   // Nameless accounts come back as "Tikèm user": never the lead name, never a
-  // face (they still count as an unnamed portrait below).
+  // face (they still count as an unnamed portrait below). Faces with a real
+  // photo lead (owner, 2026-11-17); a stable sort keeps the server's order
+  // within each group.
   const isNamed = (u: PublicUserSummary) => !!u.displayName?.trim() && u.displayName !== 'Tikèm user'
-  const named = [...friendsGoing, ...publicGoing].filter(isNamed)
-  // Nothing to show: no faces, not the viewer, and the number held back.
-  if (!showCount && !viewerIsGoing && named.length === 0 && totalGoing <= (viewerIsGoing ? 1 : 0)) return null
+  const named = [...friendsGoing, ...publicGoing]
+    .filter(isNamed)
+    .sort((a, b) => Number(!!b.photoURL) - Number(!!a.photoURL))
+  // No named face and the number held back still shows the row: unnamed
+  // portraits and "See who's going" (others ARE going; same as the app).
 
-  // The card's pile: three faces, unnamed portraits filling in for guests who
+  // The row's pile: three faces, unnamed portraits filling in for guests who
   // keep themselves private, so a crowd still reads as one.
-  const faces = named.slice(0, 3)
+  const MAX_FACES = 3
+  const faces = named.slice(0, MAX_FACES)
   const others = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - faces.length)
   const anonBase = defaultAvatarIndex(eventId)
-  const anon = Array.from({ length: Math.min(others, 3 - faces.length) }, (_, i) => defaultAvatarAt(anonBase + i * 5))
+  const anon = Array.from({ length: Math.min(others, MAX_FACES - faces.length) }, (_, i) => defaultAvatarAt(anonBase + i * 5))
 
-  const lead = (named[0]?.displayName || '').split(' ')[0]
-  const sub = viewerIsGoing
-    ? t('whos_going.youre_going', "You're going")
-    : friendsGoing.length > 0
-      ? t(friendsGoing.length === 1 ? 'whos_going.friend_going' : 'whos_going.friend_going_plural', {
-          count: friendsGoing.length,
-          defaultValue: friendsGoing.length === 1 ? '{{count}} friend going' : '{{count}} friends going',
-        })
-      : lead && showCount && totalGoing > 1
-        ? t('whos_going.lead_and_others', { name: lead, count: totalGoing - 1, defaultValue: '{{name}} and {{count}} others going' })
-        : lead && totalGoing > 1
-          ? t('whos_going.lead_and_others_vague', { name: lead, defaultValue: '{{name}} and others are going' })
-          : t('whos_going.see_whos_going', "See who's going")
+  // The line under "Guestlist", names in bold: "You, Mika and 84 others",
+  // "Mika and others" while the number is held back. Whole-sentence templates
+  // keep the word order translatable; the names go in as markers and are
+  // swapped for <strong> below.
+  const leadName = (faces[0]?.displayName || '').split(' ')[0]
+  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0))
+  const lineKey = viewerIsGoing
+    ? leadName
+      ? othersCount === 0
+        ? 'you_lead'
+        : othersCount === 1
+          ? 'you_lead_one'
+          : 'you_lead_others'
+      : othersCount === 0
+        ? 'you_only'
+        : othersCount === 1
+          ? 'you_one'
+          : 'you_others'
+    : leadName
+      ? othersCount === 0
+        ? 'lead_only'
+        : !sayCount
+          ? 'lead_vague'
+          : othersCount === 1
+            ? 'lead_one'
+            : 'lead_others'
+      : sayCount
+        ? 'count'
+        : 'vague'
+  const YOU = '\u0001'
+  const LEAD = '\u0002'
+  const template = t(`whos_going.line.${lineKey}`, {
+    you: YOU,
+    lead: LEAD,
+    count: lineKey === 'count' ? totalGoing : othersCount,
+    interpolation: { escapeValue: false },
+  })
+  const sub = template.split(/([\u0001\u0002])/).map((part, i) =>
+    part === YOU || part === LEAD ? (
+      <strong key={i} className="font-semibold text-white">
+        {part === YOU ? t('whos_going.you_badge', 'You') : leadName}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  )
 
   const openList = () => {
     if (!currentUserId) {
@@ -181,33 +227,33 @@ export default function WhosGoing({
     setSheetOpen(true)
   }
 
-  // One filled card, Posh's shape in our materials: what it is on the left,
-  // the faces and "View" on the right. It replaced a heading over a
-  // left-aligned pile, which sat lopsided on the page (owner, 2026-11-16).
+  // Posh's guestlist row (owner's reference, 2026-11-18), same as the app:
+  // one compact filled row, "Guestlist" and who is going on the left, three
+  // overlapping faces and a compact View on the right.
   return (
     <div className={`px-4 md:max-w-xl md:px-0 ${className}`}>
       <button
         type="button"
         onClick={openList}
-        className="flex w-full items-center gap-3 rounded bg-white/[0.05] py-4 pl-[18px] pr-3.5 text-left transition-colors hover:bg-white/[0.08]"
+        className="flex w-full items-center gap-3 rounded bg-white/[0.05] py-3.5 pl-4 pr-3 text-left transition-colors hover:bg-white/[0.08]"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-bold text-white">{t('whos_going.guestlist', 'Guestlist')}</span>
-          <span className="mt-0.5 block truncate text-[13px] text-white/55">{sub}</span>
+          <span className="block text-[15px] font-semibold text-white">{t('whos_going.guestlist', 'Guestlist')}</span>
+          <span className="mt-0.5 line-clamp-2 block text-[13px] leading-[18px] text-white/55">{sub}</span>
         </span>
-        <span className="flex shrink-0 -space-x-3.5" aria-hidden>
+        <span className="flex shrink-0 -space-x-3" aria-hidden>
           {faces.map((u) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={u.uid}
               src={u.photoURL || defaultAvatarUrl(String(u.uid))}
               alt=""
-              className="h-11 w-11 rounded-full object-cover ring-2 ring-[#161616]"
+              className="h-10 w-10 rounded-full object-cover ring-2 ring-[#161616]"
             />
           ))}
           {anon.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={`anon-${i}`} src={src} alt="" className="h-11 w-11 rounded-full ring-2 ring-[#161616]" />
+            <img key={`anon-${i}`} src={src} alt="" className="h-10 w-10 rounded-full ring-2 ring-[#161616]" />
           ))}
         </span>
         <span className="grid h-9 shrink-0 place-items-center rounded bg-white/[0.08] px-4 text-[13px] font-bold text-white">

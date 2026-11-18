@@ -92,9 +92,12 @@ export default function GuestlistSheet({
         // An account with no name is listed by the server as "Tikèm user"; a
         // column of those reads as filler, so they count with the rest below.
         const named = (u: PublicUserSummary) => !!u.displayName?.trim() && u.displayName !== 'Tikèm user';
+        // Real faces lead: a stable sort keeps the server's order within each
+        // half, so the list opens on photos and the silhouettes trail.
+        const facesFirst = (a: PublicUserSummary, b: PublicUserSummary) => Number(!!b.photoURL) - Number(!!a.photoURL);
         setList({
-          friends: d.friendsGoing.filter(named),
-          others: d.publicGoing.filter(named),
+          friends: d.friendsGoing.filter(named).sort(facesFirst),
+          others: d.publicGoing.filter(named).sort(facesFirst),
           viewerIsGoing: d.viewerIsGoing,
           total: d.totalGoing,
         });
@@ -201,7 +204,7 @@ export default function GuestlistSheet({
               {loading || !list ? (
                 <ActivityIndicator style={{ marginTop: 40 }} color={T.textSecondary ?? '#A3A3A3'} />
               ) : (
-                <ScrollView style={{ marginTop: 16 }} showsVerticalScrollIndicator={false}>
+                <ScrollView style={{ marginTop: 12 }} showsVerticalScrollIndicator={false}>
                   {list.viewerIsGoing && (
                     <View style={styles.row}>
                       <Image
@@ -217,7 +220,10 @@ export default function GuestlistSheet({
                       </View>
                     </View>
                   )}
-                  {[...list.friends.map((u) => ({ u, friend: true })), ...list.others.map((u) => ({ u, friend: false }))].map(
+                  {[...list.friends.map((u) => ({ u, friend: true })), ...list.others.map((u) => ({ u, friend: false }))]
+                    // Photos first across friends and the rest; friends still lead within each.
+                    .sort((a, b) => Number(!!b.u.photoURL) - Number(!!a.u.photoURL))
+                    .map(
                     ({ u, friend }) => (
                       <TouchableOpacity key={u.uid} style={styles.row} onPress={() => openProfile(u.uid)} activeOpacity={0.7}>
                         <Image
@@ -308,13 +314,13 @@ const styles = StyleSheet.create({
   secondary: { paddingVertical: 14, marginTop: 4 },
   secondaryText: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '600' },
 
-  listTitle: { fontFamily: font.serif, fontSize: 30, lineHeight: 36, color: '#FFFFFF', marginTop: 14 },
+  listTitle: { fontFamily: font.serif, fontSize: 28, lineHeight: 34, color: '#FFFFFF', marginTop: 12 },
   listSub: { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10 },
-  rowAvatar: { width: 52, height: 52, borderRadius: 26 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 56 },
+  rowAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: T.surfaceRaised },
   hiddenDot: { overflow: 'hidden', opacity: 0.6 },
   rowText: { flex: 1, minWidth: 0 },
-  rowName: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
-  rowMeta: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 1 },
+  rowName: { fontSize: 15, lineHeight: 19, fontWeight: '600', color: '#FFFFFF' },
+  rowMeta: { fontSize: 13, lineHeight: 17, color: 'rgba(255,255,255,0.5)', marginTop: 1 },
   rowMetaStrong: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
 });

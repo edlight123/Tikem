@@ -1266,6 +1266,7 @@
     "imageGallery": "Image Gallery",
     "pageSettings": "Page Settings",
     "showOnExplore": "Show on Discover",
+    "showGoingCount": "Show how many are going",
     "passwordProtected": "Password Protected Event",
     "accessCodePlaceholderNew": "Access code (min 6 characters)",
     "accessCodePlaceholderEdit": "New access code (blank keeps current)",
@@ -1612,7 +1613,21 @@
     "more_guests": "+{{count}} more",
     "more_private": "Others keep it private",
     "no_faces": "No one shows their face yet.",
-    "sign_in_to_view": "Sign in to see who's going"
+    "sign_in_to_view": "Sign in to see who's going",
+    "line": {
+      "you_lead_others": "{{you}}, {{lead}} and {{count}} others",
+      "you_lead_one": "{{you}}, {{lead}} and 1 other",
+      "you_lead": "{{you}} and {{lead}}",
+      "you_others": "{{you}} and {{count}} others",
+      "you_one": "{{you}} and 1 other",
+      "you_only": "{{you}} are going",
+      "lead_only": "{{lead}} is going",
+      "lead_one": "{{lead}} and 1 other",
+      "lead_others": "{{lead}} and {{count}} others",
+      "lead_vague": "{{lead}} and others",
+      "count": "{{count}} going",
+      "vague": "See who's going"
+    }
   },
   "follow": {
     "loading": "Loading...",

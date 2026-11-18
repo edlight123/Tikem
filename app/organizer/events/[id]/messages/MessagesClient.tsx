@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
-import { OrgEmptyState } from '@/components/organizer/ui'
+import { OrgEmptyState, SectionHeader } from '@/components/organizer/ui'
 import type { OrganizerMessageReply, OrganizerMessageThread } from '@/lib/organizer-messages'
 
 interface MessagesClientProps {
@@ -40,7 +40,6 @@ function formatWhen(iso: string | null): string {
  * pills).
  */
 export default function MessagesClient({
-  eventTitle,
   threads: initialThreads,
   maxReplyLength,
   initialThreadId,
@@ -152,27 +151,22 @@ export default function MessagesClient({
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-white">{tx('actions.messages')}</h1>
-        <p className="mt-0.5 text-sm text-white/50">
-          {threads.length === 0
-            ? tx('messages.subtitle_empty')
+      {/* The count line only once there is something to count; empty, no
+          explainer (owner, 2026-11-18: "avoid too many explanations"). */}
+      <SectionHeader
+        className="mb-6"
+        title={tx('actions.messages')}
+        description={
+          threads.length === 0
+            ? undefined
             : waitingCount > 0
               ? tx('messages.subtitle_waiting', { count: waitingCount, total: threads.length })
-              : tx('messages.subtitle_total', { total: threads.length })}
-        </p>
-      </div>
+              : tx('messages.subtitle_total', { total: threads.length })
+        }
+      />
 
       {threads.length === 0 ? (
-        <OrgEmptyState
-          icon={MessageSquare}
-          title={tx('messages.no_messages_yet')}
-          description={
-            eventTitle
-              ? tx('messages.empty_body_named', { event: eventTitle })
-              : tx('messages.empty_body')
-          }
-        />
+        <OrgEmptyState variant="quiet" icon={MessageSquare} title={tx('messages.no_messages_yet')} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           {/* Thread list */}

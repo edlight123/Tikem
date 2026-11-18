@@ -123,37 +123,39 @@ export default function EventMarketingClient({
         </div>
       </div>
 
-      {/* Promo codes */}
+      {/* Promo codes. Empty: the heading and a quiet empty state on the
+          canvas, no card around nothing and no explainer (owner, 2026-11-18). */}
+      {promoCodes.length === 0 ? (
+        <section>
+          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promo_codes')}</h2>
+          <OrgEmptyState
+            variant="quiet"
+            icon={Tag}
+            title={t('event_marketing.no_promo_codes')}
+            action={
+              <Link
+                href={`/organizer/promo-codes?eventId=${eventId}`}
+                className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                <Tag className="h-4 w-4" />
+                {t('event_marketing.create_promo_code')}
+              </Link>
+            }
+          />
+        </section>
+      ) : (
       <div className="rounded-2xl bg-white/[0.055]">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promo_codes')}</h2>
           <Link
             href={`/organizer/promo-codes?eventId=${eventId}`}
-            className="inline-flex items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center gap-2 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
-            <Tag className="h-3.5 w-3.5" />
+            <Tag className="h-4 w-4" />
             {t('event_marketing.create_code')}
           </Link>
         </div>
 
-        {promoCodes.length === 0 ? (
-          <div className="p-8">
-            <OrgEmptyState
-              icon={Tag}
-              title={t('event_marketing.no_promo_codes')}
-              description={t('event_marketing.create_discount_codes')}
-              action={
-                <Link
-                  href={`/organizer/promo-codes?eventId=${eventId}`}
-                  className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                >
-                  <Tag className="h-4 w-4" />
-                  {t('event_marketing.create_promo_code')}
-                </Link>
-              }
-            />
-          </div>
-        ) : (
           <div className="divide-y divide-white/5">
             {promoCodes.map((code) => (
               <div key={code.id} className="flex items-center gap-4 px-5 py-4">
@@ -174,43 +176,31 @@ export default function EventMarketingClient({
               </div>
             ))}
           </div>
-        )}
       </div>
+      )}
 
       {/* Promoters */}
       <div className="rounded-2xl p-5 bg-white/[0.055]">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promoters')}</h2>
-            <p className="mt-1 text-sm text-white/50">
-              Give each street-team member their own sales link and see exactly who
-              drives which tickets, commission tallied automatically.
-            </p>
-          </div>
+          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promoters')}</h2>
           <Link
             href={`/organizer/events/${eventId}/promoters`}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {t('event_marketing.manage_promoters')}
           </Link>
         </div>
       </div>
 
-      {/* SMS campaigns — coming soon */}
-      <div className="rounded-2xl bg-white/[0.055] p-8">
-        <div className="mx-auto max-w-sm text-center">
-          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-white/[0.055]">
-            <Megaphone className="h-6 w-6 text-white/60" />
-          </div>
-          <h3 className="font-semibold text-white">{t('event_marketing.sms_campaigns')}</h3>
-          <p className="mt-2 text-sm text-white/50">
-            Send targeted SMS blasts to your ticket buyers directly from Tikèm.
-            This feature is in development and will be available soon.
-          </p>
-          <span className="mt-4 inline-block rounded px-3 py-1 text-xs font-semibold text-white/45">
-            {t('actions.coming_soon')}
-          </span>
-        </div>
+      {/* SMS campaigns, coming soon: one quiet row, not a big card with an
+          explainer (owner, 2026-11-18: "avoid big cards"). */}
+      <div className="flex items-center gap-3 px-1 text-sm">
+        <Megaphone className="h-4 w-4 text-white/40" strokeWidth={1.5} />
+        <span className="font-semibold text-white/70">{t('event_marketing.sms_campaigns')}</span>
+        <span className="inline-flex items-center gap-1.5 text-xs text-white/45">
+          <span className="h-1.5 w-1.5 rounded-full bg-white/30" aria-hidden />
+          {t('actions.coming_soon')}
+        </span>
       </div>
     </div>
   )

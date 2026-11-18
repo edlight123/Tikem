@@ -314,13 +314,9 @@ export function AttendeesManager({ eventId, eventTitle, tickets, ticketsError = 
         renderMobileCard={mobileCard}
         empty={
           <OrgEmptyState
+            variant="quiet"
             icon={User}
             title={searchQuery || filterStatus !== 'all' ? tx('event_tools.no_match') : tx('event_tools.no_attendees')}
-            description={
-              searchQuery || filterStatus !== 'all'
-                ? tx('event_tools.no_match_desc')
-                : tx('event_tools.no_attendees_desc')
-            }
           />
         }
       />

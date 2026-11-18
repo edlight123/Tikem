@@ -11,3 +11,12 @@ describe('shouldShowGoingCount', () => {
     expect(shouldShowGoingCount(300, undefined)).toBe(false)
   })
 })
+
+describe('shouldShowGoingCount with the organizer override', () => {
+  it('prints any count when the organizer asked for it', () => {
+    expect(shouldShowGoingCount(88, 1_000_000, true)).toBe(true)
+    expect(shouldShowGoingCount(3, null, true)).toBe(true)
+  })
+  it('still prints nothing for zero', () => expect(shouldShowGoingCount(0, 10, true)).toBe(false))
+  it('keeps the half-capacity rule when off', () => expect(shouldShowGoingCount(88, 1_000_000, false)).toBe(false))
+})

@@ -176,21 +176,15 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
         className="mb-6"
         title={t('guest_list.guest_list')}
         description={
-          guests.length > 0
-            ? t('event_tools.gl_summary', { guests: guests.length, tickets: issuedCount })
-            : t('event_tools.gl_intro')
+          guests.length > 0 ? t('event_tools.gl_summary', { guests: guests.length, tickets: issuedCount }) : undefined
         }
-        // The empty state below carries the white button while the list is empty.
-        actions={addButton(guests.length > 0)}
+        // Empty, the empty state below carries the one button; no intro line
+        // (owner, 2026-11-18: "avoid too many explanations").
+        actions={guests.length > 0 ? addButton(true) : undefined}
       />
 
       {guests.length === 0 ? (
-        <OrgEmptyState
-          icon={Users}
-          title={t('guest_list.no_guests_yet')}
-          description={t('event_tools.gl_empty_desc')}
-          action={addButton(true)}
-        />
+        <OrgEmptyState variant="quiet" icon={Users} title={t('guest_list.no_guests_yet')} action={addButton(true)} />
       ) : (
         <OrgDataTable rows={guests} columns={buildColumns(t)} rowKey={(g) => g.id} />
       )}
@@ -285,7 +279,6 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
                 <span className="text-sm text-white/70">{t('event_tools.gl_plus_one_desc')}</span>
               </label>
             </FormField>
-            <p className="text-xs text-white/50">{t('event_tools.gl_free_note')}</p>
             {error && <p className="text-sm text-red-300">{error}</p>}
           </FormSection>
         )}

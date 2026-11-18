@@ -360,7 +360,6 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/10">
           <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{tx('event_staff.staff_members')}</h3>
-          <p className="text-sm text-white/70">{tx('event_staff.event_scoped_access')}</p>
         </div>
         {members.length === 0 ? (
           <div className="px-6 py-8 text-sm text-white/70">{tx('event_staff.no_staff_yet')}</div>
@@ -448,7 +447,6 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/10">
           <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{tx('event_staff.invites')}</h3>
-          <p className="text-sm text-white/70">{tx('event_staff.invite_links_one_time')}</p>
         </div>
         {invites.length === 0 ? (
           <div className="px-6 py-8 text-sm text-white/70">{tx('event_staff.no_invites_yet')}</div>

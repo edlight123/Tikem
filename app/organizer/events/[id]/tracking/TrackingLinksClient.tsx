@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link2, Copy, Check, Plus, Trash2 } from 'lucide-react'
-import { FormField, OrgEmptyState } from '@/components/organizer/ui'
+import { FormField, OrgEmptyState, SectionHeader } from '@/components/organizer/ui'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmProvider'
 import { EMPTY_VALUE } from '@/lib/format'
@@ -146,27 +146,23 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">{t('tracking_links.tracking_links')}</h1>
-          <p className="mt-0.5 text-sm text-white/70">
-            {t('tracking_links.generate_utm')}
-          </p>
-        </div>
-        {!showForm && (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-              // The empty state carries the white pill while there are no links.
-              links.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
-            }`}
-          >
-            <Plus className="h-4 w-4" />
-            {t('tracking_links.new_link')}
-          </button>
-        )}
-      </div>
+      {/* No intro line under the heading (owner, 2026-11-18: "avoid too many
+          explanations"). Empty, the empty state carries the one button. */}
+      <SectionHeader
+        title={t('tracking_links.tracking_links')}
+        actions={
+          !showForm && links.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <Plus className="h-4 w-4" />
+              {t('tracking_links.new_link')}
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Builder form */}
       {showForm && (
@@ -222,7 +218,6 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
           <div className="mt-4 rounded-xl px-4 py-3 bg-white/[0.055]">
             <p className="label-mono uppercase mb-1 text-white/40">{t('tracking_links.preview')}</p>
             <p className="break-all font-mono text-xs text-white/70">{previewUrl}</p>
-            <p className="mt-1 text-xs text-white/40">{t('tracking_links.preview_id_note')}</p>
           </div>
 
           <div className="mt-4 flex justify-end gap-3">
@@ -258,14 +253,14 @@ export default function TrackingLinksClient({ eventId }: TrackingLinksClientProp
         </div>
       ) : links.length === 0 && !showForm ? (
         <OrgEmptyState
+          variant="quiet"
           icon={Link2}
           title={t('tracking_links.no_tracking_links')}
-          description={t('tracking_links.create_utm_links')}
           action={
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus className="h-4 w-4" />
               {t('tracking_links.new_tracking_link')}

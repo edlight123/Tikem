@@ -40,9 +40,24 @@ interface ContactOrganizerProps {
   eventTitle?: string
   userId: string | null | undefined
   className?: string
+  /**
+   * 'icon': a small square icon button for the organizer line, beside Follow
+   * (or save + share on a phone). The full-width 'row' read as too prominent
+   * (owner, 2026-11-18; the app made the same change).
+   */
+  variant?: 'row' | 'icon'
+  /** Icon size: 'md' (40px) matches save + share; 'sm' (36px) matches Follow. */
+  size?: 'md' | 'sm'
 }
 
-export default function ContactOrganizer({ eventId, eventTitle, userId, className = '' }: ContactOrganizerProps) {
+export default function ContactOrganizer({
+  eventId,
+  eventTitle,
+  userId,
+  className = '',
+  variant = 'row',
+  size = 'md',
+}: ContactOrganizerProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
 
@@ -99,7 +114,20 @@ export default function ContactOrganizer({ eventId, eventTitle, userId, classNam
 
   return (
     <>
-      {/* A filled row, as in the app's "Hosted by" card: icon tile, label, chevron. */}
+      {variant === 'icon' ? (
+        <button
+          type="button"
+          onClick={() => (userId ? setOpen(true) : toLogin())}
+          aria-label={t('contactOrganizer.open')}
+          title={t('contactOrganizer.open')}
+          className={`grid shrink-0 place-items-center rounded bg-white/[0.06] text-white/65 transition-colors hover:bg-white/[0.12] hover:text-white active:scale-90 ${
+            size === 'sm' ? 'h-9 w-9' : 'h-10 w-10'
+          } ${className}`}
+        >
+          <MessageCircle className="h-[18px] w-[18px]" aria-hidden />
+        </button>
+      ) : (
+      /* A filled row, as in the app's "Hosted by" card: icon tile, label, chevron. */
       <button
         type="button"
         onClick={() => (userId ? setOpen(true) : toLogin())}
@@ -111,6 +139,7 @@ export default function ContactOrganizer({ eventId, eventTitle, userId, classNam
         <span className="flex-1 text-[15px] font-medium text-white">{t('contactOrganizer.open')}</span>
         <ChevronRight className="h-4 w-4 text-white/50" aria-hidden />
       </button>
+      )}
 
       <BottomSheet
         isOpen={open}
