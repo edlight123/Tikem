@@ -13,23 +13,23 @@ import {
 import { DEFAULT_PRIVACY as MOBILE_DEFAULT_PRIVACY, attendanceVisibilityUnset as mobileUnset } from '../mobile/types/social'
 
 describe('attendance visibility default', () => {
-  it('the default is friends on web and mobile', () => {
-    expect(DEFAULT_PRIVACY.attendance_visibility).toBe('friends')
-    expect(MOBILE_DEFAULT_PRIVACY.attendance_visibility).toBe('friends')
+  it('the default is everyone on web and mobile (public by default, PR #55)', () => {
+    expect(DEFAULT_PRIVACY.attendance_visibility).toBe('everyone')
+    expect(MOBILE_DEFAULT_PRIVACY.attendance_visibility).toBe('everyone')
   })
 
-  it('unset reads as friends; explicit values are kept; junk is nobody', () => {
-    expect(normalizeAttendanceVisibility(undefined)).toBe('friends')
-    expect(normalizeAttendanceVisibility(null)).toBe('friends')
-    expect(normalizeAttendanceVisibility('')).toBe('friends')
+  it('unset reads as everyone; explicit values are kept; junk is nobody', () => {
+    expect(normalizeAttendanceVisibility(undefined)).toBe('everyone')
+    expect(normalizeAttendanceVisibility(null)).toBe('everyone')
+    expect(normalizeAttendanceVisibility('')).toBe('everyone')
     expect(normalizeAttendanceVisibility('nobody')).toBe('nobody')
     expect(normalizeAttendanceVisibility('everyone')).toBe('everyone')
     expect(normalizeAttendanceVisibility('friends')).toBe('friends')
     expect(normalizeAttendanceVisibility('all')).toBe('nobody')
   })
 
-  it('sanitizePrivacy keeps an explicit nobody and fills an unset value with friends', () => {
-    expect(sanitizePrivacy({}).attendance_visibility).toBe('friends')
+  it('sanitizePrivacy keeps an explicit nobody and fills an unset value with everyone', () => {
+    expect(sanitizePrivacy({}).attendance_visibility).toBe('everyone')
     expect(sanitizePrivacy({ attendance_visibility: 'nobody' }).attendance_visibility).toBe('nobody')
     expect(sanitizePrivacy({ profile_visibility: 'public' }, { attendance_visibility: 'nobody' }).attendance_visibility).toBe('nobody')
     expect(sanitizePrivacy({ attendance_visibility: 'everyone' }).attendance_visibility).toBe('everyone')

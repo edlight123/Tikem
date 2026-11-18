@@ -230,7 +230,10 @@ describe('getFriendsGoing (Firestore layer)', () => {
 
 describe('getFriendSuggestions (Firestore layer)', () => {
   beforeEach(() => {
-    ;['me', 'f1', 'f2', 'fof', 'fofHidden', 'pend', 'blk', 'co', 'coPrivate'].forEach((u) => user(u))
+    ;['me', 'f1', 'f2', 'fof', 'fofHidden', 'pend', 'blk', 'co'].forEach((u) => user(u))
+    // Accounts are public by default now (PR #55): coPrivate opts into
+    // friends-only attendance, so a stranger at the same event isn't suggested.
+    user('coPrivate', { privacy: { attendance_visibility: 'friends' } })
     user('fofHidden', { discoverable: false })
     user('co', { privacy: { attendance_visibility: 'everyone' } })
     put('public_profiles/fof', { full_name: 'Fof Public', photo_url: 'https://x/p.jpg', username: 'fof', is_verified: true })
