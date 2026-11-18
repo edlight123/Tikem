@@ -32,7 +32,7 @@ export function DoorModeTopBar({
   const resolvedExitHref = exitHref || `/organizer/scan`
 
   return (
-    <div className="sticky top-0 z-50 bg-black text-white">
+    <div className="sticky top-0 z-50 bg-black text-fg">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between gap-4 mb-3">
           {/* Event Title */}
@@ -41,7 +41,7 @@ export function DoorModeTopBar({
           {/* Exit Button */}
           <button
             onClick={() => router.push(resolvedExitHref)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.07] hover:bg-white/[0.12] rounded transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-1.5 bg-surface-raised hover:bg-surface-high rounded transition-colors text-sm font-medium"
           >
             <X className="w-4 h-4" />
             Exit
@@ -53,7 +53,7 @@ export function DoorModeTopBar({
           <select
             value={entryPoint}
             onChange={(e) => onEntryPointChange(e.target.value)}
-            className="px-3 py-2 bg-white/[0.06] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="px-3 py-2 bg-surface rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             {entryPoints.map((point) => (
               <option key={point} value={point}>
@@ -64,19 +64,19 @@ export function DoorModeTopBar({
 
           {/* Live Counters */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-xl">
-              <UserCheck className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-success-strong/10 rounded-xl">
+              <UserCheck className="w-4 h-4 text-success" />
               <div className="text-right">
-                <div className="text-xs text-emerald-400 font-medium">{t('door.checked_in', { defaultValue: 'Checked In' })}</div>
-                <div className="text-lg font-bold text-emerald-300">{checkedInCount}/{totalTickets}</div>
+                <div className="text-xs text-success font-medium">{t('door.checked_in', { defaultValue: 'Checked In' })}</div>
+                <div className="text-lg font-bold text-success-soft">{checkedInCount}/{totalTickets}</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.055] rounded-xl">
-              <Users className="w-4 h-4 text-white/60" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface rounded-xl">
+              <Users className="w-4 h-4 text-fg-muted" />
               <div className="text-right">
-                <div className="text-xs text-white/60 font-medium">{t('door.remaining', { defaultValue: 'Remaining' })}</div>
-                <div className="text-lg font-bold text-white">{remainingCount}</div>
+                <div className="text-xs text-fg-muted font-medium">{t('door.remaining', { defaultValue: 'Remaining' })}</div>
+                <div className="text-lg font-bold text-fg">{remainingCount}</div>
               </div>
             </div>
           </div>

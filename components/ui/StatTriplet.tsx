@@ -52,14 +52,14 @@ export function StatTriplet({ items, columns, className = '' }: StatTripletProps
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] ${className}`}
+      className={`overflow-hidden rounded-xl border border-line bg-surface-low ${className}`}
     >
-      <div className={`grid divide-x divide-y divide-white/10 ${layout}`}>
+      <div className={`grid divide-x divide-y divide-line ${layout}`}>
         {items.map((item, i) => {
           const Icon = item.icon
           return (
             <div key={`${item.label}-${i}`} className="p-4">
-              <div className="label-mono mb-1.5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-white/50 sm:text-xs">
+              <div className="label-mono mb-1.5 flex items-center gap-1.5 text-eyebrow font-medium uppercase tracking-wide text-fg-subtle sm:text-xs">
                 {Icon && <Icon className={`h-3.5 w-3.5 shrink-0 ${ICON_TONE[item.tone ?? 'default']}`} />}
                 <span className="truncate">{item.label}</span>
               </div>
@@ -79,17 +79,17 @@ export function StatTriplet({ items, columns, className = '' }: StatTripletProps
 }
 
 const VALUE_TONE: Record<StatTone, string> = {
-  default: 'text-white',
+  default: 'text-fg',
   brand: 'text-brand-300',
-  amber: 'text-amber-300',
-  emerald: 'text-emerald-300',
+  amber: 'text-warning-soft',
+  emerald: 'text-success-soft',
 }
 
 const ICON_TONE: Record<StatTone, string> = {
-  default: 'text-white/30',
+  default: 'text-fg-faint',
   brand: 'text-brand-300',
-  amber: 'text-amber-400/60',
-  emerald: 'text-emerald-400/60',
+  amber: 'text-warning/60',
+  emerald: 'text-success/60',
 }
 
 const LAYOUTS: Record<number, string> = {

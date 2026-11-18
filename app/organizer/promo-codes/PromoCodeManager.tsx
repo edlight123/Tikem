@@ -166,15 +166,15 @@ export default function PromoCodeManager({
         onClick={() => toggleActive(promo.id, promo.is_active)}
         className={`px-3 py-1.5 rounded font-medium text-xs md:text-sm transition ${
           promo.is_active
-            ? 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12]'
-            : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12]'
+            ? 'bg-surface-raised text-fg-soft hover:bg-surface-high'
+            : 'bg-surface-raised text-fg-muted hover:bg-surface-high'
         }`}
       >
         {promo.is_active ? 'Deactivate' : 'Activate'}
       </button>
       <button
         onClick={() => setDeleteTarget(promo.id)}
-        className="p-1.5 md:p-2 text-red-300 hover:bg-red-500/10 rounded-lg transition"
+        className="p-1.5 md:p-2 text-danger-soft hover:bg-danger-strong/10 rounded-lg transition"
         aria-label={t('promo_codes.delete_promo_code')}
       >
         <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
@@ -190,8 +190,8 @@ export default function PromoCodeManager({
       sortAccessor: (p) => p.code,
       render: (p) => (
         <div className="min-w-0">
-          <div className="font-mono font-bold tracking-tight text-white">{p.code}</div>
-          <div className="text-xs text-white/50 truncate">{p.event?.title || 'Event not found'}</div>
+          <div className="font-mono font-bold tracking-tight text-fg">{p.code}</div>
+          <div className="text-xs text-fg-subtle truncate">{p.event?.title || 'Event not found'}</div>
         </div>
       ),
     },
@@ -210,7 +210,7 @@ export default function PromoCodeManager({
       sortable: true,
       sortAccessor: (p) => p.uses_count,
       render: (p) => (
-        <span className="font-mono tabular-nums text-white/70">
+        <span className="font-mono tabular-nums text-fg-muted">
           {p.uses_count}
           {p.max_uses ? ` / ${p.max_uses}` : ''}
         </span>
@@ -249,19 +249,19 @@ export default function PromoCodeManager({
     return (
       <div className="p-4 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-lg font-bold tracking-tight text-white">{p.code}</span>
+          <span className="font-mono text-lg font-bold tracking-tight text-fg">{p.code}</span>
           <StatusChip tone={s.tone}>{s.label}</StatusChip>
         </div>
-        <p className="text-sm text-white/60 truncate">{p.event?.title || 'Event not found'}</p>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-fg-muted truncate">{p.event?.title || 'Event not found'}</p>
+        <p className="text-sm text-fg-muted">
           <span className="font-mono tabular-nums">
             {p.discount_type === 'percentage' ? `${p.discount_value}% off` : `$${p.discount_value} off`}
           </span>
-          <span className="text-white/40"> · </span>
+          <span className="text-fg-subtle"> · </span>
           {t('actions.used')}<span className="font-mono tabular-nums">{p.uses_count}{p.max_uses ? ` / ${p.max_uses}` : ''}</span>
         </p>
         {p.expires_at && (
-          <p className="text-xs text-white/50">{t('promo_codes.expires')}<span className="font-mono tabular-nums">{new Date(p.expires_at).toLocaleDateString()}</span></p>
+          <p className="text-xs text-fg-subtle">{t('promo_codes.expires')}<span className="font-mono tabular-nums">{new Date(p.expires_at).toLocaleDateString()}</span></p>
         )}
         <div className="pt-1">{actionButtons(p)}</div>
       </div>
@@ -272,10 +272,10 @@ export default function PromoCodeManager({
     <div className="space-y-5 pb-24 relative">
       {/* Header row */}
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('promo_codes.your_promo_codes')}</h2>
+        <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('promo_codes.your_promo_codes')}</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded bg-white text-black font-semibold text-sm hover:bg-white/90 transition"
+          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded bg-inverse text-on-inverse font-semibold text-sm hover:bg-inverse-hover transition"
         >
           <Plus className="w-4 h-4" />
           {t('promo_codes.create_promo_code')}
@@ -286,7 +286,7 @@ export default function PromoCodeManager({
       <div className="fixed bottom-24 right-4 z-40 md:hidden">
         <button
           onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-inverse text-on-inverse font-semibold text-sm hover:bg-inverse-hover active:scale-95 transition"
         >
           <Plus className="w-4 h-4" />
           {t('actions.create')}
@@ -314,7 +314,7 @@ export default function PromoCodeManager({
         <form onSubmit={handleCreate} className="space-y-4 p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="label-mono block text-xs uppercase text-white/60 mb-1.5">
+              <label className="label-mono block text-xs uppercase text-fg-muted mb-1.5">
                 Code
               </label>
               <input
@@ -322,20 +322,20 @@ export default function PromoCodeManager({
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 uppercase text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-surface w-full rounded-lg px-4 py-2.5 uppercase text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 placeholder="SUMMER2024"
               />
             </div>
 
             <div>
-              <label className="label-mono block text-xs uppercase text-white/60 mb-1.5">
+              <label className="label-mono block text-xs uppercase text-fg-muted mb-1.5">
                 {t('actions.event')}
               </label>
               <select
                 required
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
-                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-surface w-full rounded-lg px-4 py-2.5 text-fg focus:outline-none focus:ring-2 focus:ring-brand-500/25"
               >
                 <option value="">{t('promo_codes.select_event')}</option>
                 {events.map((event) => (
@@ -345,13 +345,13 @@ export default function PromoCodeManager({
             </div>
 
             <div>
-              <label className="label-mono block text-xs uppercase text-white/60 mb-1.5">
+              <label className="label-mono block text-xs uppercase text-fg-muted mb-1.5">
                 {t('promo_codes.discount_type')}
               </label>
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-surface w-full rounded-lg px-4 py-2.5 text-fg focus:outline-none focus:ring-2 focus:ring-brand-500/25"
               >
                 <option value="percentage">{t('promo_codes.percentage')}</option>
                 <option value="fixed">{t('promo_codes.fixed_amount')}</option>
@@ -359,7 +359,7 @@ export default function PromoCodeManager({
             </div>
 
             <div>
-              <label className="label-mono block text-xs uppercase text-white/60 mb-1.5">
+              <label className="label-mono block text-xs uppercase text-fg-muted mb-1.5">
                 {t('promo_codes.discount_value')}
               </label>
               <input
@@ -369,13 +369,13 @@ export default function PromoCodeManager({
                 step="0.01"
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
-                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-surface w-full rounded-lg px-4 py-2.5 text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 placeholder={discountType === 'percentage' ? '10' : '5.00'}
               />
             </div>
 
             <div>
-              <label className="label-mono block text-xs uppercase text-white/60 mb-1.5">
+              <label className="label-mono block text-xs uppercase text-fg-muted mb-1.5">
                 {t('promo_codes.max_discounted_tickets')}<span className="normal-case font-normal">(optional)</span>
               </label>
               <input
@@ -383,26 +383,26 @@ export default function PromoCodeManager({
                 min="1"
                 value={maxUses}
                 onChange={(e) => setMaxUses(e.target.value)}
-                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-surface w-full rounded-lg px-4 py-2.5 text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/25"
                 placeholder={t('promo_codes.unlimited')}
               />
               {/* The cap counts TICKETS, not orders: fulfillment increments
                   uses_count by the order quantity. Saying so here stops an
                   organizer reading "50" as "the first 50 customers". */}
-              <p className="mt-1.5 text-xs text-white/40">
+              <p className="mt-1.5 text-xs text-fg-subtle">
                 {t('promo_codes.counts_tickets_note')}
               </p>
             </div>
 
             <div>
-              <label className="label-mono block text-xs uppercase text-white/60 mb-1.5">
+              <label className="label-mono block text-xs uppercase text-fg-muted mb-1.5">
                 {t('promo_codes.expires_at')}<span className="normal-case font-normal">(optional)</span>
               </label>
               <input
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="bg-white/[0.06] w-full rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+                className="bg-surface w-full rounded-lg px-4 py-2.5 text-fg focus:outline-none focus:ring-2 focus:ring-brand-500/25"
               />
             </div>
           </div>
@@ -411,14 +411,14 @@ export default function PromoCodeManager({
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded bg-white/[0.07] px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.12] transition"
+              className="rounded bg-surface-raised px-5 py-2.5 text-sm font-semibold text-fg-muted hover:bg-surface-high transition"
             >
               {t('actions.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90 transition disabled:opacity-50"
+              className="rounded bg-inverse px-5 py-2.5 text-sm font-semibold text-on-inverse hover:bg-inverse-hover transition disabled:opacity-50"
             >
               {loading ? 'Creating…' : 'Create Code'}
             </button>

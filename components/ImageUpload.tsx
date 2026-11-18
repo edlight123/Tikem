@@ -226,11 +226,11 @@ export default function ImageUpload({
                 className="rounded-2xl  object-cover"
               />
             </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-scrim-light opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-white/90"
+                className="rounded bg-inverse px-4 py-2 text-sm font-semibold text-surface-solid transition hover:bg-inverse-hover"
               >
                 {changeLabel}
               </button>
@@ -238,7 +238,7 @@ export default function ImageUpload({
                 <button
                   type="button"
                   onClick={() => setLibraryOpen(true)}
-                  className="rounded border border-white/40 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="rounded border border-fg/40 px-4 py-2 text-sm font-semibold text-fg transition hover:bg-surface-raised"
                 >
                   {t('upload.browseLibrary', { defaultValue: 'Browse library' })}
                 </button>
@@ -247,7 +247,7 @@ export default function ImageUpload({
                 <button
                   type="button"
                   onClick={onMakePoster}
-                  className="rounded bg-white/[0.12] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className="rounded bg-surface-high px-4 py-2 text-sm font-semibold text-fg transition hover:bg-fg/20"
                 >
                   {t('composer.posterTemplates.title', { defaultValue: 'Make a poster' })}
                 </button>
@@ -261,23 +261,23 @@ export default function ImageUpload({
           // publish an event with no image at all.
           <div
             style={coolBg}
-            className={`group/flyer relative flex w-full ${frame} flex-col items-center justify-center overflow-hidden rounded-2xl text-white/50`}
+            className={`group/flyer relative flex w-full ${frame} flex-col items-center justify-center overflow-hidden rounded-2xl text-fg-subtle`}
           >
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg transition-transform group-hover/flyer:scale-105"
+              className="rounded bg-inverse px-5 py-2.5 text-sm font-semibold text-surface-solid shadow-lg transition-transform group-hover/flyer:scale-105"
             >
               {ctaLabel}
             </button>
-            <span className="mt-3 text-xs text-white/45">
+            <span className="mt-3 text-xs text-fg-subtle">
               {t('upload.formats', { defaultValue: 'PNG or JPG · up to 5MB' })}
             </span>
             {isFlyer && (
               <button
                 type="button"
                 onClick={() => setLibraryOpen(true)}
-                className="mt-4 text-xs font-semibold text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+                className="mt-4 text-xs font-semibold text-fg-muted underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg"
               >
                 {t('upload.noFlyer', { defaultValue: 'No flyer? Choose from our library' })}
               </button>
@@ -286,7 +286,7 @@ export default function ImageUpload({
               <button
                 type="button"
                 onClick={onMakePoster}
-                className="mt-2.5 text-xs font-semibold text-white/70 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+                className="mt-2.5 text-xs font-semibold text-fg-muted underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg"
               >
                 {t('composer.posterTemplates.cta', { defaultValue: 'Or make one from a template' })}
               </button>
@@ -315,12 +315,12 @@ export default function ImageUpload({
       {uploading && (
         <div className="flex items-center justify-center py-2">
           <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-brand-400"></div>
-          <span className="ml-2 text-sm text-white/60">{t('upload.uploading', { defaultValue: 'Uploading…' })}</span>
+          <span className="ml-2 text-sm text-fg-muted">{t('upload.uploading', { defaultValue: 'Uploading…' })}</span>
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 p-3 text-sm text-red-300">
+        <div className="rounded-lg border border-danger-strong/30 p-3 text-sm text-danger-soft">
           {error}
         </div>
       )}

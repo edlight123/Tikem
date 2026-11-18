@@ -74,10 +74,10 @@ function ReviewRow({ label, value }: { label: string; value?: string }) {
   const filled = Boolean(value && value.trim())
   return (
     <div>
-      <dt className="text-white/50">{label}</dt>
+      <dt className="text-fg-subtle">{label}</dt>
       {/* An empty row used to render the literal string ", " — left behind when
           the em-dash sweep replaced this placeholder's dash with a comma. */}
-      <dd className={filled ? 'text-white' : 'text-white/40'}>
+      <dd className={filled ? 'text-fg' : 'text-fg-subtle'}>
         {filled ? value : t('onboarding.verification.review.not_provided', { defaultValue: 'Not provided' })}
       </dd>
     </div>
@@ -88,11 +88,11 @@ function ReviewDoc({ ok, label }: { ok: boolean; label: string }) {
   const { t } = useTranslation('organizer')
   return (
     <li className="flex items-center gap-2">
-      <span className={`grid h-5 w-5 place-items-center rounded-full ${ok ? 'text-emerald-300' : 'bg-white/[0.10] text-white/40'}`}>
+      <span className={`grid h-5 w-5 place-items-center rounded-full ${ok ? 'text-success-soft' : 'bg-surface-raised text-fg-subtle'}`}>
         {ok ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
       </span>
-      <span className={ok ? 'text-white' : 'text-white/50'}>{label}</span>
-      {!ok && <span className="text-xs font-medium text-amber-300">{t('onboarding.verification.missing', { defaultValue: 'Missing' })}</span>}
+      <span className={ok ? 'text-fg' : 'text-fg-subtle'}>{label}</span>
+      {!ok && <span className="text-xs font-medium text-warning-soft">{t('onboarding.verification.missing', { defaultValue: 'Missing' })}</span>}
     </li>
   )
 }
@@ -315,23 +315,23 @@ export default function VerificationWizard({
         <div className="mb-6">
           <button
             onClick={onExit}
-            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors mb-4"
+            className="flex items-center gap-2 text-sm text-fg-muted hover:text-fg transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             {t('onboarding.verification.save_exit', { defaultValue: 'Save & Exit' })}
           </button>
           
           {/* Progress Bar */}
-          <div className="bg-white/[0.055] rounded-2xl p-4 md:p-5">
+          <div className="bg-surface rounded-2xl p-4 md:p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">
+              <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">
                 {t('onboarding.verification.step_of', {
                   defaultValue: 'Step {{current}} of {{total}}',
                   current: currentStepIndex + 1,
                   total: STEPS.length,
                 })}
               </h2>
-              <span className="text-sm text-white/60">
+              <span className="text-sm text-fg-muted">
                 {t('onboarding.verification.required_complete', {
                   defaultValue: '{{completed}} of {{total}} required complete',
                   completed: completedSteps,
@@ -357,12 +357,12 @@ export default function VerificationWizard({
                       className={`
                         w-8 h-8 rounded flex items-center justify-center text-xs font-semibold transition-all
                         ${isComplete
-                          ? 'bg-emerald-500 text-white'
+                          ? 'bg-success-strong text-fg'
                           : isCurrent
-                            ? 'bg-white text-black ring-4 ring-white/10'
+                            ? 'bg-inverse text-on-inverse ring-4 ring-line'
                             : isPast
-                              ? 'bg-white/[0.12] text-white/70'
-                              : 'bg-white/[0.055] text-white/45'
+                              ? 'bg-surface-high text-fg-muted'
+                              : 'bg-surface text-fg-subtle'
                         }
                       `}
                     >
@@ -371,7 +371,7 @@ export default function VerificationWizard({
                     {index < STEPS.length - 1 && (
                       <div
                         className={`flex-1 h-1 mx-2 rounded transition-colors ${
-                          isComplete || isPast ? 'bg-emerald-500' : 'bg-white/[0.08]'
+                          isComplete || isPast ? 'bg-success-strong' : 'bg-surface-raised'
                         }`}
                       />
                     )}
@@ -385,19 +385,19 @@ export default function VerificationWizard({
         {/* Current Step Info */}
         <div className="mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/[0.07] flex items-center justify-center">
-              <currentStep.icon className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center">
+              <currentStep.icon className="w-6 h-6 text-fg" />
             </div>
             <div>
               {/* `!` on the size: `.mobile-typography h1` (0,1,1) beats a bare
                   arbitrary size (0,1,0) under 640px, leading included. */}
-              <h1 className="font-display lowercase italic !text-[24px] !leading-[1.06] text-white md:!text-[28px]">
+              <h1 className="font-display lowercase italic !text-section !leading-[1.06] text-fg md:!text-headline">
                 {t(`onboarding.verification.steps.${currentStep.id}.title`, { defaultValue: currentStep.title })}
               </h1>
-              <p className="text-white/60">
+              <p className="text-fg-muted">
                 {t(`onboarding.verification.steps.${currentStep.id}.description`, { defaultValue: currentStep.description })}
                 {!currentStep.required && (
-                  <span className="ml-2 text-xs font-medium text-white/45">
+                  <span className="ml-2 text-xs font-medium text-fg-subtle">
                     {t('onboarding.verification.optional', { defaultValue: 'Optional' })}
                   </span>
                 )}
@@ -408,12 +408,12 @@ export default function VerificationWizard({
 
         {/* What you'll need — shown on the first step so organizers don't bail mid-flow */}
         {currentStepIndex === 0 && (
-          <div className="mb-6 bg-white/[0.055] rounded-xl p-4">
-            <h4 className="text-sm font-semibold text-white mb-1.5">{t('onboarding.verification.before_you_start', { defaultValue: 'Before you start' })}</h4>
-            <p className="text-sm text-white/65 mb-2">
+          <div className="mb-6 bg-surface rounded-xl p-4">
+            <h4 className="text-sm font-semibold text-fg mb-1.5">{t('onboarding.verification.before_you_start', { defaultValue: 'Before you start' })}</h4>
+            <p className="text-sm text-fg-muted mb-2">
               {t('onboarding.verification.before_you_start_intro', { defaultValue: 'Have these ready. It takes about 5 minutes, and your progress saves as you go:' })}
             </p>
-            <ul className="text-sm text-white/65 space-y-1 ml-5 list-disc">
+            <ul className="text-sm text-fg-muted space-y-1 ml-5 list-disc">
               <li>{t('onboarding.verification.checklist_id', { defaultValue: 'A government-issued ID (front & back)' })}</li>
               <li>{t('onboarding.verification.checklist_selfie', { defaultValue: 'Your phone or webcam for a quick selfie holding your ID' })}</li>
               <li>{t('onboarding.verification.checklist_org', { defaultValue: 'Your organization name and contact details' })}</li>
@@ -423,23 +423,23 @@ export default function VerificationWizard({
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-500/10 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 bg-danger-strong/10 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-danger-soft flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-200">{t('onboarding.verification.error_label', { defaultValue: 'Error' })}</p>
-              <p className="text-sm text-red-200/80">{error}</p>
+              <p className="text-sm font-medium text-danger-soft">{t('onboarding.verification.error_label', { defaultValue: 'Error' })}</p>
+              <p className="text-sm text-danger-soft/80">{error}</p>
             </div>
           </div>
         )}
 
         {/* Step Content */}
-        <div className="bg-white/[0.055] rounded-2xl overflow-hidden">
+        <div className="bg-surface rounded-2xl overflow-hidden">
           {currentStep.id === 'organizerInfo' && (
             <div className="p-5 md:p-6 space-y-5">
               {/* Full Name */}
               <div>
-                <label htmlFor="full_name" className="block text-sm font-medium text-white/70 mb-2">
-                  {t('onboarding.verification.field.full_name', { defaultValue: 'Full Name' })} <span className="text-red-500">*</span>
+                <label htmlFor="full_name" className="block text-sm font-medium text-fg-muted mb-2">
+                  {t('onboarding.verification.field.full_name', { defaultValue: 'Full Name' })} <span className="text-danger-strong">*</span>
                 </label>
                 <input
                   type="text"
@@ -449,19 +449,19 @@ export default function VerificationWizard({
                     setOrganizerForm(prev => ({ ...prev, full_name: e.target.value }))
                     if (formErrors.full_name) setFormErrors(prev => ({ ...prev, full_name: '' }))
                   }}
-                  className={`w-full rounded-lg px-4 py-3 text-white [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
-                    formErrors.full_name ? 'bg-red-500/10 ring-1 ring-inset ring-red-500/40' : 'bg-white/[0.055] hover:bg-white/[0.08] focus:bg-white/[0.08]'
+                  className={`w-full rounded-lg px-4 py-3 text-fg [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
+                    formErrors.full_name ? 'bg-danger-strong/10 ring-1 ring-inset ring-danger-strong/40' : 'bg-surface hover:bg-surface-raised focus:bg-surface-raised'
                   }`}
                   placeholder={t('onboarding.verification.field.full_name_placeholder', { defaultValue: 'Your full name as it appears on your ID' })}
                 />
-                {formErrors.full_name && <p className="mt-1.5 text-sm text-red-300">{formErrors.full_name}</p>}
+                {formErrors.full_name && <p className="mt-1.5 text-sm text-danger-soft">{formErrors.full_name}</p>}
               </div>
 
               {/* Phone & Email Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-white/70 mb-2">
-                    {t('onboarding.verification.field.phone', { defaultValue: 'Phone Number' })} <span className="text-red-500">*</span>
+                  <label htmlFor="phone" className="block text-sm font-medium text-fg-muted mb-2">
+                    {t('onboarding.verification.field.phone', { defaultValue: 'Phone Number' })} <span className="text-danger-strong">*</span>
                   </label>
                   <input
                     type="tel"
@@ -471,15 +471,15 @@ export default function VerificationWizard({
                       setOrganizerForm(prev => ({ ...prev, phone: e.target.value }))
                       if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: '' }))
                     }}
-                    className={`w-full rounded-lg px-4 py-3 text-white [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
-                      formErrors.phone ? 'bg-red-500/10 ring-1 ring-inset ring-red-500/40' : 'bg-white/[0.055] hover:bg-white/[0.08] focus:bg-white/[0.08]'
+                    className={`w-full rounded-lg px-4 py-3 text-fg [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
+                      formErrors.phone ? 'bg-danger-strong/10 ring-1 ring-inset ring-danger-strong/40' : 'bg-surface hover:bg-surface-raised focus:bg-surface-raised'
                     }`}
                     placeholder={t('onboarding.verification.field.phone_placeholder', { defaultValue: '+509 1234 5678' })}
                   />
-                  {formErrors.phone && <p className="mt-1.5 text-sm text-red-300">{formErrors.phone}</p>}
+                  {formErrors.phone && <p className="mt-1.5 text-sm text-danger-soft">{formErrors.phone}</p>}
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-white/70 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-fg-muted mb-2">
                     {t('onboarding.verification.field.email', { defaultValue: 'Email Address' })}
                   </label>
                   <input
@@ -487,7 +487,7 @@ export default function VerificationWizard({
                     id="email"
                     value={organizerForm.email}
                     onChange={(e) => setOrganizerForm(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                     placeholder={t('onboarding.verification.field.email_placeholder', { defaultValue: 'email@example.com' })}
                   />
                 </div>
@@ -495,8 +495,8 @@ export default function VerificationWizard({
 
               {/* Organization Name */}
               <div>
-                <label htmlFor="organization_name" className="block text-sm font-medium text-white/70 mb-2">
-                  {t('onboarding.verification.field.organization_name', { defaultValue: 'Organization Name' })} <span className="text-red-500">*</span>
+                <label htmlFor="organization_name" className="block text-sm font-medium text-fg-muted mb-2">
+                  {t('onboarding.verification.field.organization_name', { defaultValue: 'Organization Name' })} <span className="text-danger-strong">*</span>
                 </label>
                 <input
                   type="text"
@@ -506,24 +506,24 @@ export default function VerificationWizard({
                     setOrganizerForm(prev => ({ ...prev, organization_name: e.target.value }))
                     if (formErrors.organization_name) setFormErrors(prev => ({ ...prev, organization_name: '' }))
                   }}
-                  className={`w-full rounded-lg px-4 py-3 text-white [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
-                    formErrors.organization_name ? 'bg-red-500/10 ring-1 ring-inset ring-red-500/40' : 'bg-white/[0.055] hover:bg-white/[0.08] focus:bg-white/[0.08]'
+                  className={`w-full rounded-lg px-4 py-3 text-fg [color-scheme:dark] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400/50 ${
+                    formErrors.organization_name ? 'bg-danger-strong/10 ring-1 ring-inset ring-danger-strong/40' : 'bg-surface hover:bg-surface-raised focus:bg-surface-raised'
                   }`}
                   placeholder={t('onboarding.verification.field.organization_name_placeholder', { defaultValue: 'Your business or organization name' })}
                 />
-                {formErrors.organization_name && <p className="mt-1.5 text-sm text-red-300">{formErrors.organization_name}</p>}
+                {formErrors.organization_name && <p className="mt-1.5 text-sm text-danger-soft">{formErrors.organization_name}</p>}
               </div>
 
               {/* Organization Type */}
               <div>
-                <label htmlFor="organization_type" className="block text-sm font-medium text-white/70 mb-2">
+                <label htmlFor="organization_type" className="block text-sm font-medium text-fg-muted mb-2">
                   {t('onboarding.verification.field.organization_type', { defaultValue: 'Organization Type' })}
                 </label>
                 <select
                   id="organization_type"
                   value={organizerForm.organization_type}
                   onChange={(e) => setOrganizerForm(prev => ({ ...prev, organization_type: e.target.value }))}
-                  className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 >
                   <option value="individual">{t('onboarding.verification.org_type.individual', { defaultValue: 'Individual/Sole Proprietor' })}</option>
                   <option value="company">{t('onboarding.verification.org_type.company', { defaultValue: 'Company/Corporation' })}</option>
@@ -534,7 +534,7 @@ export default function VerificationWizard({
 
               {/* Address */}
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-white/70 mb-2">
+                <label htmlFor="address" className="block text-sm font-medium text-fg-muted mb-2">
                   {t('onboarding.verification.field.address', { defaultValue: 'Address' })}
                 </label>
                 <input
@@ -542,7 +542,7 @@ export default function VerificationWizard({
                   id="address"
                   value={organizerForm.address}
                   onChange={(e) => setOrganizerForm(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   placeholder={t('onboarding.verification.field.address_placeholder', { defaultValue: 'Street address' })}
                 />
               </div>
@@ -550,7 +550,7 @@ export default function VerificationWizard({
               {/* City & Country */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-white/70 mb-2">
+                  <label htmlFor="city" className="block text-sm font-medium text-fg-muted mb-2">
                     {t('onboarding.verification.field.city', { defaultValue: 'City' })}
                   </label>
                   <input
@@ -558,19 +558,19 @@ export default function VerificationWizard({
                     id="city"
                     value={organizerForm.city}
                     onChange={(e) => setOrganizerForm(prev => ({ ...prev, city: e.target.value }))}
-                    className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                     placeholder={t('onboarding.verification.field.city_placeholder', { defaultValue: 'Port-au-Prince' })}
                   />
                 </div>
                 <div>
-                  <label htmlFor="country" className="block text-sm font-medium text-white/70 mb-2">
+                  <label htmlFor="country" className="block text-sm font-medium text-fg-muted mb-2">
                     {t('onboarding.verification.field.country', { defaultValue: 'Country' })}
                   </label>
                   <select
                     id="country"
                     value={organizerForm.country}
                     onChange={(e) => setOrganizerForm(prev => ({ ...prev, country: e.target.value }))}
-                    className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   >
                     <option value="Haiti">{t('onboarding.verification.country.haiti', { defaultValue: 'Haiti' })}</option>
                     <option value="Dominican Republic">{t('onboarding.verification.country.dominican_republic', { defaultValue: 'Dominican Republic' })}</option>
@@ -584,11 +584,11 @@ export default function VerificationWizard({
           {currentStep.id === 'governmentId' && (
             <div className="p-5 md:p-6 space-y-5">
               {/* Tips */}
-              <div className="bg-white/[0.07] rounded-xl p-4">
-                <h4 className="font-semibold text-white text-sm mb-2 flex items-center gap-2">
+              <div className="bg-surface-raised rounded-xl p-4">
+                <h4 className="font-semibold text-fg text-sm mb-2 flex items-center gap-2">
                   <Sparkles className="w-4 h-4" /> {t('onboarding.verification.photo_tips', { defaultValue: 'Photo Tips' })}
                 </h4>
-                <ul className="text-sm text-white/65 space-y-1 ml-6 list-disc">
+                <ul className="text-sm text-fg-muted space-y-1 ml-6 list-disc">
                   <li>{t('onboarding.verification.tip_readable', { defaultValue: 'Ensure all text is clearly readable' })}</li>
                   <li>{t('onboarding.verification.tip_lighting', { defaultValue: 'Use good lighting (avoid glare)' })}</li>
                   <li>{t('onboarding.verification.tip_background', { defaultValue: 'Place ID on a contrasting background' })}</li>
@@ -620,9 +620,9 @@ export default function VerificationWizard({
           {currentStep.id === 'selfie' && (
             <div className="p-5 md:p-6 space-y-5">
               {/* Instructions */}
-              <div className="bg-white/[0.07] rounded-xl p-4">
-                <h4 className="font-semibold text-white text-sm mb-2">{t('onboarding.verification.selfie_how', { defaultValue: 'How to take a good selfie:' })}</h4>
-                <ul className="text-sm text-white/65 space-y-1 ml-6 list-disc">
+              <div className="bg-surface-raised rounded-xl p-4">
+                <h4 className="font-semibold text-fg text-sm mb-2">{t('onboarding.verification.selfie_how', { defaultValue: 'How to take a good selfie:' })}</h4>
+                <ul className="text-sm text-fg-muted space-y-1 ml-6 list-disc">
                   <li>{t('onboarding.verification.selfie_tip_hold', { defaultValue: 'Hold your ID next to your face' })}</li>
                   <li>{t('onboarding.verification.selfie_tip_face', { defaultValue: 'Make sure your face is clearly visible' })}</li>
                   <li>{t('onboarding.verification.selfie_tip_text', { defaultValue: 'Ensure the ID text is readable in the photo' })}</li>
@@ -644,15 +644,15 @@ export default function VerificationWizard({
 
           {currentStep.id === 'businessDetails' && (
             <div className="p-5 md:p-6 space-y-5">
-              <div className="bg-white/[0.06] rounded-xl p-4 mb-2">
-                <p className="text-sm text-white/60">
+              <div className="bg-surface rounded-xl p-4 mb-2">
+                <p className="text-sm text-fg-muted">
                   {t('onboarding.verification.business_optional_note', { defaultValue: 'This step is optional. Add business details if you have a registered business.' })}
                 </p>
               </div>
 
               {/* Business Registration Number */}
               <div>
-                <label htmlFor="business_registration_number" className="block text-sm font-medium text-white/70 mb-2">
+                <label htmlFor="business_registration_number" className="block text-sm font-medium text-fg-muted mb-2">
                   {t('onboarding.verification.field.business_registration_number', { defaultValue: 'Business Registration Number' })}
                 </label>
                 <input
@@ -660,14 +660,14 @@ export default function VerificationWizard({
                   id="business_registration_number"
                   value={businessForm.business_registration_number}
                   onChange={(e) => setBusinessForm(prev => ({ ...prev, business_registration_number: e.target.value }))}
-                  className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   placeholder={t('onboarding.verification.field.business_registration_number_placeholder', { defaultValue: 'e.g., RC-12345' })}
                 />
               </div>
 
               {/* Tax ID */}
               <div>
-                <label htmlFor="tax_id" className="block text-sm font-medium text-white/70 mb-2">
+                <label htmlFor="tax_id" className="block text-sm font-medium text-fg-muted mb-2">
                   {t('onboarding.verification.field.tax_id', { defaultValue: 'Tax ID Number (NIF)' })}
                 </label>
                 <input
@@ -675,7 +675,7 @@ export default function VerificationWizard({
                   id="tax_id"
                   value={businessForm.tax_id}
                   onChange={(e) => setBusinessForm(prev => ({ ...prev, tax_id: e.target.value }))}
-                  className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   placeholder={t('onboarding.verification.field.tax_id_placeholder', { defaultValue: 'e.g., NIF-123456789' })}
                 />
               </div>
@@ -683,14 +683,14 @@ export default function VerificationWizard({
               {/* Business Type & Registration Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="business_type" className="block text-sm font-medium text-white/70 mb-2">
+                  <label htmlFor="business_type" className="block text-sm font-medium text-fg-muted mb-2">
                     {t('onboarding.verification.field.business_type', { defaultValue: 'Business Type' })}
                   </label>
                   <select
                     id="business_type"
                     value={businessForm.business_type}
                     onChange={(e) => setBusinessForm(prev => ({ ...prev, business_type: e.target.value }))}
-                    className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   >
                     <option value="">{t('onboarding.verification.business_type.select', { defaultValue: 'Select type' })}</option>
                     <option value="sole_proprietorship">{t('onboarding.verification.business_type.sole_proprietorship', { defaultValue: 'Sole Proprietorship' })}</option>
@@ -701,7 +701,7 @@ export default function VerificationWizard({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="registration_date" className="block text-sm font-medium text-white/70 mb-2">
+                  <label htmlFor="registration_date" className="block text-sm font-medium text-fg-muted mb-2">
                     {t('onboarding.verification.field.registration_date', { defaultValue: 'Registration Date' })}
                   </label>
                   <input
@@ -709,7 +709,7 @@ export default function VerificationWizard({
                     id="registration_date"
                     value={businessForm.registration_date}
                     onChange={(e) => setBusinessForm(prev => ({ ...prev, registration_date: e.target.value }))}
-                    className="w-full rounded-lg bg-white/[0.055] px-4 py-3 text-white [color-scheme:dark] transition-colors hover:bg-white/[0.08] focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                    className="w-full rounded-lg bg-surface px-4 py-3 text-fg [color-scheme:dark] transition-colors hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   />
                 </div>
               </div>
@@ -718,14 +718,14 @@ export default function VerificationWizard({
 
           {currentStep.id === 'review' && (
             <div className="p-5 md:p-6 space-y-4">
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-fg-muted">
                 {t('onboarding.verification.review_intro', { defaultValue: 'Please confirm everything is correct before submitting. You can edit any section.' })}
               </p>
 
               {/* Personal information */}
-              <div className="bg-white/[0.07] rounded-xl p-4">
+              <div className="bg-surface-raised rounded-xl p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('onboarding.verification.review.personal_information', { defaultValue: 'Personal information' })}</h3>
+                  <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('onboarding.verification.review.personal_information', { defaultValue: 'Personal information' })}</h3>
                   <button type="button" onClick={() => setCurrentStepIndex(0)} className="text-sm font-medium text-brand-300 hover:text-brand-300">{t('onboarding.verification.review.edit', { defaultValue: 'Edit' })}</button>
                 </div>
                 <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -739,9 +739,9 @@ export default function VerificationWizard({
               </div>
 
               {/* Documents */}
-              <div className="bg-white/[0.07] rounded-xl p-4">
+              <div className="bg-surface-raised rounded-xl p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('onboarding.verification.review.identity_documents', { defaultValue: 'Identity documents' })}</h3>
+                  <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('onboarding.verification.review.identity_documents', { defaultValue: 'Identity documents' })}</h3>
                   <button type="button" onClick={() => setCurrentStepIndex(1)} className="text-sm font-medium text-brand-300 hover:text-brand-300">{t('onboarding.verification.review.edit', { defaultValue: 'Edit' })}</button>
                 </div>
                 <ul className="space-y-2 text-sm">
@@ -753,9 +753,9 @@ export default function VerificationWizard({
 
               {/* Business (only if provided) */}
               {(businessForm.business_registration_number || businessForm.tax_id || businessForm.business_type) && (
-                <div className="bg-white/[0.07] rounded-xl p-4">
+                <div className="bg-surface-raised rounded-xl p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('onboarding.verification.review.business_details', { defaultValue: 'Business details' })}</h3>
+                    <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('onboarding.verification.review.business_details', { defaultValue: 'Business details' })}</h3>
                     <button type="button" onClick={() => setCurrentStepIndex(3)} className="text-sm font-medium text-brand-300 hover:text-brand-300">{t('onboarding.verification.review.edit', { defaultValue: 'Edit' })}</button>
                   </div>
                   <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -766,7 +766,7 @@ export default function VerificationWizard({
                 </div>
               )}
 
-              <div className="rounded-xl bg-white/[0.07] p-4 text-sm text-white/65">
+              <div className="rounded-xl bg-surface-raised p-4 text-sm text-fg-muted">
                 {t('onboarding.verification.review.submit_disclaimer', { defaultValue: 'By submitting, you confirm this information is accurate. Our team reviews it usually within 1–2 business days, and you’ll be notified once approved, which unlocks withdrawals.' })}
               </div>
             </div>
@@ -781,8 +781,8 @@ export default function VerificationWizard({
             className={`
               flex items-center gap-2 px-4 py-2.5 rounded text-sm font-semibold transition-all
               ${currentStepIndex === 0
-                ? 'text-white/40 cursor-not-allowed'
-                : 'text-white/70 hover:bg-white/[0.07] hover:text-white'
+                ? 'text-fg-subtle cursor-not-allowed'
+                : 'text-fg-muted hover:bg-surface-raised hover:text-fg'
               }
             `}
           >
@@ -795,7 +795,7 @@ export default function VerificationWizard({
               <button
                 onClick={handleSkipStep}
                 disabled={saving}
-                className="px-4 py-2.5 rounded text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] transition-colors"
+                className="px-4 py-2.5 rounded text-sm font-semibold text-fg bg-surface-raised hover:bg-surface-high transition-colors"
               >
                 {t('onboarding.verification.nav.skip_for_now', { defaultValue: 'Skip for now' })}
               </button>
@@ -805,7 +805,7 @@ export default function VerificationWizard({
               <button
                 onClick={onComplete}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 rounded text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 rounded text-sm font-semibold bg-inverse text-on-inverse hover:bg-inverse-hover transition-all"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -820,7 +820,7 @@ export default function VerificationWizard({
               <button
                 onClick={handleSaveCurrentStep}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded text-sm font-semibold bg-white text-black hover:bg-white/90 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded text-sm font-semibold bg-inverse text-on-inverse hover:bg-inverse-hover transition-all"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

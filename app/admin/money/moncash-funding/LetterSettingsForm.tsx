@@ -110,17 +110,17 @@ export function LetterSettingsForm({
   return (
     <ConsolePanel className="px-5 py-4">
       {!initial.merchantAccountNumber && (
-        <p className="mb-4 text-[12px] text-console-amber">
+        <p className="mb-4 text-caption text-console-amber">
           The MonCash merchant account number is not set. Merchant-transfer letters print a blank line in its place.
         </p>
       )}
       <div className="grid gap-6 lg:grid-cols-2">
         {GROUPS.map((g) => (
           <fieldset key={g.title}>
-            <legend className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">{g.title}</legend>
+            <legend className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">{g.title}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               {g.fields.map((f) => (
-                <label key={f.key} className={`block text-[12px] text-console-mut ${f.wide ? 'sm:col-span-2' : ''}`}>
+                <label key={f.key} className={`block text-caption text-console-mut ${f.wide ? 'sm:col-span-2' : ''}`}>
                   {f.label}
                   <ConsoleInput
                     className="mt-1"
@@ -130,9 +130,9 @@ export function LetterSettingsForm({
                     placeholder={f.key === 'merchantAccountNumber' ? 'Not set' : undefined}
                   />
                   {errors[f.key] ? (
-                    <span className="mt-1 block text-[11.5px] text-console-red">{errors[f.key]}</span>
+                    <span className="mt-1 block text-eyebrow text-console-red">{errors[f.key]}</span>
                   ) : f.hint ? (
-                    <span className="mt-1 block text-[11.5px] text-console-faint">{f.hint}</span>
+                    <span className="mt-1 block text-eyebrow text-console-faint">{f.hint}</span>
                   ) : null}
                 </label>
               ))}
@@ -150,7 +150,7 @@ export function LetterSettingsForm({
         >
           Restore contract defaults
         </ConsoleButton>
-        {dirty && !saving && <span className="text-[12px] text-console-faint">Unsaved changes</span>}
+        {dirty && !saving && <span className="text-caption text-console-faint">Unsaved changes</span>}
         {message && <ConsoleState tone={message.tone}>{message.text}</ConsoleState>}
       </div>
     </ConsolePanel>

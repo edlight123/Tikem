@@ -55,7 +55,7 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
               <Link
                 href={`/discover?${w.categories.map((c) => `category=${encodeURIComponent(c)}`).join('&')}&${scopeQs}`}
                 aria-label={`${w.label}: ${countLabel}`}
-                className={`group relative block overflow-hidden rounded bg-white/[0.06] outline-none transition-colors hover:bg-white/[0.09] focus-visible:ring-2 focus-visible:ring-white/70 ${
+                className={`group relative block overflow-hidden rounded bg-surface outline-none transition-colors hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-fg/70 ${
                   wide ? 'aspect-[16/10] sm:aspect-[4/5]' : 'aspect-[4/5]'
                 }`}
               >
@@ -69,12 +69,12 @@ export default function WorldsIndex({ worlds, scopeQs }: { worlds: HomeWorld[]; 
                   quality={65}
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                 />
-                <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+                <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-scrim-strong via-scrim-light to-transparent" />
                 <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-3 sm:p-4">
-                  <span className="font-grotesk font-bold lowercase !leading-none tracking-[-0.03em] text-white !text-[clamp(19px,1.6vw,23px)]">
+                  <span className="font-grotesk font-bold lowercase !leading-none tracking-[-0.03em] text-fg !text-[clamp(19px,1.6vw,23px)]">
                     {w.label}
                   </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">{countLabel}</span>
+                  <span className="font-mono text-eyebrow uppercase tracking-[0.1em] text-fg-muted">{countLabel}</span>
                 </span>
               </Link>
             </li>

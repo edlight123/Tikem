@@ -115,11 +115,11 @@ export default function GuestCheckoutForm({
   // which next to the filled phone control read as two different form systems
   // in one sheet. 16px so iOS does not zoom the sheet on focus.
   const inputClass =
-    'w-full rounded-xl bg-white/[0.06] px-4 py-3 text-[16px] text-white placeholder-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50'
+    'w-full rounded-xl bg-surface px-4 py-3 text-base text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-white/60 leading-relaxed">
+      <p className="text-sm text-fg-muted leading-relaxed">
         {t('checkout.guest_intro', {
           defaultValue:
             'No account needed. We send your ticket and QR code straight to you, and you can create an account afterwards if you want.',
@@ -127,37 +127,37 @@ export default function GuestCheckoutForm({
       </p>
 
       {orderSummary ? (
-        <div className="rounded-2xl bg-white/[0.055] p-4 space-y-2 text-sm">
+        <div className="rounded-2xl bg-surface p-4 space-y-2 text-sm">
           {orderSummary.fee > 0 && (
             <>
               <div className="flex justify-between">
-                <span className="text-white/60">
+                <span className="text-fg-muted">
                   {t('events.subtotal', { defaultValue: 'Subtotal' })}
                 </span>
-                <span className="text-white">
+                <span className="text-fg">
                   {orderSummary.subtotal.toLocaleString()} {orderSummary.currency}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">
+                <span className="text-fg-muted">
                   {t('checkout.service_fee', { defaultValue: 'Service fee' })}
                 </span>
-                <span className="text-white">
+                <span className="text-fg">
                   {orderSummary.fee.toLocaleString()} {orderSummary.currency}
                 </span>
               </div>
             </>
           )}
-          <div className="flex justify-between border-t border-white/10 pt-2 font-semibold">
-            <span className="text-white/80">
+          <div className="flex justify-between border-t border-line pt-2 font-semibold">
+            <span className="text-fg-soft">
               {t('checkout.you_pay', { defaultValue: "You'll pay" })}
             </span>
-            <span className="text-white">
+            <span className="text-fg">
               {orderSummary.total.toLocaleString()} {orderSummary.currency}
             </span>
           </div>
           {orderSummary.fee > 0 && (
-            <p className="text-xs text-white/45">
+            <p className="text-xs text-fg-subtle">
               {t('checkout.service_fee_nonrefundable', {
                 defaultValue: 'Service fee is non-refundable unless the event is cancelled.',
               })}
@@ -166,7 +166,7 @@ export default function GuestCheckoutForm({
         </div>
       ) : (
         feesAddedOnTop && (
-          <p className="text-xs text-white/45">
+          <p className="text-xs text-fg-subtle">
             {t('checkout.fee_added_notice', {
               defaultValue:
                 'A service fee is added to the ticket price. You will see the full total before you pay.',
@@ -179,7 +179,7 @@ export default function GuestCheckoutForm({
       )}
 
       <div>
-        <label htmlFor="guest-name" className="block text-xs uppercase tracking-wider text-white/50 mb-1.5">
+        <label htmlFor="guest-name" className="block text-xs uppercase tracking-wider text-fg-subtle mb-1.5">
           {t('checkout.guest_name', { defaultValue: 'Full name' })}
         </label>
         <input
@@ -195,7 +195,7 @@ export default function GuestCheckoutForm({
       </div>
 
       <div>
-        <label htmlFor="guest-email" className="block text-xs uppercase tracking-wider text-white/50 mb-1.5">
+        <label htmlFor="guest-email" className="block text-xs uppercase tracking-wider text-fg-subtle mb-1.5">
           {t('checkout.guest_email', { defaultValue: 'Email' })}
         </label>
         <input
@@ -213,10 +213,10 @@ export default function GuestCheckoutForm({
       </div>
 
       <div>
-        <label htmlFor="guest-phone" className="block text-xs uppercase tracking-wider text-white/50 mb-1.5">
+        <label htmlFor="guest-phone" className="block text-xs uppercase tracking-wider text-fg-subtle mb-1.5">
           {t('checkout.guest_phone', { defaultValue: 'Phone' })}
           {!requirePhone && (
-            <span className="ml-1 normal-case tracking-normal text-white/35">
+            <span className="ml-1 normal-case tracking-normal text-fg-faint">
               {t('common.optional', { defaultValue: 'optional' })}
             </span>
           )}
@@ -233,7 +233,7 @@ export default function GuestCheckoutForm({
           required={requirePhone}
           disabled={busy}
         />
-        <p className="mt-1.5 text-xs text-white/40">
+        <p className="mt-1.5 text-xs text-fg-subtle">
           {requirePhone
             ? t('checkout.guest_phone_hint_ht', {
                 defaultValue: 'It helps us find your ticket if you lose the email.',
@@ -245,13 +245,13 @@ export default function GuestCheckoutForm({
       </div>
 
       {error && (
-        <div className="bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">{error}</div>
+        <div className="bg-danger-strong/10 text-danger-soft px-4 py-3 rounded-xl text-sm">{error}</div>
       )}
 
       <button
         type="submit"
         disabled={busy || checking}
-        className="block w-full h-12 bg-white hover:bg-white/90 text-black text-center font-semibold px-5 rounded transition-colors disabled:opacity-50"
+        className="block w-full h-12 bg-inverse hover:bg-inverse-hover text-on-inverse text-center font-semibold px-5 rounded transition-colors disabled:opacity-50"
       >
         {busy || checking ? t('events.processing') : submitLabel}
       </button>
@@ -261,13 +261,13 @@ export default function GuestCheckoutForm({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="w-full h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
+          className="w-full h-12 px-4 rounded bg-surface-raised font-medium text-fg hover:bg-surface-high disabled:opacity-50"
         >
           {t('common.cancel')}
         </button>
       )}
 
-      <p className="text-center text-xs text-white/40">
+      <p className="text-center text-xs text-fg-subtle">
         {t('checkout.guest_signin_hint', { defaultValue: 'Already have an account?' })}{' '}
         <a href="/auth/login" className="text-brand-400 underline underline-offset-2">
           {t('nav.signIn')}

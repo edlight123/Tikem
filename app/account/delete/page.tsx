@@ -46,28 +46,28 @@ export default async function AccountDeletePage() {
       <Navbar user={user} />
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <p className="eyebrow text-white/45">{p('eyebrow', 'Your data')}</p>
+        <p className="eyebrow text-fg-subtle">{p('eyebrow', 'Your data')}</p>
         {/* `!` beats the legacy `.mobile-typography h1` rule on a phone. */}
-        <h1 className="mt-2 font-display italic lowercase !text-[clamp(30px,6vw,44px)] !leading-[1.04] text-white">
+        <h1 className="mt-2 font-display italic lowercase !text-[clamp(30px,6vw,44px)] !leading-[1.04] text-fg">
           {p('title', 'Delete your Tikèm account')}
         </h1>
-        <p className="mt-4 !text-[15px] !leading-relaxed text-white/65">{p('lede', '')}</p>
+        <p className="mt-4 !text-body !leading-relaxed text-fg-muted">{p('lede', '')}</p>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl bg-white/[0.055] p-5">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{p('app_heading', 'In the Tikèm app')}</h2>
-            <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">{p('app_steps', '')}</p>
+          <div className="rounded-2xl bg-surface p-5">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{p('app_heading', 'In the Tikèm app')}</h2>
+            <p className="mt-2 !text-sm !leading-relaxed text-fg-muted">{p('app_steps', '')}</p>
           </div>
-          <div className="rounded-2xl bg-white/[0.055] p-5">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{p('web_heading', 'On the web')}</h2>
-            <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">{p('web_steps', '')}</p>
+          <div className="rounded-2xl bg-surface p-5">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{p('web_heading', 'On the web')}</h2>
+            <p className="mt-2 !text-sm !leading-relaxed text-fg-muted">{p('web_steps', '')}</p>
           </div>
         </div>
-        <p className="mt-3 !text-[13px] text-white/45">{p('reauth_note', '')}</p>
+        <p className="mt-3 !text-meta text-fg-subtle">{p('reauth_note', '')}</p>
 
         <Link
           href={ctaHref}
-          className="mt-6 inline-flex items-center justify-center rounded bg-white px-6 py-3 text-[15px] font-semibold text-black transition-colors hover:bg-white/85"
+          className="mt-6 inline-flex items-center justify-center rounded bg-inverse px-6 py-3 text-body font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
         >
           {ctaLabel}
         </Link>
@@ -75,16 +75,16 @@ export default async function AccountDeletePage() {
         <div className="mt-12 space-y-8">
           {sections.map((s) => (
             <section key={s.heading}>
-              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{s.heading}</h2>
-              <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">{s.body}</p>
+              <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{s.heading}</h2>
+              <p className="mt-2 !text-sm !leading-relaxed text-fg-muted">{s.body}</p>
             </section>
           ))}
 
-          <section className="rounded-2xl bg-white/[0.03] p-5">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{p('support_heading', "Can't sign in?")}</h2>
-            <p className="mt-2 !text-[14px] !leading-relaxed text-white/60">
+          <section className="rounded-2xl bg-surface-low p-5">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{p('support_heading', "Can't sign in?")}</h2>
+            <p className="mt-2 !text-sm !leading-relaxed text-fg-muted">
               {supportBefore}
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=Account%20deletion`} className="text-white underline underline-offset-2">
+              <a href={`mailto:${SUPPORT_EMAIL}?subject=Account%20deletion`} className="text-fg underline underline-offset-2">
                 {SUPPORT_EMAIL}
               </a>
               {supportAfter}

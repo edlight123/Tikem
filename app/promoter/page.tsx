@@ -187,10 +187,10 @@ export default async function PromoterPortalPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 pb-mobile-nav md:pb-16">
         <header className="mb-8">
-          <p className="label-mono text-[11px] uppercase tracking-widest text-white/50 mb-2">
+          <p className="label-mono text-eyebrow uppercase tracking-widest text-fg-subtle mb-2">
             {copy.eyebrow}
           </p>
-          <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+          <h1 className="text-3xl md:text-4xl font-bold text-fg leading-tight">
             {copy.title}
           </h1>
         </header>
@@ -201,9 +201,9 @@ export default async function PromoterPortalPage() {
         {Object.keys(totalsByCurrency).length > 0 && (
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Object.entries(totalsByCurrency).map(([currency, t]) => (
-              <div key={currency} className="rounded-2xl bg-white/[0.055] p-4">
-                <p className="text-lg font-bold text-white">{fmtMoney(t.commissionCents, currency)}</p>
-                <p className="text-[11px] uppercase tracking-wider text-white/50 mt-1">
+              <div key={currency} className="rounded-2xl bg-surface p-4">
+                <p className="text-lg font-bold text-fg">{fmtMoney(t.commissionCents, currency)}</p>
+                <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-1">
                   {copy.commissionEarned(t.ticketsSold)}
                 </p>
               </div>
@@ -212,20 +212,20 @@ export default async function PromoterPortalPage() {
         )}
 
         {records.length === 0 ? (
-          <div className="rounded-2xl bg-white/[0.055] p-6 text-center">
-            <p className="text-white font-semibold">{copy.emptyTitle}</p>
-            <p className="text-sm text-white/60 mt-2 leading-relaxed">{copy.emptyDesc}</p>
+          <div className="rounded-2xl bg-surface p-6 text-center">
+            <p className="text-fg font-semibold">{copy.emptyTitle}</p>
+            <p className="text-sm text-fg-muted mt-2 leading-relaxed">{copy.emptyDesc}</p>
           </div>
         ) : (
           <div className="space-y-8">
             {byOrganizer.map((group) => (
               <section key={group.id}>
                 <div className="mb-3 flex items-baseline justify-between gap-3">
-                  <h2 className="text-white font-semibold truncate">{group.name}</h2>
+                  <h2 className="text-fg font-semibold truncate">{group.name}</h2>
                   {Object.keys(group.owedByCurrency).length > 0 && (
-                    <p className="text-sm text-white/60 shrink-0">
+                    <p className="text-sm text-fg-muted shrink-0">
                       {copy.owesYou}{' '}
-                      <span className="text-white font-semibold">
+                      <span className="text-fg font-semibold">
                         {Object.entries(group.owedByCurrency)
                           .map(([currency, cents]) => fmtMoney(cents, currency))
                           .join(' + ')}
@@ -235,15 +235,15 @@ export default async function PromoterPortalPage() {
                 </div>
                 <div className="space-y-4">
                   {group.rows.map((r) => (
-                    <div key={r.id} className="rounded-2xl bg-white/[0.055] p-5">
+                    <div key={r.id} className="rounded-2xl bg-surface p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-white font-semibold truncate">{r.eventTitle}</p>
-                          <p className="text-xs text-white/50 mt-0.5 font-mono">{r.code}</p>
+                          <p className="text-fg font-semibold truncate">{r.eventTitle}</p>
+                          <p className="text-xs text-fg-subtle mt-0.5 font-mono">{r.code}</p>
                         </div>
-                        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-white/50 shrink-0">
+                        <span className="inline-flex items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle shrink-0">
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${r.isActive ? 'bg-emerald-400' : 'bg-white/30'}`}
+                            className={`h-1.5 w-1.5 rounded-full ${r.isActive ? 'bg-success' : 'bg-fg/30'}`}
                           />
                           {r.isActive ? copy.active : copy.paused}
                         </span>
@@ -251,23 +251,23 @@ export default async function PromoterPortalPage() {
 
                       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                         <div>
-                          <p className="text-white font-bold">{r.ticketsSold}</p>
-                          <p className="text-[11px] uppercase tracking-wider text-white/50 mt-0.5">{copy.tickets}</p>
+                          <p className="text-fg font-bold">{r.ticketsSold}</p>
+                          <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-0.5">{copy.tickets}</p>
                         </div>
                         <div>
-                          <p className="text-white font-bold">{fmtMoney(r.grossCents, r.currency)}</p>
-                          <p className="text-[11px] uppercase tracking-wider text-white/50 mt-0.5">{copy.sales}</p>
+                          <p className="text-fg font-bold">{fmtMoney(r.grossCents, r.currency)}</p>
+                          <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-0.5">{copy.sales}</p>
                         </div>
                         <div>
-                          <p className="text-white font-bold">{fmtMoney(r.commissionCents, r.currency)}</p>
-                          <p className="text-[11px] uppercase tracking-wider text-white/50 mt-0.5">{copy.commission}</p>
+                          <p className="text-fg font-bold">{fmtMoney(r.commissionCents, r.currency)}</p>
+                          <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-0.5">{copy.commission}</p>
                         </div>
                       </div>
 
                       <div className="mt-4 flex gap-2">
                         <Link
                           href={r.statsUrl}
-                          className="flex-1 text-center rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/[0.12] transition-colors"
+                          className="flex-1 text-center rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-soft hover:bg-surface-high transition-colors"
                         >
                           {copy.openStatsPage}
                         </Link>
@@ -280,7 +280,7 @@ export default async function PromoterPortalPage() {
           </div>
         )}
 
-        <p className="mt-8 text-xs text-white/40 text-center leading-relaxed">{copy.footerNote}</p>
+        <p className="mt-8 text-xs text-fg-subtle text-center leading-relaxed">{copy.footerNote}</p>
       </main>
 
       <MobileNavWrapper />

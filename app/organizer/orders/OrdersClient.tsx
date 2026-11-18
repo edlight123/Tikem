@@ -41,9 +41,9 @@ const COLUMNS: OrgColumn<Order>[] = [
     sortAccessor: (o) => o.attendeeName,
     render: (o) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">{o.attendeeName || EMPTY_VALUE}</p>
+        <p className="truncate font-medium text-fg">{o.attendeeName || EMPTY_VALUE}</p>
         {o.attendeeEmail && (
-          <p className="truncate text-xs text-white/45">{o.attendeeEmail}</p>
+          <p className="truncate text-xs text-fg-subtle">{o.attendeeEmail}</p>
         )}
       </div>
     ),
@@ -54,7 +54,7 @@ const COLUMNS: OrgColumn<Order>[] = [
     sortable: true,
     hideOnMobile: true,
     render: (o) => (
-      <span className="truncate font-display italic text-white/70">{o.eventTitle}</span>
+      <span className="truncate font-display italic text-fg-muted">{o.eventTitle}</span>
     ),
   },
   {
@@ -64,7 +64,7 @@ const COLUMNS: OrgColumn<Order>[] = [
     sortable: true,
     sortAccessor: (o) => o.amount,
     render: (o) => (
-      <span className="font-mono font-semibold tabular-nums text-white">
+      <span className="font-mono font-semibold tabular-nums text-fg">
         {money(o.amount, o.currency)}
       </span>
     ),
@@ -78,7 +78,7 @@ const COLUMNS: OrgColumn<Order>[] = [
     render: (o) => {
       const d = new Date(o.purchasedAt)
       return (
-        <span className="font-mono tabular-nums text-white/55">
+        <span className="font-mono tabular-nums text-fg-muted">
           {isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}
         </span>
       )
@@ -121,7 +121,7 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
         subtitle={t('orders.every_ticket_sold')}
         actions={
           orders.length > 0 ? (
-            <span className="rounded bg-white/[0.055] px-3.5 py-2 text-sm text-white/70">
+            <span className="rounded bg-surface px-3.5 py-2 text-sm text-fg-muted">
               <span className="font-mono tabular-nums">{orders.length}</span> order{orders.length !== 1 ? 's' : ''}
             </span>
           ) : undefined
@@ -163,17 +163,17 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
             return (
               <div className="px-4 py-3.5">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="truncate font-medium text-white">{o.attendeeName || EMPTY_VALUE}</p>
+                  <p className="truncate font-medium text-fg">{o.attendeeName || EMPTY_VALUE}</p>
                   <StatusChip tone={statusTone(o.status)}>
                     {o.status.replace(/_/g, ' ')}
                   </StatusChip>
                 </div>
-                <p className="mt-0.5 truncate font-display italic text-xs text-white/45">{o.eventTitle}</p>
+                <p className="mt-0.5 truncate font-display italic text-xs text-fg-subtle">{o.eventTitle}</p>
                 <div className="mt-2 flex items-center gap-3 text-sm">
-                  <span className="font-mono font-semibold text-white tabular-nums">
+                  <span className="font-mono font-semibold text-fg tabular-nums">
                     {money(o.amount, o.currency)}
                   </span>
-                  <span className="font-mono tabular-nums text-white/40">
+                  <span className="font-mono tabular-nums text-fg-subtle">
                     {isValid(d) ? format(d, 'MMM d, yyyy') : EMPTY_VALUE}
                   </span>
                 </div>

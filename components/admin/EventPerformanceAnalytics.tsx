@@ -72,7 +72,7 @@ export function EventPerformanceAnalytics() {
         <p className="mb-4 text-sm text-console-red">{loadError}</p>
         <button
           onClick={() => void loadData()}
-          className="rounded bg-console-raise px-3 py-1.5 text-[13px] font-semibold text-console-mut transition-colors hover:text-console-text"
+          className="rounded bg-console-raise px-3 py-1.5 text-meta font-semibold text-console-mut transition-colors hover:text-console-text"
         >
           Retry
         </button>
@@ -88,7 +88,7 @@ export function EventPerformanceAnalytics() {
       <div className="rounded-lg bg-console-panel p-4">
         <div className="mb-3 flex items-center gap-2">
           <Trophy className="h-4 w-4 text-console-faint" />
-          <h3 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Top performing events</h3>
+          <h3 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Top performing events</h3>
         </div>
         {topEvents.length > 0 ? (
           <ul className="divide-y divide-console-raise">
@@ -124,7 +124,7 @@ export function EventPerformanceAnalytics() {
       <div className="rounded-lg bg-console-panel p-4">
         <div className="mb-3 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-console-faint" />
-          <h3 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Popular categories · 30d</h3>
+          <h3 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Popular categories · 30d</h3>
         </div>
         {categories.length > 0 ? (
           <div className="space-y-2.5">

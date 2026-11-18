@@ -1,23 +1,23 @@
 /**
  * Organizer → Settings → Danger Zone loading skeleton.
  *
- * The old one filled the warning banner with `bg-red-200` bars — #fecaca, a
+ * The old one filled the warning banner with `bg-danger-soft` bars — #fecaca, a
  * pastel pink band strobing across a black page on every navigation, the same
- * family of mistake as the `bg-white/80` flash this codebase used to ship. The
+ * family of mistake as the `bg-fg/80` flash this codebase used to ship. The
  * bars are `.skeleton` now; the RED lives where the real page puts it, in the
- * `bg-red-500/10` banner fill and the per-card tinted fills.
+ * `bg-danger-strong/10` banner fill and the per-card tinted fills.
  *
  * Page body only: the organizer layout already paints OrganizerTopNav and the
  * `pb-mobile-nav` main.
  *
  * Derived geometry (app/organizer/settings/danger-zone/page.tsx → DangerZone):
- *   root    min-h-screen bg-[#0a0a0a] py-8
+ *   root    min-h-screen bg-canvas py-8
  *   inner   max-w-3xl px-4 sm:px-6 lg:px-8
  *   back    inline text-sm link + 16px chevron, mb-6
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *           mt-1.5  (the eyebrow was missing here). The banner follows with no
  *           top margin, so they touch.
- *   banner  bg-red-500/10 rounded-2xl p-4 mb-6, a 20px icon
+ *   banner  bg-danger-strong/10 rounded-2xl p-4 mb-6, a 20px icon
  *           beside a bold line over two lines of 14px copy
  *   cards   space-y-4 of three `rounded-2xl p-6` fills, one per escalation
  *           tier (white/[0.055] → amber-500/10 → red-500/10): an icon plus
@@ -29,11 +29,11 @@ function Bar({ className = '' }: { className?: string }) {
   return <div className={`skeleton rounded ${className}`} />
 }
 
-const TIERS = ['bg-white/[0.055]', 'bg-amber-500/10', 'bg-red-500/10']
+const TIERS = ['bg-surface', 'bg-warning-strong/10', 'bg-danger-strong/10']
 
 export default function DangerZoneLoading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Bar className="mb-6 h-5 w-32" />
 
@@ -44,7 +44,7 @@ export default function DangerZoneLoading() {
         </div>
 
         {/* Warning banner: a tinted fill, matching the page. */}
-        <div className="mb-6 rounded-2xl bg-red-500/10 p-4">
+        <div className="mb-6 rounded-2xl bg-danger-strong/10 p-4">
           <div className="flex items-start gap-3">
             <div className="skeleton mt-0.5 h-5 w-5 shrink-0 rounded" />
             <div className="min-w-0 flex-1">

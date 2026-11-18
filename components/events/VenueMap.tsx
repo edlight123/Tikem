@@ -102,7 +102,7 @@ export default function VenueMap({ event, href, venueName, className = '' }: Ven
       {!loaded && (
         <span
           aria-hidden
-          className="absolute inset-0 animate-pulse bg-white/[0.06]"
+          className="absolute inset-0 animate-pulse bg-surface"
         />
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}

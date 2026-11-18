@@ -91,12 +91,12 @@ function useEscapeInterceptor(active: boolean, handler: () => void) {
 /**
  * A real filled control, not a hairline around nothing.
  *
- * This was `border` + `bg-white/[0.03]` — a visible ring over a fill so faint
+ * This was `border` + `bg-surface-low` — a visible ring over a fill so faint
  * it read as empty, which is the exact pattern the owner rejected across the
  * composer's left column ("not every box needs to be a border w empty fill")
  * and then again for these two ("i dont like the light border and no fill. see
  * how you can make it more premium"). So the ring is gone and the fill does the
- * work: `bg-white/[0.07]` is the composer's own field surface, lifting to
+ * work: `bg-surface-raised` is the composer's own field surface, lifting to
  * `.12` on hover so the control still answers the cursor. Focus keeps a real
  * ring — that one is not decoration, it is how a keyboard user finds it.
  *
@@ -110,7 +110,7 @@ function useEscapeInterceptor(active: boolean, handler: () => void) {
  * reserve an exact width.
  */
 const triggerBase =
-  'inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/[0.07] px-3 py-1.5 text-sm font-semibold tabular-nums text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-brand-400/40 sm:min-h-0'
+  'inline-flex min-h-11 items-center gap-2 rounded-lg bg-surface-raised px-3 py-1.5 text-sm font-semibold tabular-nums text-fg transition-colors hover:bg-surface-high focus:outline-none focus:ring-2 focus:ring-brand-400/40 sm:min-h-0'
 
 /**
  * THE REFLOW FIX.
@@ -214,17 +214,17 @@ function PickerModal({
       aria-modal="true"
       aria-label={title}
     >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
       <div
-        className={`relative z-[101] max-h-[88svh] w-full ${maxWidth} overflow-y-auto overscroll-contain rounded-t-2xl border border-white/10 bg-[#111] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:pb-4`}
+        className={`relative z-[101] max-h-[88svh] w-full ${maxWidth} overflow-y-auto overscroll-contain rounded-t-2xl border border-line bg-surface-solid p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:pb-4`}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <h3 className="text-base font-semibold text-fg">{title}</h3>
           <button
             type="button"
             onClick={onClose}
             aria-label={t('common.close', { defaultValue: 'Close' })}
-            className="grid h-9 w-9 place-items-center rounded-lg text-white/50 hover:bg-white/[0.12] hover:text-white"
+            className="grid h-9 w-9 place-items-center rounded-lg text-fg-subtle hover:bg-surface-high hover:text-fg"
           >
             <X className="h-4 w-4" />
           </button>
@@ -244,13 +244,13 @@ function PickerModal({
 
 function quickChipCls(on: boolean, disabled = false) {
   return [
-    'relative rounded px-2.5 py-1.5 text-[13px] leading-[18px] font-semibold transition-colors',
+    'relative rounded px-2.5 py-1.5 text-meta leading-[18px] font-semibold transition-colors',
     "after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-['']",
     disabled
-      ? 'cursor-not-allowed bg-white/[0.03] text-white/25'
+      ? 'cursor-not-allowed bg-surface-low text-fg-faint'
       : on
-      ? 'bg-white text-black'
-      : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white',
+      ? 'bg-inverse text-on-inverse'
+      : 'bg-surface-raised text-fg-soft hover:bg-surface-high hover:text-fg',
   ].join(' ')
 }
 
@@ -390,7 +390,7 @@ export function InlineCalendar({
           type="button"
           onClick={() => setView(prevMonth)}
           disabled={prevDisabled}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:text-white/20 disabled:hover:bg-transparent"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface-high hover:text-fg disabled:cursor-not-allowed disabled:text-fg-faint disabled:hover:bg-transparent"
           aria-label={t('pickers.prev_month', { defaultValue: 'Previous month' })}
         >
           <ChevronLeft className="h-5 w-5" />
@@ -406,18 +406,18 @@ export function InlineCalendar({
           aria-label={`${format(view, 'LLLL yyyy', { locale })}, ${t('pickers.choose_month', {
             defaultValue: 'Choose month and year',
           })}`}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-semibold capitalize text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-semibold capitalize text-fg transition-colors hover:bg-surface-high focus:outline-none focus:ring-2 focus:ring-brand-400/40"
         >
           {format(view, 'LLLL yyyy', { locale })}
           <ChevronDown
-            className={`h-4 w-4 shrink-0 text-white/50 transition-transform ${mode === 'months' ? 'rotate-180' : ''}`}
+            className={`h-4 w-4 shrink-0 text-fg-subtle transition-transform ${mode === 'months' ? 'rotate-180' : ''}`}
           />
         </button>
 
         <button
           type="button"
           onClick={() => setView(addMonths(view, 1))}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.12] hover:text-white"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
           aria-label={t('pickers.next_month', { defaultValue: 'Next month' })}
         >
           <ChevronRight className="h-5 w-5" />
@@ -430,16 +430,16 @@ export function InlineCalendar({
             <button
               type="button"
               onClick={() => setView((v) => setYear(v, v.getFullYear() - 1))}
-              className="grid h-11 w-11 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.12] hover:text-white"
+              className="grid h-11 w-11 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
               aria-label={t('pickers.prev_year', { defaultValue: 'Previous year' })}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="text-sm font-semibold tabular-nums text-white">{format(view, 'yyyy')}</span>
+            <span className="text-sm font-semibold tabular-nums text-fg">{format(view, 'yyyy')}</span>
             <button
               type="button"
               onClick={() => setView((v) => setYear(v, v.getFullYear() + 1))}
-              className="grid h-11 w-11 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.12] hover:text-white"
+              className="grid h-11 w-11 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
               aria-label={t('pickers.next_year', { defaultValue: 'Next year' })}
             >
               <ChevronRight className="h-5 w-5" />
@@ -462,10 +462,10 @@ export function InlineCalendar({
                   className={[
                     'min-h-11 rounded-lg text-sm font-semibold capitalize transition-colors',
                     disabled
-                      ? 'cursor-not-allowed bg-white/[0.03] text-white/20'
+                      ? 'cursor-not-allowed bg-surface-low text-fg-faint'
                       : on
-                      ? 'bg-white text-black'
-                      : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white',
+                      ? 'bg-inverse text-on-inverse'
+                      : 'bg-surface-raised text-fg-soft hover:bg-surface-high hover:text-fg',
                   ].join(' ')}
                 >
                   {format(monthDate, 'LLL', { locale })}
@@ -478,7 +478,7 @@ export function InlineCalendar({
         <>
           <div className="mb-1 grid grid-cols-7 gap-0.5">
             {weekdayLabels.map((w, i) => (
-              <div key={i} className="py-1 text-center text-[10px] font-medium uppercase tracking-wide text-white/35">
+              <div key={i} className="py-1 text-center text-eyebrow font-medium uppercase tracking-wide text-fg-faint">
                 {w}
               </div>
             ))}
@@ -513,12 +513,12 @@ export function InlineCalendar({
                         // Selected is the only pure white in here; today is the
                         // only teal, and it means exactly one thing.
                         isSel
-                          ? 'bg-white font-semibold text-black'
+                          ? 'bg-inverse font-semibold text-on-inverse'
                           : disabled
-                          ? 'cursor-not-allowed text-white/15'
+                          ? 'cursor-not-allowed text-fg/15'
                           : inMonth
-                          ? 'text-white hover:bg-white/[0.12]'
-                          : 'text-white/25 hover:bg-white/[0.08]',
+                          ? 'text-fg hover:bg-surface-high'
+                          : 'text-fg-faint hover:bg-surface-raised',
                         !isSel && !disabled && isToday(day) ? 'ring-1 ring-inset ring-brand-400/50' : '',
                       ].join(' ')}
                     >
@@ -625,13 +625,13 @@ export function DatePicker({
         aria-expanded={open}
         data-invalid={invalid || undefined}
         className={`${triggerBase} ${
-          // A colour-only `border-red-400/60` did nothing here: triggerBase
+          // A colour-only `border-danger/60` did nothing here: triggerBase
           // carries no border-width, so the invalid state was invisible. An
           // inset ring shows on the fill without adding a box to the layout.
-          invalid ? 'ring-1 ring-inset ring-red-400/70' : ''
-        } ${selected ? '' : 'text-white/45'} ${className}`}
+          invalid ? 'ring-1 ring-inset ring-danger/70' : ''
+        } ${selected ? '' : 'text-fg-subtle'} ${className}`}
       >
-        <CalendarDays className="h-4 w-4 shrink-0 text-white/40" />
+        <CalendarDays className="h-4 w-4 shrink-0 text-fg-subtle" />
         <StableWidth label={label} candidates={candidates} />
       </button>
 
@@ -773,18 +773,18 @@ export function TimePicker({
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`${triggerBase} ${value ? '' : 'text-white/45'} ${className}`}
+        className={`${triggerBase} ${value ? '' : 'text-fg-subtle'} ${className}`}
       >
-        <Clock className="h-4 w-4 shrink-0 text-white/40" />
+        <Clock className="h-4 w-4 shrink-0 text-fg-subtle" />
         <StableWidth label={label} candidates={candidates} />
       </button>
 
       <PickerModal open={open} onClose={close} title={title} maxWidth="max-w-xs">
         {/* The running answer, large. This is the only thing that has to be
             read, and it is never more than one glance away from any tap. */}
-        <div className="mb-3 rounded-xl bg-white/[0.055] px-4 py-3 text-center">
+        <div className="mb-3 rounded-xl bg-surface px-4 py-3 text-center">
           <span
-            className={`text-2xl font-semibold tabular-nums ${draft ? 'text-white' : 'text-white/40'}`}
+            className={`text-2xl font-semibold tabular-nums ${draft ? 'text-fg' : 'text-fg-subtle'}`}
             aria-live="polite"
           >
             {draft ? timeLabel(draft, locale) : t('pickers.no_time_yet', { defaultValue: 'No time set' })}
@@ -806,7 +806,7 @@ export function TimePicker({
                   }}
                   className={[
                     'min-h-11 flex-1 rounded-lg text-sm font-semibold uppercase transition-colors',
-                    on ? 'bg-white text-black' : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12] hover:text-white',
+                    on ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg-muted hover:bg-surface-high hover:text-fg',
                   ].join(' ')}
                 >
                   {format(new Date(2000, 0, 1, pm ? 13 : 1, 0), 'a', { locale })}
@@ -816,7 +816,7 @@ export function TimePicker({
           </div>
         )}
 
-        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-white/40">
+        <p className="mb-1.5 text-eyebrow font-medium uppercase tracking-wide text-fg-subtle">
           {t('pickers.hour', { defaultValue: 'Hour' })}
         </p>
         <div className={`grid gap-1.5 ${meridiem ? 'grid-cols-4' : 'grid-cols-6'}`} role="group">
@@ -830,7 +830,7 @@ export function TimePicker({
                 onClick={() => commit(hourValue(display), parts ? parts.m : 0)}
                 className={[
                   'min-h-11 rounded-lg text-sm font-semibold tabular-nums transition-colors',
-                  on ? 'bg-white text-black' : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white',
+                  on ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg-soft hover:bg-surface-high hover:text-fg',
                 ].join(' ')}
               >
                 {meridiem ? display : pad2(display)}
@@ -839,7 +839,7 @@ export function TimePicker({
           })}
         </div>
 
-        <p className="mb-1.5 mt-3 text-[11px] font-medium uppercase tracking-wide text-white/40">
+        <p className="mb-1.5 mt-3 text-eyebrow font-medium uppercase tracking-wide text-fg-subtle">
           {t('pickers.minutes', { defaultValue: 'Minutes' })}
         </p>
         <div className="grid grid-cols-4 gap-1.5" role="group">
@@ -853,7 +853,7 @@ export function TimePicker({
                 onClick={() => commit(parts ? parts.h : 19, m)}
                 className={[
                   'min-h-11 rounded-lg text-sm font-semibold tabular-nums transition-colors',
-                  on ? 'bg-white text-black' : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white',
+                  on ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg-soft hover:bg-surface-high hover:text-fg',
                 ].join(' ')}
               >
                 :{pad2(m)}
@@ -865,7 +865,7 @@ export function TimePicker({
         <button
           type="button"
           onClick={close}
-          className="mt-4 min-h-11 w-full rounded-lg bg-white text-sm font-semibold text-black transition-colors hover:bg-white/90"
+          className="mt-4 min-h-11 w-full rounded-lg bg-inverse text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
         >
           {t('common.done', { defaultValue: 'Done' })}
         </button>

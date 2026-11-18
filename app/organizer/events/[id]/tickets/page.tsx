@@ -48,7 +48,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
           actions={
           <Link
             href={`/organizer/events/${id}/edit`}
-            className="inline-flex h-10 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-10 items-center gap-2 rounded bg-inverse px-4 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Pencil className="h-4 w-4" />
             <T k="server_bits.edit_tickets" />
@@ -65,7 +65,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
             action={
               <Link
                 href={`/organizer/events/${id}/edit`}
-                className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Pencil className="h-4 w-4" />
                 <T k="server_bits.add_tickets" />
@@ -80,12 +80,12 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
               return (
                 <div
                   key={tier.id}
-                  className="rounded-2xl bg-white/[0.03] p-5"
+                  className="rounded-2xl bg-surface-low p-5"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[15px] font-semibold text-white">{tier.name}</p>
-                      <p className="mt-0.5 text-sm font-mono tabular-nums text-white/70">{money(tier.price)}</p>
+                      <p className="text-body font-semibold text-fg">{tier.name}</p>
+                      <p className="mt-0.5 text-sm font-mono tabular-nums text-fg-muted">{money(tier.price)}</p>
                     </div>
                     <StatusChip tone={soldOut ? 'danger' : 'success'}>
                       {soldOut ? 'Sold out' : 'On sale'}
@@ -94,15 +94,15 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
 
                   <div className="mt-4">
                     <div className="mb-1.5 flex items-center justify-between text-xs">
-                      <span className="label-mono uppercase text-white/70">Sold</span>
-                      <span className="font-semibold font-mono tabular-nums text-white">
+                      <span className="label-mono uppercase text-fg-muted">Sold</span>
+                      <span className="font-semibold font-mono tabular-nums text-fg">
                         {tier.sold}
-                        {tier.quantity > 0 && <span className="text-white/70"> / {tier.quantity}</span>}
+                        {tier.quantity > 0 && <span className="text-fg-muted"> / {tier.quantity}</span>}
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded bg-white/[0.12]">
+                    <div className="h-2 w-full overflow-hidden rounded bg-surface-high">
                       <div
-                        className={`h-2 rounded ${soldOut ? 'bg-red-500' : 'bg-white'}`}
+                        className={`h-2 rounded ${soldOut ? 'bg-danger-strong' : 'bg-inverse'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>

@@ -6,14 +6,14 @@
  * navbar, no bottom reservation.
  *
  * Derived geometry (app/organizer/settings/profile/page.tsx):
- *   root    min-h-screen bg-[#0a0a0a] py-8
+ *   root    min-h-screen bg-canvas py-8
  *   inner   max-w-3xl px-4 sm:px-6 lg:px-8
  *   back    inline text-sm link + 16px chevron, mb-6
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px) leading 1.02,
  *           subtitle mt-1.5 at 14/15px  (the eyebrow was missing here)
- *   card    mt-8 overflow-hidden rounded-2xl bg-white/[0.03] — ProfileForm:
+ *   card    mt-8 overflow-hidden rounded-2xl bg-surface-low — ProfileForm:
  *           an avatar row then three fields and a submit
- *   note    mt-6 p-4 rounded-lg bg-white/[0.03]
+ *   note    mt-6 p-4 rounded-lg bg-surface-low
  *
  * `animate-pulse` and hand-set fills replaced by `.skeleton`, and the old
  * `w-96` bars are gone: 384px inside a 370px content box overflowed
@@ -26,7 +26,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function ProfileLoading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Bar className="mb-6 h-5 w-32" />
 
@@ -36,7 +36,7 @@ export default function ProfileLoading() {
           <Bar className="mt-1.5 h-4 w-72 max-w-full" />
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03] p-6">
+        <div className="mt-8 overflow-hidden rounded-2xl bg-surface-low p-6">
           {/* Avatar row */}
           <div className="flex items-start gap-6">
             <div className="skeleton h-24 w-24 shrink-0 rounded-full" />
@@ -61,7 +61,7 @@ export default function ProfileLoading() {
         </div>
 
         {/* Info notice */}
-        <div className="mt-6 rounded-lg bg-white/[0.03] p-4">
+        <div className="mt-6 rounded-lg bg-surface-low p-4">
           <Bar className="h-4 w-full" />
           <Bar className="mt-2 h-4 w-2/3" />
         </div>

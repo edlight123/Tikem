@@ -7,7 +7,7 @@ import { formatDate, safeString } from './format'
 export function OrganizerVerificationRequestCard({ verificationRequest }: { verificationRequest: any }) {
   return (
     <ConsolePanel className="p-4 sm:p-5">
-      <h2 className="label-mono mb-4 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+      <h2 className="label-mono mb-4 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
         Verification Request
       </h2>
 
@@ -95,7 +95,7 @@ export function OrganizerVerificationDocsCard({ verificationDocs }: { verificati
 
   return (
     <ConsolePanel className="p-4 sm:p-5">
-      <h2 className="label-mono mb-4 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+      <h2 className="label-mono mb-4 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
         Verification Documents ({verificationDocs.length})
       </h2>
 

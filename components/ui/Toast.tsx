@@ -36,9 +36,9 @@ export function useToast() {
 }
 
 /* The icon is the ONLY thing that carries the variant.
-   It used to be the surface: `bg-success-50` and friends are near-white tints
+   It used to be the surface: `bg-success/10` and friends are near-white tints
    (#F0FDF4, #FEF2F2, #FFFBEB) left over from the light theme, and the title on
-   top of them was already `text-white` — measured 1.05:1 against the fill, i.e.
+   top of them was already `text-fg` — measured 1.05:1 against the fill, i.e.
    literally invisible, which is the "welcome back popup I cannot read" report.
    `info` was worse: a bulk find/replace had deleted its bg outright (the
    orphaned trailing space in `'border-brand-200 '`), so it was a transparent
@@ -47,20 +47,20 @@ export function useToast() {
    500-weight, not 600: the 600s were chosen to sit on a pale tint. On the dark
    surface below they drop to ~2.8:1 (warning) — the 500s clear 4.5:1. */
 const toastIcons: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle className="w-4 h-4 text-success-500" />,
-  error: <AlertCircle className="w-4 h-4 text-error-500" />,
-  warning: <AlertTriangle className="w-4 h-4 text-warning-500" />,
+  success: <CheckCircle className="w-4 h-4 text-success-strong" />,
+  error: <AlertCircle className="w-4 h-4 text-danger-strong" />,
+  warning: <AlertTriangle className="w-4 h-4 text-warning-strong" />,
   info: <Info className="w-4 h-4 text-brand-400" />,
 };
 
 /* One surface for every variant. A toast FLOATS, so unlike a card it cannot use
-   the `bg-white/[0.03]` rung — 3% white is translucent and a poster underneath
+   the `bg-surface-low` rung — 3% white is translucent and a poster underneath
    would read straight through it. #1c1c1c is the brief's named
    "elevated card / sheet (higher)" token: opaque, and a clear brightness step
    above the #0a0a0a page, which is how this app separates surfaces. No border —
    the fill does the separating (docs/POSH_DESIGN_BRIEF.md, "a fill, not a
    hairline"). */
-const TOAST_SURFACE = 'bg-[#1c1c1c] shadow-hard';
+const TOAST_SURFACE = 'bg-surface-raised-solid shadow-hard';
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -125,11 +125,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   globals.css is (0,1,1) and overrides bare Tailwind sizes under
                   640px to exactly text-sm, so anything smaller would be silently
                   reverted — and 14px is the floor for body copy anyway. */}
-              <h4 className="font-semibold text-white text-sm">
+              <h4 className="font-semibold text-fg text-sm">
                 {toast.title}
               </h4>
               {toast.message && (
-                <p className="text-sm text-white/65 mt-0.5">
+                <p className="text-sm text-fg-muted mt-0.5">
                   {toast.message}
                 </p>
               )}
@@ -139,7 +139,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => removeToast(toast.id)}
               aria-label="Dismiss"
-              className="flex-shrink-0 -mr-0.5 mt-0.5 text-white/50 hover:text-white transition-colors"
+              className="flex-shrink-0 -mr-0.5 mt-0.5 text-fg-subtle hover:text-fg transition-colors"
             >
               <X className="w-4 h-4" />
             </button>

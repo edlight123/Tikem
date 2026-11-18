@@ -47,15 +47,15 @@ const buildColumns = (tx: (k: string, o?: any) => string): OrgColumn<Comp>[] => 
     sortable: true,
     render: (c) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">{c.recipient_name || EMPTY_VALUE}</p>
-        <p className="truncate text-xs text-white/50">{c.recipient_email || tx('event_tools.gl_no_email_short')}</p>
+        <p className="truncate font-medium text-fg">{c.recipient_name || EMPTY_VALUE}</p>
+        <p className="truncate text-xs text-fg-subtle">{c.recipient_email || tx('event_tools.gl_no_email_short')}</p>
       </div>
     ),
   },
   {
     key: 'ticket_type',
     header: tx('comps.ticket_type'),
-    render: (c) => <span className="text-sm text-white/70">{c.ticket_type}</span>,
+    render: (c) => <span className="text-sm text-fg-muted">{c.ticket_type}</span>,
   },
   {
     key: 'status',
@@ -69,7 +69,7 @@ const buildColumns = (tx: (k: string, o?: any) => string): OrgColumn<Comp>[] => 
     key: 'note',
     header: tx('comps.internal_note'),
     hideOnMobile: true,
-    render: (c) => <span className="text-sm text-white/50">{c.note || EMPTY_VALUE}</span>,
+    render: (c) => <span className="text-sm text-fg-subtle">{c.note || EMPTY_VALUE}</span>,
   },
 ]
 
@@ -155,7 +155,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
       type="button"
       onClick={() => setOpen(true)}
       className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-        primary ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+        primary ? 'bg-inverse text-on-inverse hover:bg-inverse-hover' : 'bg-surface-raised text-fg hover:bg-surface-high'
       }`}
     >
       <Gift className="h-4 w-4" />
@@ -190,14 +190,14 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
               <button
                 type="button"
                 onClick={reset}
-                className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {tx('event_tools.comp_issue_another')}
               </button>
               <button
                 type="button"
                 onClick={close}
-                className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {tx('event_tools.done')}
               </button>
@@ -207,7 +207,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
             <button
               type="button"
               onClick={close}
-              className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {tx('actions.cancel')}
             </button>
@@ -215,7 +215,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
               type="button"
               onClick={handleIssue}
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Gift className="h-4 w-4" />
               {isPending ? tx('event_tools.issuing') : tx('event_tools.comp_submit')}
@@ -229,7 +229,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
             <StatusChip className="!normal-case" tone={outcome.emailed ? 'success' : 'warning'}>
               {outcome.emailed ? tx('event_tools.ticket_issued') : tx('event_tools.ticket_issued_not_sent')}
             </StatusChip>
-            <p className="text-sm text-white/80">
+            <p className="text-sm text-fg-soft">
               {outcome.emailed
                 ? tx('event_tools.comp_result_emailed', { count: outcome.count, email: outcome.email })
                 : outcome.emailLimited
@@ -249,7 +249,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-base sm:text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface"
             />
           </FormField>
           <FormField label={tx('event_tools.email_optional')} hint={tx('event_tools.comp_email_hint')}>
@@ -258,7 +258,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jane@example.com"
-              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-base sm:text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface"
             />
           </FormField>
         </FormSection>
@@ -270,7 +270,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
                 id="comp-tier"
                 value={tierId}
                 onChange={(e) => setTierId(e.target.value)}
-                className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+                className="w-full rounded px-4 py-3 text-base sm:text-sm text-fg focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface"
               >
                 {tiers.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -288,7 +288,7 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
               max={20}
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-base sm:text-sm text-fg focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface"
             />
           </FormField>
           <FormField label={tx('comps.internal_note')}>
@@ -297,10 +297,10 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder={tx('event_tools.comp_note_placeholder')}
-              className="w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]"
+              className="w-full rounded px-4 py-3 text-base sm:text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface"
             />
           </FormField>
-          {error && <p className="text-sm text-red-300">{error}</p>}
+          {error && <p className="text-sm text-danger-soft">{error}</p>}
         </FormSection>
         </>
         )}

@@ -52,10 +52,10 @@ export default function CityRow({
           <ul className="flex items-center gap-1 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] [scrollbar-width:none] sm:pr-0 sm:[mask-image:none] [&::-webkit-scrollbar]:hidden">
             {/* A single city still says where the page is. */}
             {cities.length === 1 && (
-              <li className="flex h-10 shrink-0 items-center gap-2 px-2.5 font-grotesk text-[15px] font-medium leading-none text-white">
-                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#14B8A6]" />
+              <li className="flex h-10 shrink-0 items-center gap-2 px-2.5 font-grotesk text-body font-medium leading-none text-fg">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-500" />
                 {cities[0].name}
-                <span className="font-mono text-[10px] tabular-nums text-white/30">{cities[0].count}</span>
+                <span className="font-mono text-eyebrow tabular-nums text-fg-faint">{cities[0].count}</span>
               </li>
             )}
             {items.map((item) => {
@@ -66,18 +66,18 @@ export default function CityRow({
                     href={item.href}
                     scroll={false}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex h-10 items-center gap-2 rounded px-2.5 font-grotesk text-[15px] font-medium leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70 ${
-                      isActive ? 'text-white' : 'text-white/45 hover:text-white/85'
+                    className={`flex h-10 items-center gap-2 rounded px-2.5 font-grotesk text-body font-medium leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-fg/70 ${
+                      isActive ? 'text-fg' : 'text-fg-subtle hover:text-fg-soft'
                     }`}
                   >
                     <span
                       aria-hidden
                       className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                        isActive ? 'bg-[#14B8A6]' : 'bg-transparent'
+                        isActive ? 'bg-brand-500' : 'bg-transparent'
                       }`}
                     />
                     {item.name}
-                    <span className="font-mono text-[10px] tabular-nums text-white/30">{item.count}</span>
+                    <span className="font-mono text-eyebrow tabular-nums text-fg-faint">{item.count}</span>
                   </Link>
                 </li>
               )

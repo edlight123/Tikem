@@ -21,7 +21,7 @@ import { PageHeader, SectionHeader } from '@/components/organizer/ui'
 /**
  * The organizer settings hub.
  *
- * What was here before: nine link cards painted `bg-white/[0.03]` — the exact
+ * What was here before: nine link cards painted `bg-surface-low` — the exact
  * colour of the page behind them — with `rounded-xl  p-4` where a border class
  * had been deleted, and `hover:border-brand-300` with no border-width to hover.
  * So the cards were invisible, the hover was inert, the icon tiles were empty
@@ -60,25 +60,25 @@ function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
       <SectionHeader title={title} className="mb-3" />
       {/* One panel, hairline-divided — not one card per row. The group is the
           object; the rows are its contents. */}
-      <div className="overflow-hidden rounded-2xl bg-white/[0.025] divide-y divide-white/[0.055]">
+      <div className="overflow-hidden rounded-2xl bg-surface-low divide-y divide-line-soft">
         {rows.map(({ href, icon: Icon, title: rowTitle, desc, hint }) => (
           <Link
             key={href}
             href={href}
-            className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 sm:px-5"
+            className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-surface focus:outline-none focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 sm:px-5"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-white/55 transition-colors group-hover:text-white/80">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-fg-muted transition-colors group-hover:text-fg-soft">
               <Icon className="h-[18px] w-[18px]" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold text-white">{rowTitle}</span>
-              <span className="mt-0.5 block text-[13px] leading-snug text-white/50">{desc}</span>
+              <span className="block text-body font-semibold text-fg">{rowTitle}</span>
+              <span className="mt-0.5 block text-meta leading-snug text-fg-subtle">{desc}</span>
             </span>
             {hint && (
-              <span className="shrink-0 text-[12px] font-semibold text-amber-300">{hint}</span>
+              <span className="shrink-0 text-caption font-semibold text-warning-soft">{hint}</span>
             )}
             <ChevronRight
-              className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-white/60"
+              className="h-4 w-4 shrink-0 text-fg-faint transition-colors group-hover:text-fg-muted"
               aria-hidden
             />
           </Link>
@@ -99,13 +99,13 @@ function StateReadout({
   tone: 'good' | 'warn' | 'idle'
 }) {
   const dot =
-    tone === 'good' ? 'bg-emerald-400' : tone === 'warn' ? 'bg-amber-400' : 'bg-white/30'
+    tone === 'good' ? 'bg-success' : tone === 'warn' ? 'bg-warning' : 'bg-fg/30'
   const text =
-    tone === 'good' ? 'text-emerald-300' : tone === 'warn' ? 'text-amber-300' : 'text-white/60'
+    tone === 'good' ? 'text-success-soft' : tone === 'warn' ? 'text-warning-soft' : 'text-fg-muted'
   return (
     <div className="flex min-w-0 items-baseline gap-2">
-      <span className="eyebrow shrink-0 text-white/40">{label}</span>
-      <span className={`flex min-w-0 items-center gap-1.5 text-[13px] font-semibold ${text}`}>
+      <span className="eyebrow shrink-0 text-fg-subtle">{label}</span>
+      <span className={`flex min-w-0 items-center gap-1.5 text-meta font-semibold ${text}`}>
         <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
         <span className="truncate">{value}</span>
       </span>
@@ -145,7 +145,7 @@ export default function SettingsContent({
       {/* The three live facts, on one line. A settings hub's job is partly to
           answer "is my account actually ready", these answer it without
           spending four cards on it. */}
-      <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-y border-white/10 py-4">
+      <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-y border-line py-4">
         {isOwner && (
         <>
         <StateReadout
@@ -177,14 +177,14 @@ export default function SettingsContent({
           tickets. Unfinished, it leads; finished, it disappears entirely rather
           than sitting there as a green trophy. */}
       {isOwner && !isVerified && (
-        <div className="mt-6 overflow-hidden rounded-2xl bg-amber-500/10">
+        <div className="mt-6 overflow-hidden rounded-2xl bg-warning-strong/10">
           <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3.5">
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-300">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-strong/15 text-warning-soft">
                 <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <div className="min-w-0">
-                <h2 className="text-[15px] font-semibold text-white">
+                <h2 className="text-body font-semibold text-fg">
                   {isPending
                     ? t('settings.verify_banner_pending_title', {
                         defaultValue: 'Verification under review',
@@ -193,7 +193,7 @@ export default function SettingsContent({
                         defaultValue: 'Verify your identity to get paid',
                       })}
                 </h2>
-                <p className="mt-1 max-w-[60ch] text-[13px] leading-relaxed text-white/65">
+                <p className="mt-1 max-w-[60ch] text-meta leading-relaxed text-fg-muted">
                   {isPending
                     ? t('settings.verify_banner_pending_body', {
                         defaultValue:
@@ -209,7 +209,7 @@ export default function SettingsContent({
             {!isPending && (
               <Link
                 href="/organizer/verify"
-                className="shrink-0 rounded bg-white px-5 py-2.5 text-center text-sm font-semibold text-black transition-opacity hover:opacity-90"
+                className="shrink-0 rounded bg-inverse px-5 py-2.5 text-center text-sm font-semibold text-on-inverse transition-opacity hover:opacity-90"
               >
                 {t('settings.verify_banner_cta', { defaultValue: 'Start verification' })}
               </Link>
@@ -301,21 +301,21 @@ export default function SettingsContent({
       {isOwner && (
       <Link
         href="/organizer/settings/danger-zone"
-        className="group mt-8 flex items-center gap-4 rounded-2xl bg-red-500/[0.04] px-4 py-4 ring-1 ring-red-500/20 transition-colors hover:bg-red-500/[0.09] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 sm:px-5"
+        className="group mt-8 flex items-center gap-4 rounded-2xl bg-danger-strong/[0.04] px-4 py-4 ring-1 ring-danger-strong/20 transition-colors hover:bg-danger-strong/[0.09] focus:outline-none focus-visible:ring-2 focus-visible:ring-danger sm:px-5"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-300">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-danger-strong/10 text-danger-soft">
           <AlertTriangle className="h-[18px] w-[18px]" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-red-200">
+          <span className="block text-body font-semibold text-danger-soft">
             {t('settings.danger_zone')}
           </span>
-          <span className="mt-0.5 block text-[13px] leading-snug text-white/50">
+          <span className="mt-0.5 block text-meta leading-snug text-fg-subtle">
             {t('settings.danger_zone_desc')}
           </span>
         </span>
         <ChevronRight
-          className="h-4 w-4 shrink-0 text-red-300/40 transition-colors group-hover:text-red-300/80"
+          className="h-4 w-4 shrink-0 text-danger-soft/40 transition-colors group-hover:text-danger-soft/80"
           aria-hidden
         />
       </Link>
@@ -323,11 +323,11 @@ export default function SettingsContent({
 
       {/* Support is not a status and not a setting — it belongs at the end, the
           way a footer answers "and if none of this helped". */}
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
-        <p className="text-[13px] text-white/45">{t('settings.need_help')}</p>
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+        <p className="text-meta text-fg-subtle">{t('settings.need_help')}</p>
         <Link
           href="/support"
-          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
+          className="inline-flex items-center gap-1.5 text-meta font-semibold text-fg-soft underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg"
         >
           <HelpCircle className="h-4 w-4" aria-hidden />
           {t('settings.contact_support')}

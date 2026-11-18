@@ -90,7 +90,7 @@ export function PosterCard({
       {/* ---------- Poster (4px corners: artwork, not chrome) ---------- */}
       <div
         className={`relative ${aspectClass} w-full max-w-full overflow-hidden rounded ${
-          hasImage ? 'bg-white/[0.02]' : 'bg-gradient-to-br from-brand-700 via-brand-900 to-black'
+          hasImage ? 'bg-surface-low' : 'bg-gradient-to-br from-brand-700 via-brand-900 to-black'
         } ${
           glow
             ? '[box-shadow:0_0_30px_-2px_rgba(var(--pg),0.20)] transition-shadow duration-200 group-hover:[box-shadow:0_0_48px_2px_rgba(var(--pg),0.32)]'
@@ -110,7 +110,7 @@ export function PosterCard({
         ) : (
           // Text-only events still read as premium: the title in the event-name voice.
           <div className="absolute inset-0 flex items-center justify-center p-5 text-center">
-            <span className="font-display text-[28px] italic leading-[1.05] text-white line-clamp-4">
+            <span className="font-display text-headline italic leading-[1.05] text-fg line-clamp-4">
               {title}
             </span>
           </div>
@@ -124,7 +124,7 @@ export function PosterCard({
           card carried a teal line, and teal is for state. */}
       <div className="pt-2.5">
         <h3
-          className={`truncate font-display text-[clamp(20px,8.5cqw,28px)] italic leading-[1.15] text-white ${
+          className={`truncate font-display text-[clamp(20px,8.5cqw,28px)] italic leading-[1.15] text-fg ${
             reserveAction ? 'pr-9' : ''
           }`}
         >
@@ -135,17 +135,17 @@ export function PosterCard({
           // runtime's timezone, so the server (UTC) and the visitor's browser
           // can legitimately disagree — React should adopt the client text
           // instead of logging a recoverable hydration mismatch (#425).
-          <p className="mt-1 truncate text-[13px] text-white/55" suppressHydrationWarning>
+          <p className="mt-1 truncate text-meta text-fg-muted" suppressHydrationWarning>
             {venue}
-            {venue && dateLabel && <span className="text-white/30"> · </span>}
+            {venue && dateLabel && <span className="text-fg-faint"> · </span>}
             {dateLabel}
           </p>
         )}
         {(priceLabel || status) && (
-          <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-[13px]">
-            {priceLabel && <span className="shrink-0 font-semibold text-white/85">{priceLabel}</span>}
-            {priceLabel && status && <span className="text-white/30">·</span>}
-            {status && <span className="flex min-w-0 items-center gap-1.5 truncate text-white/55">{status}</span>}
+          <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-meta">
+            {priceLabel && <span className="shrink-0 font-semibold text-fg-soft">{priceLabel}</span>}
+            {priceLabel && status && <span className="text-fg-faint">·</span>}
+            {status && <span className="flex min-w-0 items-center gap-1.5 truncate text-fg-muted">{status}</span>}
           </p>
         )}
       </div>

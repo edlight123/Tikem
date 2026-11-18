@@ -62,11 +62,11 @@ export default function PromoterAccountOffer({
 
   if (alreadyClaimed && status !== 'error') {
     return (
-      <div className="mt-8 rounded-2xl bg-white/[0.055] p-5">
-        <p className="text-white font-semibold">{t('promoter.claimed_title', 'This page is in your Tikèm account.')}</p>
+      <div className="mt-8 rounded-2xl bg-surface p-5">
+        <p className="text-fg font-semibold">{t('promoter.claimed_title', 'This page is in your Tikèm account.')}</p>
         <a
           href="/promoter"
-          className="inline-block mt-3 text-sm font-semibold text-white underline underline-offset-4 decoration-white/30 hover:decoration-white"
+          className="inline-block mt-3 text-sm font-semibold text-fg underline underline-offset-4 decoration-fg-faint hover:decoration-fg"
         >
           {t('promoter.claimed_link', 'Open your promoter portal →')}
         </a>
@@ -75,9 +75,9 @@ export default function PromoterAccountOffer({
   }
 
   return (
-    <div className="mt-8 rounded-2xl bg-white/[0.055] p-5">
-      <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('promoter.offer_title', 'Withdraw your commission')}</h2>
-      <p className="text-sm text-white/60 mt-1.5 leading-relaxed">
+    <div className="mt-8 rounded-2xl bg-surface p-5">
+      <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('promoter.offer_title', 'Withdraw your commission')}</h2>
+      <p className="text-sm text-fg-muted mt-1.5 leading-relaxed">
         {t(
           'promoter.offer_desc',
           'Add this to a free Tikèm account to withdraw your earnings to MonCash and see every event you promote in one portal. This link keeps working either way.'
@@ -87,7 +87,7 @@ export default function PromoterAccountOffer({
       <div className="mt-4 flex flex-col sm:flex-row gap-3">
         <a
           href={signupHref}
-          className="flex-1 text-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold py-3 px-5 rounded transition-colors min-h-[44px] flex items-center justify-center"
+          className="flex-1 text-center bg-surface-raised hover:bg-surface-high text-fg font-semibold py-3 px-5 rounded transition-colors min-h-[44px] flex items-center justify-center"
         >
           {t('promoter.create_account', 'Create an account')}
         </a>
@@ -95,14 +95,14 @@ export default function PromoterAccountOffer({
           type="button"
           onClick={handleAddToAccount}
           disabled={status === 'working'}
-          className="flex-1 bg-white/[0.07] text-white/80 hover:bg-white/[0.12] font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-[44px]"
+          className="flex-1 bg-surface-raised text-fg-soft hover:bg-surface-high font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-[44px]"
         >
           {status === 'working' ? t('promoter.adding', 'Adding…') : t('promoter.already_have_one', 'I already have one')}
         </button>
       </div>
 
       {message && (
-        <p className={`mt-3 text-sm ${status === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>
+        <p className={`mt-3 text-sm ${status === 'error' ? 'text-danger-soft' : 'text-success-soft'}`}>
           {message}
         </p>
       )}

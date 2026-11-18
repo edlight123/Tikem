@@ -66,7 +66,7 @@ export function ConfirmationDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -77,29 +77,29 @@ export function ConfirmationDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
-        className="relative w-full max-w-sm rounded-2xl bg-[#1e1e1e] p-6 shadow-2xl"
+        className="relative w-full max-w-sm rounded-2xl bg-surface-raised-solid p-6 shadow-2xl"
         style={{ animation: 'scaleIn 0.18s ease-out' }}
       >
         <button
           type="button"
           aria-label={t('actions.close_dialog')}
           onClick={onClose}
-          className="absolute right-4 top-4 grid h-7 w-7 place-items-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.04] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          className="absolute right-4 top-4 grid h-7 w-7 place-items-center rounded-lg text-fg-subtle transition-colors hover:bg-surface-low hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <div className="mb-4 grid h-12 w-12 place-items-center rounded-xl bg-white/[0.07]">
+        <div className="mb-4 grid h-12 w-12 place-items-center rounded-xl bg-surface-raised">
           <AlertTriangle
-            className={`h-6 w-6 ${variant === 'danger' ? 'text-red-400' : 'text-white/70'}`}
+            className={`h-6 w-6 ${variant === 'danger' ? 'text-danger' : 'text-fg-muted'}`}
           />
         </div>
 
-        <h2 id={titleId} className="font-display italic text-lg text-white">
+        <h2 id={titleId} className="font-display italic text-lg text-fg">
           {title}
         </h2>
         {description && (
-          <p id={descId} className="mt-1.5 text-sm text-white/55">
+          <p id={descId} className="mt-1.5 text-sm text-fg-muted">
             {description}
           </p>
         )}
@@ -110,7 +110,7 @@ export function ConfirmationDialog({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="h-11 flex-1 rounded bg-white/[0.07] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="h-11 flex-1 rounded bg-surface-raised text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -120,8 +120,8 @@ export function ConfirmationDialog({
             disabled={loading}
             className={`h-11 flex-1 rounded text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 ${
               variant === 'danger'
-                ? 'bg-red-500/15 text-red-200 hover:bg-red-500/25 focus-visible:ring-red-500'
-                : 'bg-white text-black hover:bg-white/90 focus-visible:ring-brand-500'
+                ? 'bg-danger-strong/15 text-danger-soft hover:bg-danger-strong/25 focus-visible:ring-danger-strong'
+                : 'bg-inverse text-on-inverse hover:bg-inverse-hover focus-visible:ring-brand-500'
             }`}
           >
             {loading ? 'Working…' : confirmLabel}

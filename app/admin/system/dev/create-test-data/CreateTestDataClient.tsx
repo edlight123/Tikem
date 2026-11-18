@@ -393,7 +393,7 @@ export default function CreateTestDataClient() {
   if (loading) {
     return (
       <ConsolePanel className="px-4 py-8 text-center">
-        <span className="label-mono text-[13px] text-console-mut">Loading…</span>
+        <span className="label-mono text-meta text-console-mut">Loading…</span>
       </ConsolePanel>
     )
   }
@@ -402,7 +402,7 @@ export default function CreateTestDataClient() {
     return (
       <ConsolePanel className="mx-auto max-w-md px-6 py-8 text-center">
         <p className="text-sm font-semibold text-console-text">Authentication required</p>
-        <p className="mb-5 mt-1 text-[13px] text-console-mut">
+        <p className="mb-5 mt-1 text-meta text-console-mut">
           You must be logged in to access this page.
         </p>
         <ConsoleButton
@@ -423,18 +423,18 @@ export default function CreateTestDataClient() {
       </ConsoleCaption>
 
       <ConsolePanel className="px-4 py-3.5">
-        <div className="text-[13px] text-console-mut">
+        <div className="text-meta text-console-mut">
           <span className="font-semibold text-console-text">Logged in as</span>{' '}
           <span className="label-mono">{user.email}</span>
         </div>
-        <div className="mt-0.5 text-[13px] text-console-mut">
+        <div className="mt-0.5 text-meta text-console-mut">
           Events will be created under this account
         </div>
       </ConsolePanel>
 
       <ConsoleSection>Events to be created ({testEvents.length})</ConsoleSection>
       <ConsolePanel className="max-h-48 overflow-y-auto px-4 py-3">
-        <ul className="space-y-2 text-[13px] text-console-mut">
+        <ul className="space-y-2 text-meta text-console-mut">
           {testEvents.map((event, index) => (
             <li key={index} className="flex items-start gap-2">
               <span className="text-console-faint">•</span>
@@ -471,7 +471,7 @@ export default function CreateTestDataClient() {
         <>
           <ConsoleSection>Output</ConsoleSection>
           <ConsolePanel className="p-2">
-            <div className="label-mono max-h-96 overflow-y-auto rounded bg-console-ground p-4 text-[13px] text-console-mut">
+            <div className="label-mono max-h-96 overflow-y-auto rounded bg-console-ground p-4 text-meta text-console-mut">
               {results.map((line, index) => (
                 <div key={index} className="mb-1">
                   {line}
@@ -492,7 +492,7 @@ export default function CreateTestDataClient() {
       )}
 
       <ConsoleSection>Note</ConsoleSection>
-      <p className="text-[13px] text-console-mut">
+      <p className="text-meta text-console-mut">
         Temporary admin page. This should be deleted after testing. It&apos;s only for development
         purposes.
       </p>

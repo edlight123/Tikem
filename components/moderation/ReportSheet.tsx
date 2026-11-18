@@ -89,21 +89,21 @@ export default function ReportSheet({
     <BottomSheet isOpen={isOpen} onClose={onClose} title={title}>
       {done ? (
         <div className="pb-2">
-          <p className="text-[15px] leading-relaxed text-white/70">
+          <p className="text-body leading-relaxed text-fg-muted">
             {done === 'duplicate' ? t('moderation.already_reported') : t('moderation.success_body')}
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 h-12 w-full rounded-xl bg-white text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
+            className="mt-6 h-12 w-full rounded-xl bg-inverse text-body font-semibold text-on-inverse transition-opacity hover:opacity-90"
           >
             {t('moderation.done')}
           </button>
         </div>
       ) : (
         <div>
-          <p className="mb-3 text-sm text-white/60">{t('moderation.report_intro')}</p>
-          <div role="radiogroup" className="divide-y divide-white/[0.06]">
+          <p className="mb-3 text-sm text-fg-muted">{t('moderation.report_intro')}</p>
+          <div role="radiogroup" className="divide-y divide-line-soft">
             {REPORT_REASONS.map((key) => {
               const selected = reason === key
               return (
@@ -113,11 +113,11 @@ export default function ReportSheet({
                   role="radio"
                   aria-checked={selected}
                   onClick={() => setReason(key)}
-                  className="flex w-full items-center justify-between py-3 text-left text-[15px] text-white"
+                  className="flex w-full items-center justify-between py-3 text-left text-body text-fg"
                 >
                   {t(`moderation.reasons.${key}`)}
                   <span
-                    className={`grid h-5 w-5 place-items-center rounded-full ${selected ? 'bg-white text-black' : 'bg-white/[0.08]'}`}
+                    className={`grid h-5 w-5 place-items-center rounded-full ${selected ? 'bg-inverse text-on-inverse' : 'bg-surface-raised'}`}
                     aria-hidden
                   >
                     {selected && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -127,7 +127,7 @@ export default function ReportSheet({
             })}
           </div>
 
-          <label className="mt-4 block text-[13px] text-white/60" htmlFor="report-details">
+          <label className="mt-4 block text-meta text-fg-muted" htmlFor="report-details">
             {t('moderation.details_label')}
           </label>
           <textarea
@@ -137,23 +137,23 @@ export default function ReportSheet({
             maxLength={MAX_DETAILS}
             rows={3}
             placeholder={t('moderation.details_placeholder')}
-            className="mt-1.5 w-full resize-none rounded-xl bg-white/[0.06] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/30 sm:text-sm"
+            className="mt-1.5 w-full resize-none rounded-xl bg-surface px-3 py-2.5 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-fg/30 sm:text-sm"
           />
-          <p className="mt-1 text-right text-xs tabular-nums text-white/40">
+          <p className="mt-1 text-right text-xs tabular-nums text-fg-subtle">
             {details.length}/{MAX_DETAILS}
           </p>
 
-          {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
 
           <button
             type="button"
             onClick={submit}
             disabled={!reason || sending}
-            className="mt-4 h-12 w-full rounded-xl bg-white text-[15px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="mt-4 h-12 w-full rounded-xl bg-inverse text-body font-semibold text-on-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {sending ? t('moderation.submitting') : t('moderation.submit')}
           </button>
-          <p className="mt-3 text-center text-xs text-white/45">{t('moderation.contact_line')}</p>
+          <p className="mt-3 text-center text-xs text-fg-subtle">{t('moderation.contact_line')}</p>
         </div>
       )}
     </BottomSheet>

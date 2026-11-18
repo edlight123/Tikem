@@ -164,42 +164,42 @@ export default async function PromoterStatsPage({
 
       <main className="max-w-2xl mx-auto px-4 py-8 pb-mobile-nav md:pb-16">
         <header className="mb-8">
-          <p className="label-mono text-[11px] uppercase tracking-widest text-white/50 mb-2">
+          <p className="label-mono text-eyebrow uppercase tracking-widest text-fg-subtle mb-2">
             {copy.eyebrow(promoter.code)}
           </p>
-          <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+          <h1 className="text-3xl md:text-4xl font-bold text-fg leading-tight">
             {promoter.name}
           </h1>
-          <p className="text-white/60 mt-2">
+          <p className="text-fg-muted mt-2">
             {event?.title || copy.defaultEventTitle}
             {formatDate(toIso(event?.start_datetime), lang) ? `, ${formatDate(toIso(event?.start_datetime), lang)}` : ''}
           </p>
-          <p className="text-white/50 text-sm mt-1">{copy.youEarn(commissionLabel)}</p>
+          <p className="text-fg-subtle text-sm mt-1">{copy.youEarn(commissionLabel)}</p>
         </header>
 
         {/* The link — the promoter's whole toolkit. */}
-        <div className="rounded-2xl bg-white/[0.055] p-5">
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{copy.yourLinkTitle}</h2>
-          <p className="mt-2 truncate rounded-xl bg-white/[0.07] px-4 py-3 text-sm text-white/70 font-mono">
+        <div className="rounded-2xl bg-surface p-5">
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{copy.yourLinkTitle}</h2>
+          <p className="mt-2 truncate rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg-muted font-mono">
             {shareUrl}
           </p>
           <PromoterShareActions shareUrl={shareUrl} eventTitle={String(event?.title || copy.defaultEventTitle)} />
-          <p className="mt-3 text-xs text-white/40 leading-relaxed">{copy.linkNote}</p>
+          <p className="mt-3 text-xs text-fg-subtle leading-relaxed">{copy.linkNote}</p>
         </div>
 
         {/* Stats */}
         <div className="mt-5 grid grid-cols-3 gap-3">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl bg-white/[0.055] p-4 text-center">
-              <p className="text-lg md:text-xl font-bold text-white">{s.value}</p>
-              <p className="text-[11px] uppercase tracking-wider text-white/50 mt-1">{s.label}</p>
+            <div key={s.label} className="rounded-2xl bg-surface p-4 text-center">
+              <p className="text-lg md:text-xl font-bold text-fg">{s.value}</p>
+              <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-1">{s.label}</p>
             </div>
           ))}
         </div>
 
         {promoter.is_active === false && (
-          <div className="mt-5 rounded-2xl bg-amber-500/10 px-5 py-4">
-            <p className="text-amber-300 text-sm">{copy.pausedNotice}</p>
+          <div className="mt-5 rounded-2xl bg-warning-strong/10 px-5 py-4">
+            <p className="text-warning-soft text-sm">{copy.pausedNotice}</p>
           </div>
         )}
 
@@ -208,7 +208,7 @@ export default async function PromoterStatsPage({
           alreadyClaimed={Boolean(promoter.claimed_by_uid)}
         />
 
-        <p className="mt-8 text-xs text-white/40 text-center leading-relaxed">{copy.footerNote}</p>
+        <p className="mt-8 text-xs text-fg-subtle text-center leading-relaxed">{copy.footerNote}</p>
       </main>
 
       <MobileNavWrapper />

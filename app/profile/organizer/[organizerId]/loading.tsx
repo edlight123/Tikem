@@ -4,7 +4,7 @@
  * The old one drew a page that does not exist: a circular 64px avatar (the real
  * one is a 80/96px `rounded-2xl` tile), a six-cell stats grid the page has no
  * trace of, and a six-card block — and BOTH grids were filled with
- * `bg-[#0a0a0a]`, which is the page's own colour, so they rendered as nothing
+ * `bg-canvas`, which is the page's own colour, so they rendered as nothing
  * at all. Its navbar was `py-3` (56px at every width) against a real
  * `h-14 sm:h-16`.
  *
@@ -18,7 +18,7 @@
  *              bio mt-4 (max-w-[60ch], 15px) · actions mt-5 with a follow
  *              button and 44px round social buttons
  *   body     max-w-7xl px-4 pb-12 sm:px-6 lg:px-8; one section per state,
- *            `border-t border-white/10 pt-8 md:pt-10`, a serif heading in a
+ *            `border-t border-line pt-8 md:pt-10`, a serif heading in a
  *            mb-5 block, then grid-cols-1 gap-4 md:grid-cols-2 md:gap-6
  *            lg:grid-cols-3 of DiscoverEventCard (aspect-[4/5] + text below)
  */
@@ -29,9 +29,9 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       {/* Navbar */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
           <Bar className="h-8 w-20 rounded" />
@@ -74,7 +74,7 @@ export default function Loading() {
 
       {/* ── UPCOMING ─────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        <section className="border-t border-white/10 pt-8 md:pt-10">
+        <section className="border-t border-line pt-8 md:pt-10">
           <div className="mb-5">
             <Bar className="h-7 w-48 sm:h-8 sm:w-56" />
             <Bar className="mt-1 h-3.5 w-64 max-w-full" />

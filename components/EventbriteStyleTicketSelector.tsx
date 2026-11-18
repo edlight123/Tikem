@@ -265,14 +265,14 @@ export default function EventbriteStyleTicketSelector({
   }
 
   if (loading) {
-    return <p className="text-white/65">{t('events.loading_ticket_options')}</p>
+    return <p className="text-fg-muted">{t('events.loading_ticket_options')}</p>
   }
 
   if (tiers.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-white/65 mb-4">{t('events.no_ticket_tiers')}</p>
-        <p className="text-sm text-white/70">{t('events.no_ticket_tiers_desc')}</p>
+        <p className="text-fg-muted mb-4">{t('events.no_ticket_tiers')}</p>
+        <p className="text-sm text-fg-muted">{t('events.no_ticket_tiers_desc')}</p>
       </div>
     )
   }
@@ -293,7 +293,7 @@ export default function EventbriteStyleTicketSelector({
 
   return (
     <div className="space-y-4">
-      <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('events.select_tickets')}</h3>
+      <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('events.select_tickets')}</h3>
 
       {/* Tier List with Quantity Selectors */}
       <div className="space-y-3">
@@ -314,18 +314,18 @@ export default function EventbriteStyleTicketSelector({
                  differed by one pixel of teal. */
               className={`rounded-xl p-4 transition-colors ${
                 quantity > 0
-                  ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50'
+                  ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50'
                   : isAvailable
-                  ? 'bg-white/[0.03] hover:bg-white/[0.06]'
-                  : 'bg-white/[0.03] opacity-50'
+                  ? 'bg-surface-low hover:bg-surface'
+                  : 'bg-surface-low opacity-50'
               }`}
             >
               <div className="flex items-start justify-between gap-4">
                 {/* Tier Info */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-white">{tier.name}</h4>
+                  <h4 className="font-semibold text-fg">{tier.name}</h4>
                   {tier.description && (
-                    <p className="text-sm text-white/65 mt-1">{tier.description}</p>
+                    <p className="text-sm text-fg-muted mt-1">{tier.description}</p>
                   )}
                   {/* Two lines on purpose. These shared one `flex gap-3` row,
                       and once the stepper has taken its ~140px the tier column
@@ -339,7 +339,7 @@ export default function EventbriteStyleTicketSelector({
                         number is itemized in the summary below, where the fee can be
                         stated for the order as a whole. */}
                     {!isFreeTier(tier) && orderPricing.feeOnTop && (
-                      <span className="ml-1 font-normal text-white/50">
+                      <span className="ml-1 font-normal text-fg-subtle">
                         {t('checkout.plus_fees', { defaultValue: '+ fees' })}
                       </span>
                     )}
@@ -358,7 +358,7 @@ export default function EventbriteStyleTicketSelector({
                     return (
                       <p
                         className={`mt-1 inline-flex items-center gap-1.5 text-xs font-medium ${
-                          urgent ? 'text-amber-300' : 'text-red-400'
+                          urgent ? 'text-warning-soft' : 'text-danger'
                         }`}
                       >
                         {urgent && (
@@ -369,13 +369,13 @@ export default function EventbriteStyleTicketSelector({
                     )
                   })()}
                   {freeClaimClosed && (
-                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300">
-                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-success-soft">
+                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />
                       {t('events.free_tier_already_claimed', { defaultValue: 'You already have your free ticket' })}
                     </p>
                   )}
                   {!freeClaimClosed && !isAvailable && available > 0 && (
-                    <p className="text-xs text-amber-400 mt-1">
+                    <p className="text-xs text-warning mt-1">
                       {tier.sales_start && new Date(tier.sales_start) > new Date()
                         ? `${t('events.sales_start')} ${new Date(tier.sales_start).toLocaleDateString()}`
                         : `${t('events.sales_ended')} ${new Date(tier.sales_end!).toLocaleDateString()}`}
@@ -390,20 +390,20 @@ export default function EventbriteStyleTicketSelector({
                       onClick={() => updateQuantity(tier.id, -1)}
                       disabled={quantity === 0}
                       aria-label={`${t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}, ${tier.name}`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/[0.07] transition-colors hover:bg-white/[0.14] disabled:opacity-30 disabled:cursor-not-allowed sm:h-9 sm:w-9"
+                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-raised transition-colors hover:bg-surface-high disabled:opacity-30 disabled:cursor-not-allowed sm:h-9 sm:w-9"
                     >
-                      <Minus className="w-4 h-4 text-white/80" />
+                      <Minus className="w-4 h-4 text-fg-soft" />
                     </button>
-                    <span className="w-12 text-center font-semibold text-white text-lg">
+                    <span className="w-12 text-center font-semibold text-fg text-lg">
                       {quantity}
                     </span>
                     <button
                       onClick={() => updateQuantity(tier.id, 1)}
                       disabled={quantity >= available}
                       aria-label={`${t('events.increase_quantity', { defaultValue: 'Increase quantity' })}, ${tier.name}`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/[0.07] transition-colors hover:bg-white/[0.14] disabled:opacity-30 disabled:cursor-not-allowed sm:h-9 sm:w-9"
+                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-raised transition-colors hover:bg-surface-high disabled:opacity-30 disabled:cursor-not-allowed sm:h-9 sm:w-9"
                     >
-                      <Plus className="w-4 h-4 text-white/80" />
+                      <Plus className="w-4 h-4 text-fg-soft" />
                     </button>
                   </div>
                 )}
@@ -432,7 +432,7 @@ export default function EventbriteStyleTicketSelector({
         </button>
       ) : (
         <div>
-          <label htmlFor="promo-code" className="mb-1.5 block text-xs uppercase tracking-wider text-white/50">
+          <label htmlFor="promo-code" className="mb-1.5 block text-xs uppercase tracking-wider text-fg-subtle">
             {t('events.promo_code_optional')}
           </label>
           <div className="flex gap-2">
@@ -445,23 +445,23 @@ export default function EventbriteStyleTicketSelector({
               placeholder={t('events.enter_code')}
               disabled={!canPurchase || validatingPromo}
               /* Filled, and 16px so iOS does not zoom the sheet on focus. */
-              className="min-w-0 flex-1 rounded-lg bg-white/[0.055] px-3 py-2.5 text-[16px] uppercase text-white placeholder:text-white/35 placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
+              className="min-w-0 flex-1 rounded-lg bg-surface px-3 py-2.5 text-base uppercase text-fg placeholder:text-fg-faint placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:opacity-50"
             />
             <button
               onClick={validatePromoCode}
               disabled={!canPurchase || !promoCode.trim() || validatingPromo}
-              className="min-h-11 shrink-0 rounded-lg bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/10 disabled:text-white/40 disabled:cursor-not-allowed"
+              className="min-h-11 shrink-0 rounded-lg bg-inverse px-4 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle disabled:cursor-not-allowed"
             >
               {validatingPromo ? '…' : t('events.apply')}
             </button>
           </div>
           {promoError && (
-            <div className="mt-2 text-sm text-red-300" role="alert">
+            <div className="mt-2 text-sm text-danger-soft" role="alert">
               {promoError}
             </div>
           )}
           {promoValidation?.valid && (
-            <div className="mt-2 flex items-center gap-1 text-sm text-green-400">
+            <div className="mt-2 flex items-center gap-1 text-sm text-success">
               <span aria-hidden>✓</span>
               <span>{promoValidation.promoCode?.description || t('events.promo_code_applied')}</span>
             </div>
@@ -471,16 +471,16 @@ export default function EventbriteStyleTicketSelector({
 
       {/* Total Summary */}
       {totalTickets > 0 && (
-        <div className="rounded-xl bg-white/[0.03] p-4">
+        <div className="rounded-xl bg-surface-low p-4">
           <div className="space-y-2">
             {tiers
               .filter(tier => quantities[tier.id] > 0)
               .map(tier => (
                 <div key={tier.id} className="flex justify-between text-sm">
-                  <span className="text-white/65">
+                  <span className="text-fg-muted">
                     {quantities[tier.id]}× {tier.name}
                   </span>
-                  <span className="text-white">
+                  <span className="text-fg">
                     {formatMoney(
                       computeSelectionTotal([{ price: tier.price, quantity: quantities[tier.id] }])
                     )}
@@ -488,7 +488,7 @@ export default function EventbriteStyleTicketSelector({
                 </div>
               ))}
             {promoValidation?.valid && promoValidation.promoCode && (
-              <div className="flex justify-between text-sm text-green-400">
+              <div className="flex justify-between text-sm text-success">
                 <span>
                   {t('events.promo_discount')} ({promoValidation.promoCode.code})
                 </span>
@@ -498,17 +498,17 @@ export default function EventbriteStyleTicketSelector({
               </div>
             )}
             {showFeeLine && (
-              <div className="flex justify-between text-sm text-white/65">
+              <div className="flex justify-between text-sm text-fg-muted">
                 <span>{t('checkout.service_fee', { defaultValue: 'Service fee' })}</span>
-                <span className="text-white">{formatMoney(orderPricing.buyerFee)}</span>
+                <span className="text-fg">{formatMoney(orderPricing.buyerFee)}</span>
               </div>
             )}
-            <div className="border-t border-white/10 pt-2 flex justify-between font-semibold text-lg">
+            <div className="border-t border-line pt-2 flex justify-between font-semibold text-lg">
               <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
               <span className="text-brand-400">{formatMoney(orderPricing.total)}</span>
             </div>
             {showFeeLine && (
-              <p className="text-xs text-white/45">
+              <p className="text-xs text-fg-subtle">
                 {t('checkout.total_includes_fees', {
                   defaultValue: 'Total includes all fees. This is what you pay.',
                 })}{' '}
@@ -525,7 +525,7 @@ export default function EventbriteStyleTicketSelector({
       <button
         onClick={handlePurchase}
         disabled={!canPurchase || totalTickets === 0}
-        className="h-14 w-full rounded bg-white px-6 font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/[0.07] disabled:text-white/40 disabled:cursor-not-allowed"
+        className="h-14 w-full rounded bg-inverse px-6 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:bg-surface-raised disabled:text-fg-subtle disabled:cursor-not-allowed"
       >
         {!canPurchase
           ? t('events.sign_in_to_purchase')

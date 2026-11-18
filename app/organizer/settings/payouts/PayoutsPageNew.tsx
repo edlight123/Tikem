@@ -454,9 +454,9 @@ export default function PayoutsPageNew({
   }
 
   const statusIcon = (status: 'pending' | 'verified' | 'failed') => {
-    if (status === 'verified') return <CheckCircle className="w-4 h-4 text-emerald-300" />
-    if (status === 'failed') return <AlertCircle className="w-4 h-4 text-red-300" />
-    return <Clock className="w-4 h-4 text-amber-300" />
+    if (status === 'verified') return <CheckCircle className="w-4 h-4 text-success-soft" />
+    if (status === 'failed') return <AlertCircle className="w-4 h-4 text-danger-soft" />
+    return <Clock className="w-4 h-4 text-warning-soft" />
   }
 
   // List of supported banks
@@ -993,32 +993,32 @@ export default function PayoutsPageNew({
   })
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       {/* Header. No band and no `border-b`: a header strip with its own fill
           or hairline reads as a crack across the page. It sits on the canvas. */}
       <div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-white/60 mb-3">
-            <Link href="/organizer/settings" className="hover:text-white">
+          <div className="flex items-center gap-2 text-sm text-fg-muted mb-3">
+            <Link href="/organizer/settings" className="hover:text-fg">
               {t('payouts_page.breadcrumb_settings', { defaultValue: 'Settings' })}
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-white font-medium">{t('payouts_page.title', { defaultValue: 'Payouts' })}</span>
+            <span className="text-fg font-medium">{t('payouts_page.title', { defaultValue: 'Payouts' })}</span>
           </div>
 
           {/* Title. `!` on both size and leading: `.mobile-typography h1` is an
               element+class selector (0,1,1) and beat the bare arbitrary size
               (0,1,0), so this rendered at 20px/tight on every phone. */}
-          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-white mb-2">
+          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-fg mb-2">
             {t('payouts_page.title', { defaultValue: 'Payouts' })}
           </h1>
-          <p className="text-white/60">
+          <p className="text-fg-muted">
             {t('payouts_page.subtitle_setup_only', { defaultValue: 'Set up where your payouts go.' })}
           </p>
 
           {/* The shared kit `Chip` rather than three hand-rolled pills: it already
-              carries the ladder (chosen = bg-white/text-black, unchosen =
+              carries the ladder (chosen = bg-white/text-on-inverse, unchosen =
               0.055 → 0.12 hover) and it steps up correctly off this 0.03 band. */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Chip active href="/organizer/settings/payouts">
@@ -1037,12 +1037,12 @@ export default function PayoutsPageNew({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!isFocusedEdit && payoutChangeVerificationRequired ? (
-          <div id="payout-change-stepup" className="mb-6 rounded-xl bg-amber-500/10 p-4">
+          <div id="payout-change-stepup" className="mb-6 rounded-xl bg-warning-strong/10 p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-300 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-warning-soft flex-shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-amber-100">{t('payouts_page.stepup_title', { defaultValue: 'Confirm payout details change' })}</p>
-                <p className="text-sm text-amber-200/80 mt-1">
+                <p className="text-sm font-medium text-warning-soft">{t('payouts_page.stepup_title', { defaultValue: 'Confirm payout details change' })}</p>
+                <p className="text-sm text-warning-soft/80 mt-1">
                   {payoutChangeMessage ||
                     t('payouts_page.stepup_desc', { defaultValue: 'For your security, confirm this change with the 6-digit code sent to your email.' })}
                 </p>
@@ -1055,13 +1055,13 @@ export default function PayoutsPageNew({
                     onChange={(e) => setPayoutChangeCode(e.target.value)}
                     placeholder={t('payouts_page.code_placeholder', { defaultValue: '6-digit code' })}
                     aria-label={t('payouts_page.code_aria', { defaultValue: '6-digit verification code' })}
-                    className="w-full rounded-xl bg-white/[0.09] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500 sm:w-48"
+                    className="w-full rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500 sm:w-48"
                   />
                   <button
                     type="button"
                     onClick={verifyPayoutChangeEmailCode}
                     disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)}
-                    className="px-4 py-2 bg-white text-black rounded font-semibold hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                    className="px-4 py-2 bg-inverse text-on-inverse rounded font-semibold hover:bg-inverse-hover transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isVerifyingPayoutChangeCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_and_continue', { defaultValue: 'Verify & continue' })}
                   </button>
@@ -1069,7 +1069,7 @@ export default function PayoutsPageNew({
                     type="button"
                     onClick={sendPayoutChangeEmailCode}
                     disabled={isSendingPayoutChangeCode}
-                    className="px-4 py-2 rounded bg-amber-500/20 text-amber-200 font-semibold hover:bg-amber-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 rounded bg-warning-strong/20 text-warning-soft font-semibold hover:bg-warning-strong/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingPayoutChangeCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.resend_code', { defaultValue: 'Resend code' })}
                   </button>
@@ -1088,14 +1088,14 @@ export default function PayoutsPageNew({
               /* ── STEPPER LAYOUT (focused edit: ?edit=haiti or ?edit=stripe_connect) ── */
               <div className="flex flex-col gap-6">
                 {/* Profile header */}
-                <div className="flex items-start justify-between gap-3 rounded-2xl bg-white/[0.055] p-6">
+                <div className="flex items-start justify-between gap-3 rounded-2xl bg-surface p-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-brand-300">
                       {activeProfile === 'stripe_connect' ? <Globe className="h-5 w-5" /> : <Wallet className="h-5 w-5" />}
                     </div>
                     <div>
-                      <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('payouts_page.profile_payouts_title', { profile: focusedProfileLabel, defaultValue: '{{profile}} payouts' })}</h2>
-                      <p className="mt-0.5 text-sm text-white/60">
+                      <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('payouts_page.profile_payouts_title', { profile: focusedProfileLabel, defaultValue: '{{profile}} payouts' })}</h2>
+                      <p className="mt-0.5 text-sm text-fg-muted">
                         {activeProfile === 'stripe_connect' ? t('payouts_page.profile_stripe_sub', { defaultValue: 'Bank payouts via Stripe Connect.' }) : t('payouts_page.profile_haiti_sub', { defaultValue: 'Bank transfer or MonCash.' })}
                       </p>
                     </div>
@@ -1115,12 +1115,12 @@ export default function PayoutsPageNew({
                         return (
                           <div key={step.key} className={`flex items-center ${i < steps.length - 1 ? 'flex-1' : ''}`}>
                             <div className="flex shrink-0 items-center gap-2">
-                              <div className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${isDone ? 'bg-emerald-500 text-white' : isActive ? 'bg-white text-black' : 'bg-white/10 text-white/40'}`}>
+                              <div className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${isDone ? 'bg-success-strong text-fg' : isActive ? 'bg-inverse text-on-inverse' : 'bg-surface-raised text-fg-subtle'}`}>
                                 {isDone ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : i + 1}
                               </div>
-                              <span className={`whitespace-nowrap text-sm font-medium ${isActive ? 'text-white' : isDone ? 'text-white/60' : 'text-white/30'}`}>{step.label}</span>
+                              <span className={`whitespace-nowrap text-sm font-medium ${isActive ? 'text-fg' : isDone ? 'text-fg-muted' : 'text-fg-faint'}`}>{step.label}</span>
                             </div>
-                            {i < steps.length - 1 && <div className={`mx-3 h-px flex-1 ${isDone ? 'bg-emerald-500/40' : 'bg-white/15'}`} />}
+                            {i < steps.length - 1 && <div className={`mx-3 h-px flex-1 ${isDone ? 'bg-success-strong/40' : 'bg-surface-high'}`} />}
                           </div>
                         )
                       })}
@@ -1130,12 +1130,12 @@ export default function PayoutsPageNew({
 
                 {/* Step-up banner inline in stepper */}
                 {payoutChangeVerificationRequired ? (
-                  <div id="payout-change-stepup" className="rounded-xl bg-amber-500/10 p-4">
+                  <div id="payout-change-stepup" className="rounded-xl bg-warning-strong/10 p-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />
+                      <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning-soft" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-amber-100">{t('payouts_page.stepup_title', { defaultValue: 'Confirm payout details change' })}</p>
-                        <p className="text-sm text-amber-300 mt-1">{payoutChangeMessage || t('payouts_page.stepup_desc', { defaultValue: 'For your security, confirm this change with the 6-digit code sent to your email.' })}</p>
+                        <p className="text-sm font-medium text-warning-soft">{t('payouts_page.stepup_title', { defaultValue: 'Confirm payout details change' })}</p>
+                        <p className="text-sm text-warning-soft mt-1">{payoutChangeMessage || t('payouts_page.stepup_desc', { defaultValue: 'For your security, confirm this change with the 6-digit code sent to your email.' })}</p>
                         <div className="mt-3 flex flex-col sm:flex-row gap-2">
                           <input
                             type="text"
@@ -1144,12 +1144,12 @@ export default function PayoutsPageNew({
                             onChange={(e) => setPayoutChangeCode(e.target.value)}
                             placeholder={t('payouts_page.code_placeholder', { defaultValue: '6-digit code' })}
                             aria-label={t('payouts_page.code_aria', { defaultValue: '6-digit verification code' })}
-                            className="w-full rounded-xl bg-white/[0.09] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500 sm:w-48"
+                            className="w-full rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500 sm:w-48"
                           />
-                          <button type="button" onClick={verifyPayoutChangeEmailCode} disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)} className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40">
+                          <button type="button" onClick={verifyPayoutChangeEmailCode} disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)} className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-40">
                             {isVerifyingPayoutChangeCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_and_continue', { defaultValue: 'Verify & continue' })}
                           </button>
-                          <button type="button" onClick={sendPayoutChangeEmailCode} disabled={isSendingPayoutChangeCode} className="rounded bg-amber-500/20 px-4 py-2.5 text-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/30 disabled:opacity-50">
+                          <button type="button" onClick={sendPayoutChangeEmailCode} disabled={isSendingPayoutChangeCode} className="rounded bg-warning-strong/20 px-4 py-2.5 text-sm font-semibold text-warning-soft transition-colors hover:bg-warning-strong/30 disabled:opacity-50">
                             {isSendingPayoutChangeCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.resend_code', { defaultValue: 'Resend code' })}
                           </button>
                         </div>
@@ -1160,43 +1160,43 @@ export default function PayoutsPageNew({
 
                 {/* Step 1 — Payout method */}
                 {editStep === 'method' && (
-                  <div className="rounded-2xl bg-white/[0.055]">
+                  <div className="rounded-2xl bg-surface">
                     <div className="p-6">
                       <SectionHeader className="mb-4" title={t('payouts_page.payout_method', { defaultValue: 'Payout method' })} />
 
                       {isStripeConnectSelection ? (
-                        <div className="mb-4 rounded-xl bg-white/[0.055] p-4">
+                        <div className="mb-4 rounded-xl bg-surface p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-sm font-semibold text-white">Stripe Connect</p>
-                              <p className="mt-1 text-sm text-white/60">{t('payouts_page.stripe_connect_desc', { defaultValue: 'Connect your Stripe account to receive payouts to your bank.' })}</p>
+                              <p className="text-sm font-semibold text-fg">Stripe Connect</p>
+                              <p className="mt-1 text-sm text-fg-muted">{t('payouts_page.stripe_connect_desc', { defaultValue: 'Connect your Stripe account to receive payouts to your bank.' })}</p>
                             </div>
                             <StatusChip tone={getStripeBadge().tone}>{getStripeBadge().label}</StatusChip>
                           </div>
-                          {stripeStatusError ? <div className="mt-3 text-sm text-red-300">{stripeStatusError}</div> : null}
+                          {stripeStatusError ? <div className="mt-3 text-sm text-danger-soft">{stripeStatusError}</div> : null}
                           <div className="mt-3 flex gap-2">
                             {!stripeStatus?.connected ? (
-                              <button type="button" onClick={startStripeOnboarding} className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90">{t('payouts_page.connect_with_stripe', { defaultValue: 'Connect with Stripe' })}</button>
+                              <button type="button" onClick={startStripeOnboarding} className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse hover:bg-inverse-hover">{t('payouts_page.connect_with_stripe', { defaultValue: 'Connect with Stripe' })}</button>
                             ) : (
                               <>
-                                <button type="button" onClick={startStripeOnboarding} className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]">{t('payouts_page.continue_onboarding', { defaultValue: 'Continue onboarding' })}</button>
-                                <button type="button" onClick={openStripeDashboard} className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]">{t('payouts_page.manage_in_stripe', { defaultValue: 'Manage in Stripe' })}</button>
+                                <button type="button" onClick={startStripeOnboarding} className="rounded bg-surface-raised px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-high">{t('payouts_page.continue_onboarding', { defaultValue: 'Continue onboarding' })}</button>
+                                <button type="button" onClick={openStripeDashboard} className="rounded bg-surface-raised px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-high">{t('payouts_page.manage_in_stripe', { defaultValue: 'Manage in Stripe' })}</button>
                               </>
                             )}
-                            {isLoadingStripeStatus ? <span className="self-center text-sm text-white/50">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</span> : null}
+                            {isLoadingStripeStatus ? <span className="self-center text-sm text-fg-subtle">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</span> : null}
                           </div>
                         </div>
                       ) : null}
 
                       {isHaiti && String(formData.method || '').toLowerCase() === 'mobile_money' && selectedProvider === 'moncash' ? (
-                        <div className="mb-4 rounded-xl bg-white/[0.055] p-4">
-                          <p className="text-sm font-semibold text-white">{t('payouts_page.instant_moncash_title', { defaultValue: 'Instant MonCash (prefunding)' })}</p>
-                          <p className="mt-1 text-sm text-white/60">{t('payouts_page.instant_moncash_desc', { min: MONCASH_MIN_LABEL, defaultValue: INSTANT_MONCASH_DESC_FALLBACK })}</p>
-                          {prefundingError ? <div className="mt-2 text-sm text-red-300">{prefundingError}</div> : null}
+                        <div className="mb-4 rounded-xl bg-surface p-4">
+                          <p className="text-sm font-semibold text-fg">{t('payouts_page.instant_moncash_title', { defaultValue: 'Instant MonCash (prefunding)' })}</p>
+                          <p className="mt-1 text-sm text-fg-muted">{t('payouts_page.instant_moncash_desc', { min: MONCASH_MIN_LABEL, defaultValue: INSTANT_MONCASH_DESC_FALLBACK })}</p>
+                          {prefundingError ? <div className="mt-2 text-sm text-danger-soft">{prefundingError}</div> : null}
                           {prefunding ? (
-                            <div className="mt-2 text-sm text-white/70">{t('payouts_page.prefunding_status', { status: prefunding.enabled && prefunding.available ? t('payouts_page.prefunding_available', { defaultValue: 'Available' }) : prefunding.enabled ? t('payouts_page.prefunding_unavailable', { defaultValue: 'Temporarily unavailable' }) : t('payouts_page.prefunding_disabled', { defaultValue: 'Disabled' }), defaultValue: 'Status: {{status}}' })}</div>
-                          ) : <div className="mt-2 text-sm text-white/50">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</div>}
-                          <label className="mt-3 flex items-center gap-2 text-sm text-white">
+                            <div className="mt-2 text-sm text-fg-muted">{t('payouts_page.prefunding_status', { status: prefunding.enabled && prefunding.available ? t('payouts_page.prefunding_available', { defaultValue: 'Available' }) : prefunding.enabled ? t('payouts_page.prefunding_unavailable', { defaultValue: 'Temporarily unavailable' }) : t('payouts_page.prefunding_disabled', { defaultValue: 'Disabled' }), defaultValue: 'Status: {{status}}' })}</div>
+                          ) : <div className="mt-2 text-sm text-fg-subtle">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</div>}
+                          <label className="mt-3 flex items-center gap-2 text-sm text-fg">
                             <input type="checkbox" checked={Boolean(config?.allowInstantMoncash)} disabled={!prefunding?.enabled || !prefunding?.available}
                               onChange={async (e) => {
                                 try {
@@ -1217,7 +1217,7 @@ export default function PayoutsPageNew({
 
                       <div className="space-y-4">
                         <div>
-                          <label htmlFor="step-location" className="mb-2 block text-sm font-medium text-white/70">{t('payouts_page.account_location', { defaultValue: 'Account location' })} <span className="text-red-500">*</span></label>
+                          <label htmlFor="step-location" className="mb-2 block text-sm font-medium text-fg-muted">{t('payouts_page.account_location', { defaultValue: 'Account location' })} <span className="text-danger-strong">*</span></label>
                           <select id="step-location" value={formData.accountLocation}
                             onChange={(e) => {
                               const nextLocation = e.target.value
@@ -1225,77 +1225,77 @@ export default function PayoutsPageNew({
                               const wantsStripe = nextLocation === 'united_states' || nextLocation === 'canada' || nextLocation === 'france'
                               setFormData({ ...formData, accountLocation: wantsStripe ? nextLocation : 'united_states', method: 'bank_transfer' })
                             }}
-                            className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                            className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                           >
                             {activeProfile === 'haiti' ? <option value="haiti">{t('payouts_page.country_haiti', { defaultValue: 'Haiti' })}</option> : (<><option value="united_states">{t('payouts_page.country_united_states', { defaultValue: 'United States' })}</option><option value="canada">{t('payouts_page.country_canada', { defaultValue: 'Canada' })}</option><option value="france">{t('payouts_page.country_france', { defaultValue: 'France' })}</option></>)}
                           </select>
-                          {activeProfile === 'stripe_connect' ? <p className="mt-1 !text-xs text-white/50">{t('payouts_page.stripe_handles_us_ca', { defaultValue: 'US, Canada and France payouts are handled via Stripe Connect.' })}</p> : null}
+                          {activeProfile === 'stripe_connect' ? <p className="mt-1 !text-xs text-fg-subtle">{t('payouts_page.stripe_handles_us_ca', { defaultValue: 'US, Canada and France payouts are handled via Stripe Connect.' })}</p> : null}
                         </div>
 
                         {activeProfile === 'haiti' ? (
                           <div>
-                            <label className="mb-2 block text-sm font-medium text-white/70">{t('payouts_page.payout_method', { defaultValue: 'Payout method' })} <span className="text-red-500">*</span></label>
+                            <label className="mb-2 block text-sm font-medium text-fg-muted">{t('payouts_page.payout_method', { defaultValue: 'Payout method' })} <span className="text-danger-strong">*</span></label>
                             {/* Selection changes the FILL and adds the teal ring;
                                 these were an unfilled box with a 4% hover, so the
                                 chosen method differed from the other by nothing. */}
                             <div className="space-y-2">
-                              <label className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${formData.method === 'bank_transfer' ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50' : 'bg-white/[0.055] hover:bg-white/[0.12]'}`}>
+                              <label className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${formData.method === 'bank_transfer' ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50' : 'bg-surface hover:bg-surface-high'}`}>
                                 <input type="radio" name="step-method" value="bank_transfer" checked={formData.method === 'bank_transfer'} onChange={(e) => setFormData({ ...formData, method: e.target.value as any })} className="h-4 w-4 accent-brand-500" />
-                                <span className="text-sm font-medium text-white">{t('payouts_page.bank_transfer', { defaultValue: 'Bank transfer' })}</span>
+                                <span className="text-sm font-medium text-fg">{t('payouts_page.bank_transfer', { defaultValue: 'Bank transfer' })}</span>
                               </label>
-                              <label className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${formData.method === 'mobile_money' ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50' : 'bg-white/[0.055] hover:bg-white/[0.12]'}`}>
+                              <label className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${formData.method === 'mobile_money' ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50' : 'bg-surface hover:bg-surface-high'}`}>
                                 <input type="radio" name="step-method" value="mobile_money" checked={formData.method === 'mobile_money'} onChange={(e) => setFormData({ ...formData, method: e.target.value as any })} className="h-4 w-4 accent-brand-500" />
-                                <span className="text-sm font-medium text-white">{t('payouts_page.mobile_money', { defaultValue: 'Mobile money' })}</span>
+                                <span className="text-sm font-medium text-fg">{t('payouts_page.mobile_money', { defaultValue: 'Mobile money' })}</span>
                               </label>
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white/70">{t('payouts_page.stripe_collects_bank_short', { defaultValue: 'Stripe Connect collects your bank details securely. No bank info required here.' })}</div>
+                          <div className="rounded-xl bg-surface px-4 py-3 text-sm text-fg-muted">{t('payouts_page.stripe_collects_bank_short', { defaultValue: 'Stripe Connect collects your bank details securely. No bank info required here.' })}</div>
                         )}
 
                         {activeProfile === 'haiti' && formData.method === 'bank_transfer' ? (
                           <div>
-                            <label className="mb-2 block text-sm font-medium text-white/70">{t('payouts_page.bank_account', { defaultValue: 'Bank account' })} <span className="text-red-500">*</span></label>
-                            {isLoadingBankDestinations ? <div className="text-sm text-white/50">{t('payouts_page.loading_saved_banks', { defaultValue: 'Loading saved bank accounts…' })}</div> : null}
+                            <label className="mb-2 block text-sm font-medium text-fg-muted">{t('payouts_page.bank_account', { defaultValue: 'Bank account' })} <span className="text-danger-strong">*</span></label>
+                            {isLoadingBankDestinations ? <div className="text-sm text-fg-subtle">{t('payouts_page.loading_saved_banks', { defaultValue: 'Loading saved bank accounts…' })}</div> : null}
                             {bankDestinations && bankDestinations.length ? (
-                              <select aria-label={t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })} value={selectedBankDestinationId} onChange={(e) => setSelectedBankDestinationId(e.target.value)} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
+                              <select aria-label={t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })} value={selectedBankDestinationId} onChange={(e) => setSelectedBankDestinationId(e.target.value)} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
                                 {bankDestinations.map((d) => (<option key={d.id} value={d.id}>{d.bankName} • ****{d.accountNumberLast4}{d.isPrimary ? t('payouts_page.primary_suffix', { defaultValue: ' (Primary)' }) : ''}</option>))}
                               </select>
-                            ) : <div className="text-sm text-white/60">{t('payouts_page.no_banks_step2', { defaultValue: 'No bank accounts saved yet. Add one in step 2 (Verify).' })}</div>}
-                            {bankDestinationsError ? <div className="text-xs text-red-300 mt-1">{bankDestinationsError}</div> : null}
+                            ) : <div className="text-sm text-fg-muted">{t('payouts_page.no_banks_step2', { defaultValue: 'No bank accounts saved yet. Add one in step 2 (Verify).' })}</div>}
+                            {bankDestinationsError ? <div className="text-xs text-danger-soft mt-1">{bankDestinationsError}</div> : null}
                           </div>
                         ) : null}
 
                         {formData.method === 'mobile_money' && activeProfile === 'haiti' && (
                           <>
                             <div>
-                              <label htmlFor="step-provider" className="mb-2 block text-sm font-medium text-white/70">{t('payouts_page.provider', { defaultValue: 'Provider' })}</label>
-                              <select id="step-provider" value={formData.provider} onChange={(e) => setFormData({ ...formData, provider: e.target.value })} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
+                              <label htmlFor="step-provider" className="mb-2 block text-sm font-medium text-fg-muted">{t('payouts_page.provider', { defaultValue: 'Provider' })}</label>
+                              <select id="step-provider" value={formData.provider} onChange={(e) => setFormData({ ...formData, provider: e.target.value })} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
                                 <option value="moncash">MonCash</option>
                                 {NATCASH_ENABLED && <option value="natcash">Natcash</option>}
                               </select>
                             </div>
                             {Boolean(config?.mobileMoneyDetails?.phoneNumberLast4) && !isChangingMobileNumber ? (
-                              <div className="rounded-xl bg-white/[0.055] p-4">
-                                <div className="text-sm font-medium text-white">{t('payouts_page.saved_phone_number', { defaultValue: 'Saved phone number' })}</div>
-                                <div className="mt-1 text-sm text-white/70">****{config?.mobileMoneyDetails?.phoneNumberLast4}</div>
+                              <div className="rounded-xl bg-surface p-4">
+                                <div className="text-sm font-medium text-fg">{t('payouts_page.saved_phone_number', { defaultValue: 'Saved phone number' })}</div>
+                                <div className="mt-1 text-sm text-fg-muted">****{config?.mobileMoneyDetails?.phoneNumberLast4}</div>
                                 <button type="button" onClick={() => setIsChangingMobileNumber(true)} className="mt-2 text-sm font-medium text-brand-300">{t('payouts_page.change_number', { defaultValue: 'Change number' })}</button>
                               </div>
                             ) : (
                               <div>
-                                <label htmlFor="step-phone" className="mb-2 block text-sm font-medium text-white/70">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</label>
-                                <input id="step-phone" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+50912345678" className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                <label htmlFor="step-phone" className="mb-2 block text-sm font-medium text-fg-muted">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</label>
+                                <input id="step-phone" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+50912345678" className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                 {Boolean(config?.mobileMoneyDetails?.phoneNumberLast4) ? (
-                                  <button type="button" onClick={() => { setIsChangingMobileNumber(false); setFormData((p) => ({ ...p, phoneNumber: '' })) }} className="mt-2 text-sm font-medium text-white/60 hover:text-white/70">{t('payouts_page.use_saved_number', { defaultValue: 'Use saved number instead' })}</button>
+                                  <button type="button" onClick={() => { setIsChangingMobileNumber(false); setFormData((p) => ({ ...p, phoneNumber: '' })) }} className="mt-2 text-sm font-medium text-fg-muted hover:text-fg-muted">{t('payouts_page.use_saved_number', { defaultValue: 'Use saved number instead' })}</button>
                                 ) : null}
                               </div>
                             )}
                           </>
                         )}
 
-                        {error && <div className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">{error}</div>}
+                        {error && <div className="rounded-xl bg-danger-strong/10 p-4 text-sm text-danger-soft">{error}</div>}
 
-                        <button type="button" onClick={() => handleSavePayoutDetails(() => setEditStep('verify'))} disabled={isSaving || payoutChangeVerificationRequired} className="w-full rounded bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-40">
+                        <button type="button" onClick={() => handleSavePayoutDetails(() => setEditStep('verify'))} disabled={isSaving || payoutChangeVerificationRequired} className="w-full rounded bg-inverse px-4 py-3 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-40">
                           {isSaving ? (activeProfile === 'stripe_connect' ? t('payouts_page.opening_stripe', { defaultValue: 'Opening Stripe…' }) : t('payouts_page.saving', { defaultValue: 'Saving…' })) : (activeProfile === 'stripe_connect' ? t('payouts_page.continue_to_stripe', { defaultValue: 'Continue to Stripe' }) : t('payouts_page.save_and_continue', { defaultValue: 'Save & continue' }))}
                         </button>
                       </div>
@@ -1305,7 +1305,7 @@ export default function PayoutsPageNew({
 
                 {/* Step 2 — Verify */}
                 {editStep === 'verify' && (
-                  <div className="rounded-2xl bg-white/[0.055]">
+                  <div className="rounded-2xl bg-surface">
                     <div className="p-6">
                       <div id="verify-payouts" />
                       <SectionHeader
@@ -1317,98 +1317,98 @@ export default function PayoutsPageNew({
                       <div className="space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-sm font-medium text-white">{t('payouts_page.organizer_identity', { defaultValue: 'Organizer identity' })}</div>
-                            <div className="text-sm text-white/60">{organizerIdentityStatus === 'verified' ? t('payouts_page.status_verified', { defaultValue: 'Verified' }) : organizerIdentityStatus === 'failed' ? t('payouts_page.status_needs_attention', { defaultValue: 'Needs attention' }) : t('payouts_page.status_pending', { defaultValue: 'Pending' })}</div>
+                            <div className="text-sm font-medium text-fg">{t('payouts_page.organizer_identity', { defaultValue: 'Organizer identity' })}</div>
+                            <div className="text-sm text-fg-muted">{organizerIdentityStatus === 'verified' ? t('payouts_page.status_verified', { defaultValue: 'Verified' }) : organizerIdentityStatus === 'failed' ? t('payouts_page.status_needs_attention', { defaultValue: 'Needs attention' }) : t('payouts_page.status_pending', { defaultValue: 'Pending' })}</div>
                           </div>
                           <Link href="/organizer/verify" className="text-sm font-medium text-brand-300">{t('payouts_page.view', { defaultValue: 'View' })}</Link>
                         </div>
 
                         {!isStripeConnectAccount && config?.method === 'bank_transfer' && hasPayoutSetup && (
-                          <div className="border-t border-white/10 pt-3">
+                          <div className="border-t border-line pt-3">
                             <div className="mb-3">
-                              <div className="text-sm font-medium text-white">{t('payouts_page.bank_account', { defaultValue: 'Bank account' })}</div>
-                              <div className="text-sm text-white/60">{bankStatus === 'verified' ? t('payouts_page.status_verified', { defaultValue: 'Verified' }) : bankStatus === 'failed' ? t('payouts_page.status_needs_attention', { defaultValue: 'Needs attention' }) : t('payouts_page.status_pending', { defaultValue: 'Pending' })}</div>
+                              <div className="text-sm font-medium text-fg">{t('payouts_page.bank_account', { defaultValue: 'Bank account' })}</div>
+                              <div className="text-sm text-fg-muted">{bankStatus === 'verified' ? t('payouts_page.status_verified', { defaultValue: 'Verified' }) : bankStatus === 'failed' ? t('payouts_page.status_needs_attention', { defaultValue: 'Needs attention' }) : t('payouts_page.status_pending', { defaultValue: 'Pending' })}</div>
                             </div>
                             <div className="space-y-3">
                               {isHaiti ? (
                                 <div>
-                                  <label htmlFor="step2-bank-select" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })}</label>
-                                  <select id="step2-bank-select" value={selectedBankDestinationId} onChange={(e) => setSelectedBankDestinationId(e.target.value)} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
+                                  <label htmlFor="step2-bank-select" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })}</label>
+                                  <select id="step2-bank-select" value={selectedBankDestinationId} onChange={(e) => setSelectedBankDestinationId(e.target.value)} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
                                     {(bankDestinations || []).map((d) => (<option key={d.id} value={d.id}>{d.bankName} • ****{d.accountNumberLast4}{d.isPrimary ? t('payouts_page.primary_suffix', { defaultValue: ' (Primary)' }) : ''} ({d.verificationStatus ? t(`payouts_page.dest_status_${d.verificationStatus}`, { defaultValue: d.verificationStatus }) : t('payouts_page.dest_status_not_submitted', { defaultValue: 'not submitted' })})</option>))}
                                   </select>
-                                  {isLoadingBankDestinations ? <div className="mt-1 text-xs text-white/50">{t('payouts_page.loading_bank_accounts', { defaultValue: 'Loading bank accounts…' })}</div> : null}
-                                  {bankDestinationsError ? <div className="mt-1 text-xs text-red-300">{bankDestinationsError}</div> : null}
+                                  {isLoadingBankDestinations ? <div className="mt-1 text-xs text-fg-subtle">{t('payouts_page.loading_bank_accounts', { defaultValue: 'Loading bank accounts…' })}</div> : null}
+                                  {bankDestinationsError ? <div className="mt-1 text-xs text-danger-soft">{bankDestinationsError}</div> : null}
                                 </div>
                               ) : null}
                               {(() => {
                                 const selected = (bankDestinations || []).find((d) => d.id === selectedBankDestinationId) || null
                                 const status = (selected?.verificationStatus || null) as 'pending' | 'verified' | 'failed' | null
-                                if (isHaiti && status === 'pending') return <div className="text-sm text-white/60">{selected?.verificationSubmittedAt ? t('payouts_page.verification_submitted_on', { date: new Date(selected.verificationSubmittedAt).toLocaleDateString(), defaultValue: 'Verification submitted on {{date}}. Awaiting review.' }) : t('payouts_page.verification_submitted', { defaultValue: 'Verification submitted. Awaiting review.' })}</div>
+                                if (isHaiti && status === 'pending') return <div className="text-sm text-fg-muted">{selected?.verificationSubmittedAt ? t('payouts_page.verification_submitted_on', { date: new Date(selected.verificationSubmittedAt).toLocaleDateString(), defaultValue: 'Verification submitted on {{date}}. Awaiting review.' }) : t('payouts_page.verification_submitted', { defaultValue: 'Verification submitted. Awaiting review.' })}</div>
                                 if (!isHaiti) { if (bankStatus === 'verified') return null } else { if (!selectedBankDestinationId) return null; if (status === 'verified') return null }
                                 return (
                                   <>
-                                    {isHaiti && status === 'failed' ? <div className="text-sm text-red-300">{t('payouts_page.verification_rejected', { defaultValue: 'Verification was rejected. Please upload a new document.' })}</div> : null}
+                                    {isHaiti && status === 'failed' ? <div className="text-sm text-danger-soft">{t('payouts_page.verification_rejected', { defaultValue: 'Verification was rejected. Please upload a new document.' })}</div> : null}
                                     <div>
-                                      <label htmlFor="step2-doc-type" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.document_type', { defaultValue: 'Document type' })}</label>
-                                      <select id="step2-doc-type" value={bankVerificationType} onChange={(e) => setBankVerificationType(e.target.value as any)} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
+                                      <label htmlFor="step2-doc-type" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.document_type', { defaultValue: 'Document type' })}</label>
+                                      <select id="step2-doc-type" value={bankVerificationType} onChange={(e) => setBankVerificationType(e.target.value as any)} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
                                         <option value="bank_statement">{t('payouts_page.doc_bank_statement', { defaultValue: 'Bank statement' })}</option>
                                         <option value="void_check">{t('payouts_page.doc_void_check', { defaultValue: 'Void check' })}</option>
                                         <option value="utility_bill">{t('payouts_page.doc_utility_bill', { defaultValue: 'Utility bill' })}</option>
                                       </select>
                                     </div>
                                     <div>
-                                      <label className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.upload_document', { defaultValue: 'Upload document' })}</label>
-                                      <input type="file" accept="image/*,application/pdf" aria-label={t('payouts_page.upload_document', { defaultValue: 'Upload document' })} onChange={(e) => setBankVerificationFile(e.target.files?.[0] || null)} className="w-full text-sm text-white" />
+                                      <label className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.upload_document', { defaultValue: 'Upload document' })}</label>
+                                      <input type="file" accept="image/*,application/pdf" aria-label={t('payouts_page.upload_document', { defaultValue: 'Upload document' })} onChange={(e) => setBankVerificationFile(e.target.files?.[0] || null)} className="w-full text-sm text-fg" />
                                     </div>
-                                    <button type="button" onClick={submitBankVerification} disabled={isSubmittingBankVerification} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                    <button type="button" onClick={submitBankVerification} disabled={isSubmittingBankVerification} className="w-full rounded bg-surface-raised px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-high disabled:opacity-50">
                                       {isSubmittingBankVerification ? t('payouts_page.submitting', { defaultValue: 'Submitting…' }) : t('payouts_page.submit_bank_verification', { defaultValue: 'Submit bank verification' })}
                                     </button>
-                                    {bankVerificationMessage && <div className="text-sm text-white/60">{bankVerificationMessage}</div>}
+                                    {bankVerificationMessage && <div className="text-sm text-fg-muted">{bankVerificationMessage}</div>}
                                   </>
                                 )
                               })()}
                               {isHaiti ? (
-                                <div className="border-t border-white/10 pt-3">
+                                <div className="border-t border-line pt-3">
                                   <div className="flex items-center justify-between gap-3">
-                                    <div className="text-sm font-medium text-white">{t('payouts_page.additional_bank_accounts', { defaultValue: 'Additional bank accounts' })}</div>
+                                    <div className="text-sm font-medium text-fg">{t('payouts_page.additional_bank_accounts', { defaultValue: 'Additional bank accounts' })}</div>
                                     <button type="button" onClick={() => setShowAddBankDestination((v) => !v)} className="text-sm font-medium text-brand-300">{showAddBankDestination ? t('payouts_page.cancel', { defaultValue: 'Cancel' }) : t('payouts_page.add_bank_account', { defaultValue: 'Add bank account' })}</button>
                                   </div>
-                                  {addBankDestinationMessage ? <div className="mt-2 text-sm text-white/60">{addBankDestinationMessage}</div> : null}
+                                  {addBankDestinationMessage ? <div className="mt-2 text-sm text-fg-muted">{addBankDestinationMessage}</div> : null}
                                   {showAddBankDestination ? (
                                     <div className="mt-3 space-y-3">
                                       <div>
-                                        <label htmlFor="step2-add-bank" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.bank', { defaultValue: 'Bank' })}</label>
-                                        <select id="step2-add-bank" value={newBankDestination.bankName} onChange={(e) => setNewBankDestination((p) => ({ ...p, bankName: e.target.value, customBankName: e.target.value === 'other' ? p.customBankName : '' }))} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
+                                        <label htmlFor="step2-add-bank" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.bank', { defaultValue: 'Bank' })}</label>
+                                        <select id="step2-add-bank" value={newBankDestination.bankName} onChange={(e) => setNewBankDestination((p) => ({ ...p, bankName: e.target.value, customBankName: e.target.value === 'other' ? p.customBankName : '' }))} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500">
                                           <option value="">{t('payouts_page.select_a_bank', { defaultValue: 'Select a bank' })}</option>
                                           {banks.map((bank) => (<option key={bank.value} value={bank.value}>{bank.label}</option>))}
                                         </select>
                                       </div>
                                       {newBankDestination.bankName === 'other' ? (
                                         <div>
-                                          <label htmlFor="step2-custom-bank" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.bank_name', { defaultValue: 'Bank name' })}</label>
-                                          <input id="step2-custom-bank" type="text" value={newBankDestination.customBankName} onChange={(e) => setNewBankDestination((p) => ({ ...p, customBankName: e.target.value }))} placeholder={t('payouts_page.bank_name_placeholder', { defaultValue: 'Enter your bank name' })} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                          <label htmlFor="step2-custom-bank" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.bank_name', { defaultValue: 'Bank name' })}</label>
+                                          <input id="step2-custom-bank" type="text" value={newBankDestination.customBankName} onChange={(e) => setNewBankDestination((p) => ({ ...p, customBankName: e.target.value }))} placeholder={t('payouts_page.bank_name_placeholder', { defaultValue: 'Enter your bank name' })} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                         </div>
                                       ) : null}
                                       <div>
-                                        <label htmlFor="step2-acct-num" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.account_number', { defaultValue: 'Account number' })}</label>
-                                        <input id="step2-acct-num" type="text" value={newBankDestination.accountNumber} onChange={(e) => setNewBankDestination((p) => ({ ...p, accountNumber: e.target.value }))} placeholder="1234567890" className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                        <label htmlFor="step2-acct-num" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.account_number', { defaultValue: 'Account number' })}</label>
+                                        <input id="step2-acct-num" type="text" value={newBankDestination.accountNumber} onChange={(e) => setNewBankDestination((p) => ({ ...p, accountNumber: e.target.value }))} placeholder="1234567890" className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                       </div>
                                       <div>
-                                        <label htmlFor="step2-acct-holder" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.account_holder_name', { defaultValue: 'Account holder name' })}</label>
-                                        <input id="step2-acct-holder" type="text" value={newBankDestination.accountHolder} onChange={(e) => setNewBankDestination((p) => ({ ...p, accountHolder: e.target.value }))} placeholder={t('payouts_page.account_holder_placeholder', { defaultValue: 'Your legal name' })} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                        <label htmlFor="step2-acct-holder" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.account_holder_name', { defaultValue: 'Account holder name' })}</label>
+                                        <input id="step2-acct-holder" type="text" value={newBankDestination.accountHolder} onChange={(e) => setNewBankDestination((p) => ({ ...p, accountHolder: e.target.value }))} placeholder={t('payouts_page.account_holder_placeholder', { defaultValue: 'Your legal name' })} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                       </div>
                                       <div>
-                                        <label htmlFor="step2-routing" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.routing_number_optional', { defaultValue: 'Routing number (optional)' })}</label>
-                                        <input id="step2-routing" type="text" value={newBankDestination.routingNumber} onChange={(e) => setNewBankDestination((p) => ({ ...p, routingNumber: e.target.value }))} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                        <label htmlFor="step2-routing" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.routing_number_optional', { defaultValue: 'Routing number (optional)' })}</label>
+                                        <input id="step2-routing" type="text" value={newBankDestination.routingNumber} onChange={(e) => setNewBankDestination((p) => ({ ...p, routingNumber: e.target.value }))} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                       </div>
                                       <div>
-                                        <label htmlFor="step2-swift" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.swift_code_optional', { defaultValue: 'SWIFT code (optional)' })}</label>
-                                        <input id="step2-swift" type="text" value={newBankDestination.swiftCode} onChange={(e) => setNewBankDestination((p) => ({ ...p, swiftCode: e.target.value }))} className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                        <label htmlFor="step2-swift" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.swift_code_optional', { defaultValue: 'SWIFT code (optional)' })}</label>
+                                        <input id="step2-swift" type="text" value={newBankDestination.swiftCode} onChange={(e) => setNewBankDestination((p) => ({ ...p, swiftCode: e.target.value }))} className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                       </div>
-                                      <button type="button" onClick={addBankDestination} disabled={isAddingBankDestination} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                      <button type="button" onClick={addBankDestination} disabled={isAddingBankDestination} className="w-full rounded bg-surface-raised px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-high disabled:opacity-50">
                                         {isAddingBankDestination ? t('payouts_page.adding', { defaultValue: 'Adding…' }) : t('payouts_page.add_bank_account', { defaultValue: 'Add bank account' })}
                                       </button>
-                                      <p className="!text-xs text-white/50">{t('payouts_page.bank_doc_note', { defaultValue: "You'll need to submit a bank statement or void check for each bank account." })}</p>
+                                      <p className="!text-xs text-fg-subtle">{t('payouts_page.bank_doc_note', { defaultValue: "You'll need to submit a bank statement or void check for each bank account." })}</p>
                                     </div>
                                   ) : null}
                                 </div>
@@ -1418,35 +1418,35 @@ export default function PayoutsPageNew({
                         )}
 
                         {!isStripeConnectAccount && config?.method === 'mobile_money' && hasPayoutSetup && (
-                          <div className="border-t border-white/10 pt-3">
+                          <div className="border-t border-line pt-3">
                             <div className="mb-3">
-                              <div className="text-sm font-medium text-white">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</div>
-                              <div className="text-sm text-white/60">{phoneStatus === 'verified' ? t('payouts_page.status_verified', { defaultValue: 'Verified' }) : phoneStatus === 'failed' ? t('payouts_page.status_needs_attention', { defaultValue: 'Needs attention' }) : t('payouts_page.status_pending', { defaultValue: 'Pending' })}</div>
+                              <div className="text-sm font-medium text-fg">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</div>
+                              <div className="text-sm text-fg-muted">{phoneStatus === 'verified' ? t('payouts_page.status_verified', { defaultValue: 'Verified' }) : phoneStatus === 'failed' ? t('payouts_page.status_needs_attention', { defaultValue: 'Needs attention' }) : t('payouts_page.status_pending', { defaultValue: 'Pending' })}</div>
                             </div>
                             {phoneStatus !== 'verified' && !smsAvailable && (
-                              <p className="text-sm text-white/60">{t('payout_phone_check.no_sms_body')}</p>
+                              <p className="text-sm text-fg-muted">{t('payout_phone_check.no_sms_body')}</p>
                             )}
                             {phoneStatus !== 'verified' && smsAvailable && (
                               <div className="space-y-3">
-                                <button type="button" onClick={sendPhoneVerificationCode} disabled={isSendingPhoneCode} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                <button type="button" onClick={sendPhoneVerificationCode} disabled={isSendingPhoneCode} className="w-full rounded bg-surface-raised px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-high disabled:opacity-50">
                                   {isSendingPhoneCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.send_verification_code', { defaultValue: 'Send verification code' })}
                                 </button>
                                 <div>
-                                  <label htmlFor="step2-phone-code" className="mb-1 block text-sm font-medium text-white/70">{t('payouts_page.enter_6_digit_code', { defaultValue: 'Enter 6-digit code' })}</label>
-                                  <input id="step2-phone-code" type="text" inputMode="numeric" value={phoneVerificationCode} onChange={(e) => setPhoneVerificationCode(e.target.value)} placeholder="123456" className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
+                                  <label htmlFor="step2-phone-code" className="mb-1 block text-sm font-medium text-fg-muted">{t('payouts_page.enter_6_digit_code', { defaultValue: 'Enter 6-digit code' })}</label>
+                                  <input id="step2-phone-code" type="text" inputMode="numeric" value={phoneVerificationCode} onChange={(e) => setPhoneVerificationCode(e.target.value)} placeholder="123456" className="w-full rounded-xl bg-surface px-4 py-3 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500" />
                                 </div>
-                                <button type="button" onClick={submitPhoneVerificationCode} disabled={isSubmittingPhoneCode} className="w-full rounded bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50">
+                                <button type="button" onClick={submitPhoneVerificationCode} disabled={isSubmittingPhoneCode} className="w-full rounded bg-surface-raised px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-high disabled:opacity-50">
                                   {isSubmittingPhoneCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_phone', { defaultValue: 'Verify phone' })}
                                 </button>
-                                {phoneVerificationMessage && <div className="text-sm text-white/60">{phoneVerificationMessage}</div>}
+                                {phoneVerificationMessage && <div className="text-sm text-fg-muted">{phoneVerificationMessage}</div>}
                               </div>
                             )}
                           </div>
                         )}
                       </div>
 
-                      <p className="mt-4 !text-xs text-white/50">{t('payouts_page.verification_required_note', { defaultValue: 'Verification is required to receive payouts and publish paid events.' })}</p>
-                      <button type="button" onClick={() => setEditStep('done')} className="mt-4 w-full rounded bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90">
+                      <p className="mt-4 !text-xs text-fg-subtle">{t('payouts_page.verification_required_note', { defaultValue: 'Verification is required to receive payouts and publish paid events.' })}</p>
+                      <button type="button" onClick={() => setEditStep('done')} className="mt-4 w-full rounded bg-inverse px-4 py-3 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover">
                         {t('payouts_page.done_back_to_overview', { defaultValue: 'Done, back to overview' })}
                       </button>
                     </div>
@@ -1455,13 +1455,13 @@ export default function PayoutsPageNew({
 
                 {/* Step 3 — Done */}
                 {editStep === 'done' && (
-                  <div className="rounded-2xl bg-emerald-500/10 p-8 text-center">
-                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20">
-                      <CheckCircle className="h-7 w-7 text-emerald-300" />
+                  <div className="rounded-2xl bg-success-strong/10 p-8 text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-success-strong/20">
+                      <CheckCircle className="h-7 w-7 text-success-soft" />
                     </div>
-                    <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white">{t('payouts_page.all_set_title', { defaultValue: "You're all set!" })}</h2>
-                    <p className="mt-2 text-sm text-white/60">{t('payouts_page.all_set_desc', { defaultValue: 'Your payout details have been saved. If your identity isn’t verified yet, verify it to withdraw. Our team reviews it usually within 1–2 business days.' })}</p>
-                    <Link href="/organizer/settings/payouts" className="mt-6 inline-flex items-center gap-2 rounded bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    <h2 className="font-display lowercase italic !text-headline !leading-snug text-fg">{t('payouts_page.all_set_title', { defaultValue: "You're all set!" })}</h2>
+                    <p className="mt-2 text-sm text-fg-muted">{t('payouts_page.all_set_desc', { defaultValue: 'Your payout details have been saved. If your identity isn’t verified yet, verify it to withdraw. Our team reviews it usually within 1–2 business days.' })}</p>
+                    <Link href="/organizer/settings/payouts" className="mt-6 inline-flex items-center gap-2 rounded bg-inverse px-6 py-3 text-sm font-semibold text-on-inverse hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
                       {t('payouts_page.back_to_payouts', { defaultValue: 'Back to payouts' })}
                     </Link>
                   </div>
@@ -1482,7 +1482,7 @@ export default function PayoutsPageNew({
             />
 
             {/* Payout Profile Selector */}
-            <div className="order-1 overflow-hidden rounded-2xl bg-white/[0.055]">
+            <div className="order-1 overflow-hidden rounded-2xl bg-surface">
               <div className="p-6">
                 <SectionHeader
                   className="mb-4"
@@ -1522,27 +1522,27 @@ export default function PayoutsPageNew({
                         setActiveProfile(p.id)
                         setShowAdditionalProfiles(true)
                       }}
-                      /* The nesting trap: an unchosen row was bg-white/[0.03] inside
-                         a bg-white/[0.03] card — literally the same colour — with a
+                      /* The nesting trap: an unchosen row was bg-surface-low inside
+                         a bg-surface-low card — literally the same colour — with a
                          hover that repeated the base value, so it had no hover at
                          all. Rows step up to 0.055, and the chosen one to 0.08 plus
                          the teal ring. */
                       className={`w-full rounded-xl px-4 py-3 text-left transition-colors ${
                         activeProfile === p.id
-                          ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50'
-                          : 'bg-white/[0.055] hover:bg-white/[0.12]'
+                          ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50'
+                          : 'bg-surface hover:bg-surface-high'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium text-white">{p.title}</span>
-                        <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] uppercase tracking-wider text-white/50">
+                        <span className="text-sm font-medium text-fg">{p.title}</span>
+                        <span className="inline-flex shrink-0 items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle">
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${p.configured ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                            className={`h-1.5 w-1.5 rounded-full ${p.configured ? 'bg-success' : 'bg-warning'}`}
                           />
                           {p.configured ? t('payouts_page.chip_set_up', { defaultValue: 'Set up' }) : t('payouts_page.chip_needs_setup', { defaultValue: 'Needs setup' })}
                         </span>
                       </div>
-                      <p className="mt-0.5 !text-xs text-white/50">{p.detail}</p>
+                      <p className="mt-0.5 !text-xs text-fg-subtle">{p.detail}</p>
                     </button>
                   ))}
                 </div>
@@ -1556,7 +1556,7 @@ export default function PayoutsPageNew({
                       setShowAllRails(true)
                       setShowAdditionalProfiles(true)
                     }}
-                    className="mt-3 text-xs font-medium text-white/50 underline underline-offset-2 hover:text-white/80"
+                    className="mt-3 text-xs font-medium text-fg-subtle underline underline-offset-2 hover:text-fg-soft"
                   >
                     {t('payouts_page.show_all_rails', { defaultValue: 'Show every payout method anyway' })}
                   </button>
@@ -1565,7 +1565,7 @@ export default function PayoutsPageNew({
             </div>
 
             {/* Verification Card */}
-            <div className="order-3 overflow-hidden rounded-2xl bg-white/[0.055]">
+            <div className="order-3 overflow-hidden rounded-2xl bg-surface">
               <div className="p-6">
                 <div id="verify-payouts" />
                 <SectionHeader
@@ -1577,8 +1577,8 @@ export default function PayoutsPageNew({
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-sm font-medium text-white">{t('payouts_page.organizer_identity', { defaultValue: 'Organizer identity' })}</div>
-                      <div className="text-sm text-white/60">
+                      <div className="text-sm font-medium text-fg">{t('payouts_page.organizer_identity', { defaultValue: 'Organizer identity' })}</div>
+                      <div className="text-sm text-fg-muted">
                         {organizerIdentityStatus === 'verified'
                           ? t('payouts_page.status_verified', { defaultValue: 'Verified' })
                           : organizerIdentityStatus === 'failed'
@@ -1595,11 +1595,11 @@ export default function PayoutsPageNew({
                   </div>
 
                   {!isStripeConnectAccount && config?.method === 'bank_transfer' && hasPayoutSetup && (
-                    <div className="pt-3 border-t border-white/10">
+                    <div className="pt-3 border-t border-line">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
-                          <div className="text-sm font-medium text-white">{t('payouts_page.bank_account', { defaultValue: 'Bank account' })}</div>
-                          <div className="text-sm text-white/60">
+                          <div className="text-sm font-medium text-fg">{t('payouts_page.bank_account', { defaultValue: 'Bank account' })}</div>
+                          <div className="text-sm text-fg-muted">
                             {bankStatus === 'verified'
                               ? t('payouts_page.status_verified', { defaultValue: 'Verified' })
                               : bankStatus === 'failed'
@@ -1612,12 +1612,12 @@ export default function PayoutsPageNew({
                       <div className="space-y-3">
                         {isHaiti ? (
                           <div>
-                            <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })}</label>
+                            <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })}</label>
                             <select
                               aria-label={t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })}
                               value={selectedBankDestinationId}
                               onChange={(e) => setSelectedBankDestinationId(e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                              className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                             >
                               {(bankDestinations || []).map((d) => (
                                 <option key={d.id} value={d.id}>
@@ -1626,10 +1626,10 @@ export default function PayoutsPageNew({
                               ))}
                             </select>
                             {isLoadingBankDestinations ? (
-                              <div className="text-xs text-white/50 mt-1">{t('payouts_page.loading_bank_accounts', { defaultValue: 'Loading bank accounts…' })}</div>
+                              <div className="text-xs text-fg-subtle mt-1">{t('payouts_page.loading_bank_accounts', { defaultValue: 'Loading bank accounts…' })}</div>
                             ) : null}
                             {bankDestinationsError ? (
-                              <div className="text-xs text-red-300 mt-1">{bankDestinationsError}</div>
+                              <div className="text-xs text-danger-soft mt-1">{bankDestinationsError}</div>
                             ) : null}
                           </div>
                         ) : null}
@@ -1644,7 +1644,7 @@ export default function PayoutsPageNew({
 
                           if (isHaiti && status === 'pending') {
                             return (
-                              <div className="text-sm text-white/60">
+                              <div className="text-sm text-fg-muted">
                                 {selected?.verificationSubmittedAt ? t('payouts_page.verification_submitted_on', { date: new Date(selected.verificationSubmittedAt).toLocaleDateString(), defaultValue: 'Verification submitted on {{date}}. Awaiting review.' }) : t('payouts_page.verification_submitted', { defaultValue: 'Verification submitted. Awaiting review.' })}
                               </div>
                             )
@@ -1661,18 +1661,18 @@ export default function PayoutsPageNew({
                           return (
                             <>
                               {isHaiti && status === 'failed' ? (
-                                <div className="text-sm text-red-300">
+                                <div className="text-sm text-danger-soft">
                                   {t('payouts_page.verification_rejected', { defaultValue: 'Verification was rejected. Please upload a new document.' })}
                                 </div>
                               ) : null}
 
                               <div>
-                                <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.document_type', { defaultValue: 'Document type' })}</label>
+                                <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.document_type', { defaultValue: 'Document type' })}</label>
                                 <select
                                   aria-label={t('payouts_page.document_type', { defaultValue: 'Document type' })}
                                   value={bankVerificationType}
                                   onChange={(e) => setBankVerificationType(e.target.value as any)}
-                                  className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                  className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                 >
                                   <option value="bank_statement">{t('payouts_page.doc_bank_statement', { defaultValue: 'Bank statement' })}</option>
                                   <option value="void_check">{t('payouts_page.doc_void_check', { defaultValue: 'Void check' })}</option>
@@ -1681,7 +1681,7 @@ export default function PayoutsPageNew({
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.upload_document', { defaultValue: 'Upload document' })}</label>
+                                <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.upload_document', { defaultValue: 'Upload document' })}</label>
                                 <input
                                   type="file"
                                   accept="image/*,application/pdf"
@@ -1695,22 +1695,22 @@ export default function PayoutsPageNew({
                                 type="button"
                                 onClick={submitBankVerification}
                                 disabled={isSubmittingBankVerification}
-                                className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-4 py-2 rounded bg-surface-raised text-fg font-medium hover:bg-surface-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isSubmittingBankVerification ? t('payouts_page.submitting', { defaultValue: 'Submitting…' }) : t('payouts_page.submit_bank_verification', { defaultValue: 'Submit bank verification' })}
                               </button>
 
                               {bankVerificationMessage && (
-                                <div className="text-sm text-white/60">{bankVerificationMessage}</div>
+                                <div className="text-sm text-fg-muted">{bankVerificationMessage}</div>
                               )}
                             </>
                           )
                         })()}
 
                         {isHaiti ? (
-                          <div className="pt-3 border-t border-white/10">
+                          <div className="pt-3 border-t border-line">
                             <div className="flex items-center justify-between gap-3">
-                              <div className="text-sm font-medium text-white">{t('payouts_page.additional_bank_accounts', { defaultValue: 'Additional bank accounts' })}</div>
+                              <div className="text-sm font-medium text-fg">{t('payouts_page.additional_bank_accounts', { defaultValue: 'Additional bank accounts' })}</div>
                               <button
                                 type="button"
                                 onClick={() => setShowAddBankDestination((v) => !v)}
@@ -1721,13 +1721,13 @@ export default function PayoutsPageNew({
                             </div>
 
                             {addBankDestinationMessage ? (
-                              <div className="text-sm text-white/60 mt-2">{addBankDestinationMessage}</div>
+                              <div className="text-sm text-fg-muted mt-2">{addBankDestinationMessage}</div>
                             ) : null}
 
                             {showAddBankDestination ? (
                               <div className="mt-3 space-y-3">
                                 <div>
-                                  <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.bank', { defaultValue: 'Bank' })}</label>
+                                  <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.bank', { defaultValue: 'Bank' })}</label>
                                   <select
                                     aria-label={t('payouts_page.bank', { defaultValue: 'Bank' })}
                                     value={newBankDestination.bankName}
@@ -1738,7 +1738,7 @@ export default function PayoutsPageNew({
                                         customBankName: e.target.value === 'other' ? p.customBankName : '',
                                       }))
                                     }
-                                    className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                    className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                   >
                                     <option value="">{t('payouts_page.select_a_bank', { defaultValue: 'Select a bank' })}</option>
                                     {banks.map((bank) => (
@@ -1751,61 +1751,61 @@ export default function PayoutsPageNew({
 
                                 {newBankDestination.bankName === 'other' ? (
                                   <div>
-                                    <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.bank_name', { defaultValue: 'Bank name' })}</label>
+                                    <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.bank_name', { defaultValue: 'Bank name' })}</label>
                                     <input
                                       type="text"
                                       value={newBankDestination.customBankName}
                                       onChange={(e) =>
                                         setNewBankDestination((p) => ({ ...p, customBankName: e.target.value }))
                                       }
-                                      className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                      className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                       placeholder={t('payouts_page.bank_name_placeholder', { defaultValue: 'Enter your bank name' })}
                                     />
                                   </div>
                                 ) : null}
 
                                 <div>
-                                  <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.account_number', { defaultValue: 'Account number' })}</label>
+                                  <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.account_number', { defaultValue: 'Account number' })}</label>
                                   <input
                                     type="text"
                                     value={newBankDestination.accountNumber}
                                     onChange={(e) => setNewBankDestination((p) => ({ ...p, accountNumber: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                    className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                     placeholder="1234567890"
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.account_holder_name', { defaultValue: 'Account holder name' })}</label>
+                                  <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.account_holder_name', { defaultValue: 'Account holder name' })}</label>
                                   <input
                                     type="text"
                                     value={newBankDestination.accountHolder}
                                     onChange={(e) => setNewBankDestination((p) => ({ ...p, accountHolder: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                    className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                     placeholder={t('payouts_page.account_holder_placeholder', { defaultValue: 'Your legal name' })}
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.routing_number_optional', { defaultValue: 'Routing number (optional)' })}</label>
+                                  <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.routing_number_optional', { defaultValue: 'Routing number (optional)' })}</label>
                                   <input
                                     type="text"
                                     aria-label={t('payouts_page.routing_number', { defaultValue: 'Routing number' })}
                                     value={newBankDestination.routingNumber}
                                     onChange={(e) => setNewBankDestination((p) => ({ ...p, routingNumber: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                    className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                     placeholder=""
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.swift_code_optional', { defaultValue: 'SWIFT code (optional)' })}</label>
+                                  <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.swift_code_optional', { defaultValue: 'SWIFT code (optional)' })}</label>
                                   <input
                                     type="text"
                                     aria-label={t('payouts_page.swift_code', { defaultValue: 'SWIFT code' })}
                                     value={newBankDestination.swiftCode}
                                     onChange={(e) => setNewBankDestination((p) => ({ ...p, swiftCode: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                                    className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                                     placeholder=""
                                   />
                                 </div>
@@ -1814,12 +1814,12 @@ export default function PayoutsPageNew({
                                   type="button"
                                   onClick={addBankDestination}
                                   disabled={isAddingBankDestination}
-                                  className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="w-full px-4 py-2 rounded bg-surface-raised text-fg font-medium hover:bg-surface-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isAddingBankDestination ? t('payouts_page.adding', { defaultValue: 'Adding…' }) : t('payouts_page.add_bank_account', { defaultValue: 'Add bank account' })}
                                 </button>
 
-                                <p className="!text-xs text-white/50">
+                                <p className="!text-xs text-fg-subtle">
                                   {t('payouts_page.bank_doc_note', { defaultValue: "You'll need to submit a bank statement or void check for each bank account." })}
                                 </p>
                               </div>
@@ -1831,11 +1831,11 @@ export default function PayoutsPageNew({
                   )}
 
                   {!isStripeConnectAccount && config?.method === 'mobile_money' && hasPayoutSetup && (
-                    <div className="pt-3 border-t border-white/10">
+                    <div className="pt-3 border-t border-line">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
-                          <div className="text-sm font-medium text-white">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</div>
-                          <div className="text-sm text-white/60">
+                          <div className="text-sm font-medium text-fg">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</div>
+                          <div className="text-sm text-fg-muted">
                             {phoneStatus === 'verified'
                               ? t('payouts_page.status_verified', { defaultValue: 'Verified' })
                               : phoneStatus === 'failed'
@@ -1846,7 +1846,7 @@ export default function PayoutsPageNew({
                       </div>
 
                       {phoneStatus !== 'verified' && !smsAvailable && (
-                        <p className="text-sm text-white/60">{t('payout_phone_check.no_sms_body')}</p>
+                        <p className="text-sm text-fg-muted">{t('payout_phone_check.no_sms_body')}</p>
                       )}
                       {phoneStatus !== 'verified' && smsAvailable && (
                         <div className="space-y-3">
@@ -1854,20 +1854,20 @@ export default function PayoutsPageNew({
                             type="button"
                             onClick={sendPhoneVerificationCode}
                             disabled={isSendingPhoneCode}
-                            className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 rounded bg-surface-raised text-fg font-medium hover:bg-surface-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isSendingPhoneCode ? t('payouts_page.sending', { defaultValue: 'Sending…' }) : t('payouts_page.send_verification_code', { defaultValue: 'Send verification code' })}
                           </button>
 
                           <div>
-                            <label className="block text-sm font-medium text-white/70 mb-1">{t('payouts_page.enter_6_digit_code', { defaultValue: 'Enter 6-digit code' })}</label>
+                            <label className="block text-sm font-medium text-fg-muted mb-1">{t('payouts_page.enter_6_digit_code', { defaultValue: 'Enter 6-digit code' })}</label>
                             <input
                               type="text"
                               inputMode="numeric"
                               value={phoneVerificationCode}
                               onChange={(e) => setPhoneVerificationCode(e.target.value)}
                               placeholder="123456"
-                              className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                              className="w-full px-3 py-2 rounded-lg bg-surface text-sm text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                             />
                           </div>
 
@@ -1875,13 +1875,13 @@ export default function PayoutsPageNew({
                             type="button"
                             onClick={submitPhoneVerificationCode}
                             disabled={isSubmittingPhoneCode}
-                            className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2 rounded bg-surface-raised text-fg font-medium hover:bg-surface-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isSubmittingPhoneCode ? t('payouts_page.verifying', { defaultValue: 'Verifying…' }) : t('payouts_page.verify_phone', { defaultValue: 'Verify phone' })}
                           </button>
 
                           {phoneVerificationMessage && (
-                            <div className="text-sm text-white/60">{phoneVerificationMessage}</div>
+                            <div className="text-sm text-fg-muted">{phoneVerificationMessage}</div>
                           )}
                         </div>
                       )}
@@ -1889,7 +1889,7 @@ export default function PayoutsPageNew({
                   )}
                 </div>
 
-                <p className="!text-xs text-white/50 mt-4">
+                <p className="!text-xs text-fg-subtle mt-4">
                   {t('payouts_page.verification_required_note', { defaultValue: 'Verification is required to receive payouts and publish paid events.' })}
                 </p>
               </div>
@@ -1898,7 +1898,7 @@ export default function PayoutsPageNew({
             </div>
             
             {/* Payout Setup Card */}
-            <div className="order-2 overflow-hidden rounded-2xl bg-white/[0.055]">
+            <div className="order-2 overflow-hidden rounded-2xl bg-surface">
               <div className="p-6">
                 <SectionHeader
                   className="mb-4"
@@ -1908,11 +1908,11 @@ export default function PayoutsPageNew({
                 {/* 0.055, not 0.03: an inset repeating the card's own fill is the
                     page colour twice over and renders as nothing. */}
                 {isStripeConnectSelection ? (
-                  <div className="mb-4 rounded-xl p-3 sm:p-4 bg-white/[0.07]">
+                  <div className="mb-4 rounded-xl p-3 sm:p-4 bg-surface-raised">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-white">Stripe Connect</p>
-                        <p className="!text-[12px] sm:!text-sm text-white/60 mt-1">
+                        <p className="text-sm font-semibold text-fg">Stripe Connect</p>
+                        <p className="!text-caption sm:!text-sm text-fg-muted mt-1">
                           {t('payouts_page.stripe_connect_desc', { defaultValue: 'Connect your Stripe account to receive payouts to your bank.' })}
                         </p>
                       </div>
@@ -1920,7 +1920,7 @@ export default function PayoutsPageNew({
                     </div>
 
                     {stripeStatusError ? (
-                      <div className="mt-3 text-sm text-red-300">{stripeStatusError}</div>
+                      <div className="mt-3 text-sm text-danger-soft">{stripeStatusError}</div>
                     ) : null}
 
                     <div className="mt-3 flex gap-2">
@@ -1928,7 +1928,7 @@ export default function PayoutsPageNew({
                         <button
                           type="button"
                           onClick={startStripeOnboarding}
-                          className="px-3 py-2 bg-white/[0.1] text-white rounded text-sm font-semibold hover:bg-white/[0.15]"
+                          className="px-3 py-2 bg-surface-raised text-fg rounded text-sm font-semibold hover:bg-surface-high"
                         >
                           {t('payouts_page.connect_with_stripe', { defaultValue: 'Connect with Stripe' })}
                         </button>
@@ -1937,14 +1937,14 @@ export default function PayoutsPageNew({
                           <button
                             type="button"
                             onClick={startStripeOnboarding}
-                            className="px-3 py-2 rounded bg-white/[0.07] text-white text-sm font-medium transition-colors hover:bg-white/[0.12]"
+                            className="px-3 py-2 rounded bg-surface-raised text-fg text-sm font-medium transition-colors hover:bg-surface-high"
                           >
                             {t('payouts_page.continue_onboarding', { defaultValue: 'Continue onboarding' })}
                           </button>
                           <button
                             type="button"
                             onClick={openStripeDashboard}
-                            className="px-3 py-2 rounded bg-white/[0.07] text-white text-sm font-medium transition-colors hover:bg-white/[0.12]"
+                            className="px-3 py-2 rounded bg-surface-raised text-fg text-sm font-medium transition-colors hover:bg-surface-high"
                           >
                             {t('payouts_page.manage_in_stripe', { defaultValue: 'Manage in Stripe' })}
                           </button>
@@ -1952,7 +1952,7 @@ export default function PayoutsPageNew({
                       )}
 
                       {isLoadingStripeStatus ? (
-                        <span className="text-sm text-white/50 self-center">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</span>
+                        <span className="text-sm text-fg-subtle self-center">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</span>
                       ) : null}
                     </div>
                   </div>
@@ -1961,25 +1961,25 @@ export default function PayoutsPageNew({
                 {isHaiti &&
                 String(formData.method || '').toLowerCase() === 'mobile_money' &&
                 selectedProvider === 'moncash' ? (
-                  <div className="mb-4 rounded-xl p-3 sm:p-4 bg-white/[0.07]">
-                    <p className="text-sm font-semibold text-white">{t('payouts_page.instant_moncash_title', { defaultValue: 'Instant MonCash (prefunding)' })}</p>
-                    <p className="!text-[12px] sm:!text-sm text-white/60 mt-1">
+                  <div className="mb-4 rounded-xl p-3 sm:p-4 bg-surface-raised">
+                    <p className="text-sm font-semibold text-fg">{t('payouts_page.instant_moncash_title', { defaultValue: 'Instant MonCash (prefunding)' })}</p>
+                    <p className="!text-caption sm:!text-sm text-fg-muted mt-1">
                       {t('payouts_page.instant_moncash_desc', { min: MONCASH_MIN_LABEL, defaultValue: INSTANT_MONCASH_DESC_FALLBACK })}
                     </p>
 
                     {prefundingError ? (
-                      <div className="mt-2 text-sm text-red-300">{prefundingError}</div>
+                      <div className="mt-2 text-sm text-danger-soft">{prefundingError}</div>
                     ) : null}
 
                     {prefunding ? (
-                      <div className="mt-2 text-[12px] sm:text-sm text-white/70">
+                      <div className="mt-2 text-caption sm:text-sm text-fg-muted">
                         {t('payouts_page.prefunding_status', { status: prefunding.enabled && prefunding.available ? t('payouts_page.prefunding_available', { defaultValue: 'Available' }) : prefunding.enabled ? t('payouts_page.prefunding_unavailable', { defaultValue: 'Temporarily unavailable' }) : t('payouts_page.prefunding_disabled', { defaultValue: 'Disabled' }), defaultValue: 'Status: {{status}}' })}
                       </div>
                     ) : (
-                      <div className="mt-2 text-[12px] sm:text-sm text-white/50">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</div>
+                      <div className="mt-2 text-caption sm:text-sm text-fg-subtle">{t('payouts_page.loading', { defaultValue: 'Loading…' })}</div>
                     )}
 
-                    <label className="mt-3 flex items-center gap-2 text-sm text-white">
+                    <label className="mt-3 flex items-center gap-2 text-sm text-fg">
                       <input
                         type="checkbox"
                         checked={Boolean(config?.allowInstantMoncash)}
@@ -2018,8 +2018,8 @@ export default function PayoutsPageNew({
                   // Summary View
                   <div className="space-y-4">
                     <div>
-                      <div className="text-sm font-medium text-white/50 mb-1">{t('payouts_page.location', { defaultValue: 'Location' })}</div>
-                      <div className="text-base text-white">
+                      <div className="text-sm font-medium text-fg-subtle mb-1">{t('payouts_page.location', { defaultValue: 'Location' })}</div>
+                      <div className="text-base text-fg">
                         {formatLocationLabel(
                           config?.accountLocation || 
                           config?.bankDetails?.accountLocation || 
@@ -2029,8 +2029,8 @@ export default function PayoutsPageNew({
                     </div>
 
                     <div>
-                      <div className="text-sm font-medium text-white/50 mb-1">{t('payouts_page.method', { defaultValue: 'Method' })}</div>
-                      <div className="text-base text-white">
+                      <div className="text-sm font-medium text-fg-subtle mb-1">{t('payouts_page.method', { defaultValue: 'Method' })}</div>
+                      <div className="text-base text-fg">
                         {isStripeConnectAccount ? (
                           <>Stripe Connect</>
                         ) : config?.method === 'bank_transfer' ? (
@@ -2067,7 +2067,7 @@ export default function PayoutsPageNew({
                       </div>
                     </div>
 
-                    <p className="text-sm text-white/60 pt-2">
+                    <p className="text-sm text-fg-muted pt-2">
                       {isStripeConnectAccount
                         ? t('payouts_page.payouts_via_stripe', { defaultValue: 'Your payouts are handled through Stripe Connect.' })
                         : t('payouts_page.payouts_to_this_account', { defaultValue: 'Your payouts will be sent to this account.' })}
@@ -2076,7 +2076,7 @@ export default function PayoutsPageNew({
                     <button
                       type="button"
                       onClick={() => setIsEditing(true)}
-                      className="w-full px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors"
+                      className="w-full px-4 py-2 rounded bg-surface-raised text-fg font-medium hover:bg-surface-high transition-colors"
                     >
                       {t('payouts_page.edit_payout_details', { defaultValue: 'Edit payout details' })}
                     </button>
@@ -2086,8 +2086,8 @@ export default function PayoutsPageNew({
                   <div className="space-y-4">
                     {/* Account Location */}
                     <div>
-                      <label className="block text-sm font-medium text-white/70 mb-2">
-                        {t('payouts_page.account_location', { defaultValue: 'Account location' })} <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-fg-muted mb-2">
+                        {t('payouts_page.account_location', { defaultValue: 'Account location' })} <span className="text-danger-strong">*</span>
                       </label>
                       <select
                         aria-label={t('payouts_page.account_location', { defaultValue: 'Account location' })}
@@ -2109,7 +2109,7 @@ export default function PayoutsPageNew({
                             method: 'bank_transfer',
                           })
                         }}
-                        className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                        className="w-full px-3 py-2 rounded-lg bg-surface text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                       >
                         {activeProfile === 'haiti' ? (
                           <option value="haiti">{t('payouts_page.country_haiti', { defaultValue: 'Haiti' })}</option>
@@ -2122,7 +2122,7 @@ export default function PayoutsPageNew({
                       </select>
 
                       {activeProfile === 'stripe_connect' ? (
-                        <p className="mt-1 !text-xs text-white/50">
+                        <p className="mt-1 !text-xs text-fg-subtle">
                           {t('payouts_page.stripe_handles_us_ca_long', { defaultValue: 'US/Canada payouts are handled via Stripe Connect (no bank details required here).' })}
                         </p>
                       ) : null}
@@ -2131,11 +2131,11 @@ export default function PayoutsPageNew({
                     {/* Payout Method */}
                     {activeProfile === 'haiti' ? (
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">
-                          {t('payouts_page.payout_method', { defaultValue: 'Payout method' })} <span className="text-red-500">*</span>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">
+                          {t('payouts_page.payout_method', { defaultValue: 'Payout method' })} <span className="text-danger-strong">*</span>
                         </label>
                         <div className="space-y-2">
-                          <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${formData.method === 'bank_transfer' ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50' : 'bg-white/[0.055] hover:bg-white/[0.12]'}`}>
+                          <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${formData.method === 'bank_transfer' ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50' : 'bg-surface hover:bg-surface-high'}`}>
                             <input
                               type="radio"
                               name="method"
@@ -2144,9 +2144,9 @@ export default function PayoutsPageNew({
                               onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
                               className="h-4 w-4 accent-brand-500"
                             />
-                            <span className="text-sm font-medium text-white">{t('payouts_page.bank_transfer', { defaultValue: 'Bank transfer' })}</span>
+                            <span className="text-sm font-medium text-fg">{t('payouts_page.bank_transfer', { defaultValue: 'Bank transfer' })}</span>
                           </label>
-                          <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${formData.method === 'mobile_money' ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50' : 'bg-white/[0.055] hover:bg-white/[0.12]'}`}>
+                          <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${formData.method === 'mobile_money' ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50' : 'bg-surface hover:bg-surface-high'}`}>
                             <input
                               type="radio"
                               name="method"
@@ -2155,12 +2155,12 @@ export default function PayoutsPageNew({
                               onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
                               className="h-4 w-4 accent-brand-500"
                             />
-                            <span className="text-sm font-medium text-white">{t('payouts_page.mobile_money', { defaultValue: 'Mobile money' })}</span>
+                            <span className="text-sm font-medium text-fg">{t('payouts_page.mobile_money', { defaultValue: 'Mobile money' })}</span>
                           </label>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 bg-white/[0.07] rounded-xl text-sm text-white/70">
+                      <div className="p-3 bg-surface-raised rounded-xl text-sm text-fg-muted">
                         {t('payouts_page.stripe_collects_bank_long', { defaultValue: "Stripe Connect will collect your bank details securely. You don't need to enter any bank information on Tikèm." })}
                       </div>
                     )}
@@ -2168,12 +2168,12 @@ export default function PayoutsPageNew({
                     {/* Bank Transfer Fields */}
                     {activeProfile === 'haiti' && formData.method === 'bank_transfer' ? (
                       <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">
-                          {t('payouts_page.bank_account', { defaultValue: 'Bank account' })} <span className="text-red-500">*</span>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">
+                          {t('payouts_page.bank_account', { defaultValue: 'Bank account' })} <span className="text-danger-strong">*</span>
                         </label>
 
                         {isLoadingBankDestinations ? (
-                          <div className="text-sm text-white/50">{t('payouts_page.loading_saved_banks', { defaultValue: 'Loading saved bank accounts…' })}</div>
+                          <div className="text-sm text-fg-subtle">{t('payouts_page.loading_saved_banks', { defaultValue: 'Loading saved bank accounts…' })}</div>
                         ) : null}
 
                         {bankDestinations && bankDestinations.length ? (
@@ -2181,7 +2181,7 @@ export default function PayoutsPageNew({
                             aria-label={t('payouts_page.select_bank_account', { defaultValue: 'Select bank account' })}
                             value={selectedBankDestinationId}
                             onChange={(e) => setSelectedBankDestinationId(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                            className="w-full px-3 py-2 rounded-lg bg-surface text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                           >
                             {bankDestinations.map((d) => (
                               <option key={d.id} value={d.id}>
@@ -2190,13 +2190,13 @@ export default function PayoutsPageNew({
                             ))}
                           </select>
                         ) : (
-                          <div className="text-sm text-white/60">
+                          <div className="text-sm text-fg-muted">
                             {t('payouts_page.no_banks_verification_section', { defaultValue: 'No bank accounts saved yet. Add one in the verification section.' })}
                           </div>
                         )}
 
                         {bankDestinationsError ? (
-                          <div className="text-xs text-red-300 mt-1">{bankDestinationsError}</div>
+                          <div className="text-xs text-danger-soft mt-1">{bankDestinationsError}</div>
                         ) : null}
 
                         <button
@@ -2216,14 +2216,14 @@ export default function PayoutsPageNew({
                     {formData.method === 'mobile_money' && activeProfile === 'haiti' && (
                       <>
                         <div>
-                          <label className="block text-sm font-medium text-white/70 mb-2">
+                          <label className="block text-sm font-medium text-fg-muted mb-2">
                             {t('payouts_page.provider', { defaultValue: 'Provider' })}
                           </label>
                           <select
                             aria-label={t('payouts_page.provider', { defaultValue: 'Provider' })}
                             value={formData.provider}
                             onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                            className="w-full px-3 py-2 rounded-lg bg-surface text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                           >
                             <option value="moncash">MonCash</option>
                             {NATCASH_ENABLED && <option value="natcash">Natcash</option>}
@@ -2231,9 +2231,9 @@ export default function PayoutsPageNew({
                         </div>
 
                         {Boolean(config?.mobileMoneyDetails?.phoneNumberLast4) && !isChangingMobileNumber ? (
-                          <div className="rounded-xl p-3 bg-white/[0.07]">
-                            <div className="text-sm text-white font-medium">{t('payouts_page.saved_phone_number', { defaultValue: 'Saved phone number' })}</div>
-                            <div className="text-sm text-white/70 mt-1">
+                          <div className="rounded-xl p-3 bg-surface-raised">
+                            <div className="text-sm text-fg font-medium">{t('payouts_page.saved_phone_number', { defaultValue: 'Saved phone number' })}</div>
+                            <div className="text-sm text-fg-muted mt-1">
                               ****{config?.mobileMoneyDetails?.phoneNumberLast4}
                             </div>
                             <button
@@ -2246,13 +2246,13 @@ export default function PayoutsPageNew({
                           </div>
                         ) : (
                           <div>
-                            <label className="block text-sm font-medium text-white/70 mb-2">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</label>
+                            <label className="block text-sm font-medium text-fg-muted mb-2">{t('payouts_page.phone_number', { defaultValue: 'Phone number' })}</label>
                             <input
                               type="tel"
                               value={formData.phoneNumber}
                               onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                               placeholder="+50912345678"
-                              className="w-full px-3 py-2 rounded-lg bg-white/[0.055] text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
+                              className="w-full px-3 py-2 rounded-lg bg-surface text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-500"
                             />
                             {Boolean(config?.mobileMoneyDetails?.phoneNumberLast4) ? (
                               <button
@@ -2261,7 +2261,7 @@ export default function PayoutsPageNew({
                                   setIsChangingMobileNumber(false)
                                   setFormData((p) => ({ ...p, phoneNumber: '' }))
                                 }}
-                                className="mt-2 text-sm font-medium text-white/60 hover:text-white/70"
+                                className="mt-2 text-sm font-medium text-fg-muted hover:text-fg-muted"
                               >
                                 {t('payouts_page.use_saved_number', { defaultValue: 'Use saved number instead' })}
                               </button>
@@ -2272,7 +2272,7 @@ export default function PayoutsPageNew({
                     )}
 
                     {error && (
-                      <div className="p-3 rounded-xl bg-red-500/10 text-sm text-red-200">
+                      <div className="p-3 rounded-xl bg-danger-strong/10 text-sm text-danger-soft">
                         {error}
                       </div>
                     )}
@@ -2282,7 +2282,7 @@ export default function PayoutsPageNew({
                         type="button"
                         onClick={() => handleSavePayoutDetails()}
                         disabled={isSaving || payoutChangeVerificationRequired}
-                        className="flex-1 px-4 py-2 bg-white text-black rounded font-semibold hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex-1 px-4 py-2 bg-inverse text-on-inverse rounded font-semibold hover:bg-inverse-hover transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {isSaving
                           ? (activeProfile === 'stripe_connect' ? t('payouts_page.opening_stripe', { defaultValue: 'Opening Stripe…' }) : t('payouts_page.saving', { defaultValue: 'Saving…' }))
@@ -2300,7 +2300,7 @@ export default function PayoutsPageNew({
                             setPayoutChangeMessage(null)
                           }}
                           disabled={isSaving}
-                          className="px-4 py-2 rounded bg-white/[0.07] text-white font-medium hover:bg-white/[0.12] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 rounded bg-surface-raised text-fg font-medium hover:bg-surface-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t('payouts_page.cancel', { defaultValue: 'Cancel' })}
                         </button>
@@ -2323,15 +2323,15 @@ export default function PayoutsPageNew({
               that view properly (against the balance a withdrawal is actually
               judged against). Removed rather than left as a second, drifting
               copy of the same numbers; the link below goes to the real one. */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
-            <p className="!text-[13px] text-white/45">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+            <p className="!text-meta text-fg-subtle">
               {t('payouts_page.earnings_moved', {
                 defaultValue: 'Looking for what you’ve earned and what’s been paid out?',
               })}
             </p>
             <Link
               href="/organizer/finance"
-              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
+              className="inline-flex items-center gap-1.5 text-meta font-semibold text-fg-soft underline decoration-fg-faint underline-offset-4 transition-colors hover:text-fg"
             >
               {t('payouts_page.go_to_finance', { defaultValue: 'Go to Finance' })}
               <ChevronRight className="h-4 w-4" aria-hidden />

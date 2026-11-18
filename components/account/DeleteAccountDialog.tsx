@@ -145,7 +145,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-4 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-account-title"
@@ -153,29 +153,29 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
         if (e.target === e.currentTarget && !busy) onClose()
       }}
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-[#1c1c1c] p-6">
-        <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-red-500/10 text-red-300">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-surface-raised-solid p-6">
+        <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-danger-strong/10 text-danger-soft">
           <AlertTriangle className="h-6 w-6" aria-hidden />
         </div>
         {/* h3 + `!`: .mobile-typography would drop this to text-base on a phone. */}
-        <h3 id="delete-account-title" className="font-display italic !text-[24px] !leading-tight text-white">
+        <h3 id="delete-account-title" className="font-display italic !text-section !leading-tight text-fg">
           {title}
         </h3>
 
         {step === 'confirm' && (
-          <div className="mt-3 space-y-4 !text-[14px] !leading-relaxed text-white/60">
+          <div className="mt-3 space-y-4 !text-sm !leading-relaxed text-fg-muted">
             <p>{k('intro')}</p>
             <div>
-              <p className="eyebrow mb-1 text-white/40">{k('deleted_heading')}</p>
+              <p className="eyebrow mb-1 text-fg-subtle">{k('deleted_heading')}</p>
               <p>{k('deleted_body')}</p>
             </div>
             <div>
-              <p className="eyebrow mb-1 text-white/40">{k('kept_heading')}</p>
+              <p className="eyebrow mb-1 text-fg-subtle">{k('kept_heading')}</p>
               <p>{k('kept_body')}</p>
             </div>
-            <p className="text-white/85">{k('tickets_warning')}</p>
+            <p className="text-fg-soft">{k('tickets_warning')}</p>
             <div>
-              <label htmlFor="delete-account-confirm" className="eyebrow mb-2 block text-white/40">
+              <label htmlFor="delete-account-confirm" className="eyebrow mb-2 block text-fg-subtle">
                 {k('type_to_confirm', { word: CONFIRM_WORD })}
               </label>
               <input
@@ -186,14 +186,14 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
                 autoComplete="off"
                 autoCapitalize="characters"
                 placeholder={CONFIRM_WORD}
-                className="w-full rounded-xl bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
+                className="w-full rounded-xl bg-surface px-3.5 py-3 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-inset focus:ring-danger-strong"
               />
             </div>
           </div>
         )}
 
         {step === 'reauth' && (
-          <div className="mt-3 space-y-4 !text-[14px] !leading-relaxed text-white/60">
+          <div className="mt-3 space-y-4 !text-sm !leading-relaxed text-fg-muted">
             <p>
               {method === 'password'
                 ? k('reauth_body_password')
@@ -209,22 +209,22 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
                 autoComplete="current-password"
                 placeholder={k('password_placeholder')}
                 aria-label={k('password_placeholder')}
-                className="w-full rounded-xl bg-white/[0.06] px-3.5 py-3 text-[16px] text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"
+                className="w-full rounded-xl bg-surface px-3.5 py-3 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"
               />
             )}
           </div>
         )}
 
         {step === 'blocked' && (
-          <div className="mt-3 space-y-3 !text-[14px] !leading-relaxed text-white/60">
+          <div className="mt-3 space-y-3 !text-sm !leading-relaxed text-fg-muted">
             <p>{k('blocked_body')}</p>
             <ul className="space-y-2">
               {obligations.map((o, i) => (
-                <li key={i} className="rounded-xl bg-white/[0.055] px-4 py-3 text-white/85">
+                <li key={i} className="rounded-xl bg-surface px-4 py-3 text-fg-soft">
                   {o.type === 'upcoming_events_with_sales' && (
                     <>
                       <p>{k('obligation_events')}</p>
-                      <ul className="mt-1 space-y-0.5 text-white/60">
+                      <ul className="mt-1 space-y-0.5 text-fg-muted">
                         {o.events.map((e) => (
                           <li key={e.id}>{k('obligation_event', { title: e.title, count: e.ticketsSold })}</li>
                         ))}
@@ -246,11 +246,11 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
           </div>
         )}
 
-        {error && <p className="mt-4 !text-[13px] text-red-300">{error}</p>}
+        {error && <p className="mt-4 !text-meta text-danger-soft">{error}</p>}
 
-        <p className="mt-5 !text-[12px] text-white/40">
+        <p className="mt-5 !text-caption text-fg-subtle">
           {k('support_prefix')}{' '}
-          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-white/70 underline underline-offset-2 hover:text-white">
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-fg-muted underline underline-offset-2 hover:text-fg">
             {SUPPORT_EMAIL}
           </a>
         </p>
@@ -260,7 +260,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
+            className="flex-1 rounded bg-surface-raised px-4 py-3 text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg disabled:opacity-50"
           >
             {step === 'blocked' ? k('close') : k('cancel')}
           </button>
@@ -270,7 +270,7 @@ export function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose:
               onClick={step === 'confirm' ? attemptDelete : handleReauth}
               disabled={confirmDisabled}
               aria-busy={busy}
-              className="flex flex-1 items-center justify-center gap-2 rounded bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-1 items-center justify-center gap-2 rounded bg-danger-strong/15 px-4 py-3 text-sm font-semibold text-danger-soft transition-colors hover:bg-danger-strong/25 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
               {busy

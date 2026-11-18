@@ -64,6 +64,6 @@ export default async function PayoutHistoryPage() {
   }
 
   return (
-    <div className="bg-[#0a0a0a]">      <PayoutHistoryTable payouts={transformedPayouts} />    </div>
+    <div className="bg-canvas">      <PayoutHistoryTable payouts={transformedPayouts} />    </div>
   )
 }

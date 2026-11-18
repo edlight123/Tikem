@@ -20,7 +20,7 @@ interface SocialLinksCardProps {
  * pink square on black), four platform icons in their own brand colours fighting
  * each other, a textarea and four `@`-prefixed inputs that were all borders and
  * no fill, and an "we don't verify these" notice built as `border
- * border-amber-200` — Tailwind's LIGHT amber, so a near-white hairline around
+ * border-warning-soft` — Tailwind's LIGHT amber, so a near-white hairline around
  * empty space.
  *
  * Now: the serif section heading carries the identity, so the pink tile is gone;
@@ -122,11 +122,11 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
                   placeholder={t('social.bio_placeholder')}
                   className={`${FIELD} resize-none`}
                 />
-                <p className="mt-1.5 text-right !text-[12px] text-white/35">{bio.length}/280</p>
+                <p className="mt-1.5 text-right !text-caption text-fg-faint">{bio.length}/280</p>
               </>
             ) : (
-              <p className="!text-[15px] !leading-relaxed whitespace-pre-line text-white/80">
-                {profile.bio?.trim() ? profile.bio : <span className="text-white/35">{t('social.no_bio')}</span>}
+              <p className="!text-body !leading-relaxed whitespace-pre-line text-fg-soft">
+                {profile.bio?.trim() ? profile.bio : <span className="text-fg-faint">{t('social.no_bio')}</span>}
               </p>
             )}
           </div>
@@ -137,18 +137,18 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
             if (!isEditing && !value) return null
             return (
               <div key={key} className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/55">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface text-fg-muted">
                   <Icon className="h-[18px] w-[18px]" aria-hidden />
                 </span>
                 {isEditing ? (
-                  <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-xl bg-white/[0.06] focus-within:ring-2 focus-within:ring-inset focus-within:ring-brand-500">
-                    <span className="select-none pl-3.5 pr-1 text-[16px] text-white/35">@</span>
+                  <div className="flex min-w-0 flex-1 items-center overflow-hidden rounded-xl bg-surface focus-within:ring-2 focus-within:ring-inset focus-within:ring-brand-500">
+                    <span className="select-none pl-3.5 pr-1 text-base text-fg-faint">@</span>
                     <input
                       type="text"
                       value={links[key] || ''}
                       onChange={(e) => setLinks((prev) => ({ ...prev, [key]: e.target.value }))}
                       placeholder={t(`social.${placeholderKey}`)}
-                      className="min-w-0 flex-1 bg-transparent py-3 pr-3.5 text-[16px] text-white outline-none placeholder:text-white/35"
+                      className="min-w-0 flex-1 bg-transparent py-3 pr-3.5 text-base text-fg outline-none placeholder:text-fg-faint"
                       aria-label={label}
                     />
                   </div>
@@ -156,8 +156,8 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
                   <div className="min-w-0 flex-1">
                     {/* A span, not a p: `.mobile-typography p` (element+class)
                         would override .eyebrow's size and line-height. */}
-                    <span className="eyebrow block text-white/40">{label}</span>
-                    <p className="mt-0.5 truncate !text-[15px] font-semibold text-white">@{value}</p>
+                    <span className="eyebrow block text-fg-subtle">{label}</span>
+                    <p className="mt-0.5 truncate !text-body font-semibold text-fg">@{value}</p>
                   </div>
                 )}
               </div>
@@ -165,14 +165,14 @@ export function SocialLinksCard({ profile, onUpdate }: SocialLinksCardProps) {
           })}
 
           {!isEditing && !hasAnyLink && (
-            <p className="px-4 py-4 !text-[14px] text-white/35 sm:px-5">{t('social.no_links')}</p>
+            <p className="px-4 py-4 !text-sm text-fg-faint sm:px-5">{t('social.no_links')}</p>
           )}
         </PanelRows>
       </Panel>
 
       {isEditing && (
-        <div className="mt-3 rounded-xl bg-amber-400/[0.08] px-4 py-3">
-          <p className="!text-[12px] !leading-relaxed text-amber-200/85">{t('social.notice')}</p>
+        <div className="mt-3 rounded-xl bg-warning/[0.08] px-4 py-3">
+          <p className="!text-caption !leading-relaxed text-warning-soft/85">{t('social.notice')}</p>
         </div>
       )}
     </ProfileSection>

@@ -117,7 +117,7 @@ export default function AdminOrganizersClient({
           <span className="block truncate text-sm font-medium text-console-text group-hover:underline">
             {u.full_name || 'No name'}
           </span>
-          <span className="block truncate text-[13px] text-console-mut">{u.email}</span>
+          <span className="block truncate text-meta text-console-mut">{u.email}</span>
         </Link>
       ),
     },
@@ -130,7 +130,7 @@ export default function AdminOrganizersClient({
       key: 'joined',
       header: 'Joined',
       render: (u) => (
-        <span className="font-mono tabular-nums text-[13px] text-console-mut whitespace-nowrap">
+        <span className="font-mono tabular-nums text-meta text-console-mut whitespace-nowrap">
           {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
         </span>
       ),
@@ -142,7 +142,7 @@ export default function AdminOrganizersClient({
       render: (u) => (
         <Link
           href={`/admin/people/organizers/${u.id}`}
-          className="inline-flex items-center gap-1 text-[13px] font-medium text-console-mut hover:text-console-text"
+          className="inline-flex items-center gap-1 text-meta font-medium text-console-mut hover:text-console-text"
         >
           Manage <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
@@ -155,11 +155,11 @@ export default function AdminOrganizersClient({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className="block truncate text-sm font-medium text-console-text">{u.full_name || 'No name'}</span>
-          <span className="block truncate text-[13px] text-console-mut">{u.email}</span>
+          <span className="block truncate text-meta text-console-mut">{u.email}</span>
         </div>
         {renderVerification(u)}
       </div>
-      <div className="mt-2 font-mono tabular-nums text-[13px] text-console-mut">
+      <div className="mt-2 font-mono tabular-nums text-meta text-console-mut">
         Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
       </div>
     </Link>
@@ -185,7 +185,7 @@ export default function AdminOrganizersClient({
       <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-8">
         {stats.map((s) => (
           <div key={s.label}>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
               {s.label}
             </div>
             <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">
@@ -232,7 +232,7 @@ export default function AdminOrganizersClient({
         variant="console"
         renderMobileCard={renderOrganizerMobileCard}
         empty={
-          <p className="label-mono text-center text-[12px] uppercase tracking-[0.14em] text-console-mut">
+          <p className="label-mono text-center text-caption uppercase tracking-[0.14em] text-console-mut">
             {query || verifyFilter !== 'all' ? 'No organizers match your filters' : t('organizers.no_organizers_found')}
           </p>
         }

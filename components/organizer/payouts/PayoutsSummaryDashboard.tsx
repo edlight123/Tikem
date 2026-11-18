@@ -83,29 +83,29 @@ export default function PayoutsSummaryDashboard({
   const statusHero = {
     none: {
       icon: <Wallet className="h-7 w-7" />,
-      ring: 'bg-white/[0.055]',
-      chip: 'bg-white/[0.08] text-white',
+      ring: 'bg-surface',
+      chip: 'bg-surface-raised text-fg',
       title: 'Set up payouts to get paid',
       description: 'Add a payout method to start receiving earnings from your ticket sales. It only takes a few minutes.',
     },
     active: {
       icon: <CheckCircle className="h-7 w-7" />,
-      ring: 'bg-white/[0.055]',
-      chip: 'bg-emerald-500/15 text-emerald-300',
+      ring: 'bg-surface',
+      chip: 'bg-success-strong/15 text-success-soft',
       title: 'Your payouts are ready',
       description: 'Your payout method is set up and verified. Earnings are paid out according to your schedule.',
     },
     pending: {
       icon: <Clock className="h-7 w-7" />,
-      ring: 'bg-amber-500/10',
-      chip: 'bg-amber-500/15 text-amber-300',
+      ring: 'bg-warning-strong/10',
+      chip: 'bg-warning-strong/15 text-warning-soft',
       title: 'Verification in progress',
       description: 'We’re reviewing your payout details. This usually takes 1–2 business days, we’ll notify you once it’s approved.',
     },
     needs_attention: {
       icon: <AlertCircle className="h-7 w-7" />,
-      ring: 'bg-red-500/10',
-      chip: 'bg-red-500/15 text-red-300',
+      ring: 'bg-danger-strong/10',
+      chip: 'bg-danger-strong/15 text-danger-soft',
       title: 'Action needed on your payouts',
       description: 'One of your payout methods needs attention before you can receive funds. Open it below to resolve.',
     },
@@ -148,12 +148,12 @@ export default function PayoutsSummaryDashboard({
   }
 
   const renderPayoutMethod = (method: PayoutMethod, profile: 'haiti' | 'stripe_connect') => {
-    const iconBgColor = 'bg-white/[0.08] text-white/80'
+    const iconBgColor = 'bg-surface-raised text-fg-soft'
 
     return (
       <div 
         key={profile}
-        className="bg-white/[0.055] rounded-2xl p-5 transition-colors"
+        className="bg-surface rounded-2xl p-5 transition-colors"
       >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -161,8 +161,8 @@ export default function PayoutsSummaryDashboard({
               {getMethodIcon(method.type)}
             </div>
             <div>
-              <h3 className="font-semibold text-white">{method.details.name}</h3>
-              <p className="text-sm text-white/50">
+              <h3 className="font-semibold text-fg">{method.details.name}</h3>
+              <p className="text-sm text-fg-subtle">
                 {method.type === 'stripe' && 'Stripe Connect'}
                 {method.type === 'bank_transfer' && method.details.bankName}
                 {method.type === 'mobile_money' && method.details.provider}
@@ -173,7 +173,7 @@ export default function PayoutsSummaryDashboard({
         </div>
 
         {method.details.maskedNumber && (
-          <div className="bg-white/[0.06] rounded-xl px-3 py-2 mb-4 font-mono text-sm text-white/60">
+          <div className="bg-surface rounded-xl px-3 py-2 mb-4 font-mono text-sm text-fg-muted">
             {method.type === 'mobile_money' ? 'Phone: ' : 'Account: '}
             ****{method.details.maskedNumber}
           </div>
@@ -184,8 +184,8 @@ export default function PayoutsSummaryDashboard({
           onClick={() => onEdit(profile)}
           className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-semibold transition-colors ${
             method.status === 'needs_attention'
-              ? 'bg-red-500/15 text-red-200 hover:bg-red-500/25'
-              : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+              ? 'bg-danger-strong/15 text-danger-soft hover:bg-danger-strong/25'
+              : 'bg-surface-raised text-fg hover:bg-surface-high'
           }`}
         >
           {method.status === 'needs_attention' ? (
@@ -208,14 +208,14 @@ export default function PayoutsSummaryDashboard({
               {statusHero.icon}
             </div>
             <div className="min-w-0">
-              <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{statusHero.title}</h2>
-              <p className="mt-1 text-sm text-white/60">{statusHero.description}</p>
+              <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{statusHero.title}</h2>
+              <p className="mt-1 text-sm text-fg-muted">{statusHero.description}</p>
             </div>
           </div>
           {needsIdentity && (
             <Link
               href="/organizer/verify"
-              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/90"
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded bg-inverse px-5 py-2.5 font-semibold text-on-inverse transition hover:bg-inverse-hover"
             >
               <ShieldCheck className="h-4 w-4" />
               {t('verify_to_withdraw.cta', { defaultValue: 'Verify your identity' })}
@@ -225,7 +225,7 @@ export default function PayoutsSummaryDashboard({
             <button
               type="button"
               onClick={onSetupNew}
-              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/90"
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded bg-inverse px-5 py-2.5 font-semibold text-on-inverse transition hover:bg-inverse-hover"
             >
               <Plus className="h-4 w-4" />
               {t('payouts_summary.set_up_payouts')}
@@ -237,7 +237,7 @@ export default function PayoutsSummaryDashboard({
       {/* Payout Methods */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('payouts_summary.payout_methods')}</h2>
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('payouts_summary.payout_methods')}</h2>
           {hasAnyMethod && (
             <button
               type="button"
@@ -256,18 +256,18 @@ export default function PayoutsSummaryDashboard({
             {stripeMethod && renderPayoutMethod(stripeMethod, 'stripe_connect')}
           </div>
         ) : (
-          <div className="bg-white/[0.055] rounded-2xl p-8 text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-white/[0.08] flex items-center justify-center">
-              <Wallet className="w-7 h-7 text-white/40" />
+          <div className="bg-surface rounded-2xl p-8 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-surface-raised flex items-center justify-center">
+              <Wallet className="w-7 h-7 text-fg-subtle" />
             </div>
-            <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-2">{t('payouts_summary.no_payout_methods')}</h3>
-            <p className="text-white/60 mb-4 max-w-sm mx-auto">
+            <h3 className="font-display lowercase italic !text-section !leading-snug text-fg mb-2">{t('payouts_summary.no_payout_methods')}</h3>
+            <p className="text-fg-muted mb-4 max-w-sm mx-auto">
               {t('payouts_summary.set_up_payout_method')}
             </p>
             <button
               type="button"
               onClick={onSetupNew}
-              className="px-6 py-2.5 bg-white/[0.07] text-white rounded font-semibold hover:bg-white/[0.12] transition-colors"
+              className="px-6 py-2.5 bg-surface-raised text-fg rounded font-semibold hover:bg-surface-high transition-colors"
             >
               {t('payouts_summary.set_up_payouts_title')}
             </button>
@@ -276,45 +276,45 @@ export default function PayoutsSummaryDashboard({
       </div>
 
       {/* Quick Links */}
-      <div className="bg-white/[0.055] rounded-2xl p-5">
-        <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-4">{t('payouts_summary.manage')}</h3>
+      <div className="bg-surface rounded-2xl p-5">
+        <h3 className="font-display lowercase italic !text-section !leading-snug text-fg mb-4">{t('payouts_summary.manage')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Link
             href="/organizer/earnings"
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition-colors"
+            className="flex items-center gap-3 p-3 rounded-xl bg-surface-low hover:bg-surface-raised transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-5 h-5 text-white/60" />
+            <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-5 h-5 text-fg-muted" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white">{t('payouts_summary.earnings')}</div>
-              <div className="text-sm text-white/50">{t('payouts_summary.balance_withdrawals')}</div>
+              <div className="font-medium text-fg">{t('payouts_summary.earnings')}</div>
+              <div className="text-sm text-fg-subtle">{t('payouts_summary.balance_withdrawals')}</div>
             </div>
           </Link>
 
           <Link
             href="/organizer/settings/payouts/history"
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition-colors"
+            className="flex items-center gap-3 p-3 rounded-xl bg-surface-low hover:bg-surface-raised transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-              <History className="w-5 h-5 text-white/60" />
+            <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center flex-shrink-0">
+              <History className="w-5 h-5 text-fg-muted" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white">{t('payouts_summary.payout_history')}</div>
-              <div className="text-sm text-white/50">{t('payouts_summary.past_transfers')}</div>
+              <div className="font-medium text-fg">{t('payouts_summary.payout_history')}</div>
+              <div className="text-sm text-fg-subtle">{t('payouts_summary.past_transfers')}</div>
             </div>
           </Link>
 
           <Link
             href="/organizer/settings/payouts/fees"
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition-colors"
+            className="flex items-center gap-3 p-3 rounded-xl bg-surface-low hover:bg-surface-raised transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-5 h-5 text-white/60" />
+            <div className="w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-5 h-5 text-fg-muted" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white">{t('payouts_summary.fees_rules')}</div>
-              <div className="text-sm text-white/50">{t('payouts_summary.schedule_limits')}</div>
+              <div className="font-medium text-fg">{t('payouts_summary.fees_rules')}</div>
+              <div className="text-sm text-fg-subtle">{t('payouts_summary.schedule_limits')}</div>
             </div>
           </Link>
         </div>

@@ -91,15 +91,15 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-5 pb-24 md:pb-10">
       {/* Setup banner — only when something's missing */}
       {incomplete.length > 0 && (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-500/[0.09] px-3.5 py-2.5">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-warning-strong/[0.09] px-3.5 py-2.5">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm">
-            <span className="font-medium text-white">{tx('command_center.finish_setup')}</span>
-            <span className="text-white/40">·</span>
+            <span className="font-medium text-fg">{tx('command_center.finish_setup')}</span>
+            <span className="text-fg-subtle">·</span>
             {incomplete.map((s, i) => (
-              <span key={s.id} className="flex items-center gap-1.5 text-white/55">
-                <span className="h-1 w-1 rounded-full bg-amber-400" />
-                <Link href={s.href} className="hover:text-white">{s.label}</Link>
-                {i < incomplete.length - 1 && <span className="ml-1 text-white/20">·</span>}
+              <span key={s.id} className="flex items-center gap-1.5 text-fg-muted">
+                <span className="h-1 w-1 rounded-full bg-warning" />
+                <Link href={s.href} className="hover:text-fg">{s.label}</Link>
+                {i < incomplete.length - 1 && <span className="ml-1 text-fg-faint">·</span>}
               </span>
             ))}
           </div>
@@ -113,13 +113,13 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
       )}
 
       {/* KPI strip — single compact divided row */}
-      <div className="grid grid-cols-2 divide-x divide-y divide-white/10 overflow-hidden rounded-lg bg-white/[0.03] sm:grid-cols-4 sm:divide-y-0">
+      <div className="grid grid-cols-2 divide-x divide-y divide-line overflow-hidden rounded-lg bg-surface-low sm:grid-cols-4 sm:divide-y-0">
         {kpis.map((k) => (
           <div key={k.label} className="px-4 py-3">
-            <p className="label-mono truncate uppercase text-[11px] text-white/70">{k.label}</p>
+            <p className="label-mono truncate uppercase text-eyebrow text-fg-muted">{k.label}</p>
             <p className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-xl font-bold font-mono tabular-nums text-white">{k.value}</span>
-              {k.sub && <span className="text-xs font-mono tabular-nums text-white/70">{k.sub}</span>}
+              <span className="text-xl font-bold font-mono tabular-nums text-fg">{k.value}</span>
+              {k.sub && <span className="text-xs font-mono tabular-nums text-fg-muted">{k.sub}</span>}
             </p>
           </div>
         ))}
@@ -129,10 +129,10 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
         {/* ===== Main column ===== */}
         <div className="min-w-0 space-y-4">
           {/* Sales trend */}
-          <section className="rounded-lg bg-white/[0.03] p-4">
+          <section className="rounded-lg bg-surface-low p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-[16px] lowercase italic leading-none text-white">
-                {tx('actions.sales')}<span className="ml-1 font-normal font-mono tabular-nums text-white/40">· {soldInWindow} in {TREND_DAYS}d</span>
+              <h3 className="font-display text-base lowercase italic leading-none text-fg">
+                {tx('actions.sales')}<span className="ml-1 font-normal font-mono tabular-nums text-fg-subtle">· {soldInWindow} in {TREND_DAYS}d</span>
               </h3>
               <Link href={`/organizer/events/${event.id}/analytics`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-300 hover:text-brand-200">
                 {tx('actions.analytics')}<ArrowUpRight className="h-3 w-3" />
@@ -150,21 +150,21 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
                   <div
                     key={i}
                     aria-hidden="true"
-                    className="flex-1 rounded-t bg-white/70 transition-colors hover:bg-white"
+                    className="flex-1 rounded-t bg-fg/70 transition-colors hover:bg-inverse"
                     style={{ height: `${Math.max(3, (b.count / maxCount) * 100)}%` }}
                     title={`${format(b.date, 'MMM d')}: ${b.count}`}
                   />
                 ))}
               </div>
             ) : (
-              <p className="py-6 text-center text-sm text-white/35">{tx('command_center.no_sales_in_window')}</p>
+              <p className="py-6 text-center text-sm text-fg-faint">{tx('command_center.no_sales_in_window')}</p>
             )}
           </section>
 
           {/* Ticket tiers */}
-          <section className="rounded-lg bg-white/[0.03] p-4">
+          <section className="rounded-lg bg-surface-low p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-[16px] lowercase italic leading-none text-white">{tx('command_center.ticket_types')}</h3>
+              <h3 className="font-display text-base lowercase italic leading-none text-fg">{tx('command_center.ticket_types')}</h3>
               <Link href={`/organizer/events/${event.id}/tickets`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-300 hover:text-brand-200">
                 {tx('actions.manage')}<ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -177,11 +177,11 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
                   const pct = qty > 0 ? Math.min(100, Math.round((tsold / qty) * 100)) : 0
                   return (
                     <div key={tier.id} className="flex items-center gap-3">
-                      <span className="w-28 shrink-0 truncate text-sm text-white">{tier.name || 'Ticket'}</span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded bg-white/[0.06]">
-                        <div className="h-full rounded bg-white" style={{ width: `${pct}%` }} />
+                      <span className="w-28 shrink-0 truncate text-sm text-fg">{tier.name || 'Ticket'}</span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded bg-surface">
+                        <div className="h-full rounded bg-inverse" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="shrink-0 text-xs font-mono tabular-nums text-white/50">
+                      <span className="shrink-0 text-xs font-mono tabular-nums text-fg-subtle">
                         {tsold}{qty > 0 ? `/${qty}` : ''} · {Number(tier.price) > 0 ? formatMoneyFromCents(Math.round(Number(tier.price) * 100), currency) : 'Free'}
                       </span>
                     </div>
@@ -189,7 +189,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
                 })}
               </div>
             ) : (
-              <p className="py-4 text-sm text-white/45">
+              <p className="py-4 text-sm text-fg-subtle">
                 No ticket types yet.{' '}
                 <Link href={`/organizer/events/${event.id}/edit#tickets`} className="font-semibold text-brand-300 hover:text-brand-200">{tx('command_center.add_one')}</Link>
               </p>
@@ -197,29 +197,29 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
           </section>
 
           {/* Recent activity */}
-          <section className="rounded-lg bg-white/[0.03] p-4">
-            <h3 className="mb-2 font-display text-[16px] lowercase italic leading-none text-white">{tx('command_center.recent_activity')}</h3>
+          <section className="rounded-lg bg-surface-low p-4">
+            <h3 className="mb-2 font-display text-base lowercase italic leading-none text-fg">{tx('command_center.recent_activity')}</h3>
             {recent.length > 0 ? (
-              <ul className="divide-y divide-white/5">
+              <ul className="divide-y divide-line-soft">
                 {recent.map((t: any) => {
                   const cents = Math.round((Number(t.price_paid || 0) || 0) * 100)
                   const cur = normalizeCurrency(t.currency, currency)
                   const when = t.purchased_at ? new Date(t.purchased_at) : null
                   return (
                     <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                      <span className="flex items-center gap-2 text-white/80">
+                      <span className="flex items-center gap-2 text-fg-soft">
                         <Ticket className="h-3.5 w-3.5 shrink-0 text-brand-300" />
                         Ticket sold · {cents > 0 ? formatMoneyFromCents(cents, cur) : 'Free'}
                       </span>
                       {when && !Number.isNaN(when.getTime()) && (
-                        <span className="shrink-0 text-xs font-mono tabular-nums text-white/35">{formatDistanceToNow(when, { addSuffix: true })}</span>
+                        <span className="shrink-0 text-xs font-mono tabular-nums text-fg-faint">{formatDistanceToNow(when, { addSuffix: true })}</span>
                       )}
                     </li>
                   )
                 })}
               </ul>
             ) : (
-              <p className="py-4 text-sm text-white/45">{tx('command_center.no_sales_share')}</p>
+              <p className="py-4 text-sm text-fg-subtle">{tx('command_center.no_sales_share')}</p>
             )}
           </section>
         </div>
@@ -233,17 +233,17 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
           ) : (
             <Link
               href={`/organizer/events/${event.id}/edit#banner`}
-              className="flex aspect-[4/5] w-full flex-col items-center justify-center rounded-lg bg-white/[0.055] text-center text-white/45 transition-colors hover:bg-white/[0.09] hover:text-white/70"
+              className="flex aspect-[4/5] w-full flex-col items-center justify-center rounded-lg bg-surface text-center text-fg-subtle transition-colors hover:bg-surface-raised hover:text-fg-muted"
             >
               <ImageIcon className="mb-2 h-8 w-8" />
               <span className="text-sm font-medium">{tx('command_center.add_a_flyer')}</span>
-              <span className="mt-0.5 text-xs text-white/35">{tx('command_center.portrait_ratio')}</span>
+              <span className="mt-0.5 text-xs text-fg-faint">{tx('command_center.portrait_ratio')}</span>
             </Link>
           )}
           <div className="space-y-2.5 text-sm">
             <div className="flex items-start gap-2.5">
-              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
-              <span className="font-mono tabular-nums text-white/75">
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+              <span className="font-mono tabular-nums text-fg-soft">
                 {(() => {
                   const d = new Date(event.start_datetime)
                   return isValid(d) ? format(d, 'EEE, MMM d, yyyy · h:mm a') : 'Date to be announced'
@@ -252,26 +252,26 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
             </div>
             <div className="flex items-start gap-2.5">
               {event.is_online ? (
-                <Globe className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+                <Globe className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
               ) : (
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
               )}
-              <span className="text-white/75">
+              <span className="text-fg-soft">
                 {event.is_online ? 'Online event' : event.venue_name || event.city || 'Location TBD'}
               </span>
             </div>
           </div>
           <Link
             href={`/organizer/events/${event.id}/edit`}
-            className="flex h-11 w-full items-center justify-center rounded bg-white/[0.08] text-center text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+            className="flex h-11 w-full items-center justify-center rounded bg-surface-raised text-center text-sm font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
           >
             {tx('command_center.edit_event')}
           </Link>
 
           {event.description && (
-            <div className="border-t border-white/10 pt-3">
-              <h4 className="label-mono mb-1.5 uppercase text-xs text-white/40">{tx('actions.about')}</h4>
-              <p className="line-clamp-5 whitespace-pre-wrap text-sm leading-relaxed text-white/55">
+            <div className="border-t border-line pt-3">
+              <h4 className="label-mono mb-1.5 uppercase text-xs text-fg-subtle">{tx('actions.about')}</h4>
+              <p className="line-clamp-5 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
                 {event.description}
               </p>
             </div>

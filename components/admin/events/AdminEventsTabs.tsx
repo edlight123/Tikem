@@ -24,7 +24,7 @@ export function AdminEventsTabs({ activeTab, onTabChange, tabs }: AdminEventsTab
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={`
-                  label-mono whitespace-nowrap py-3 px-1 border-b-2 text-[11px] uppercase tracking-[0.08em] flex items-center gap-2 transition-colors
+                  label-mono whitespace-nowrap py-3 px-1 border-b-2 text-eyebrow uppercase tracking-[0.08em] flex items-center gap-2 transition-colors
                   ${isActive
                     ? 'border-console-text text-console-text'
                     : 'border-transparent text-console-mut hover:text-console-text'

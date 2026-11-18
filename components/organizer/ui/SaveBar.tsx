@@ -34,17 +34,17 @@ export function SaveBar({
     <div
       role="region"
       aria-label={t('save_bar.unsaved_changes')}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0a0a0a]/95 px-4 py-3 backdrop-blur-md sm:px-6"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-canvas/95 px-4 py-3 backdrop-blur-md sm:px-6"
       style={{ animation: 'slideUp 0.2s ease-out' }}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-        <p className="text-sm text-white/60">{t('save_bar.unsaved_short')}</p>
+        <p className="text-sm text-fg-muted">{t('save_bar.unsaved_short')}</p>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onDiscard}
             disabled={saving}
-            className="rounded bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="rounded bg-surface-raised px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {discardLabel}
           </button>
@@ -52,7 +52,7 @@ export function SaveBar({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="rounded bg-white px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
+            className="rounded bg-inverse px-5 py-2 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50"
           >
             {saving ? 'Saving…' : saveLabel}
           </button>

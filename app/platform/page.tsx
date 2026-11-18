@@ -333,19 +333,19 @@ function Section({
       <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <div className={flip ? 'lg:order-2' : ''}>
           <Reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/40">
+            <p className="text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
               {index}
             </p>
-            <h2 className="mt-2 font-display lowercase italic !text-[clamp(28px,4.5vw,44px)] !leading-[1.02] text-white/90">
+            <h2 className="mt-2 font-display lowercase italic !text-[clamp(28px,4.5vw,44px)] !leading-[1.02] text-fg">
               {title}
             </h2>
-            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/55">{blurb}</p>
+            <p className="mt-4 max-w-md text-body leading-relaxed text-fg-muted">{blurb}</p>
           </Reveal>
           <div className="mt-9 space-y-6">
             {points.map((p, i) => (
               <Reveal key={p.title} delay={140 + i * 110}>
-                <h3 className="font-grotesk text-[15px] font-semibold text-white">{p.title}</h3>
-                <p className="mt-1 max-w-md text-[14px] leading-relaxed text-white/55">{p.body}</p>
+                <h3 className="font-grotesk text-body font-semibold text-fg">{p.title}</h3>
+                <p className="mt-1 max-w-md text-sm leading-relaxed text-fg-muted">{p.body}</p>
               </Reveal>
             ))}
           </div>
@@ -413,13 +413,13 @@ export default async function PlatformPage() {
       <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 pb-12 pt-14 sm:px-6 sm:pb-16 sm:pt-20 lg:grid-cols-[1.1fr,0.9fr] lg:gap-16 lg:px-8">
         <div>
           <p
-            className="plt-enter text-[11px] font-medium uppercase tracking-[0.14em] text-white/40"
+            className="plt-enter text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle"
             style={{ ['--d' as any]: '0s' }}
           >
             {t.heroEyebrow}
           </p>
           <h1
-            className="plt-enter mt-4 font-grotesk font-bold uppercase !leading-[1.02] tracking-tight text-white !text-[clamp(40px,7vw,88px)]"
+            className="plt-enter mt-4 font-grotesk font-bold uppercase !leading-[1.02] tracking-tight text-fg !text-[clamp(40px,7vw,88px)]"
             style={{ ['--d' as any]: '0.08s' }}
           >
             {t.heroTitle1}
@@ -427,7 +427,7 @@ export default async function PlatformPage() {
             {t.heroTitle2}
           </h1>
           <p
-            className="plt-enter mt-5 max-w-xl font-display lowercase italic !text-[clamp(19px,2.6vw,26px)] !leading-snug text-white/70"
+            className="plt-enter mt-5 max-w-xl font-display lowercase italic !text-[clamp(19px,2.6vw,26px)] !leading-snug text-fg-muted"
             style={{ ['--d' as any]: '0.18s' }}
           >
             {t.heroSub}
@@ -438,13 +438,13 @@ export default async function PlatformPage() {
           >
             <Link
               href="/auth/signup"
-              className="inline-flex items-center rounded-xl bg-white px-6 py-3 text-sm font-medium text-black transition-colors duration-200 hover:bg-white/90"
+              className="inline-flex items-center rounded-xl bg-inverse px-6 py-3 text-sm font-medium text-on-inverse transition-colors duration-200 hover:bg-inverse-hover"
             >
               {t.ctaStart}
             </Link>
             <Link
               href="/organizer"
-              className="inline-flex items-center rounded-xl border border-white/12 px-6 py-3 text-sm font-normal text-white/80 transition-colors duration-200 hover:border-white/25 hover:text-white"
+              className="inline-flex items-center rounded-xl border border-line px-6 py-3 text-sm font-normal text-fg-soft transition-colors duration-200 hover:border-line-strong hover:text-fg"
             >
               {t.ctaDashboard}
             </Link>
@@ -466,8 +466,8 @@ export default async function PlatformPage() {
         <div className="grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3">
           {t.props.map((s, i) => (
             <Reveal key={s.label} delay={i * 110}>
-              <p className="font-grotesk text-[17px] font-bold text-white">{s.label}</p>
-              <p className="mt-1 text-[13px] text-white/55">{s.sub}</p>
+              <p className="font-grotesk text-lead font-bold text-fg">{s.label}</p>
+              <p className="mt-1 text-meta text-fg-muted">{s.sub}</p>
             </Reveal>
           ))}
         </div>
@@ -510,19 +510,19 @@ export default async function PlatformPage() {
       />
 
       {/* SIGN-OFF — de-boxed, the editorial close */}
-      <section className="border-t border-white/10">
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <Reveal>
-            <h2 className="font-display lowercase italic !text-[clamp(36px,6vw,72px)] !leading-[1.02] text-white">
+            <h2 className="font-display lowercase italic !text-[clamp(36px,6vw,72px)] !leading-[1.02] text-fg">
               {t.signoffTitle}
             </h2>
           </Reveal>
           <Reveal delay={120}>
-            <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-white/55">
+            <p className="mt-4 max-w-lg text-body leading-relaxed text-fg-muted">
               {t.signoffSub}
             </p>
-            <p className="mt-3 flex items-center gap-2 text-[13px] text-white/50">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <p className="mt-3 flex items-center gap-2 text-meta text-fg-subtle">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
               {t.verified}
             </p>
           </Reveal>
@@ -530,13 +530,13 @@ export default async function PlatformPage() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 href="/auth/signup"
-                className="inline-flex items-center rounded-xl bg-white px-6 py-3 text-sm font-medium text-black transition-colors duration-200 hover:bg-white/90"
+                className="inline-flex items-center rounded-xl bg-inverse px-6 py-3 text-sm font-medium text-on-inverse transition-colors duration-200 hover:bg-inverse-hover"
               >
                 {t.ctaStart}
               </Link>
               <Link
                 href="/discover"
-                className="inline-flex items-center rounded-xl border border-white/12 px-6 py-3 text-sm font-normal text-white/80 transition-colors duration-200 hover:border-white/25 hover:text-white"
+                className="inline-flex items-center rounded-xl border border-line px-6 py-3 text-sm font-normal text-fg-soft transition-colors duration-200 hover:border-line-strong hover:text-fg"
               >
                 {t.ctaExplore}
               </Link>

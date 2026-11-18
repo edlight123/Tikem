@@ -64,7 +64,7 @@ export function ConsolePage({
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
           {title}
         </h1>
         <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export function ConsolePage({
 
 /** One-line explainer under a title. Use sparingly — the screen should explain itself. */
 export function ConsoleCaption({ children }: { children: ReactNode }) {
-  return <p className="-mt-2 mb-4 text-[13px] text-console-mut">{children}</p>
+  return <p className="-mt-2 mb-4 text-meta text-console-mut">{children}</p>
 }
 
 /**
@@ -122,7 +122,7 @@ export function ConsoleTabs({
               key={tab.href}
               href={tab.href}
               aria-current={active ? 'page' : undefined}
-              className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut ${
+              className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-meta transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut ${
                 active
                   ? 'border-console-text font-semibold text-console-text'
                   : 'border-transparent text-console-mut hover:text-console-text'
@@ -130,7 +130,7 @@ export function ConsoleTabs({
             >
               {tab.label}
               {typeof tab.count === 'number' && tab.count > 0 && (
-                <span className="label-mono text-[11px] tabular-nums text-console-faint">
+                <span className="label-mono text-eyebrow tabular-nums text-console-faint">
                   {tab.count}
                 </span>
               )}
@@ -145,7 +145,7 @@ export function ConsoleTabs({
 /** Section label inside a page: small mono caps. */
 export function ConsoleSection({ children }: { children: ReactNode }) {
   return (
-    <div className="label-mono mb-2 mt-7 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+    <div className="label-mono mb-2 mt-7 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
       {children}
     </div>
   )
@@ -199,10 +199,10 @@ export function ConsoleRow({
 
 /** The right-aligned age figure for a ConsoleRow. */
 export function ConsoleAge({ ageAt, now }: { ageAt?: string | null; now?: Date | null }) {
-  if (!now) return <span className="label-mono text-[13px] text-console-faint">·</span>
+  if (!now) return <span className="label-mono text-meta text-console-faint">·</span>
   return (
     <span
-      className={`label-mono shrink-0 text-[13px] tabular-nums ${consoleAgeClass(ageAt, now)}`}
+      className={`label-mono shrink-0 text-meta tabular-nums ${consoleAgeClass(ageAt, now)}`}
       title={ageAt ? `Waiting since ${new Date(ageAt).toISOString()}` : 'No timestamp recorded'}
     >
       {formatAge(ageAt, now)}
@@ -245,7 +245,7 @@ export const ConsoleButton = forwardRef<HTMLButtonElement, ButtonProps>(function
     <button
       ref={ref}
       {...props}
-      className={`rounded px-4 py-2 text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut disabled:cursor-not-allowed disabled:opacity-50 ${look} ${className}`}
+      className={`rounded px-4 py-2 text-meta transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut disabled:cursor-not-allowed disabled:opacity-50 ${look} ${className}`}
     />
   )
 })
@@ -256,7 +256,7 @@ export const ConsoleInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTM
       <input
         ref={ref}
         {...props}
-        className={`w-full rounded bg-console-ground px-3 py-2 text-[13.5px] text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut ${className}`}
+        className={`w-full rounded bg-console-ground px-3 py-2 text-meta text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut ${className}`}
       />
     )
   }

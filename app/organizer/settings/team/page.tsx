@@ -54,11 +54,11 @@ export default async function TeamSettingsPage({
   const { events, error: eventsError } = await getOrganizerEvents(orgId)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <Link
           href="/organizer/settings"
-          className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-fg mb-6 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /><T k="event_analytics.back_to_settings" /></Link>
 
@@ -69,43 +69,43 @@ export default async function TeamSettingsPage({
         />
 
         {eventsError ? (
-          <div className="mt-8 mb-6 rounded-2xl bg-amber-500/10 p-4 text-sm text-white/70">
+          <div className="mt-8 mb-6 rounded-2xl bg-warning-strong/10 p-4 text-sm text-fg-muted">
             We couldn&apos;t load your events right now. Some counts may be incomplete, please refresh to try again.
           </div>
         ) : null}
 
         {/* mt-8, matching the sibling settings pages. */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-          <div className="rounded-2xl bg-white/[0.055] p-4">
+          <div className="rounded-2xl bg-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-white/[0.07] text-white/70 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-surface-raised text-fg-muted flex items-center justify-center">
                 <CalendarDays className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-medium text-white/50 uppercase tracking-wide"><T k="event_analytics.your_events" /></p>
-                <p className="text-2xl font-semibold text-white">{events.length}</p>
+                <p className="text-xs font-medium text-fg-subtle uppercase tracking-wide"><T k="event_analytics.your_events" /></p>
+                <p className="text-2xl font-semibold text-fg">{events.length}</p>
               </div>
             </div>
           </div>
-          <div className="rounded-2xl bg-white/[0.055] p-4">
+          <div className="rounded-2xl bg-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-white/[0.07] text-white/70 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-surface-raised text-fg-muted flex items-center justify-center">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-medium text-white/50 uppercase tracking-wide"><T k="event_analytics.check_in_access" /></p>
-                <p className="text-sm font-semibold text-white"><T k="event_analytics.event_scoped" /></p>
+                <p className="text-xs font-medium text-fg-subtle uppercase tracking-wide"><T k="event_analytics.check_in_access" /></p>
+                <p className="text-sm font-semibold text-fg"><T k="event_analytics.event_scoped" /></p>
               </div>
             </div>
           </div>
-          <div className="rounded-2xl bg-white/[0.055] p-4">
+          <div className="rounded-2xl bg-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-white/[0.07] text-white/70 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-surface-raised text-fg-muted flex items-center justify-center">
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-medium text-white/50 uppercase tracking-wide"><T k="event_analytics.staff" /></p>
-                <p className="text-sm font-semibold text-white"><T k="event_analytics.managed_per_event" /></p>
+                <p className="text-xs font-medium text-fg-subtle uppercase tracking-wide"><T k="event_analytics.staff" /></p>
+                <p className="text-sm font-semibold text-fg"><T k="event_analytics.managed_per_event" /></p>
               </div>
             </div>
           </div>
@@ -117,24 +117,24 @@ export default async function TeamSettingsPage({
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-2xl bg-white/[0.055] p-5">
-              <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3"><T k="event_analytics.guidelines" /></h3>
-              <ul className="space-y-3 text-sm text-white/70">
+            <div className="rounded-2xl bg-surface p-5">
+              <h3 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3"><T k="event_analytics.guidelines" /></h3>
+              <ul className="space-y-3 text-sm text-fg-muted">
                 <li className="flex gap-2">
-                  <span className="text-white/40">•</span><T k="event_analytics.invite_staff_for_event" /></li>
+                  <span className="text-fg-subtle">•</span><T k="event_analytics.invite_staff_for_event" /></li>
                 <li className="flex gap-2">
-                  <span className="text-white/40">•</span><T k="event_analytics.one_time_invite_links" /></li>
+                  <span className="text-fg-subtle">•</span><T k="event_analytics.one_time_invite_links" /></li>
                 <li className="flex gap-2">
-                  <span className="text-white/40">•</span><T k="event_analytics.remove_access_if_lost" /></li>
+                  <span className="text-fg-subtle">•</span><T k="event_analytics.remove_access_if_lost" /></li>
               </ul>
             </div>
 
-            <div className="bg-white/[0.055] rounded-2xl p-5">
-              <h3 className="text-base font-semibold text-white mb-2"><T k="event_analytics.need_help" /></h3>
-              <p className="text-sm text-white/70 mb-4"><T k="event_analytics.support_can_help" /></p>
+            <div className="bg-surface rounded-2xl p-5">
+              <h3 className="text-base font-semibold text-fg mb-2"><T k="event_analytics.need_help" /></h3>
+              <p className="text-sm text-fg-muted mb-4"><T k="event_analytics.support_can_help" /></p>
               <Link
                 href="mailto:support@tikem.co"
-                className="inline-flex items-center text-sm font-semibold text-white underline underline-offset-4 hover:text-white/80 transition-colors"
+                className="inline-flex items-center text-sm font-semibold text-fg underline underline-offset-4 hover:text-fg-soft transition-colors"
               >
                 Contact Support →
               </Link>

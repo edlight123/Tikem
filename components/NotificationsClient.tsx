@@ -53,9 +53,9 @@ type Tone = 'neutral' | 'amber' | 'rose'
 type Family = 'tickets' | 'events' | 'payouts' | 'other'
 
 const TONE_FG: Record<Tone, string> = {
-  neutral: 'text-white/70',
-  amber: 'text-amber-200',
-  rose: 'text-rose-200',
+  neutral: 'text-fg-muted',
+  amber: 'text-warning-soft',
+  rose: 'text-danger-soft',
 }
 
 const FAMILY_ORDER: Family[] = ['tickets', 'events', 'payouts', 'other']
@@ -153,8 +153,8 @@ function bucketFor(when: number, now: number): BucketKey {
 
 /** Quiet text action: no box, no border; underline on hover. */
 const QUIET_ACTION =
-  'rounded text-[13px] font-medium underline-offset-4 transition-colors duration-200 ' +
-  'hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ' +
+  'rounded text-meta font-medium underline-offset-4 transition-colors duration-200 ' +
+  'hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg/60 ' +
   'motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-45'
 
 export function NotificationsClient(props: NotificationsClientProps) {
@@ -491,16 +491,16 @@ function NotificationsFeed({
           className={[
             'group flex cursor-pointer items-start gap-3.5 rounded-2xl px-3 py-3 outline-none sm:gap-4 sm:px-4 sm:py-3.5',
             'transition-colors duration-300 motion-reduce:transition-none',
-            'hover:bg-white/[0.07] focus-visible:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/50',
+            'hover:bg-surface-raised focus-visible:bg-surface-raised focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-fg/50',
             // Fill, not a hairline: an unread row is a surface on the page;
             // once read it settles back onto the canvas.
-            unread ? 'bg-white/[0.045]' : 'bg-transparent',
+            unread ? 'bg-surface-low' : 'bg-transparent',
           ].join(' ')}
         >
           {/* Poster thumbnail when the row is about an event, else a glyph tile. */}
           <div
             className={[
-              'relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-white/[0.07] sm:h-14 sm:w-14',
+              'relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-raised sm:h-14 sm:w-14',
               'transition-opacity duration-300 motion-reduce:transition-none',
               unread ? 'opacity-100' : 'opacity-75 group-hover:opacity-100',
             ].join(' ')}
@@ -526,9 +526,9 @@ function NotificationsFeed({
             <div className="flex items-baseline justify-between gap-3">
               <h3
                 className={[
-                  'min-w-0 truncate font-grotesk !text-[15px] font-semibold !leading-snug tracking-[-0.01em]',
+                  'min-w-0 truncate font-grotesk !text-body font-semibold !leading-snug tracking-[-0.01em]',
                   'transition-colors duration-300 motion-reduce:transition-none',
-                  unread ? 'text-white' : 'text-white/60',
+                  unread ? 'text-fg' : 'text-fg-muted',
                 ].join(' ')}
               >
                 {notification.title}
@@ -536,7 +536,7 @@ function NotificationsFeed({
 
               <span className="flex shrink-0 items-center gap-2">
                 <span
-                  className="label-mono text-[11px] text-white/40"
+                  className="label-mono text-eyebrow text-fg-subtle"
                   title={exactTime(notification.createdAt)}
                   suppressHydrationWarning
                 >
@@ -544,7 +544,7 @@ function NotificationsFeed({
                 </span>
                 {unread && (
                   // Unread is a small teal dot: the one place teal appears here.
-                  <span className="h-2 w-2 rounded-full bg-[#14B8A6]" role="img" aria-label={t('new_label', { defaultValue: 'New' })} />
+                  <span className="h-2 w-2 rounded-full bg-brand-500" role="img" aria-label={t('new_label', { defaultValue: 'New' })} />
                 )}
               </span>
             </div>
@@ -554,10 +554,10 @@ function NotificationsFeed({
                 (two on a phone) that the target page expands on. */}
             <p
               className={[
-                '!mt-1 !text-[13.5px] !leading-relaxed',
+                '!mt-1 !text-meta !leading-relaxed',
                 isReply ? 'whitespace-pre-line' : 'line-clamp-2 sm:line-clamp-1',
                 'transition-colors duration-300 motion-reduce:transition-none',
-                unread ? 'text-white/60' : 'text-white/40',
+                unread ? 'text-fg-muted' : 'text-fg-subtle',
               ].join(' ')}
             >
               {body}
@@ -571,7 +571,7 @@ function NotificationsFeed({
                     e.stopPropagation()
                     handleAcceptStaffInvite(notification)
                   }}
-                  className="rounded-lg bg-white px-3.5 py-1.5 text-[13px] font-semibold text-black transition-colors hover:bg-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                  className="rounded-lg bg-inverse px-3.5 py-1.5 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   {t('invite.accept', { defaultValue: 'Accept invite' })}
                 </button>
@@ -582,7 +582,7 @@ function NotificationsFeed({
                     e.stopPropagation()
                     handleDeclineStaffInvite(notification)
                   }}
-                  className={`${QUIET_ACTION} text-white/55 hover:text-white`}
+                  className={`${QUIET_ACTION} text-fg-muted hover:text-fg`}
                 >
                   {t('invite.decline', { defaultValue: 'Decline' })}
                 </button>
@@ -603,16 +603,16 @@ function NotificationsFeed({
             the homepage hero, with the actions as quiet text, never boxes. */}
         <header>
           {/* A div, not a p: `.mobile-typography p` would drag it to 14px. */}
-          <div className="label-mono text-[11px] uppercase tracking-[0.14em] text-white/40">
+          <div className="label-mono text-eyebrow uppercase tracking-[0.14em] text-fg-subtle">
             {t('eyebrow', { defaultValue: 'Your inbox' })}
           </div>
-          <h1 className="mt-2 font-grotesk font-bold text-white !text-[clamp(40px,7vw,64px)] !leading-[0.95] tracking-[-0.035em]">
+          <h1 className="mt-2 font-grotesk font-bold text-fg !text-[clamp(40px,7vw,64px)] !leading-[0.95] tracking-[-0.035em]">
             {t('title', { defaultValue: 'Notifications' })}
           </h1>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-            <div className="flex items-center gap-2 text-[14px] text-white/55 sm:text-[15px]">
-              {hasUnread && <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-[#14B8A6]" />}
+            <div className="flex items-center gap-2 text-sm text-fg-muted sm:text-body">
+              {hasUnread && <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-brand-500" />}
               <span>
                 {hasUnread
                   ? t('unread_count', {
@@ -630,7 +630,7 @@ function NotificationsFeed({
                     type="button"
                     onClick={handleMarkAllAsRead}
                     disabled={isLoading}
-                    className={`${QUIET_ACTION} text-white/85 hover:text-white`}
+                    className={`${QUIET_ACTION} text-fg-soft hover:text-fg`}
                   >
                     {isLoading
                       ? t('working', { defaultValue: 'Working…' })
@@ -641,7 +641,7 @@ function NotificationsFeed({
                   type="button"
                   onClick={handleClearAll}
                   disabled={isClearing}
-                  className={`${QUIET_ACTION} text-white/45 hover:text-rose-200`}
+                  className={`${QUIET_ACTION} text-fg-subtle hover:text-danger-soft`}
                 >
                   {isClearing
                     ? t('working', { defaultValue: 'Working…' })
@@ -656,7 +656,7 @@ function NotificationsFeed({
           /* Empty state: the brief's formula (headline, one line, one white
              CTA), carried by a piece from the Tikèm art library instead of
              an outline icon in a box. */
-          <div className="mt-10 overflow-hidden rounded-3xl bg-white/[0.03] sm:mt-12 sm:grid sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+          <div className="mt-10 overflow-hidden rounded-3xl bg-surface-low sm:mt-12 sm:grid sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
             <div className="relative aspect-[4/3] sm:aspect-auto sm:min-h-[400px]">
               <Image
                 src="/art/notifications-empty.jpg"
@@ -666,16 +666,16 @@ function NotificationsFeed({
                 className="object-cover"
               />
               {/* Fade the art into the card on a phone, where text sits below. */}
-              <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#080808] to-transparent sm:hidden" />
+              <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-canvas to-transparent sm:hidden" />
             </div>
             <div className="flex flex-col justify-center px-6 pb-8 pt-2 sm:px-10 sm:py-12">
-              <div className="label-mono text-[11px] uppercase tracking-[0.14em] text-white/40">
+              <div className="label-mono text-eyebrow uppercase tracking-[0.14em] text-fg-subtle">
                 {t('empty.eyebrow', { defaultValue: 'Quiet for now' })}
               </div>
-              <h2 className="mt-3 font-grotesk font-bold text-white !text-[clamp(28px,4vw,40px)] !leading-[1] tracking-[-0.03em]">
+              <h2 className="mt-3 font-grotesk font-bold text-fg !text-[clamp(28px,4vw,40px)] !leading-[1] tracking-[-0.03em]">
                 {t('empty.title', { defaultValue: 'No notifications yet' })}
               </h2>
-              <p className="!mt-3 max-w-sm !text-[15px] !leading-relaxed text-white/55">
+              <p className="!mt-3 max-w-sm !text-body !leading-relaxed text-fg-muted">
                 {t('empty.description', {
                   defaultValue: "When you get notifications, they'll show up here.",
                 })}
@@ -683,7 +683,7 @@ function NotificationsFeed({
               <div className="mt-7">
                 <Link
                   href="/discover"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[15px] font-semibold text-black transition-colors hover:bg-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                  className="inline-flex items-center gap-2 rounded-xl bg-inverse px-5 py-3 text-body font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   <Compass className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                   {t('empty.cta', { defaultValue: 'Find events' })}

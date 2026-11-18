@@ -30,8 +30,9 @@ import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { nationalDayDismissId, nationalDayText, type ActiveNationalDay } from '@/lib/nationalDays'
 import { nationalDayArt } from '@/lib/nationalDayArt'
+import { color } from '@/lib/design/tokens'
 
-const TEAL = '#14B8A6'
+const TEAL = color.brand[500]
 
 /** Same prefix the app uses for its AsyncStorage key. */
 const DISMISS_PREFIX = 'nationalDays.dismissed.'
@@ -84,19 +85,19 @@ export default function NationalDayBanner({
 
   const words = (
     <>
-      <p className="flex min-w-0 items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white/70">
+      <p className="flex min-w-0 items-center gap-2 font-mono text-eyebrow uppercase tracking-[0.14em] text-fg-muted">
         <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
         <span className="shrink-0 whitespace-nowrap">{when}</span>
       </p>
       {/* Few words on the picture (owner 2026-11-16: "too many words, reads too
           much"): when, the day's name in the serif, one action. */}
-      <h2 className="mt-3 font-display italic font-normal text-white text-balance !text-[clamp(38px,5.5vw,72px)] !leading-[0.95]">
+      <h2 className="mt-3 font-display italic font-normal text-fg text-balance !text-[clamp(38px,5.5vw,72px)] !leading-[0.95]">
         {title}
       </h2>
       {showCta && (
         <Link
           href={href}
-          className="mt-6 inline-flex h-12 items-center self-start rounded bg-white px-6 font-grotesk text-[15px] font-semibold text-black outline-none transition-colors hover:bg-white/85 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          className="mt-6 inline-flex h-12 items-center self-start rounded bg-inverse px-6 font-grotesk text-body font-semibold text-on-inverse outline-none transition-colors hover:bg-inverse-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
           {t('home.nationalDay.see_events', { defaultValue: 'See events' })}
         </Link>
@@ -131,7 +132,7 @@ export default function NationalDayBanner({
       <script dangerouslySetInnerHTML={{ __html: hideIfDismissed }} />
       <div className="relative">
         {/* Phone and tablet: the poster, words on the scrim. */}
-        <div className="relative overflow-hidden rounded bg-white/[0.045] lg:hidden">
+        <div className="relative overflow-hidden rounded bg-surface-low lg:hidden">
           <div className="relative aspect-[4/5] max-h-[78vh] w-full sm:aspect-[16/11]">
             <Image
               src={art.src}
@@ -156,7 +157,7 @@ export default function NationalDayBanner({
         </div>
 
         {/* Desktop: words on a fill, the art at its own 4:5 on the right. */}
-        <div className="hidden overflow-hidden rounded bg-white/[0.045] lg:grid lg:grid-cols-12">
+        <div className="hidden overflow-hidden rounded bg-surface-low lg:grid lg:grid-cols-12">
           <div className="flex flex-col justify-end p-12 lg:col-span-7 xl:p-14">{words}</div>
           <div className="relative aspect-[4/5] max-h-[520px] w-full lg:col-span-5">
             <Image src={art.src} alt={art.alt} fill sizes="(min-width: 1024px) 40vw, 1px" className="object-cover" />
@@ -174,7 +175,7 @@ export default function NationalDayBanner({
           title={t('home.nationalDay.dismiss', {
             defaultValue: 'Hide this banner',
           })}
-          className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded text-white/60 outline-none transition-colors [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+          className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded text-fg-muted outline-none transition-colors [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))] hover:text-fg focus-visible:text-fg focus-visible:ring-2 focus-visible:ring-fg/70"
         >
           <X aria-hidden className="h-5 w-5" strokeWidth={2} />
         </button>

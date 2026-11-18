@@ -174,9 +174,9 @@ const STATUS_LABEL: Record<Item['status'], string> = { pending: 'Owed', failed: 
 function Figure({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
     <div>
-      <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{label}</div>
+      <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{label}</div>
       <div className="mt-0.5 font-mono text-xl tabular-nums text-console-text">{value}</div>
-      {sub && <div className="mt-0.5 text-[11.5px] text-console-mut">{sub}</div>}
+      {sub && <div className="mt-0.5 text-eyebrow text-console-mut">{sub}</div>}
     </div>
   )
 }
@@ -188,7 +188,7 @@ function ItemBody({ item }: { item: Item }) {
         <span className="font-mono text-base font-bold tabular-nums text-console-text">
           {formatMoney(item.amount, item.currency)}
         </span>
-        <span className="label-mono text-[11px] uppercase tracking-[0.14em] text-console-mut">{item.method}</span>
+        <span className="label-mono text-eyebrow uppercase tracking-[0.14em] text-console-mut">{item.method}</span>
         <ConsoleState tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</ConsoleState>
         {item.needsReview && <ConsoleState tone="warn">Check amount in Stripe first</ConsoleState>}
       </div>
@@ -220,7 +220,7 @@ function ItemBody({ item }: { item: Item }) {
         <p className="mt-1 text-sm text-console-faint">No paying wallet recorded: this is the buyer&apos;s profile phone. Confirm it before paying.</p>
       )}
       {item.note && <p className="mt-1 text-sm text-console-mut">Note: {item.note}</p>}
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
         {item.ticketId && <span>ticket {item.ticketId}</span>}
         {item.orderId && <span>order {item.orderId}</span>}
         {item.transactionId && <span>tx {item.transactionId}</span>}
@@ -571,13 +571,13 @@ export default function RefundQueue() {
       </div>
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Refunds awaiting review
         </h2>
         {reviews.length === 0 ? (
           <ConsolePanel className="px-4 py-8 text-center">
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">Nothing to decide</p>
-            <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">Nothing to decide</p>
+            <p className="mx-auto mt-1 max-w-md text-meta text-console-faint">
               A refund lands here when the organizer&apos;s remaining balance with Tikèm can&apos;t cover it, and every
               refund for a Haiti event lands here. No money is sent until you approve it.
             </p>
@@ -595,7 +595,7 @@ export default function RefundQueue() {
                       <span className="font-mono text-base font-bold tabular-nums text-console-text">
                         {formatMoney(item.amount, item.currency)}
                       </span>
-                      <span className="label-mono text-[11px] uppercase tracking-[0.14em] text-console-mut">
+                      <span className="label-mono text-eyebrow uppercase tracking-[0.14em] text-console-mut">
                         {item.method || item.rail || 'unknown'}
                       </span>
                       {item.status === 'approving' ? (
@@ -644,7 +644,7 @@ export default function RefundQueue() {
                     {item.lastError && (
                       <p className="mt-1 text-sm text-console-red">Last approval failed: {item.lastError}</p>
                     )}
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
                       <span>ticket {item.ticketId}</span>
                       {item.ticketRefundStatus && <span>ticket now {item.ticketRefundStatus}</span>}
                       <span>held {shortDate(item.createdAt)}</span>
@@ -682,12 +682,12 @@ export default function RefundQueue() {
       </section>
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Owed to buyers</h2>
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Owed to buyers</h2>
         {open.length === 0 ? (
           <ConsolePanel className="px-4 py-12 text-center">
             <Undo2 className="mx-auto mb-2 h-6 w-6 text-console-faint" />
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">Nobody is waiting</p>
-            <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">Nobody is waiting</p>
+            <p className="mx-auto mt-1 max-w-md text-meta text-console-faint">
               Mobile-money refunds land here the moment they are queued, and the admins are emailed.
             </p>
           </ConsolePanel>
@@ -708,7 +708,7 @@ export default function RefundQueue() {
 
       {failed.length > 0 && (
         <section>
-          <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Payout failed</h2>
+          <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Payout failed</h2>
           <div className="space-y-2">
             {failed.map((item) => (
               <ConsoleRow key={keyOf(item)} ageAt={item.createdAt} now={now}>
@@ -724,13 +724,13 @@ export default function RefundQueue() {
       )}
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Card refunds to reconcile
         </h2>
         {recon.length === 0 ? (
           <ConsolePanel className="px-4 py-8 text-center">
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">Nothing to reconcile</p>
-            <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">Nothing to reconcile</p>
+            <p className="mx-auto mt-1 max-w-md text-meta text-console-faint">
               A card refund lands here only when Stripe accepted it but the ticket could not be updated.
             </p>
           </ConsolePanel>
@@ -765,7 +765,7 @@ export default function RefundQueue() {
                       {item.ticketRefundStatus ? ` / ${item.ticketRefundStatus}` : ''}
                       {item.error ? ` · write failed: ${item.error}` : ''}
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
                       <span>ticket {item.ticketId}</span>
                       {item.refundId && <span>refund {item.refundId}</span>}
                       <span>flagged {shortDate(item.createdAt)}</span>
@@ -793,13 +793,13 @@ export default function RefundQueue() {
       </section>
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Flagged card orders
         </h2>
         {stripeOrders.length === 0 ? (
           <ConsolePanel className="px-4 py-8 text-center">
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">No flagged orders</p>
-            <p className="mx-auto mt-1 max-w-md text-[13px] text-console-faint">
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">No flagged orders</p>
+            <p className="mx-auto mt-1 max-w-md text-meta text-console-faint">
               Card orders land here when an automatic refund failed, a money step never confirmed, or a
               partial Stripe refund did not match whole tickets.
             </p>
@@ -843,7 +843,7 @@ export default function RefundQueue() {
                     {item.refundError && (
                       <p className="mt-1 text-sm text-console-faint">Stripe said: {item.refundError}</p>
                     )}
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-console-faint">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-eyebrow text-console-faint">
                       <span>order {item.paymentId}</span>
                       {item.paymentIntentId && item.paymentIntentId !== item.paymentId && <span>pi {item.paymentIntentId}</span>}
                       <span>updated {shortDate(item.updatedAt)}</span>
@@ -871,10 +871,10 @@ export default function RefundQueue() {
       </section>
 
       <section>
-        <h2 className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Recently paid</h2>
+        <h2 className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Recently paid</h2>
         {resolved.length === 0 ? (
           <ConsolePanel className="px-4 py-12 text-center">
-            <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">Nothing paid yet</p>
+            <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">Nothing paid yet</p>
           </ConsolePanel>
         ) : (
           <ConsolePanel>

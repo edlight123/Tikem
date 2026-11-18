@@ -28,7 +28,7 @@ interface GuestListClientProps {
 type Outcome = { name: string; email: string; emailed: boolean; link: string | null }
 
 const inputCls =
-  'w-full rounded px-4 py-3 text-[16px] sm:text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-white/[0.06]'
+  'w-full rounded px-4 py-3 text-base sm:text-sm text-fg placeholder-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-500/60 bg-surface'
 
 /** What happened to the guest's ticket, as a dot + label. */
 function TicketCell({ g, t }: { g: GuestRecord; t: (k: string, o?: any) => string }) {
@@ -78,11 +78,11 @@ const buildColumns = (t: (k: string, o?: any) => string): OrgColumn<GuestRecord>
     sortable: true,
     render: (g) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">
+        <p className="truncate font-medium text-fg">
           {g.name || EMPTY_VALUE}
-          {g.plus_one && <span className="ml-2 font-mono text-xs text-white/50">+1</span>}
+          {g.plus_one && <span className="ml-2 font-mono text-xs text-fg-subtle">+1</span>}
         </p>
-        <p className="truncate text-xs text-white/50">{g.email || t('event_tools.gl_no_email_short')}</p>
+        <p className="truncate text-xs text-fg-subtle">{g.email || t('event_tools.gl_no_email_short')}</p>
       </div>
     ),
   },
@@ -162,7 +162,7 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
       type="button"
       onClick={() => setOpen(true)}
       className={`inline-flex items-center gap-2 rounded px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-        primary ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white hover:bg-white/[0.12]'
+        primary ? 'bg-inverse text-on-inverse hover:bg-inverse-hover' : 'bg-surface-raised text-fg hover:bg-surface-high'
       }`}
     >
       <UserPlus className="h-4 w-4" />
@@ -200,14 +200,14 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
               <button
                 type="button"
                 onClick={reset}
-                className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {t('event_tools.gl_add_another')}
               </button>
               <button
                 type="button"
                 onClick={close}
-                className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {t('event_tools.done')}
               </button>
@@ -217,7 +217,7 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
               <button
                 type="button"
                 onClick={close}
-                className="rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {t('actions.cancel')}
               </button>
@@ -225,7 +225,7 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
                 type="button"
                 onClick={handleAdd}
                 disabled={isPending}
-                className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Ticket className="h-4 w-4" />
                 {isPending ? t('event_tools.issuing') : t('event_tools.gl_submit')}
@@ -239,7 +239,7 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
             <StatusChip className="!normal-case" tone={outcome.emailed ? 'success' : 'warning'}>
               {outcome.emailed ? t('event_tools.ticket_issued') : t('event_tools.ticket_issued_not_sent')}
             </StatusChip>
-            <p className="text-sm text-white/80">
+            <p className="text-sm text-fg-soft">
               {outcome.emailed
                 ? t('event_tools.gl_result_emailed', { email: outcome.email })
                 : outcome.email
@@ -274,12 +274,12 @@ export default function GuestListClient({ eventId, guests }: GuestListClientProp
                   type="checkbox"
                   checked={plusOne}
                   onChange={(e) => setPlusOne(e.target.checked)}
-                  className="h-4 w-4 rounded-sm bg-white/10 accent-brand-600 focus:ring-brand-500"
+                  className="h-4 w-4 rounded-sm bg-surface-raised accent-brand-600 focus:ring-brand-500"
                 />
-                <span className="text-sm text-white/70">{t('event_tools.gl_plus_one_desc')}</span>
+                <span className="text-sm text-fg-muted">{t('event_tools.gl_plus_one_desc')}</span>
               </label>
             </FormField>
-            {error && <p className="text-sm text-red-300">{error}</p>}
+            {error && <p className="text-sm text-danger-soft">{error}</p>}
           </FormSection>
         )}
       </Drawer>

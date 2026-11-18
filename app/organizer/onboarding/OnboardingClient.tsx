@@ -8,6 +8,7 @@ import {
   ConnectAccountOnboarding,
   ConnectComponentsProvider,
 } from '@stripe/react-connect-js'
+import { color } from '@/lib/design/tokens'
 
 /**
  * The client half of /organizer/onboarding: initializes Connect embedded
@@ -50,16 +51,16 @@ export default function OnboardingClient({ bearerToken }: { bearerToken: string 
       appearance: {
         overlays: 'dialog',
         variables: {
-          colorPrimary: '#14B8A6',
-          colorBackground: '#161616',
-          colorText: '#FFFFFF',
-          colorSecondaryText: '#A3A3A3',
-          colorBorder: '#262626',
-          colorDanger: '#F87171',
+          colorPrimary: color.brand[500],
+          colorBackground: color.surface.solid,
+          colorText: color.fg.DEFAULT,
+          colorSecondaryText: color.fg['muted-solid'],
+          colorBorder: color.line.solid,
+          colorDanger: color.danger.DEFAULT,
           borderRadius: '4px',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          buttonPrimaryColorBackground: '#FFFFFF',
-          buttonPrimaryColorText: '#0A0A0A',
+          buttonPrimaryColorBackground: color.fg.DEFAULT,
+          buttonPrimaryColorText: color.canvas,
         },
       },
       fonts: [],
@@ -111,8 +112,8 @@ export default function OnboardingClient({ bearerToken }: { bearerToken: string 
 // WebView too, and must not depend on dashboard layout CSS.
 const wrap: React.CSSProperties = {
   minHeight: '100vh',
-  background: '#0A0A0A',
-  color: '#FFFFFF',
+  background: color.canvas,
+  color: color.fg.DEFAULT,
   display: 'flex',
   justifyContent: 'center',
   padding: '24px 16px 48px',
@@ -125,5 +126,5 @@ const title: React.CSSProperties = {
   fontSize: 28,
   margin: '8px 0 6px',
 }
-const muted: React.CSSProperties = { color: '#A3A3A3', fontSize: 14, lineHeight: 1.5, margin: '0 0 20px' }
-const errorText: React.CSSProperties = { color: '#F87171', fontSize: 14 }
+const muted: React.CSSProperties = { color: color.fg['muted-solid'], fontSize: 14, lineHeight: 1.5, margin: '0 0 20px' }
+const errorText: React.CSSProperties = { color: color.danger.DEFAULT, fontSize: 14 }

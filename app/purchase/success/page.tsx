@@ -97,7 +97,7 @@ export default async function PurchaseSuccessPage({
   const amountCurrency = (ticket as any)?.currency || null
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       <PurchasePopupBridge status="success" ticketId={ticket?.id ? String(ticket.id) : null} />
       <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
 

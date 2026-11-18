@@ -111,14 +111,14 @@ export default async function GuestTicketsPage({
   const dateFallback = t('guest_tickets.date_tba', 'Date to be announced')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <Navbar user={null} isAdmin={false} />
 
       <main className="max-w-2xl mx-auto px-4 py-8 pb-mobile-nav md:pb-16">
         {purchased === '1' && (
-          <div className="mb-6 rounded-2xl bg-emerald-500/10 px-5 py-4">
-            <p className="text-emerald-200 font-semibold">{t('guest_tickets.payment_confirmed', 'Payment confirmed')}</p>
-            <p className="text-sm text-white/70 mt-1">
+          <div className="mb-6 rounded-2xl bg-success-strong/10 px-5 py-4">
+            <p className="text-success-soft font-semibold">{t('guest_tickets.payment_confirmed', 'Payment confirmed')}</p>
+            <p className="text-sm text-fg-muted mt-1">
               {/* Say only what can have gone out: an email when the order has an
                   address, a text only when an SMS provider is configured
                   (lib/sms.ts). This used to promise "a copy and a text message"
@@ -126,7 +126,7 @@ export default async function GuestTicketsPage({
               {emailed && (
                 <>
                   {t('guest_tickets.also_sent_prefix', 'We also sent')}{' '}
-                  <strong className="text-white/90">{order.email}</strong>{' '}
+                  <strong className="text-fg">{order.email}</strong>{' '}
                   {texted
                     ? t('guest_tickets.also_sent_copy_and_text', 'a copy and a text message.')
                     : t('guest_tickets.also_sent_copy', 'a copy.')}{' '}
@@ -135,7 +135,7 @@ export default async function GuestTicketsPage({
               {!emailed && texted && (
                 <>
                   {t('guest_tickets.also_texted_prefix', 'We also texted this link to')}{' '}
-                  <strong className="text-white/90">{order.phone}</strong>.{' '}
+                  <strong className="text-fg">{order.phone}</strong>.{' '}
                 </>
               )}
               {t('guest_tickets.keep_link', 'Keep this link. It is your ticket.')}
@@ -144,26 +144,26 @@ export default async function GuestTicketsPage({
         )}
 
         <header className="mb-8">
-          <p className="label-mono text-[11px] uppercase tracking-widest text-white/50 mb-2">
+          <p className="label-mono text-eyebrow uppercase tracking-widest text-fg-subtle mb-2">
             {tickets.length > 1
               ? t('guest_tickets.tickets_count', '{{count}} tickets').replace('{{count}}', String(tickets.length))
               : t('guest_tickets.your_ticket', 'Your ticket')}
           </p>
-          <h1 className="font-display italic !text-[34px] md:!text-[44px] !leading-[1.05] text-white">
+          <h1 className="font-display italic !text-display md:!text-hero !leading-[1.05] text-fg">
             {event?.title || t('guest_tickets.your_event', 'Your event')}
           </h1>
-          <p className="text-white/60 mt-2">{formatDate(startIso, intlLocaleFor(lang), dateFallback)}</p>
+          <p className="text-fg-muted mt-2">{formatDate(startIso, intlLocaleFor(lang), dateFallback)}</p>
           {(event?.venue_name || event?.city) && (
-            <p className="text-white/60">
+            <p className="text-fg-muted">
               {[event?.venue_name, event?.city].filter(Boolean).join(', ')}
             </p>
           )}
         </header>
 
         {ticketsMovedAway ? (
-          <div className="rounded-2xl bg-white/[0.055] p-6 text-center">
-            <p className="text-white font-semibold">{t('guest_tickets.no_longer_here', 'These tickets are no longer on this link.')}</p>
-            <p className="text-sm text-white/60 mt-2">
+          <div className="rounded-2xl bg-surface p-6 text-center">
+            <p className="text-fg font-semibold">{t('guest_tickets.no_longer_here', 'These tickets are no longer on this link.')}</p>
+            <p className="text-sm text-fg-muted mt-2">
               {t(
                 'guest_tickets.no_longer_here_detail',
                 'They were moved to an account, transferred, or refunded. Sign in to the account that holds them, or contact support.'
@@ -171,9 +171,9 @@ export default async function GuestTicketsPage({
             </p>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="rounded-2xl bg-white/[0.055] p-6 text-center">
-            <p className="text-white font-semibold">{t('guest_tickets.still_being_issued', 'Your tickets are still being issued.')}</p>
-            <p className="text-sm text-white/60 mt-2">
+          <div className="rounded-2xl bg-surface p-6 text-center">
+            <p className="text-fg font-semibold">{t('guest_tickets.still_being_issued', 'Your tickets are still being issued.')}</p>
+            <p className="text-sm text-fg-muted mt-2">
               {t('guest_tickets.still_being_issued_detail', 'This usually takes a few seconds. Refresh this page. The link stays valid.')}
             </p>
           </div>
@@ -182,14 +182,14 @@ export default async function GuestTicketsPage({
             {tickets.map((ticket, index) => (
               <div
                 key={ticket.id}
-                className="rounded-2xl bg-white/[0.055] overflow-hidden"
+                className="rounded-2xl bg-surface overflow-hidden"
               >
-                <div className="px-5 py-4 bg-white/[0.03] flex items-center justify-between gap-3">
+                <div className="px-5 py-4 bg-surface-low flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-white font-semibold truncate">
+                    <p className="text-fg font-semibold truncate">
                       {ticket.tier_name || ticket.ticket_type || t('guest_tickets.general_admission', 'General Admission')}
                     </p>
-                    <p className="text-xs text-white/50 mt-0.5">{order.name}</p>
+                    <p className="text-xs text-fg-subtle mt-0.5">{order.name}</p>
                   </div>
                   <StatusChip tone={ticket.checked_in ? 'neutral' : 'success'} className="shrink-0">
                     {ticket.checked_in ? t('guest_tickets.checked_in', 'Checked in') : t('guest_tickets.valid', 'Valid')}
@@ -198,7 +198,7 @@ export default async function GuestTicketsPage({
 
                 <div className="p-6 flex flex-col items-center">
                   {qrCodes[index] ? (
-                    <div className="rounded-2xl bg-white p-4">
+                    <div className="rounded-2xl bg-inverse p-4">
                       {/* Data URI, rendered unoptimized — there is no remote asset to optimize. */}
                       <Image
                         src={qrCodes[index] as string}
@@ -209,14 +209,14 @@ export default async function GuestTicketsPage({
                       />
                     </div>
                   ) : (
-                    <div className="grid place-items-center rounded-2xl bg-white/[0.08] px-10 py-12">
-                      <Ticket className="h-10 w-10 text-white/45" strokeWidth={1.5} aria-hidden />
+                    <div className="grid place-items-center rounded-2xl bg-surface-raised px-10 py-12">
+                      <Ticket className="h-10 w-10 text-fg-subtle" strokeWidth={1.5} aria-hidden />
                     </div>
                   )}
-                  <p className="mt-4 font-mono text-lg tracking-[0.2em] text-white">
+                  <p className="mt-4 font-mono text-lg tracking-[0.2em] text-fg">
                     {String(ticket.id).slice(0, 12).toUpperCase()}
                   </p>
-                  <p className="text-xs text-white/50 mt-1">{t('guest_tickets.show_code_fallback', "Show this code if the QR won't scan")}</p>
+                  <p className="text-xs text-fg-subtle mt-1">{t('guest_tickets.show_code_fallback', "Show this code if the QR won't scan")}</p>
                   {/* Authorised by this link's token on the server, never by the id alone. */}
                   <div className="mt-5 w-full">
                     <RefundRequestAction
@@ -241,7 +241,7 @@ export default async function GuestTicketsPage({
           alreadyClaimed={Boolean(order.claimedByUid)}
         />
 
-        <p className="mt-8 text-xs text-white/40 text-center leading-relaxed">
+        <p className="mt-8 text-xs text-fg-subtle text-center leading-relaxed">
           {order.phone
             ? t('guest_tickets.lost_page_email_and_text', 'Lost this page? It is in your confirmation email and text message.')
             : t('guest_tickets.lost_page_email', 'Lost this page? It is in your confirmation email.')}{' '}

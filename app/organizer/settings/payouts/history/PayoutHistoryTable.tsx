@@ -74,28 +74,28 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
   }
 
   return (
-    <div className="bg-[#0a0a0a]">
+    <div className="bg-canvas">
       {/* Header */}
       <div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-white/60 mb-3">
-            <Link href="/organizer/settings" className="hover:text-white">
+          <div className="flex items-center gap-2 text-sm text-fg-muted mb-3">
+            <Link href="/organizer/settings" className="hover:text-fg">
               {t('actions.settings')}
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/organizer/settings/payouts" className="hover:text-white">
+            <Link href="/organizer/settings/payouts" className="hover:text-fg">
               {t('actions.payouts')}
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-white font-medium">{t('payout_history.payout_history')}</span>
+            <span className="text-fg font-medium">{t('payout_history.payout_history')}</span>
           </div>
 
           {/* Title */}
-          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-white mb-2">
+          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-fg mb-2">
             {t('payout_history.payout_history')}
           </h1>
-          <p className="text-white/60">
+          <p className="text-fg-muted">
             {t('payout_history.view_all_payouts')}
           </p>
         </div>
@@ -103,36 +103,36 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="rounded-2xl bg-white/[0.055] overflow-hidden">
+        <div className="rounded-2xl bg-surface overflow-hidden">
           
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-white/[0.06]">
+              <thead className="border-b border-line-soft">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-subtle uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-white/50 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-fg-subtle uppercase tracking-wider">
                     {t('actions.amount')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-subtle uppercase tracking-wider">
                     {t('actions.status')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-subtle uppercase tracking-wider">
                     {t('actions.events')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-fg-subtle uppercase tracking-wider">
                     {t('actions.method')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.06]">
+              <tbody className="divide-y divide-line-soft">
                 {payouts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-white/50">
+                    <td colSpan={5} className="px-6 py-12 text-center text-fg-subtle">
                       <div className="flex flex-col items-center gap-2">
-                        <AlertCircle className="w-12 h-12 text-white/50" />
+                        <AlertCircle className="w-12 h-12 text-fg-subtle" />
                         <p>{t('payout_history.no_history_yet')}</p>
                         <p className="text-sm">
                           {t('payout_history.payouts_appear_after')}
@@ -144,21 +144,21 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
                   payouts.map((payout) => (
                     <tr
                       key={payout.id}
-                      className="hover:bg-white/[0.04]"
+                      className="hover:bg-surface-low"
                     >
-                      <td className="px-6 py-4 text-sm text-white">
+                      <td className="px-6 py-4 text-sm text-fg">
                         {formatDate(payout.date)}
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-white text-right">
+                      <td className="px-6 py-4 text-sm font-medium text-fg text-right">
                         {formatCurrency(payout.amount)}
                       </td>
                       <td className="px-6 py-4">
                         {getStatusBadge(payout.status)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-white/60">
+                      <td className="px-6 py-4 text-sm text-fg-muted">
                         {payout.eventCount} {payout.eventCount === 1 ? 'event' : 'events'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-white/60 capitalize">
+                      <td className="px-6 py-4 text-sm text-fg-muted capitalize">
                         {payout.method}
                       </td>
                     </tr>
@@ -169,11 +169,11 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden divide-y divide-white/[0.06]">
+          <div className="md:hidden divide-y divide-line-soft">
             {payouts.length === 0 ? (
-              <div className="px-6 py-12 text-center text-white/50">
+              <div className="px-6 py-12 text-center text-fg-subtle">
                 <div className="flex flex-col items-center gap-2">
-                  <AlertCircle className="w-12 h-12 text-white/50" />
+                  <AlertCircle className="w-12 h-12 text-fg-subtle" />
                   <p>{t('payout_history.no_history_yet')}</p>
                   <p className="text-sm">
                     {t('payout_history.payouts_appear_after')}
@@ -184,18 +184,18 @@ export default function PayoutHistoryClient({ payouts }: { payouts: PayoutHistor
               payouts.map((payout) => (
                 <div
                   key={payout.id}
-                  className="w-full p-6 text-left hover:bg-white/[0.04]"
+                  className="w-full p-6 text-left hover:bg-surface-low"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div className="text-sm text-white/50">
+                    <div className="text-sm text-fg-subtle">
                       {formatDate(payout.date)}
                     </div>
                     {getStatusBadge(payout.status)}
                   </div>
-                  <div className="text-lg font-semibold text-white mb-2">
+                  <div className="text-lg font-semibold text-fg mb-2">
                     {formatCurrency(payout.amount)}
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-white/60">
+                  <div className="flex items-center gap-3 text-sm text-fg-muted">
                     <span>{payout.eventCount} {payout.eventCount === 1 ? 'event' : 'events'}</span>
                     <span>·</span>
                     <span className="capitalize">{payout.method}</span>

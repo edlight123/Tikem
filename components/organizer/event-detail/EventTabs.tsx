@@ -96,14 +96,14 @@ export function EventTabs({ eventId, ticketCount, requiresApproval = false, pend
     `flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${
       active
         ? 'border-brand-600 text-brand-300'
-        : 'border-transparent text-white/55 hover:border-white/20 hover:text-white'
+        : 'border-transparent text-fg-muted hover:border-line-strong hover:text-fg'
     }`
 
   // The one sticky bar on this page, now that EventHeader above it scrolls.
   // `var(--chrome-h)` is OrganizerTopNav's own height (globals.css sets it to
   // 56px inside the organizer shell), so this cannot drift if the nav changes.
   return (
-    <div className="sticky top-[var(--chrome-h)] z-20 border-b border-white/10 bg-[#0a0a0a]">
+    <div className="sticky top-[var(--chrome-h)] z-20 border-b border-line bg-canvas">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <nav
           aria-label={t('organizer.event_sections_aria', { defaultValue: 'Event sections' })}
@@ -123,8 +123,8 @@ export function EventTabs({ eventId, ticketCount, requiresApproval = false, pend
                 {tab.label}
                 {tab.count !== undefined && (
                   <span
-                    className={`rounded px-2 py-0.5 text-[11px] font-semibold font-mono tabular-nums ${
-                      active ? 'text-brand-300' : 'bg-white/8 text-white/55'
+                    className={`rounded px-2 py-0.5 text-eyebrow font-semibold font-mono tabular-nums ${
+                      active ? 'text-brand-300' : 'bg-surface-raised text-fg-muted'
                     }`}
                   >
                     {tab.count}
@@ -154,7 +154,7 @@ export function EventTabs({ eventId, ticketCount, requiresApproval = false, pend
             {menuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-[calc(100%+1px)] z-30 w-56 overflow-hidden rounded-xl bg-[#171717] py-1 shadow-2xl"
+                className="absolute right-0 top-[calc(100%+1px)] z-30 w-56 overflow-hidden rounded-xl bg-surface-solid py-1 shadow-2xl"
               >
                 {more.map((tab) => {
                   const active = isActive(tab)
@@ -166,8 +166,8 @@ export function EventTabs({ eventId, ticketCount, requiresApproval = false, pend
                       aria-current={active ? 'page' : undefined}
                       className={`block px-4 py-2.5 text-sm transition-colors ${
                         active
-                          ? 'bg-white/[0.06] font-medium text-brand-300'
-                          : 'text-white/70 hover:bg-white/[0.05] hover:text-white'
+                          ? 'bg-surface font-medium text-brand-300'
+                          : 'text-fg-muted hover:bg-surface hover:text-fg'
                       }`}
                     >
                       {tab.label}

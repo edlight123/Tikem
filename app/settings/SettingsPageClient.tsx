@@ -23,8 +23,8 @@ interface SettingsPageClientProps {
 /**
  * /settings, brought onto the house surface ladder.
  *
- * What it was: four cards of `bg-white/[0.03] rounded-2xl shadow-soft border
- * border-white/10`, and inside them every read-only field was the SAME 3% fill
+ * What it was: four cards of `bg-surface-low rounded-2xl shadow-soft border
+ * border-line`, and inside them every read-only field was the SAME 3% fill
  * with its own hairline. On the #0a0a0a page a 3% white fill is very nearly the
  * page colour, so the only thing that read was the outlines — and a 0.03 field
  * inside a 0.03 card is invisible twice over. Cards now carry the fill alone;
@@ -40,7 +40,7 @@ interface SettingsPageClientProps {
  */
 
 /** A read-only value display. An inset on a card, so it steps up the ladder. */
-const READONLY_FIELD = 'rounded-xl bg-white/[0.055] px-4 py-3'
+const READONLY_FIELD = 'rounded-xl bg-surface px-4 py-3'
 
 export default function SettingsPageClient({ user }: SettingsPageClientProps) {
   const { t } = useTranslation('settings')
@@ -52,7 +52,7 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
       {/* Back Button */}
       <Link
         href="/profile"
-        className="inline-flex items-center gap-2 text-white/65 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-fg-muted hover:text-fg mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="font-medium">{t('back_to_profile')}</span>
@@ -65,7 +65,7 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
       <div className="space-y-6">
 
         {/* Personal Information */}
-        <div className="rounded-2xl bg-white/[0.03] p-6">
+        <div className="rounded-2xl bg-surface-low p-6">
           <div className="flex items-start gap-3 mb-6">
             <User className="mt-1 h-5 w-5 shrink-0 text-brand-300" />
             <EditorialSectionHeading
@@ -78,36 +78,36 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-white/70 mb-2">{t('personal_info.full_name')}</label>
+                <label className="block text-sm font-semibold text-fg-muted mb-2">{t('personal_info.full_name')}</label>
                 <div className={READONLY_FIELD}>
-                  <p className="text-white font-medium">{user.full_name}</p>
+                  <p className="text-fg font-medium">{user.full_name}</p>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-white/70 mb-2">{t('personal_info.email')}</label>
+                <label className="block text-sm font-semibold text-fg-muted mb-2">{t('personal_info.email')}</label>
                 <div className={`${READONLY_FIELD} break-words`}>
-                  <p className="text-white font-medium">{user.email}</p>
+                  <p className="text-fg font-medium">{user.email}</p>
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-white/70 mb-2">{t('personal_info.phone')}</label>
+              <label className="block text-sm font-semibold text-fg-muted mb-2">{t('personal_info.phone')}</label>
               <div className={READONLY_FIELD}>
-                <p className="text-white font-medium">{user.phone_number || t('personal_info.not_provided')}</p>
+                <p className="text-fg font-medium">{user.phone_number || t('personal_info.not_provided')}</p>
               </div>
             </div>
 
             <div className="pt-4">
-              <p className="text-sm text-white/65 bg-white/[0.055] rounded-xl p-4">
-                <strong className="text-white">{t('personal_info.note')}:</strong> {t('personal_info.note_text')}
+              <p className="text-sm text-fg-muted bg-surface rounded-xl p-4">
+                <strong className="text-fg">{t('personal_info.note')}:</strong> {t('personal_info.note_text')}
               </p>
             </div>
           </div>
         </div>
 
         {/* Account Security */}
-        <div className="rounded-2xl bg-white/[0.03] p-6">
+        <div className="rounded-2xl bg-surface-low p-6">
           <div className="flex items-start gap-3 mb-6">
             <Shield className="mt-1 h-5 w-5 shrink-0 text-brand-300" />
             <EditorialSectionHeading
@@ -119,7 +119,7 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-white/70 mb-2">{t('security.verification_status')}</label>
+              <label className="block text-sm font-semibold text-fg-muted mb-2">{t('security.verification_status')}</label>
               <div className="flex flex-wrap items-center gap-3">
                 {user.is_verified ? (
                   <StatusChip tone="success" icon={Shield} className="text-sm">
@@ -136,7 +136,7 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
                       // button surface.
                       <Link
                         href="/organizer/verify"
-                        className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-white/90"
+                        className="rounded-xl bg-inverse px-4 py-2 text-sm font-bold text-on-inverse transition-colors hover:bg-inverse-hover"
                       >
                         {t('security.get_verified')}
                       </Link>
@@ -147,7 +147,7 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-white/70 mb-2">{t('security.role')}</label>
+              <label className="block text-sm font-semibold text-fg-muted mb-2">{t('security.role')}</label>
               <StatusChip tone={user.role === 'organizer' ? 'brand' : 'neutral'} className="text-sm">
                 {user.role === 'organizer' ? t('security.event_organizer') : t('security.event_attendee')}
               </StatusChip>
@@ -155,11 +155,11 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
 
             {/* Kept: a rule BETWEEN two blocks of one card is the legitimate
                 border — it separates, it does not draw a box. */}
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-line">
               {/* Was a link to /api/auth/logout, a route that never existed.
                   Now the real change-password form (or, for Google / Apple
                   accounts, a sentence saying there is no Tikèm password). */}
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white/70">
+              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-fg-muted">
                 <Lock className="w-4 h-4" />
                 {t('security.change_password')}
               </div>
@@ -169,7 +169,7 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
         </div>
 
         {/* Notification Preferences */}
-        <div className="rounded-2xl bg-white/[0.03] p-6">
+        <div className="rounded-2xl bg-surface-low p-6">
           <div className="flex items-start gap-3 mb-6">
             <Bell className="mt-1 h-5 w-5 shrink-0 text-brand-300" />
             <EditorialSectionHeading
@@ -184,13 +184,13 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
                 actually a step (0.03 → 0.04 was not one). */}
             <Link
               href="/settings/notifications"
-              className="flex items-center justify-between gap-3 p-4 rounded-xl bg-white/[0.055] hover:bg-white/[0.12] transition-colors"
+              className="flex items-center justify-between gap-3 p-4 rounded-xl bg-surface hover:bg-surface-high transition-colors"
             >
               <div className="min-w-0">
-                <p className="font-semibold text-white">{t('notifications.preferences')}</p>
-                <p className="text-sm text-white/65">{t('notifications.preferences_desc')}</p>
+                <p className="font-semibold text-fg">{t('notifications.preferences')}</p>
+                <p className="text-sm text-fg-muted">{t('notifications.preferences_desc')}</p>
               </div>
-              <svg className="w-5 h-5 shrink-0 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 shrink-0 text-fg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
@@ -198,9 +198,9 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
         </div>
 
         {/* Danger Zone */}
-        <div className="rounded-2xl bg-white/[0.03] p-6">
+        <div className="rounded-2xl bg-surface-low p-6">
           <div className="flex items-start gap-3 mb-6">
-            <Trash2 className="mt-1 h-5 w-5 shrink-0 text-red-400" />
+            <Trash2 className="mt-1 h-5 w-5 shrink-0 text-danger" />
             <EditorialSectionHeading
               className="min-w-0 flex-1"
               title={t('danger.title')}
@@ -211,20 +211,20 @@ export default function SettingsPageClient({ user }: SettingsPageClientProps) {
           <div className="space-y-4">
             {/* Was an empty box outlined in red. The warning is carried by a red
                 FILL instead, so it reads at a glance. */}
-            <div className="rounded-xl bg-red-500/[0.08] p-4">
-              <p className="font-semibold text-red-300 mb-2">{t('danger.delete_account')}</p>
-              <p className="text-sm text-red-300 mb-4">
+            <div className="rounded-xl bg-danger-strong/[0.08] p-4">
+              <p className="font-semibold text-danger-soft mb-2">{t('danger.delete_account')}</p>
+              <p className="text-sm text-danger-soft mb-4">
                 {t('danger.delete_warning')}
               </p>
               <button
                 type="button"
                 onClick={() => setShowDelete(true)}
-                className="px-4 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-200 font-semibold transition-colors"
+                className="px-4 py-2 rounded-xl bg-danger-strong/15 hover:bg-danger-strong/25 text-danger-soft font-semibold transition-colors"
               >
                 {t('danger.delete_button')}
               </button>
-              <p className="mt-3 text-xs text-white/45">
-                <Link href="/account/delete" className="underline underline-offset-2 hover:text-white/70">
+              <p className="mt-3 text-xs text-fg-subtle">
+                <Link href="/account/delete" className="underline underline-offset-2 hover:text-fg-muted">
                   {t('danger.what_is_deleted')}
                 </Link>
               </p>

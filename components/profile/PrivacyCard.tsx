@@ -31,12 +31,12 @@ const ATTENDANCE_OPTIONS: Array<{
 /**
  * Privacy: one three-way choice, then two switches.
  *
- * Before: the three choices were `border border-white/10` boxes with no fill,
- * and the chosen one differed by swapping that hairline for `border-teal-500
- * ring-1 ring-teal-500` — a one-pixel difference between chosen and unchosen, on
+ * Before: the three choices were `border border-line` boxes with no fill,
+ * and the chosen one differed by swapping that hairline for `border-brand-500
+ * ring-1 ring-brand-500` — a one-pixel difference between chosen and unchosen, on
  * the page's most consequential control. The house rule is explicit about this
  * exact failure: selection changes the FILL, and the teal ring is the accent on
- * top. The two switches also painted their knob `bg-white/[0.03]`, so the knob
+ * top. The two switches also painted their knob `bg-surface-low`, so the knob
  * was invisible at both ends of the track.
  */
 export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
@@ -107,20 +107,20 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
               disabled={isUpdating}
               className={`flex w-full items-start gap-2.5 rounded-2xl p-3 text-left transition-colors disabled:opacity-60 ${
                 active
-                  ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50'
-                  : 'bg-white/[0.055] hover:bg-white/[0.12]'
+                  ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50'
+                  : 'bg-surface hover:bg-surface-high'
               }`}
             >
               <span
                 className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
-                  active ? 'bg-brand-500/20 text-brand-300' : 'bg-white/[0.06] text-white/50'
+                  active ? 'bg-brand-500/20 text-brand-300' : 'bg-surface text-fg-subtle'
                 }`}
               >
                 <Icon className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block !text-[15px] font-semibold text-white">{t(`privacy.${key}`)}</span>
-                <span className="mt-0.5 block !text-[13px] !leading-relaxed text-white/50">
+                <span className="block !text-body font-semibold text-fg">{t(`privacy.${key}`)}</span>
+                <span className="mt-0.5 block !text-meta !leading-relaxed text-fg-subtle">
                   {t(`privacy.${key}_desc`)}
                 </span>
               </span>
@@ -129,7 +129,7 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
                 className={`mt-1 h-4 w-4 shrink-0 rounded-full ${
                   active
                     ? 'bg-brand-400 ring-1 ring-brand-400'
-                    : 'ring-1 ring-inset ring-white/25'
+                    : 'ring-1 ring-inset ring-line-strong'
                 }`}
                 aria-hidden
               />
@@ -137,7 +137,7 @@ export function PrivacyCard({ profile, onUpdate }: PrivacyCardProps) {
           )
         })}
       </div>
-      <p className="mt-2 !text-[12px] text-white/35">{t('privacy.attendance_note')}</p>
+      <p className="mt-2 !text-caption text-fg-faint">{t('privacy.attendance_note')}</p>
 
       {/* The two switches */}
       <Panel className="mt-4">

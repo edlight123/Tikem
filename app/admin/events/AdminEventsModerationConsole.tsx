@@ -241,10 +241,10 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
     <div>
       {/* Page Header — aligned with the breadcrumb + content column (matches other admin pages) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-2 sm:pt-4 sm:pb-3">
-        <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
           Events Moderation
         </h1>
-        <p className="mt-1 hidden text-[13px] text-console-mut sm:block">
+        <p className="mt-1 hidden text-meta text-console-mut sm:block">
           Review and manage all events on the platform
         </p>
       </div>

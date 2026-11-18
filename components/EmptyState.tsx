@@ -30,20 +30,20 @@ export default function EmptyState({
   actionIcon: ActionIcon,
 }: EmptyStateProps) {
   return (
-    <div className="rounded-2xl bg-white/[0.055] px-6 py-12 text-center">
-      <div className="mx-auto mb-5 grid h-14 w-14 place-items-center text-white/45">
+    <div className="rounded-2xl bg-surface px-6 py-12 text-center">
+      <div className="mx-auto mb-5 grid h-14 w-14 place-items-center text-fg-subtle">
         <Icon className="h-9 w-9" strokeWidth={1.5} />
       </div>
 
-      {/* `!text-[22px]`: `.mobile-typography h3` outranks a plain size utility. */}
-      <h3 className="font-display italic lowercase !text-[22px] !leading-tight text-white">{title}</h3>
+      {/* `!text-section`: `.mobile-typography h3` outranks a plain size utility. */}
+      <h3 className="font-display italic lowercase !text-section !leading-tight text-fg">{title}</h3>
 
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-white/55">{description}</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-fg-muted">{description}</p>
 
       {actionLabel && actionHref && (
         <Link
           href={actionHref}
-          className="mt-6 inline-flex items-center gap-2 rounded bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+          className="mt-6 inline-flex items-center gap-2 rounded bg-inverse px-6 py-3 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
         >
           {ActionIcon && <ActionIcon className="h-4 w-4" />}
           {actionLabel}

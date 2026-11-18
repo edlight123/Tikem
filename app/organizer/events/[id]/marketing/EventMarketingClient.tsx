@@ -75,23 +75,23 @@ export default function EventMarketingClient({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
       {/* Share link */}
-      <div className="rounded-2xl p-5 bg-white/[0.055]">
+      <div className="rounded-2xl p-5 bg-surface">
         <div className="mb-4 flex items-center gap-2">
-          <Share2 className="h-4 w-4 text-white/60" />
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.share_your_event')}</h2>
+          <Share2 className="h-4 w-4 text-fg-muted" />
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('event_marketing.share_your_event')}</h2>
         </div>
 
         {/* URL row */}
         <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm text-white/70 bg-white/[0.055]">
-            <ExternalLink className="h-4 w-4 shrink-0 text-white/40" />
+          <div className="flex flex-1 items-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm text-fg-muted bg-surface">
+            <ExternalLink className="h-4 w-4 shrink-0 text-fg-subtle" />
             <span className="truncate">{eventUrl || `/events/${eventId}`}</span>
           </div>
           <button
             type="button"
             onClick={copyLink}
             aria-label={t('event_marketing.copy_event_link')}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded bg-inverse px-4 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {copied ? <><Check className="h-4 w-4" />{t('event_marketing.copied')}</> : <><Copy className="h-4 w-4" />{t('event_marketing.copy_link')}</>}
           </button>
@@ -99,7 +99,7 @@ export default function EventMarketingClient({
             href={`/events/${eventId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded bg-white/[0.07] text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded bg-surface-raised text-fg-muted transition-colors hover:bg-surface-high hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             aria-label={t('event_marketing.open_in_new_tab')}
           >
             <ExternalLink className="h-4 w-4" />
@@ -108,14 +108,14 @@ export default function EventMarketingClient({
 
         {/* Social share */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="label-mono uppercase text-white/70">{t('event_marketing.share_on')}</span>
+          <span className="label-mono uppercase text-fg-muted">{t('event_marketing.share_on')}</span>
           {socialLinks.map((s) => (
             <a
               key={s.label}
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="rounded bg-surface-raised px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {s.label}
             </a>
@@ -127,7 +127,7 @@ export default function EventMarketingClient({
           canvas, no card around nothing and no explainer (owner, 2026-11-18). */}
       {promoCodes.length === 0 ? (
         <section>
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promo_codes')}</h2>
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('event_marketing.promo_codes')}</h2>
           <OrgEmptyState
             variant="quiet"
             icon={Tag}
@@ -135,7 +135,7 @@ export default function EventMarketingClient({
             action={
               <Link
                 href={`/organizer/promo-codes?eventId=${eventId}`}
-                className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Tag className="h-4 w-4" />
                 {t('event_marketing.create_promo_code')}
@@ -144,29 +144,29 @@ export default function EventMarketingClient({
           />
         </section>
       ) : (
-      <div className="rounded-2xl bg-white/[0.055]">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promo_codes')}</h2>
+      <div className="rounded-2xl bg-surface">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('event_marketing.promo_codes')}</h2>
           <Link
             href={`/organizer/promo-codes?eventId=${eventId}`}
-            className="inline-flex items-center gap-2 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex items-center gap-2 rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Tag className="h-4 w-4" />
             {t('event_marketing.create_code')}
           </Link>
         </div>
 
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-line-soft">
             {promoCodes.map((code) => (
               <div key={code.id} className="flex items-center gap-4 px-5 py-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-white">{code.code}</span>
+                    <span className="font-mono font-semibold text-fg">{code.code}</span>
                     <StatusChip tone={code.is_active ? 'success' : 'neutral'}>
                       {code.is_active ? 'Active' : 'Inactive'}
                     </StatusChip>
                   </div>
-                  <p className="mt-0.5 text-sm text-white/50">
+                  <p className="mt-0.5 text-sm text-fg-subtle">
                     {discountLabel(code.discount_type, code.discount_value)}
                     {' · '}
                     {code.uses} use{code.uses !== 1 ? 's' : ''}
@@ -180,12 +180,12 @@ export default function EventMarketingClient({
       )}
 
       {/* Promoters */}
-      <div className="rounded-2xl p-5 bg-white/[0.055]">
+      <div className="rounded-2xl p-5 bg-surface">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('event_marketing.promoters')}</h2>
+          <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('event_marketing.promoters')}</h2>
           <Link
             href={`/organizer/events/${eventId}/promoters`}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {t('event_marketing.manage_promoters')}
           </Link>
@@ -195,10 +195,10 @@ export default function EventMarketingClient({
       {/* SMS campaigns, coming soon: one quiet row, not a big card with an
           explainer (owner, 2026-11-18: "avoid big cards"). */}
       <div className="flex items-center gap-3 px-1 text-sm">
-        <Megaphone className="h-4 w-4 text-white/40" strokeWidth={1.5} />
-        <span className="font-semibold text-white/70">{t('event_marketing.sms_campaigns')}</span>
-        <span className="inline-flex items-center gap-1.5 text-xs text-white/45">
-          <span className="h-1.5 w-1.5 rounded-full bg-white/30" aria-hidden />
+        <Megaphone className="h-4 w-4 text-fg-subtle" strokeWidth={1.5} />
+        <span className="font-semibold text-fg-muted">{t('event_marketing.sms_campaigns')}</span>
+        <span className="inline-flex items-center gap-1.5 text-xs text-fg-subtle">
+          <span className="h-1.5 w-1.5 rounded-full bg-fg/30" aria-hidden />
           {t('actions.coming_soon')}
         </span>
       </div>

@@ -34,7 +34,7 @@ function threadFromUrl(): string | null {
 
 function Poster({ url, className }: { url: string | null; className: string }) {
   return (
-    <span className={`relative block shrink-0 overflow-hidden rounded bg-white/[0.07] ${className}`}>
+    <span className={`relative block shrink-0 overflow-hidden rounded bg-surface-raised ${className}`}>
       {url ? <Image src={url} alt="" fill sizes="64px" unoptimized className="object-cover" /> : null}
     </span>
   )
@@ -202,14 +202,14 @@ export function MessagesCard() {
           <Panel>
             <Link
               href={`/events/${encodeURIComponent(thread.event_id)}`}
-              className="flex items-center gap-3.5 bg-white/[0.03] px-4 py-3.5 transition-colors hover:bg-white/[0.055] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 sm:px-5"
+              className="flex items-center gap-3.5 bg-surface-low px-4 py-3.5 transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 sm:px-5"
             >
               <Poster url={thread.event_poster} className="h-14 w-11" />
               <span className="min-w-0">
-                <span className="block truncate font-display italic !text-[18px] !leading-snug text-white">
+                <span className="block truncate font-display italic !text-lead !leading-snug text-fg">
                   {thread.event_title}
                 </span>
-                <span className="mt-0.5 block truncate text-[13px] text-white/50">{organizerLabel}</span>
+                <span className="mt-0.5 block truncate text-meta text-fg-subtle">{organizerLabel}</span>
               </span>
             </Link>
 
@@ -224,11 +224,11 @@ export function MessagesCard() {
                   >
                     <div
                       className={`max-w-[85%] rounded px-4 py-3 ${
-                        mine ? 'bg-white/[0.14] text-white/90' : 'bg-white/[0.055] text-white/85'
+                        mine ? 'bg-surface-high text-fg' : 'bg-surface text-fg-soft'
                       }`}
                     >
-                      <p className="whitespace-pre-line text-[15px] leading-relaxed">{m.body}</p>
-                      <p className="mt-1.5 text-[11px] text-white/40">
+                      <p className="whitespace-pre-line text-body leading-relaxed">{m.body}</p>
+                      <p className="mt-1.5 text-eyebrow text-fg-subtle">
                         {mine ? t('dashboard.messages.you') : m.author_name || organizerLabel} · {formatWhen(m.created_at)}
                       </p>
                     </div>
@@ -237,11 +237,11 @@ export function MessagesCard() {
               })}
             </ol>
 
-            <div className="bg-white/[0.02] px-4 py-4 sm:px-5">
+            <div className="bg-surface-low px-4 py-4 sm:px-5">
               {thread.closed ? (
-                <p className="text-[13px] text-white/50">{t('dashboard.messages.closed')}</p>
+                <p className="text-meta text-fg-subtle">{t('dashboard.messages.closed')}</p>
               ) : thread.awaiting_organizer ? (
-                <p className="text-[13px] text-white/50">{t('dashboard.messages.awaiting')}</p>
+                <p className="text-meta text-fg-subtle">{t('dashboard.messages.awaiting')}</p>
               ) : null}
               {!blocked && (
                 <>
@@ -259,9 +259,9 @@ export function MessagesCard() {
                     className={`${FIELD} resize-y`}
                   />
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <p className="text-[12px] text-white/40">{t('dashboard.messages.privacy')}</p>
+                    <p className="text-caption text-fg-subtle">{t('dashboard.messages.privacy')}</p>
                     <div className="flex shrink-0 items-center gap-3">
-                      <span className="font-mono text-[11px] tabular-nums text-white/35">
+                      <span className="font-mono text-eyebrow tabular-nums text-fg-faint">
                         {draft.length}/{MAX_FOLLOWUP_LENGTH}
                       </span>
                       <button
@@ -277,7 +277,7 @@ export function MessagesCard() {
                   </div>
                 </>
               )}
-              {error && <p className="mt-3 text-[13px] text-red-400">{error}</p>}
+              {error && <p className="mt-3 text-meta text-danger">{error}</p>}
             </div>
           </Panel>
         )}
@@ -327,20 +327,20 @@ export function MessagesCard() {
                 key={th.id}
                 type="button"
                 onClick={() => openThread(th.id)}
-                className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.055] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 sm:px-5"
+                className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 sm:px-5"
               >
                 <Poster url={th.event_poster} className="h-14 w-11" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
                     <span
-                      className={`truncate font-display italic !text-[18px] !leading-snug ${th.unread ? 'text-white' : 'text-white/80'}`}
+                      className={`truncate font-display italic !text-lead !leading-snug ${th.unread ? 'text-fg' : 'text-fg-soft'}`}
                     >
                       {th.event_title}
                     </span>
-                    <span className="shrink-0 text-[11px] text-white/40">{formatWhen(th.last_activity_at)}</span>
+                    <span className="shrink-0 text-eyebrow text-fg-subtle">{formatWhen(th.last_activity_at)}</span>
                   </span>
                   <span className="mt-0.5 flex items-center gap-2">
-                    <span className={`line-clamp-1 text-[13px] ${th.unread ? 'text-white/80' : 'text-white/50'}`}>
+                    <span className={`line-clamp-1 text-meta ${th.unread ? 'text-fg-soft' : 'text-fg-subtle'}`}>
                       {th.last_message_role === 'attendee'
                         ? `${t('dashboard.messages.you')}: `
                         : th.organizer_name

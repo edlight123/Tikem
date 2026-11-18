@@ -53,30 +53,30 @@ export default function EmailSuggestion({
     <div
       role="group"
       aria-live="polite"
-      className={`mt-2 rounded bg-white/[0.06] px-4 py-3.5 transition-shadow ${
+      className={`mt-2 rounded bg-surface px-4 py-3.5 transition-shadow ${
         attention ? 'ring-1 ring-brand-400/70' : ''
       }`}
     >
-      <div className="text-[12px] font-medium uppercase tracking-wider text-white/45">
+      <div className="text-caption font-medium uppercase tracking-wider text-fg-subtle">
         {t('email_check.did_you_mean')}
       </div>
-      <div className="mt-1 break-all text-[16px] font-semibold text-white">
+      <div className="mt-1 break-all text-base font-semibold text-fg">
         {fixed.slice(0, at + 1)}
         <span className="text-brand-400">{fixed.slice(at + 1)}</span>
       </div>
-      {attention && <div className="mt-1.5 text-[13px] text-white/60">{t('email_check.confirm_first')}</div>}
+      {attention && <div className="mt-1.5 text-meta text-fg-muted">{t('email_check.confirm_first')}</div>}
       <div className="mt-3 flex gap-2">
         <button
           type="button"
           onClick={onAccept}
-          className="h-9 rounded bg-white px-4 text-[13px] font-semibold text-black transition-colors hover:bg-white/90"
+          className="h-9 rounded bg-inverse px-4 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
         >
           {t('email_check.use_this')}
         </button>
         <button
           type="button"
           onClick={onKeep}
-          className="h-9 rounded bg-white/[0.07] px-4 text-[13px] font-medium text-white/80 transition-colors hover:bg-white/[0.12]"
+          className="h-9 rounded bg-surface-raised px-4 text-meta font-medium text-fg-soft transition-colors hover:bg-surface-high"
         >
           {t('email_check.keep_mine')}
         </button>

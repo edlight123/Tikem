@@ -152,21 +152,21 @@ export default function PromoterWalletCard() {
   const numberOnHold = Number.isFinite(holdUntilMs) && holdUntilMs > Date.now()
 
   return (
-    <div className="mb-8 rounded-2xl bg-white/[0.055] p-5">
-      <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">{t('promoter.wallet_title', 'Your wallet')}</h2>
+    <div className="mb-8 rounded-2xl bg-surface p-5">
+      <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">{t('promoter.wallet_title', 'Your wallet')}</h2>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-xl font-bold text-white">{fmtBuckets(wallet.availableByCurrency)}</p>
-          <p className="text-[11px] uppercase tracking-wider text-white/50 mt-1">{t('promoter.wallet_available', 'Available now')}</p>
+          <p className="text-xl font-bold text-fg">{fmtBuckets(wallet.availableByCurrency)}</p>
+          <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-1">{t('promoter.wallet_available', 'Available now')}</p>
         </div>
         <div>
-          <p className="text-xl font-bold text-white/70">{fmtBuckets(wallet.pendingByCurrency)}</p>
-          <p className="text-[11px] uppercase tracking-wider text-white/50 mt-1">{t('promoter.wallet_pending', 'Pending release')}</p>
+          <p className="text-xl font-bold text-fg-muted">{fmtBuckets(wallet.pendingByCurrency)}</p>
+          <p className="text-eyebrow uppercase tracking-wider text-fg-subtle mt-1">{t('promoter.wallet_pending', 'Pending release')}</p>
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-white/40 leading-relaxed">
+      <p className="mt-3 text-xs text-fg-subtle leading-relaxed">
         {t('promoter.wallet_note', {
           defaultValue:
             "Commission unlocks when the event's funds release to the organizer, the same schedule their own payout follows. Instant MonCash withdrawals carry a {{fee}}% fee; minimum {{min}}.",
@@ -176,13 +176,13 @@ export default function PromoterWalletCard() {
       </p>
 
       {hasOwed && (
-        <p className="mt-3 text-xs text-amber-200">
+        <p className="mt-3 text-xs text-warning-soft">
           {t('promoter.wallet_owed', { defaultValue: 'Owed back from reversed commission: {{amount}}', amount: fmtBuckets(owed) })}
         </p>
       )}
 
       {numberOnHold && (
-        <p className="mt-3 text-xs text-white/60">
+        <p className="mt-3 text-xs text-fg-muted">
           {t('promoter.wallet_number_on_hold', {
             defaultValue: 'This MonCash number can receive withdrawals from {{date}}.',
             date: new Date(holdUntilMs).toLocaleString(),
@@ -199,13 +199,13 @@ export default function PromoterWalletCard() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder={t('promoter.wallet_code_placeholder', '6-digit code')}
-            className="flex-1 rounded-xl bg-white/[0.07] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="flex-1 rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg placeholder-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           />
           <button
             type="button"
             onClick={handleConfirmCode}
             disabled={working || code.length !== 6}
-            className="rounded bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
+            className="rounded bg-inverse hover:bg-inverse-hover px-5 py-3 text-sm font-semibold text-on-inverse transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {t('promoter.wallet_code_confirm', 'Confirm')}
           </button>
@@ -219,13 +219,13 @@ export default function PromoterWalletCard() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder={t('promoter.wallet_phone_placeholder', 'MonCash number (e.g. 509 XX XX XX XX)')}
-            className="flex-1 rounded-xl bg-white/[0.07] px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="flex-1 rounded-xl bg-surface-raised px-4 py-3 text-sm text-fg placeholder-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           />
           <button
             type="button"
             onClick={handleWithdraw}
             disabled={working || !phone.trim()}
-            className="rounded bg-white hover:bg-white/90 px-5 py-3 text-sm font-semibold text-black transition-colors disabled:opacity-50 min-h-[44px]"
+            className="rounded bg-inverse hover:bg-inverse-hover px-5 py-3 text-sm font-semibold text-on-inverse transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {working ? t('promoter.wallet_sending', 'Sending…') : t('promoter.wallet_withdraw_btn', 'Withdraw to MonCash')}
           </button>
@@ -233,29 +233,29 @@ export default function PromoterWalletCard() {
       )}
 
       {message && (
-        <p className={`mt-3 text-sm ${message.kind === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>
+        <p className={`mt-3 text-sm ${message.kind === 'error' ? 'text-danger-soft' : 'text-success-soft'}`}>
           {message.text}
         </p>
       )}
 
       {withdrawals.length > 0 && (
-        <div className="mt-5 border-t border-white/[0.06] pt-4 space-y-2">
+        <div className="mt-5 border-t border-line-soft pt-4 space-y-2">
           {withdrawals.map((w) => (
             <div key={w.id} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-white/60">
+              <span className="text-fg-muted">
                 {w.createdAt ? new Date(w.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : EMPTY_VALUE}
                 {' · '}
                 {fmtMoney(w.payoutHtgCents, 'HTG')}
                 {w.instant ? ` · ${t('promoter.wallet_instant_label', 'instant')}` : ''}
               </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-white/50">
+              <span className="inline-flex items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
                     w.status === 'completed'
-                      ? 'bg-emerald-400'
+                      ? 'bg-success'
                       : w.status === 'failed'
-                      ? 'bg-red-400'
-                      : 'bg-amber-400'
+                      ? 'bg-danger'
+                      : 'bg-warning'
                   }`}
                 />
                 {w.status}

@@ -71,18 +71,18 @@ export default function SelfieForm({ userId, initialData, onSave, onCancel }: Pr
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8">
-        <h3 className="mb-2 font-display lowercase italic !text-[22px] !leading-snug text-white">
+      <div className="bg-surface rounded-2xl p-6 md:p-8">
+        <h3 className="mb-2 font-display lowercase italic !text-section !leading-snug text-fg">
           {t('actions.identity_verification')}
         </h3>
-        <p className="text-sm md:text-base text-white/60 mb-6">
+        <p className="text-sm md:text-base text-fg-muted mb-6">
           {t('verification_selfie.take_clear_selfie')}
         </p>
 
         {/* Instructions */}
-        <div className="bg-white/[0.07] rounded-xl p-4 mb-6">
-          <h4 className="font-semibold text-white text-sm mb-2">{t('verification_selfie.instructions')}</h4>
-          <ul className="text-sm text-white/65 space-y-1 list-disc list-inside">
+        <div className="bg-surface-raised rounded-xl p-4 mb-6">
+          <h4 className="font-semibold text-fg text-sm mb-2">{t('verification_selfie.instructions')}</h4>
+          <ul className="text-sm text-fg-muted space-y-1 list-disc list-inside">
             <li>{t('onboarding.verification.selfie_tip_hold', { defaultValue: 'Hold your ID next to your face' })}</li>
             <li>{t('onboarding.verification.selfie_tip_face', { defaultValue: 'Make sure your face is clearly visible' })}</li>
             <li>{t('onboarding.verification.selfie_tip_readable', { defaultValue: 'Ensure the ID text is readable in the photo' })}</li>
@@ -103,8 +103,8 @@ export default function SelfieForm({ userId, initialData, onSave, onCancel }: Pr
 
         {/* Error */}
         {error && (
-          <div className="mt-4 p-3 bg-red-500/10 rounded-xl">
-            <p className="text-sm text-red-300">{error}</p>
+          <div className="mt-4 p-3 bg-danger-strong/10 rounded-xl">
+            <p className="text-sm text-danger-soft">{error}</p>
           </div>
         )}
       </div>
@@ -115,7 +115,7 @@ export default function SelfieForm({ userId, initialData, onSave, onCancel }: Pr
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="flex-1 px-6 py-3 text-white bg-white/[0.07] rounded font-semibold hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+          className="flex-1 px-6 py-3 text-fg bg-surface-raised rounded font-semibold hover:bg-surface-high transition-colors disabled:opacity-50"
         >
           {t('actions.cancel')}
         </button>
@@ -123,7 +123,7 @@ export default function SelfieForm({ userId, initialData, onSave, onCancel }: Pr
           type="button"
           onClick={handleContinue}
           disabled={isSaving || !selfiePath}
-          className="flex-1 px-6 py-3 bg-white hover:bg-white/90 text-black rounded font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-6 py-3 bg-inverse hover:bg-inverse-hover text-on-inverse rounded font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? 'Saving...' : 'Save & Continue'}
         </button>

@@ -41,20 +41,20 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
 
   if (transfersQuery.empty) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
-          <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
-              <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
+          <div className="bg-surface rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-surface-raised">
+              <XCircle className="h-8 w-8 text-danger-soft" strokeWidth={1.5} />
             </div>
-            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Not Found</h1>
-            <p className="text-[13px] sm:text-base text-white/60 mb-4 sm:mb-6">
+            <h1 className="font-display italic lowercase !text-headline sm:!text-display !leading-none text-fg mb-3">Transfer Not Found</h1>
+            <p className="text-meta sm:text-base text-fg-muted mb-4 sm:mb-6">
               This transfer link is invalid or has expired.
             </p>
             <a
               href="/tickets"
-              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded hover:bg-white/90 min-h-[44px]"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-inverse text-on-inverse text-body sm:text-base font-semibold rounded hover:bg-inverse-hover min-h-[44px]"
             >
               View My Tickets
             </a>
@@ -88,22 +88,22 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
     })
 
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
-          <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
-              <Clock className="h-8 w-8 text-amber-300" strokeWidth={1.5} />
+          <div className="bg-surface rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-surface-raised">
+              <Clock className="h-8 w-8 text-warning-soft" strokeWidth={1.5} />
             </div>
-            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Transfer Expired</h1>
-            <p className="text-[13px] sm:text-base text-white/60 mb-4 sm:mb-6">
+            <h1 className="font-display italic lowercase !text-headline sm:!text-display !leading-none text-fg mb-3">Transfer Expired</h1>
+            <p className="text-meta sm:text-base text-fg-muted mb-4 sm:mb-6">
               This transfer link expired on {new Date(transfer.expires_at).toLocaleString()}.
               <br />
               Transfer links are only valid for 24 hours.
             </p>
             <a
               href="/tickets"
-              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded hover:bg-white/90 min-h-[44px]"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-inverse text-on-inverse text-body sm:text-base font-semibold rounded hover:bg-inverse-hover min-h-[44px]"
             >
               View My Tickets
             </a>
@@ -117,26 +117,26 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   // Check if already responded to
   if (transfer.status !== 'pending') {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
-          <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
+          <div className="bg-surface rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-surface-raised">
               {transfer.status === 'accepted' ? (
-                <CheckCircle2 className="h-8 w-8 text-emerald-300" strokeWidth={1.5} />
+                <CheckCircle2 className="h-8 w-8 text-success-soft" strokeWidth={1.5} />
               ) : (
-                <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
+                <XCircle className="h-8 w-8 text-danger-soft" strokeWidth={1.5} />
               )}
             </div>
-            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">
+            <h1 className="font-display italic lowercase !text-headline sm:!text-display !leading-none text-fg mb-3">
               Transfer {transfer.status === 'accepted' ? 'Completed' : 'Cancelled'}
             </h1>
-            <p className="text-[13px] sm:text-base text-white/60 mb-4 sm:mb-6">
+            <p className="text-meta sm:text-base text-fg-muted mb-4 sm:mb-6">
               This transfer has already been {transfer.status}.
             </p>
             <a
               href="/tickets"
-              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[15px] sm:text-base font-semibold rounded hover:bg-white/90 min-h-[44px]"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-inverse text-on-inverse text-body sm:text-base font-semibold rounded hover:bg-inverse-hover min-h-[44px]"
             >
               View My Tickets
             </a>
@@ -152,15 +152,15 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   
   if (!ticketDoc.exists) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
-          <div className="bg-white/[0.055] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-white/[0.08]">
-              <XCircle className="h-8 w-8 text-red-300" strokeWidth={1.5} />
+          <div className="bg-surface rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded bg-surface-raised">
+              <XCircle className="h-8 w-8 text-danger-soft" strokeWidth={1.5} />
             </div>
-            <h1 className="font-display italic lowercase !text-[26px] sm:!text-[30px] !leading-none text-white mb-3">Ticket Not Found</h1>
-            <p className="text-[13px] sm:text-base text-white/60">
+            <h1 className="font-display italic lowercase !text-headline sm:!text-display !leading-none text-fg mb-3">Ticket Not Found</h1>
+            <p className="text-meta sm:text-base text-fg-muted">
               The ticket associated with this transfer no longer exists.
             </p>
           </div>
@@ -187,7 +187,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   const serializedSender = sender ? serializeData({ id: senderDoc.id, ...sender }) : null
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       <Navbar user={user} />
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-12">
         <TransferAcceptForm

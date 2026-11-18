@@ -64,7 +64,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
   // Every state is a FILL, never a hairline around an empty box (see
   // docs/POSH_DESIGN_BRIEF.md). This used to be the other way round and it read
   // backwards: `complete` and `needs_attention` had NO surface at all while
-  // `incomplete` carried `bg-white/[0.03]`, so a finished step looked fainter
+  // `incomplete` carried `bg-surface-low`, so a finished step looked fainter
   // than an unfinished one. Done work now sits one step UP the ladder (0.05 on
   // the 0.03 page), unfinished work stays at the base 0.03, and the state that
   // needs a human sits at 0.05 with a red ring — the sanctioned "fill plus an
@@ -74,10 +74,10 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
     { surface: string; iconBgColor: string; icon: React.ReactNode; tone: ChipTone; badgeText: string }
   > = {
     complete: {
-      surface: 'bg-white/[0.08]',
-      iconBgColor: 'bg-emerald-500',
+      surface: 'bg-surface-raised',
+      iconBgColor: 'bg-success-strong',
       icon: (
-        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
         </svg>
       ),
@@ -85,10 +85,10 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
       badgeText: 'Complete'
     },
     incomplete: {
-      surface: 'bg-white/[0.055]',
-      iconBgColor: 'bg-white/[0.10]',
+      surface: 'bg-surface',
+      iconBgColor: 'bg-surface-raised',
       icon: (
-        <span className="text-xs font-bold text-white/60">
+        <span className="text-xs font-bold text-fg-muted">
           {stepNumber}
         </span>
       ),
@@ -96,10 +96,10 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
       badgeText: step.required ? 'Required' : 'Optional'
     },
     needs_attention: {
-      surface: 'bg-white/[0.08] ring-1 ring-inset ring-red-500/40',
-      iconBgColor: 'bg-red-500',
+      surface: 'bg-surface-raised ring-1 ring-inset ring-danger-strong/40',
+      iconBgColor: 'bg-danger-strong',
       icon: (
-        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -125,7 +125,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
   return (
     <div 
       onClick={isClickable ? handleCardClick : undefined}
-      className={`${config.surface} rounded-2xl p-4 transition-colors ${isClickable ? 'cursor-pointer hover:bg-white/[0.12]' : ''}`}
+      className={`${config.surface} rounded-2xl p-4 transition-colors ${isClickable ? 'cursor-pointer hover:bg-surface-high' : ''}`}
     >
       <div className="flex items-start gap-4">
         {/* Step icon */}
@@ -137,15 +137,15 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-white text-sm md:text-base mb-1">
+              <h3 className="font-semibold text-fg text-sm md:text-base mb-1">
                 {step.title}
                 {step.required && (
-                  <span className="text-red-500 ml-1" aria-label={t('actions.required')}>
+                  <span className="text-danger-strong ml-1" aria-label={t('actions.required')}>
                     *
                   </span>
                 )}
               </h3>
-              <p className="text-xs md:text-sm text-white/60">
+              <p className="text-xs md:text-sm text-fg-muted">
                 {step.description}
               </p>
             </div>
@@ -159,8 +159,8 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
           {/* Missing fields / Error message */}
           {step.status !== 'complete' && step.missingFields && step.missingFields.length > 0 && (
             <div className="mt-2 mb-3">
-              <p className="text-xs text-white/60 mb-1">{t('verification_stepper.missing')}</p>
-              <ul className="list-disc list-inside text-xs text-white/70 space-y-0.5">
+              <p className="text-xs text-fg-muted mb-1">{t('verification_stepper.missing')}</p>
+              <ul className="list-disc list-inside text-xs text-fg-muted space-y-0.5">
                 {step.missingFields.map((field) => (
                   <li key={field}>
                     {formatFieldName(field)}
@@ -171,7 +171,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
           )}
 
           {step.errorMessage && (
-            <div className="mt-2 mb-3 text-xs text-red-300">
+            <div className="mt-2 mb-3 text-xs text-danger-soft">
               {step.errorMessage}
             </div>
           )}
@@ -193,7 +193,7 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
             <div className="mt-3">
               <button
                 onClick={onEdit}
-                className="inline-flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white/70 transition-colors"
+                className="inline-flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-fg-muted transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

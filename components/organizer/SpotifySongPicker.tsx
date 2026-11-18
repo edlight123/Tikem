@@ -189,7 +189,7 @@ export default function SpotifySongPicker({
   }
 
   const shell =
-    'bg-white/[0.06] flex items-center gap-3 rounded-xl px-4 transition-colors focus-within:ring-2 focus-within:ring-brand-400/40'
+    'bg-surface flex items-center gap-3 rounded-xl px-4 transition-colors focus-within:ring-2 focus-within:ring-brand-400/40'
 
   // ── Selected state ──────────────────────────────────────────────────────
   // A picked track (or a saved/pasted link) collapses to one compact row.
@@ -199,7 +199,7 @@ export default function SpotifySongPicker({
 
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-3 rounded-xl bg-white/[0.055] px-3 py-2.5">
+        <div className="flex items-center gap-3 rounded-xl bg-surface px-3 py-2.5">
           {picked?.albumArt ? (
             // Plain <img>: i.scdn.co isn't in images.remotePatterns and these are
             // already 64px squares, so /_next/image would only add a hop.
@@ -215,14 +215,14 @@ export default function SpotifySongPicker({
           ) : (
             // A saved or pasted link has no album art to show, so the logo
             // stands in — it still says where the song lives.
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.07]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-raised">
               <SpotifyLogo className="h-[20px] w-[20px]" />
             </span>
           )}
 
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm text-white">{label}</span>
-            <span className="block truncate text-xs text-white/50">
+            <span className="block truncate text-sm text-fg">{label}</span>
+            <span className="block truncate text-xs text-fg-subtle">
               {sub}
               {picked?.durationMs ? ` · ${formatDuration(picked.durationMs)}` : ''}
             </span>
@@ -231,7 +231,7 @@ export default function SpotifySongPicker({
           <button
             type="button"
             onClick={clear}
-            className="shrink-0 rounded-lg px-2 py-1 text-xs text-white/60 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
+            className="shrink-0 rounded-lg px-2 py-1 text-xs text-fg-muted transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
           >
             {t('composer.spotifyChange', { defaultValue: 'Change' })}
           </button>
@@ -239,7 +239,7 @@ export default function SpotifySongPicker({
             type="button"
             onClick={clear}
             aria-label={t('composer.spotifyRemove', { defaultValue: 'Remove song' })}
-            className="shrink-0 rounded-lg p-1 text-white/40 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
+            className="shrink-0 rounded-lg p-1 text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -262,10 +262,10 @@ export default function SpotifySongPicker({
             aria-label={t('composer.spotifyPlaceholder', { defaultValue: 'Add song from Spotify' })}
             inputMode="url"
             autoComplete="off"
-            className="w-full bg-transparent py-3 text-sm text-white placeholder:text-white/40 focus:outline-none"
+            className="w-full bg-transparent py-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
           />
         </div>
-        <p className="px-1 text-[11px] text-white/40">
+        <p className="px-1 text-eyebrow text-fg-subtle">
           {t('composer.spotifySearchUnavailable', {
             defaultValue: 'Song search needs setup. Paste a Spotify link for now.',
           })}
@@ -303,9 +303,9 @@ export default function SpotifySongPicker({
           aria-autocomplete="list"
           aria-activedescendant={activeId}
           autoComplete="off"
-          className="w-full bg-transparent py-3 text-sm text-white placeholder:text-white/40 focus:outline-none"
+          className="w-full bg-transparent py-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
         />
-        {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white/40" aria-hidden />}
+        {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-fg-subtle" aria-hidden />}
       </div>
 
       {open && (
@@ -313,10 +313,10 @@ export default function SpotifySongPicker({
           id={listboxId}
           role="listbox"
           aria-label={t('composer.spotifyResultsLabel', { defaultValue: 'Song results' })}
-          className="absolute left-0 right-0 z-30 mt-2 max-h-80 overflow-y-auto rounded-xl bg-[#1c1c1c] py-1 shadow-2xl"
+          className="absolute left-0 right-0 z-30 mt-2 max-h-80 overflow-y-auto rounded-xl bg-surface-raised-solid py-1 shadow-2xl"
         >
           {results.length === 0 ? (
-            <li className="px-4 py-3 text-xs text-white/40">
+            <li className="px-4 py-3 text-xs text-fg-subtle">
               {t('composer.spotifyNoResults', { defaultValue: 'No songs found.' })}
             </li>
           ) : (
@@ -337,7 +337,7 @@ export default function SpotifySongPicker({
                   }}
                   onMouseEnter={() => setActive(i)}
                   className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
-                    i === active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                    i === active ? 'bg-surface' : 'hover:bg-surface-low'
                   }`}
                 >
                   {track.albumArt ? (
@@ -351,15 +351,15 @@ export default function SpotifySongPicker({
                       className="h-10 w-10 shrink-0 rounded-lg object-cover"
                     />
                   ) : (
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.07]">
-                      <Music2 className="h-[18px] w-[18px] text-white/40" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-raised">
+                      <Music2 className="h-[18px] w-[18px] text-fg-subtle" />
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-white">{track.name}</span>
-                    <span className="block truncate text-xs text-white/50">{track.artists}</span>
+                    <span className="block truncate text-sm text-fg">{track.name}</span>
+                    <span className="block truncate text-xs text-fg-subtle">{track.artists}</span>
                   </span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-white/30">
+                  <span className="shrink-0 text-eyebrow tabular-nums text-fg-faint">
                     {formatDuration(track.durationMs)}
                   </span>
                 </button>

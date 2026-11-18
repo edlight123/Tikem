@@ -1,7 +1,7 @@
 /**
  * Organizer → My Events loading skeleton.
  *
- * The old one painted `bg-gradient-to-br from-white/5 to-white/10` across the
+ * The old one painted `bg-gradient-to-br from-surface to-surface-raised` across the
  * whole main area — a grey wash over a black portal, the same family of
  * mistake as the white band this codebase used to strobe on navigation — and
  * it drew the wrong body: a filter row of three pills over
@@ -13,7 +13,7 @@
  * page.tsx, the `authLoading || (loading && !events.length)` branch), so the
  * two skeletons are now the same picture and nothing moves between them:
  *
- *   min-h-screen bg-[#0a0a0a]
+ *   min-h-screen bg-canvas
  *     max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10
  *       PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle mt-1.5
  *                    (no action button in the loading branch)
@@ -28,7 +28,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         {/* PageHeader */}
         <div className="flex items-start justify-between gap-4">

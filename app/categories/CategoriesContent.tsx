@@ -91,10 +91,10 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <div className="mb-6 md:mb-8">
           {/* Editorial voice: serif lowercase, like every public section header. */}
-          <h1 className="font-display lowercase italic !text-[clamp(28px,4.5vw,40px)] !leading-[1.02] text-white/90">
+          <h1 className="font-display lowercase italic !text-[clamp(28px,4.5vw,40px)] !leading-[1.02] text-fg">
             {t('events.rail_worlds', { defaultValue: 'dekouvri monn ou' })}
           </h1>
-          <p className="mt-2 text-[13px] text-white/55 md:text-[15px]">
+          <p className="mt-2 text-meta text-fg-muted md:text-body">
             {t('events.rail_worlds_desc', {
               defaultValue: 'discover your world: mizik, kilti, espò and more',
             })}
@@ -109,7 +109,7 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
         {/* Events in Selected Category */}
         {initialCategory && (
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6 capitalize">
+            <h2 className="text-xl md:text-2xl font-bold text-fg mb-4 md:mb-6 capitalize">
               {t('events.category_events', { category: initialCategory })}
             </h2>
             {loading ? (
@@ -121,10 +121,10 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-base md:text-lg font-semibold text-white mb-2">
+                <h3 className="text-base md:text-lg font-semibold text-fg mb-2">
                   {t('events.no_category_events', { category: initialCategory })}
                 </h3>
-                <p className="text-[13px] md:text-base text-white/55">
+                <p className="text-meta md:text-base text-fg-muted">
                   {t('events.check_back_or_explore')}
                 </p>
               </div>

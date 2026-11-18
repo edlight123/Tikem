@@ -54,24 +54,24 @@ export default function Footer() {
   ]
 
   const linkClass =
-    'text-sm text-white/60 transition-colors duration-200 hover:text-brand-300'
+    'text-sm text-fg-muted transition-colors duration-200 hover:text-brand-300'
 
   return (
     <footer
       aria-label={t('footer.landmark', { defaultValue: 'Site footer' })}
-      className="bg-[#0a0a0a]"
+      className="bg-canvas"
     >
       <div className="mx-auto max-w-7xl px-4 pb-[calc(3rem+var(--mobile-nav-h))] pt-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 md:grid-cols-4">
           {/* Brand + tagline + the diaspora, written into the identity */}
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="inline-flex items-center">
-              <TikemWordmark className="text-[28px] text-white" />
+              <TikemWordmark className="text-headline text-fg" />
             </Link>
-            <p className="mt-3 font-display lowercase italic text-[17px] text-white/60">
+            <p className="mt-3 font-display lowercase italic text-lead text-fg-muted">
               {t('footer.tagline_short', { defaultValue: 'where Haiti goes out.' })}
             </p>
-            <p className="mt-4 max-w-sm text-[11px] font-medium uppercase tracking-[0.16em] leading-relaxed text-white/35">
+            <p className="mt-4 max-w-sm text-eyebrow font-medium uppercase tracking-[0.16em] leading-relaxed text-fg-faint">
               Port-au-Prince · Cap-Haïtien · Miami · New York · Montréal · Paris
             </p>
             {/* Language sits here, under the cities, rather than in the bottom
@@ -81,7 +81,7 @@ export default function Footer() {
                 exactly the first-time visitor most likely to need it. Beside
                 the places we cover is also simply where a reader looks. */}
             <LanguageSwitcher className="mt-6" />
-            <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.16em] text-white/35">
+            <p className="mt-6 text-eyebrow font-medium uppercase tracking-[0.16em] text-fg-faint">
               {t('store_badges.get_the_app', { defaultValue: 'Get the app' })}
             </p>
             <StoreBadges className="mt-3" />
@@ -89,7 +89,7 @@ export default function Footer() {
 
           {/* Discover column */}
           <nav aria-label={t('footer.discover', { defaultValue: 'Discover' })}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
               {t('footer.discover', { defaultValue: 'Discover' })}
             </h2>
             <ul className="mt-4 space-y-3">
@@ -105,7 +105,7 @@ export default function Footer() {
 
           {/* Company / legal column */}
           <nav aria-label={t('footer.company', { defaultValue: 'Company' })}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
               {t('footer.company', { defaultValue: 'Company' })}
             </h2>
             <ul className="mt-4 space-y-3">
@@ -122,17 +122,17 @@ export default function Footer() {
 
         {/* Bottom row: copyright, then where to follow us and who builds it. */}
         <div className="mt-14 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-fg-subtle">
             {t('footer.copyright', { year, defaultValue: '© {{year}} Tikèm' })}
           </p>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-white/40">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-fg-subtle">
             <a
               href={INSTAGRAM_URL}
               onClick={openInstagram}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t('footer.instagram', { defaultValue: 'Tikèm on Instagram' })}
-              className="inline-flex items-center gap-1.5 text-white/60 transition-colors duration-200 hover:text-brand-300"
+              className="inline-flex items-center gap-1.5 text-fg-muted transition-colors duration-200 hover:text-brand-300"
             >
               <Instagram size={14} aria-hidden="true" />
               @tikem.co
@@ -145,7 +145,7 @@ export default function Footer() {
                 href={EDLIGHT_LABS_URL}
                 target="_blank"
                 rel="noopener"
-                className="text-white/60 transition-colors duration-200 hover:text-brand-300"
+                className="text-fg-muted transition-colors duration-200 hover:text-brand-300"
               >
                 EdLight Labs
               </a>

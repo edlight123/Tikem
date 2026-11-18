@@ -35,14 +35,14 @@ const DRAFT_NOTE: Record<Locale, string> = {
  * paragraphs). `!` on sizes: body's .mobile-typography flattens bare
  * h2/p utilities on phones.
  */
-const BODY = '!text-[15px] !leading-relaxed text-white/75'
+const BODY = '!text-body !leading-relaxed text-fg-soft'
 function Block({ block }: { block: ContentBlock }) {
   switch (block.type) {
     case 'heading':
       return block.level === 3 ? (
-        <h3 className="mb-2 mt-7 !text-[16px] font-semibold text-white">{block.text}</h3>
+        <h3 className="mb-2 mt-7 !text-base font-semibold text-fg">{block.text}</h3>
       ) : (
-        <h2 className="mb-3 mt-10 font-grotesk !text-[20px] font-bold tracking-[-0.01em] text-white first:mt-0 sm:!text-[22px]">
+        <h2 className="mb-3 mt-10 font-grotesk !text-title font-bold tracking-[-0.01em] text-fg first:mt-0 sm:!text-section">
           {block.text}
         </h2>
       )
@@ -50,13 +50,13 @@ function Block({ block }: { block: ContentBlock }) {
       return <p className={`mb-4 ${BODY}`}>{block.text}</p>
     case 'list':
       return block.ordered ? (
-        <ol className={`mb-5 ml-5 list-decimal space-y-1.5 marker:text-white/40 ${BODY}`}>
+        <ol className={`mb-5 ml-5 list-decimal space-y-1.5 marker:text-fg-subtle ${BODY}`}>
           {block.items.map((item, i) => (
             <li key={i}>{item}</li>
           ))}
         </ol>
       ) : (
-        <ul className={`mb-5 ml-5 list-disc space-y-1.5 marker:text-white/40 ${BODY}`}>
+        <ul className={`mb-5 ml-5 list-disc space-y-1.5 marker:text-fg-subtle ${BODY}`}>
           {block.items.map((item, i) => (
             <li key={i}>{item}</li>
           ))}
@@ -65,10 +65,10 @@ function Block({ block }: { block: ContentBlock }) {
     case 'callout':
       // A fill, not a coloured rule down the side (house rule: fill, not hairline).
       return (
-        <div className="mt-8 rounded bg-white/[0.05] p-5 sm:p-6">
-          {block.title ? <h3 className="mb-2 !text-[16px] font-semibold text-white">{block.title}</h3> : null}
+        <div className="mt-8 rounded bg-surface p-5 sm:p-6">
+          {block.title ? <h3 className="mb-2 !text-base font-semibold text-fg">{block.title}</h3> : null}
           {block.items && block.items.length > 0 ? (
-            <ul className={`ml-5 list-disc space-y-1.5 marker:text-white/40 ${BODY}`}>
+            <ul className={`ml-5 list-disc space-y-1.5 marker:text-fg-subtle ${BODY}`}>
               {block.items.map((item, i) => (
                 <li key={i}>{item}</li>
               ))}
@@ -97,30 +97,30 @@ export default function ContentPageView({
   const title = page?.title || fallbackTitle || 'Content'
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+    <div className="min-h-screen bg-canvas pb-mobile-nav">
       <Navbar user={user} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
-        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3 md:mb-4">
+        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-fg mb-2 sm:mb-3 md:mb-4">
           {title}
         </h1>
         {page?.updated ? (
-          <p className="text-[11px] sm:text-[13px] md:text-base text-white/65 mb-4 sm:mb-6 md:mb-8">
+          <p className="text-eyebrow sm:text-meta md:text-base text-fg-muted mb-4 sm:mb-6 md:mb-8">
             Last updated: {page.updated}
           </p>
         ) : null}
 
         {page?.draft ? (
-          <p className="text-[11px] sm:text-[13px] md:text-sm text-amber-300/90 mb-4 sm:mb-6">
+          <p className="text-eyebrow sm:text-meta md:text-sm text-warning-soft/90 mb-4 sm:mb-6">
             {DRAFT_NOTE[locale] ?? DRAFT_NOTE.en}
           </p>
         ) : null}
 
-        <div className="rounded bg-white/[0.03] p-5 sm:p-8">
+        <div className="rounded bg-surface-low p-5 sm:p-8">
           {page && page.blocks.length > 0 ? (
             page.blocks.map((block, i) => <Block key={i} block={block} />)
           ) : (
-            <p className="text-white/65">
+            <p className="text-fg-muted">
               This content is currently unavailable. Please check back shortly or contact{' '}
               <a href="mailto:support@tikem.co">support@tikem.co</a>.
             </p>

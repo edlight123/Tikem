@@ -22,7 +22,7 @@ export default function OrganizerStatsStrip({
     <div className="mb-6 grid grid-cols-3 divide-x divide-console-raise overflow-hidden rounded-lg bg-console-panel">
       {figures.map((f) => (
         <div key={f.label} className="p-4">
-          <div className="label-mono text-[11px] uppercase tracking-wide text-console-mut">{f.label}</div>
+          <div className="label-mono text-eyebrow uppercase tracking-wide text-console-mut">{f.label}</div>
           <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-console-text">{f.value}</div>
         </div>
       ))}

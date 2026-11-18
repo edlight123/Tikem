@@ -15,7 +15,7 @@ import { Trans } from 'react-i18next'
  */
 export function DaysWithSalesCaption({ count }: { count: number }) {
   return (
-    <p className="mt-2 text-xs text-white/40">
+    <p className="mt-2 text-xs text-fg-subtle">
       <Trans
         i18nKey="event_analytics.days_with_sales"
         ns="organizer"

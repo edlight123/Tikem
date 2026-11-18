@@ -86,14 +86,14 @@ export default async function PurchaseFailedPage({
   const message = messages[reason] || messages.unknown
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
       <PurchasePopupBridge status="failed" reason={reason} />
       <div className="max-w-md w-full">
-        <div className="bg-white/[0.055] rounded-2xl p-6 md:p-8 text-center">
+        <div className="bg-surface rounded-2xl p-6 md:p-8 text-center">
           {/* Error Icon */}
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-red-500/10 rounded flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 md:w-16 md:h-16 bg-danger-strong/10 rounded flex items-center justify-center mx-auto mb-4">
             <svg
-              className="w-7 h-7 md:w-8 md:h-8 text-red-400"
+              className="w-7 h-7 md:w-8 md:h-8 text-danger"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -107,33 +107,33 @@ export default async function PurchaseFailedPage({
             </svg>
           </div>
 
-          <h1 className="font-display lowercase italic !text-[28px] md:!text-[32px] !leading-tight text-white mb-2">
+          <h1 className="font-display lowercase italic !text-headline md:!text-display !leading-tight text-fg mb-2">
             {message.title}
           </h1>
 
-          <p className="text-sm md:text-base text-white/65 mb-6 md:mb-8">
+          <p className="text-sm md:text-base text-fg-muted mb-6 md:mb-8">
             {message.description}
           </p>
 
           <div className="space-y-2.5">
             <Link
               href="/"
-              className="flex h-12 w-full items-center justify-center bg-white hover:bg-white/90 text-black font-semibold px-6 rounded transition-colors text-base"
+              className="flex h-12 w-full items-center justify-center bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold px-6 rounded transition-colors text-base"
             >
               {t('purchase.browse_events', 'Browse Events')}
             </Link>
 
             <Link
               href="/tickets"
-              className="flex h-12 w-full items-center justify-center bg-white/[0.07] hover:bg-white/[0.12] text-white font-semibold px-6 rounded transition-colors text-base"
+              className="flex h-12 w-full items-center justify-center bg-surface-raised hover:bg-surface-high text-fg font-semibold px-6 rounded transition-colors text-base"
             >
               {t('purchase.view_my_tickets', 'View My Tickets')}
             </Link>
           </div>
 
           {reason === 'ticket_creation_failed' && (
-            <div className="mt-5 p-3.5 md:p-4 bg-amber-500/10 rounded-xl text-left">
-              <p className="text-[13px] md:text-sm text-amber-200">
+            <div className="mt-5 p-3.5 md:p-4 bg-warning-strong/10 rounded-xl text-left">
+              <p className="text-meta md:text-sm text-warning-soft">
                 <strong>{t('purchase.important_label', 'Important:')}</strong>{' '}
                 {t('purchase.ticket_creation_failed_contact', 'Your payment was processed. Please contact support at')}{' '}
                 <a href="mailto:support@tikem.co" className="underline font-semibold">

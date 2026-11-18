@@ -1,3 +1,4 @@
+import { color } from '@/lib/design/tokens'
 /**
  * Loading boundary for the whole /admin subtree.
  *
@@ -7,7 +8,7 @@
  *
  * Deliberately NOT the `.skeleton` sweep used on the public site: that class
  * bakes in an rgba(255,255,255,0.06) fill tuned for the black canvas, and the
- * Control Room is its own world (`console-ground` #12151A with elevation
+ * Control Room is its own world (`console-ground` ${color.console.ground} with elevation
  * steps). `console-panel` here is the exact colour of the row that arrives.
  *
  * Derived geometry (ConsolePage → ConsoleRow):

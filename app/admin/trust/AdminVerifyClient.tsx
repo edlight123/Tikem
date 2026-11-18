@@ -247,7 +247,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
       <div className="mb-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
         {kpis.map((k) => (
           <div key={k.label}>
-            <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{k.label}</p>
+            <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{k.label}</p>
             <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{k.value}</p>
           </div>
         ))}
@@ -270,7 +270,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
                 role="tab"
                 aria-selected={active}
                 onClick={() => setStatus(tabItem.key)}
-                className={`label-mono border-b-2 px-1 pb-2 text-[12px] uppercase tracking-[0.14em] transition-colors ${
+                className={`label-mono border-b-2 px-1 pb-2 text-caption uppercase tracking-[0.14em] transition-colors ${
                   active ? 'border-console-text text-console-text' : 'border-transparent text-console-mut hover:text-console-text'
                 }`}
               >
@@ -340,7 +340,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
               onChange={toggleSelectAll}
               className="h-4 w-4 accent-console-text"
             />
-            <label htmlFor="select-all-verify" className="text-[13px] text-console-mut cursor-pointer">
+            <label htmlFor="select-all-verify" className="text-meta text-console-mut cursor-pointer">
               {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}
             </label>
             {selectedIds.size > 0 && (
@@ -348,7 +348,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
                 variant="primary"
                 onClick={handleBulkApprove}
                 disabled={bulkActionLoading}
-                className="ml-auto inline-flex items-center gap-1.5 py-1.5 text-[13px]"
+                className="ml-auto inline-flex items-center gap-1.5 py-1.5 text-meta"
               >
                 <Check className="h-4 w-4" />
                 {bulkActionLoading ? 'Approving…' : `Approve ${selectedIds.size}`}
@@ -395,8 +395,8 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
       <details className="group mt-6 rounded-lg bg-console-panel">
         <summary className="flex cursor-pointer select-none items-center justify-between gap-3 p-4">
           <div>
-            <h2 className="label-mono text-[12px] font-bold uppercase tracking-[0.14em] text-console-text">{t('verify.quick_toggle_title')}</h2>
-            <p className="mt-0.5 text-[13px] text-console-mut">{t('verify.quick_toggle_subtitle')}</p>
+            <h2 className="label-mono text-caption font-bold uppercase tracking-[0.14em] text-console-text">{t('verify.quick_toggle_title')}</h2>
+            <p className="mt-0.5 text-meta text-console-mut">{t('verify.quick_toggle_subtitle')}</p>
           </div>
           <ChevronDown className="h-5 w-5 shrink-0 text-console-faint transition-transform group-open:rotate-180" />
         </summary>

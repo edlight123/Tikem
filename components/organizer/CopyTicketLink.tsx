@@ -31,9 +31,9 @@ export function CopyTicketLink({ url, full = false }: { url: string; full?: bool
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded bg-white/[0.08] px-2.5 py-1.5 text-xs font-semibold text-white/85 transition-colors hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+      className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-2.5 py-1.5 text-xs font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Link2 className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-success-soft" /> : <Link2 className="h-3.5 w-3.5" />}
       {copied ? t('event_tools.link_copied') : t('event_tools.copy_ticket_link')}
     </button>
   )
@@ -47,7 +47,7 @@ export function CopyTicketLink({ url, full = false }: { url: string; full?: bool
         readOnly
         value={url}
         onFocus={(e) => e.currentTarget.select()}
-        className="w-full rounded bg-black/30 px-3 py-2.5 font-mono text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-brand-500/60"
+        className="w-full rounded bg-scrim-light px-3 py-2.5 font-mono text-xs text-fg-soft focus:outline-none focus:ring-2 focus:ring-brand-500/60"
       />
       {button}
     </div>

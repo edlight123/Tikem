@@ -95,18 +95,18 @@ export default function MobileKeyFacts({
   return (
     <div className="md:hidden px-4 pt-2">
       {/* Printed in the event's zone, so the server and the browser agree. */}
-      <p className="text-[15px] text-white/60">
+      <p className="text-body text-fg-muted">
         {formatInZone(startDate, zone, 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
         {endLabel && ` – ${endLabel}`}
       </p>
 
-      {place && <p className="mt-0.5 text-[15px] text-white/60">{place}</p>}
+      {place && <p className="mt-0.5 text-body text-fg-muted">{place}</p>}
 
       {/* A free event's button already says so; "Free" here was a repeat. */}
       {!isFree && (
-      <p className="mt-3 text-[15px] font-semibold text-white">
+      <p className="mt-3 text-body font-semibold text-fg">
         {priceLine}
-        <span className="ml-1.5 text-[13px] font-normal text-white/45">
+        <span className="ml-1.5 text-meta font-normal text-fg-subtle">
           {feesIncluded
             ? t('events.fees_included', { defaultValue: 'Fees included' })
             : t('events.per_ticket', { defaultValue: 'per ticket' })}
@@ -124,7 +124,7 @@ export default function MobileKeyFacts({
         const copy = scarcityCopy(s)
         if (!copy) return null
         return (
-          <p className={`mt-1 text-[13px] font-medium ${isUrgent(s) ? 'text-amber-300' : 'text-red-400'}`}>
+          <p className={`mt-1 text-meta font-medium ${isUrgent(s) ? 'text-warning-soft' : 'text-danger'}`}>
             {t(copy.key, { defaultValue: copy.defaultValue, count: copy.count })}
           </p>
         )

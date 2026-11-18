@@ -57,13 +57,13 @@ function StatCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl bg-white/[0.055] p-5 shadow-soft">
-      <div className="flex items-center gap-2 text-white/50">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/[0.06] text-brand-300">{icon}</span>
+    <div className="rounded-2xl bg-surface p-5 shadow-soft">
+      <div className="flex items-center gap-2 text-fg-subtle">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-surface text-brand-300">{icon}</span>
         <span className="label-mono text-xs uppercase">{label}</span>
       </div>
-      <div className="mt-3 text-white">{children}</div>
-      {hint && <p className="mt-1 text-xs text-white/50">{hint}</p>}
+      <div className="mt-3 text-fg">{children}</div>
+      {hint && <p className="mt-1 text-xs text-fg-subtle">{hint}</p>}
     </div>
   )
 }
@@ -115,14 +115,14 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
   const renderMoney = (
     pick: (t?: CurrencyTotals) => number,
     single: number,
-    valueClass = 'text-white',
+    valueClass = 'text-fg',
   ) => {
     if (isMixed) {
       return (
         <span className="block space-y-1">
           {(['USD', 'HTG'] as const).map((code) => (
             <span key={code} className="flex items-baseline justify-between gap-3">
-              <span className="label-mono text-[11px] uppercase text-white/40">{code}</span>
+              <span className="label-mono text-eyebrow uppercase text-fg-subtle">{code}</span>
               <span className={`font-mono tabular-nums text-lg font-bold ${valueClass}`}>
                 {formatCurrency(pick(code === 'USD' ? usd : htg), code)}
               </span>
@@ -166,10 +166,10 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
           one large figure on the canvas, the way the public pages let a number
           or a title do the work, and teal is left to the one accent that
           matters, the wallet mark. */}
-      <section className="relative overflow-hidden rounded-2xl bg-white/[0.055] p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-2xl bg-surface p-6 sm:p-8">
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-white/50">
+            <div className="flex items-center gap-2 text-fg-subtle">
               <Wallet className="h-4 w-4 text-brand-400" />
               <span className="eyebrow">{tx('earnings.available_to_withdraw')}</span>
             </div>
@@ -187,18 +187,18 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
               ))}
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/55">
+            <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-fg-muted">
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
                 Pending&nbsp;
-                <span className="font-mono tabular-nums font-semibold text-white">
+                <span className="font-mono tabular-nums font-semibold text-fg">
                   {balances.map((b) => formatCurrency(b.pendingMinor, asCode(b.currency))).join(' · ')}
                 </span>
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <ArrowDownCircle className="h-3.5 w-3.5" />
                 Withdrawn&nbsp;
-                <span className="font-mono tabular-nums font-semibold text-white">
+                <span className="font-mono tabular-nums font-semibold text-fg">
                   {balances.map((b) => formatCurrency(b.withdrawnMinor, asCode(b.currency))).join(' · ')}
                 </span>
               </span>
@@ -210,7 +210,7 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
               retired (owner decision 2026-10-05): it duplicated that flow on a
               second ledger. */}
           {readOnly ? (
-            <p className="max-w-[18rem] shrink-0 text-xs text-white/55 lg:text-right">
+            <p className="max-w-[18rem] shrink-0 text-xs text-fg-muted lg:text-right">
               {tx('finance_view.read_only_hub_body')}
             </p>
           ) : (
@@ -218,13 +218,13 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
             <a
               href="#events-earnings"
               className={`inline-flex w-full items-center justify-center gap-2 rounded px-6 py-3 font-semibold transition lg:w-auto ${
-                anyAvailable ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.07] text-white/60'
+                anyAvailable ? 'bg-inverse text-on-inverse hover:bg-inverse-hover' : 'bg-surface-raised text-fg-muted'
               }`}
             >
               Withdraw from an event
               <ArrowRight className="h-4 w-4" />
             </a>
-            <p className="mt-2 max-w-[18rem] text-xs text-white/55 lg:text-right">
+            <p className="mt-2 max-w-[18rem] text-xs text-fg-muted lg:text-right">
               {anyAvailable
                 ? 'Open an event below and withdraw its released funds to MonCash or your bank.'
                 : tx('payout_timing.nothing_yet', {
@@ -249,40 +249,40 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
           {renderMoney(
             (t) => (t?.totalPlatformFees ?? 0) + (t?.totalProcessingFees ?? 0),
             summary.totalPlatformFees + summary.totalProcessingFees,
-            'text-white/50',
+            'text-fg-subtle',
           )}
         </StatCard>
       </div>
 
       {/* Fee structure — compact disclosure to keep the page focused */}
-      <details className="group overflow-hidden rounded-2xl bg-white/[0.055] shadow-soft">
+      <details className="group overflow-hidden rounded-2xl bg-surface shadow-soft">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
-          <span className="flex items-center gap-2 text-sm font-medium text-white">
+          <span className="flex items-center gap-2 text-sm font-medium text-fg">
             <Receipt className="h-4 w-4 text-brand-300" />
             {tx('earnings.how_fees_calculated')}
           </span>
-          <span className="flex items-center gap-3 text-sm text-white/50">
+          <span className="flex items-center gap-3 text-sm text-fg-subtle">
             <span className="hidden sm:inline">{tx('earnings.total_fees')}<span className="ml-1.5 font-mono tabular-nums">{totalFeesLabel}</span></span>
             <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
           </span>
         </summary>
-        <div className="space-y-2 border-t border-white/10 px-5 py-4 text-sm text-white/60">
+        <div className="space-y-2 border-t border-line px-5 py-4 text-sm text-fg-muted">
           <div className="flex justify-between">
             <span>{tx('earnings.platform_fee')}</span>
-            <span className="font-mono tabular-nums font-medium text-white">Your market&rsquo;s rate</span>
+            <span className="font-mono tabular-nums font-medium text-fg">Your market&rsquo;s rate</span>
           </div>
           <div className="flex justify-between">
             <span>{tx('earnings.processing_fee')}</span>
-            <span className="font-mono tabular-nums font-medium text-white">Included (Tikèm pays it)</span>
+            <span className="font-mono tabular-nums font-medium text-fg">Included (Tikèm pays it)</span>
           </div>
-          <div className="flex justify-between border-t border-white/10 pt-2">
+          <div className="flex justify-between border-t border-line pt-2">
             <span>{tx('earnings.total_fees_paid')}</span>
-            <span className="font-mono tabular-nums font-semibold text-white">{totalFeesLabel}</span>
+            <span className="font-mono tabular-nums font-semibold text-fg">{totalFeesLabel}</span>
           </div>
           {/* WHO PAYS decides whether these rates come out of the organizer's money at
               all. Stating the rates without this reads as "deducted from you" in every
               market, which is only true where the organizer bears the fee. */}
-          <p className="border-t border-white/10 pt-2 text-xs text-white/45">
+          <p className="border-t border-line pt-2 text-xs text-fg-subtle">
             The rate depends on where the event is: 10% in Haiti, 6% + $0.99 per ticket in the
             US, 6% + C$0.99 in Canada, 2.5% + €0.50 in France. Card and MonCash processing come
             out of Tikèm&rsquo;s fee, never out of your money. When the fee is passed to buyers it
@@ -300,13 +300,13 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
         </div>
       </details>
 
-      <div id="events-earnings" className="scroll-mt-24 overflow-hidden rounded-2xl bg-white/[0.055] shadow-soft">
+      <div id="events-earnings" className="scroll-mt-24 overflow-hidden rounded-2xl bg-surface shadow-soft">
         {/* Filter Tabs */}
         <div className="px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="font-display lowercase italic !text-[22px] !leading-snug text-white">events</div>
-              <div className="text-xs text-white/50">{tx('earnings.filter_by_settlement')}</div>
+              <div className="font-display lowercase italic !text-section !leading-snug text-fg">events</div>
+              <div className="text-xs text-fg-subtle">{tx('earnings.filter_by_settlement')}</div>
             </div>
 
             <div className="flex gap-2 overflow-x-auto">
@@ -314,10 +314,10 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`relative inline-flex items-center whitespace-nowrap rounded px-2.5 py-1.5 text-[13px] font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+                  className={`relative inline-flex items-center whitespace-nowrap rounded px-2.5 py-1.5 text-meta font-medium leading-[18px] transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                     filter === status
-                      ? 'bg-white text-black'
-                      : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                      ? 'bg-inverse text-on-inverse'
+                      : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
                   }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -328,26 +328,26 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
         </div>
 
         {/* Mobile View - Cards */}
-        <div className="sm:hidden divide-y divide-white/10">
+        <div className="sm:hidden divide-y divide-line">
           {filteredEvents.length === 0 ? (
             <div className="px-4 py-12 text-center">
               <svg
-                className="mx-auto h-12 w-12 text-white/40"
+                className="mx-auto h-12 w-12 text-fg-subtle"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <p className="mt-4 text-white/50">{tx('earnings.no_events_for_filter')}</p>
+              <p className="mt-4 text-fg-subtle">{tx('earnings.no_events_for_filter')}</p>
             </div>
           ) : (
             filteredEvents.map((event) => (
-              <div key={event.eventId} className="p-4 hover:bg-white/[0.07]">
+              <div key={event.eventId} className="p-4 hover:bg-surface-raised">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="truncate font-semibold text-white">{event.eventTitle}</h3>
-                    <p className="font-mono tabular-nums text-sm text-white/50 mt-1">
+                    <h3 className="truncate font-semibold text-fg">{event.eventTitle}</h3>
+                    <p className="font-mono tabular-nums text-sm text-fg-subtle mt-1">
                       {new Date(event.eventDate).toLocaleDateString()}
                     </p>
                   </div>
@@ -361,20 +361,20 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
                 
                 <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
                   <div>
-                    <div className="label-mono uppercase text-white/50">{tx('earnings.gross_sales_title')}</div>
+                    <div className="label-mono uppercase text-fg-subtle">{tx('earnings.gross_sales_title')}</div>
                     <div className="font-mono tabular-nums font-medium">
                       {formatCurrency(event.grossSales, event.currency || undefined)}
                     </div>
                   </div>
                   <div>
-                    <div className="label-mono uppercase text-white/50">{tx('earnings.net_amount_title')}</div>
+                    <div className="label-mono uppercase text-fg-subtle">{tx('earnings.net_amount_title')}</div>
                     <div className="font-mono tabular-nums font-medium">
                       {formatCurrency(event.netAmount, event.currency || undefined)}
                     </div>
                   </div>
                   <div>
-                    <div className="label-mono uppercase text-white/50">{tx('earnings.available')}</div>
-                    <div className="font-mono tabular-nums font-semibold text-emerald-300">
+                    <div className="label-mono uppercase text-fg-subtle">{tx('earnings.available')}</div>
+                    <div className="font-mono tabular-nums font-semibold text-success-soft">
                       {formatCurrency(event.availableToWithdraw, event.currency || undefined)}
                     </div>
                   </div>
@@ -395,53 +395,53 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
         {/* Desktop View - Table */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-white/[0.05]">
+            <thead className="bg-surface">
               <tr>
-                <th className="px-6 py-3 text-left text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-left text-xs label-mono text-fg-subtle uppercase">
                   {tx('actions.event')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-left text-xs label-mono text-fg-subtle uppercase">
                   Date
                 </th>
-                <th className="px-6 py-3 text-right text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-right text-xs label-mono text-fg-subtle uppercase">
                   {tx('earnings.gross_sales_title')}
                 </th>
-                <th className="px-6 py-3 text-right text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-right text-xs label-mono text-fg-subtle uppercase">
                   {tx('earnings.net_amount_title')}
                 </th>
-                <th className="px-6 py-3 text-right text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-right text-xs label-mono text-fg-subtle uppercase">
                   {tx('earnings.available')}
                 </th>
-                <th className="px-6 py-3 text-center text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-center text-xs label-mono text-fg-subtle uppercase">
                   {tx('actions.status')}
                 </th>
-                <th className="px-6 py-3 text-center text-xs label-mono text-white/50 uppercase">
+                <th className="px-6 py-3 text-center text-xs label-mono text-fg-subtle uppercase">
                   {tx('actions.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10">
+            <tbody className="divide-y divide-line">
               {filteredEvents.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <svg
-                      className="mx-auto h-12 w-12 text-white/40"
+                      className="mx-auto h-12 w-12 text-fg-subtle"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
-                    <p className="mt-4 text-white/50">{tx('earnings.no_events_for_filter')}</p>
+                    <p className="mt-4 text-fg-subtle">{tx('earnings.no_events_for_filter')}</p>
                   </td>
                 </tr>
               ) : (
                 filteredEvents.map((event) => (
-                  <tr key={event.eventId} className="hover:bg-white/[0.07]">
+                  <tr key={event.eventId} className="hover:bg-surface-raised">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-white">{event.eventTitle}</div>
+                      <div className="font-medium text-fg">{event.eventTitle}</div>
                     </td>
-                    <td className="px-6 py-4 font-mono tabular-nums text-sm text-white/50 whitespace-nowrap">
+                    <td className="px-6 py-4 font-mono tabular-nums text-sm text-fg-subtle whitespace-nowrap">
                       {new Date(event.eventDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right font-mono tabular-nums font-medium whitespace-nowrap">
@@ -450,7 +450,7 @@ export default function EarningsView({ summary, organizerId, withdrawable, readO
                     <td className="px-6 py-4 text-right font-mono tabular-nums font-medium whitespace-nowrap">
                       {formatCurrency(event.netAmount, event.currency || undefined)}
                     </td>
-                    <td className="px-6 py-4 text-right font-mono tabular-nums font-semibold text-emerald-300 whitespace-nowrap">
+                    <td className="px-6 py-4 text-right font-mono tabular-nums font-semibold text-success-soft whitespace-nowrap">
                       {formatCurrency(event.availableToWithdraw, event.currency || undefined)}
                     </td>
                     <td className="px-6 py-4 text-center">

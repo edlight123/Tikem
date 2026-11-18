@@ -17,7 +17,7 @@ export default function OrganizerAccountCard({
 }) {
   return (
     <ConsolePanel className="p-4 sm:p-5">
-      <h2 className="label-mono mb-4 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+      <h2 className="label-mono mb-4 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
         Account Information
       </h2>
       <dl className="space-y-3">

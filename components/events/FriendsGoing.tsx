@@ -50,14 +50,14 @@ export default function FriendsGoing({ eventId, currentUserId, className = '' }:
 
   return (
     <div className={`px-4 md:px-0 ${className}`}>
-      <div className="flex items-center gap-3 rounded-2xl bg-white/[0.055] px-4 py-3">
+      <div className="flex items-center gap-3 rounded-2xl bg-surface px-4 py-3">
         <div className="flex -space-x-2.5">
           {data.friends.map((f) => (
             <Link
               key={f.uid}
               href={`/profile/organizer/${f.uid}`}
               title={f.displayName}
-              className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-white/[0.12] text-xs font-semibold text-white ring-2 ring-black"
+              className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-surface-high text-xs font-semibold text-fg ring-2 ring-black"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -68,7 +68,7 @@ export default function FriendsGoing({ eventId, currentUserId, className = '' }:
             </Link>
           ))}
         </div>
-        <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">{label}</p>
+        <p className="min-w-0 flex-1 truncate text-body font-bold text-fg">{label}</p>
       </div>
     </div>
   )

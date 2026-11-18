@@ -184,14 +184,14 @@ export default function DocumentUploadCard({
   }
 
   return (
-    <div className="bg-white/[0.06] rounded-2xl p-4 md:p-6">
+    <div className="bg-surface rounded-2xl p-4 md:p-6">
       {/* Header */}
       <div className="mb-4">
-        <h3 className="font-semibold text-white text-sm md:text-base mb-1">
+        <h3 className="font-semibold text-fg text-sm md:text-base mb-1">
           {title}
-          {required && <span className="text-red-400 ml-1">*</span>}
+          {required && <span className="text-danger ml-1">*</span>}
         </h3>
-        <p className="text-xs md:text-sm text-white/60">
+        <p className="text-xs md:text-sm text-fg-muted">
           {description}
         </p>
       </div>
@@ -200,7 +200,7 @@ export default function DocumentUploadCard({
       {previewUrl ? (
         <div className="space-y-3">
           {/* Image Preview */}
-          <div className="relative aspect-video bg-white/[0.10] rounded-xl overflow-hidden">
+          <div className="relative aspect-video bg-surface-raised rounded-xl overflow-hidden">
             <Image
               src={previewUrl}
               alt={title}
@@ -215,14 +215,14 @@ export default function DocumentUploadCard({
               <button
                 onClick={openFileDialog}
                 disabled={isUploading}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] hover:bg-white/[0.12] rounded transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-fg bg-surface-raised hover:bg-surface-high rounded transition-colors disabled:opacity-50"
               >
                 {t('document_upload.replace')}
               </button>
               <button
                 onClick={handleRemove}
                 disabled={isUploading}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-red-200 bg-red-500/15 hover:bg-red-500/25 rounded transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-danger-soft bg-danger-strong/15 hover:bg-danger-strong/25 rounded transition-colors disabled:opacity-50"
               >
                 {t('actions.remove')}
               </button>
@@ -236,29 +236,29 @@ export default function DocumentUploadCard({
           onDragLeave={handleDragLeave}
           className={`rounded-xl p-6 md:p-8 text-center transition-all ${
             isDragging
-              ? 'ring-1 ring-inset ring-brand-400/50 bg-white/[0.12]'
-              : 'bg-white/[0.06] hover:bg-white/[0.1]'
+              ? 'ring-1 ring-inset ring-brand-400/50 bg-surface-high'
+              : 'bg-surface hover:bg-surface-raised'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           onClick={disabled ? undefined : openFileDialog}
         >
           {isUploading ? (
             <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 border-4 border-white/60 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-white/60">{t('document_upload.uploading')}</p>
+              <div className="w-12 h-12 border-4 border-fg/60 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-fg-muted">{t('document_upload.uploading')}</p>
             </div>
           ) : (
             <>
               {/* Upload Icon */}
-              <div className="w-12 h-12 mx-auto mb-3 rounded bg-white/[0.08] flex items-center justify-center">
-                <svg className="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 mx-auto mb-3 rounded bg-surface-raised flex items-center justify-center">
+                <svg className="w-6 h-6 text-fg-soft" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
 
-              <p className="text-sm md:text-base font-medium text-white mb-1">
+              <p className="text-sm md:text-base font-medium text-fg mb-1">
                 {isDragging ? 'Drop file here' : 'Drag & drop or click to upload'}
               </p>
-              <p className="text-xs text-white/50 mb-4">
+              <p className="text-xs text-fg-subtle mb-4">
                 Maximum file size: {maxSizeMB}MB
               </p>
 
@@ -271,7 +271,7 @@ export default function DocumentUploadCard({
                     openFileDialog()
                   }}
                   disabled={disabled}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-white/[0.07] rounded hover:bg-white/[0.12] transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-semibold text-fg bg-surface-raised rounded hover:bg-surface-high transition-colors disabled:opacity-50"
                 >
                   {t('document_upload.choose_file')}
                 </button>
@@ -282,7 +282,7 @@ export default function DocumentUploadCard({
                     openCameraDialog()
                   }}
                   disabled={disabled}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-black bg-white rounded hover:bg-white/90 transition-colors disabled:opacity-50 sm:hidden"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-on-inverse bg-inverse rounded hover:bg-inverse-hover transition-colors disabled:opacity-50 sm:hidden"
                 >
                   <Camera className="h-4 w-4" aria-hidden="true" />
                   Take Photo
@@ -295,8 +295,8 @@ export default function DocumentUploadCard({
 
       {/* Error Message */}
       {error && (
-        <div className="mt-3 p-3 bg-red-500/10 rounded-xl">
-          <p className="text-sm text-red-200">{error}</p>
+        <div className="mt-3 p-3 bg-danger-strong/10 rounded-xl">
+          <p className="text-sm text-danger-soft">{error}</p>
         </div>
       )}
 

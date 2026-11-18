@@ -16,19 +16,19 @@ export default function TicketsError({
   }, [error])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white/[0.055] rounded-2xl p-8 text-center">
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-surface rounded-2xl p-8 text-center">
         <div className="mb-6 flex justify-center">
-          <div className="w-16 h-16 bg-red-500/15 rounded flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+          <div className="w-16 h-16 bg-danger-strong/15 rounded flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-danger" />
           </div>
         </div>
 
-        <h1 className="font-display italic lowercase !text-[26px] !leading-tight text-white mb-3">
+        <h1 className="font-display italic lowercase !text-headline !leading-tight text-fg mb-3">
           We couldn&apos;t load your tickets
         </h1>
 
-        <p className="text-white/70 mb-6">
+        <p className="text-fg-muted mb-6">
           Something went wrong while loading your tickets. This is usually a
           temporary network issue, please try again in a moment.
         </p>
@@ -36,7 +36,7 @@ export default function TicketsError({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={reset}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded hover:bg-white/90 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-inverse text-on-inverse font-semibold rounded hover:bg-inverse-hover transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
@@ -44,7 +44,7 @@ export default function TicketsError({
 
           <Link
             href="/"
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.07] text-white rounded hover:bg-white/[0.12] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-surface-raised text-fg rounded hover:bg-surface-high transition-colors"
           >
             <Home className="w-4 h-4" />
             Go Home

@@ -151,29 +151,29 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] px-4 py-10">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-canvas px-4 py-10">
       <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-20%] h-[460px] w-[460px] max-w-full -translate-x-1/2 rounded-full blur-[150px]" />
       <div className="relative max-w-md w-full space-y-7">
         <div className="text-center">
           <Link href="/" className="inline-flex justify-center">
-            <TikemWordmark italic className="text-[46px] text-white" />
+            <TikemWordmark italic className="text-hero text-fg" />
           </Link>
-          <p className="mt-1.5 text-sm text-white/55">{BRAND.tagline}</p>
-          <h1 className="mt-6 font-display italic text-2xl md:text-3xl text-white">
+          <p className="mt-1.5 text-sm text-fg-muted">{BRAND.tagline}</p>
+          <h1 className="mt-6 font-display italic text-2xl md:text-3xl text-fg">
             {t('signup.title')}
           </h1>
         </div>
 
         <form className="space-y-5" onSubmit={handleSignup}>
           {error && (
-            <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="rounded-xl bg-danger-strong/10 px-4 py-3 text-sm text-danger-soft">
               {error}
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="fullName" className="block text-[13px] font-medium text-white/70 mb-1.5">
+              <label htmlFor="fullName" className="block text-meta font-medium text-fg-muted mb-1.5">
                 {t('signup.full_name')}
               </label>
               <input
@@ -185,13 +185,13 @@ export default function SignupPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="block w-full px-4 py-3 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                className="block w-full px-4 py-3 text-base rounded-lg bg-surface text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 placeholder={t('signup.full_name_placeholder')}
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-[13px] font-medium text-white/70 mb-1.5">
+              <label htmlFor="email" className="block text-meta font-medium text-fg-muted mb-1.5">
                 {t('signup.email')}
               </label>
               <input
@@ -202,15 +202,15 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full px-4 py-3 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                className="block w-full px-4 py-3 text-base rounded-lg bg-surface text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                 placeholder={t('signup.email_placeholder')}
               />
               <EmailSuggestion {...emailSuggestion.props} />
             </div>
 
             <div>
-              <label htmlFor="phoneNumber" className="block text-[13px] font-medium text-white/70 mb-1.5">
-                {t('signup.phone_number')} <span className="text-white/40">({t('signup.phone_number_optional')})</span>
+              <label htmlFor="phoneNumber" className="block text-meta font-medium text-fg-muted mb-1.5">
+                {t('signup.phone_number')} <span className="text-fg-subtle">({t('signup.phone_number_optional')})</span>
               </label>
               {/* A country picker plus the number, stored as E.164. A bare
                   tel input let the same person's number be saved three
@@ -225,7 +225,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-[13px] font-medium text-white/70 mb-1.5">
+              <label htmlFor="password" className="block text-meta font-medium text-fg-muted mb-1.5">
                 {t('signup.password')}
               </label>
               <div className="relative">
@@ -237,14 +237,14 @@ export default function SignupPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full px-4 py-3 pr-11 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+                  className="block w-full px-4 py-3 pr-11 text-base rounded-lg bg-surface text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50"
                   placeholder={t('signup.password_placeholder')}
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg p-1"
                   aria-label={showPassword ? t('signup.hide_password') : t('signup.show_password')}
                 >
                   {showPassword ? (
@@ -259,19 +259,19 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              <p className="mt-1.5 text-[11px] text-white/50">{t('signup.password_hint')}</p>
+              <p className="mt-1.5 text-eyebrow text-fg-subtle">{t('signup.password_hint')}</p>
             </div>
           </div>
 
           {/* Terms acceptance (App Store 1.2 / EULA): creating an account is
               agreeing to Terms that prohibit objectionable content. */}
-          <p className="text-[12px] leading-relaxed text-white/50">
+          <p className="text-caption leading-relaxed text-fg-subtle">
             {t('signup.terms_prefix')}{' '}
-            <Link href="/legal/terms" target="_blank" className="font-semibold text-white/80 underline-offset-2 hover:underline">
+            <Link href="/legal/terms" target="_blank" className="font-semibold text-fg-soft underline-offset-2 hover:underline">
               {t('signup.terms_link')}
             </Link>{' '}
             {t('signup.terms_and')}{' '}
-            <Link href="/legal/privacy" target="_blank" className="font-semibold text-white/80 underline-offset-2 hover:underline">
+            <Link href="/legal/privacy" target="_blank" className="font-semibold text-fg-soft underline-offset-2 hover:underline">
               {t('signup.privacy_link')}
             </Link>
             {t('signup.terms_suffix')}
@@ -280,17 +280,17 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-3.5 px-4 rounded text-black text-base font-semibold bg-white hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex justify-center py-3.5 px-4 rounded text-on-inverse text-base font-semibold bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-canvas focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? t('signup.submit_loading') : t('signup.submit')}
           </button>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
+              <div className="w-full border-t border-line" />
             </div>
-            <div className="relative flex justify-center text-[13px]">
-              <span className="px-3 bg-[#0a0a0a] text-white/45">{t('signup.or_continue_with')}</span>
+            <div className="relative flex justify-center text-meta">
+              <span className="px-3 bg-canvas text-fg-subtle">{t('signup.or_continue_with')}</span>
             </div>
           </div>
 
@@ -298,7 +298,7 @@ export default function SignupPage() {
             type="button"
             onClick={handleGoogleSignup}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded bg-white/[0.07] text-white text-base font-semibold hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a] focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded bg-surface-raised text-fg text-base font-semibold hover:bg-surface-high focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-canvas focus:ring-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -322,7 +322,7 @@ export default function SignupPage() {
           </button>
 
           <div className="text-center">
-            <p className="text-[13px] text-white/55">
+            <p className="text-meta text-fg-muted">
               {t('signup.have_account')}{' '}
               <Link
                 href={`/auth/login?redirect=${encodeURIComponent(redirectTo)}`}

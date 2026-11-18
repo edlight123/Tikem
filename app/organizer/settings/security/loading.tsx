@@ -5,13 +5,13 @@
  * `pb-mobile-nav` main.
  *
  * Derived geometry (app/organizer/settings/security/page.tsx → SecurityForm):
- *   root    min-h-screen bg-[#0a0a0a] py-8
+ *   root    min-h-screen bg-canvas py-8
  *   inner   max-w-5xl px-4 sm:px-6 lg:px-8
  *   back    inline text-sm link + 16px chevron, mb-6
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *           mt-1.5  (the eyebrow was missing here). SecurityForm follows with
  *           NO top margin, so nothing sits between them.
- *   cards   space-y-6 of three `rounded-xl bg-white/[0.03] p-6`:
+ *   cards   space-y-6 of three `rounded-xl bg-surface-low p-6`:
  *             1. Change Password — a 20px serif heading, then three
  *                `py-3 rounded` fields in a max-w-md column and a submit
  *             2. Two-Factor — heading + copy with a small status pill right
@@ -27,7 +27,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function SecurityLoading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <Bar className="mb-6 h-5 w-32" />
 
@@ -41,7 +41,7 @@ export default function SecurityLoading() {
 
         <div className="space-y-6">
           {/* Change Password */}
-          <div className="rounded-xl bg-white/[0.03] p-6">
+          <div className="rounded-xl bg-surface-low p-6">
             <Bar className="mb-6 h-5 w-48" />
             <div className="max-w-md space-y-4">
               {[0, 1, 2].map((i) => (
@@ -55,7 +55,7 @@ export default function SecurityLoading() {
           </div>
 
           {/* Two-Factor */}
-          <div className="rounded-xl bg-white/[0.03] p-6">
+          <div className="rounded-xl bg-surface-low p-6">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <Bar className="h-5 w-56 max-w-full" />
@@ -66,12 +66,12 @@ export default function SecurityLoading() {
           </div>
 
           {/* Recent Login Activity */}
-          <div className="overflow-hidden rounded-xl bg-white/[0.03]">
+          <div className="overflow-hidden rounded-xl bg-surface-low">
             <div className="p-6">
               <Bar className="h-5 w-52" />
               <Bar className="mt-2 h-4 w-64 max-w-full" />
             </div>
-            <div className="divide-y divide-white/10">
+            <div className="divide-y divide-line">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="p-4">
                   <div className="flex items-start justify-between gap-4">

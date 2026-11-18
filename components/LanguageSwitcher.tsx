@@ -70,7 +70,7 @@ export default function LanguageSwitcher({ className = '' }: { className?: strin
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Languages className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden />
+      <Languages className="h-3.5 w-3.5 shrink-0 text-fg-faint" aria-hidden />
       <div
         role="group"
         aria-label={t('footer.language', { defaultValue: 'Language' })}
@@ -90,10 +90,10 @@ export default function LanguageSwitcher({ className = '' }: { className?: strin
               // The app-wide chip spec: 10px radius, ~30px of ink, and the
               // 44px touch target supplied by the ::after inset rather than by
               // making the chip tall.
-              className={`relative rounded px-2.5 py-1.5 text-[13px] leading-[18px] font-medium transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
+              className={`relative rounded px-2.5 py-1.5 text-meta leading-[18px] font-medium transition-colors after:absolute after:inset-x-0 after:-inset-y-[7px] after:content-[''] ${
                 on
-                  ? 'bg-white text-black'
-                  : 'text-white/50 hover:bg-white/[0.08] hover:text-white'
+                  ? 'bg-inverse text-on-inverse'
+                  : 'text-fg-subtle hover:bg-surface-raised hover:text-fg'
               }`}
             >
               {/* The full endonym where there is room; the two-letter code on

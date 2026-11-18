@@ -255,13 +255,13 @@ export function MoncashFundingClient() {
   }
 
   if (loading && !data) {
-    return <ConsolePanel className="px-5 py-6 text-[13px] text-console-mut">Computing the plan…</ConsolePanel>
+    return <ConsolePanel className="px-5 py-6 text-meta text-console-mut">Computing the plan…</ConsolePanel>
   }
   if (loadError && !data) {
     return (
       <ConsolePanel className="px-5 py-6">
         <ConsoleState tone="bad">Could not compute the plan</ConsoleState>
-        <p className="mt-2 text-[13px] text-console-mut">{loadError}</p>
+        <p className="mt-2 text-meta text-console-mut">{loadError}</p>
         <ConsoleButton className="mt-4" onClick={load}>Try again</ConsoleButton>
       </ConsolePanel>
     )
@@ -277,23 +277,23 @@ export function MoncashFundingClient() {
       {/* ── Pool balance + cutoff ── */}
       <div className="grid gap-3 md:grid-cols-2">
         <ConsolePanel className="px-5 py-4">
-          <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Prefunded pool (live)</div>
+          <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Prefunded pool (live)</div>
           {balance.balanceHtg === null ? (
             <>
               <div className="mt-2">
                 <ConsoleState tone="bad">MonCash balance unavailable</ConsoleState>
               </div>
-              <p className="mt-1 break-words text-[12px] text-console-mut">{balance.error}</p>
-              <p className="mt-1 text-[12px] text-console-faint">
+              <p className="mt-1 break-words text-caption text-console-mut">{balance.error}</p>
+              <p className="mt-1 text-caption text-console-faint">
                 Tried {haitiDateTime(balance.checkedAt)} (Haiti). Generating a request is disabled until it loads.
               </p>
             </>
           ) : (
             <>
-              <div className="label-mono mt-1 text-[26px] font-bold tabular-nums text-console-text">
+              <div className="label-mono mt-1 text-headline font-bold tabular-nums text-console-text">
                 {formatHtg(balance.balanceHtg)}
               </div>
-              <p className="text-[12px] text-console-faint">Read from MonCash {haitiDateTime(balance.checkedAt)} (Haiti)</p>
+              <p className="text-caption text-console-faint">Read from MonCash {haitiDateTime(balance.checkedAt)} (Haiti)</p>
             </>
           )}
           <ConsoleButton className="mt-3" onClick={load} disabled={loading}>
@@ -301,9 +301,9 @@ export function MoncashFundingClient() {
           </ConsoleButton>
         </ConsolePanel>
         <ConsolePanel className="px-5 py-4">
-          <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Next Digicel cutoff</div>
-          <div className="label-mono mt-1 text-[26px] font-bold text-console-text">{plan.cutoff.label}</div>
-          <p className="text-[12px] text-console-mut">
+          <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Next Digicel cutoff</div>
+          <div className="label-mono mt-1 text-headline font-bold text-console-text">{plan.cutoff.label}</div>
+          <p className="text-caption text-console-mut">
             {plan.cutoff.sameDay
               ? 'A request sent before then is processed today.'
               : `A request sent now is processed ${plan.cutoff.label.replace(/ \d+ (AM|PM)$/, '')}.`}{' '}
@@ -351,7 +351,7 @@ export function MoncashFundingClient() {
                     {w.severity === 'critical' ? 'Critical' : w.severity === 'warning' ? 'Warning' : 'Note'}
                   </ConsoleState>
                 </span>
-                <p className="text-[13px] leading-relaxed text-console-text">{w.message}</p>
+                <p className="text-meta leading-relaxed text-console-text">{w.message}</p>
               </div>
             ))}
           </ConsolePanel>
@@ -364,12 +364,12 @@ export function MoncashFundingClient() {
       <ConsolePanel className="px-5 py-4">
         {/* 1. Letter type */}
         <fieldset>
-          <legend className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Letter</legend>
+          <legend className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Letter</legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {(['merchant_transfer', 'bank_transfer'] as const).map((k) => (
               <label
                 key={k}
-                className={`flex cursor-pointer gap-3 rounded px-4 py-3 text-[13px] ${letterType === k ? 'bg-console-raise text-console-text' : 'bg-console-ground text-console-mut hover:text-console-text'}`}
+                className={`flex cursor-pointer gap-3 rounded px-4 py-3 text-meta ${letterType === k ? 'bg-console-raise text-console-text' : 'bg-console-ground text-console-mut hover:text-console-text'}`}
               >
                 <input
                   type="radio"
@@ -381,7 +381,7 @@ export function MoncashFundingClient() {
                 />
                 <span>
                   <span className="block font-semibold">{PREFUNDING_LETTER_KINDS[k].label}</span>
-                  <span className="mt-0.5 block text-[12px] leading-relaxed text-console-faint">
+                  <span className="mt-0.5 block text-caption leading-relaxed text-console-faint">
                     {k === 'merchant_transfer'
                       ? `Digicel debits the MonCash merchant account and credits ${data.letterSettings.companyName} PREFUNDED No. ${data.letterSettings.prefundedAccountNumber}.`
                       : 'You already wired the money to a Digicel bank account; Digicel credits the prefunded account. The receipt goes with the letter.'}
@@ -393,7 +393,7 @@ export function MoncashFundingClient() {
         </fieldset>
 
         {letterType === 'merchant_transfer' && !data.letterSettings.merchantAccountNumber && (
-          <p className="mt-3 text-[12px] text-console-amber">
+          <p className="mt-3 text-caption text-console-amber">
             The merchant account number is not set, so the letter prints a blank line where it goes. Fill it in by hand, or
             set it in Letter settings below before downloading.
           </p>
@@ -401,12 +401,12 @@ export function MoncashFundingClient() {
 
         {isBank && (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="block text-[12px] text-console-mut">
+            <label className="block text-caption text-console-mut">
               Digicel account you wired to
               <select
                 value={bankId}
                 onChange={(e) => setBankId(e.target.value)}
-                className="mt-1 w-full rounded bg-console-ground px-3 py-2 text-[13.5px] text-console-text focus:outline-none focus:ring-2 focus:ring-console-mut"
+                className="mt-1 w-full rounded bg-console-ground px-3 py-2 text-meta text-console-text focus:outline-none focus:ring-2 focus:ring-console-mut"
               >
                 <option value="">Choose a bank…</option>
                 {DIGICEL_BANK_ACCOUNTS.map((b) => (
@@ -416,11 +416,11 @@ export function MoncashFundingClient() {
                 ))}
               </select>
             </label>
-            <label className="block text-[12px] text-console-mut">
+            <label className="block text-caption text-console-mut">
               Transaction number (from the receipt)
               <ConsoleInput className="mt-1" value={txn} onChange={(e) => setTxn(e.target.value)} placeholder="e.g. FT26299ABC12" />
             </label>
-            <div className="rounded bg-console-ground px-4 py-3 text-[12px] leading-relaxed text-console-mut md:col-span-2">
+            <div className="rounded bg-console-ground px-4 py-3 text-caption leading-relaxed text-console-mut md:col-span-2">
               <span className="font-semibold text-console-text">Before you send:</span> the wire&apos;s description must end with{' '}
               <span className="label-mono text-console-text">{bankTransferDescription(data.letterSettings.companyName)}</span>, and the
               bank receipt must be attached to the email with the letter. Otherwise Digicel reverses the deposit at your cost.
@@ -430,11 +430,11 @@ export function MoncashFundingClient() {
 
         {/* 2. Amount */}
         <fieldset className="mt-5 space-y-2">
-          <legend className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          <legend className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
             {isBank ? 'Amount wired' : 'Amount'}
           </legend>
           {(['minimum', 'recommended', 'custom'] as const).map((c) => (
-            <label key={c} className="flex cursor-pointer items-center gap-3 text-[13px] text-console-text">
+            <label key={c} className="flex cursor-pointer items-center gap-3 text-meta text-console-text">
               <input
                 type="radio"
                 name="amount-choice"
@@ -466,9 +466,9 @@ export function MoncashFundingClient() {
             </label>
           ))}
         </fieldset>
-        {amountError && <p className="mt-2 text-[12px] text-console-amber">{amountError}</p>}
-        {bankError && (bankId || txn) && <p className="mt-2 text-[12px] text-console-amber">{bankError}</p>}
-        <p className="mt-3 text-[12px] text-console-faint">
+        {amountError && <p className="mt-2 text-caption text-console-amber">{amountError}</p>}
+        {bankError && (bankId || txn) && <p className="mt-2 text-caption text-console-amber">{bankError}</p>}
+        <p className="mt-3 text-caption text-console-faint">
           {isBank
             ? 'For a bank transfer, use the exact amount on the receipt, in whole gourdes.'
             : `Custom amounts must be a multiple of ${plan.settings.roundingStepHtg.toLocaleString('en-US')} HTG, at least the minimum and at most the maximum.`}{' '}
@@ -480,26 +480,26 @@ export function MoncashFundingClient() {
         <ConsoleButton variant={generated ? 'quiet' : 'primary'} className="mt-4" onClick={generate} disabled={!canGenerate}>
           {generating ? 'Generating…' : `Generate letter${chosenAmount > 0 && !amountError ? ` for ${formatHtg(chosenAmount)}` : ''}`}
         </ConsoleButton>
-        {blocking && <p className="mt-2 text-[12px] text-console-red">{blocking.message}</p>}
-        {generateError && <p className="mt-2 text-[12px] text-console-red">{generateError}</p>}
+        {blocking && <p className="mt-2 text-caption text-console-red">{blocking.message}</p>}
+        {generateError && <p className="mt-2 text-caption text-console-red">{generateError}</p>}
 
         {generated && (
           <div className="mt-5 rounded bg-console-ground px-4 py-4">
-            <span className="label-mono text-[12px] text-console-mut">
+            <span className="label-mono text-caption text-console-mut">
               {generated.reference} · {formatHtg(generated.amountHtg)} · {PREFUNDING_LETTER_KINDS[generated.letterType].short} · logged, not sent
             </span>
 
-            <ol className="mt-3 space-y-3 text-[13px] text-console-text">
+            <ol className="mt-3 space-y-3 text-meta text-console-text">
               <li className="flex flex-wrap items-center gap-3">
                 <span className="label-mono w-5 text-console-faint">1</span>
                 <a
                   href={generated.letter.url}
                   download={generated.letter.fileName}
-                  className="rounded bg-console-text px-4 py-2 text-[13px] font-bold text-console-ground hover:opacity-90"
+                  className="rounded bg-console-text px-4 py-2 text-meta font-bold text-console-ground hover:opacity-90"
                 >
                   Download letter (PDF)
                 </a>
-                <span className="text-[12px] text-console-faint">Print, sign, put the seal in its own box (never on the signature), scan.</span>
+                <span className="text-caption text-console-faint">Print, sign, put the seal in its own box (never on the signature), scan.</span>
               </li>
               <li className="flex flex-wrap items-center gap-3">
                 <span className="label-mono w-5 text-console-faint">2</span>
@@ -507,14 +507,14 @@ export function MoncashFundingClient() {
                   href={generated.email.gmailUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-text hover:opacity-90"
+                  className="rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-text hover:opacity-90"
                 >
                   Open in Gmail
                 </a>
-                <a href={generated.email.mailtoUrl} className="rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-mut hover:text-console-text">
+                <a href={generated.email.mailtoUrl} className="rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut hover:text-console-text">
                   Mail app
                 </a>
-                <span className="text-[12px] text-console-faint">Opens as {generated.email.from}; nothing is sent until you press Send.</span>
+                <span className="text-caption text-console-faint">Opens as {generated.email.from}; nothing is sent until you press Send.</span>
               </li>
               <li className="flex items-baseline gap-3">
                 <span className="label-mono w-5 shrink-0 text-console-faint">3</span>
@@ -526,19 +526,19 @@ export function MoncashFundingClient() {
             </ol>
 
             {generated.letter.missing.includes('merchantAccountNumber') && (
-              <p className="mt-3 text-[12px] text-console-amber">
+              <p className="mt-3 text-caption text-console-amber">
                 This letter has a blank line for the merchant account number. Write it in before signing, or set it in Letter
                 settings and download again.
               </p>
             )}
 
-            <dl className="mt-4 space-y-1 text-[12.5px]">
+            <dl className="mt-4 space-y-1 text-caption">
               <Row label="To" value={generated.email.to.join(', ')} />
               <Row label="Cc" value={generated.email.cc.join(', ') || '—'} />
               <Row label="From" value={generated.email.from} />
               <Row label="Subject" value={generated.email.subject} onCopy={() => copy('subject', generated.email.subject)} copied={copied === 'subject'} />
             </dl>
-            <pre className="mt-3 max-h-[320px] overflow-auto whitespace-pre-wrap rounded bg-console-panel px-4 py-3 font-sans text-[13px] leading-relaxed text-console-text">
+            <pre className="mt-3 max-h-[320px] overflow-auto whitespace-pre-wrap rounded bg-console-panel px-4 py-3 font-sans text-meta leading-relaxed text-console-text">
               {generated.email.body}
             </pre>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -547,7 +547,7 @@ export function MoncashFundingClient() {
                 I sent it: mark as sent
               </ConsoleButton>
             </div>
-            <p className="mt-2 text-[12px] text-console-faint">
+            <p className="mt-2 text-caption text-console-faint">
               Tikèm does not send this email. The letter is dated the day you download it; the request is confirmed completed
               when the pool balance rises.
             </p>
@@ -565,8 +565,8 @@ export function MoncashFundingClient() {
         <EmptyPanel title="No deadlines" line={`Nothing becomes withdrawable to MonCash in the next ${plan.settings.recommendedHorizonDays} days.`} />
       ) : (
         <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-[13px]">
-            <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
+          <table className="w-full min-w-[640px] text-left text-meta">
+            <thead className="label-mono border-b border-console-ground text-eyebrow uppercase tracking-[0.14em] text-console-faint">
               <tr>
                 <th className="px-4 py-3 font-normal">Withdrawable from</th>
                 <th className="px-4 py-3 text-right font-normal">Amount</th>
@@ -598,8 +598,8 @@ export function MoncashFundingClient() {
         <EmptyPanel title="Nothing due" line="No Haiti event has organizer money waiting, and no MonCash withdrawal is waiting to be sent." />
       ) : (
         <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-[13px]">
-            <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
+          <table className="w-full min-w-[760px] text-left text-meta">
+            <thead className="label-mono border-b border-console-ground text-eyebrow uppercase tracking-[0.14em] text-console-faint">
               <tr>
                 <th className="px-4 py-3 font-normal">Event</th>
                 <th className="px-4 py-3 font-normal">Organizer</th>
@@ -622,9 +622,9 @@ export function MoncashFundingClient() {
                   <td className="label-mono px-4 py-2 text-right tabular-nums">{htgMinor(r.amountMinor)}</td>
                   <td className="px-4 py-2">
                     <ConsoleState tone={BUCKET_TONE[r.bucket]}>{BUCKET_LABEL[r.bucket]}</ConsoleState>
-                    {r.bucket === 'held' && <span className="ml-2 text-[11px] text-console-faint">{r.reason}</span>}
+                    {r.bucket === 'held' && <span className="ml-2 text-eyebrow text-console-faint">{r.reason}</span>}
                   </td>
-                  <td className="label-mono px-4 py-2 text-[11px] text-console-mut">
+                  <td className="label-mono px-4 py-2 text-eyebrow text-console-mut">
                     {[r.countsIn.minimum && 'min', r.countsIn.recommended && 'rec', r.countsIn.maximum && 'max'].filter(Boolean).join(' · ') || '—'}
                   </td>
                 </tr>
@@ -645,7 +645,7 @@ export function MoncashFundingClient() {
                   <td className="px-4 py-2">
                     <ConsoleState tone="bad">{w.status === 'pending' ? 'Requested, not sent' : 'Approved, not sent'}</ConsoleState>
                   </td>
-                  <td className="label-mono px-4 py-2 text-[11px] text-console-mut">min · rec · max</td>
+                  <td className="label-mono px-4 py-2 text-eyebrow text-console-mut">min · rec · max</td>
                 </tr>
               ))}
             </tbody>
@@ -657,13 +657,13 @@ export function MoncashFundingClient() {
 
       {/* ── Request log ── */}
       <ConsoleSection>Requests to Digicel</ConsoleSection>
-      {rowError && <p className="mb-2 text-[12px] text-console-red">{rowError}</p>}
+      {rowError && <p className="mb-2 text-caption text-console-red">{rowError}</p>}
       {data.requests.length === 0 ? (
         <EmptyPanel title="No requests" line="No Digicel request has been generated yet." />
       ) : (
         <ConsolePanel className="overflow-hidden"><div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-[13px]">
-            <thead className="label-mono border-b border-console-ground text-[10px] uppercase tracking-[0.14em] text-console-faint">
+          <table className="w-full min-w-[900px] text-left text-meta">
+            <thead className="label-mono border-b border-console-ground text-eyebrow uppercase tracking-[0.14em] text-console-faint">
               <tr>
                 <th className="px-4 py-3 font-normal">Reference</th>
                 <th className="px-4 py-3 text-right font-normal">Amount</th>
@@ -676,35 +676,35 @@ export function MoncashFundingClient() {
             <tbody className="divide-y divide-console-ground">
               {data.requests.map((r) => (
                 <tr key={r.id} className="align-top hover:bg-console-raise">
-                  <td className="label-mono px-4 py-2 text-[12px] text-console-text">{r.reference || r.id}</td>
+                  <td className="label-mono px-4 py-2 text-caption text-console-text">{r.reference || r.id}</td>
                   <td className="label-mono px-4 py-2 text-right tabular-nums">{formatHtg(r.amountHtg)}</td>
                   <td className="px-4 py-2 text-console-text">
                     {PREFUNDING_LETTER_KINDS[r.letterType]?.short || PREFUNDING_LETTER_KINDS.merchant_transfer.short}
                     {r.letterType === 'bank_transfer' && (
-                      <div className="label-mono text-[11px] text-console-faint">
+                      <div className="label-mono text-eyebrow text-console-faint">
                         {r.bankName || '—'} · txn {r.transactionNumber || '—'}
                       </div>
                     )}
                   </td>
                   <td className="px-4 py-2 text-console-mut">
                     {haitiDateTime(r.createdAt)}
-                    <div className="text-[11px] text-console-faint">{r.createdByEmail || ''}</div>
+                    <div className="text-eyebrow text-console-faint">{r.createdByEmail || ''}</div>
                   </td>
                   <td className="px-4 py-2">
                     <ConsoleState tone={r.status === 'generated' ? 'neutral' : consoleTone(r.status === 'sent' ? 'pending' : r.status)}>
                       {r.status === 'generated' ? 'Generated' : r.status === 'sent' ? 'Sent, awaiting top-up' : r.status === 'completed' ? 'Completed' : 'Cancelled'}
                     </ConsoleState>
                     {r.status === 'completed' && r.balanceAtCompletionHtg !== null && (
-                      <div className="text-[11px] text-console-faint">Pool rose to {formatHtg(r.balanceAtCompletionHtg)}</div>
+                      <div className="text-eyebrow text-console-faint">Pool rose to {formatHtg(r.balanceAtCompletionHtg)}</div>
                     )}
-                    {r.status === 'sent' && r.sentAt && <div className="text-[11px] text-console-faint">Sent {haitiDateTime(r.sentAt)}</div>}
+                    {r.status === 'sent' && r.sentAt && <div className="text-eyebrow text-console-faint">Sent {haitiDateTime(r.sentAt)}</div>}
                   </td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
                       {r.status !== 'cancelled' && (
                         <a
                           href={`/api/admin/moncash-funding/requests/${r.id}/letter`}
-                          className="rounded bg-console-raise px-4 py-2 text-[13px] font-semibold text-console-mut hover:text-console-text"
+                          className="rounded bg-console-raise px-4 py-2 text-meta font-semibold text-console-mut hover:text-console-text"
                         >
                           PDF
                         </a>
@@ -744,8 +744,8 @@ export function MoncashFundingClient() {
 function EmptyPanel({ title, line }: { title: string; line: string }) {
   return (
     <ConsolePanel className="px-5 py-10 text-center sm:p-12">
-      <p className="label-mono text-[12px] uppercase tracking-[0.14em] text-console-mut">{title}</p>
-      <p className="mt-1 text-[13px] text-console-faint">{line}</p>
+      <p className="label-mono text-caption uppercase tracking-[0.14em] text-console-mut">{title}</p>
+      <p className="mt-1 text-meta text-console-faint">{line}</p>
     </ConsolePanel>
   )
 }
@@ -753,9 +753,9 @@ function EmptyPanel({ title, line }: { title: string; line: string }) {
 function NumberPanel({ label, value, explain }: { label: string; value: number; explain: string }) {
   return (
     <ConsolePanel className="px-5 py-4">
-      <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{label}</div>
-      <div className="label-mono mt-1 text-[26px] font-bold tabular-nums text-console-text">{formatHtg(value)}</div>
-      <p className="mt-1 text-[12px] leading-relaxed text-console-mut">{explain}</p>
+      <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{label}</div>
+      <div className="label-mono mt-1 text-headline font-bold tabular-nums text-console-text">{formatHtg(value)}</div>
+      <p className="mt-1 text-caption leading-relaxed text-console-mut">{explain}</p>
     </ConsolePanel>
   )
 }
@@ -763,10 +763,10 @@ function NumberPanel({ label, value, explain }: { label: string; value: number; 
 function Row({ label, value, onCopy, copied }: { label: string; value: string; onCopy?: () => void; copied?: boolean }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3">
-      <dt className="label-mono w-16 shrink-0 text-[11px] uppercase text-console-faint">{label}</dt>
+      <dt className="label-mono w-16 shrink-0 text-eyebrow uppercase text-console-faint">{label}</dt>
       <dd className="min-w-0 flex-1 break-words text-console-text">{value}</dd>
       {onCopy && (
-        <button type="button" onClick={onCopy} className="text-[12px] text-console-mut hover:text-console-text">
+        <button type="button" onClick={onCopy} className="text-caption text-console-mut hover:text-console-text">
           {copied ? 'Copied' : 'Copy'}
         </button>
       )}

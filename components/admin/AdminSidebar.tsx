@@ -48,7 +48,7 @@ function RailLink({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="label-mono px-3 pb-1.5 pt-5 text-[9.5px] uppercase tracking-[0.18em] text-console-faint">
+    <div className="label-mono px-3 pb-1.5 pt-5 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
       {children}
     </div>
   )
@@ -78,8 +78,8 @@ export function AdminSidebar({ userEmail }: { userEmail?: string }) {
         href="/admin"
         className="label-mono mb-2 px-3 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-console-mut"
       >
-        <span className="text-[13px] font-bold tracking-[0.06em] text-console-text">TIKÈM</span>
-        <span className="mt-0.5 block text-[9px] tracking-[0.2em] text-console-faint">CONSOLE</span>
+        <span className="text-meta font-bold tracking-[0.06em] text-console-text">TIKÈM</span>
+        <span className="mt-0.5 block text-eyebrow tracking-[0.2em] text-console-faint">CONSOLE</span>
       </Link>
 
       <RailLink href="/admin" label="Needs you" active={isActive('/admin')} />
@@ -92,7 +92,7 @@ export function AdminSidebar({ userEmail }: { userEmail?: string }) {
         return (
           <RailLink key={group.key} href={group.href} label={group.label} active={isActive(group.href)}>
             {stat && stat.count > 0 ? (
-              <span className="label-mono shrink-0 text-[11.5px] tabular-nums">
+              <span className="label-mono shrink-0 text-eyebrow tabular-nums">
                 <span className="text-console-mut">{stat.count}</span>
                 {stat.oldestAt && now && (
                   <>
@@ -103,7 +103,7 @@ export function AdminSidebar({ userEmail }: { userEmail?: string }) {
               </span>
             ) : unreadable ? (
               <span
-                className="label-mono shrink-0 text-[11.5px] text-console-faint"
+                className="label-mono shrink-0 text-eyebrow text-console-faint"
                 title="Count unavailable, this queue could not be read"
               >
 , 

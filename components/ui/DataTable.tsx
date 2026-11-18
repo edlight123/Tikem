@@ -190,7 +190,7 @@ export function DataTable<T>({
     if (activeSortKey !== col.key)
       return (
         <ChevronsUpDown
-          className={isConsole ? 'h-3.5 w-3.5 text-console-faint' : 'h-3.5 w-3.5 text-white/50'}
+          className={isConsole ? 'h-3.5 w-3.5 text-console-faint' : 'h-3.5 w-3.5 text-fg-subtle'}
         />
       )
     const activeIconClass = isConsole ? 'h-3.5 w-3.5 text-console-text' : 'h-3.5 w-3.5 text-brand-600'
@@ -201,10 +201,10 @@ export function DataTable<T>({
     )
   }
 
-  const dividerClass = isConsole ? 'divide-y divide-console-raise' : 'divide-y divide-white/10'
+  const dividerClass = isConsole ? 'divide-y divide-console-raise' : 'divide-y divide-line'
   const checkboxClass = isConsole
     ? 'h-4 w-4 rounded accent-console-text focus:outline-none focus:ring-2 focus:ring-console-mut'
-    : 'h-4 w-4 rounded border-white/10 text-brand-600 focus:ring-brand-500'
+    : 'h-4 w-4 rounded border-line text-brand-600 focus:ring-brand-500'
 
   return (
     <div
@@ -212,7 +212,7 @@ export function DataTable<T>({
         isConsole
           ? `overflow-hidden rounded-lg bg-console-panel ${className}`
           : // The table is a surface, so it gets a FILL, not a hairline drawn
-            // around it. `border border-white/10` over a 3% fill on the
+            // around it. `border border-line` over a 3% fill on the
             // #0a0a0a page meant only the outline read — the wireframe look
             // the owner has rejected repeatedly (see "Surfaces: a fill, not a
             // hairline around nothing" in docs/POSH_DESIGN_BRIEF.md). This now
@@ -220,11 +220,11 @@ export function DataTable<T>({
             // exactly. `shadow-soft` went with it: rgba(0,0,0,0.08) is a black
             // shadow on a black page. The rules INSIDE the table stay — a rule
             // between rows and under the header row is the meaning.
-            `overflow-hidden rounded-2xl bg-white/[0.03] ${className}`
+            `overflow-hidden rounded-2xl bg-surface-low ${className}`
       }
     >
       {toolbar && (
-        <div className={isConsole ? 'p-3 sm:p-4' : 'border-b border-white/10 p-3 sm:p-4'}>
+        <div className={isConsole ? 'p-3 sm:p-4' : 'border-b border-line p-3 sm:p-4'}>
           {toolbar}
         </div>
       )}
@@ -235,19 +235,19 @@ export function DataTable<T>({
             <div key={i} className="flex items-center gap-4 px-4 py-4 sm:px-6">
               {/* Skeleton bars sit ON the 0.03 card, so they step UP the ladder
                   to the inset tone; the old 0.04 on 0.03 was invisible. */}
-              <div className={`h-9 w-9 animate-pulse rounded-lg ${isConsole ? 'bg-console-raise' : 'bg-white/[0.07]'}`} />
+              <div className={`h-9 w-9 animate-pulse rounded-lg ${isConsole ? 'bg-console-raise' : 'bg-surface-raised'}`} />
               <div className="flex-1 space-y-2">
-                <div className={`h-3.5 w-1/3 animate-pulse rounded ${isConsole ? 'bg-console-raise' : 'bg-white/[0.07]'}`} />
-                <div className={`h-3 w-1/4 animate-pulse rounded ${isConsole ? 'bg-console-raise' : 'bg-white/[0.07]'}`} />
+                <div className={`h-3.5 w-1/3 animate-pulse rounded ${isConsole ? 'bg-console-raise' : 'bg-surface-raised'}`} />
+                <div className={`h-3 w-1/4 animate-pulse rounded ${isConsole ? 'bg-console-raise' : 'bg-surface-raised'}`} />
               </div>
-              <div className={`h-6 w-16 animate-pulse ${isConsole ? 'rounded bg-console-raise' : 'rounded bg-white/[0.07]'}`} />
+              <div className={`h-6 w-16 animate-pulse ${isConsole ? 'rounded bg-console-raise' : 'rounded bg-surface-raised'}`} />
             </div>
           ))}
         </div>
       ) : rows.length === 0 ? (
         <div className="p-8">
           {empty ?? (
-            <p className={isConsole ? 'text-center text-sm text-console-mut' : 'text-center text-sm text-white/50'}>
+            <p className={isConsole ? 'text-center text-sm text-console-mut' : 'text-center text-sm text-fg-subtle'}>
               No results found.
             </p>
           )}
@@ -258,13 +258,13 @@ export function DataTable<T>({
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               {/* A sticky header needs an OPAQUE fill so rows don't ghost
-                  through it. `bg-[#0a0a0a]` was the page colour punched into
+                  through it. `bg-canvas` was the page colour punched into
                   the middle of the card; #141414 is the brief's surface-1 and
                   is what components/organizer/ui/DataTable already uses. */}
               <thead
-                className={`${isConsole ? 'bg-console-panel' : 'bg-[#141414]'} ${stickyHeader ? 'sticky top-0 z-10' : ''}`}
+                className={`${isConsole ? 'bg-console-panel' : 'bg-surface-solid'} ${stickyHeader ? 'sticky top-0 z-10' : ''}`}
               >
-                <tr className={isConsole ? '' : 'border-b border-white/10'}>
+                <tr className={isConsole ? '' : 'border-b border-line'}>
                   {selection && (
                     <th className="w-12 px-4 py-3 sm:px-6">
                       <input
@@ -285,13 +285,13 @@ export function DataTable<T>({
                       onClick={() => handleSort(col)}
                       className={`${
                         isConsole
-                          ? 'label-mono px-4 py-3 text-[10px] uppercase tracking-wide text-console-faint sm:px-6'
-                          : 'px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-white/50 sm:px-6'
+                          ? 'label-mono px-4 py-3 text-eyebrow uppercase tracking-wide text-console-faint sm:px-6'
+                          : 'px-4 py-3 text-eyebrow font-semibold uppercase tracking-wider text-fg-subtle sm:px-6'
                       } ${alignClass[col.align ?? 'left']} ${
                         col.sortable
                           ? isConsole
                             ? 'cursor-pointer select-none hover:text-console-mut'
-                            : 'cursor-pointer select-none hover:text-white/70'
+                            : 'cursor-pointer select-none hover:text-fg-muted'
                           : ''
                       } ${col.hideOnMobile ? '' : ''} ${col.headerClassName ?? ''}`}
                     >
@@ -314,7 +314,7 @@ export function DataTable<T>({
                     <tr
                       key={id}
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
-                      className={`transition-colors ${isConsole ? 'hover:bg-console-raise' : 'hover:bg-white/[0.07]'} ${
+                      className={`transition-colors ${isConsole ? 'hover:bg-console-raise' : 'hover:bg-surface-raised'} ${
                         onRowClick ? 'cursor-pointer' : ''
                       }`}
                     >
@@ -333,7 +333,7 @@ export function DataTable<T>({
                         <td
                           key={col.key}
                           className={`px-4 py-3 align-middle text-sm ${
-                            isConsole ? 'text-console-text' : 'text-white'
+                            isConsole ? 'text-console-text' : 'text-fg'
                           } sm:px-6 ${alignClass[col.align ?? 'left']} ${col.cellClassName ?? ''}`}
                         >
                           {col.render
@@ -374,8 +374,8 @@ export function DataTable<T>({
                       <span
                         className={
                           isConsole
-                            ? 'label-mono text-[10px] uppercase tracking-wide text-console-faint'
-                            : 'text-[11px] font-semibold uppercase tracking-wide text-white/50'
+                            ? 'label-mono text-eyebrow uppercase tracking-wide text-console-faint'
+                            : 'text-eyebrow font-semibold uppercase tracking-wide text-fg-subtle'
                         }
                       >
                         {col.header}
@@ -384,7 +384,7 @@ export function DataTable<T>({
                         className={
                           isConsole
                             ? 'min-w-0 text-right text-sm text-console-text'
-                            : 'min-w-0 text-right text-sm text-white'
+                            : 'min-w-0 text-right text-sm text-fg'
                         }
                       >
                         {col.render
@@ -405,10 +405,10 @@ export function DataTable<T>({
           className={
             isConsole
               ? 'flex items-center justify-between px-4 py-3 sm:px-6'
-              : 'flex items-center justify-between border-t border-white/10 px-4 py-3 sm:px-6'
+              : 'flex items-center justify-between border-t border-line px-4 py-3 sm:px-6'
           }
         >
-          <p className={isConsole ? 'label-mono text-xs tabular-nums text-console-mut' : 'text-xs text-white/50'}>
+          <p className={isConsole ? 'label-mono text-xs tabular-nums text-console-mut' : 'text-xs text-fg-subtle'}>
             Page {footerPage} of {footerTotalPages}
           </p>
           <div className="flex items-center gap-2">
@@ -423,7 +423,7 @@ export function DataTable<T>({
                   // the only thing visible, and the hover was not visible at
                   // all. It is a control sitting INSIDE the card, so it takes
                   // the inset step of the ladder and a real hover step.
-                  : 'inline-flex items-center gap-1 rounded-lg bg-white/[0.06] px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:opacity-40'
+                  : 'inline-flex items-center gap-1 rounded-lg bg-surface px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-high hover:text-fg disabled:cursor-not-allowed disabled:opacity-40'
               }
             >
               <ChevronLeft className="h-4 w-4" />
@@ -436,7 +436,7 @@ export function DataTable<T>({
               className={
                 isConsole
                   ? 'inline-flex items-center gap-1 rounded bg-console-raise px-3 py-1.5 text-sm font-medium text-console-mut transition-colors hover:text-console-text disabled:cursor-not-allowed disabled:opacity-40'
-                  : 'inline-flex items-center gap-1 rounded-lg bg-white/[0.06] px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:opacity-40'
+                  : 'inline-flex items-center gap-1 rounded-lg bg-surface px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-high hover:text-fg disabled:cursor-not-allowed disabled:opacity-40'
               }
             >
               Next

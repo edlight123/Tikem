@@ -16,7 +16,7 @@ export default async function SupportRequestPage() {
   const user = await getCurrentUser()
 
   return (
-      <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
+      <div className="min-h-screen bg-canvas pb-mobile-nav">
         <Navbar user={user} isAdmin={isAdmin(((user as any)?.email_verified) ? user?.email : null)} />
         
         <SupportRequestForm />

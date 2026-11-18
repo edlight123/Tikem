@@ -20,13 +20,13 @@ export async function InviteMetricsLine() {
     { label: 'Buyers from invites', value: totals.purchased },
   ]
   return (
-    <section className="mt-8 rounded-xl bg-white/[0.04] px-4 py-3">
-      <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Friend invites</div>
+    <section className="mt-8 rounded-xl bg-surface-low px-4 py-3">
+      <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Friend invites</div>
       <div className="mt-2 flex flex-wrap gap-x-8 gap-y-2">
         {cells.map((c) => (
           <div key={c.label} className="flex items-baseline gap-2">
             <span className="font-mono text-lg tabular-nums text-console-text">{c.value}</span>
-            <span className="text-[12px] text-console-mut">{c.label}</span>
+            <span className="text-caption text-console-mut">{c.label}</span>
           </div>
         ))}
       </div>

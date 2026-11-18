@@ -64,7 +64,7 @@ export function DisbursementsTabs({
               type="button"
               onClick={() => selectTab(tab.id)}
               aria-current={isActive ? 'true' : undefined}
-              className={`label-mono border-b-2 pb-1.5 text-[11px] uppercase tracking-[0.14em] transition-colors ${
+              className={`label-mono border-b-2 pb-1.5 text-eyebrow uppercase tracking-[0.14em] transition-colors ${
                 isActive
                   ? 'border-console-text text-console-text'
                   : 'border-transparent text-console-mut hover:text-console-text'

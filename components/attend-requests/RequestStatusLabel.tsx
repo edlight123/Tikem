@@ -6,20 +6,20 @@
 export type RequestTone = 'pending' | 'approved' | 'declined'
 
 const DOT: Record<RequestTone, string> = {
-  pending: 'bg-amber-400',
-  approved: 'bg-emerald-400',
-  declined: 'bg-white/40',
+  pending: 'bg-warning',
+  approved: 'bg-success',
+  declined: 'bg-fg/40',
 }
 
 const TEXT: Record<RequestTone, string> = {
-  pending: 'text-amber-300',
-  approved: 'text-emerald-300',
-  declined: 'text-white/50',
+  pending: 'text-warning-soft',
+  approved: 'text-success-soft',
+  declined: 'text-fg-subtle',
 }
 
 export default function RequestStatusLabel({ tone, label, className = '' }: { tone: RequestTone; label: string; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] ${TEXT[tone]} ${className}`}>
+    <span className={`inline-flex items-center gap-2 text-eyebrow font-bold uppercase tracking-[0.12em] ${TEXT[tone]} ${className}`}>
       <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT[tone]}`} />
       {label}
     </span>

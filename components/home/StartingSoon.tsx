@@ -32,8 +32,8 @@ function Countdown({ start, now }: { start: string; now: number }) {
   const ms = new Date(start).getTime() - now
   if (ms <= 0) {
     return (
-      <span className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.08em] text-white">
-        <span aria-hidden className="ticker-live h-1.5 w-1.5 rounded-full bg-[#14B8A6]" />
+      <span className="flex items-center gap-2 font-mono text-caption uppercase tracking-[0.08em] text-fg">
+        <span aria-hidden className="ticker-live h-1.5 w-1.5 rounded-full bg-brand-500" />
         {t('home.soon.starting', { defaultValue: 'Starting now' })}
       </span>
     )
@@ -42,12 +42,12 @@ function Countdown({ start, now }: { start: string; now: number }) {
   const clock = `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
   return (
     <span className="block">
-      <span className="block font-mono text-[10px] uppercase tracking-[0.12em] text-white/40">
+      <span className="block font-mono text-eyebrow uppercase tracking-[0.12em] text-fg-subtle">
         {t('home.soon.starts_in', { defaultValue: 'Starts in' })}
       </span>
       {/* The digits change every second: keep them out of the live region
           noise — screen readers get the start time from the data line. */}
-      <span aria-hidden className="mt-1 block font-mono text-[18px] tabular-nums tracking-[0.02em] text-white sm:text-[22px]">
+      <span aria-hidden className="mt-1 block font-mono text-lead tabular-nums tracking-[0.02em] text-fg sm:text-section">
         {clock}
       </span>
     </span>
@@ -70,18 +70,18 @@ export default function StartingSoon({ events, now: serverNow, zone }: { events:
             <li key={ev.id}>
               <Link
                 href={`/events/${ev.id}`}
-                className="group flex items-center gap-4 rounded bg-white/[0.04] p-3 outline-none transition-colors hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/70 sm:gap-6 sm:p-4"
+                className="group flex items-center gap-4 rounded bg-surface-low p-3 outline-none transition-colors hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-fg/70 sm:gap-6 sm:p-4"
               >
-                <span className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded bg-white/[0.06] sm:w-20">
+                <span className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded bg-surface sm:w-20">
                   {ev.banner_image_url && (
                     <Image src={ev.banner_image_url} alt={ev.title} fill sizes="80px" quality={60} className="object-cover" />
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-grotesk font-bold text-white !text-[clamp(18px,2vw,24px)] !leading-tight tracking-[-0.02em]">
+                  <span className="block truncate font-grotesk font-bold text-fg !text-[clamp(18px,2vw,24px)] !leading-tight tracking-[-0.02em]">
                     {ev.title}
                   </span>
-                  <span className="mt-1.5 block truncate font-mono text-[11px] uppercase tracking-[0.08em] text-white/50">
+                  <span className="mt-1.5 block truncate font-mono text-eyebrow uppercase tracking-[0.08em] text-fg-subtle">
                     {eventWhen(ev.start_datetime, zone, i18n.language)}
                     {venue && <> · {venue}</>}
                   </span>
@@ -92,7 +92,7 @@ export default function StartingSoon({ events, now: serverNow, zone }: { events:
                 <span className="hidden shrink-0 text-right sm:block">
                   <Countdown start={ev.start_datetime} now={now} />
                 </span>
-                <span className="hidden shrink-0 items-center gap-1.5 pl-2 text-[13px] font-medium text-white/55 transition-colors group-hover:text-white md:flex">
+                <span className="hidden shrink-0 items-center gap-1.5 pl-2 text-meta font-medium text-fg-muted transition-colors group-hover:text-fg md:flex">
                   {t('home.soon.tickets', { defaultValue: 'Tickets' })}
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </span>

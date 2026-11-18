@@ -74,15 +74,15 @@ export default function GettingStartedTracker({
   const nextStep = steps.find((s) => !s.completed);
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white/[0.03] shadow-sm">
+    <div className="overflow-hidden rounded-2xl bg-surface-low shadow-sm">
       {/* Header — the rule below divides two stacked regions, so it earns its keep. */}
-      <div className="border-b border-white/10 p-6">
+      <div className="border-b border-line p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display text-[22px] italic lowercase leading-none text-white">
+            <h2 className="font-display text-section italic lowercase leading-none text-fg">
               {t('organizer.gettingStarted.title', 'Getting Started')}
             </h2>
-            <p className="text-sm text-white/50 mt-1">
+            <p className="text-sm text-fg-subtle mt-1">
               {completedCount === steps.length
                 ? t('organizer.gettingStarted.allComplete', "You're all set!")
                 : t('organizer.gettingStarted.progress', '{{completed}} of {{total}} steps complete', {
@@ -97,7 +97,7 @@ export default function GettingStartedTracker({
         </div>
 
         {/* Progress Bar */}
-        <div className="h-2 overflow-hidden rounded bg-white/[0.08]">
+        <div className="h-2 overflow-hidden rounded bg-surface-raised">
           <div
             className="h-full rounded bg-brand-400 transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
@@ -106,7 +106,7 @@ export default function GettingStartedTracker({
       </div>
 
       {/* Steps */}
-      <div className="divide-y divide-white/10">
+      <div className="divide-y divide-line">
         {steps.map((step, index) => (
           <div
             key={step.id}
@@ -116,18 +116,18 @@ export default function GettingStartedTracker({
             // inset ring.
             className={`flex items-center gap-4 p-4 transition-colors ${
               nextStep?.id === step.id
-                ? 'bg-white/[0.08] ring-1 ring-inset ring-brand-400/50'
-                : 'bg-white/[0.03]'
+                ? 'bg-surface-raised ring-1 ring-inset ring-brand-400/50'
+                : 'bg-surface-low'
             }`}
           >
             {/* Status Icon */}
             <div className="flex-shrink-0">
               {step.completed ? (
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                <CheckCircle2 className="w-8 h-8 text-success" />
               ) : (
                 <div className="relative">
-                  <Circle className="w-8 h-8 text-white/50" />
-                  <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-white/50 font-mono tabular-nums">
+                  <Circle className="w-8 h-8 text-fg-subtle" />
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-fg-subtle font-mono tabular-nums">
                     {index + 1}
                   </span>
                 </div>
@@ -138,12 +138,12 @@ export default function GettingStartedTracker({
             <div className="flex-1 min-w-0">
               <h3
                 className={`font-medium ${
-                  step.completed ? 'text-white/50 line-through' : 'text-white'
+                  step.completed ? 'text-fg-subtle line-through' : 'text-fg'
                 }`}
               >
                 {step.title}
               </h3>
-              <p className="text-sm text-white/50 mt-0.5">{step.description}</p>
+              <p className="text-sm text-fg-subtle mt-0.5">{step.description}</p>
             </div>
 
             {/* Action */}
@@ -152,8 +152,8 @@ export default function GettingStartedTracker({
                 href={step.href}
                 className={`inline-flex flex-shrink-0 items-center gap-1 rounded px-4 py-2 text-sm font-medium transition-colors ${
                   nextStep?.id === step.id
-                    ? 'bg-white text-black hover:bg-white/90'
-                    : 'bg-white/[0.07] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                    ? 'bg-inverse text-on-inverse hover:bg-inverse-hover'
+                    : 'bg-surface-raised text-fg-muted hover:bg-surface-high hover:text-fg'
                 }`}
               >
                 {step.ctaLabel}
@@ -162,7 +162,7 @@ export default function GettingStartedTracker({
             )}
 
             {step.completed && (
-              <span className="flex-shrink-0 text-sm text-emerald-300 font-medium">
+              <span className="flex-shrink-0 text-sm text-success-soft font-medium">
                 {t('common.complete', 'Complete')}
               </span>
             )}

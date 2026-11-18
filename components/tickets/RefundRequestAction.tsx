@@ -39,9 +39,9 @@ const KNOWN_ERROR_CODES = new Set([
   'event_cancelled',
 ])
 
-const SHEET_FIELD = 'rounded-lg bg-white/[0.06] text-white'
+const SHEET_FIELD = 'rounded-lg bg-surface text-fg'
 const PRIMARY_BTN =
-  'rounded-lg bg-white font-bold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
+  'rounded-lg bg-inverse font-bold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50'
 
 type Props = {
   ticketId: string
@@ -94,15 +94,15 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
       : IN_PROGRESS.has(status)
         ? t('refund_request.status_in_progress')
         : t('refund_request.status_denied')
-    const dot = status === 'denied' ? 'bg-white/40' : 'bg-amber-400'
+    const dot = status === 'denied' ? 'bg-fg/40' : 'bg-warning'
     return (
       <div className="w-full pt-1 text-center" role="status">
-        <p className="inline-flex items-center gap-2 text-sm text-white/80">
+        <p className="inline-flex items-center gap-2 text-sm text-fg-soft">
           <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
           {label}
         </p>
         {UNDER_REVIEW.has(status) && (
-          <p className="mt-1 text-xs text-white/50">
+          <p className="mt-1 text-xs text-fg-subtle">
             {justSent ? t('refund_request.sent') : t('refund_request.status_requested_detail')}
           </p>
         )}
@@ -178,14 +178,14 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
           setError(null)
           setOpen(true)
         }}
-        className="pt-1 text-sm text-white/50 underline underline-offset-4 decoration-white/20 transition-colors hover:text-white/80"
+        className="pt-1 text-sm text-fg-subtle underline underline-offset-4 decoration-fg-faint transition-colors hover:text-fg-soft"
       >
         {t('refund_request.action')}
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-0 sm:items-center sm:p-4"
           onClick={() => !submitting && setOpen(false)}
         >
           <div
@@ -193,26 +193,26 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
             aria-modal="true"
             aria-labelledby="refund-request-title"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl bg-[#1c1c1c] p-6 text-left sm:rounded-2xl"
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl bg-surface-raised-solid p-6 text-left sm:rounded-2xl"
           >
             <h2
               id="refund-request-title"
-              className="font-display italic lowercase !text-2xl !leading-[1.04] text-white mb-5"
+              className="font-display italic lowercase !text-2xl !leading-[1.04] text-fg mb-5"
             >
               {t('refund_request.title')}
             </h2>
 
             <form onSubmit={submit} className="space-y-5">
               <fieldset>
-                <legend className="mb-2 block text-sm font-medium text-white/70">
+                <legend className="mb-2 block text-sm font-medium text-fg-muted">
                   {t('refund_request.reason_label')}
                 </legend>
                 <div className="space-y-2">
                   {REASONS.map((key, i) => (
                     <label
                       key={key}
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-[15px] transition-colors ${
-                        reason === key ? 'bg-white/[0.12] text-white' : 'bg-white/[0.06] text-white/80 hover:bg-white/[0.09]'
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-body transition-colors ${
+                        reason === key ? 'bg-surface-high text-fg' : 'bg-surface text-fg-soft hover:bg-surface-raised'
                       }`}
                     >
                       <input
@@ -232,7 +232,7 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
               </fieldset>
 
               <div>
-                <label htmlFor="refund-details" className="mb-2 block text-sm font-medium text-white/70">
+                <label htmlFor="refund-details" className="mb-2 block text-sm font-medium text-fg-muted">
                   {t('refund_request.details_label')}
                 </label>
                 <textarea
@@ -244,19 +244,19 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
                   maxLength={MAX_DETAILS}
                   minLength={MIN_DETAILS}
                   required
-                  className={`${SHEET_FIELD} w-full px-4 py-2.5 text-[16px] placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500`}
+                  className={`${SHEET_FIELD} w-full px-4 py-2.5 text-base placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500`}
                 />
-                <p className={`mt-1 text-xs ${trimmed.length >= MIN_DETAILS ? 'text-white/40' : 'text-white/55'}`}>
+                <p className={`mt-1 text-xs ${trimmed.length >= MIN_DETAILS ? 'text-fg-subtle' : 'text-fg-muted'}`}>
                   {t('refund_request.details_hint', { min: MIN_DETAILS, count: Math.min(trimmed.length, MIN_DETAILS) })}
                 </p>
               </div>
 
-              <p className="rounded-lg bg-white/[0.04] p-3 text-sm leading-relaxed text-white/65">
+              <p className="rounded-lg bg-surface-low p-3 text-sm leading-relaxed text-fg-muted">
                 {t('refund_request.note')}
               </p>
 
               {error && (
-                <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+                <div className="rounded-lg bg-danger-strong/10 p-3 text-sm text-danger-soft" role="alert">
                   {error}
                 </div>
               )}
@@ -266,7 +266,7 @@ export default function RefundRequestAction({ ticketId, refundStatus, eligible, 
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={submitting}
-                  className="flex-1 rounded-lg bg-white/[0.06] px-4 py-2.5 font-medium text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-surface px-4 py-2.5 font-medium text-fg-muted transition-colors hover:bg-surface-high hover:text-fg disabled:opacity-50"
                 >
                   {t('refund_request.cancel')}
                 </button>

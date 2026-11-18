@@ -81,28 +81,28 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       {/* Header */}
-      <div className="bg-gray-900 p-4 flex items-center justify-between">
-        <h2 className="text-white text-lg font-semibold flex items-center gap-2">
+      <div className="bg-surface-solid p-4 flex items-center justify-between">
+        <h2 className="text-fg text-lg font-semibold flex items-center gap-2">
           <Camera className="w-5 h-5" />
           {t('qr_scanner.scan_qr_code')}
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFlashlight}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-surface-raised-solid rounded-lg transition-colors"
           >
             {flashlightOn ? (
-              <Flashlight className="w-5 h-5 text-yellow-400" />
+              <Flashlight className="w-5 h-5 text-warning" />
             ) : (
-              <FlashlightOff className="w-5 h-5 text-white/40" />
+              <FlashlightOff className="w-5 h-5 text-fg-subtle" />
             )}
           </button>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-surface-raised-solid rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-5 h-5 text-fg" />
             </button>
           )}
         </div>
@@ -112,9 +112,9 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       <div className="flex-1 flex items-center justify-center p-4">
         {cameraError ? (
           <div className="text-center">
-            <Camera className="w-16 h-16 text-white/50 mx-auto mb-4" />
-            <p className="text-white text-lg mb-2">{t('qr_scanner.camera_not_available')}</p>
-            <p className="text-white/40 text-sm">{cameraError}</p>
+            <Camera className="w-16 h-16 text-fg-subtle mx-auto mb-4" />
+            <p className="text-fg text-lg mb-2">{t('qr_scanner.camera_not_available')}</p>
+            <p className="text-fg-subtle text-sm">{cameraError}</p>
           </div>
         ) : (
           <div id="qr-reader" className="w-full max-w-md" />
@@ -122,8 +122,8 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       </div>
 
       {/* Instructions */}
-      <div className="bg-gray-900 p-4 text-center">
-        <p className="text-white/40 text-sm">
+      <div className="bg-surface-solid p-4 text-center">
+        <p className="text-fg-subtle text-sm">
           {t('qr_scanner.position_qr')}
         </p>
       </div>

@@ -233,15 +233,15 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
           <div>
-            <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Pending Requests</p>
+            <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Pending Requests</p>
             <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{pendingCount}</p>
           </div>
           <div>
-            <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Awaiting Payment</p>
+            <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Awaiting Payment</p>
             <p className="mt-1 font-mono text-xl tabular-nums text-console-text">{approvedCount}</p>
           </div>
           <div>
-            <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Total in Queue</p>
+            <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Total in Queue</p>
             <p className="mt-1 font-mono text-xl tabular-nums text-console-text">
               {formatCurrency(payouts.reduce((sum, p) => sum + p.amount, 0))}
             </p>
@@ -259,7 +259,7 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
       {/* Payouts Table */}
       <ConsolePanel className="overflow-hidden">
         <div className="px-4 py-3">
-          <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Payout Queue</h2>
+          <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Payout Queue</h2>
         </div>
 
         {payouts.length === 0 ? (
@@ -271,14 +271,14 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
             <table className="min-w-full divide-y divide-console-raise">
               <thead>
                 <tr>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Organizer</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Amount</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Method</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Tickets</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Requested</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Scheduled</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Status</th>
-                  <th className="label-mono px-6 py-3 text-left text-[10px] uppercase tracking-[0.14em] text-console-faint">Actions</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Organizer</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Amount</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Method</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Tickets</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Requested</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Scheduled</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Status</th>
+                  <th className="label-mono px-6 py-3 text-left text-eyebrow uppercase tracking-[0.14em] text-console-faint">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-console-raise">
@@ -344,9 +344,9 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
 
       {/* Modal */}
       {showModal && selectedPayout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-scrim p-4">
           <div className="my-8 w-full max-w-2xl rounded-lg bg-console-panel p-6 shadow-xl">
-            <h3 className="label-mono mb-4 text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+            <h3 className="label-mono mb-4 text-body font-bold uppercase tracking-[0.14em] text-console-text">
               {modalMode === 'approve' && 'Approve Payout'}
               {modalMode === 'decline' && 'Decline Payout'}
               {modalMode === 'mark-paid' && 'Mark Payout as Paid'}

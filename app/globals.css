@@ -32,7 +32,7 @@ html {
 }
 
 body {
-  @apply bg-[#0a0a0a] text-white;
+  @apply bg-canvas text-fg;
   overscroll-behavior-y: none;
 }
 
@@ -40,7 +40,7 @@ body {
  *
  * Wrapped in :where() so it carries ZERO specificity. Written plainly, this
  * selector's triple `:not()` compound out-specified every `bg-*` utility on
- * every input, select and textarea in the app: `bg-white/[0.05]` on a field
+ * every input, select and textarea in the app: `bg-surface` on a field
  * added the class and emitted the CSS, and changed nothing on screen. Filled
  * inputs were quietly impossible, which is why the composer ended up built
  * entirely from hollow outlines.
@@ -56,7 +56,7 @@ body {
   color: inherit;
 }
 /* A select's open list paints its options from the select's own background.
- * Our fields use translucent fills (bg-white/[0.06]), which Chrome and Firefox
+ * Our fields use translucent fills (bg-surface), which Chrome and Firefox
  * on Windows/Linux composite over white: white text on a white list. Options
  * get an opaque dark fill of their own. */
 select option,
@@ -76,7 +76,7 @@ textarea::placeholder {
  * own border-radius — which is 0, because the rounded fill lives on the
  * wrapper div around it. So an autofilled address turned its field into a
  * hard-edged black box sitting inside a rounded one, and lost the field's
- * `bg-white/[0.05]` surface entirely.
+ * `bg-surface` surface entirely.
  *
  * `background-clip: text` is the fix rather than a patch: the browser still
  * paints its autofill background, but only behind the glyphs, so the field's
@@ -206,9 +206,9 @@ select:-webkit-autofill {
 
    Specificity, and this is the whole trick: in a selector LIST each compound
    is weighed on its own. `input:not([type=…]):not(…):not(…)` is (0,3,1) and
-   beats a `text-[15px]` utility class, but the bare `textarea` and `select`
+   beats a `text-body` utility class, but the bare `textarea` and `select`
    in the same list were only (0,0,1) and LOST — so the composer's
-   `text-[15px]` textarea still zoomed the page when "Short Summary" opened it
+   `text-body` textarea still zoomed the page when "Short Summary" opened it
    with autoFocus, even though the input beside it was fixed. The `:root`
    prefix costs nothing visually and lifts every compound to at least (0,1,1),
    which is what actually has to be true for all three. No `!important`: no
@@ -230,7 +230,7 @@ select:-webkit-autofill {
  * skeletons does not strobe.
  *
  * The base colour is baked in rather than left to a utility: a skeleton in
- * `bg-white/[0.03]` is invisible on this page (that mistake has ~500 instances
+ * `bg-surface-low` is invisible on this page (that mistake has ~500 instances
  * app-wide), and skeletons are the one thing that MUST be visible or the page
  * looks broken rather than busy. */
 .skeleton {

@@ -23,12 +23,12 @@ export default async function OrganizationSettingsPage() {
   const organizerData = await getOrganizerData(orgId);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <SettingsPageChrome titleKey="organization_title" subtitleKey="organization_subtitle" />
 
         {/* Organization Form */}
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
+        <div className="mt-8 overflow-hidden rounded-2xl bg-surface-low">
           <OrganizationForm 
             userId={orgId}
             initialData={{

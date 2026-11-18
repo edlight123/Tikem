@@ -44,19 +44,19 @@ export default function ReactivatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded bg-white/[0.055] p-6 sm:p-8">
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded bg-surface p-6 sm:p-8">
         {state === 'loading' ? (
-          <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/50" />
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-fg-subtle" />
         ) : (
           <>
-            <h1 className="font-display italic lowercase !text-[30px] !leading-none text-white mb-4">{t('reactivate.title')}</h1>
-            <p className="text-white/70 mb-3">{t('reactivate.body')}</p>
-            <p className="text-white/70 mb-6">
+            <h1 className="font-display italic lowercase !text-display !leading-none text-fg mb-4">{t('reactivate.title')}</h1>
+            <p className="text-fg-muted mb-3">{t('reactivate.body')}</p>
+            <p className="text-fg-muted mb-6">
               {eventCount > 0 ? t('reactivate.events_count', { count: eventCount }) : t('reactivate.events_none')}
             </p>
             {state === 'error' && (
-              <div role="alert" className="mb-4 rounded bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
+              <div role="alert" className="mb-4 rounded bg-danger-strong/10 px-4 py-2.5 text-sm text-danger-soft">
                 {t('reactivate.failed')}
               </div>
             )}
@@ -65,14 +65,14 @@ export default function ReactivatePage() {
                 type="button"
                 onClick={reactivate}
                 disabled={state === 'working'}
-                className="flex items-center justify-center gap-2 rounded bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded bg-inverse px-6 py-3 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50"
               >
                 {state === 'working' && <Loader2 className="h-4 w-4 animate-spin" />}
                 {state === 'working' ? t('reactivate.submitting') : t('reactivate.submit')}
               </button>
               <a
                 href={target}
-                className="rounded bg-white/[0.08] px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-white/[0.14]"
+                className="rounded bg-surface-raised px-6 py-3 text-center font-semibold text-fg transition-colors hover:bg-surface-high"
               >
                 {t('reactivate.later')}
               </a>

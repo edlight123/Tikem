@@ -96,19 +96,19 @@ export function EventHeader({ event }: EventHeaderProps) {
   // this header's varies with the title. The tabs below are the thing worth
   // pinning (they are navigation); a title and its actions can scroll away.
   return (
-    <div className="bg-[#0a0a0a]/90">
+    <div className="bg-canvas/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop Header */}
         <div className="hidden md:block py-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="font-display italic text-2xl font-bold text-white truncate">{event.title}</h1>
+                <h1 className="font-display italic text-2xl font-bold text-fg truncate">{event.title}</h1>
                 <StatusChip tone={event.is_published ? 'success' : 'neutral'}>
                   {event.is_published ? t('organizer.published') : t('organizer.draft')}
                 </StatusChip>
               </div>
-              <div className="flex items-center gap-4 text-sm text-white/60">
+              <div className="flex items-center gap-4 text-sm text-fg-muted">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
                   <span className="font-mono tabular-nums">{format(startDate, 'EEE, MMM d, yyyy • h:mm a')}</span>
@@ -124,7 +124,7 @@ export function EventHeader({ event }: EventHeaderProps) {
                     <span>{event.venue_name || event.city || 'Location TBD'}</span>
                   </div>
                 )}
-                <span className="font-mono tabular-nums text-xs text-white/50">
+                <span className="font-mono tabular-nums text-xs text-fg-subtle">
                   {t('organizer.updated')} {formatDistanceToNow(updatedDate, { addSuffix: true })}
                 </span>
               </div>
@@ -134,7 +134,7 @@ export function EventHeader({ event }: EventHeaderProps) {
             <div className="flex items-center gap-2 ml-4">
               <Link
                 href={`/organizer/events/${event.id}/edit`}
-                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-surface-raised px-4 text-sm font-medium text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
               >
                 <Edit className="w-4 h-4" />
                 {t('organizer.edit')}
@@ -142,7 +142,7 @@ export function EventHeader({ event }: EventHeaderProps) {
               <Link
                 href={`/events/${event.id}`}
                 target="_blank"
-                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-surface-raised px-4 text-sm font-medium text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
               >
                 <Eye className="w-4 h-4" />
                 {t('organizer.preview')}
@@ -158,7 +158,7 @@ export function EventHeader({ event }: EventHeaderProps) {
                     navigator.clipboard.writeText(`${window.location.origin}/events/${event.id}`)
                   }
                 }}
-                className="inline-flex h-11 items-center gap-2 rounded bg-white/[0.07] px-4 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+                className="inline-flex h-11 items-center gap-2 rounded bg-surface-raised px-4 text-sm font-medium text-fg-soft transition-colors hover:bg-surface-high hover:text-fg"
               >
                 <Share2 className="w-4 h-4" />
                 {t('organizer.share')}
@@ -168,8 +168,8 @@ export function EventHeader({ event }: EventHeaderProps) {
                 disabled={isPublishing}
                 className={`h-11 rounded px-4 text-sm font-semibold transition-colors ${
                   event.is_published
-                    ? 'bg-white/[0.12] text-white hover:bg-white/[0.18]'
-                    : 'bg-white text-black hover:bg-white/90'
+                    ? 'bg-surface-high text-fg hover:bg-fg/18'
+                    : 'bg-inverse text-on-inverse hover:bg-inverse-hover'
                 }`}
               >
                 {isPublishing ? t('organizer.processing') : event.is_published ? t('organizer.unpublish') : t('organizer.publish')}
@@ -193,12 +193,12 @@ export function EventHeader({ event }: EventHeaderProps) {
         {/* Mobile Header */}
         <div className="md:hidden py-3">
           <div className="flex items-center gap-2 mb-2">
-            <h1 className="font-display italic text-lg font-bold text-white truncate flex-1">{event.title}</h1>
+            <h1 className="font-display italic text-lg font-bold text-fg truncate flex-1">{event.title}</h1>
             <StatusChip tone={event.is_published ? 'success' : 'neutral'}>
               {event.is_published ? t('organizer.published') : t('organizer.draft')}
             </StatusChip>
           </div>
-          <div className="flex flex-col gap-1 text-xs text-white/60">
+          <div className="flex flex-col gap-1 text-xs text-fg-muted">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               <span className="font-mono tabular-nums">{format(startDate, 'MMM d, yyyy • h:mm a')}</span>
@@ -212,22 +212,22 @@ export function EventHeader({ event }: EventHeaderProps) {
       </div>
 
       {/* Mobile Bottom Action Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/10 px-4 py-3 z-40 safe-bottom">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-canvas border-t border-line px-4 py-3 z-40 safe-bottom">
         <div className="grid grid-cols-4 gap-2">
           <Link
             href={`/organizer/events/${event.id}/edit`}
-            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-white/[0.06]"
+            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-surface"
           >
-            <Edit className="w-5 h-5 text-white/70" />
-            <span className="text-xs text-white/70">{t('organizer.edit')}</span>
+            <Edit className="w-5 h-5 text-fg-muted" />
+            <span className="text-xs text-fg-muted">{t('organizer.edit')}</span>
           </Link>
           <Link
             href={`/events/${event.id}`}
             target="_blank"
-            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-white/[0.06]"
+            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-surface"
           >
-            <Eye className="w-5 h-5 text-white/70" />
-            <span className="text-xs text-white/70">{t('organizer.preview')}</span>
+            <Eye className="w-5 h-5 text-fg-muted" />
+            <span className="text-xs text-fg-muted">{t('organizer.preview')}</span>
           </Link>
           <button
             onClick={() => {
@@ -238,20 +238,20 @@ export function EventHeader({ event }: EventHeaderProps) {
                 })
               }
             }}
-            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-white/[0.06]"
+            className="flex flex-col items-center gap-1 rounded p-2 transition-colors hover:bg-surface"
           >
-            <Share2 className="w-5 h-5 text-white/70" />
-            <span className="text-xs text-white/70">{t('organizer.share')}</span>
+            <Share2 className="w-5 h-5 text-fg-muted" />
+            <span className="text-xs text-fg-muted">{t('organizer.share')}</span>
           </button>
           <button
             onClick={handlePublishToggle}
             disabled={isPublishing}
             className={`flex flex-col items-center gap-1 rounded p-2 transition-colors ${
-              event.is_published ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'
+              event.is_published ? 'bg-surface-raised' : 'hover:bg-surface'
             }`}
           >
-            <div className={`h-5 w-5 rounded-full ${event.is_published ? 'bg-brand-400' : 'bg-white/30'}`} />
-            <span className={`text-xs font-medium ${event.is_published ? 'text-brand-300' : 'text-white/70'}`}>
+            <div className={`h-5 w-5 rounded-full ${event.is_published ? 'bg-brand-400' : 'bg-fg/30'}`} />
+            <span className={`text-xs font-medium ${event.is_published ? 'text-brand-300' : 'text-fg-muted'}`}>
               {event.is_published ? t('organizer.live') : t('organizer.publish')}
             </span>
           </button>

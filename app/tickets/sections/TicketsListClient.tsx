@@ -42,8 +42,8 @@ export default function TicketsListClient({ upcomingEvents, pastEvents }: Ticket
               <Calendar className="w-5 h-5 text-brand-300" />
             </div>
             <div>
-              <h2 className="font-display italic text-2xl text-white">{t('upcoming.title')}</h2>
-              <p className="text-sm text-white/60">
+              <h2 className="font-display italic text-2xl text-fg">{t('upcoming.title')}</h2>
+              <p className="text-sm text-fg-muted">
                 {t('upcoming.count', { count: upcomingEvents.length })}
               </p>
             </div>
@@ -74,11 +74,11 @@ export default function TicketsListClient({ upcomingEvents, pastEvents }: Ticket
         <div>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <Clock className="w-5 h-5 text-white/60" />
+              <Clock className="w-5 h-5 text-fg-muted" />
             </div>
             <div>
-              <h2 className="font-display italic text-2xl text-white">{t('past.title')}</h2>
-              <p className="text-sm text-white/60">
+              <h2 className="font-display italic text-2xl text-fg">{t('past.title')}</h2>
+              <p className="text-sm text-fg-muted">
                 {t('past.count', { count: pastEvents.length })}
               </p>
             </div>

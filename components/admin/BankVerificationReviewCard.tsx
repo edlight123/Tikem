@@ -212,14 +212,14 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                   <CreditCard className="w-6 h-6 text-console-mut" />
                 </div>
                 <div>
-                  <h4 className="label-mono text-[11px] font-bold uppercase tracking-[0.14em] text-console-text">Bank Account Details</h4>
+                  <h4 className="label-mono text-eyebrow font-bold uppercase tracking-[0.14em] text-console-text">Bank Account Details</h4>
                   <p className="text-xs text-console-faint">Information provided by organizer</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                     Bank Name
                   </div>
                   <div className="text-base font-medium text-console-text">
@@ -228,7 +228,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                 </div>
 
                 <div>
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                     Account Holder Name
                   </div>
                   <div className="text-base font-medium text-console-text">
@@ -237,7 +237,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                 </div>
 
                 <div>
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                     Account Number
                   </div>
                   <div className="text-base font-mono font-medium text-console-text">
@@ -247,7 +247,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
 
                 {verification.bankDetails.routingNumber && (
                   <div>
-                    <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                    <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                       Routing Number
                     </div>
                     <div className="text-base font-mono font-medium text-console-text">
@@ -265,14 +265,14 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                   <FileText className="w-6 h-6 text-console-mut" />
                 </div>
                 <div>
-                  <h4 className="label-mono text-[11px] font-bold uppercase tracking-[0.14em] text-console-text">Proof Document</h4>
+                  <h4 className="label-mono text-eyebrow font-bold uppercase tracking-[0.14em] text-console-text">Proof Document</h4>
                   <p className="text-xs text-console-faint">Document submitted for verification</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                     Document Type
                   </div>
                   <div className="text-base font-medium text-console-text">
@@ -281,7 +281,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                 </div>
 
                 <div>
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                     File Name
                   </div>
                   <div className="text-sm font-medium text-console-text break-all">
@@ -290,7 +290,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                 </div>
 
                 <div>
-                  <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1">
+                  <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1">
                     File Size
                   </div>
                   <div className="text-base font-medium text-console-text">
@@ -338,7 +338,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
           {/* Actions */}
           {verification.verificationDoc.status === 'pending' && rejecting && (
             <div className="mt-6 space-y-3">
-              <label htmlFor={`reject-reason-${verification.destinationId}`} className="block text-[13px] text-console-mut">
+              <label htmlFor={`reject-reason-${verification.destinationId}`} className="block text-meta text-console-mut">
                 Reason for rejection (will be sent to organizer)
               </label>
               <ConsoleInput

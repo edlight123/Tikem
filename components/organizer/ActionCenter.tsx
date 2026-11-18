@@ -22,12 +22,12 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
   
   if (alerts.length === 0) {
     return (
-      <div className="rounded-2xl bg-white/[0.03] p-6">
+      <div className="rounded-2xl bg-surface-low p-6">
         <div className="flex items-start gap-4">
-          <ShieldCheck className="w-6 h-6 shrink-0 text-emerald-300" />
+          <ShieldCheck className="w-6 h-6 shrink-0 text-success-soft" />
           <div>
-            <h3 className="font-display italic text-xl text-white mb-1">{t('organizer.action_center.all_caught_up')}</h3>
-            <p className="text-sm text-emerald-300">{t('organizer.action_center.no_action_items')}</p>
+            <h3 className="font-display italic text-xl text-fg mb-1">{t('organizer.action_center.all_caught_up')}</h3>
+            <p className="text-sm text-success-soft">{t('organizer.action_center.no_action_items')}</p>
           </div>
         </div>
       </div>
@@ -58,27 +58,27 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
   const getColor = (type: Alert['type']) => {
     switch (type) {
       case 'draft':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-brand-300', btn: 'bg-white/[0.07] text-white hover:bg-white/[0.12]' }
+        return { bg: 'bg-surface hover:bg-surface-raised', text: 'text-fg', icon: 'text-brand-300', btn: 'bg-surface-raised text-fg hover:bg-surface-high' }
       case 'low-sales':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-amber-300', btn: 'bg-amber-500/15 text-amber-200 hover:bg-amber-500/25' }
+        return { bg: 'bg-surface hover:bg-surface-raised', text: 'text-fg', icon: 'text-warning-soft', btn: 'bg-warning-strong/15 text-warning-soft hover:bg-warning-strong/25' }
       case 'payout':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-brand-300', btn: 'bg-white/[0.07] text-white hover:bg-white/[0.12]' }
+        return { bg: 'bg-surface hover:bg-surface-raised', text: 'text-fg', icon: 'text-brand-300', btn: 'bg-surface-raised text-fg hover:bg-surface-high' }
       case 'verification':
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-amber-300', btn: 'bg-amber-500/15 text-amber-200 hover:bg-amber-500/25' }
+        return { bg: 'bg-surface hover:bg-surface-raised', text: 'text-fg', icon: 'text-warning-soft', btn: 'bg-warning-strong/15 text-warning-soft hover:bg-warning-strong/25' }
       default:
-        return { bg: 'bg-white/[0.055] hover:bg-white/[0.08]', text: 'text-white', icon: 'text-white/60', btn: 'bg-white/[0.07] text-white hover:bg-white/[0.12]' }
+        return { bg: 'bg-surface hover:bg-surface-raised', text: 'text-fg', icon: 'text-fg-muted', btn: 'bg-surface-raised text-fg hover:bg-surface-high' }
     }
   }
 
   return (
-    <div className="rounded-2xl bg-white/[0.03] p-6 shadow-soft">
+    <div className="rounded-2xl bg-surface-low p-6 shadow-soft">
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06]">
-          <AlertCircle className="w-5 h-5 text-red-300" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface">
+          <AlertCircle className="w-5 h-5 text-danger-soft" />
         </div>
         <div>
-          <h3 className="font-display italic text-xl text-white">{t('organizer.action_center.title')}</h3>
-          <p className="text-sm text-white/60">
+          <h3 className="font-display italic text-xl text-fg">{t('organizer.action_center.title')}</h3>
+          <p className="text-sm text-fg-muted">
             {alerts.length} {alerts.length !== 1 ? t('organizer.action_center.action_items_plural') : t('organizer.action_center.action_items')}
           </p>
         </div>
@@ -93,7 +93,7 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
               className={`${colors.bg} rounded-xl p-4 transition-colors`}
             >
               <div className="flex items-start gap-3">
-                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.08] ${colors.icon}`}>
+                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-surface-raised ${colors.icon}`}>
                   {getIcon(alert.type)}
                 </div>
                 <div className="flex-1 min-w-0">

@@ -40,7 +40,7 @@ export function ClearedToday({ activities }: { activities: ClearedActivity[] }) 
   if (total === 0) return null
 
   return (
-    <p className="label-mono mt-4 text-[11.5px] uppercase tracking-[0.08em] text-console-faint">
+    <p className="label-mono mt-4 text-eyebrow uppercase tracking-[0.08em] text-console-faint">
       <span className="text-console-mut">Cleared today, </span>
       <span className="tabular-nums text-console-mut">{total}</span>
       {byActor.length > 0 && (

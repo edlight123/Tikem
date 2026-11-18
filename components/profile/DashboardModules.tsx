@@ -91,8 +91,8 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
         >
           <OrganizerMark logoUrl={logoUrl} className="h-14 w-14 rounded transition-opacity group-hover:opacity-80" />
           {uploading ? (
-            <span className="absolute inset-0 grid place-items-center rounded bg-black/60">
-              <Loader2 className="h-5 w-5 animate-spin text-white" aria-hidden />
+            <span className="absolute inset-0 grid place-items-center rounded bg-scrim">
+              <Loader2 className="h-5 w-5 animate-spin text-fg" aria-hidden />
             </span>
           ) : null}
         </button>
@@ -107,10 +107,10 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
           href="/organizer/settings/organization"
           className="min-w-0 flex-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
-          <span className={`block truncate !text-[16px] font-semibold ${name ? 'text-white' : 'text-white/45'}`}>
+          <span className={`block truncate !text-base font-semibold ${name ? 'text-fg' : 'text-fg-subtle'}`}>
             {name || t('dashboard.organization.empty_name')}
           </span>
-          <span className="mt-0.5 line-clamp-2 block !text-[13px] !leading-snug text-white/50">
+          <span className="mt-0.5 line-clamp-2 block !text-meta !leading-snug text-fg-subtle">
             {t('dashboard.organization.hint')}
           </span>
         </Link>
@@ -118,7 +118,7 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="hidden shrink-0 items-center gap-1.5 rounded bg-white/[0.06] px-3 py-2 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50 sm:inline-flex"
+          className="hidden shrink-0 items-center gap-1.5 rounded bg-surface px-3 py-2 text-meta font-semibold text-fg-soft transition-colors hover:bg-surface-high hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50 sm:inline-flex"
         >
           <Camera className="h-3.5 w-3.5" aria-hidden />
           {actionLabel}
@@ -141,28 +141,28 @@ export function OrganizationCard({ name, logo }: { name: string; logo: string })
 export function FindFriendsCard() {
   const { t } = useTranslation('profile')
   return (
-    <section className="relative overflow-hidden rounded bg-white/[0.055] p-5 sm:p-6">
+    <section className="relative overflow-hidden rounded bg-surface p-5 sm:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.10),transparent_70%)]"
       />
       <div className="relative">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded bg-white/[0.08] text-white/80">
+          <span className="flex h-8 w-8 items-center justify-center rounded bg-surface-raised text-fg-soft">
             <Users className="h-3.5 w-3.5" aria-hidden />
           </span>
           <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-400" />
-          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
+          <span className="text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
             {t('dashboard.find_friends.eyebrow')}
           </span>
         </div>
-        <h2 className="mt-4 font-display lowercase italic !text-[24px] !leading-snug text-white">
+        <h2 className="mt-4 font-display lowercase italic !text-section !leading-snug text-fg">
           {t('dashboard.find_friends.title')}
         </h2>
-        <p className="mt-1.5 max-w-lg !text-[14px] !leading-relaxed text-white/60">{t('dashboard.find_friends.body')}</p>
+        <p className="mt-1.5 max-w-lg !text-sm !leading-relaxed text-fg-muted">{t('dashboard.find_friends.body')}</p>
         <Link
           href="/connections?tab=find"
-          className="mt-4 inline-flex h-10 items-center gap-2 rounded bg-white px-5 text-[13px] font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="mt-4 inline-flex h-10 items-center gap-2 rounded bg-inverse px-5 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
         >
           {t('dashboard.find_friends.cta')}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -186,10 +186,10 @@ export function PostersSection({ posters, total }: { posters: any[]; total: numb
         total > 0 ? (
           <Link
             href="/tickets"
-            className="eyebrow group inline-flex items-center gap-1 whitespace-nowrap rounded pb-1 text-[11px] text-white/55 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="eyebrow group inline-flex items-center gap-1 whitespace-nowrap rounded pb-1 text-eyebrow text-fg-muted transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
           >
             {t('dashboard.posters.see_all')}
-            {total > posters.length ? <span className="tabular-nums text-white/35">({total})</span> : null}
+            {total > posters.length ? <span className="tabular-nums text-fg-faint">({total})</span> : null}
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
         ) : undefined
@@ -210,7 +210,7 @@ export function PostersSection({ posters, total }: { posters: any[]; total: numb
           action={
             <Link
               href="/discover"
-              className="inline-flex h-10 items-center rounded bg-white px-5 text-[13px] font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              className="inline-flex h-10 items-center rounded bg-inverse px-5 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
             >
               {t('dashboard.posters.explore')}
             </Link>
@@ -235,25 +235,25 @@ export function ViewAsSection({ canOrganize, canStaff }: { canOrganize: boolean;
   const { t } = useTranslation('profile')
   if (!canOrganize && !canStaff) return null
   const base =
-    'flex h-11 flex-1 items-center justify-center rounded px-4 text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
+    'flex h-11 flex-1 items-center justify-center rounded px-4 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
   return (
     <ProfileSection title={t('dashboard.view_as.title')}>
       <div className="flex gap-2" role="group" aria-label={t('dashboard.view_as.title')}>
-        <span aria-current="page" className={`${base} bg-white/[0.08] text-white ring-1 ring-inset ring-brand-500`}>
+        <span aria-current="page" className={`${base} bg-surface-raised text-fg ring-1 ring-inset ring-brand-500`}>
           {t('dashboard.view_as.attendee')}
         </span>
         {canOrganize ? (
-          <Link href="/organizer" className={`${base} bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white`}>
+          <Link href="/organizer" className={`${base} bg-surface text-fg-muted hover:bg-surface-high hover:text-fg`}>
             {t('dashboard.view_as.organizer')}
           </Link>
         ) : null}
         {canStaff ? (
-          <Link href="/staff" className={`${base} bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white`}>
+          <Link href="/staff" className={`${base} bg-surface text-fg-muted hover:bg-surface-high hover:text-fg`}>
             {t('dashboard.view_as.staff')}
           </Link>
         ) : null}
       </div>
-      <p className="mt-2.5 !text-[12px] !leading-relaxed text-white/40">
+      <p className="mt-2.5 !text-caption !leading-relaxed text-fg-subtle">
         {[canOrganize ? t('dashboard.view_as.tip_organizer') : '', canStaff ? t('dashboard.view_as.tip_staff') : '']
           .filter(Boolean)
           .join(' ')}
@@ -273,18 +273,18 @@ export type SettingsRow =
   | { kind: 'link'; href: string; icon: IconType; label: string; description?: string; external?: boolean; trailing?: string }
 
 const ROW =
-  'group flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500'
+  'group flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-surface focus:outline-none focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500'
 
 function RowBody({ icon: Icon, label, description }: { icon: IconType; label: string; description?: string }) {
   return (
     <>
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded bg-white/[0.06] text-white/55 transition-colors group-hover:text-white/85">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded bg-surface text-fg-muted transition-colors group-hover:text-fg-soft">
         <Icon className="h-[17px] w-[17px]" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate !text-[15px] font-semibold text-white">{label}</span>
+        <span className="block truncate !text-body font-semibold text-fg">{label}</span>
         {description ? (
-          <span className="mt-0.5 block truncate !text-[12.5px] !leading-snug text-white/45">{description}</span>
+          <span className="mt-0.5 block truncate !text-caption !leading-snug text-fg-subtle">{description}</span>
         ) : null}
       </span>
     </>
@@ -316,23 +316,23 @@ export function RowList({
                   type="button"
                   onClick={() => onOpen?.(row.id)}
                   aria-current={active ? 'true' : undefined}
-                  className={`${ROW} ${active ? 'bg-white/[0.07]' : ''}`}
+                  className={`${ROW} ${active ? 'bg-surface-raised' : ''}`}
                 >
                   <RowBody icon={row.icon} label={row.label} description={row.description} />
                   <ChevronRight
-                    className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-brand-400' : 'text-white/25 group-hover:text-white/60'}`}
+                    className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-brand-400' : 'text-fg-faint group-hover:text-fg-muted'}`}
                     aria-hidden
                   />
                 </button>
               )
             }
             const trailing = row.external ? (
-              <span className="flex shrink-0 items-center gap-1.5 text-[13px] text-white/40">
+              <span className="flex shrink-0 items-center gap-1.5 text-meta text-fg-subtle">
                 {row.trailing}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               </span>
             ) : (
-              <ChevronRight className="h-4 w-4 shrink-0 text-white/25 transition-colors group-hover:text-white/60" aria-hidden />
+              <ChevronRight className="h-4 w-4 shrink-0 text-fg-faint transition-colors group-hover:text-fg-muted" aria-hidden />
             )
             return row.external ? (
               <a

@@ -21,7 +21,7 @@ const TOPICS = [
 
 /** A field on the form card: one step up the fill ladder, no outline. */
 const FIELD =
-  'w-full rounded bg-white/[0.06] px-4 py-3 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50'
+  'w-full rounded bg-surface px-4 py-3 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50'
 
 type Status = { kind: 'idle' } | { kind: 'sent'; email: string; reference: string } | { kind: 'error'; message: string }
 
@@ -74,51 +74,51 @@ export default function SupportRequestForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <Link
           href="/support"
-          className="inline-flex items-center gap-2 text-sm text-white/65 hover:text-white mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-fg mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t('nav.back_to_support')}
         </Link>
 
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">{t('request_form.title')}</h1>
-          <p className="text-white/65">{t('request_form.description')}</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-fg mb-2">{t('request_form.title')}</h1>
+          <p className="text-fg-muted">{t('request_form.description')}</p>
         </div>
 
         {status.kind === 'sent' ? (
-          <div role="status" className="rounded bg-white/[0.055] p-6 sm:p-8">
+          <div role="status" className="rounded bg-surface p-6 sm:p-8">
             <div className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-brand-500/15">
               <Check className="h-6 w-6 text-brand-300" />
             </div>
-            <h2 className="font-display italic lowercase !text-[28px] !leading-none text-white mb-3">
+            <h2 className="font-display italic lowercase !text-headline !leading-none text-fg mb-3">
               {t('request_form.success_title')}
             </h2>
-            <p className="text-white/70 mb-6">{t('request_form.success_message', { email: status.email, reference: status.reference })}</p>
+            <p className="text-fg-muted mb-6">{t('request_form.success_message', { email: status.email, reference: status.reference })}</p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href="/support"
-                className="inline-flex items-center justify-center rounded bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-white/90"
+                className="inline-flex items-center justify-center rounded bg-inverse px-6 py-3 font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
               >
                 {t('request_form.back_to_support')}
               </Link>
               <button
                 type="button"
                 onClick={resetForm}
-                className="inline-flex items-center justify-center rounded bg-white/[0.08] px-6 py-3 font-semibold text-white transition-colors hover:bg-white/[0.14]"
+                className="inline-flex items-center justify-center rounded bg-surface-raised px-6 py-3 font-semibold text-fg transition-colors hover:bg-surface-high"
               >
                 {t('request_form.send_another')}
               </button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="rounded bg-white/[0.03] p-6 sm:p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="rounded bg-surface-low p-6 sm:p-8 space-y-6">
             {/* User type: a functional two-way toggle, so the selected tile is the white fill. */}
             <div>
-              <span className="block text-sm font-semibold text-white/70 mb-3">{t('request_form.user_type_label')}</span>
+              <span className="block text-sm font-semibold text-fg-muted mb-3">{t('request_form.user_type_label')}</span>
               <div className="flex gap-3" role="radiogroup" aria-label={t('request_form.user_type_label')}>
                 {(['attendee', 'organizer'] as const).map((type) => {
                   const selected = formData.userType === type
@@ -131,7 +131,7 @@ export default function SupportRequestForm() {
                       aria-checked={selected}
                       onClick={() => setFormData({ ...formData, userType: type })}
                       className={`flex-1 rounded px-4 py-3 font-medium transition-colors ${
-                        selected ? 'bg-white text-black' : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.1]'
+                        selected ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-raised'
                       }`}
                     >
                       <span className="inline-flex items-center justify-center gap-2">
@@ -145,7 +145,7 @@ export default function SupportRequestForm() {
             </div>
 
             <div>
-              <label htmlFor="name" className="block text-sm font-semibold text-white/70 mb-2">
+              <label htmlFor="name" className="block text-sm font-semibold text-fg-muted mb-2">
                 {t('request_form.name')} *
               </label>
               <input
@@ -162,7 +162,7 @@ export default function SupportRequestForm() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-white/70 mb-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-fg-muted mb-2">
                 {t('request_form.email')} *
               </label>
               <input
@@ -192,7 +192,7 @@ export default function SupportRequestForm() {
             </div>
 
             <div>
-              <label htmlFor="topic" className="block text-sm font-semibold text-white/70 mb-2">
+              <label htmlFor="topic" className="block text-sm font-semibold text-fg-muted mb-2">
                 {t('request_form.category')} *
               </label>
               <select
@@ -212,7 +212,7 @@ export default function SupportRequestForm() {
             </div>
 
             <div>
-              <label htmlFor="subject" className="block text-sm font-semibold text-white/70 mb-2">
+              <label htmlFor="subject" className="block text-sm font-semibold text-fg-muted mb-2">
                 {t('request_form.subject')} *
               </label>
               <input
@@ -228,7 +228,7 @@ export default function SupportRequestForm() {
             </div>
 
             <div>
-              <label htmlFor="message" className="block text-sm font-semibold text-white/70 mb-2">
+              <label htmlFor="message" className="block text-sm font-semibold text-fg-muted mb-2">
                 {t('request_form.message')} *
               </label>
               <textarea
@@ -242,11 +242,11 @@ export default function SupportRequestForm() {
                 className={`${FIELD} resize-none`}
                 placeholder={t('request_form.message_placeholder')}
               />
-              <p className="text-xs text-white/50 mt-1">{t('request_form.details_hint')}</p>
+              <p className="text-xs text-fg-subtle mt-1">{t('request_form.details_hint')}</p>
             </div>
 
             {status.kind === 'error' && (
-              <div role="alert" className="rounded bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              <div role="alert" className="rounded bg-danger-strong/10 px-4 py-3 text-sm text-danger-soft">
                 {status.message}
               </div>
             )}
@@ -255,7 +255,7 @@ export default function SupportRequestForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-8 py-3 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                className="px-8 py-3 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -273,14 +273,14 @@ export default function SupportRequestForm() {
           </form>
         )}
 
-        <div className="mt-6 p-4 bg-white/[0.03] rounded">
-          <p className="text-sm text-white/65">
+        <div className="mt-6 p-4 bg-surface-low rounded">
+          <p className="text-sm text-fg-muted">
             <strong className="inline-flex items-center gap-2">
               <Info className="w-4 h-4" />
               {t('tip.title')}:
             </strong>{' '}
             {t('tip.body_prefix')}
-            <Link href="/support" className="underline hover:text-white">
+            <Link href="/support" className="underline hover:text-fg">
               {t('tip.body_link')}
             </Link>
             {t('tip.body_suffix')}

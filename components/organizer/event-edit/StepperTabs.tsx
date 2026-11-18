@@ -23,7 +23,7 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
   const { t } = useTranslation('organizer')
 
   return (
-    <div className="bg-white/[0.03] border-b border-white/10">
+    <div className="bg-surface-low border-b border-line">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Desktop Tabs */}
         <div className="hidden md:flex items-center justify-between">
@@ -42,7 +42,7 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                   className={`relative flex items-center gap-3 px-4 py-4 transition-all flex-1 group ${
                     isActive
                       ? 'border-b-4'
-                      : 'border-b-4 border-transparent hover:border-white/10'
+                      : 'border-b-4 border-transparent hover:border-line'
                   }`}
                   style={{
                     borderBottomColor: isActive ? '#0F766E' : undefined
@@ -51,12 +51,12 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                   {/* Step Number/Status Icon */}
                   <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 transition-all ${
                     isActive
-                      ? 'bg-white text-black'
+                      ? 'bg-inverse text-on-inverse'
                       : isCompleted
-                      ? 'text-emerald-300 group-hover:bg-emerald-500/15'
+                      ? 'text-success-soft group-hover:bg-success-strong/15'
                       : hasWarnings || tab.missingFields.length > 0
-                      ? 'text-amber-300 group-hover:bg-amber-500/15'
-                      : 'bg-white/[0.03] text-white/60 group-hover:bg-white/[0.08]'
+                      ? 'text-warning-soft group-hover:bg-warning-strong/15'
+                      : 'bg-surface-low text-fg-muted group-hover:bg-surface-raised'
                   }`}>
                     {isCompleted && !isActive ? (
                       <Check className="w-5 h-5" />
@@ -73,15 +73,15 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                       isActive
                         ? 'text-brand-300'
                         : isPast
-                        ? 'text-white/50'
-                        : 'text-white/40 group-hover:text-white/60'
+                        ? 'text-fg-subtle'
+                        : 'text-fg-subtle group-hover:text-fg-muted'
                     }`}>
                       Step {index + 1}
                     </p>
                     <p className={`font-bold text-sm ${
                       isActive
-                        ? 'text-white'
-                        : 'text-white/70 group-hover:text-white'
+                        ? 'text-fg'
+                        : 'text-fg-muted group-hover:text-fg'
                     }`}>
                       {tab.title}
                     </p>
@@ -89,17 +89,17 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                     {/* Status Indicators */}
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {isCompleted ? (
-                        <span className="text-xs text-emerald-300 font-medium flex items-center gap-1">
+                        <span className="text-xs text-success-soft font-medium flex items-center gap-1">
                           <Check className="w-3 h-3" />
                           {t('actions.complete')}
                         </span>
                       ) : tab.missingFields.length > 0 ? (
-                        <span className="text-xs text-amber-300 font-medium">
+                        <span className="text-xs text-warning-soft font-medium">
                           {tab.missingFields.length} missing
                         </span>
                       ) : null}
                       {hasWarnings && (
-                        <span className="text-xs text-amber-300 font-medium flex items-center gap-1">
+                        <span className="text-xs text-warning-soft font-medium flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
                           {tab.warnings.length}
                         </span>
@@ -109,7 +109,7 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
 
                   {/* Completion Badge */}
                   {isCompleted && (
-                    <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center">
+                    <div className="absolute top-2 right-2 w-5 h-5 bg-success-strong text-fg rounded-full flex items-center justify-center">
                       <Check className="w-3 h-3" />
                     </div>
                   )}
@@ -119,8 +119,8 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
                 {index < tabs.length - 1 && (
                   <div className={`h-0.5 w-8 transition-all ${
                     isPast || isCompleted
-                      ? 'bg-green-500'
-                      : 'bg-white/[0.03]'
+                      ? 'bg-success-strong'
+                      : 'bg-surface-low'
                   }`}></div>
                 )}
               </div>
@@ -134,7 +134,7 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
             <select
               value={currentTab}
               onChange={(e) => onTabChange(e.target.value)}
-              className="w-full px-4 py-3 pr-10 bg-white/[0.06] rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none font-semibold text-white"
+              className="w-full px-4 py-3 pr-10 bg-surface rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none font-semibold text-fg"
             >
               {tabs.map((tab, index) => {
                 const Icon = TAB_ICONS[tab.id] || FileText
@@ -146,7 +146,7 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
               })}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-fg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -156,18 +156,18 @@ export function StepperTabs({ tabs, currentTab, onTabChange }: StepperTabsProps)
           <div className="mt-2 flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               {tabs.find(t => t.id === currentTab)?.isComplete ? (
-                <span className="flex items-center gap-1 text-emerald-300 font-medium">
+                <span className="flex items-center gap-1 text-success-soft font-medium">
                   <Check className="w-4 h-4" />
                   {t('actions.complete')}
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-amber-300 font-medium">
+                <span className="flex items-center gap-1 text-warning-soft font-medium">
                   <AlertCircle className="w-4 h-4" />
                   {tabs.find(t => t.id === currentTab)?.missingFields.length || 0} missing
                 </span>
               )}
             </div>
-            <span className="text-white/50">
+            <span className="text-fg-subtle">
               {tabs.filter(t => t.isComplete).length} of {tabs.length} complete
             </span>
           </div>

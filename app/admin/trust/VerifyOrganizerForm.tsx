@@ -83,14 +83,14 @@ export default function VerifyOrganizerForm({ organizers }: Props) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="label-mono block text-[10px] uppercase tracking-[0.18em] text-console-faint">{t('verify.override_search_label')}</label>
+        <label className="label-mono block text-eyebrow uppercase tracking-[0.18em] text-console-faint">{t('verify.override_search_label')}</label>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('verify.override_search_placeholder')}
-          className="w-full px-3 py-2 rounded bg-console-ground text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut text-[15px] sm:text-base"
+          className="w-full px-3 py-2 rounded bg-console-ground text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut text-body sm:text-base"
         />
-        <p className="text-[12px] sm:text-sm text-console-faint">{t('verify.override_search_hint')}</p>
+        <p className="text-caption sm:text-sm text-console-faint">{t('verify.override_search_hint')}</p>
       </div>
 
       {!shouldShowResults ? (

@@ -269,7 +269,7 @@ export default function OrganizerPayoutReleaseCard({ organizerId }: { organizerI
     <div className="rounded-lg bg-console-panel p-4 sm:p-5 lg:col-span-2">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">
+          <h2 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">
             Payout Release
           </h2>
           <p className="mt-1 text-xs text-console-mut">
@@ -349,12 +349,12 @@ export default function OrganizerPayoutReleaseCard({ organizerId }: { organizerI
                       <button
                         type="button"
                         onClick={() => setValues((prev) => ({ ...prev, [field.key]: '' }))}
-                        className="text-[11px] font-semibold text-console-mut hover:text-console-text"
+                        className="text-eyebrow font-semibold text-console-mut hover:text-console-text"
                       >
                         Use platform default
                       </button>
                     ) : (
-                      <span className="label-mono text-[11px] uppercase tracking-wide text-console-faint">Inherited</span>
+                      <span className="label-mono text-eyebrow uppercase tracking-wide text-console-faint">Inherited</span>
                     )}
                   </div>
 
@@ -380,7 +380,7 @@ export default function OrganizerPayoutReleaseCard({ organizerId }: { organizerI
                   </div>
 
                   <p className="mt-1.5 text-xs text-console-mut">{field.help}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-console-faint">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-eyebrow text-console-faint">
                     <span>
                       Allowed {toDisplay(field.kind, limit.min)}, {toDisplay(field.kind, limit.max)}
                       {suffix ? ` ${suffix}` : ''}
@@ -406,7 +406,7 @@ export default function OrganizerPayoutReleaseCard({ organizerId }: { organizerI
                   <p className="text-sm font-medium text-console-text">
                     {toggle.label}
                     {toggle.relaxes && (
-                      <span className="ml-2 label-mono text-[10px] uppercase tracking-wide text-console-amber">
+                      <span className="ml-2 label-mono text-eyebrow uppercase tracking-wide text-console-amber">
                         note required
                       </span>
                     )}
@@ -423,7 +423,7 @@ export default function OrganizerPayoutReleaseCard({ organizerId }: { organizerI
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-inverse transition-transform ${
                       toggle.value ? 'translate-x-[22px]' : 'translate-x-0.5'
                     }`}
                   />
@@ -436,7 +436,7 @@ export default function OrganizerPayoutReleaseCard({ organizerId }: { organizerI
           <div>
             <label htmlFor="override-note" className="mb-1.5 flex flex-wrap items-baseline gap-2 text-sm font-medium text-console-mut">
               Note
-              <span className={`label-mono text-[10px] uppercase tracking-wide ${isRelaxing ? 'text-console-amber' : 'text-console-faint'}`}>
+              <span className={`label-mono text-eyebrow uppercase tracking-wide ${isRelaxing ? 'text-console-amber' : 'text-console-faint'}`}>
                 {isRelaxing ? 'required' : 'optional'}
               </span>
             </label>

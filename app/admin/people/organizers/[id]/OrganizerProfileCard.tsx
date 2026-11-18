@@ -10,7 +10,7 @@ export default function OrganizerProfileCard({ organizer }: { organizer: any }) 
   const websiteHref = safeExternalUrl(organizer.website)
   return (
     <ConsolePanel className="p-4 sm:p-5 lg:col-span-2">
-      <h2 className="label-mono mb-4 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+      <h2 className="label-mono mb-4 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
         Organization Profile
       </h2>
 

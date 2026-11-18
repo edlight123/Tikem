@@ -8,12 +8,12 @@ import type { FriendshipState } from '@/types/social'
 
 /**
  * Palette follows docs/POSH_DESIGN_BRIEF.md (2026-09-04). It used to fill the
- * affirmative actions with teal — `bg-teal-600` on Accept and a
- * `from-teal-600 to-teal-700` gradient on Add friend — which the brief forbids
+ * affirmative actions with teal — `bg-brand-600` on Accept and a
+ * `from-brand-600 to-brand-700` gradient on Add friend — which the brief forbids
  * outright: teal is a semantic accent (verified / live / selected), never a
  * button fill. Affirmative actions are now the white pill. The three quiet
- * states were `border border-white/15` over `bg-white/[0.03]`, a hairline
- * around a fill too faint to read; they are plain `bg-white/[0.055]` fills now,
+ * states were `border border-line-strong` over `bg-surface-low`, a hairline
+ * around a fill too faint to read; they are plain `bg-surface` fills now,
  * on the surface ladder, with the hover step doing the work the border was
  * pretending to do. Geometry (rounded-xl, `pad`) is unchanged so the organizer
  * profile hero still lines up with FollowButton beside it.
@@ -119,7 +119,7 @@ export default function ConnectButton({
       <button
         onClick={remove}
         disabled={loading}
-        className={`group inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-white/[0.055] text-white/80 hover:bg-white/[0.12] hover:text-red-300 transition-colors disabled:opacity-50`}
+        className={`group inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-surface text-fg-soft hover:bg-surface-high hover:text-danger-soft transition-colors disabled:opacity-50`}
         title={t('connections.remove_friend', { defaultValue: 'Remove friend' })}
       >
         <Check className="w-4 h-4 group-hover:hidden" />
@@ -135,7 +135,7 @@ export default function ConnectButton({
       <button
         onClick={remove}
         disabled={loading}
-        className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-white/[0.055] text-white/50 hover:bg-white/[0.12] hover:text-white/80 transition-colors disabled:opacity-50`}
+        className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-surface text-fg-subtle hover:bg-surface-high hover:text-fg-soft transition-colors disabled:opacity-50`}
         title={t('connections.cancel_request', { defaultValue: 'Cancel request' })}
       >
         <Clock className="w-4 h-4" />
@@ -152,8 +152,8 @@ export default function ConnectButton({
           disabled={loading}
           className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl transition-colors disabled:opacity-50 ${
             quiet
-              ? 'bg-white/[0.055] text-white/80 hover:bg-white/[0.12] hover:text-white'
-              : 'bg-white text-black hover:bg-white/90'
+              ? 'bg-surface text-fg-soft hover:bg-surface-high hover:text-fg'
+              : 'bg-inverse text-on-inverse hover:bg-inverse-hover'
           }`}
         >
           <Check className="w-4 h-4" />
@@ -162,7 +162,7 @@ export default function ConnectButton({
         <button
           onClick={() => respond('decline')}
           disabled={loading}
-          className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-white/[0.055] text-white/70 hover:bg-white/[0.12] hover:text-white transition-colors disabled:opacity-50`}
+          className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-surface text-fg-muted hover:bg-surface-high hover:text-fg transition-colors disabled:opacity-50`}
         >
           {t('connections.decline', { defaultValue: 'Decline' })}
         </button>
@@ -175,7 +175,7 @@ export default function ConnectButton({
     <button
       onClick={sendRequest}
       disabled={loading}
-      className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-50`}
+      className={`inline-flex items-center gap-1.5 ${pad} font-semibold rounded-xl bg-inverse text-on-inverse hover:bg-inverse-hover transition-colors disabled:opacity-50`}
     >
       <UserPlus className="w-4 h-4" />
       {t('connections.add_friend', { defaultValue: 'Add friend' })}

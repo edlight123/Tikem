@@ -83,13 +83,13 @@ export function DiscoverEventCard({ event, rowOnPhone = false, priority = false 
             <span
               aria-hidden
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                cue.variant === 'warning' ? 'bg-amber-400' : 'bg-white/70'
+                cue.variant === 'warning' ? 'bg-warning' : 'bg-fg/70'
               }`}
             />
             <span className="truncate">{cue.label}</span>
           </>
         )}
-        {cue && friendsGoing > 0 && <span className="text-white/30">·</span>}
+        {cue && friendsGoing > 0 && <span className="text-fg-faint">·</span>}
         {friendsGoing > 0 && (
           <span className="inline-flex shrink-0 items-center gap-1">
             <Users aria-hidden className="h-3 w-3" />
@@ -124,9 +124,9 @@ export function DiscoverEventCard({ event, rowOnPhone = false, priority = false 
           onClick={handleBookmarkToggle}
           aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           aria-pressed={isBookmarked}
-          className="pointer-events-auto absolute -right-2 top-full z-20 mt-1 grid h-10 w-10 place-items-center rounded text-white/55 transition-colors hover:text-white active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="pointer-events-auto absolute -right-2 top-full z-20 mt-1 grid h-10 w-10 place-items-center rounded text-fg-muted transition-colors hover:text-fg active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
         >
-          <Bookmark className={`h-[17px] w-[17px] ${isBookmarked ? 'fill-white text-white' : ''}`} />
+          <Bookmark className={`h-[17px] w-[17px] ${isBookmarked ? 'fill-fg text-fg' : ''}`} />
         </button>
       </div>
     </div>
@@ -140,17 +140,17 @@ export function DiscoverEventCard({ event, rowOnPhone = false, priority = false 
         href={`/events/${event.id}`}
         className="flex items-center gap-3.5 py-2.5 transition-opacity active:opacity-70 min-[420px]:hidden"
       >
-        <div className="relative aspect-[4/5] w-[72px] shrink-0 overflow-hidden rounded bg-white/[0.06]">
+        <div className="relative aspect-[4/5] w-[72px] shrink-0 overflow-hidden rounded bg-surface">
           {event.banner_image_url && (
             <PosterImage src={event.banner_image_url} alt={event.title} sizes="72px" frameRatio={4 / 5} />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[17px] italic leading-tight text-white">{event.title}</p>
-          {dateLabel && <p className="mt-1 truncate text-[13px] text-white/60">{dateLabel}</p>}
-          {venue && <p className="mt-0.5 truncate text-[13px] text-white/45">{venue}</p>}
+          <p className="truncate font-display text-lead italic leading-tight text-fg">{event.title}</p>
+          {dateLabel && <p className="mt-1 truncate text-meta text-fg-muted">{dateLabel}</p>}
+          {venue && <p className="mt-0.5 truncate text-meta text-fg-subtle">{venue}</p>}
           {/* Its own line: beside a long venue name it was the part cut off. */}
-          {priceLabel && <p className="mt-1 text-[13px] font-medium text-white/85">{priceLabel}</p>}
+          {priceLabel && <p className="mt-1 text-meta font-medium text-fg-soft">{priceLabel}</p>}
         </div>
       </Link>
       {card}

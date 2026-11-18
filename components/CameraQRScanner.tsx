@@ -329,9 +329,9 @@ export function CameraQRScanner({
 
   if (hasPermission === false) {
     return (
-      <div className={`rounded-lg border-2 border-dashed border-red-300 p-8 text-center ${className}`}>
+      <div className={`rounded-lg border-2 border-dashed border-danger-soft p-8 text-center ${className}`}>
         <svg
-          className="mx-auto h-12 w-12 text-red-400"
+          className="mx-auto h-12 w-12 text-danger"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -343,16 +343,16 @@ export function CameraQRScanner({
             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-red-300">Camera Access Denied</h3>
-        <p className="mt-1 text-sm text-red-600">
+        <h3 className="mt-2 text-sm font-medium text-danger-soft">Camera Access Denied</h3>
+        <p className="mt-1 text-sm text-danger-strong">
           {error || 'Please allow camera access to scan QR codes'}
         </p>
         {debugInfo && (
-          <p className="mt-2 text-xs text-red-500 font-mono">{debugInfo}</p>
+          <p className="mt-2 text-xs text-danger-strong font-mono">{debugInfo}</p>
         )}
         <button
           onClick={startCamera}
-          className="mt-4 inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+          className="mt-4 inline-flex items-center rounded-md bg-danger-strong px-4 py-2 text-sm font-semibold text-fg shadow-sm hover:bg-danger-strong"
         >
           Try Again
         </button>
@@ -363,7 +363,7 @@ export function CameraQRScanner({
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ aspectRatio: '1/1', width: '100%', maxWidth: '500px', margin: '0 auto' }}>
+    <div className={`relative rounded-lg overflow-hidden bg-surface-solid ${className}`} style={{ aspectRatio: '1/1', width: '100%', maxWidth: '500px', margin: '0 auto' }}>
       {/* Video element - hidden, used for stream */}
       <video
         ref={videoRef}
@@ -382,7 +382,7 @@ export function CameraQRScanner({
 
       {/* iOS Start Button Overlay */}
       {isIOS && hasPermission === null && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center bg-surface-solid/95 backdrop-blur-sm">
           <div className="text-center p-8">
             <svg
               className="mx-auto h-16 w-16 text-brand-400"
@@ -403,8 +403,8 @@ export function CameraQRScanner({
                 d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            <h3 className="mt-4 text-lg font-semibold text-white">Start Camera</h3>
-            <p className="mt-2 text-sm text-white/40">
+            <h3 className="mt-4 text-lg font-semibold text-fg">Start Camera</h3>
+            <p className="mt-2 text-sm text-fg-subtle">
               Tap the button below to enable camera scanning
             </p>
             {debugInfo && (
@@ -412,7 +412,7 @@ export function CameraQRScanner({
             )}
             <button
               onClick={startCamera}
-              className="mt-6 inline-flex items-center rounded-lg bg-brand-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:bg-brand-700"
+              className="mt-6 inline-flex items-center rounded-lg bg-brand-600 px-8 py-4 text-lg font-semibold text-fg shadow-lg hover:bg-brand-700"
             >
               📷 Start Camera
             </button>
@@ -422,8 +422,8 @@ export function CameraQRScanner({
 
       {/* Loading overlay - hide on iOS when button is showing */}
       {!isIOS && hasPermission === null && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="text-center text-white">
+        <div className="absolute inset-0 flex items-center justify-center bg-scrim-strong backdrop-blur-sm">
+          <div className="text-center text-fg">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-white"></div>
             <p className="mt-4 text-sm">Requesting camera access...</p>
             {debugInfo && (
@@ -436,17 +436,17 @@ export function CameraQRScanner({
       {/* Scanning indicator */}
       {isScanning && (
         <>
-          <div className="absolute top-4 right-4 flex items-center gap-2 rounded bg-green-500 px-3 py-1 text-sm font-medium text-white shadow-lg">
+          <div className="absolute top-4 right-4 flex items-center gap-2 rounded bg-success-strong px-3 py-1 text-sm font-medium text-fg shadow-lg">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white/[0.03]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-inverse opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-surface-low"></span>
             </span>
             Scanning...
           </div>
           
           {/* Scanning frame indicator */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute inset-8 border-4 border-white/30 rounded-lg">
+            <div className="absolute inset-8 border-4 border-fg/30 rounded-lg">
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"></div>
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
@@ -459,14 +459,14 @@ export function CameraQRScanner({
       {/* Instructions overlay */}
       {isScanning && (
         <div className="absolute bottom-4 left-4 right-4 space-y-2">
-          <div className="rounded-lg bg-black/70 p-3 text-center backdrop-blur-sm">
-            <p className="text-sm font-medium text-white">
+          <div className="rounded-lg bg-scrim p-3 text-center backdrop-blur-sm">
+            <p className="text-sm font-medium text-fg">
               Point camera at QR code to scan
             </p>
           </div>
           {debugInfo && (
             <div className="rounded-lg bg-brand-600/80 px-3 py-2 text-center backdrop-blur-sm">
-              <p className="text-xs font-mono text-white">
+              <p className="text-xs font-mono text-fg">
                 {debugInfo} | Frames: {frameCount}
               </p>
             </div>
@@ -475,7 +475,7 @@ export function CameraQRScanner({
           {consoleLog.length > 0 && (
             <div className="rounded-lg bg-brand-700/90 px-2 py-2 backdrop-blur-sm">
               {consoleLog.map((log, i) => (
-                <p key={i} className="text-xs font-mono text-white">
+                <p key={i} className="text-xs font-mono text-fg">
                   {log}
                 </p>
               ))}

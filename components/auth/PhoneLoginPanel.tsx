@@ -133,11 +133,11 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
 
   const secondsLeft = Math.max(0, Math.ceil((resendAt - now) / 1000))
   const field =
-    'block w-full px-4 py-3 text-base rounded-lg bg-white/[0.06] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50'
+    'block w-full px-4 py-3 text-base rounded-lg bg-surface text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50'
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-danger-soft">{error}</p>}
       {step === 'phone' ? (
         <form
           className="space-y-4"
@@ -151,7 +151,7 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
               aria-label={t('phone.countryPickerTitle')}
               value={iso}
               onChange={(e) => setIso(e.target.value)}
-              className="rounded-lg bg-white/[0.10] text-white px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-400/50"
+              className="rounded-lg bg-surface-raised text-fg px-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-400/50"
             >
               {COUNTRIES.map((c) => (
                 <option key={c.iso} value={c.iso}>
@@ -170,11 +170,11 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
               className={field}
             />
           </div>
-          <p className="text-[13px] text-white/55">{t('phone.hint')}</p>
+          <p className="text-meta text-fg-muted">{t('phone.hint')}</p>
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-3.5 px-4 rounded bg-white text-black text-base font-semibold disabled:opacity-50"
+            className="w-full py-3.5 px-4 rounded bg-inverse text-on-inverse text-base font-semibold disabled:opacity-50"
           >
             {t('phone.continueWithWhatsApp')}
           </button>
@@ -182,8 +182,8 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
       ) : (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">{t('phone.codeTitle')}</h3>
-            <p className="text-sm text-white/60">{t('phone.codeSentTo', { phone })}</p>
+            <h3 className="text-lg font-semibold text-fg">{t('phone.codeTitle')}</h3>
+            <p className="text-sm text-fg-muted">{t('phone.codeSentTo', { phone })}</p>
           </div>
           <input
             ref={codeRef}
@@ -201,15 +201,15 @@ export function PhoneLoginPanel({ redirectTo }: { redirectTo: string }) {
             }}
             className={`${field} text-center tracking-[0.5em] text-2xl font-semibold`}
           />
-          {busy && <p className="text-sm text-white/55">{t('phone.verifying')}</p>}
+          {busy && <p className="text-sm text-fg-muted">{t('phone.verifying')}</p>}
           <div className="flex items-center justify-between text-sm">
-            <button type="button" className="text-white/60 hover:text-white" onClick={() => setStep('phone')} disabled={busy}>
+            <button type="button" className="text-fg-muted hover:text-fg" onClick={() => setStep('phone')} disabled={busy}>
               {t('phone.changeNumber')}
             </button>
             {secondsLeft > 0 ? (
-              <span className="text-white/45">{t('phone.resendIn', { seconds: secondsLeft })}</span>
+              <span className="text-fg-subtle">{t('phone.resendIn', { seconds: secondsLeft })}</span>
             ) : (
-              <button type="button" className="font-semibold text-white" onClick={() => send(phone)} disabled={busy}>
+              <button type="button" className="font-semibold text-fg" onClick={() => send(phone)} disabled={busy}>
                 {t('phone.resend')}
               </button>
             )}

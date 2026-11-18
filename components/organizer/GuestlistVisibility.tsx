@@ -65,7 +65,7 @@ export function FacePile({
       {shown.map((f, i) => (
         <span
           key={f.id}
-          className="grid place-items-center overflow-hidden rounded-full bg-white/[0.12] font-semibold text-white ring-2 ring-[#0f0f0f]"
+          className="grid place-items-center overflow-hidden rounded-full bg-surface-high font-semibold text-fg ring-2 ring-canvas"
           style={{
             width: size,
             height: size,
@@ -201,15 +201,15 @@ export default function GuestlistVisibilityPicker({
     <div
       role="group"
       aria-label={t('composer.guestVis.legend', { defaultValue: 'Who can see the guest list' })}
-      className="flex items-center gap-3 rounded-xl bg-white/[0.055] p-3"
+      className="flex items-center gap-3 rounded-xl bg-surface p-3"
     >
       {value !== 'count' && <FacePile faces={sample} size={40} dim={dimmed} />}
 
       {/* No truncate: at 402px the row can get narrow enough that clipping
           would eat the count, and a wrapped sentence is still readable. */}
       <span className="min-w-0 flex-1" aria-live="polite">
-        <span className="block text-[15px] font-semibold leading-tight text-white">{sentence(value)}</span>
-        <span className="mt-1 block text-[11px] leading-snug text-white/45">{hint(value)}</span>
+        <span className="block text-body font-semibold leading-tight text-fg">{sentence(value)}</span>
+        <span className="mt-1 block text-eyebrow leading-snug text-fg-subtle">{hint(value)}</span>
       </span>
 
       <button
@@ -235,14 +235,14 @@ export default function GuestlistVisibilityPicker({
         // locale, rather than by a magic number I would have to keep correct
         // in three languages. Same technique as <StableWidth> in
         // components/ui/DateTimePickers, for the same reason.
-        className={`flex h-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl px-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#141414] ${
+        className={`flex h-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl px-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-solid ${
           dimmed
-            ? 'bg-white/[0.06] text-white/45 hover:bg-white/[0.12] hover:text-white/70'
-            : 'bg-white/[0.11] text-white hover:bg-white/[0.18]'
+            ? 'bg-surface text-fg-subtle hover:bg-surface-high hover:text-fg-muted'
+            : 'bg-surface-high text-fg hover:bg-fg/18'
         }`}
       >
         <Icon className="h-[17px] w-[17px]" aria-hidden />
-        <span className="label-mono grid text-[9px] uppercase leading-none tracking-wide">
+        <span className="label-mono grid text-eyebrow uppercase leading-none tracking-wide">
           {GUESTLIST_VISIBILITIES.map((v) => (
             <span
               key={v}

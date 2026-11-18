@@ -1,9 +1,9 @@
 /**
  * Favorites loading skeleton.
  *
- * The old one drew eight `h-24 bg-white/[0.03] border border-white/10` list
+ * The old one drew eight `h-24 bg-surface-low border border-line` list
  * rows. Two things wrong with that: /favorites renders a POSTER GRID, and
- * `bg-white/[0.03]` on a `#0a0a0a` page paints nothing — the skeleton was
+ * `bg-surface-low` on a `#0a0a0a` page paints nothing — the skeleton was
  * eight invisible outlines. Its navbar was also `py-3` (56px at every width)
  * against a real `h-14 sm:h-16`, so the page lifted 8px from sm up.
  *
@@ -26,9 +26,9 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       {/* Navbar — h-14 / sm:h-16, with this page's bottom rule. */}
-      <div className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b border-line bg-canvas/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-24" />
           <Bar className="h-8 w-20 rounded" />

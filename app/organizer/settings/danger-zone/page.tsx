@@ -11,17 +11,17 @@ export default async function DangerZoneSettingsPage() {
   const user = ctx.user;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <SettingsPageChrome titleKey="danger_zone_title" subtitleKey="danger_zone_subtitle" />
 
         {/* Warning Banner */}
-        <div className="bg-red-500/10 rounded-2xl p-4 mb-6">
+        <div className="bg-danger-strong/10 rounded-2xl p-4 mb-6">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-danger-soft flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-red-300 mb-1"><T k="server_bits.proceed_with_caution" /></h3>
-              <p className="text-sm text-red-200/80"><T k="server_bits.danger_intro" /></p>
+              <h3 className="font-semibold text-danger-soft mb-1"><T k="server_bits.proceed_with_caution" /></h3>
+              <p className="text-sm text-danger-soft/80"><T k="server_bits.danger_intro" /></p>
             </div>
           </div>
         </div>

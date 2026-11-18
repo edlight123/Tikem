@@ -190,7 +190,7 @@ export function AdminCommandBar({}: AdminCommandBarProps) {
               className="relative flex items-center gap-2 px-3 py-2 text-console-amber rounded hover:bg-console-panel transition-colors"
             >
               <Bell className="w-4 h-4" />
-              <span className="label-mono absolute -top-1 -right-1 w-5 h-5 bg-console-red text-console-ground text-[10px] font-bold rounded-full flex items-center justify-center tabular-nums">
+              <span className="label-mono absolute -top-1 -right-1 w-5 h-5 bg-console-red text-console-ground text-eyebrow font-bold rounded-full flex items-center justify-center tabular-nums">
                 {pendingTotal > 9 ? '9+' : pendingTotal}
               </span>
             </Link>

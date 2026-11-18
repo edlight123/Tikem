@@ -156,10 +156,10 @@ export default function GuestEditorSheet({
    * width sum below was done at the size that actually ships.
    * ------------------------------------------------------------------------ */
   const fieldBase =
-    'min-h-11 w-full min-w-0 rounded-xl bg-white/[0.055] py-3 text-[16px] text-white [color-scheme:dark] placeholder:text-white/40 transition-colors focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50'
+    'min-h-11 w-full min-w-0 rounded-xl bg-surface py-3 text-base text-fg [color-scheme:dark] placeholder:text-fg-subtle transition-colors focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50'
   const field = `${fieldBase} px-4`
 
-  const label = 'label-mono mb-1.5 block text-[10px] uppercase text-white/70'
+  const label = 'label-mono mb-1.5 block text-eyebrow uppercase text-fg-muted'
 
   /**
    * Chips: filled, not outlined; `rounded`, not a full pill. ~34px of
@@ -167,8 +167,8 @@ export default function GuestEditorSheet({
    * the layout — the composer's own chip geometry.
    */
   const chip = (on: boolean) =>
-    `-my-1 inline-flex min-w-0 items-center rounded px-3 py-2 text-[13px] font-medium transition-colors ${
-      on ? 'bg-white text-black' : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+    `-my-1 inline-flex min-w-0 items-center rounded px-3 py-2 text-meta font-medium transition-colors ${
+      on ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
     }`
 
   return (
@@ -177,7 +177,7 @@ export default function GuestEditorSheet({
         type="button"
         onClick={onCancel}
         aria-label={t('common.close', { defaultValue: 'Close' })}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
       />
       <div
         ref={sheetRef}
@@ -188,10 +188,10 @@ export default function GuestEditorSheet({
             ? t('composer.guest.addTitle', { defaultValue: 'Add to lineup' })
             : t('composer.guest.editTitle', { defaultValue: 'Edit lineup entry' })
         }
-        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[#1c1c1c] shadow-2xl sm:rounded-3xl"
+        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface-raised-solid shadow-2xl sm:rounded-3xl"
       >
-        <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
-          <h2 className="min-w-0 truncate text-[15px] font-semibold text-white">
+        <div className="flex items-center justify-between border-b border-line-soft px-5 py-4">
+          <h2 className="min-w-0 truncate text-body font-semibold text-fg">
             {isNew
               ? t('composer.guest.addTitle', { defaultValue: 'Add to lineup' })
               : t('composer.guest.editTitle', { defaultValue: 'Edit lineup entry' })}
@@ -199,7 +199,7 @@ export default function GuestEditorSheet({
           <button
             type="button"
             onClick={onCancel}
-            className="-my-1 shrink-0 rounded-lg p-2 text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="-my-1 shrink-0 rounded-lg p-2 text-fg-subtle transition-colors hover:bg-surface hover:text-fg"
             aria-label={t('common.close', { defaultValue: 'Close' })}
           >
             <X className="h-4 w-4" />
@@ -213,7 +213,7 @@ export default function GuestEditorSheet({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="group relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12] disabled:opacity-60"
+              className="group relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full bg-surface transition-colors hover:bg-surface-high disabled:opacity-60"
               aria-label={t('composer.guest.photo', { defaultValue: 'Add a photo' })}
             >
               {draft.photoUrl ? (
@@ -221,14 +221,14 @@ export default function GuestEditorSheet({
                 <img src={draft.photoUrl} alt="" className="h-full w-full object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center">
-                  <User className="h-7 w-7 text-white/35" />
+                  <User className="h-7 w-7 text-fg-faint" />
                 </span>
               )}
-              <span className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="absolute inset-0 flex items-center justify-center bg-scrim-light opacity-0 transition-opacity group-hover:opacity-100">
                 {uploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  <Loader2 className="h-5 w-5 animate-spin text-fg" />
                 ) : (
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-white">
+                  <span className="text-eyebrow font-semibold uppercase tracking-wide text-fg">
                     {draft.photoUrl
                       ? t('composer.guest.change', { defaultValue: 'Change' })
                       : t('composer.guest.add', { defaultValue: 'Add' })}
@@ -236,8 +236,8 @@ export default function GuestEditorSheet({
                 )}
               </span>
               {uploading && !draft.photoUrl && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/55">
-                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                <span className="absolute inset-0 flex items-center justify-center bg-scrim-light">
+                  <Loader2 className="h-5 w-5 animate-spin text-fg" />
                 </span>
               )}
             </button>
@@ -256,8 +256,8 @@ export default function GuestEditorSheet({
                   width — measured 175px at 16px — which on a 320px phone is
                   50px more than this row can give it. Without min-w-0 it
                   refuses to shrink and pushes out of the sheet. */}
-              <div className="flex min-h-11 items-center gap-2.5 rounded-xl bg-white/[0.055] px-3.5 transition-colors focus-within:bg-white/[0.08]">
-                <Link2 className="h-[18px] w-[18px] shrink-0 text-white/40" aria-hidden />
+              <div className="flex min-h-11 items-center gap-2.5 rounded-xl bg-surface px-3.5 transition-colors focus-within:bg-surface-raised">
+                <Link2 className="h-[18px] w-[18px] shrink-0 text-fg-subtle" aria-hidden />
                 <input
                   value={draft.link}
                   onChange={(e) => onPatch({ link: e.target.value })}
@@ -266,7 +266,7 @@ export default function GuestEditorSheet({
                     defaultValue: 'Instagram, Spotify, website…',
                   })}
                   aria-label={t('composer.guest.link', { defaultValue: 'Link' })}
-                  className="w-full min-w-0 bg-transparent py-3 text-[16px] text-white placeholder:text-white/40 focus:outline-none"
+                  className="w-full min-w-0 bg-transparent py-3 text-base text-fg placeholder:text-fg-subtle focus:outline-none"
                 />
               </div>
             </div>
@@ -275,7 +275,7 @@ export default function GuestEditorSheet({
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif" onChange={handlePhoto} className="hidden" />
 
           {uploadError && (
-            <p className="rounded-xl bg-red-500/10 px-3.5 py-2.5 text-[13px] text-red-300">{uploadError}</p>
+            <p className="rounded-xl bg-danger-strong/10 px-3.5 py-2.5 text-meta text-danger-soft">{uploadError}</p>
           )}
 
           <div>
@@ -344,7 +344,7 @@ export default function GuestEditorSheet({
               can outgrow its box; the rows below wrap at both levels, so the
               layout has no width it can fail at. Same control, same surface,
               same geometry as the Dates card upstairs in the composer. */}
-          <div className="overflow-hidden rounded-xl bg-white/[0.03]">
+          <div className="overflow-hidden rounded-xl bg-surface-low">
             {(
               [
                 ['start', t('composer.guest.startTime', { defaultValue: 'Start time' }), draft.startTime],
@@ -356,10 +356,10 @@ export default function GuestEditorSheet({
                 role="group"
                 aria-label={text}
                 className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${
-                  i > 0 ? 'border-t border-white/[0.06]' : ''
+                  i > 0 ? 'border-t border-line-soft' : ''
                 }`}
               >
-                <span className="min-w-0 text-[15px] font-medium text-white/80">{text}</span>
+                <span className="min-w-0 text-body font-medium text-fg-soft">{text}</span>
                 <div className="flex flex-wrap items-center gap-2">
                   {/* A set time is optional, and the native input it replaced
                       could be emptied — so keep a way back to no time. */}
@@ -367,7 +367,7 @@ export default function GuestEditorSheet({
                     <button
                       type="button"
                       onClick={() => onPatch(which === 'start' ? { startTime: '' } : { endTime: '' })}
-                      className="-my-1 rounded-lg px-2 py-2 text-[13px] text-white/45 transition-colors hover:text-white"
+                      className="-my-1 rounded-lg px-2 py-2 text-meta text-fg-subtle transition-colors hover:text-fg"
                     >
                       {t('common.clear', { defaultValue: 'Clear' })}
                     </button>
@@ -384,11 +384,11 @@ export default function GuestEditorSheet({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 border-t border-white/[0.07] px-5 py-4">
+        <div className="flex items-center gap-3 border-t border-line-soft px-5 py-4">
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 min-w-0 flex-1 rounded bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+            className="min-h-11 min-w-0 flex-1 rounded bg-surface-raised px-4 py-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
           >
             {t('common.cancel', { defaultValue: 'Cancel' })}
           </button>
@@ -396,7 +396,7 @@ export default function GuestEditorSheet({
             type="button"
             onClick={onSave}
             disabled={!draft.name.trim() || uploading}
-            className="min-h-11 min-w-0 flex-1 rounded bg-white px-4 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 min-w-0 flex-1 rounded bg-inverse px-4 py-3 text-sm font-semibold text-on-inverse transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t('common.save', { defaultValue: 'Save' })}
           </button>

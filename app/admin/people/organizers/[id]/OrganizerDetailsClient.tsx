@@ -183,7 +183,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
       {/* Header — mono caps, the console's own voice; state badges beneath. */}
       <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+          <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
             {user.full_name || 'No name'}
           </h1>
           <p className="mt-1 text-sm text-console-mut">{user.email}</p>

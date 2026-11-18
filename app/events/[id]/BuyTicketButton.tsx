@@ -1113,7 +1113,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     <>
       {isMonCashPopupOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-scrim-light backdrop-blur-sm"
           aria-hidden="true"
         />
       )}
@@ -1172,8 +1172,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           title={t('events.enter_access_code', { defaultValue: 'Enter access code' })}
         >
           <form onSubmit={handleVerifyCode} className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
+            <div className="flex items-center gap-2 text-sm text-fg-muted">
+              <Lock className="h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
               <span>
                 {t('events.password_protected_hint', {
                   defaultValue: 'This event is password protected. Enter the code to continue.',
@@ -1188,11 +1188,11 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               onChange={(e) => setCodeInput(e.target.value)}
               placeholder={t('events.access_code_placeholder', { defaultValue: 'Access code' })}
               disabled={verifyingCode}
-              className="w-full rounded-xl bg-white/[0.055] px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-400/50 disabled:opacity-50"
+              className="w-full rounded-xl bg-surface px-4 py-3 text-fg placeholder-fg-subtle focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-400/50 disabled:opacity-50"
             />
 
             {codeError && (
-              <div className="bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">
+              <div className="bg-danger-strong/10 text-danger-soft px-4 py-3 rounded-xl text-sm">
                 {codeError}
               </div>
             )}
@@ -1200,7 +1200,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <button
               type="submit"
               disabled={verifyingCode || !codeInput.trim()}
-              className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
+              className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse text-center text-body font-semibold py-3 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
             >
               {verifyingCode
                 ? t('events.processing')
@@ -1215,7 +1215,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 pendingActionRef.current = null
               }}
               disabled={verifyingCode}
-              className="w-full h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
+              className="w-full h-12 px-4 rounded bg-surface-raised font-medium text-fg hover:bg-surface-high disabled:opacity-50"
             >
               {t('common.cancel')}
             </button>
@@ -1225,10 +1225,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       {isFree && heldFree > 0 ? (
         // Already going: one free claim per event, so no claim button to press.
         // Dot + label status (no pill badge), a fill not a hairline.
-        <div className="flex min-h-12 items-center justify-between gap-3 rounded bg-white/[0.055] py-2 pl-4 pr-2">
+        <div className="flex min-h-12 items-center justify-between gap-3 rounded bg-surface py-2 pl-4 pr-2">
           <div className="min-w-0">
             <RequestStatusLabel tone="approved" label={t('events.youre_going', { defaultValue: "You're going" })} />
-            <p className="mt-0.5 truncate text-sm text-white/60">
+            <p className="mt-0.5 truncate text-sm text-fg-muted">
               {t(heldFree === 1 ? 'events.held_tickets' : 'events.held_tickets_plural', {
                 count: heldFree,
                 defaultValue: heldFree === 1 ? '{{count}} ticket' : '{{count}} tickets',
@@ -1237,7 +1237,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           </div>
           <Link
             href={`/tickets/event/${encodeURIComponent(eventId)}`}
-            className="shrink-0 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+            className="shrink-0 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover"
           >
             {t('events.view_my_tickets', { defaultValue: 'View tickets' })}
           </Link>
@@ -1247,7 +1247,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           <button
             onClick={() => setShowFreeStep(true)}
             disabled={loading}
-            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
+            className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse text-center text-body font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
             {loading ? t('events.processing') : t('events.rsvp_cta', { defaultValue: 'RSVP' })}
           </button>
@@ -1259,27 +1259,27 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             >
             <div className="space-y-4">
               {/* Quantity Selector for Free Tickets */}
-              <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
-                <span className="text-sm font-medium text-white/70">{t('events.quantity')}</span>
+              <div className="flex items-center justify-between bg-surface rounded-xl p-4">
+                <span className="text-sm font-medium text-fg-muted">{t('events.quantity')}</span>
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1 || loading}
                     aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded bg-surface-raised flex items-center justify-center hover:bg-surface-high disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     </svg>
                   </button>
-                  <span className="w-12 text-center font-semibold text-white">{quantity}</span>
+                  <span className="w-12 text-center font-semibold text-fg">{quantity}</span>
                   <button
                     onClick={() => setQuantity(Math.min(MAX_FREE_TICKETS_PER_PERSON, quantity + 1))}
                     disabled={quantity >= MAX_FREE_TICKETS_PER_PERSON || loading}
                     aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded bg-surface-raised flex items-center justify-center hover:bg-surface-high disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
@@ -1287,8 +1287,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               </div>
 
               {plusOneSlots > 0 && (
-                <div className="space-y-2 rounded bg-white/[0.03] p-4">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/50">
+                <div className="space-y-2 rounded bg-surface-low p-4">
+                  <p className="text-eyebrow font-bold uppercase tracking-[0.12em] text-fg-subtle">
                     {t('attend_requests.claim.plus_one_title')}
                   </p>
                   {Array.from({ length: plusOneSlots }).map((_, i) => (
@@ -1306,7 +1306,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                             return next
                           })
                         }
-                        className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
+                        className="w-full rounded bg-surface px-3 py-2.5 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
                       />
                       <input
                         value={plusOneNames[i]?.phone || ''}
@@ -1322,17 +1322,17 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                             return next
                           })
                         }
-                        className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
+                        className="w-full rounded bg-surface px-3 py-2.5 text-base text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
                       />
                     </div>
                   ))}
-                  <p className="text-xs text-white/45">{t('attend_requests.claim.plus_one_hint')}</p>
+                  <p className="text-xs text-fg-subtle">{t('attend_requests.claim.plus_one_hint')}</p>
                 </div>
               )}
 
               {isPasswordProtected && hasAccess !== true && (
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
+                <div className="flex items-center gap-2 text-sm text-fg-muted">
+                  <Lock className="h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
                   <span>{t('events.password_required', { defaultValue: 'Password required' })}</span>
                 </div>
               )}
@@ -1343,7 +1343,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   gateOrRun('free')
                 }}
                 disabled={loading}
-                className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
+                className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse text-center text-body font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
               >
                 {loading ? t('events.processing') : `${t('events.claim')} ${quantity} ${t('events.free_ticket')}${quantity !== 1 ? 's' : ''}`}
               </button>
@@ -1354,8 +1354,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       ) : (
         <>
           {isPasswordProtected && hasAccess !== true && (
-            <div className="mb-3 flex items-center gap-2 text-sm text-white/70">
-              <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
+            <div className="mb-3 flex items-center gap-2 text-sm text-fg-muted">
+              <Lock className="h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
               <span>{t('events.password_required', { defaultValue: 'Password required' })}</span>
             </div>
           )}
@@ -1363,7 +1363,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           <button
             onClick={() => gateOrRun('paid')}
             disabled={loading || tierProbeLoading}
-            className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
+            className="block w-full bg-inverse hover:bg-inverse-hover text-on-inverse text-center text-body font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
             {loading || tierProbeLoading ? t('events.processing') : t('events.buy_ticket')}
           </button>
@@ -1392,7 +1392,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       )}
 
       {error && !showModal && (
-        <div className="mt-3 bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">
+        <div className="mt-3 bg-danger-strong/10 text-danger-soft px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
@@ -1404,33 +1404,33 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           title={t('events.choose_payment_method')}
         >
           <div className="space-y-4">
-            <p className="text-white/70">
+            <p className="text-fg-muted">
               {quantity === 1 ? t('events.select_payment_description', { count: quantity }) : t('events.select_payment_description_plural', { count: quantity })}
             </p>
 
             {/* Quantity Selector - Only show for single tier purchases */}
             {selectedTiers.length === 0 && (
-              <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
-                <span className="text-sm font-medium text-white/70">{t('events.quantity')}</span>
+              <div className="flex items-center justify-between bg-surface rounded-xl p-4">
+                <span className="text-sm font-medium text-fg-muted">{t('events.quantity')}</span>
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1 || loading}
                     aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded bg-surface-raised flex items-center justify-center hover:bg-surface-high disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     </svg>
                   </button>
-                  <span className="w-12 text-center font-semibold text-white">{quantity}</span>
+                  <span className="w-12 text-center font-semibold text-fg">{quantity}</span>
                   <button
                     onClick={() => setQuantity(Math.min(10, quantity + 1))}
                     disabled={quantity >= 10 || loading}
                     aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 rounded bg-surface-raised flex items-center justify-center hover:bg-surface-high disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
@@ -1438,37 +1438,37 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               </div>
             )}
 
-            <div className="rounded-xl bg-white/[0.055] p-4">
+            <div className="rounded-xl bg-surface p-4">
               {selectedTiers.length > 0 ? (
                 // Show itemized breakdown for multi-tier purchases
                 <div className="space-y-2">
                   {selectedTiers.map((tier, index) => (
                     <div key={index} className="flex justify-between items-center text-sm">
-                      <span className="text-white/65">
+                      <span className="text-fg-muted">
                         {tier.quantity}x {tier.tierName || t('ticket.ticket')}
                       </span>
-                      <span className="font-medium text-white">
+                      <span className="font-medium text-fg">
                         {(tier.price * tier.quantity).toLocaleString()} {currency}
                       </span>
                     </div>
                   ))}
                   {orderPricing.discount > 0 && (
-                    <div className="flex justify-between items-center text-sm text-green-400">
+                    <div className="flex justify-between items-center text-sm text-success">
                       <span>{t('events.promo_discount')}</span>
                       <span className="font-medium">-{formatAmount(orderPricing.discount)}</span>
                     </div>
                   )}
                   {showFeeLine && (
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/65">
+                      <span className="text-fg-muted">
                         {t('checkout.service_fee', { defaultValue: 'Service fee' })}
                       </span>
-                      <span className="font-medium text-white">{formatAmount(orderPricing.buyerFee)}</span>
+                      <span className="font-medium text-fg">{formatAmount(orderPricing.buyerFee)}</span>
                     </div>
                   )}
-                  <div className="border-t border-white/10 pt-2 mt-2">
+                  <div className="border-t border-line pt-2 mt-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-white/65">{t('events.total_amount')}:</span>
+                      <span className="text-sm font-medium text-fg-muted">{t('events.total_amount')}:</span>
                       <span className="text-xl font-bold text-brand-300">
                         {formatAmount(orderPricing.total)}
                       </span>
@@ -1481,21 +1481,21 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   {showFeeLine && (
                     <>
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-white/65">
+                        <span className="text-fg-muted">
                           {t('events.subtotal', { defaultValue: 'Subtotal' })}
                         </span>
-                        <span className="font-medium text-white">{formatAmount(orderPricing.faceValue)}</span>
+                        <span className="font-medium text-fg">{formatAmount(orderPricing.faceValue)}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-white/65">
+                        <span className="text-fg-muted">
                           {t('checkout.service_fee', { defaultValue: 'Service fee' })}
                         </span>
-                        <span className="font-medium text-white">{formatAmount(orderPricing.buyerFee)}</span>
+                        <span className="font-medium text-fg">{formatAmount(orderPricing.buyerFee)}</span>
                       </div>
                     </>
                   )}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-white/65">{t('events.total_amount')}:</span>
+                    <span className="text-sm text-fg-muted">{t('events.total_amount')}:</span>
                     <span className="text-xl font-bold text-brand-300">
                       {formatAmount(orderPricing.total)}
                     </span>
@@ -1504,7 +1504,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               )}
 
               {showFeeLine && (
-                <p className="mt-2 text-xs text-white/45">
+                <p className="mt-2 text-xs text-fg-subtle">
                   {t('checkout.total_includes_fees', {
                     defaultValue: 'Total includes all fees. This is what you pay.',
                   })}{' '}
@@ -1515,7 +1515,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               )}
 
               {isHaitiEvent && String(currency || 'HTG').toUpperCase() === 'USD' && (
-                <div className="mt-3 text-sm text-white/65">
+                <div className="mt-3 text-sm text-fg-muted">
                   {usdHtgQuoteLoading && (
                     <span>
                       {t('checkout.estimating_moncash_total', {
@@ -1527,10 +1527,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     <div className="space-y-1">
                       <div>
                         {t('checkout.estimated_moncash_charge', { defaultValue: 'Estimated MonCash charge:' })}{' '}
-                        <span className="font-semibold text-white">{usdHtgQuote.amountHtg.toLocaleString()} HTG</span>
+                        <span className="font-semibold text-fg">{usdHtgQuote.amountHtg.toLocaleString()} HTG</span>
                       </div>
                       {usdHtgQuote.baseRate != null && usdHtgQuote.spreadPercent != null && (
-                        <div className="text-xs text-white/70">
+                        <div className="text-xs text-fg-muted">
                           {t('checkout.moncash_rate_detail', {
                             rate: usdHtgQuote.baseRate.toFixed(2),
                             spread: (usdHtgQuote.spreadPercent * 100).toFixed(0),
@@ -1541,7 +1541,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     </div>
                   )}
                   {!usdHtgQuoteLoading && usdHtgQuoteError && (
-                    <span className="text-red-300">
+                    <span className="text-danger-soft">
                       {t('checkout.moncash_estimate_unavailable', {
                         defaultValue: 'Unable to estimate HTG total right now.',
                       })}
@@ -1551,14 +1551,14 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               )}
 
               {promoCode && (
-                <div className="mt-2 flex items-center gap-1.5 text-sm text-green-400">
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-success">
                   <Check className="h-4 w-4" aria-hidden="true" /> {t('events.promo_code_applied')}
                 </div>
               )}
             </div>
 
             {error && (
-              <div className="bg-red-500/10 text-red-200 px-4 py-3 rounded-xl text-sm">
+              <div className="bg-danger-strong/10 text-danger-soft px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
@@ -1570,26 +1570,26 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               <button
                 onClick={() => handlePurchase(isHaitiEvent ? 'sogepay' : 'stripe')}
                 disabled={loading}
-                className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-white/[0.055] hover:bg-white/[0.12] transition disabled:opacity-50"
+                className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-surface hover:bg-surface-high transition disabled:opacity-50"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-surface-raised rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-fg" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
                     </svg>
                   </div>
                   <div className="text-left">
-                    <div className="font-semibold text-white">{t('events.credit_debit_card')}</div>
-                    <div className="text-sm text-white/70">{isHaitiEvent ? 'Sogepay' : t('events.visa_mastercard_amex')}</div>
+                    <div className="font-semibold text-fg">{t('events.credit_debit_card')}</div>
+                    <div className="text-sm text-fg-muted">{isHaitiEvent ? 'Sogepay' : t('events.visa_mastercard_amex')}</div>
                   </div>
                 </div>
                 {pendingMethod === (isHaitiEvent ? 'sogepay' : 'stripe') ? (
-                  <svg className="w-5 h-5 text-white/70 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <svg className="w-5 h-5 text-fg-muted animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-fg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 )}
@@ -1602,26 +1602,26 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   <button
                     onClick={() => handlePurchase('moncash')}
                     disabled={loading}
-                    className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-white/[0.055] hover:bg-white/[0.12] transition disabled:opacity-50"
+                    className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-surface hover:bg-surface-high transition disabled:opacity-50"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 bg-surface-raised rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-fg" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
                         </svg>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold text-white">MonCash</div>
-                        <div className="text-sm text-white/70">{t('events.mobile_money_haiti')}</div>
+                        <div className="font-semibold text-fg">MonCash</div>
+                        <div className="text-sm text-fg-muted">{t('events.mobile_money_haiti')}</div>
                       </div>
                     </div>
                     {pendingMethod === 'moncash' ? (
-                      <svg className="w-5 h-5 text-white/70 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <svg className="w-5 h-5 text-fg-muted animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-fg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     )}
@@ -1631,26 +1631,26 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   <button
                     onClick={() => handlePurchase('natcash')}
                     disabled={loading}
-                    className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-white/[0.055] hover:bg-white/[0.12] transition disabled:opacity-50"
+                    className="w-full flex items-center justify-between px-4 py-4 rounded-2xl bg-surface hover:bg-surface-high transition disabled:opacity-50"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 bg-surface-raised rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-fg" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v12h10V6H7zm2 10h6v2H9v-2zm0-4h6v2H9v-2z" />
                         </svg>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold text-white">NatCash</div>
-                        <div className="text-sm text-white/70">{t('events.mobile_money_haiti')}</div>
+                        <div className="font-semibold text-fg">NatCash</div>
+                        <div className="text-sm text-fg-muted">{t('events.mobile_money_haiti')}</div>
                       </div>
                     </div>
                     {pendingMethod === 'natcash' ? (
-                      <svg className="w-5 h-5 text-white/70 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <svg className="w-5 h-5 text-fg-muted animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-fg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     )}
@@ -1663,7 +1663,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <button
               onClick={() => setShowModal(false)}
               disabled={loading}
-              className="w-full h-12 px-4 rounded bg-white/[0.07] font-medium text-white hover:bg-white/[0.12] disabled:opacity-50"
+              className="w-full h-12 px-4 rounded bg-surface-raised font-medium text-fg hover:bg-surface-high disabled:opacity-50"
             >
               {loading ? t('events.processing') : t('common.cancel')}
             </button>

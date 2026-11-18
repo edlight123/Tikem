@@ -236,7 +236,7 @@ export default function SecurityDashboardClient() {
   const getSeverityBadge = (severity: string) => {
     return (
       <span
-        className={`label-mono inline-flex items-center text-[11px] font-semibold uppercase tracking-wide ${
+        className={`label-mono inline-flex items-center text-eyebrow font-semibold uppercase tracking-wide ${
           SEVERITY_COLORS[severity as keyof typeof SEVERITY_COLORS]
         }`}
       >
@@ -252,22 +252,22 @@ export default function SecurityDashboardClient() {
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-8">
         <div>
-          <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Unreviewed</div>
+          <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Unreviewed</div>
           <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{unreviewedCount}</div>
         </div>
         <div>
-          <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Critical</div>
+          <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Critical</div>
           <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{criticalCount}</div>
         </div>
         <div>
-          <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">In View</div>
+          <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">In View</div>
           <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{activities.length}</div>
         </div>
       </div>
 
       {/* Admin Tools */}
       <div>
-        <div className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <div className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Admin Tools
         </div>
         <ConsolePanel className="p-4">
@@ -305,13 +305,13 @@ export default function SecurityDashboardClient() {
 
       {/* Filters */}
       <div>
-        <div className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+        <div className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
           Filters
         </div>
         <ConsolePanel className="p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="label-mono mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-console-faint">
+              <label className="label-mono mb-1.5 block text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                 Review Status
               </label>
               <select
@@ -326,7 +326,7 @@ export default function SecurityDashboardClient() {
             </div>
 
             <div>
-              <label className="label-mono mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-console-faint">
+              <label className="label-mono mb-1.5 block text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                 Severity
               </label>
               <select
@@ -343,7 +343,7 @@ export default function SecurityDashboardClient() {
             </div>
 
             <div>
-              <label className="label-mono mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-console-faint">
+              <label className="label-mono mb-1.5 block text-eyebrow uppercase tracking-[0.18em] text-console-faint">
                 Activity Type
               </label>
               <select

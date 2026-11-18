@@ -133,8 +133,8 @@ export function DiscoverPageContent({
               // target on the page and the one that switches the whole feed.
               // The underline still sits on the text's own baseline, so the
               // bigger box costs nothing visually.
-              className={`relative inline-flex min-h-11 items-end pb-2 text-[15px] font-medium transition-colors sm:min-h-0 ${
-                tab === t.key ? 'text-white' : 'text-white/60 hover:text-white'
+              className={`relative inline-flex min-h-11 items-end pb-2 text-body font-medium transition-colors sm:min-h-0 ${
+                tab === t.key ? 'text-fg' : 'text-fg-muted hover:text-fg'
               }`}
             >
               {t.label}
@@ -143,7 +143,7 @@ export function DiscoverPageContent({
           ))}
         </div>
         {tab === 'forYou' && feed.length > 0 && (
-          <span className="hidden pb-2 text-sm text-white/70 sm:block">
+          <span className="hidden pb-2 text-sm text-fg-muted sm:block">
             {feed.length} event{feed.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -160,21 +160,21 @@ export function DiscoverPageContent({
       {/* Saved */}
       {tab === 'saved' &&
         (!userId ? (
-          <div className="mx-auto max-w-2xl rounded-2xl bg-white/[0.055] py-16 text-center text-white/70">
+          <div className="mx-auto max-w-2xl rounded-2xl bg-surface py-16 text-center text-fg-muted">
             <Link href="/auth/login?redirect=/discover" className="font-semibold text-brand-300 hover:text-brand-200">
               {t('discover.sign_in', 'Sign in')}
             </Link>{' '}
             {t('discover.sign_in_desc', "to see events you've saved.")}
           </div>
         ) : savedEvents === null ? (
-          <div className="mx-auto max-w-2xl py-16 text-center text-white/70">{t('discover.loading_saved', 'Loading saved events…')}</div>
+          <div className="mx-auto max-w-2xl py-16 text-center text-fg-muted">{t('discover.loading_saved', 'Loading saved events…')}</div>
         ) : savedEvents.length > 0 ? (
           renderFeed(savedEvents)
         ) : (
-          <div className="mx-auto max-w-2xl rounded-2xl bg-white/[0.055] py-16 text-center">
-            <Search className="mx-auto mb-3 h-8 w-8 text-white/30" />
-            <p className="text-white/70">{t('discover.no_saved_title', 'No saved events yet')}</p>
-            <p className="mt-1 text-sm text-white/70">{t('discover.no_saved_desc', 'Tap the bookmark on any event to save it here.')}</p>
+          <div className="mx-auto max-w-2xl rounded-2xl bg-surface py-16 text-center">
+            <Search className="mx-auto mb-3 h-8 w-8 text-fg-faint" />
+            <p className="text-fg-muted">{t('discover.no_saved_title', 'No saved events yet')}</p>
+            <p className="mt-1 text-sm text-fg-muted">{t('discover.no_saved_desc', 'Tap the bookmark on any event to save it here.')}</p>
           </div>
         ))}
     </FriendsGoingProvider>

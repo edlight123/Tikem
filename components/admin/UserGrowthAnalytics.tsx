@@ -70,7 +70,7 @@ export function UserGrowthAnalytics({ days = 30 }: Props) {
         <p className="mb-4 text-sm text-console-red">{loadError || 'Failed to load user growth data'}</p>
         <button
           onClick={() => fetchData(selectedDays)}
-          className="rounded bg-console-raise px-3 py-1.5 text-[13px] font-semibold text-console-mut transition-colors hover:text-console-text"
+          className="rounded bg-console-raise px-3 py-1.5 text-meta font-semibold text-console-mut transition-colors hover:text-console-text"
         >
           Retry
         </button>
@@ -105,16 +105,16 @@ export function UserGrowthAnalytics({ days = 30 }: Props) {
           { label: 'Organizers', value: data.organizerCount, sub: `${pct(data.organizerCount)}% of total` },
         ].map((s) => (
           <div key={s.label}>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{s.label}</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{s.label}</div>
             <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{s.value.toLocaleString()}</div>
-            <div className="mt-0.5 font-mono text-[11px] tabular-nums text-console-mut">{s.sub}</div>
+            <div className="mt-0.5 font-mono text-eyebrow tabular-nums text-console-mut">{s.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Growth Chart */}
       <div className="rounded-lg bg-console-panel p-4">
-        <h3 className="label-mono mb-3 text-[10px] uppercase tracking-[0.18em] text-console-faint">Daily signups</h3>
+        <h3 className="label-mono mb-3 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Daily signups</h3>
         {data.dailySignups.length > 0 ? (
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={data.dailySignups} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>

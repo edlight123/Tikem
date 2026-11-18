@@ -63,7 +63,7 @@ export default function SpotifyEmbed({ url, className = '' }: { url?: string | n
           iframe whose scheme differs from its document's gets an opaque
           canvas: white showed in the corners outside Spotify's own rounded
           player. The 4px clip is the house radius. */}
-      <div ref={box} className="overflow-hidden rounded bg-white/[0.06]" style={{ height }}>
+      <div ref={box} className="overflow-hidden rounded bg-surface" style={{ height }}>
         {near ? (
           <iframe
             src={`https://open.spotify.com/embed/${parsed.type}/${parsed.id}?theme=0`}

@@ -24,12 +24,12 @@ export default async function NotificationsSettingsPage() {
   const preferences = await getNotificationPreferences(orgId);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <SettingsPageChrome titleKey="notifications_title" subtitleKey="notifications_subtitle" />
 
         {/* Notifications Form */}
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
+        <div className="mt-8 overflow-hidden rounded-2xl bg-surface-low">
           <NotificationsForm 
             userId={orgId}
             initialData={withOrganizerNotificationDefaults(preferences)}

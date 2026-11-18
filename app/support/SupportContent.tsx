@@ -10,8 +10,8 @@ import { attendeeFAQCategoryMeta, organizerFAQCategoryMeta, type UserRole, type 
 /**
  * Surface pass on /support.
  *
- * Every card here was `bg-white/[0.03]` (or no fill at all) wrapped in
- * `border border-white/10`. On the #0a0a0a page a 3% fill is very nearly the
+ * Every card here was `bg-surface-low` (or no fill at all) wrapped in
+ * `border border-line`. On the #0a0a0a page a 3% fill is very nearly the
  * page colour, so the page read as a wireframe of outlined boxes — see
  * "Surfaces: a fill, not a hairline around nothing" in docs/POSH_DESIGN_BRIEF.md.
  * Cards now carry the fill; the contact cards sit INSIDE another card so they
@@ -22,7 +22,7 @@ import { attendeeFAQCategoryMeta, organizerFAQCategoryMeta, type UserRole, type 
  */
 
 /** A card sitting on another card — one step up the ladder. */
-const NESTED_CARD = 'rounded-xl bg-white/[0.06] p-6 transition-colors hover:bg-white/[0.12]'
+const NESTED_CARD = 'rounded-xl bg-surface p-6 transition-colors hover:bg-surface-high'
 
 export default function SupportContent() {
   const { t } = useTranslation('support')
@@ -85,11 +85,11 @@ export default function SupportContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-canvas">
       {/* Hero Section. On the page colour, like every other page: a full
           teal slab made Support read as a different product (teal is the
           sparing accent, never a field). */}
-      <div className="text-white">
+      <div className="text-fg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="text-center max-w-3xl mx-auto">
             {/* No eyebrow: it repeated the title word for word. */}
@@ -104,7 +104,7 @@ export default function SupportContent() {
 
             {/* Search Bar */}
             <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
               <input
                 type="text"
                 placeholder={t('search.placeholder')}
@@ -113,7 +113,7 @@ export default function SupportContent() {
                 // The field had `border-0` and no fill at all — a transparent
                 // input with only a caret to say it was there. A field gets a
                 // FILL; 16px keeps iOS from zooming the page on focus.
-                className="w-full pl-12 pr-4 py-4 rounded-xl border-0 bg-white/[0.06] text-[16px] text-white placeholder-white/45 focus:ring-2 focus:ring-inset focus:ring-white/40 focus:outline-none"
+                className="w-full pl-12 pr-4 py-4 rounded-xl border-0 bg-surface text-base text-fg placeholder-fg-subtle focus:ring-2 focus:ring-inset focus:ring-fg/40 focus:outline-none"
               />
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function SupportContent() {
           the navbar's own border and read as a crack across the page; the bar is
           opaque page colour, so the content scrolling under it is separation
           enough. `shadow-sm` was a black shadow on a black page. */}
-      <div className="bg-[#0a0a0a] sticky top-14 sm:top-16 z-10">
+      <div className="bg-canvas sticky top-14 sm:top-16 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-center gap-2">
             <button
@@ -138,8 +138,8 @@ export default function SupportContent() {
               // teal is semantic in this app, never a surface.
               className={`px-6 py-2.5 rounded font-semibold transition-colors ${
                 role === 'attendee'
-                  ? 'bg-white text-black'
-                  : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                  ? 'bg-inverse text-on-inverse'
+                  : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
               }`}
             >
               <span className="inline-flex items-center gap-2">
@@ -155,8 +155,8 @@ export default function SupportContent() {
               }}
               className={`px-6 py-2.5 rounded font-semibold transition-colors ${
                 role === 'organizer'
-                  ? 'bg-white text-black'
-                  : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                  ? 'bg-inverse text-on-inverse'
+                  : 'bg-surface text-fg-muted hover:bg-surface-high hover:text-fg'
               }`}
             >
               <span className="inline-flex items-center gap-2">
@@ -183,12 +183,12 @@ export default function SupportContent() {
                 <button
                   key={category.id}
                   onClick={() => scrollToCategory(category.id)}
-                  className="group flex items-center gap-3 rounded bg-white/[0.03] px-4 py-4 text-left transition-colors hover:bg-white/[0.07] sm:px-6 sm:py-5"
+                  className="group flex items-center gap-3 rounded bg-surface-low px-4 py-4 text-left transition-colors hover:bg-surface-raised sm:px-6 sm:py-5"
                 >
                   {/* Icon + label: the one-line descriptions under each topic
                       repeated the topic's name in more words. */}
-                  <category.icon className="w-5 h-5 shrink-0 text-white/60 transition-colors group-hover:text-white" />
-                  <h3 className="font-semibold text-white">
+                  <category.icon className="w-5 h-5 shrink-0 text-fg-muted transition-colors group-hover:text-fg" />
+                  <h3 className="font-semibold text-fg">
                     {category.title}
                   </h3>
                 </button>
@@ -201,15 +201,15 @@ export default function SupportContent() {
         <div className="space-y-12">
           {searchQuery && filteredFAQs.length === 0 && (
             <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.06] flex items-center justify-center">
-                <Search className="w-7 h-7 text-white/50" />
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface flex items-center justify-center">
+                <Search className="w-7 h-7 text-fg-subtle" />
               </div>
               {/* `!text-2xl`: `.mobile-typography h3` (0,1,1) was collapsing this
                   to 16px on every phone. */}
-              <h3 className="font-display italic lowercase !text-2xl !leading-[1.04] text-white mb-2">
+              <h3 className="font-display italic lowercase !text-2xl !leading-[1.04] text-fg mb-2">
                 {t('search.no_results')}
               </h3>
-              <p className="text-white/65">
+              <p className="text-fg-muted">
                 {t('search.no_results_desc')}
               </p>
             </div>
@@ -221,7 +221,7 @@ export default function SupportContent() {
 
               {/* The `divide-y` stays: a rule BETWEEN the rows of one accordion
                   is the meaning. What went is the border drawn around the box. */}
-              <div className="bg-white/[0.03] rounded-xl divide-y divide-white/10 overflow-hidden">
+              <div className="bg-surface-low rounded-xl divide-y divide-line overflow-hidden">
                 {category.faqs.map((faq, index) => {
                   const key = `${category.id}-${index}`
                   const isOpen = openFAQs.has(key)
@@ -230,19 +230,19 @@ export default function SupportContent() {
                     <div key={index}>
                       <button
                         onClick={() => toggleFAQ(category.id, index)}
-                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-white/[0.07] transition-colors"
+                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface-raised transition-colors"
                       >
-                        <span className="font-semibold text-white pr-4">
+                        <span className="font-semibold text-fg pr-4">
                           {faq.question}
                         </span>
                         {isOpen ? (
-                          <ChevronUp className="w-5 h-5 text-white/50 flex-shrink-0" />
+                          <ChevronUp className="w-5 h-5 text-fg-subtle flex-shrink-0" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-white/50 flex-shrink-0" />
+                          <ChevronDown className="w-5 h-5 text-fg-subtle flex-shrink-0" />
                         )}
                       </button>
                       {isOpen && (
-                        <div className="px-6 pb-4 text-white/70 leading-relaxed">
+                        <div className="px-6 pb-4 text-fg-muted leading-relaxed">
                           {faq.answer}
                         </div>
                       )}
@@ -259,7 +259,7 @@ export default function SupportContent() {
             the purest form of the defect. */}
         {/* On a phone the panel goes: its 32px padding put boxes inside a box
             and squeezed the three cards. They sit on the page there. */}
-        <div className="mt-14 sm:mt-20 sm:rounded-2xl sm:bg-white/[0.03] sm:p-12">
+        <div className="mt-14 sm:mt-20 sm:rounded-2xl sm:bg-surface-low sm:p-12">
           <div className="max-w-2xl mb-5 sm:mb-8">
             <EditorialSectionHeading title={t('need_help.title')} />
           </div>
@@ -273,11 +273,11 @@ export default function SupportContent() {
               className={`${NESTED_CARD} group block`}
             >
               <div className="flex items-center justify-between mb-3">
-                <Mail className="w-6 h-6 text-white/70" />
-                <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                <Mail className="w-6 h-6 text-fg-muted" />
+                <ExternalLink className="w-4 h-4 text-fg-subtle group-hover:text-fg transition-colors" />
               </div>
-              <h3 className="font-semibold text-white mb-1">{t('contact_cards.email_title')}</h3>
-              <p className="text-sm text-white/65">
+              <h3 className="font-semibold text-fg mb-1">{t('contact_cards.email_title')}</h3>
+              <p className="text-sm text-fg-muted">
                 {t('contact_cards.email_desc')}
               </p>
             </a>
@@ -291,11 +291,11 @@ export default function SupportContent() {
             >
               <div className="flex items-center justify-between mb-3">
                 {/* green-600 is a dark green on a black page — near unreadable. */}
-                <MessageCircle className="w-6 h-6 text-green-400" />
-                <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                <MessageCircle className="w-6 h-6 text-success" />
+                <ExternalLink className="w-4 h-4 text-fg-subtle group-hover:text-fg transition-colors" />
               </div>
-              <h3 className="font-semibold text-white mb-1">{t('contact_cards.whatsapp_title')}</h3>
-              <p className="text-sm text-white/65">
+              <h3 className="font-semibold text-fg mb-1">{t('contact_cards.whatsapp_title')}</h3>
+              <p className="text-sm text-fg-muted">
                 {t('contact_cards.whatsapp_desc')}
               </p>
             </a>
@@ -306,11 +306,11 @@ export default function SupportContent() {
               className={`${NESTED_CARD} group block`}
             >
               <div className="flex items-center justify-between mb-3">
-                <FileText className="w-6 h-6 text-white/70" />
-                <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                <FileText className="w-6 h-6 text-fg-muted" />
+                <ExternalLink className="w-4 h-4 text-fg-subtle group-hover:text-fg transition-colors" />
               </div>
-              <h3 className="font-semibold text-white mb-1">{t('contact_cards.request_title')}</h3>
-              <p className="text-sm text-white/65">
+              <h3 className="font-semibold text-fg mb-1">{t('contact_cards.request_title')}</h3>
+              <p className="text-sm text-fg-muted">
                 {t('contact_cards.request_desc')}
               </p>
             </Link>

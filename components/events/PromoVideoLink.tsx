@@ -39,14 +39,14 @@ export default function PromoVideoLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer nofollow"
-      className={`flex min-h-11 items-center gap-3 text-[15px] text-brand-400 transition-colors hover:text-brand-300 ${className}`}
+      className={`flex min-h-11 items-center gap-3 text-body text-brand-400 transition-colors hover:text-brand-300 ${className}`}
     >
       <PlayCircle className="h-[18px] w-[18px] shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate">
         {t('events.watchTrailer', { defaultValue: 'Watch the trailer' })}
-        <span className="ml-2 text-white/40">{externalUrlLabel(href)}</span>
+        <span className="ml-2 text-fg-subtle">{externalUrlLabel(href)}</span>
       </span>
-      <ExternalLink className="h-[15px] w-[15px] shrink-0 text-white/40" aria-hidden />
+      <ExternalLink className="h-[15px] w-[15px] shrink-0 text-fg-subtle" aria-hidden />
     </a>
   )
 }

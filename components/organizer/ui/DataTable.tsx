@@ -151,7 +151,7 @@ export function OrgDataTable<T>({
   function SortIcon({ col }: { col: OrgColumn<T> }) {
     if (!col.sortable) return null
     if (activeSortKey !== col.key)
-      return <ChevronsUpDown className="h-3.5 w-3.5 text-white/30" />
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-fg-faint" />
     return activeSortDir === 'asc' ? (
       <ChevronUp className="h-3.5 w-3.5 text-brand-400" />
     ) : (
@@ -161,22 +161,22 @@ export function OrgDataTable<T>({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl bg-white/[0.03] ${className}`}
+      className={`overflow-hidden rounded-2xl bg-surface-low ${className}`}
     >
       {toolbar && (
-        <div className="border-b border-white/10 p-3 sm:p-4">{toolbar}</div>
+        <div className="border-b border-line p-3 sm:p-4">{toolbar}</div>
       )}
 
       {loading ? (
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-line-soft">
           {Array.from({ length: skeletonRows }).map((_, i) => (
             <div key={i} className="flex animate-pulse items-center gap-4 px-4 py-4 sm:px-6">
-              <div className="h-9 w-9 rounded-lg bg-white/[0.06]" />
+              <div className="h-9 w-9 rounded-lg bg-surface" />
               <div className="flex-1 space-y-2">
-                <div className="h-3.5 w-1/3 rounded bg-white/[0.06]" />
-                <div className="h-3 w-1/4 rounded bg-white/[0.06]" />
+                <div className="h-3.5 w-1/3 rounded bg-surface" />
+                <div className="h-3 w-1/4 rounded bg-surface" />
               </div>
-              <div className="h-6 w-16 rounded bg-white/[0.06]" />
+              <div className="h-6 w-16 rounded bg-surface" />
             </div>
           ))}
         </div>
@@ -185,7 +185,7 @@ export function OrgDataTable<T>({
         // drew a box inside a box.
         <div className="p-8 [&>*]:bg-transparent">
           {empty ?? (
-            <p className="text-center text-sm text-white/40">{t('actions.no_results_found')}</p>
+            <p className="text-center text-sm text-fg-subtle">{t('actions.no_results_found')}</p>
           )}
         </div>
       ) : (
@@ -194,16 +194,16 @@ export function OrgDataTable<T>({
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead
-                className={`bg-[#141414] ${stickyHeader ? 'sticky top-0 z-10' : ''}`}
+                className={`bg-surface-solid ${stickyHeader ? 'sticky top-0 z-10' : ''}`}
               >
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-line">
                   {columns.map((col) => (
                     <th
                       key={col.key}
                       onClick={() => handleSort(col)}
-                      className={`label-mono px-4 py-3 text-[11px] uppercase text-white/40 sm:px-6 ${
+                      className={`label-mono px-4 py-3 text-eyebrow uppercase text-fg-subtle sm:px-6 ${
                         alignClass[col.align ?? 'left']
-                      } ${col.sortable ? 'cursor-pointer select-none hover:text-white/70' : ''} ${
+                      } ${col.sortable ? 'cursor-pointer select-none hover:text-fg-muted' : ''} ${
                         col.headerClassName ?? ''
                       }`}
                     >
@@ -219,21 +219,21 @@ export function OrgDataTable<T>({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-line-soft">
                 {visibleRows.map((row) => {
                   const id = rowKey(row)
                   return (
                     <tr
                       key={id}
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
-                      className={`transition-colors hover:bg-white/[0.04] ${
+                      className={`transition-colors hover:bg-surface-low ${
                         onRowClick ? 'cursor-pointer' : ''
                       }`}
                     >
                       {columns.map((col) => (
                         <td
                           key={col.key}
-                          className={`px-4 py-3.5 align-middle text-sm text-white sm:px-6 ${
+                          className={`px-4 py-3.5 align-middle text-sm text-fg sm:px-6 ${
                             alignClass[col.align ?? 'left']
                           } ${col.cellClassName ?? ''}`}
                         >
@@ -250,7 +250,7 @@ export function OrgDataTable<T>({
           </div>
 
           {/* Mobile cards */}
-          <div className="divide-y divide-white/5 md:hidden">
+          <div className="divide-y divide-line-soft md:hidden">
             {visibleRows.map((row) => {
               const id = rowKey(row)
               if (renderMobileCard) {
@@ -272,10 +272,10 @@ export function OrgDataTable<T>({
                 >
                   {columns.map((col) => (
                     <div key={col.key} className="flex items-start justify-between gap-3">
-                      <span className="label-mono text-[11px] uppercase text-white/40">
+                      <span className="label-mono text-eyebrow uppercase text-fg-subtle">
                         {col.header}
                       </span>
-                      <span className="min-w-0 text-right text-sm text-white">
+                      <span className="min-w-0 text-right text-sm text-fg">
                         {col.render
                           ? col.render(row)
                           : String((row as Record<string, unknown>)[col.key] ?? '')}
@@ -290,8 +290,8 @@ export function OrgDataTable<T>({
       )}
 
       {showFooter && (
-        <div className="flex items-center justify-between border-t border-white/10 px-4 py-3 sm:px-6">
-          <p className="font-mono tabular-nums text-xs text-white/40">
+        <div className="flex items-center justify-between border-t border-line px-4 py-3 sm:px-6">
+          <p className="font-mono tabular-nums text-xs text-fg-subtle">
             Page {footerPage} of {footerTotalPages}
           </p>
           <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export function OrgDataTable<T>({
               type="button"
               onClick={() => goToPage((footerPage ?? 1) - 1)}
               disabled={(footerPage ?? 1) <= 1}
-              className="inline-flex items-center gap-1 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded bg-surface-raised px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-high disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
@@ -308,7 +308,7 @@ export function OrgDataTable<T>({
               type="button"
               onClick={() => goToPage((footerPage ?? 1) + 1)}
               disabled={(footerPage ?? 1) >= (footerTotalPages ?? 1)}
-              className="inline-flex items-center gap-1 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded bg-surface-raised px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-high disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
               <ChevronRight className="h-4 w-4" />

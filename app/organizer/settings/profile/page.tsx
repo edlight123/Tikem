@@ -22,12 +22,12 @@ export default async function ProfileSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <SettingsPageChrome titleKey="profile_title" subtitleKey="profile_subtitle" />
 
         {/* Profile Form */}
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03]">
+        <div className="mt-8 overflow-hidden rounded-2xl bg-surface-low">
           <ProfileForm 
             userId={user.id}
             initialData={{
@@ -40,9 +40,9 @@ export default async function ProfileSettingsPage() {
         </div>
 
         {/* Info Notice */}
-        <div className="mt-6 p-4 bg-white/[0.03]  rounded-lg">
-          <p className="text-sm text-white/60">
-            <strong className="text-white">Note:</strong> Your email address is managed through your authentication provider and cannot be changed here. Contact support if you need to update your email.
+        <div className="mt-6 p-4 bg-surface-low  rounded-lg">
+          <p className="text-sm text-fg-muted">
+            <strong className="text-fg">Note:</strong> Your email address is managed through your authentication provider and cannot be changed here. Contact support if you need to update your email.
           </p>
         </div>
       </div>

@@ -247,7 +247,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
     return (
       <div className="rounded-lg bg-console-panel p-3">
-        <p className="label-mono mb-2 text-[10px] uppercase tracking-[0.18em] text-console-faint">Liveness recording</p>
+        <p className="label-mono mb-2 text-eyebrow uppercase tracking-[0.18em] text-console-faint">Liveness recording</p>
         <video
           src={imageUrls.livenessUrl}
           controls
@@ -280,7 +280,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
   const renderImageThumb = (label: string, url: string | null, alt: string) => {
     return (
       <div>
-        <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-1 sm:mb-2">{label}</p>
+        <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-1 sm:mb-2">{label}</p>
         {url ? (
           <div
             onClick={() => setSelectedImage(url)}
@@ -302,7 +302,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
           </div>
         ) : (
           <div className="aspect-[1.586/1] bg-console-ground rounded-lg flex items-center justify-center">
-            <p className="text-[12px] sm:text-sm text-console-faint">Not provided</p>
+            <p className="text-caption sm:text-sm text-console-faint">Not provided</p>
           </div>
         )}
       </div>
@@ -316,11 +316,11 @@ export default function VerificationRequestReview({ request, user }: Props) {
       return (
         <div className="mt-3 rounded-lg p-3 sm:p-4 bg-console-panel">
           <p className="text-sm font-semibold text-console-text">Payout checklist</p>
-          <p className="text-[12px] sm:text-sm text-console-mut mt-1">
+          <p className="text-caption sm:text-sm text-console-mut mt-1">
             Payout setup can be completed after approval, but these items are required before payouts can be issued.
           </p>
 
-          <div className="mt-3 space-y-2 text-[13px] sm:text-sm text-console-mut">
+          <div className="mt-3 space-y-2 text-meta sm:text-sm text-console-mut">
             <div className="flex items-start gap-2">
               <span className="mt-0.5">•</span>
               <span>Identity verification (Organizer Verification) must be approved.</span>
@@ -410,12 +410,12 @@ export default function VerificationRequestReview({ request, user }: Props) {
                   href={imageUrls.businessRegistrationUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-[13px] sm:text-sm font-medium"
+                  className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-meta sm:text-sm font-medium"
                 >
                   Open business registration
                 </a>
               ) : (
-                <div className="px-3 py-2 rounded bg-console-panel text-[13px] sm:text-sm text-console-faint">
+                <div className="px-3 py-2 rounded bg-console-panel text-meta sm:text-sm text-console-faint">
                   Business registration not provided
                 </div>
               )}
@@ -425,12 +425,12 @@ export default function VerificationRequestReview({ request, user }: Props) {
                   href={imageUrls.taxIdUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-[13px] sm:text-sm font-medium"
+                  className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-meta sm:text-sm font-medium"
                 >
                   Open tax ID document
                 </a>
               ) : (
-                <div className="px-3 py-2 rounded bg-console-panel text-[13px] sm:text-sm text-console-faint">
+                <div className="px-3 py-2 rounded bg-console-panel text-meta sm:text-sm text-console-faint">
                   Tax ID not provided
                 </div>
               )}
@@ -516,13 +516,13 @@ export default function VerificationRequestReview({ request, user }: Props) {
                 {user?.full_name || 'Unknown User'}
               </h3>
               {age ? (
-                <span className={`label-mono text-[13px] tabular-nums shrink-0 ${ageColor}`} title={ageTitle}>
+                <span className={`label-mono text-meta tabular-nums shrink-0 ${ageColor}`} title={ageTitle}>
                   {age}
                 </span>
               ) : null}
             </div>
-            <p className="text-[13px] sm:text-sm text-console-mut truncate">{user?.email}</p>
-            <p className="font-mono tabular-nums text-[11px] sm:text-xs text-console-faint mt-1">
+            <p className="text-meta sm:text-sm text-console-mut truncate">{user?.email}</p>
+            <p className="font-mono tabular-nums text-eyebrow sm:text-xs text-console-faint mt-1">
               {submittedDate ? (
                 <>
                   Submitted {formatSubmittedAt(submittedDate)} (UTC)
@@ -558,14 +558,14 @@ export default function VerificationRequestReview({ request, user }: Props) {
                       <div className="min-w-0">
                         <p className="text-sm sm:text-base font-semibold text-console-text truncate">{title}</p>
                         {stepValue?.description ? (
-                          <p className="text-[12px] sm:text-sm text-console-mut">{stepValue.description}</p>
+                          <p className="text-caption sm:text-sm text-console-mut">{stepValue.description}</p>
                         ) : null}
                       </div>
                       <div className="flex items-center gap-3 whitespace-nowrap">
                         {required ? (
-                          <span className="label-mono uppercase text-[10px] sm:text-xs tracking-[0.14em] text-console-faint">Required</span>
+                          <span className="label-mono uppercase text-eyebrow sm:text-xs tracking-[0.14em] text-console-faint">Required</span>
                         ) : (
-                          <span className="label-mono uppercase text-[10px] sm:text-xs tracking-[0.14em] text-console-faint">Optional</span>
+                          <span className="label-mono uppercase text-eyebrow sm:text-xs tracking-[0.14em] text-console-faint">Optional</span>
                         )}
                         <ConsoleState tone={consoleTone(stepStatus)}>
                           {String(stepStatus).replaceAll('_', ' ')}
@@ -574,19 +574,19 @@ export default function VerificationRequestReview({ request, user }: Props) {
                     </div>
 
                     {errorMessage ? (
-                      <div className="text-[12px] sm:text-sm text-console-red rounded bg-console-panel p-2 mb-2">
+                      <div className="text-caption sm:text-sm text-console-red rounded bg-console-panel p-2 mb-2">
                         {errorMessage}
                       </div>
                     ) : null}
 
                     {missingFields.length > 0 ? (
-                      <div className="text-[12px] sm:text-sm text-console-amber rounded bg-console-panel p-2 mb-2">
+                      <div className="text-caption sm:text-sm text-console-amber rounded bg-console-panel p-2 mb-2">
                         Missing: {missingFields.join(', ')}
                       </div>
                     ) : null}
 
                     {Object.keys(fields).length === 0 ? (
-                      <p className="text-[12px] sm:text-sm text-console-faint">No details provided.</p>
+                      <p className="text-caption sm:text-sm text-console-faint">No details provided.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
                         {Object.entries(fields)
@@ -594,8 +594,8 @@ export default function VerificationRequestReview({ request, user }: Props) {
                           .filter((x) => x.s)
                           .map(({ k, s }) => (
                             <div key={k} className="min-w-0">
-                              <p className="text-[11px] sm:text-xs text-console-faint truncate">{k.replaceAll('_', ' ')}</p>
-                              <p className="text-[13px] sm:text-sm text-console-text break-words">{s}</p>
+                              <p className="text-eyebrow sm:text-xs text-console-faint truncate">{k.replaceAll('_', ' ')}</p>
+                              <p className="text-meta sm:text-sm text-console-text break-words">{s}</p>
                             </div>
                           ))}
                       </div>
@@ -608,8 +608,8 @@ export default function VerificationRequestReview({ request, user }: Props) {
             </div>
           ) : (
             <div className="rounded-lg p-3 sm:p-4 bg-console-ground">
-              <p className="text-[13px] sm:text-sm text-console-mut font-medium">Submission details</p>
-              <p className="text-[12px] sm:text-sm text-console-faint">No step-by-step submission data found on this request.</p>
+              <p className="text-meta sm:text-sm text-console-mut font-medium">Submission details</p>
+              <p className="text-caption sm:text-sm text-console-faint">No step-by-step submission data found on this request.</p>
             </div>
           )}
         </div>
@@ -617,7 +617,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
         {/* Fallback proof section for legacy/unknown request shapes */}
         {!steps ? (
           <div className="mb-4 sm:mb-6">
-            <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-2">Proof</p>
+            <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-2">Proof</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
               {loadingImages ? (
                 <div className="col-span-1 sm:col-span-3 text-center py-8">
@@ -635,19 +635,19 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
             {!loadingImages && (imageUrls.businessRegistrationUrl || imageUrls.taxIdUrl) ? (
               <div className="mt-3 rounded-lg p-3 sm:p-4 bg-console-ground">
-                <p className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint mb-2">Business Documents</p>
+                <p className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint mb-2">Business Documents</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {imageUrls.businessRegistrationUrl ? (
                     <a
                       href={imageUrls.businessRegistrationUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-[13px] sm:text-sm font-medium"
+                      className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-meta sm:text-sm font-medium"
                     >
                       Open business registration
                     </a>
                   ) : (
-                    <div className="px-3 py-2 rounded bg-console-panel text-[13px] sm:text-sm text-console-faint">
+                    <div className="px-3 py-2 rounded bg-console-panel text-meta sm:text-sm text-console-faint">
                       Business registration not provided
                     </div>
                   )}
@@ -657,12 +657,12 @@ export default function VerificationRequestReview({ request, user }: Props) {
                       href={imageUrls.taxIdUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-[13px] sm:text-sm font-medium"
+                      className="px-3 py-2 rounded bg-console-raise text-console-text hover:opacity-90 text-meta sm:text-sm font-medium"
                     >
                       Open tax ID document
                     </a>
                   ) : (
-                    <div className="px-3 py-2 rounded bg-console-panel text-[13px] sm:text-sm text-console-faint">
+                    <div className="px-3 py-2 rounded bg-console-panel text-meta sm:text-sm text-console-faint">
                       Tax ID not provided
                     </div>
                   )}
@@ -703,7 +703,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
       {selectedImage && (
         <div
           onClick={() => setSelectedImage(null)}
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-scrim z-50 flex items-center justify-center p-4"
         >
           <div className="relative max-w-4xl max-h-full">
             <button
@@ -731,17 +731,17 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
       {/* Rejection Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-scrim z-50 flex items-center justify-center p-4">
           <div className="bg-console-panel rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full">
-            <h3 className="label-mono text-[13px] font-bold uppercase tracking-[0.14em] text-console-text mb-3 sm:mb-4">Request Changes</h3>
-            <p className="text-[13px] sm:text-sm text-console-mut mb-3 sm:mb-4">
+            <h3 className="label-mono text-meta font-bold uppercase tracking-[0.14em] text-console-text mb-3 sm:mb-4">Request Changes</h3>
+            <p className="text-meta sm:text-sm text-console-mut mb-3 sm:mb-4">
               Please describe what needs to be fixed. The organizer will receive this in an email and can resubmit.
             </p>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="e.g., ID photo is blurry; please re-upload a clear front/back."
-              className="w-full px-3 py-2 rounded bg-console-ground text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut mb-3 sm:mb-4 text-[15px] sm:text-base min-h-[44px]"
+              className="w-full px-3 py-2 rounded bg-console-ground text-console-text placeholder:text-console-faint focus:outline-none focus:ring-2 focus:ring-console-mut mb-3 sm:mb-4 text-body sm:text-base min-h-[44px]"
               rows={4}
             />
             <div className="flex gap-2 sm:gap-3">

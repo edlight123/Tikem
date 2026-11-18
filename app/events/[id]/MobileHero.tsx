@@ -64,7 +64,7 @@ export default function MobileHero({
             quality={20}
             className="scale-125 object-cover opacity-60 blur-3xl"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/30 via-[#0a0a0a]/55 to-[#0a0a0a]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-canvas/30 via-canvas/55 to-canvas" />
         </div>
       )}
 
@@ -89,7 +89,7 @@ export default function MobileHero({
             strip render through, and it uses `rounded` — 4px in this config,
             where `rounded-2xl` is 10px. At 10px this one poster read visibly
             softer than every other poster on the site. */}
-        <div className="relative mx-4 aspect-[4/5] overflow-hidden rounded bg-white/[0.04]">
+        <div className="relative mx-4 aspect-[4/5] overflow-hidden rounded bg-surface-low">
           {bannerUrl ? (
             <>
               {/* No scrim over the art: nothing is laid on its lower half, and a
@@ -100,7 +100,7 @@ export default function MobileHero({
           ) : (
             <div className="poster-vignette absolute inset-0" style={{ backgroundImage: posterTheme.bg }}>
               <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-                <span className="font-display italic text-[28px] leading-[0.98] text-white/90 drop-shadow line-clamp-3">
+                <span className="font-display italic text-headline leading-[0.98] text-fg drop-shadow line-clamp-3">
                   {title}
                 </span>
               </div>
@@ -111,9 +111,9 @@ export default function MobileHero({
               never a filled pill (house rule). The scrim keeps the label
               legible over whatever colours the flyer has. */}
           <div className="absolute left-3 top-3 flex flex-col items-start gap-2">
-            {isSoldOut && <PosterChip dot="bg-red-400">{t('ticket.sold_out')}</PosterChip>}
+            {isSoldOut && <PosterChip dot="bg-danger">{t('ticket.sold_out')}</PosterChip>}
             {!isSoldOut && selloutSoon && (
-              <PosterChip dot="bg-amber-400">{t('ticket.almost_sold_out')}</PosterChip>
+              <PosterChip dot="bg-warning">{t('ticket.almost_sold_out')}</PosterChip>
             )}
             {isTrending && <PosterChip dot="bg-brand-400">{t('events.trending')}</PosterChip>}
           </div>
@@ -126,11 +126,11 @@ export default function MobileHero({
           who's going, in the app's order (owner, 2026-11-18). */}
       <div className="px-4 pb-1 pt-4">
         {category && category.toLowerCase() !== 'other' && (
-          <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
+          <p className="mb-2.5 text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
             {category}
           </p>
         )}
-        <h1 className="font-display italic !text-[34px] text-white !leading-[1.02] break-words">
+        <h1 className="font-display italic !text-display text-fg !leading-[1.02] break-words">
           {title}
         </h1>
       </div>
@@ -140,7 +140,7 @@ export default function MobileHero({
 
 function PosterChip({ dot, children }: { dot: string; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded bg-black/40 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white backdrop-blur-md">
+    <span className="inline-flex items-center gap-1.5 rounded bg-scrim-light px-2.5 py-1 text-eyebrow font-medium uppercase tracking-[0.08em] text-fg backdrop-blur-md">
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden />
       {children}
     </span>

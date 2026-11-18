@@ -343,7 +343,7 @@ export function SearchSuggest({
     <div ref={wrapRef} className="relative flex-1">
       <form onSubmit={handleSubmit}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             ref={inputRef}
             type="text"
@@ -354,7 +354,7 @@ export function SearchSuggest({
               if (hasQuery && flatRows.length > 0) setOpen(true)
             }}
             placeholder={t('filters.search_placeholder')}
-            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.07] rounded text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400 text-[16px]"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface-raised rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-400 text-base"
             role="combobox"
             aria-expanded={showDropdown}
             aria-controls={listboxId}
@@ -375,10 +375,10 @@ export function SearchSuggest({
           id={listboxId}
           role="listbox"
           aria-label={t('suggest.aria_label', { defaultValue: 'Search suggestions' })}
-          className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#111] shadow-xl backdrop-blur-md"
+          className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-line bg-surface-solid shadow-xl backdrop-blur-md"
         >
           {showNoMatches && (
-            <p role="presentation" className="px-4 py-3 text-[13px] text-white/50">
+            <p role="presentation" className="px-4 py-3 text-meta text-fg-subtle">
               {t('events.no_matches_hint', {
                 defaultValue: 'No matches. Press Enter to search all',
               })}
@@ -390,11 +390,11 @@ export function SearchSuggest({
               key={section.id}
               role="group"
               aria-label={section.label}
-              className={sectionIndex > 0 ? 'border-t border-white/[0.07]' : undefined}
+              className={sectionIndex > 0 ? 'border-t border-line-soft' : undefined}
             >
               <p
                 aria-hidden
-                className="px-3.5 pb-1 pt-2.5 text-[10px] font-normal uppercase tracking-[0.14em] text-white/35"
+                className="px-3.5 pb-1 pt-2.5 text-eyebrow font-normal uppercase tracking-[0.14em] text-fg-faint"
               >
                 {section.label}
               </p>
@@ -417,12 +417,12 @@ export function SearchSuggest({
                       }}
                       onMouseEnter={() => setHighlight(index)}
                       className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                        isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                        isActive ? 'bg-surface' : 'hover:bg-surface-low'
                       }`}
                     >
                       {row.kind === 'event' && (
                         <>
-                          <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-white/10">
+                          <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-line">
                             {isRenderableImage(row.image) ? (
                               <Image
                                 src={row.image as string}
@@ -436,11 +436,11 @@ export function SearchSuggest({
                             )}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] font-medium text-white">
+                            <span className="block truncate text-sm font-medium text-fg">
                               {row.title}
                             </span>
                             {row.meta && (
-                              <span className="mt-0.5 block truncate text-[12px] text-white/50">
+                              <span className="mt-0.5 block truncate text-caption text-fg-subtle">
                                 {row.meta}
                               </span>
                             )}
@@ -450,7 +450,7 @@ export function SearchSuggest({
 
                       {(row.kind === 'organizer' || row.kind === 'person') && (
                         <>
-                          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.06] ring-1 ring-white/10">
+                          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface ring-1 ring-line">
                             {isRenderableImage(row.photo) ? (
                               <Image
                                 src={row.photo as string}
@@ -460,21 +460,21 @@ export function SearchSuggest({
                                 className="object-cover"
                               />
                             ) : row.kind === 'organizer' ? (
-                              <Users className="h-4 w-4 text-white/40" />
+                              <Users className="h-4 w-4 text-fg-subtle" />
                             ) : (
-                              <User className="h-4 w-4 text-white/40" />
+                              <User className="h-4 w-4 text-fg-subtle" />
                             )}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-1.5">
-                              <span className="truncate text-[14px] font-medium text-white">
+                              <span className="truncate text-sm font-medium text-fg">
                                 {row.name}
                               </span>
                               {row.verified && (
                                 <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-brand-400" />
                               )}
                             </span>
-                            <span className="mt-0.5 block truncate text-[12px] text-white/50">
+                            <span className="mt-0.5 block truncate text-caption text-fg-subtle">
                               {row.kind === 'organizer'
                                 ? t('suggest.role_organizer', { defaultValue: 'Organizer' })
                                 : row.connected
@@ -487,14 +487,14 @@ export function SearchSuggest({
 
                       {row.kind === 'city' && (
                         <>
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ring-1 ring-white/10">
-                            <MapPin className="h-4 w-4 text-white/40" />
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ring-1 ring-line">
+                            <MapPin className="h-4 w-4 text-fg-subtle" />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] font-medium text-white">
+                            <span className="block truncate text-sm font-medium text-fg">
                               {row.city}
                             </span>
-                            <span className="mt-0.5 block truncate text-[12px] text-white/50">
+                            <span className="mt-0.5 block truncate text-caption text-fg-subtle">
                               {t('suggest.city_filter_hint', {
                                 defaultValue: 'Filter events by city',
                               })}
@@ -515,8 +515,8 @@ export function SearchSuggest({
             <p
               role="presentation"
               aria-live="polite"
-              className={`px-3.5 py-2.5 text-[12px] text-white/35 ${
-                sections.length > 0 ? 'border-t border-white/[0.07]' : ''
+              className={`px-3.5 py-2.5 text-caption text-fg-faint ${
+                sections.length > 0 ? 'border-t border-line-soft' : ''
               }`}
             >
               {t('suggest.searching', { defaultValue: 'Searching…' })}

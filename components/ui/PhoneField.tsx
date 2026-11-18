@@ -90,19 +90,19 @@ export default function PhoneField({
 
   return (
     <div
-      className={`flex items-stretch gap-2 rounded-lg bg-white/[0.06] transition-colors focus-within:ring-2 focus-within:ring-brand-400/50 ${
-        invalid ? 'ring-2 ring-red-400/60' : ''
+      className={`flex items-stretch gap-2 rounded-lg bg-surface transition-colors focus-within:ring-2 focus-within:ring-brand-400/50 ${
+        invalid ? 'ring-2 ring-danger/60' : ''
       } ${disabled ? 'pointer-events-none opacity-60' : ''} ${className}`}
     >
       {/* The country. A real <select> under a styled face: the native picker is
           a full-height wheel on a phone, which is far better for a 90-item
           list than anything hand-rolled, and it comes with search on desktop. */}
       <label className="relative flex shrink-0 cursor-pointer items-center gap-1.5 pl-3 pr-2">
-        <span aria-hidden className="text-[17px] leading-none">
+        <span aria-hidden className="text-lead leading-none">
           {country.flag}
         </span>
-        <span className="text-[16px] font-medium tabular-nums text-white">+{country.dial}</span>
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden />
+        <span className="text-base font-medium tabular-nums text-fg">+{country.dial}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-fg-subtle" aria-hidden />
         <select
           value={iso}
           onChange={(e) => push(e.target.value, national)}
@@ -111,14 +111,14 @@ export default function PhoneField({
           className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-transparent opacity-0 outline-none"
         >
           {PHONE_COUNTRIES.map((c) => (
-            <option key={c.iso} value={c.iso} className="bg-[#141414] text-white">
+            <option key={c.iso} value={c.iso} className="bg-surface-solid text-fg">
               {c.flag} {c.name} +{c.dial}
             </option>
           ))}
         </select>
       </label>
 
-      <span aria-hidden className="my-2 w-px shrink-0 bg-white/10" />
+      <span aria-hidden className="my-2 w-px shrink-0 bg-surface-raised" />
 
       {/* The national number. A paste is interpreted rather than merely
           stripped: "+509 3412 5678" moves the picker to Haiti and fills in
@@ -139,7 +139,7 @@ export default function PhoneField({
         aria-label={ariaLabel || t('phone.number', { defaultValue: 'Phone number' })}
         placeholder={t('phone.placeholder', { defaultValue: '34 12 56 78' })}
         // 16px: iOS zooms the page on focus below that.
-        className="min-w-0 flex-1 bg-transparent py-3 pr-4 text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+        className="min-w-0 flex-1 bg-transparent py-3 pr-4 text-base text-fg placeholder:text-fg-faint focus:outline-none"
       />
     </div>
   )

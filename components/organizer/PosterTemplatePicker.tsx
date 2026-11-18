@@ -132,20 +132,20 @@ export default function PosterTemplatePicker({
         type="button"
         onClick={onClose}
         aria-label={t('common.close', { defaultValue: 'Close' })}
-        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim-strong backdrop-blur-sm"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t('composer.posterTemplates.title', { defaultValue: 'Make a poster' })}
-        className="relative flex max-h-[calc(100svh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-[#1c1c1c] shadow-2xl sm:max-h-[90svh] sm:rounded-3xl"
+        className="relative flex max-h-[calc(100svh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-surface-raised-solid shadow-2xl sm:max-h-[90svh] sm:rounded-3xl"
       >
         <div className="flex shrink-0 items-start justify-between gap-4 px-5 pb-3 pt-4">
           <div>
-            <h2 className="text-[15px] font-semibold text-white">
+            <h2 className="text-body font-semibold text-fg">
               {t('composer.posterTemplates.title', { defaultValue: 'Make a poster' })}
             </h2>
-            <p className="mt-0.5 text-[13px] text-white/50">
+            <p className="mt-0.5 text-meta text-fg-subtle">
               {t('composer.posterTemplates.hint', {
                 defaultValue: "Your event's details, designed. Pick a layout, then a colour.",
               })}
@@ -154,7 +154,7 @@ export default function PosterTemplatePicker({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="shrink-0 rounded-lg p-1.5 text-fg-subtle transition-colors hover:bg-surface hover:text-fg"
             aria-label={t('common.close', { defaultValue: 'Close' })}
           >
             <X className="h-4 w-4" />
@@ -163,7 +163,7 @@ export default function PosterTemplatePicker({
 
         {/* Background photo for the layouts that use one. */}
         <div className="shrink-0 px-5">
-          <p className="text-[12px] font-medium uppercase tracking-wider text-white/45">
+          <p className="text-caption font-medium uppercase tracking-wider text-fg-subtle">
             {t('composer.posterTemplates.photo', { defaultValue: 'Photo' })}
           </p>
           <div className="scrollbar-hide mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -174,7 +174,7 @@ export default function PosterTemplatePicker({
                 onClick={() => setPhoto(p.full)}
                 aria-pressed={photo === p.full}
                 aria-label={i === 0 && initialPhoto ? t('composer.posterTemplates.yourPhoto', { defaultValue: 'Your photo' }) : undefined}
-                className={`relative h-14 w-11 shrink-0 overflow-hidden rounded bg-white/[0.06] ${photo === p.full ? 'ring-2 ring-white' : 'opacity-70 hover:opacity-100'}`}
+                className={`relative h-14 w-11 shrink-0 overflow-hidden rounded bg-surface ${photo === p.full ? 'ring-2 ring-white' : 'opacity-70 hover:opacity-100'}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.thumb} alt="" className="h-full w-full object-cover" />
@@ -194,12 +194,12 @@ export default function PosterTemplatePicker({
                   type="button"
                   onClick={() => setSelected(tpl.id)}
                   aria-pressed={on}
-                  className={`relative block aspect-[4/5] w-full overflow-hidden rounded bg-white/[0.04] ${on ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1c1c1c]' : ''}`}
+                  className={`relative block aspect-[4/5] w-full overflow-hidden rounded bg-surface-low ${on ? 'ring-2 ring-white ring-offset-2 ring-offset-surface-raised-solid' : ''}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
                   {on && (
-                    <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-white text-black">
+                    <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-inverse text-on-inverse">
                       <Check className="h-3.5 w-3.5" />
                     </span>
                   )}
@@ -226,13 +226,13 @@ export default function PosterTemplatePicker({
           })}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-3 bg-[#1c1c1c] px-5 py-4">
-          <p className="min-w-0 text-[13px] text-red-300">{error}</p>
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-surface-raised-solid px-5 py-4">
+          <p className="min-w-0 text-meta text-danger-soft">{error}</p>
           <button
             type="button"
             onClick={use}
             disabled={saving}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded bg-white px-5 text-[14px] font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-60"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded bg-inverse px-5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-60"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {t('composer.posterTemplates.use', { defaultValue: 'Use this poster' })}

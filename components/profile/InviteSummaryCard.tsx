@@ -47,9 +47,9 @@ export function InviteSummaryCard() {
       <EditorialSectionHeading title={t('invites.summaryTitle')} className="mb-4" />
       <div className="grid grid-cols-3 gap-2">
         {cells.map((c) => (
-          <div key={c.label} className="rounded-2xl bg-white/[0.055] px-4 py-3">
-            <div className="font-mono text-2xl font-bold tabular-nums text-white">{c.value}</div>
-            <div className="mt-1 text-[12px] text-white/55">{c.label}</div>
+          <div key={c.label} className="rounded-2xl bg-surface px-4 py-3">
+            <div className="font-mono text-2xl font-bold tabular-nums text-fg">{c.value}</div>
+            <div className="mt-1 text-caption text-fg-muted">{c.label}</div>
           </div>
         ))}
       </div>

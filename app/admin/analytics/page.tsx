@@ -10,10 +10,10 @@ export default async function AdminAnalyticsPage() {
       <AdminBreadcrumbs items={[{ label: 'Analytics' }]} />
 
       <div className="mb-5 sm:mb-6">
-        <h1 className="label-mono text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+        <h1 className="label-mono text-body font-bold uppercase tracking-[0.14em] text-console-text">
           Platform Analytics
         </h1>
-        <p className="mt-1 text-[13px] text-console-mut">
+        <p className="mt-1 text-meta text-console-mut">
           The live scorecard, every area drills into its own page
         </p>
       </div>

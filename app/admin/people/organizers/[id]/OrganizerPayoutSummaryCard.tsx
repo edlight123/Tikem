@@ -29,7 +29,7 @@ export default function OrganizerPayoutSummaryCard({
 
   return (
     <ConsolePanel className="p-4 sm:p-5">
-      <h2 className="label-mono mb-4 text-[10px] uppercase tracking-[0.18em] text-console-faint">
+      <h2 className="label-mono mb-4 text-eyebrow uppercase tracking-[0.18em] text-console-faint">
         Bank Account &amp; Payouts
       </h2>
 

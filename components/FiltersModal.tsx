@@ -20,8 +20,8 @@ import { discoverChipCls } from './discover/DateChips'
  * are the two that divide stacked regions (header/scroller, scroller/actions).
  */
 const FIELD_CLS =
-  'w-full min-h-11 rounded-xl bg-white/[0.06] px-4 py-2.5 text-[16px] text-white [color-scheme:dark] transition-colors ' +
-  'hover:bg-white/[0.09] focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-400/50'
+  'w-full min-h-11 rounded-xl bg-surface px-4 py-2.5 text-base text-fg [color-scheme:dark] transition-colors ' +
+  'hover:bg-surface-raised focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-400/50'
 
 interface FiltersModalProps {
   isOpen: boolean
@@ -163,10 +163,10 @@ export function FiltersModal({
     '[&::-moz-range-track]:h-6 [&::-moz-range-track]:bg-transparent',
     '[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5',
     '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full',
-    '[&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/40 [&::-webkit-slider-thumb]:bg-brand-400',
+    '[&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-shade/40 [&::-webkit-slider-thumb]:bg-brand-400',
     '[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5',
     '[&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full',
-    '[&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black/40 [&::-moz-range-thumb]:bg-brand-400',
+    '[&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-shade/40 [&::-moz-range-thumb]:bg-brand-400',
     // Visible keyboard focus, drawn on the thumb itself.
     '[&:focus-visible::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(45,212,191,0.35)]',
     '[&:focus-visible::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(45,212,191,0.35)]',
@@ -200,7 +200,7 @@ export function FiltersModal({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 transition-opacity"
+        className="fixed inset-0 bg-scrim-light backdrop-blur-md z-50 transition-opacity"
         onClick={onClose}
       />
 
@@ -214,16 +214,16 @@ export function FiltersModal({
           // chrome, so a 90vh box overshoots what is actually on screen. No
           // border on the panel either — shadow-poster and the blurred
           // backdrop already separate it from the page.
-          className="pointer-events-auto bg-[#1c1c1c] w-full h-full md:h-auto md:max-h-[90svh] md:max-w-[600px] rounded-t-3xl md:rounded-3xl shadow-poster flex flex-col overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 duration-200"
+          className="pointer-events-auto bg-surface-raised-solid w-full h-full md:h-auto md:max-h-[90svh] md:max-w-[600px] rounded-t-3xl md:rounded-3xl shadow-poster flex flex-col overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header. The hairline is a region divider (title bar vs scroller),
               which earns it; the panel colour runs straight through. */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-line">
             <div className="flex items-baseline gap-2.5">
-              <h2 id="filters-modal-title" className="font-display italic text-2xl leading-none text-white">{t('filters.filters')}</h2>
+              <h2 id="filters-modal-title" className="font-display italic text-2xl leading-none text-fg">{t('filters.filters')}</h2>
               {activeCount > 0 && (
-                <span className="eyebrow text-[11px] text-brand-400">{activeCount} {t('filters.active')}</span>
+                <span className="eyebrow text-eyebrow text-brand-400">{activeCount} {t('filters.active')}</span>
               )}
             </div>
             <button
@@ -232,7 +232,7 @@ export function FiltersModal({
               aria-label={t('common.close', { defaultValue: 'Close' })}
               // 36px of ink, 44px of target: the ::after stretches 4px past
               // every edge without adding a visible pixel.
-              className="relative grid h-9 w-9 place-items-center rounded bg-white/[0.06] text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white after:absolute after:-inset-1 after:content-['']"
+              className="relative grid h-9 w-9 place-items-center rounded bg-surface text-fg-muted transition-colors hover:bg-surface-high hover:text-fg after:absolute after:-inset-1 after:content-['']"
             >
               <X className="w-[18px] h-[18px]" />
             </button>
@@ -242,7 +242,7 @@ export function FiltersModal({
           <div className="flex-1 overflow-y-auto p-5 space-y-6">
             {/* Date Filter */}
             <div className="space-y-3">
-              <label className="eyebrow text-[11px] text-white/70">{t('filters.date')}</label>
+              <label className="eyebrow text-eyebrow text-fg-muted">{t('filters.date')}</label>
               {/* gap-y-4: the chips' 44px target overhangs their 30px ink by
                   7px top and bottom, so wrapped rows need 14px+ between them
                   or the targets overlap. */}
@@ -273,20 +273,20 @@ export function FiltersModal({
 
             {/* Event Type - Segmented Control */}
             <div className="space-y-3">
-              <label className="eyebrow text-[11px] text-white/70">{t('filters.event_type')}</label>
+              <label className="eyebrow text-eyebrow text-fg-muted">{t('filters.event_type')}</label>
               {/* A real toggle, so it gets fills: a 0.06 track (44px tall with
                   its 4px padding) and a white pill on the chosen segment. */}
-              <div className="inline-flex rounded bg-white/[0.06] p-1">
+              <div className="inline-flex rounded bg-surface p-1">
                 {EVENT_TYPE_OPTIONS.map(option => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => onDraftChange({ ...draftFilters, eventType: option.value })}
                     aria-pressed={draftFilters.eventType === option.value}
-                    className={`min-h-9 rounded px-4 text-[13px] leading-[18px] font-medium transition-colors
+                    className={`min-h-9 rounded px-4 text-meta leading-[18px] font-medium transition-colors
                       ${draftFilters.eventType === option.value
-                        ? 'bg-white text-black'
-                        : 'text-white/70 hover:bg-white/[0.12] hover:text-white'
+                        ? 'bg-inverse text-on-inverse'
+                        : 'text-fg-muted hover:bg-surface-high hover:text-fg'
                       }`}
                   >
                     {option.label}
@@ -298,20 +298,20 @@ export function FiltersModal({
             {/* Price Filter — dual-thumb range, currency-aware */}
             <div className="space-y-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="eyebrow text-[11px] text-white/70">{t('filters.price')}</span>
-                <span aria-live="polite" className="text-sm font-medium tabular-nums text-white">
+                <span className="eyebrow text-eyebrow text-fg-muted">{t('filters.price')}</span>
+                <span aria-live="polite" className="text-sm font-medium tabular-nums text-fg">
                   {priceReadout}
                 </span>
               </div>
 
               <div
-                className={`rounded-2xl bg-white/[0.055] px-4 pb-3 pt-4 transition-opacity ${
+                className={`rounded-2xl bg-surface px-4 pb-3 pt-4 transition-opacity ${
                   isFreeOnly ? 'opacity-40' : 'opacity-100'
                 }`}
               >
                 <div className="relative h-6">
                   {/* Track */}
-                  <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-white/20" />
+                  <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded bg-fg/20" />
                   {/* Selected portion */}
                   <div
                     className="pointer-events-none absolute top-1/2 h-[3px] -translate-y-1/2 rounded bg-brand-400"
@@ -342,7 +342,7 @@ export function FiltersModal({
                     className={`${rangeInputClass} z-10`}
                   />
                 </div>
-                <div className="mt-2 flex items-baseline justify-between text-[11px] tabular-nums text-white/40">
+                <div className="mt-2 flex items-baseline justify-between text-eyebrow tabular-nums text-fg-subtle">
                   <span>{priceMoney(priceSlider.min)}</span>
                   <span>{andUp(priceSlider.max)}</span>
                 </div>
@@ -363,7 +363,7 @@ export function FiltersModal({
 
             {/* Category Filter */}
             <div className="space-y-3">
-              <label className="eyebrow text-[11px] text-white/70">{t('filters.categories')}</label>
+              <label className="eyebrow text-eyebrow text-fg-muted">{t('filters.categories')}</label>
               <div className="flex flex-wrap gap-x-2 gap-y-4">
                 {CATEGORIES.map(category => (
                   <button
@@ -381,7 +381,7 @@ export function FiltersModal({
 
             {/* Location Filter */}
             <div className="space-y-3">
-              <label className="eyebrow text-[11px] text-white/70">{t('filters.location')}</label>
+              <label className="eyebrow text-eyebrow text-fg-muted">{t('filters.location')}</label>
               <div className="space-y-3">
                 {/* City Dropdown. Filled picker trigger, own chevron — the
                     native arrow goes with appearance-none. */}
@@ -396,13 +396,13 @@ export function FiltersModal({
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
                 </div>
 
                 {/* Commune/Neighborhood Dropdown */}
                 {hasLocation && (
                   <div className="space-y-2">
-                    <label className="eyebrow text-[10px] text-white/70">{locationLabel}</label>
+                    <label className="eyebrow text-eyebrow text-fg-muted">{locationLabel}</label>
                     <div className="relative">
                       <select
                         value={draftFilters.commune || ''}
@@ -414,7 +414,7 @@ export function FiltersModal({
                           <option key={subdivision} value={subdivision}>{subdivision}</option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
                     </div>
                   </div>
                 )}
@@ -425,11 +425,11 @@ export function FiltersModal({
           {/* Footer — action bar. Panel colour, not the page colour; the
               hairline divides two stacked regions, so it stays. The bottom
               padding clears the iPhone home indicator. */}
-          <div className="border-t border-white/10 bg-[#1c1c1c]/90 backdrop-blur px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+          <div className="border-t border-line bg-surface-raised-solid/90 backdrop-blur px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={onReset}
-              className="min-h-11 shrink-0 rounded-xl bg-white/[0.06] px-4 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] hover:text-white"
+              className="min-h-11 shrink-0 rounded-xl bg-surface px-4 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
             >
               {t('filters.reset')}
             </button>
@@ -446,8 +446,8 @@ export function FiltersModal({
                 // pushing the row sideways.
               className={`min-h-11 flex-1 rounded-xl px-5 text-sm font-semibold leading-tight transition-colors md:flex-none md:px-7
                 ${hasChanges
-                  ? 'bg-white text-black hover:bg-white/90'
-                  : 'bg-white/[0.06] text-white/35 cursor-not-allowed'
+                  ? 'bg-inverse text-on-inverse hover:bg-inverse-hover'
+                  : 'bg-surface text-fg-faint cursor-not-allowed'
                 }`}
             >
               {t('filters.apply_filters')}

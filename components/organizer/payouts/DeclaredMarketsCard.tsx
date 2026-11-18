@@ -103,10 +103,10 @@ export default function DeclaredMarketsCard({
   }
 
   return (
-    <div className={`bg-white/[0.055] rounded-2xl overflow-hidden ${className || ''}`}>
+    <div className={`bg-surface rounded-2xl overflow-hidden ${className || ''}`}>
       <div className="p-6">
-        <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('markets.title', { defaultValue: 'Where you run events' })}</h2>
-        <p className="mt-1 text-sm text-white/60">
+        <h2 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('markets.title', { defaultValue: 'Where you run events' })}</h2>
+        <p className="mt-1 text-sm text-fg-muted">
           Pick every country you plan to hold events in. We&apos;ll only ask you to set up the
           payout methods those countries actually use, and you can change this whenever you
           expand.
@@ -123,8 +123,8 @@ export default function DeclaredMarketsCard({
                 onClick={() => toggle(code)}
                 className={`inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-medium transition-colors ${
                   isOn
-                    ? 'bg-white text-black'
-                    : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white'
+                    ? 'bg-inverse text-on-inverse'
+                    : 'bg-surface-raised text-fg-soft hover:bg-surface-high hover:text-fg'
                 }`}
               >
                 {isOn ? <Check className="h-3.5 w-3.5" /> : null}
@@ -134,32 +134,32 @@ export default function DeclaredMarketsCard({
           })}
         </div>
 
-        {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+        {error ? <p className="mt-3 text-sm text-danger-soft">{error}</p> : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={!isDirty || isSaving}
-            className="inline-flex items-center gap-2 rounded bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface-high disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {isSaving ? t('markets.saving', { defaultValue: 'Saving…' }) : t('markets.save', { defaultValue: 'Save markets' })}
           </button>
           {justSaved && !isDirty ? (
-            <span className="text-sm text-white/50">{t('markets.saved_note', { defaultValue: 'Saved. You can update this any time.' })}</span>
+            <span className="text-sm text-fg-subtle">{t('markets.saved_note', { defaultValue: 'Saved. You can update this any time.' })}</span>
           ) : null}
         </div>
 
         {/* What the declaration implies, stated plainly. Two markets on two
             different rails are TWO setups, not two options. */}
-        <div className="mt-6 border-t border-white/[0.06] pt-5">
+        <div className="mt-6 border-t border-line-soft pt-5">
           {saved.length === 0 ? (
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-fg-subtle">
               {t('markets.none_declared', { defaultValue: 'Nothing declared yet, so every payout method is shown below.' })}
             </p>
           ) : rails.length === 0 ? (
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-fg-subtle">
               {t('markets.no_paid_yet', {
                 defaultValue:
                   "Paid tickets aren't available in the markets you picked yet, so there's no payout method to set up. Free and RSVP events work today.",
@@ -167,7 +167,7 @@ export default function DeclaredMarketsCard({
             </p>
           ) : (
             <>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-fg-muted">
                 {rails.length > 1
                   ? t('markets.needs_many', { count: rails.length, defaultValue: `Your markets need ${rails.length} separate payout setups. Completing one does not cover the other.` })
                   : t('markets.needs_one', { defaultValue: 'Your markets need one payout setup.' })}
@@ -183,17 +183,17 @@ export default function DeclaredMarketsCard({
                       <span
                         aria-hidden
                         className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                          isConfigured ? 'bg-emerald-400' : 'bg-white/30'
+                          isConfigured ? 'bg-success' : 'bg-fg/30'
                         }`}
                       />
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-white">
+                        <div className="text-sm font-medium text-fg">
                           {railCopy(t)[rail].title}
-                          <span className="ml-2 text-xs font-normal text-white/50">
+                          <span className="ml-2 text-xs font-normal text-fg-subtle">
                             {isConfigured ? t('markets.set_up', { defaultValue: 'Set up' }) : t('markets.not_set_up', { defaultValue: 'Not set up' })}
                           </span>
                         </div>
-                        <div className="text-xs text-white/50">
+                        <div className="text-xs text-fg-subtle">
                           {served} · {railCopy(t)[rail].blurb}
                         </div>
                       </div>

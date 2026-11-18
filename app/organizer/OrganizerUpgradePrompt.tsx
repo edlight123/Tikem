@@ -45,15 +45,15 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
     <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-2">
       {/* Left — textured brand panel */}
       <div className="relative hidden overflow-hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0a0a0a] to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-surface-raised-solid via-canvas to-canvas" />
         <div aria-hidden className="absolute left-1/3 top-1/4 h-[420px] w-[420px] max-w-full rounded-full blur-[140px]" />
         {/* No wordmark here — the site navbar above already carries the logo. */}
         <div className="relative flex h-full flex-col justify-end p-10">
           <div>
-            <h2 className="max-w-sm font-display italic text-3xl leading-tight text-white">
+            <h2 className="max-w-sm font-display italic text-3xl leading-tight text-fg">
               Create your world on tikèm.
             </h2>
-            <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-white/55">
+            <p className="mt-3 max-w-sm text-body leading-relaxed text-fg-muted">
               {t('upgrade_prompt.setup_once_note')}
             </p>
           </div>
@@ -63,22 +63,22 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
       {/* Right — clean form */}
       <div className="flex items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-md">
-          <h1 className="font-display italic text-[clamp(28px,4vw,40px)] leading-[1.05] text-white">
+          <h1 className="font-display italic text-[clamp(28px,4vw,40px)] leading-[1.05] text-fg">
             {t('upgrade_prompt.create_your_organization')}
           </h1>
-          <p className="mt-2 text-[15px] text-white/55">
+          <p className="mt-2 text-body text-fg-muted">
             {t('upgrade_prompt.brand_visible_note')}
           </p>
 
           {error && (
-            <div className="mt-5 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="mt-5 rounded-xl bg-danger-strong/10 px-4 py-3 text-sm text-danger-soft">
               {error}
             </div>
           )}
 
           {/* Brand name */}
           <div className="mt-7">
-            <label htmlFor="org-name" className="mb-2 block text-sm font-semibold text-white/80">
+            <label htmlFor="org-name" className="mb-2 block text-sm font-semibold text-fg-soft">
               {t('upgrade_prompt.what_is_org_called')}
             </label>
             <input
@@ -86,14 +86,14 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
               placeholder={t('upgrade_prompt.brand_name')}
-              className="bg-white/[0.06] w-full rounded-xl px-4 py-3 text-[15px] text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+              className="bg-surface w-full rounded-xl px-4 py-3 text-body text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-400/40"
             />
           </div>
 
           {/* Square logo */}
           <div className="mt-6">
-            <label className="mb-2 block text-sm font-semibold text-white/80">
-              Add your brand&rsquo;s logo <span className="font-normal text-white/40">(square, optional)</span>
+            <label className="mb-2 block text-sm font-semibold text-fg-soft">
+              Add your brand&rsquo;s logo <span className="font-normal text-fg-subtle">(square, optional)</span>
             </label>
             <div className="w-40">
               <ImageUpload variant="square" currentImage={logoUrl} onImageUploaded={setLogoUrl} />
@@ -105,17 +105,17 @@ export default function OrganizerUpgradePrompt({ redirectTo }: { redirectTo?: st
             type="button"
             disabled={isPending}
             onClick={handleContinue}
-            className="mt-8 w-full rounded bg-white px-5 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-8 w-full rounded bg-inverse px-5 py-3.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? 'Setting up…' : 'Continue'}
           </button>
-          <p className="mt-3 text-center text-xs text-white/40">
+          <p className="mt-3 text-center text-xs text-fg-subtle">
             {t('upgrade_prompt.drafts_free_note')}
           </p>
           <button
             type="button"
             onClick={() => router.push('/discover')}
-            className="mt-2 w-full rounded px-5 py-2.5 text-sm font-medium text-white/50 transition-colors hover:text-white"
+            className="mt-2 w-full rounded px-5 py-2.5 text-sm font-medium text-fg-subtle transition-colors hover:text-fg"
           >
             {t('upgrade_prompt.browse_events_instead')}
           </button>

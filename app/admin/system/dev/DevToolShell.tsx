@@ -32,7 +32,7 @@ export default function DevToolShell({
           { label: title, href },
         ]}
       />
-      <h1 className="label-mono mb-4 text-[15px] font-bold uppercase tracking-[0.14em] text-console-text">
+      <h1 className="label-mono mb-4 text-body font-bold uppercase tracking-[0.14em] text-console-text">
         {title}
       </h1>
       {children}

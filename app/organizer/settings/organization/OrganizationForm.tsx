@@ -142,7 +142,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
       {/* Organization Logo */}
       <div className="flex items-start gap-6">
         <div className="relative">
-          <div className="w-24 h-24 rounded-lg overflow-hidden bg-white/[0.055]">
+          <div className="w-24 h-24 rounded-lg overflow-hidden bg-surface">
             {formData.organization_logo ? (
               <Image
                 src={formData.organization_logo}
@@ -153,20 +153,20 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Building2 className="w-12 h-12 text-white/40" />
+                <Building2 className="w-12 h-12 text-fg-subtle" />
               </div>
             )}
           </div>
           {isUploadingLogo && (
-            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
+            <div className="absolute inset-0 bg-scrim-light rounded-lg flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-fg animate-spin" />
             </div>
           )}
         </div>
         <div className="flex-1">
           <label
             htmlFor="logo-upload"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.07] hover:bg-white/[0.12] text-white/80 rounded cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-surface-raised hover:bg-surface-high text-fg-soft rounded cursor-pointer transition-colors"
           >
             <Upload className="w-4 h-4" />
             {t('organization.upload_logo')}
@@ -179,7 +179,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
             className="hidden"
             disabled={isUploadingLogo}
           />
-          <p className="text-xs text-white/50 mt-2">
+          <p className="text-xs text-fg-subtle mt-2">
             {t('organization.square_logo_note')}
           </p>
         </div>
@@ -187,7 +187,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
 
       {/* Organization Name */}
       <div>
-        <label htmlFor="organization_name" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="organization_name" className="block text-sm font-medium text-fg-muted mb-2">
           Organization Name *
         </label>
         <input
@@ -195,7 +195,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
           id="organization_name"
           value={formData.organization_name}
           onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
-          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
           placeholder="e.g., Haiti Music Festival"
           required
         />
@@ -203,14 +203,14 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
 
       {/* Organization Type */}
       <div>
-        <label htmlFor="organization_type" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="organization_type" className="block text-sm font-medium text-fg-muted mb-2">
           {t('organization.organization_type')}
         </label>
         <select
           id="organization_type"
           value={formData.organization_type}
           onChange={(e) => setFormData({ ...formData, organization_type: e.target.value })}
-          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
         >
           <option value="">{t('organization.select_type')}</option>
           <option value="individual">{t('organization.individual')}</option>
@@ -223,7 +223,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
 
       {/* Description */}
       <div>
-        <label htmlFor="organization_description" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="organization_description" className="block text-sm font-medium text-fg-muted mb-2">
           {t('actions.description')}
         </label>
         <textarea
@@ -231,27 +231,27 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
           value={formData.organization_description}
           onChange={(e) => setFormData({ ...formData, organization_description: e.target.value })}
           rows={4}
-          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 resize-none bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+          className="w-full px-4 py-3 rounded focus:ring-2 focus:ring-brand-500 resize-none bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
           placeholder={t('organization.about_placeholder')}
         />
-        <p className="text-xs text-white/50 mt-1">
+        <p className="text-xs text-fg-subtle mt-1">
           {t('organization.public_profile_note')}
         </p>
       </div>
 
       {/* Website */}
       <div>
-        <label htmlFor="website" className="block text-sm font-medium text-white/70 mb-2">
+        <label htmlFor="website" className="block text-sm font-medium text-fg-muted mb-2">
           {t('actions.website')}
         </label>
         <div className="relative">
-          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="url"
             id="website"
             value={formData.website}
             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder="https://example.com"
           />
         </div>
@@ -259,52 +259,52 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
 
       {/* Social Media */}
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-white/70">{t('organization.social_media')}</h3>
+        <h3 className="text-sm font-medium text-fg-muted">{t('organization.social_media')}</h3>
         
         {/* Facebook */}
         <div className="relative">
-          <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="text"
             value={formData.facebook}
             onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder={t('organization.facebook_hint')}
           />
         </div>
 
         {/* Instagram */}
         <div className="relative">
-          <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="text"
             value={formData.instagram}
             onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder={t('organization.instagram_hint')}
           />
         </div>
 
         {/* Twitter */}
         <div className="relative">
-          <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="text"
             value={formData.twitter}
             onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder={t('organization.twitter_hint')}
           />
         </div>
 
         {/* LinkedIn */}
         <div className="relative">
-          <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
           <input
             type="text"
             value={formData.linkedin}
             onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-white/[0.06] text-[16px] text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded focus:ring-2 focus:ring-brand-500 bg-surface text-base text-fg placeholder:text-fg-faint focus:outline-none"
             placeholder={t('organization.linkedin_hint')}
           />
         </div>

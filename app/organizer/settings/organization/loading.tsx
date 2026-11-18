@@ -5,12 +5,12 @@
  * the `pb-mobile-nav` main.
  *
  * Derived geometry (app/organizer/settings/organization/page.tsx):
- *   root    min-h-screen bg-[#0a0a0a] py-8
+ *   root    min-h-screen bg-canvas py-8
  *   inner   max-w-3xl px-4 sm:px-6 lg:px-8
  *   back    inline text-sm link + 16px chevron, mb-6
  *   header  PageHeader — eyebrow, h1 mt-1.5 clamp(26px,4vw,38px), subtitle
  *           mt-1.5  (the eyebrow was missing here)
- *   card    mt-8 overflow-hidden rounded-2xl bg-white/[0.03] — OrganizationForm:
+ *   card    mt-8 overflow-hidden rounded-2xl bg-surface-low — OrganizationForm:
  *           a logo tile then eight fields (name, type, description, website and
  *           four social handles)
  *
@@ -24,7 +24,7 @@ function Bar({ className = '' }: { className?: string }) {
 
 export default function OrganizationLoading() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8">
+    <div className="min-h-screen bg-canvas py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Bar className="mb-6 h-5 w-32" />
 
@@ -34,7 +34,7 @@ export default function OrganizationLoading() {
           <Bar className="mt-1.5 h-4 w-72 max-w-full" />
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white/[0.03] p-6">
+        <div className="mt-8 overflow-hidden rounded-2xl bg-surface-low p-6">
           {/* Logo row */}
           <div className="flex items-start gap-6">
             <div className="skeleton h-24 w-24 shrink-0 rounded-lg" />

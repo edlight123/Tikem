@@ -20,7 +20,7 @@ export default function Loading() {
   return (
     <div className="min-h-screen bg-black pb-mobile-nav">
       {/* Navbar */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 bg-scrim-strong backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           <Bar className="h-7 w-28" />
           <Bar className="h-8 w-24 rounded" />
@@ -48,7 +48,7 @@ export default function Loading() {
               <div
                 key={i}
                 className={`flex items-start gap-3.5 rounded-2xl px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5 ${
-                  i < 2 ? 'bg-white/[0.045]' : ''
+                  i < 2 ? 'bg-surface-low' : ''
                 }`}
               >
                 <div className="skeleton h-12 w-12 shrink-0 rounded-xl sm:h-14 sm:w-14" />

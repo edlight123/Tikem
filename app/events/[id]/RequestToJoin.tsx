@@ -28,7 +28,7 @@ type OwnRequest = {
 }
 
 const field =
-  'w-full rounded bg-white/[0.055] px-4 py-3 text-[16px] text-white placeholder:text-white/35 focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-[15px]'
+  'w-full rounded bg-surface px-4 py-3 text-base text-fg placeholder:text-fg-faint focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-body'
 
 export default function RequestToJoin({
   eventId,
@@ -161,9 +161,9 @@ export default function RequestToJoin({
   }
 
   const primary =
-    'block w-full min-h-12 rounded bg-white px-5 py-2.5 text-center text-[15px] font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50'
+    'block w-full min-h-12 rounded bg-inverse px-5 py-2.5 text-center text-body font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50'
   const secondary =
-    'block w-full min-h-12 rounded bg-white/[0.08] px-5 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50'
+    'block w-full min-h-12 rounded bg-surface-raised px-5 py-2.5 text-center text-body font-semibold text-fg transition-colors hover:bg-surface-high disabled:opacity-50'
 
   if (!userId) {
     return (
@@ -174,7 +174,7 @@ export default function RequestToJoin({
   }
 
   if (!loaded) {
-    return <div className="h-12 w-full animate-pulse rounded bg-white/[0.06]" aria-hidden="true" />
+    return <div className="h-12 w-full animate-pulse rounded bg-surface" aria-hidden="true" />
   }
 
   if (compact && request && request.status !== 'cancelled') {
@@ -187,7 +187,7 @@ export default function RequestToJoin({
             type="button"
             onClick={cancel}
             disabled={busy}
-            className="shrink-0 rounded bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.12] disabled:opacity-50"
+            className="shrink-0 rounded bg-surface-raised px-4 py-2.5 text-sm font-semibold text-fg hover:bg-surface-high disabled:opacity-50"
           >
             {t('attend_requests.state.cancel')}
           </button>
@@ -195,7 +195,7 @@ export default function RequestToJoin({
         {tone === 'approved' && (
           <Link
             href={`/tickets/event/${eventId}`}
-            className="shrink-0 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
+            className="shrink-0 rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse hover:bg-inverse-hover"
           >
             {t('attend_requests.state.view_tickets')}
           </Link>
@@ -210,7 +210,7 @@ export default function RequestToJoin({
       <div className="space-y-3">
         <div>
           <RequestStatusLabel tone="pending" label={t('attend_requests.state.pending_label')} />
-          <p className="mt-1.5 text-sm text-white/60">
+          <p className="mt-1.5 text-sm text-fg-muted">
             {extra > 0
               ? t('attend_requests.state.pending_body_plus', { count: extra })
               : t('attend_requests.state.pending_body')}
@@ -228,7 +228,7 @@ export default function RequestToJoin({
       <div className="space-y-3">
         <div>
           <RequestStatusLabel tone="approved" label={t('attend_requests.state.approved_label')} />
-          <p className="mt-1.5 text-sm text-white/60">{t('attend_requests.state.approved_body')}</p>
+          <p className="mt-1.5 text-sm text-fg-muted">{t('attend_requests.state.approved_body')}</p>
         </div>
         <Link href={`/tickets/event/${eventId}`} className={primary}>
           {t('attend_requests.state.view_tickets')}
@@ -241,7 +241,7 @@ export default function RequestToJoin({
     return (
       <div>
         <RequestStatusLabel tone="declined" label={t('attend_requests.state.declined_label')} />
-        <p className="mt-1.5 text-sm text-white/60">{t('attend_requests.state.declined_body')}</p>
+        <p className="mt-1.5 text-sm text-fg-muted">{t('attend_requests.state.declined_body')}</p>
       </div>
     )
   }
@@ -254,38 +254,38 @@ export default function RequestToJoin({
       <BottomSheet isOpen={open} onClose={() => !busy && setOpen(false)}>
         <form onSubmit={send} className="space-y-6 pb-2">
           <div>
-            <h2 className="font-display lowercase italic !text-[30px] !leading-[1.05] text-white">
+            <h2 className="font-display lowercase italic !text-display !leading-[1.05] text-fg">
               {t('attend_requests.sheet.title')}
             </h2>
-            <p className="mt-1.5 text-sm text-white/60">{t('attend_requests.sheet.subtitle')}</p>
+            <p className="mt-1.5 text-sm text-fg-muted">{t('attend_requests.sheet.subtitle')}</p>
           </div>
 
           {allowed > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/50">
+                <span className="text-eyebrow font-bold uppercase tracking-[0.12em] text-fg-subtle">
                   {t('attend_requests.sheet.bringing')}
                 </span>
-                <div className="flex items-center gap-3 rounded bg-white/[0.055] px-2 py-1.5">
+                <div className="flex items-center gap-3 rounded bg-surface px-2 py-1.5">
                   <button
                     type="button"
                     aria-label={t('attend_requests.sheet.decrease')}
                     disabled={guests.length === 0 || busy}
                     onClick={() => setGuests((g) => g.slice(0, -1))}
-                    className="grid h-8 w-8 place-items-center rounded bg-white/[0.08] text-white hover:bg-white/[0.14] disabled:opacity-40"
+                    className="grid h-8 w-8 place-items-center rounded bg-surface-raised text-fg hover:bg-surface-high disabled:opacity-40"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="min-w-[96px] text-center text-sm text-white">
+                  <span className="min-w-[96px] text-center text-sm text-fg">
                     {t('attend_requests.sheet.guests', { count: guests.length })}
-                    <span className="text-white/45"> · {t('attend_requests.sheet.max', { count: allowed })}</span>
+                    <span className="text-fg-subtle"> · {t('attend_requests.sheet.max', { count: allowed })}</span>
                   </span>
                   <button
                     type="button"
                     aria-label={t('attend_requests.sheet.increase')}
                     disabled={guests.length >= allowed || busy}
                     onClick={() => setGuests((g) => [...g, { firstName: '', phone: '' }])}
-                    className="grid h-8 w-8 place-items-center rounded bg-white/[0.08] text-white hover:bg-white/[0.14] disabled:opacity-40"
+                    className="grid h-8 w-8 place-items-center rounded bg-surface-raised text-fg hover:bg-surface-high disabled:opacity-40"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -293,7 +293,7 @@ export default function RequestToJoin({
               </div>
               {guests.map((g, i) => (
                 <div key={i} className="space-y-2">
-                  <label className="block text-sm text-white/70">
+                  <label className="block text-sm text-fg-muted">
                     {t('attend_requests.sheet.first_name')}
                     <input
                       value={g.firstName}
@@ -307,7 +307,7 @@ export default function RequestToJoin({
                       className={`${field} mt-1.5`}
                     />
                   </label>
-                  <label className="block text-sm text-white/70">
+                  <label className="block text-sm text-fg-muted">
                     {t('attend_requests.sheet.phone')}
                     <input
                       value={g.phone}
@@ -328,10 +328,10 @@ export default function RequestToJoin({
 
           <div>
             <div className="flex items-center justify-between">
-              <label htmlFor={`attend-note-${eventId}`} className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/50">
+              <label htmlFor={`attend-note-${eventId}`} className="text-eyebrow font-bold uppercase tracking-[0.12em] text-fg-subtle">
                 {t('attend_requests.sheet.note')}
               </label>
-              <span className="text-xs tabular-nums text-white/40">
+              <span className="text-xs tabular-nums text-fg-subtle">
                 {note.length}/{ATTEND_NOTE_MAX}
               </span>
             </div>
@@ -348,7 +348,7 @@ export default function RequestToJoin({
 
           {needsCode && (
             <div>
-              <p className="text-sm text-white/70">{t('attend_requests.sheet.code_title')}</p>
+              <p className="text-sm text-fg-muted">{t('attend_requests.sheet.code_title')}</p>
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
@@ -360,7 +360,7 @@ export default function RequestToJoin({
           )}
 
           {error && (
-            <p role="alert" className="text-sm text-red-300">
+            <p role="alert" className="text-sm text-danger-soft">
               {error}
             </p>
           )}
@@ -369,7 +369,7 @@ export default function RequestToJoin({
             <button type="submit" disabled={busy} className={primary}>
               {busy ? t('attend_requests.sheet.sending') : needsCode ? t('attend_requests.sheet.unlock') : t('attend_requests.sheet.send')}
             </button>
-            <p className="text-center text-xs text-white/45">{t('attend_requests.sheet.footnote')}</p>
+            <p className="text-center text-xs text-fg-subtle">{t('attend_requests.sheet.footnote')}</p>
           </div>
         </form>
       </BottomSheet>

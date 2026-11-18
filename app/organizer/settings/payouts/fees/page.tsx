@@ -101,28 +101,28 @@ export default async function PayoutFeesPage() {
   }
 
   return (
-    <div className="bg-[#0a0a0a]">
+    <div className="bg-canvas">
       {/* Header */}
       <div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-white/60 mb-3">
-            <Link href="/organizer/settings" className="hover:text-white">
+          <div className="flex items-center gap-2 text-sm text-fg-muted mb-3">
+            <Link href="/organizer/settings" className="hover:text-fg">
               {t('fees_page.breadcrumb_settings', 'Settings')}
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/organizer/settings/payouts" className="hover:text-white">
+            <Link href="/organizer/settings/payouts" className="hover:text-fg">
               {t('fees_page.breadcrumb_payouts', 'Payouts')}
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-white font-medium">{t('fees_page.title', 'Fees & Rules')}</span>
+            <span className="text-fg font-medium">{t('fees_page.title', 'Fees & Rules')}</span>
           </div>
 
           {/* Title */}
-          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-white mb-2">
+          <h1 className="font-display lowercase italic !text-[clamp(28px,4vw,40px)] !leading-[1.04] text-fg mb-2">
             {t('fees_page.title', 'Fees & Rules')}
           </h1>
-          <p className="text-white/60">
+          <p className="text-fg-muted">
             {t('fees_page.subtitle', 'Understanding platform fees, processing costs, and payout schedules.')}
           </p>
         </div>
@@ -133,11 +133,11 @@ export default async function PayoutFeesPage() {
         <div className="space-y-6">
           
           {/* Who pays the fee — the thing that decides every number below */}
-          <div className="rounded-2xl bg-white/[0.055] p-6">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">
+          <div className="rounded-2xl bg-surface p-6">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">
               {t('fees_page.who_pays_title', 'Who pays the fee')}
             </h2>
-            <div className="space-y-3 text-white/70">
+            <div className="space-y-3 text-fg-muted">
               <p>
                 {t(
                   'fees_page.who_pays_intro',
@@ -170,7 +170,7 @@ export default async function PayoutFeesPage() {
                   )}
                 </li>
               </ul>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-fg-muted">
                 {t(
                   'fees_page.who_pays_free_note',
                   'Free events are never charged a fee under either model.'
@@ -180,11 +180,11 @@ export default async function PayoutFeesPage() {
           </div>
 
           {/* Platform Fee Card */}
-          <div className="rounded-2xl bg-white/[0.055] p-6">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">
+          <div className="rounded-2xl bg-surface p-6">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">
               {t('fees_page.platform_fee', 'Platform fee')}
             </h2>
-            <div className="space-y-3 text-white/70">
+            <div className="space-y-3 text-fg-muted">
               <p>
                 {t('fees_page.rates_intro', 'Tikèm’s fee on paid tickets depends on where your event is:')}
               </p>
@@ -241,11 +241,11 @@ export default async function PayoutFeesPage() {
           </div>
 
           {/* Processing Fee Card */}
-          <div className="rounded-2xl bg-white/[0.055] p-6">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">
+          <div className="rounded-2xl bg-surface p-6">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">
               {t('fees_page.processing_fee', 'Payment processing fee')}
             </h2>
-            <div className="space-y-3 text-white/70">
+            <div className="space-y-3 text-fg-muted">
               <p>
                 {t('fees_page.processing_intro', 'Payment processing fees vary by payment method:')}
               </p>
@@ -259,7 +259,7 @@ export default async function PayoutFeesPage() {
                   {t('fees_page.moncash_value', '2.5% per transaction')}
                 </li>
               </ul>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-fg-muted">
                 {t(
                   'fees_page.processing_note',
                   'Tikèm pays these out of its own fee, in every country and whoever bears the fee. They are never added to your buyer\'s total or deducted from your payout.'
@@ -269,11 +269,11 @@ export default async function PayoutFeesPage() {
           </div>
 
           {/* Payout Schedule Card */}
-          <div className="rounded-2xl bg-white/[0.055] p-6">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">
+          <div className="rounded-2xl bg-surface p-6">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">
               {t('fees_page.payout_schedule', 'Payout schedule')}
             </h2>
-            <div className="space-y-3 text-white/70">
+            <div className="space-y-3 text-fg-muted">
               <p>
                 {t('fees_page.schedule_a', 'Funds become available to withdraw')}{' '}
                 <strong>{t('fees_page.schedule_strong', '72 hours after your event ends')}</strong>
@@ -289,10 +289,10 @@ export default async function PayoutFeesPage() {
                 )}{' '}
                 <strong>{t('fees_page.schedule_strong2', '3–5 business days')}</strong>.
               </p>
-              <div className="rounded-xl bg-white/[0.07] p-4 mt-4">
+              <div className="rounded-xl bg-surface-raised p-4 mt-4">
                 <div className="flex gap-3">
-                  <Info className="w-5 h-5 text-white/60 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-white/75">
+                  <Info className="w-5 h-5 text-fg-muted flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-fg-soft">
                     <strong>{t('fees_page.note_label', 'Note:')}</strong>{' '}
                     {t(
                       'fees_page.note_body',
@@ -305,58 +305,58 @@ export default async function PayoutFeesPage() {
           </div>
 
           {/* Example Calculation Card — one per fee model, so neither reads as the rule */}
-          <div className="rounded-2xl bg-white/[0.055] p-6">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">
+          <div className="rounded-2xl bg-surface p-6">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">
               {t('fees_page.examples_title', 'Example calculations')}
             </h2>
 
             <div className="space-y-5">
               {/* Buyer pays — US / Canada / France */}
               <div>
-                <h3 className="text-sm font-semibold text-white mb-2">
+                <h3 className="text-sm font-semibold text-fg mb-2">
                   {t(
                     'fees_page.example_us_title',
                     'United States: the buyer pays the fee'
                   )}
                 </h3>
-                <div className="rounded-xl bg-white/[0.06] p-4 font-mono text-sm">
+                <div className="rounded-xl bg-surface p-4 font-mono text-sm">
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-white/60">
+                      <span className="text-fg-muted">
                         {t('fees_page.your_ticket_price', 'Your ticket price:')}
                       </span>
-                      <span className="text-white font-semibold">
+                      <span className="text-fg font-semibold">
                         {formatCurrency(usExample.faceValue, 'USD')}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">
+                      <span className="text-fg-muted">
                         {t('fees_page.fee_added_at_checkout', 'Fee added at checkout:')}
                       </span>
-                      <span className="text-white font-semibold">
+                      <span className="text-fg font-semibold">
                         + {formatCurrency(usExample.buyerFee, 'USD')}
                       </span>
                     </div>
-                    <div className="border-t border-white/[0.08] my-2"></div>
+                    <div className="border-t border-line my-2"></div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">
+                      <span className="text-fg-muted">
                         {t('fees_page.your_buyer_pays', 'Your buyer pays:')}
                       </span>
-                      <span className="text-white font-semibold">
+                      <span className="text-fg font-semibold">
                         {formatCurrency(usExample.chargeAmount, 'USD')}
                       </span>
                     </div>
                     <div className="flex justify-between text-lg">
-                      <span className="text-white font-semibold">
+                      <span className="text-fg font-semibold">
                         {t('fees_page.you_receive', 'You receive:')}
                       </span>
-                      <span className="text-emerald-300 font-bold">
+                      <span className="text-success-soft font-bold">
                         {formatCurrency(usExample.organizerNet, 'USD')}
                       </span>
                     </div>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-white/60">
+                <p className="mt-2 text-sm text-fg-muted">
                   {t(
                     'fees_page.example_us_note',
                     'You receive the full {{amount}}. Your buyer sees the total, with the fee itemized, before they pay, never at the last step.'
@@ -366,25 +366,25 @@ export default async function PayoutFeesPage() {
 
               {/* Organizer pays — Haiti */}
               <div>
-                <h3 className="text-sm font-semibold text-white mb-2">
+                <h3 className="text-sm font-semibold text-fg mb-2">
                   {t('fees_page.example_ht_title', 'Haiti: the fee comes out of your proceeds')}
                 </h3>
-                <div className="rounded-xl bg-white/[0.06] p-4 font-mono text-sm">
+                <div className="rounded-xl bg-surface p-4 font-mono text-sm">
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-white/60">
+                      <span className="text-fg-muted">
                         {t('fees_page.your_ticket_price', 'Your ticket price:')}
                       </span>
-                      <span className="text-white font-semibold">HTG 1,000</span>
+                      <span className="text-fg font-semibold">HTG 1,000</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60">
+                      <span className="text-fg-muted">
                         {t('fees_page.your_buyer_pays', 'Your buyer pays:')}
                       </span>
-                      <span className="text-white font-semibold">HTG 1,000</span>
+                      <span className="text-fg font-semibold">HTG 1,000</span>
                     </div>
-                    <div className="border-t border-white/[0.08] my-2"></div>
-                    <div className="flex justify-between text-red-300">
+                    <div className="border-t border-line my-2"></div>
+                    <div className="flex justify-between text-danger-soft">
                       <span>
                         {t('fees_page.example_platform_fee_line', 'Platform fee ({{percent}}):').replace(
                           '{{percent}}',
@@ -393,18 +393,18 @@ export default async function PayoutFeesPage() {
                       </span>
                       <span>- {formatCurrency(htExamplePlatformFee, 'HTG')}</span>
                     </div>
-                    <div className="border-t border-white/[0.08] my-2"></div>
+                    <div className="border-t border-line my-2"></div>
                     <div className="flex justify-between text-lg">
-                      <span className="text-white font-semibold">
+                      <span className="text-fg font-semibold">
                         {t('fees_page.you_receive', 'You receive:')}
                       </span>
-                      <span className="text-emerald-300 font-bold">
+                      <span className="text-success-soft font-bold">
                         {formatCurrency(1000_00 - htExamplePlatformFee, 'HTG')}
                       </span>
                     </div>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-white/60">
+                <p className="mt-2 text-sm text-fg-muted">
                   {t(
                     'fees_page.example_ht_note',
                     'You receive 1,000 HTG minus the platform fee. The advertised price is what your buyer is charged, to the gourde.'
@@ -412,7 +412,7 @@ export default async function PayoutFeesPage() {
                 </p>
               </div>
 
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-fg-muted">
                 {t(
                   'fees_page.examples_note',
                   'Simplified examples. Actual processing fees vary with the payment method your attendees use.'
@@ -422,11 +422,11 @@ export default async function PayoutFeesPage() {
           </div>
 
           {/* Refunds Note Card */}
-          <div className="rounded-2xl bg-white/[0.055] p-6">
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-3">
+          <div className="rounded-2xl bg-surface p-6">
+            <h2 className="font-display lowercase italic !text-section !leading-snug text-fg mb-3">
               {t('fees_page.refunds_title', 'Refunds')}
             </h2>
-            <div className="space-y-3 text-white/70">
+            <div className="space-y-3 text-fg-muted">
               <p>
                 {t('fees_page.refunds_intro', 'When you issue a refund to an attendee:')}
               </p>

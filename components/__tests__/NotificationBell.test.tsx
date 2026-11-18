@@ -235,6 +235,6 @@ describe('NotificationBell', () => {
     const { container } = render(<NotificationBell userId={mockUserId} />)
     
     // Initially should not show badge (prevents hydration mismatch)
-    expect(container.querySelector('.bg-red-600')).not.toBeInTheDocument()
+    expect(container.querySelector('.bg-danger-strong')).not.toBeInTheDocument()
   })
 })

@@ -143,7 +143,7 @@ export function FollowingCard({ onCountChange }: { onCountChange?: (delta: numbe
           action={
             <Link
               href="/discover"
-              className="inline-flex h-10 items-center rounded bg-white px-5 text-[13px] font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              className="inline-flex h-10 items-center rounded bg-inverse px-5 text-meta font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/70"
             >
               {t('dashboard.posters.explore')}
             </Link>
@@ -165,7 +165,7 @@ export function FollowingCard({ onCountChange }: { onCountChange?: (delta: numbe
                     >
                       <OrganizerMark logoUrl={org.avatar} className="h-11 w-11 rounded" />
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate font-display italic !text-[18px] !leading-snug text-white group-hover:text-white/80">
+                        <span className="truncate font-display italic !text-lead !leading-snug text-fg group-hover:text-fg-soft">
                           {name}
                         </span>
                         {org.isVerified ? (
@@ -182,7 +182,7 @@ export function FollowingCard({ onCountChange }: { onCountChange?: (delta: numbe
                           ? t('dashboard.following.follow_name', { name })
                           : t('dashboard.following.unfollow_name', { name })
                       }
-                      className={`${GHOST_BTN} shrink-0 justify-center sm:min-w-[96px] ${off ? '!bg-white !text-black hover:!bg-white/90' : ''}`}
+                      className={`${GHOST_BTN} shrink-0 justify-center sm:min-w-[96px] ${off ? '!bg-inverse !text-on-inverse hover:!bg-inverse-hover' : ''}`}
                     >
                       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
                       {off ? t('dashboard.following.follow') : t('dashboard.following.unfollow')}

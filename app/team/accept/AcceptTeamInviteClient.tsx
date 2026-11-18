@@ -112,36 +112,36 @@ export function InviteCard({ state }: { state: InviteState }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-black px-4 py-16">
       <Link href="/" className="mb-10 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-        <TikemWordmark italic className="text-3xl text-white" />
+        <TikemWordmark italic className="text-3xl text-fg" />
       </Link>
 
-      <div className="w-full max-w-md rounded bg-[#141414] p-6 sm:p-8">
+      <div className="w-full max-w-md rounded bg-surface-solid p-6 sm:p-8">
         {state.kind === 'working' && (
           <div className="flex flex-col items-center py-6 text-center" role="status" aria-live="polite">
-            <Loader2 className="h-6 w-6 animate-spin text-white/60" aria-hidden />
-            <p className="mt-4 text-sm text-white/60">{t('team_accept.working')}</p>
+            <Loader2 className="h-6 w-6 animate-spin text-fg-muted" aria-hidden />
+            <p className="mt-4 text-sm text-fg-muted">{t('team_accept.working')}</p>
           </div>
         )}
 
         {state.kind === 'joined' && (
           <div aria-live="polite">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+            <p className="text-eyebrow font-semibold uppercase tracking-[0.14em] text-fg-subtle">
               {t('team_accept.eyebrow')}
             </p>
-            <h1 className="mt-3 font-display !text-[30px] lowercase italic !leading-tight text-white">
+            <h1 className="mt-3 font-display !text-display lowercase italic !leading-tight text-fg">
               {t('team_accept.joined_title')}
             </h1>
-            <p className="mt-3 text-[15px] leading-relaxed text-white/75">
+            <p className="mt-3 text-body leading-relaxed text-fg-soft">
               {state.orgName
                 ? t('team_accept.joined_body', { org: state.orgName, role: roleLabel(state.role) })
                 : t('team_accept.joined_body_no_name', { role: roleLabel(state.role) })}
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-white/50">
+            <p className="mt-2 text-sm leading-relaxed text-fg-subtle">
               {state.role === 'staff' ? t('team_accept.staff_note') : t('team_accept.member_note')}
             </p>
             <Link
               href={state.role === 'staff' ? '/staff' : '/organizer'}
-              className="mt-7 flex h-12 w-full items-center justify-center rounded bg-white text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="mt-7 flex h-12 w-full items-center justify-center rounded bg-inverse text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {state.role === 'staff' ? t('team_accept.open_staff') : t('team_accept.open_dashboard')}
             </Link>
@@ -150,17 +150,17 @@ export function InviteCard({ state }: { state: InviteState }) {
 
         {state.kind === 'error' && (
           <div aria-live="polite">
-            <p className="flex items-center gap-2 text-[13px] text-red-300">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" aria-hidden />
+            <p className="flex items-center gap-2 text-meta text-danger-soft">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger" aria-hidden />
               {t('team_accept.error_label')}
             </p>
-            <h1 className="mt-3 font-display !text-[30px] lowercase italic !leading-tight text-white">
+            <h1 className="mt-3 font-display !text-display lowercase italic !leading-tight text-fg">
               {t(`team_accept.error_${state.code}_title`)}
             </h1>
-            <p className="mt-3 text-[15px] leading-relaxed text-white/70">{t(`team_accept.error_${state.code}_body`)}</p>
+            <p className="mt-3 text-body leading-relaxed text-fg-muted">{t(`team_accept.error_${state.code}_body`)}</p>
             <Link
               href={state.code === 'own_org' ? '/organizer' : '/'}
-              className="mt-7 flex h-12 w-full items-center justify-center rounded bg-white/[0.08] text-sm font-semibold text-white transition-colors hover:bg-white/[0.14] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="mt-7 flex h-12 w-full items-center justify-center rounded bg-surface-raised text-sm font-semibold text-fg transition-colors hover:bg-surface-high focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {state.code === 'own_org' ? t('team_accept.open_dashboard') : t('team_accept.go_home')}
             </Link>

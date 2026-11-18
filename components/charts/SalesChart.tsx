@@ -1,6 +1,7 @@
 'use client'
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { color } from '@/lib/design/tokens'
 
 interface SalesChartProps {
   data: Array<{
@@ -33,12 +34,12 @@ export default function SalesChart({ data, currency = 'HTG' }: SalesChartProps) 
       <AreaChart data={data}>
         <defs>
           <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#0F766E" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#0F766E" stopOpacity={0}/>
+            <stop offset="5%" stopColor={color.brand[700]} stopOpacity={0.8}/>
+            <stop offset="95%" stopColor={color.brand[700]} stopOpacity={0}/>
           </linearGradient>
           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#14B8A6" stopOpacity={0}/>
+            <stop offset="5%" stopColor={color.brand[500]} stopOpacity={0.8}/>
+            <stop offset="95%" stopColor={color.brand[500]} stopOpacity={0}/>
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -67,20 +68,20 @@ export default function SalesChart({ data, currency = 'HTG' }: SalesChartProps) 
             return [Number(value || 0), 'Tickets']
           }}
           contentStyle={{
-            backgroundColor: '#1a1a1a',
+            backgroundColor: color.surface['raised-solid'],
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            color: '#fff',
+            color: color.fg.DEFAULT,
           }}
           labelStyle={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}
-          itemStyle={{ color: '#fff' }}
+          itemStyle={{ color: color.fg.DEFAULT }}
           cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
         />
         <Area 
           type="monotone" 
           dataKey="sales" 
-          stroke="#0F766E" 
+          stroke={color.brand[700]} 
           fillOpacity={1} 
           fill="url(#colorSales)"
           strokeWidth={2}
@@ -88,7 +89,7 @@ export default function SalesChart({ data, currency = 'HTG' }: SalesChartProps) 
         <Area 
           type="monotone" 
           dataKey="revenue" 
-          stroke="#14B8A6" 
+          stroke={color.brand[500]} 
           fillOpacity={1} 
           fill="url(#colorRevenue)"
           strokeWidth={2}

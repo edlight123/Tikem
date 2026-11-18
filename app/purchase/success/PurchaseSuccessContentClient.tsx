@@ -63,47 +63,47 @@ export default function PurchaseSuccessContentClient(props: Props) {
   })()
 
   // An unknown value reads as a quiet middle dot, not as punctuation.
-  const empty = <span className="text-white/35" aria-hidden="true">·</span>
+  const empty = <span className="text-fg-faint" aria-hidden="true">·</span>
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded bg-green-500/10 mb-4">
-          <svg className="w-8 h-8 md:w-10 md:h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded bg-success-strong/10 mb-4">
+          <svg className="w-8 h-8 md:w-10 md:h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="font-display lowercase italic !text-[32px] md:!text-[40px] !leading-tight text-white mb-2">
+        <h1 className="font-display lowercase italic !text-display md:!text-hero !leading-tight text-fg mb-2">
           {t('tickets:purchase_success.title')}
         </h1>
-        <p className="text-base md:text-lg text-white/65">{t('tickets:purchase_success.subtitle')}</p>
+        <p className="text-base md:text-lg text-fg-muted">{t('tickets:purchase_success.subtitle')}</p>
       </div>
 
       {props.hasTicket && (
-        <div className="bg-white/[0.055] rounded-2xl overflow-hidden mb-6">
-          <div className="p-4 md:p-6 pb-0 md:pb-0 text-white">
+        <div className="bg-surface rounded-2xl overflow-hidden mb-6">
+          <div className="p-4 md:p-6 pb-0 md:pb-0 text-fg">
             <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-1.5 md:mb-2 line-clamp-2">{props.eventTitle}</h2>
-            <p className="text-sm md:text-base text-white/60">{startText}</p>
+            <p className="text-sm md:text-base text-fg-muted">{startText}</p>
           </div>
 
           <div className="p-4 md:p-6 space-y-3 md:space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-white/[0.06]">
-              <span className="text-[13px] font-medium text-white/65">{t('tickets:purchase_success.ticket_id_label')}</span>
-              <span className="font-mono text-sm text-white">{props.ticketIdShort || empty}</span>
+            <div className="flex justify-between items-center pb-3 border-b border-line-soft">
+              <span className="text-meta font-medium text-fg-muted">{t('tickets:purchase_success.ticket_id_label')}</span>
+              <span className="font-mono text-sm text-fg">{props.ticketIdShort || empty}</span>
             </div>
 
-            <div className="flex justify-between items-center pb-3 border-b border-white/[0.06]">
-              <span className="text-[13px] font-medium text-white/65">{t('tickets:purchase_success.location_label')}</span>
-              <span className="text-sm text-white text-right truncate max-w-[60%]">{props.location || empty}</span>
+            <div className="flex justify-between items-center pb-3 border-b border-line-soft">
+              <span className="text-meta font-medium text-fg-muted">{t('tickets:purchase_success.location_label')}</span>
+              <span className="text-sm text-fg text-right truncate max-w-[60%]">{props.location || empty}</span>
             </div>
 
-            <div className="flex justify-between items-center pb-3 border-b border-white/[0.06]">
-              <span className="text-[13px] font-medium text-white/65">{t('tickets:purchase_success.amount_paid_label')}</span>
-              <span className="text-base md:text-lg font-bold text-white">{amountText ?? empty}</span>
+            <div className="flex justify-between items-center pb-3 border-b border-line-soft">
+              <span className="text-meta font-medium text-fg-muted">{t('tickets:purchase_success.amount_paid_label')}</span>
+              <span className="text-base md:text-lg font-bold text-fg">{amountText ?? empty}</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-[13px] font-medium text-white/65">{t('tickets:purchase_success.status_label')}</span>
+              <span className="text-meta font-medium text-fg-muted">{t('tickets:purchase_success.status_label')}</span>
               <StatusChip tone="success">
                 {t('tickets:purchase_success.status_confirmed')}
               </StatusChip>
@@ -112,7 +112,7 @@ export default function PurchaseSuccessContentClient(props: Props) {
 
           <div className="p-4 md:p-6 pt-0 md:pt-0">
             {props.qrCodeDataUrl ? (
-              <div className="flex flex-col items-center justify-center bg-white/[0.06] rounded-xl p-4 md:p-6">
+              <div className="flex flex-col items-center justify-center bg-surface rounded-xl p-4 md:p-6">
                 <Image
                   src={props.qrCodeDataUrl}
                   alt={t('tickets:purchase_success.qr_alt')}
@@ -121,15 +121,15 @@ export default function PurchaseSuccessContentClient(props: Props) {
                   className="w-44 h-44 md:w-52 md:h-52 rounded-xl"
                   unoptimized
                 />
-                <p className="text-sm text-white/65 mt-3">{t('tickets:purchase_success.qr_title')}</p>
-                <p className="text-[11px] md:text-xs text-white/50 mt-1">{t('tickets:purchase_success.qr_subtitle')}</p>
+                <p className="text-sm text-fg-muted mt-3">{t('tickets:purchase_success.qr_title')}</p>
+                <p className="text-eyebrow md:text-xs text-fg-subtle mt-1">{t('tickets:purchase_success.qr_subtitle')}</p>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-40 md:h-48 bg-white/[0.06] rounded-xl">
+              <div className="flex items-center justify-center h-40 md:h-48 bg-surface rounded-xl">
                 <div className="text-center">
-                  <QrCode className="w-12 h-12 md:w-16 md:h-16 mx-auto text-white/40 mb-2" strokeWidth={1.5} aria-hidden="true" />
-                  <p className="text-sm text-white/65">{t('tickets:purchase_success.qr_title')}</p>
-                  <p className="text-[11px] md:text-xs text-white/50 mt-1">{t('tickets:purchase_success.qr_subtitle')}</p>
+                  <QrCode className="w-12 h-12 md:w-16 md:h-16 mx-auto text-fg-subtle mb-2" strokeWidth={1.5} aria-hidden="true" />
+                  <p className="text-sm text-fg-muted">{t('tickets:purchase_success.qr_title')}</p>
+                  <p className="text-eyebrow md:text-xs text-fg-subtle mt-1">{t('tickets:purchase_success.qr_subtitle')}</p>
                 </div>
               </div>
             )}
@@ -138,21 +138,21 @@ export default function PurchaseSuccessContentClient(props: Props) {
       )}
 
       {!props.hasTicket && (
-        <div className="bg-white/[0.055] rounded-2xl p-8 md:p-12 text-center mb-6">
-          <p className="text-sm md:text-base text-white/65">{t('tickets:purchase_success.no_ticket_message')}</p>
+        <div className="bg-surface rounded-2xl p-8 md:p-12 text-center mb-6">
+          <p className="text-sm md:text-base text-fg-muted">{t('tickets:purchase_success.no_ticket_message')}</p>
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link
           href="/tickets"
-          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded bg-white text-black text-base font-semibold hover:bg-white/90 transition-colors text-center"
+          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded bg-inverse text-on-inverse text-base font-semibold hover:bg-inverse-hover transition-colors text-center"
         >
           {t('tickets:purchase_success.view_tickets')}
         </Link>
         <Link
           href="/"
-          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded bg-white/[0.07] text-white text-base font-semibold hover:bg-white/[0.12] transition-colors text-center"
+          className="inline-flex h-12 items-center justify-center px-6 md:px-8 rounded bg-surface-raised text-fg text-base font-semibold hover:bg-surface-high transition-colors text-center"
         >
           {t('tickets:purchase_success.find_more_events')}
         </Link>
@@ -160,26 +160,26 @@ export default function PurchaseSuccessContentClient(props: Props) {
 
       {/* Right after a purchase is when the app is worth the most: the
           ticket lives on the phone, offline, at the door. */}
-      <div className="mt-8 rounded bg-white/[0.055] p-4 md:p-6">
-        <p className="mb-3 text-[14px] text-white/75">
+      <div className="mt-8 rounded bg-surface p-4 md:p-6">
+        <p className="mb-3 text-sm text-fg-soft">
           {t('common:store_badges.after_purchase', { defaultValue: 'Keep your ticket on your phone, even offline.' })}
         </p>
         <StoreBadges />
       </div>
 
-      <div className="mt-8 bg-white/[0.055] rounded-2xl p-4 md:p-6">
-        <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white mb-2.5">{t('tickets:purchase_success.next_steps_title')}</h3>
-        <ul className="space-y-2 text-[13px] md:text-sm text-white/70">
+      <div className="mt-8 bg-surface rounded-2xl p-4 md:p-6">
+        <h3 className="font-display lowercase italic !text-section !leading-snug text-fg mb-2.5">{t('tickets:purchase_success.next_steps_title')}</h3>
+        <ul className="space-y-2 text-meta md:text-sm text-fg-muted">
           <li className="flex items-start">
-            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0 mt-0.5 text-white/50" aria-hidden="true" />
+            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0 mt-0.5 text-fg-subtle" aria-hidden="true" />
             {t('tickets:purchase_success.next_steps.check_email')}
           </li>
           <li className="flex items-start">
-            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0 mt-0.5 text-white/50" aria-hidden="true" />
+            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0 mt-0.5 text-fg-subtle" aria-hidden="true" />
             {t('tickets:purchase_success.next_steps.save_ticket')}
           </li>
           <li className="flex items-start">
-            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0 mt-0.5 text-white/50" aria-hidden="true" />
+            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0 mt-0.5 text-fg-subtle" aria-hidden="true" />
             {t('tickets:purchase_success.next_steps.arrive_early')}
           </li>
         </ul>
@@ -187,17 +187,17 @@ export default function PurchaseSuccessContentClient(props: Props) {
 
       {/* Follow Tikèm: right after a ticket is when people are most likely to
           follow for the next one. Opens the Instagram app on a phone. */}
-      <div className="mt-4 bg-white/[0.055] rounded p-4 md:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 bg-surface rounded p-4 md:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h3 className="font-display italic !text-[24px] !leading-snug text-white">{INSTAGRAM_HANDLE}</h3>
-          <p className="mt-1 text-[13px] md:text-sm text-white/60">{t('tickets:purchase_success.follow_line')}</p>
+          <h3 className="font-display italic !text-section !leading-snug text-fg">{INSTAGRAM_HANDLE}</h3>
+          <p className="mt-1 text-meta md:text-sm text-fg-muted">{t('tickets:purchase_success.follow_line')}</p>
         </div>
         <a
           href={INSTAGRAM_URL}
           onClick={openInstagram}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 px-6 rounded bg-white/[0.08] text-white text-base font-semibold hover:bg-white/[0.12] transition-colors"
+          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 px-6 rounded bg-surface-raised text-fg text-base font-semibold hover:bg-surface-high transition-colors"
         >
           <Instagram className="h-5 w-5" aria-hidden="true" />
           {t('tickets:purchase_success.follow_cta')}

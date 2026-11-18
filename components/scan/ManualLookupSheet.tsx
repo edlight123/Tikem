@@ -36,29 +36,29 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#1c1c1c] rounded-t-3xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-surface-raised-solid rounded-t-3xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
-          <h2 className="text-xl font-bold text-white">{t('door.manual_lookup', { defaultValue: 'Manual Lookup' })}</h2>
+        <div className="flex items-center justify-between p-4 border-b border-line-soft">
+          <h2 className="text-xl font-bold text-fg">{t('door.manual_lookup', { defaultValue: 'Manual Lookup' })}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/[0.08] rounded transition-colors"
+            className="p-2 hover:bg-surface-raised rounded transition-colors"
           >
-            <X className="w-5 h-5 text-white/40" />
+            <X className="w-5 h-5 text-fg-subtle" />
           </button>
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-white/[0.06]">
+        <div className="p-4 border-b border-line-soft">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-subtle" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('door.search_placeholder', { defaultValue: 'Search by name, email, or ticket ID...' })}
-              className="w-full pl-10 pr-4 py-3 bg-white/[0.06] rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-3 bg-surface rounded-xl text-fg placeholder-fg-subtle focus:outline-none focus:ring-2 focus:ring-brand-500"
               autoFocus
             />
           </div>
@@ -68,8 +68,8 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
         <div className="flex-1 overflow-y-auto p-4">
           {filteredAttendees.length === 0 ? (
             <div className="text-center py-12">
-              <Search className="w-12 h-12 text-white/65 mx-auto mb-3" />
-              <p className="text-white/40">
+              <Search className="w-12 h-12 text-fg-muted mx-auto mb-3" />
+              <p className="text-fg-subtle">
                 {searchQuery ? 'No attendees found' : 'Start typing to search'}
               </p>
             </div>
@@ -82,13 +82,13 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
                     onSelect(attendee.ticketId)
                     onClose()
                   }}
-                  className="w-full p-4 bg-white/[0.055] hover:bg-white/[0.1] rounded-2xl transition-colors text-left"
+                  className="w-full p-4 bg-surface hover:bg-surface-raised rounded-2xl transition-colors text-left"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <User className="w-4 h-4 text-white/40 flex-shrink-0" />
-                        <span className="font-semibold text-white truncate">
+                        <User className="w-4 h-4 text-fg-subtle flex-shrink-0" />
+                        <span className="font-semibold text-fg truncate">
                           {attendee.attendeeName}
                         </span>
                         {attendee.checkedIn && (
@@ -96,12 +96,12 @@ export function ManualLookupSheet({ isOpen, onClose, attendees, onSelect }: Manu
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2 text-sm text-white/40 mb-1">
+                      <div className="flex items-center gap-2 text-sm text-fg-subtle mb-1">
                         <Mail className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">{attendee.attendeeEmail}</span>
                       </div>
                       
-                      <div className="flex items-center gap-4 text-xs text-white/50">
+                      <div className="flex items-center gap-4 text-xs text-fg-subtle">
                         <div className="flex items-center gap-1">
                           <Ticket className="w-3 h-3" />
                           <span>{attendee.ticketType}</span>

@@ -218,28 +218,28 @@ export default async function VisionPage() {
              the editorial serif. Teal appears once on this page, on the rule
              below the eyebrow, and nowhere else. ── */}
       <section className="mx-auto max-w-6xl px-4 pb-14 pt-16 sm:px-6 sm:pb-20 sm:pt-24 lg:px-8">
-        <p className="!text-[11px] font-medium uppercase tracking-[0.14em] text-white/40">
+        <p className="!text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
           {c.heroEyebrow}
         </p>
         <span aria-hidden className="mt-3 block h-px w-10 bg-brand-400" />
-        <h1 className="mt-6 max-w-4xl font-grotesk font-bold uppercase !text-[clamp(38px,7vw,84px)] !leading-[1.01] tracking-tight text-white">
+        <h1 className="mt-6 max-w-4xl font-grotesk font-bold uppercase !text-[clamp(38px,7vw,84px)] !leading-[1.01] tracking-tight text-fg">
           {c.heroTitle1}
           <br />
           {c.heroTitle2}
         </h1>
-        <p className="mt-6 font-display lowercase italic !text-[clamp(18px,2.6vw,26px)] !leading-snug text-white/60">
+        <p className="mt-6 font-display lowercase italic !text-[clamp(18px,2.6vw,26px)] !leading-snug text-fg-muted">
           {c.heroSub}
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <Link
             href="/discover"
-            className="inline-flex min-h-11 items-center rounded-xl bg-white px-6 py-3 text-sm font-medium text-black transition-opacity hover:opacity-90"
+            className="inline-flex min-h-11 items-center rounded-xl bg-inverse px-6 py-3 text-sm font-medium text-on-inverse transition-opacity hover:opacity-90"
           >
             {c.ctaExplore}
           </Link>
           <Link
             href="/create"
-            className="inline-flex min-h-11 items-center rounded-xl border border-white/12 px-6 py-3 text-sm font-normal text-white/80 transition-colors hover:bg-white/[0.05] hover:text-white"
+            className="inline-flex min-h-11 items-center rounded-xl border border-line px-6 py-3 text-sm font-normal text-fg-soft transition-colors hover:bg-surface hover:text-fg"
           >
             {c.ctaCreate}
           </Link>
@@ -248,9 +248,9 @@ export default async function VisionPage() {
 
       {/* ── The problem, said plainly and without a diagram. ── */}
       <Reveal>
-        <section className="border-t border-white/10">
+        <section className="border-t border-line">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-            <h2 className="font-display lowercase italic !text-[clamp(26px,4vw,40px)] !leading-[1.05] text-white/90">
+            <h2 className="font-display lowercase italic !text-[clamp(26px,4vw,40px)] !leading-[1.05] text-fg">
               {c.problemHead}
             </h2>
             <div className="mt-7 max-w-[62ch] space-y-5">
@@ -259,8 +259,8 @@ export default async function VisionPage() {
                   key={i}
                   className={
                     i === 0
-                      ? '!text-[17px] !leading-relaxed text-white/75 sm:!text-[19px]'
-                      : '!text-[15px] !leading-relaxed text-white/55'
+                      ? '!text-lead !leading-relaxed text-fg-soft sm:!text-lead'
+                      : '!text-body !leading-relaxed text-fg-muted'
                   }
                 >
                   {p}
@@ -274,35 +274,35 @@ export default async function VisionPage() {
       {/* ── The principles. Each one leads with its Kreyòl name, because that
              is the substance of the claim, not decoration on top of it. ── */}
       <Reveal>
-      <section className="border-t border-white/10">
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <p className="!text-[11px] font-medium uppercase tracking-[0.14em] text-white/40">
+          <p className="!text-eyebrow font-medium uppercase tracking-[0.14em] text-fg-subtle">
             {c.principlesEyebrow}
           </p>
           {/* Reveal is NOT used per item here: it renders a <div>, and
               <ol><div><li> is invalid nesting. The section reveals as a whole
               instead. */}
-          <ol className="mt-10 space-y-px overflow-hidden rounded-2xl bg-white/[0.03]">
+          <ol className="mt-10 space-y-px overflow-hidden rounded-2xl bg-surface-low">
             {c.principles.map((p, i) => (
-              <li key={p.kreyol} className="border-b border-white/[0.06] p-6 last:border-b-0 sm:p-8">
+              <li key={p.kreyol} className="border-b border-line-soft p-6 last:border-b-0 sm:p-8">
                   <div className="flex gap-5 sm:gap-8">
                     <span
                       aria-hidden
-                      className="shrink-0 pt-1 font-mono text-[12px] tabular-nums text-white/25"
+                      className="shrink-0 pt-1 font-mono text-caption tabular-nums text-fg-faint"
                     >
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="font-grotesk !text-[19px] font-bold leading-tight text-white sm:!text-[22px]">
+                      <h3 className="font-grotesk !text-lead font-bold leading-tight text-fg sm:!text-section">
                         {p.kreyol}
                       </h3>
                       {/* The gloss sits under the Kreyòl, quieter, so a reader
                           who needs it has it and a reader who doesn't isn't
                           talked down to. */}
-                      <p className="mt-1 font-display lowercase italic !text-[15px] text-white/45">
+                      <p className="mt-1 font-display lowercase italic !text-body text-fg-subtle">
                         {p.gloss}
                       </p>
-                      <p className="mt-4 max-w-[60ch] !text-[15px] !leading-relaxed text-white/60">
+                      <p className="mt-4 max-w-[60ch] !text-body !leading-relaxed text-fg-muted">
                         {p.body}
                       </p>
                     </div>
@@ -316,19 +316,19 @@ export default async function VisionPage() {
 
       {/* ── Where. Six names, set large, no map graphic. ── */}
       <Reveal>
-        <section className="border-t border-white/10">
+        <section className="border-t border-line">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-            <h2 className="font-display lowercase italic !text-[clamp(26px,4vw,40px)] !leading-[1.05] text-white/90">
+            <h2 className="font-display lowercase italic !text-[clamp(26px,4vw,40px)] !leading-[1.05] text-fg">
               {c.citiesHead}
             </h2>
-            <p className="mt-4 max-w-[58ch] !text-[15px] !leading-relaxed text-white/55">
+            <p className="mt-4 max-w-[58ch] !text-body !leading-relaxed text-fg-muted">
               {c.citiesBody}
             </p>
             <ul className="mt-9 flex flex-wrap gap-x-8 gap-y-3">
               {c.cities.map((city) => (
                 <li
                   key={city}
-                  className="font-grotesk !text-[clamp(20px,3.4vw,34px)] font-bold uppercase !leading-none tracking-tight text-white/80"
+                  className="font-grotesk !text-[clamp(20px,3.4vw,34px)] font-bold uppercase !leading-none tracking-tight text-fg-soft"
                 >
                   {city}
                 </li>
@@ -340,20 +340,20 @@ export default async function VisionPage() {
 
       {/* ── Close on the sign-off the rest of the site uses. ── */}
       <Reveal>
-        <section className="border-t border-white/10">
+        <section className="border-t border-line">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-            <h2 className="font-grotesk font-bold uppercase !text-[clamp(30px,5.5vw,60px)] !leading-[1.02] tracking-tight text-white">
+            <h2 className="font-grotesk font-bold uppercase !text-[clamp(30px,5.5vw,60px)] !leading-[1.02] tracking-tight text-fg">
               {c.closingKreyol}
             </h2>
-            <p className="mt-3 font-display lowercase italic !text-[17px] text-white/45">
+            <p className="mt-3 font-display lowercase italic !text-lead text-fg-subtle">
               {c.closingGloss}
             </p>
-            <p className="mt-7 max-w-[56ch] !text-[15px] !leading-relaxed text-white/60">
+            <p className="mt-7 max-w-[56ch] !text-body !leading-relaxed text-fg-muted">
               {c.closingBody}
             </p>
             <Link
               href="/create"
-              className="mt-9 inline-flex min-h-11 items-center rounded-xl bg-white px-6 py-3 text-sm font-medium text-black transition-opacity hover:opacity-90"
+              className="mt-9 inline-flex min-h-11 items-center rounded-xl bg-inverse px-6 py-3 text-sm font-medium text-on-inverse transition-opacity hover:opacity-90"
             >
               {c.ctaCreate}
             </Link>

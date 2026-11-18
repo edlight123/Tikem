@@ -54,7 +54,7 @@ export function OrganizerRankingsAnalytics() {
         <p className="mb-4 text-sm text-console-red">{loadError}</p>
         <button
           onClick={() => void loadData()}
-          className="rounded bg-console-raise px-3 py-1.5 text-[13px] font-semibold text-console-mut transition-colors hover:text-console-text"
+          className="rounded bg-console-raise px-3 py-1.5 text-meta font-semibold text-console-mut transition-colors hover:text-console-text"
         >
           Retry
         </button>
@@ -77,7 +77,7 @@ export function OrganizerRankingsAnalytics() {
     <div className="rounded-lg bg-console-panel p-4">
       <div className="mb-3 flex items-center gap-2">
         <Crown className="h-4 w-4 text-console-faint" />
-        <h3 className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">Top organizers</h3>
+        <h3 className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">Top organizers</h3>
         <span className="text-xs text-console-mut">· by ticket sales</span>
       </div>
 
@@ -111,7 +111,7 @@ export function OrganizerRankingsAnalytics() {
               </div>
               <div className="shrink-0 text-right">
                 <div className="font-mono text-sm tabular-nums text-console-text">{organizer.totalTickets.toLocaleString()}</div>
-                <div className="font-mono text-[11px] tabular-nums text-console-mut">
+                <div className="font-mono text-eyebrow tabular-nums text-console-mut">
                   {organizer.eventsCount > 0 ? `${(organizer.totalTickets / organizer.eventsCount).toFixed(0)}/event` : 'sales'}
                 </div>
               </div>
@@ -128,7 +128,7 @@ export function OrganizerRankingsAnalytics() {
           { v: avgRating > 0 ? avgRating.toFixed(1) : 'N/A', l: 'Avg rating' },
         ].map((s) => (
           <div key={s.l}>
-            <div className="label-mono text-[10px] uppercase tracking-[0.18em] text-console-faint">{s.l}</div>
+            <div className="label-mono text-eyebrow uppercase tracking-[0.18em] text-console-faint">{s.l}</div>
             <div className="mt-1 font-mono text-xl tabular-nums text-console-text">{s.v}</div>
           </div>
         ))}

@@ -83,7 +83,7 @@ export default function NotificationsForm({ initialData }: NotificationsFormProp
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-brand-300" />
-          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('notifications_form.email_notifications')}</h3>
+          <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('notifications_form.email_notifications')}</h3>
         </div>
         <div className="space-y-4">
           <ToggleItem
@@ -96,10 +96,10 @@ export default function NotificationsForm({ initialData }: NotificationsFormProp
       </div>
 
       {/* Push (mobile app) */}
-      <div className="pt-6 border-t border-white/10">
+      <div className="pt-6 border-t border-line">
         <div className="flex items-center gap-2 mb-4">
           <Smartphone className="w-5 h-5 text-brand-300" />
-          <h3 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('notifications_form.push_notifications')}</h3>
+          <h3 className="font-display lowercase italic !text-section !leading-snug text-fg">{t('notifications_form.push_notifications')}</h3>
         </div>
         <div className="space-y-4">
           <ToggleItem
@@ -115,21 +115,21 @@ export default function NotificationsForm({ initialData }: NotificationsFormProp
             onChange={() => handleToggle('push_attendee_messages')}
           />
         </div>
-        <p className="text-xs text-white/50 mt-3">{t('notifications_form.push_app_note')}</p>
+        <p className="text-xs text-fg-subtle mt-3">{t('notifications_form.push_app_note')}</p>
       </div>
 
       {/* Always on */}
-      <div className="pt-6 border-t border-white/10">
-        <p className="font-medium text-white">{t('notifications_form.payout_updates')}</p>
-        <p className="text-sm text-white/60">{t('notifications_form.payouts_always')}</p>
+      <div className="pt-6 border-t border-line">
+        <p className="font-medium text-fg">{t('notifications_form.payout_updates')}</p>
+        <p className="text-sm text-fg-muted">{t('notifications_form.payouts_always')}</p>
       </div>
 
       {/* Submit Button */}
-      <div className="flex justify-end pt-4 border-t border-white/10">
+      <div className="flex justify-end pt-4 border-t border-line">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-6 py-2.5 bg-inverse hover:bg-inverse-hover text-on-inverse font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSubmitting ? t('notifications_form.saving') : t('notifications_form.save')}
@@ -153,8 +153,8 @@ function ToggleItem({
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1">
-        <p className="font-medium text-white">{label}</p>
-        <p className="text-sm text-white/60">{message}</p>
+        <p className="font-medium text-fg">{label}</p>
+        <p className="text-sm text-fg-muted">{message}</p>
       </div>
       <button
         type="button"
@@ -163,11 +163,11 @@ function ToggleItem({
         aria-label={label}
         onClick={onChange}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? 'bg-brand-700' : 'bg-white/15'
+          checked ? 'bg-brand-700' : 'bg-surface-high'
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          className={`inline-block h-4 w-4 transform rounded-full bg-inverse transition-transform ${
             checked ? 'translate-x-6' : 'translate-x-1'
           }`}
         />
