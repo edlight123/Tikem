@@ -202,8 +202,10 @@ export default function OrganizerTrackingLinksScreen() {
 
         {!hasLinks ? (
           <EmptyState
+            variant="panel"
             icon={Link2}
             title={t('organizerTracking.empty')}
+            subtitle={t('organizerTracking.emptySubtitle')}
             actionLabel={t('organizerTracking.newLink')}
             onAction={openSheet}
           />
@@ -280,7 +282,7 @@ export default function OrganizerTrackingLinksScreen() {
 
       {hasLinks && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-          <WhitePillCTA
+          <WhitePillCTA size="sm"
             label={t('organizerTracking.newLink')}
             icon={<Plus size={18} color={T.onWhite} strokeWidth={2.5} />}
             onPress={openSheet}
@@ -296,7 +298,7 @@ export default function OrganizerTrackingLinksScreen() {
         footer={
           <>
             {!!formError && <Text style={styles.errorText}>{formError}</Text>}
-            <WhitePillCTA
+            <WhitePillCTA size="sm"
               label={saving ? t('organizerTracking.creating') : t('organizerTracking.sheet.create')}
               onPress={handleCreate}
               loading={saving}

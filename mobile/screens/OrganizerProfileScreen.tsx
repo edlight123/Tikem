@@ -31,6 +31,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { radius, font } from '../theme/tokens';
 import ConnectButton from '../components/ConnectButton';
+import { safeFormatForLanguage } from '../lib/dates';
 import SectionHeader from '../components/SectionHeader';
 import PosterEventCard from '../components/PosterEventCard';
 import VerifiedBadge from '../components/VerifiedBadge';
@@ -97,7 +98,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { organizerId } = route.params;
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const scrollViewRef = React.useRef<ScrollView>(null);
   
   const [organizer, setOrganizer] = useState<any>(null);
@@ -485,6 +486,18 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
   // A malformed date must hide the row: a bare NaN in JSX renders as text
   // outside <Text>, which crashes on device.
   const hostingSince = Number.isFinite(hostingYear) ? hostingYear : null;
+  // Month and year for people: "Joined Nov 2026" reads warmer than a bare year.
+  const joinedLabel = hostingSince && createdAtRaw
+    ? safeFormatForLanguage(
+        createdAtRaw.seconds
+          ? createdAtRaw.seconds * 1000
+          : typeof createdAtRaw.toDate === 'function'
+            ? createdAtRaw.toDate()
+            : createdAtRaw,
+        'MMM yyyy',
+        language
+      ) || null
+    : null;
   const subtitle = getSubtitle();
 
   // Org description, or a person's bio when the server says this viewer may
@@ -497,6 +510,16 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
         : organizer.description || '';
   const personHidden = details?.kind === 'person' && details.person === null;
   const isOrgProfile = !!organizer.organization_name || details?.kind === 'org';
+  // Not everyone is an organizer (owner, 2026-11-17). Someone who has never
+  // hosted gets a person's profile: no "0 events", no Follow, no empty
+  // "upcoming events", and "Joined Tikèm" instead of "Hosting events since".
+  const isHost =
+    isOrgProfile ||
+    (stats.totalEvents || 0) > 0 ||
+    upcomingEvents.length > 0 ||
+    pastEvents.length > 0 ||
+    organizer.role === 'organizer' ||
+    organizer.is_organizer === true;
 
   // Connect (friend-request) action still sits inline next to the stats.
   const isSelf = !!user && user.uid === organizerId;
@@ -518,6 +541,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     { label: t('organizerProfile.stats.followers'), value: String(stats.followerCount || 0) },
     { label: t('organizerProfile.stats.sold'), value: (stats.totalTicketsSold || 0).toLocaleString() },
   ].filter((item, i) => i < 2 || (stats.totalTicketsSold || 0) > 0); // "0 sold" says nothing
+  // A person's line: friends-facing facts only, never "0 events · 0 followers".
+  const personLine = !isHost && joinedLabel ? t('organizerProfile.joinedOn', { date: joinedLabel }) : null;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -568,7 +593,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* Small Follow Button - Top Right. Hidden while blocked: the block
               removed the follow and re-following is refused. */}
-          {!isSelf && !isBlocked && (
+          {!isSelf && !isBlocked && (isHost || isFollowing) && (
             <TouchableOpacity
               style={[
                 styles.followButtonSmall,
@@ -652,6 +677,13 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           {/* Stats — one quiet tabular-numeral line rather than a full-width row of three
               27px numerals. All three figures are kept, just at reading size:
               "4 EVENTS · 4 FOLLOWERS · 0 SOLD". */}
+          {!isHost ? (
+            personLine ? (
+              <View style={styles.statLine}>
+                <Text style={styles.statLabel}>{personLine}</Text>
+              </View>
+            ) : null
+          ) : (
           <View style={styles.statLine}>
             {statItems.map((item, i) => (
               <React.Fragment key={item.label}>
@@ -661,6 +693,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               </React.Fragment>
             ))}
           </View>
+          )}
 
           {/* Connect action — a quiet secondary pill inline under the stats,
               not a prominent full-width card. */}
@@ -677,7 +710,8 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
             </View>
           ) : null}
 
-          {/* Upcoming Events */}
+          {/* Upcoming Events (hosts only, or anyone who has one) */}
+          {(isHost || upcomingEvents.length > 0) && (
           <View style={styles.section}>
             {/* The shared editorial header (lowercase serif), like every other
                 section in the app and on the website. */}
@@ -707,6 +741,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               </Text>
             )}
           </View>
+          )}
 
           {/* Past Events — beta feedback: these used to be hidden behind a
               collapsed accordion, so the profile read as "Upcoming only". They
@@ -776,8 +811,10 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               {hostingSince && (
                 <View style={styles.aboutRow}>
                   <Calendar size={18} color={colors.textSecondary} />
-                  <Text style={styles.aboutLabel}>{t('organizerProfile.hostingSinceLabel')}</Text>
-                  <Text style={styles.aboutValue}>{hostingSince}</Text>
+                  <Text style={styles.aboutLabel}>
+                    {isHost ? t('organizerProfile.hostingSinceLabel') : t('organizerProfile.memberSinceLabel')}
+                  </Text>
+                  <Text style={styles.aboutValue}>{isHost ? hostingSince : joinedLabel || hostingSince}</Text>
                 </View>
               )}
             </View>

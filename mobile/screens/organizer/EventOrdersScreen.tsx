@@ -148,7 +148,7 @@ export default function EventOrdersScreen() {
             />
           </View>
           <View style={styles.gutter}>
-            <Skeleton width="100%" height={48} radius={radius.md} style={{ marginBottom: spacing.md }} />
+            <Skeleton width="100%" height={44} radius={radius.md} style={{ marginBottom: spacing.md }} />
           </View>
           <View style={styles.tabsSkeleton}>
             {[64, 72, 92].map((w, i) => (
@@ -221,9 +221,15 @@ export default function EventOrdersScreen() {
           </Text>
         </View>
         <View style={styles.rowEnd}>
-          <Text style={[styles.amount, muted && styles.amountMuted]} numberOfLines={1}>
-            {amount}
-          </Text>
+          {stats.allFree && settled ? (
+            // Every order is free: "Free" on each of 74 rows is noise. A
+            // quiet chevron says "tap for the order" instead.
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          ) : (
+            <Text style={[styles.amount, muted && styles.amountMuted]} numberOfLines={1}>
+              {amount}
+            </Text>
+          )}
           {!settled ? (
             <StatusChip status={orderTone(item.status)} label={t(`organizerOrders.status.${item.status}`)} />
           ) : null}
@@ -293,10 +299,13 @@ export default function EventOrdersScreen() {
         }
         ListEmptyComponent={
           orders.length === 0 ? (
-            <EmptyState
-              icon={ShoppingBag}
-              title={t('organizerOrders.empty.title')}
-            />
+            <View style={styles.gutter}>
+              <EmptyState
+                variant="panel"
+                icon={ShoppingBag}
+                title={t('organizerOrders.empty.title')}
+              />
+            </View>
           ) : (
             <EmptyState
               icon={ShoppingBag}
@@ -339,12 +348,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       marginHorizontal: spacing.lg,
       marginBottom: spacing.md,
       paddingHorizontal: 14,
-      height: 48,
+      height: 44,
       borderRadius: radius.md,
       backgroundColor: colors.surface,
     },
     searchInput: {
       flex: 1,
+      // 16 keeps iOS from zooming the field on focus.
       fontSize: 16,
       color: colors.text,
     },

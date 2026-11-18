@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { MessageSquare } from 'lucide-react-native';
+import { MessageSquare, Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -13,6 +13,7 @@ import EmptyState from '../../components/EmptyState';
 import OrganizerScreenHeader from '../../components/organizer/OrganizerScreenHeader';
 import { useOverlayHeaderInset } from '../../components/OverlayHeader';
 import { Touchable } from '../../components/ui/Touchable';
+import { ListGroup, ListRow } from '../../components/ui/ListRow';
 import { backendJson } from '../../lib/api/backend';
 import { refreshOrganizerUnread } from '../../lib/organizerUnread';
 import { defaultAvatar } from '../../lib/defaultAvatar';
@@ -346,8 +347,9 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
       <EmptyState icon={MessageSquare} title={t('organizerMessages.loadFailed')} />
     </View>
   ) : threads.length === 0 ? (
-    <View style={styles.emptyWrap}>
+    <View style={styles.panelWrap}>
       <EmptyState
+        variant="panel"
         icon={MessageSquare}
         title={t('organizerMessages.empty')}
         subtitle={t('organizerMessages.emptySubtitle')}
@@ -409,6 +411,23 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
         }
       >
+        {/* One-to-many lives next to one-to-one: the existing event update
+            (SendEventUpdate) reaches every ticket holder. Event-scoped only;
+            the server checks the sender may message this event. */}
+        {eventId && !loading ? (
+          <View style={styles.broadcastWrap}>
+            <ListGroup>
+              <ListRow
+                icon={Send}
+                title={t('organizerMessages.messageAll')}
+                subtitle={t('organizerMessages.messageAllHint')}
+                onPress={() =>
+                  navigation.navigate('SendEventUpdate', { eventId, eventTitle: eventTitle || '' })
+                }
+              />
+            </ListGroup>
+          </View>
+        ) : null}
         {showSegments ? <View style={styles.stackSegments}>{segments}</View> : null}
         {body}
       </ScrollView>
@@ -505,4 +524,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     needsReplyText: { fontSize: 12, fontWeight: '600', color: colors.warning },
 
     emptyWrap: { paddingTop: 48, paddingHorizontal: 24 },
+    panelWrap: { paddingTop: 8, paddingHorizontal: 16 },
+    broadcastWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 },
   });

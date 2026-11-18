@@ -318,7 +318,7 @@ export default function EventOrderDetailScreen() {
         </View>
 
         <View style={[styles.gutter, styles.actions]}>
-          <WhitePillCTA
+          <WhitePillCTA size="sm"
             label={liveTicketIds.length > 1 ? t('organizerOrders.detail.resend') : t('organizerOrders.detail.resendOne')}
             icon={<Ionicons name="paper-plane-outline" size={18} color={T.onWhite} />}
             onPress={handleResend}
@@ -480,14 +480,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      height: 52,
+      height: 44,
       borderRadius: radius.button,
       backgroundColor: T.redMuted,
       paddingHorizontal: spacing.lg,
     },
     refundText: {
       fontSize: 15,
-      fontWeight: '700',
+      fontWeight: '600',
       color: T.red,
       fontVariant: ['tabular-nums'],
     },

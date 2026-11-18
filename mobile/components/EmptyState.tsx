@@ -6,7 +6,7 @@ import { Inbox, LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import WhitePillCTA from './WhitePillCTA';
 import type { ArtPiece } from '../lib/artLibrary';
-import { radius } from '../theme/tokens';
+import { radius, font } from '../theme/tokens';
 
 interface EmptyStateProps {
   /** A lucide icon component (preferred) … */
@@ -26,6 +26,14 @@ interface EmptyStateProps {
    * stay quiet).
    */
   art?: ArtPiece;
+  /**
+   * 'panel' — the organizer-tool empty state: a filled card at the TOP of the
+   * page (not a lonely icon floating mid-screen), a serif lowercased headline,
+   * one short line and a compact white CTA, all left-aligned. Owner feedback
+   * 2026-11-18: the centred icon + bold title + giant button read cheap on
+   * the per-event pages (guest list, promo codes, promoters…).
+   */
+  variant?: 'default' | 'panel';
 }
 
 /** Widest the art poster gets, so it stays a poster on a tablet. */
@@ -49,6 +57,7 @@ export default function EmptyState({
   onAction,
   compact,
   art,
+  variant = 'default',
 }: EmptyStateProps) {
   const { colors } = useTheme();
   const { width, height } = useWindowDimensions();
@@ -105,6 +114,22 @@ export default function EmptyState({
     );
   }
 
+  if (variant === 'panel') {
+    const PanelIcon = Icon || Inbox;
+    return (
+      <View style={styles.panel}>
+        <View style={styles.panelIcon}>
+          <PanelIcon size={20} color={colors.textSecondary} strokeWidth={1.75} />
+        </View>
+        <Text style={styles.panelTitle}>{title.toLocaleLowerCase()}</Text>
+        {!!subtitle && <Text style={styles.panelSubtitle}>{subtitle}</Text>}
+        {actionLabel && onAction && (
+          <WhitePillCTA label={actionLabel} onPress={onAction} size="sm" style={styles.panelCta} />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, compact && styles.compact]}>
       {Icon || !emoji ? (
@@ -115,7 +140,7 @@ export default function EmptyState({
       <Text style={styles.title}>{title}</Text>
       {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       {actionLabel && onAction && (
-        <WhitePillCTA label={actionLabel} onPress={onAction} style={styles.cta} />
+        <WhitePillCTA label={actionLabel} onPress={onAction} size="sm" style={styles.cta} />
       )}
     </View>
   );
@@ -155,7 +180,41 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       maxWidth: 300,
     },
     cta: {
-      marginTop: 24,
+      marginTop: 20,
+    },
+    // ── panel variant ──
+    panel: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.poster,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 22,
+      alignItems: 'flex-start',
+    },
+    panelIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.poster,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    panelTitle: {
+      fontFamily: font.serif,
+      fontSize: 26,
+      lineHeight: 30,
+      color: colors.text,
+    },
+    panelSubtitle: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.textSecondary,
+      marginTop: 6,
+    },
+    panelCta: {
+      marginTop: 18,
+      alignSelf: 'flex-start',
     },
     // ── art variant ──
     artContainer: {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
-import { canOnEvent } from '@/lib/organizer/context'
+import { canOnEvent, eventOrgId, teamCol } from '@/lib/organizer/context'
+import { isTeamRole } from '@/lib/organizer/teamRoles'
 import { adminDb } from '@/lib/firebase/admin'
 
 type ApiInvite = {
@@ -20,7 +21,16 @@ type ApiMember = {
   role: string
   permissions: { checkin?: boolean; viewAttendees?: boolean }
   createdAt: string | null
-  profile: { email: string | null; full_name: string | null }
+  profile: { email: string | null; full_name: string | null; photo_url: string | null }
+}
+
+/** An active member of the event's org team, assignable to this event's door staff. */
+type ApiTeamMember = {
+  uid: string
+  role: string
+  name: string | null
+  email: string | null
+  photo_url: string | null
 }
 
 function tsToIso(value: any): string | null {
@@ -54,9 +64,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
     }
 
-    const [invitesSnap, membersSnap] = await Promise.all([
+    // The event's OWN org (not the acting-org header): its team is who can be
+    // assigned here without an invite (/api/staff/members/assign).
+    const orgId = eventOrgId(eventData)
+    const [invitesSnap, membersSnap, teamSnap] = await Promise.all([
       adminDb.collection('events').doc(eventId).collection('invites').orderBy('createdAt', 'desc').get(),
       adminDb.collection('events').doc(eventId).collection('members').orderBy('createdAt', 'desc').get(),
+      orgId ? teamCol(orgId).get() : Promise.resolve(null),
     ])
 
     const invites: ApiInvite[] = invitesSnap.docs.map((d: any) => {
@@ -77,21 +91,42 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const memberDocs = membersSnap.docs as any[]
     const memberIds = memberDocs.map((d: any) => d.id).filter(Boolean)
 
-    const userDocs = await Promise.all(memberIds.map((uid: any) => adminDb.collection('users').doc(String(uid)).get()))
-    const profileById: Record<string, { email: string | null; full_name: string | null }> = {}
+    // Active seats only (status active, doc id === uid): legacy/invited rows grant nothing.
+    const teamDocs = (teamSnap?.docs || []).filter((d: any) => {
+      const x = d.data() || {}
+      return x.status === 'active' && x.uid === d.id && isTeamRole(x.role)
+    })
+    const profileIds = Array.from(new Set([...memberIds, ...teamDocs.map((d: any) => d.id)].map(String)))
+
+    const userDocs = await Promise.all(profileIds.map((uid) => adminDb.collection('users').doc(uid).get()))
+    const profileById: Record<string, { email: string | null; full_name: string | null; photo_url: string | null }> = {}
 
     userDocs.forEach((docSnap) => {
       if (!docSnap.exists) return
       const data = docSnap.data() as any
+      const name = String(data?.full_name || data?.display_name || '').trim()
       profileById[docSnap.id] = {
         email: data?.email ? String(data.email) : null,
-        full_name: data?.full_name ? String(data.full_name) : null,
+        full_name: name || null,
+        photo_url: data?.photo_url ? String(data.photo_url) : null,
+      }
+    })
+
+    const team: ApiTeamMember[] = teamDocs.map((d: any) => {
+      const x = d.data() || {}
+      const p = profileById[d.id]
+      return {
+        uid: d.id,
+        role: String(x.role),
+        name: p?.full_name || (x.name ? String(x.name) : null),
+        email: p?.email || (x.email ? String(x.email) : null),
+        photo_url: p?.photo_url || null,
       }
     })
 
     const members: ApiMember[] = memberDocs.map((d: any) => {
       const data = d.data() as any
-      const profile = profileById[d.id] || { email: null, full_name: null }
+      const profile = profileById[d.id] || { email: null, full_name: null, photo_url: null }
 
       return {
         id: d.id,
@@ -102,7 +137,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       }
     })
 
-    return NextResponse.json({ invites, members }, { status: 200 })
+    return NextResponse.json({ invites, members, team }, { status: 200 })
   } catch (e) {
     console.error('GET /api/organizer/events/[id]/staff error', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

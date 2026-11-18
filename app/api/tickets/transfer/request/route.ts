@@ -7,13 +7,22 @@ import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { getConnectionBetween } from '@/lib/firestore/connections'
 import { findLivePendingTransfer, TRANSFER_TTL_MS } from '@/lib/tickets/transfers'
 
-const transferRequestSchema = z.object({
-  ticketId: z.string().min(1),
-  toEmail: z.string().email(),
-  message: z.string().max(500).optional()
-})
+// A transfer goes either to an email address or, from the app's friend picker,
+// to a friend's uid. The friend's email is resolved here and never sent back:
+// the picker only ever shows public profile fields.
+const transferRequestSchema = z
+  .object({
+    ticketId: z.string().min(1),
+    toEmail: z.string().email().optional(),
+    toUserId: z.string().min(1).max(128).optional(),
+    message: z.string().max(500).optional()
+  })
+  .refine((v) => Boolean(v.toEmail) !== Boolean(v.toUserId), {
+    message: 'Provide exactly one of toEmail or toUserId',
+  })
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +45,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { ticketId, toEmail, message } = validation.data
+    const { ticketId, toUserId, message } = validation.data
+    let toEmail = validation.data.toEmail || ''
+
+    if (toUserId) {
+      if (toUserId === user.id) {
+        return NextResponse.json({ error: 'Cannot transfer ticket to yourself' }, { status: 400 })
+      }
+      // Only to an accepted friend: a uid alone must not let anyone address
+      // a stranger's inbox.
+      const connection = await getConnectionBetween(user.id, toUserId)
+      if (!connection || connection.status !== 'accepted') {
+        return NextResponse.json({ error: 'You can only send to a friend', code: 'not_friends' }, { status: 403 })
+      }
+      const friendDoc = await adminDb.collection('users').doc(toUserId).get()
+      const friendEmail = String(friendDoc.data()?.email || '').trim()
+      if (!z.string().email().safeParse(friendEmail).success) {
+        return NextResponse.json(
+          { error: 'This friend has no email on their account yet', code: 'friend_no_email' },
+          { status: 400 }
+        )
+      }
+      toEmail = friendEmail
+    }
 
     // Prevent self-transfer
     if (toEmail.toLowerCase() === user.email?.toLowerCase()) {
@@ -133,7 +164,7 @@ export async function POST(request: NextRequest) {
       ticket_id: ticketId,
       from_user_id: user.id,
       to_email: toEmail.toLowerCase(),
-      to_user_id: null,
+      to_user_id: toUserId || null,
       status: 'pending',
       message: message || null,
       transfer_token: transferToken,
@@ -253,7 +284,8 @@ export async function POST(request: NextRequest) {
       transfer: {
         id: transfer.id,
         status: transfer.status,
-        toEmail: transfer.to_email,
+        // A friend's email stays private to the sender.
+        toEmail: toUserId ? null : transfer.to_email,
         transferToken: transfer.transfer_token,
         expiresAt: transfer.expires_at
       }

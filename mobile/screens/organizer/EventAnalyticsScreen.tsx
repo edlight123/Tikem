@@ -207,10 +207,13 @@ export default function EventAnalyticsScreen() {
         </View>
 
         {a.ticketsSold === 0 ? (
-          <EmptyState
-            icon={BarChart2}
-            title={t('organizerEventAnalytics.empty.title')}
-          />
+          <View style={styles.panelWrap}>
+            <EmptyState
+              variant="panel"
+              icon={BarChart2}
+              title={t('organizerEventAnalytics.empty.title')}
+            />
+          </View>
         ) : (
           <>
             {/* Sales over time */}
@@ -322,6 +325,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
       backgroundColor: colors.background,
     },
+    panelWrap: { paddingHorizontal: 16, marginTop: 24 },
     statsWrap: {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.sm,

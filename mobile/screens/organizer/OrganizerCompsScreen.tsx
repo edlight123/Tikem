@@ -17,6 +17,7 @@ import { db } from '../../config/firebase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { RADIUS } from '../../config/brand';
+import { font } from '../../theme/tokens';
 import { Skeleton } from '../../components/Skeleton';
 import { Touchable } from '../../components/ui/Touchable';
 import SectionHeader from '../../components/SectionHeader';
@@ -229,7 +230,7 @@ export default function OrganizerCompsScreen() {
           overlay
           onHeight={onHeight}
         />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}>
           {/* Issue form: title, then label + input pairs (inputs ≈45 tall:
               paddingVertical 12×2 + text), a stepper row, and the submit pill. */}
           <View style={styles.formCard}>
@@ -242,7 +243,7 @@ export default function OrganizerCompsScreen() {
             ))}
             <Skeleton width={90} height={13} radius={4} style={{ marginTop: 16, marginBottom: 8 }} />
             <Skeleton width={140} height={44} radius={RADIUS.md} />
-            <Skeleton width="100%" height={48} radius={4} style={{ marginTop: 20 }} />
+            <Skeleton width="100%" height={44} radius={4} style={{ marginTop: 20 }} />
           </View>
           {/* Issued list: section title + recipient cards (name/chip + meta). */}
           <View style={styles.section}>
@@ -272,11 +273,11 @@ export default function OrganizerCompsScreen() {
         onHeight={onHeight}
       />
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>{t('organizerComps.formTitle')}</Text>
+          <Text style={styles.formTitle}>{t('organizerComps.formTitle').toLocaleLowerCase()}</Text>
 
           <Text style={styles.label}>{t('organizerComps.recipientName')}</Text>
           <TextInput
@@ -352,7 +353,7 @@ export default function OrganizerCompsScreen() {
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
           <View style={styles.submitWrap}>
-            <WhitePillCTA
+            <WhitePillCTA size="sm"
               label={submitting ? t('organizerComps.issuing') : t('organizerComps.issue')}
               onPress={handleIssue}
               loading={submitting}
@@ -364,7 +365,12 @@ export default function OrganizerCompsScreen() {
         <View style={styles.section}>
           <SectionHeader title={t('organizerComps.listTitle')} />
           {comps.length === 0 ? (
-            <EmptyState icon={Gift} title={t('organizerComps.empty')} compact />
+            <EmptyState
+              variant="panel"
+              icon={Gift}
+              title={t('organizerComps.empty')}
+              subtitle={t('organizerComps.emptySubtitle')}
+            />
           ) : (
             comps.map((c) => (
               <View key={c.key} style={styles.compCard}>
@@ -398,27 +404,34 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
       backgroundColor: colors.background,
     },
+    // 16pt gutter / 16pt under the header, like every per-event page.
     scrollContent: {
-      padding: 20,
+      paddingHorizontal: 16,
       paddingBottom: 40,
     },
     formCard: {
       backgroundColor: colors.surface,
       borderRadius: RADIUS.xl,
-      padding: 16,
-      marginTop: 8,
+      padding: 20,
     },
+    // Serif, lowercased: the same editorial voice as SectionHeader and the
+    // promo-code form, instead of a bold sans block title.
     formTitle: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontFamily: font.serif,
+      fontSize: 24,
+      lineHeight: 28,
       color: colors.text,
-      marginBottom: 4,
+      marginBottom: 2,
     },
+    // Small uppercase field labels, matching the promo-code form.
     label: {
       marginTop: 16,
       marginBottom: 8,
-      fontSize: 13,
+      fontSize: 11,
+      lineHeight: 14,
       fontWeight: '600',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
       color: colors.textSecondary,
     },
     // Filled fields one step up from the card, never outlined boxes.
