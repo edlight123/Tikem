@@ -106,6 +106,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [pendingMethod, setPendingMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+  // Free claims pick a quantity in their own step, not on the page (owner,
+  // 2026-11-18: "why choosing the quantity on the main screen?").
+  const [showFreeStep, setShowFreeStep] = useState(false)
   // Optional names for the extra free tickets (plus-ones). Index i names ticket i+2.
   const [plusOneNames, setPlusOneNames] = useState<Array<{ firstName: string; phone: string }>>([])
   const plusOneSlots = isFree && plusOnesAllowed > 0 ? Math.min(Math.max(0, quantity - 1), plusOnesAllowed) : 0
@@ -1240,94 +1243,114 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           </Link>
         </div>
       ) : isFree ? (
-        <div className="space-y-4">
-          {/* Quantity Selector for Free Tickets */}
-          <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
-            <span className="text-sm font-medium text-white/70">{t('events.quantity')}</span>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1 || loading}
-                aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
-                className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <span className="w-12 text-center font-semibold text-white">{quantity}</span>
-              <button
-                onClick={() => setQuantity(Math.min(MAX_FREE_TICKETS_PER_PERSON, quantity + 1))}
-                disabled={quantity >= MAX_FREE_TICKETS_PER_PERSON || loading}
-                aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
-                className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {plusOneSlots > 0 && (
-            <div className="space-y-2 rounded bg-white/[0.03] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/50">
-                {t('attend_requests.claim.plus_one_title')}
-              </p>
-              {Array.from({ length: plusOneSlots }).map((_, i) => (
-                <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <input
-                    value={plusOneNames[i]?.firstName || ''}
-                    maxLength={60}
-                    autoComplete="off"
-                    aria-label={t('attend_requests.sheet.first_name')}
-                    placeholder={t('attend_requests.sheet.first_name_placeholder')}
-                    onChange={(e) =>
-                      setPlusOneNames((all) => {
-                        const next = all.slice()
-                        next[i] = { firstName: e.target.value, phone: all[i]?.phone || '' }
-                        return next
-                      })
-                    }
-                    className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
-                  />
-                  <input
-                    value={plusOneNames[i]?.phone || ''}
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="off"
-                    aria-label={t('attend_requests.sheet.phone')}
-                    placeholder={t('attend_requests.sheet.phone')}
-                    onChange={(e) =>
-                      setPlusOneNames((all) => {
-                        const next = all.slice()
-                        next[i] = { firstName: all[i]?.firstName || '', phone: e.target.value }
-                        return next
-                      })
-                    }
-                    className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
-                  />
-                </div>
-              ))}
-              <p className="text-xs text-white/45">{t('attend_requests.claim.plus_one_hint')}</p>
-            </div>
-          )}
-
-          {isPasswordProtected && hasAccess !== true && (
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
-              <span>{t('events.password_required', { defaultValue: 'Password required' })}</span>
-            </div>
-          )}
-
+        <>
           <button
-            onClick={() => gateOrRun('free')}
+            onClick={() => setShowFreeStep(true)}
             disabled={loading}
             className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
           >
-            {loading ? t('events.processing') : `${t('events.claim')} ${quantity} ${t('events.free_ticket')}${quantity !== 1 ? 's' : ''}`}
+            {loading ? t('events.processing') : t('events.rsvp_cta', { defaultValue: 'RSVP' })}
           </button>
-        </div>
+          {showFreeStep && (
+            <BottomSheet
+              isOpen={showFreeStep}
+              onClose={() => !loading && setShowFreeStep(false)}
+              title={t('events.select_tickets')}
+            >
+            <div className="space-y-4">
+              {/* Quantity Selector for Free Tickets */}
+              <div className="flex items-center justify-between bg-white/[0.055] rounded-xl p-4">
+                <span className="text-sm font-medium text-white/70">{t('events.quantity')}</span>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1 || loading}
+                    aria-label={t('events.decrease_quantity', { defaultValue: 'Decrease quantity' })}
+                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    </svg>
+                  </button>
+                  <span className="w-12 text-center font-semibold text-white">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(Math.min(MAX_FREE_TICKETS_PER_PERSON, quantity + 1))}
+                    disabled={quantity >= MAX_FREE_TICKETS_PER_PERSON || loading}
+                    aria-label={t('events.increase_quantity', { defaultValue: 'Increase quantity' })}
+                    className="w-8 h-8 rounded bg-white/[0.08] flex items-center justify-center hover:bg-white/[0.14] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4 text-white/65" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {plusOneSlots > 0 && (
+                <div className="space-y-2 rounded bg-white/[0.03] p-4">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/50">
+                    {t('attend_requests.claim.plus_one_title')}
+                  </p>
+                  {Array.from({ length: plusOneSlots }).map((_, i) => (
+                    <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <input
+                        value={plusOneNames[i]?.firstName || ''}
+                        maxLength={60}
+                        autoComplete="off"
+                        aria-label={t('attend_requests.sheet.first_name')}
+                        placeholder={t('attend_requests.sheet.first_name_placeholder')}
+                        onChange={(e) =>
+                          setPlusOneNames((all) => {
+                            const next = all.slice()
+                            next[i] = { firstName: e.target.value, phone: all[i]?.phone || '' }
+                            return next
+                          })
+                        }
+                        className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
+                      />
+                      <input
+                        value={plusOneNames[i]?.phone || ''}
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="off"
+                        aria-label={t('attend_requests.sheet.phone')}
+                        placeholder={t('attend_requests.sheet.phone')}
+                        onChange={(e) =>
+                          setPlusOneNames((all) => {
+                            const next = all.slice()
+                            next[i] = { firstName: all[i]?.firstName || '', phone: e.target.value }
+                            return next
+                          })
+                        }
+                        className="w-full rounded bg-white/[0.055] px-3 py-2.5 text-[16px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-brand-400/50 sm:text-sm"
+                      />
+                    </div>
+                  ))}
+                  <p className="text-xs text-white/45">{t('attend_requests.claim.plus_one_hint')}</p>
+                </div>
+              )}
+
+              {isPasswordProtected && hasAccess !== true && (
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <Lock className="h-4 w-4 shrink-0 text-white/60" aria-hidden="true" />
+                  <span>{t('events.password_required', { defaultValue: 'Password required' })}</span>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowFreeStep(false)
+                  gateOrRun('free')
+                }}
+                disabled={loading}
+                className="block w-full bg-white hover:bg-white/90 text-black text-center text-[15px] font-semibold py-2.5 px-5 rounded transition-colors disabled:opacity-50 min-h-12"
+              >
+                {loading ? t('events.processing') : `${t('events.claim')} ${quantity} ${t('events.free_ticket')}${quantity !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+            </BottomSheet>
+          )}
+        </>
       ) : (
         <>
           {isPasswordProtected && hasAccess !== true && (

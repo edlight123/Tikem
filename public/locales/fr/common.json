@@ -363,7 +363,8 @@
     "view_my_tickets": "Voir mes billets",
     "free_tier_already_claimed": "Vous avez déjà votre billet gratuit",
     "more_dates_one": "+{{count}} autre date",
-    "more_dates_other": "+{{count}} autres dates"
+    "more_dates_other": "+{{count}} autres dates",
+    "rsvp_cta": "Réserver"
   },
   "favorites": {
     "title": "Mes favoris",
@@ -1615,16 +1616,20 @@
     "no_faces": "Personne ne montre encore son visage.",
     "sign_in_to_view": "Connectez-vous pour voir qui y va",
     "line": {
-      "you_lead_others": "{{you}}, {{lead}} et {{count}} autres",
-      "you_lead_one": "{{you}}, {{lead}} et 1 autre",
-      "you_lead": "{{you}} et {{lead}}",
-      "you_others": "{{you}} et {{count}} autres",
-      "you_one": "{{you}} et 1 autre",
+      "you_lead_others": "{{you}}, {{lead}} et {{count}} autres y allez",
+      "you_lead_one": "{{you}}, {{lead}} et 1 autre y allez",
+      "you_lead": "{{you}} et {{lead}} y allez",
+      "you_others": "{{you}} et {{count}} autres y allez",
+      "you_one": "{{you}} et 1 autre y allez",
       "you_only": "{{you}} y allez",
       "lead_only": "{{lead}} y va",
-      "lead_one": "{{lead}} et 1 autre",
-      "lead_others": "{{lead}} et {{count}} autres",
-      "lead_vague": "{{lead}} et d'autres",
+      "lead_one": "{{lead}} et 1 autre y vont",
+      "lead_others": "{{lead}} et {{count}} autres y vont",
+      "lead_vague": "{{lead}} et d'autres y vont",
+      "lead_second": "{{lead}} et {{second}} y vont",
+      "lead_second_one": "{{lead}}, {{second}} et 1 autre y vont",
+      "lead_second_others": "{{lead}}, {{second}} et {{count}} autres y vont",
+      "lead_second_vague": "{{lead}}, {{second}} et d'autres y vont",
       "count": "{{count}} participants",
       "vague": "Voir qui y va"
     }

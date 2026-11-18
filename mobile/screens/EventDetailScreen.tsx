@@ -928,39 +928,53 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {/* Title block — text-first, under the poster */}
           <Text style={styles.title}>{event.title}</Text>
 
-          {/* Venue and date as two plain lines, the way posh states them:
-              "Professor Miller's house near Target" / "Sat, Aug 22 at 4:00 PM
-              - 9:00 PM". The old version spent two icon rows, a divider and
-              four stacked lines on the same two facts — the wasted space a
-              tester marked up twice. Tapping the venue still opens Maps, which
-              is what the ⧉ affordance did. */}
+          {/* Date, then where, at the same size (owner, 2026-11-18, from a
+              Stitch reference: "the date is above, the location immediately
+              below but similar sizing"). Tapping the place opens Maps. */}
           <View style={styles.factList}>
+            <Text style={styles.whenText}>
+              {startValid && safeFormatForLanguage(startValid, 'EEE, MMM d', language)}
+              {startValid && ` · ${safeFormatForLanguage(startValid, 'h:mm a', language)}`}
+              {endValid && ` – ${safeFormatForLanguage(endValid, 'h:mm a', language)}`}
+            </Text>
+
             {/* An online event has no venue to map: say so, and don't offer a
                 Maps hand-off for an empty address. */}
             {(event as any).is_online && !event.venue_name && !event.address ? (
               <View style={styles.venueLine}>
-                <Globe size={16} color={colors.textSecondary} />
+                <Globe size={14} color={colors.textSecondary} />
                 <Text style={styles.venueText} numberOfLines={1}>
                   {t('eventDetail.onlineEvent')}
                 </Text>
               </View>
             ) : (
               <TouchableOpacity onPress={openInMaps} activeOpacity={0.6} style={styles.venueLine}>
-                <Text style={styles.venueText} numberOfLines={2}>
-                  {event.venue_name || event.address || event.city}
+                <Text style={styles.venueText} numberOfLines={1}>
+                  {[
+                    event.venue_name || event.address || event.city,
+                    (() => {
+                      // The neighbourhood people say ("Pétion-Ville"), else the city.
+                      const area = (event as any).commune || event.city;
+                      return event.venue_name && area && !String(event.venue_name).includes(String(area)) ? area : '';
+                    })(),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
-                <ExternalLink size={14} color={colors.textSecondary} />
+                <ExternalLink size={13} color={colors.textTertiary} />
               </TouchableOpacity>
             )}
-
-            <Text style={styles.whenText}>
-              {startValid && safeFormatForLanguage(startValid, 'EEE, MMM d', language)}
-              {startValid && ` ${t('common.at')} ${safeFormatForLanguage(startValid, 'h:mm a', language)}`}
-              {endValid && ` – ${safeFormatForLanguage(endValid, 'h:mm a', language)}`}
-            </Text>
-
-
           </View>
+
+          {/* Who's going sits right under the facts, so nobody scrolls to the
+              foot of the page to see it (owner, 2026-11-18). Faces, a count,
+              or nothing, per the organizer's guest-list setting. */}
+          <WhosGoing
+            eventId={eventId}
+            visibility={guestlistVisibilityFrom(event as any)}
+            capacity={event.total_tickets}
+            alwaysCount={(event as any).show_going_count === true}
+          />
 
           {/* Organizer row, posh order: event name first, then when/where, then
               who is throwing it — with Follow (and Contact) right on the row.
@@ -1099,15 +1113,6 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 .filter(Boolean)
                 .join(' · '),
             }}
-          />
-
-          {/* Who's Going: faces, a count, or nothing, per the organizer's
-              guest-list setting (same resolver as the web event page). */}
-          <WhosGoing
-            eventId={eventId}
-            visibility={guestlistVisibilityFrom(event as any)}
-            capacity={event.total_tickets}
-            alwaysCount={(event as any).show_going_count === true}
           />
 
           {/* Bottom padding so the floating CTA never overlaps page content */}
@@ -1667,22 +1672,22 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   venueLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   venueText: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    lineHeight: 23,
-  },
-  // Date + time range on ONE grey line beneath it, matching how posh states
-  // "Sat, Aug 22 at 4:00 PM - 9:00 PM".
-  whenText: {
-    marginTop: 3,
+    flexShrink: 1,
     fontSize: 15,
     color: colors.textSecondary,
     lineHeight: 21,
+  },
+  // Date + time range on ONE grey line beneath it, matching how posh states
+  // "Sat, Aug 22 at 4:00 PM - 9:00 PM".
+  // Same voice as the place line under it (owner, 2026-11-18).
+  whenText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 21,
+    marginBottom: 2,
   },
   // 10, not 14: two rows of 14 plus a divider spent ~64pt stating a date and a
   // venue, which is the "all this space wasted" a tester marked up twice. Posh

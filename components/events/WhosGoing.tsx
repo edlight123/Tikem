@@ -107,7 +107,7 @@ export default function WhosGoing({
   if (loading) {
     return (
       <div className={`px-4 md:px-0 ${className}`}>
-        <div className="h-[76px] rounded bg-white/[0.05] animate-pulse" />
+        <div className="h-8 w-56 rounded bg-white/[0.05] animate-pulse" />
       </div>
     )
   }
@@ -129,26 +129,15 @@ export default function WhosGoing({
   // names, no friend row: those are exactly what this mode exists to withhold.
   if (visibility === 'count') {
     if (!showCount && !viewerIsGoing) return null
-    if (!showCount) {
-      return (
-        <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
-          <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
-            {t('whos_going.youre_going', "You're going")}
-          </h2>
-        </div>
-      )
-    }
     return (
-      <div className={`rounded-2xl p-4 md:p-6 ${className}`}>
-        <h2 className="font-display lowercase italic !text-[22px] !leading-none text-white">
-          {t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' })}
-        </h2>
-        {viewerIsGoing && (
-          <p className="mt-1 text-sm text-white/55">
-            {t('whos_going.youre_going', "You're going")}
-          </p>
-        )}
-      </div>
+      <p className={`px-4 text-[14px] text-white/60 md:px-0 ${className}`}>
+        {[
+          viewerIsGoing ? t('whos_going.youre_going', "You're going") : '',
+          showCount ? t('whos_going.going_count', { count: totalGoing, defaultValue: '{{count}} going' }) : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
     )
   }
 
@@ -176,7 +165,13 @@ export default function WhosGoing({
   // keep the word order translatable; the names go in as markers and are
   // swapped for <strong> below.
   const leadName = (faces[0]?.displayName || '').split(' ')[0]
-  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0))
+  // Two names when "You" isn't leading: "Olivier and Marie are going" fills
+  // the line the way Posh does (owner, 2026-11-18). Same rule as the app.
+  const secondName = viewerIsGoing ? '' : (faces[1]?.displayName || '').split(' ')[0]
+  const othersCount = Math.max(
+    0,
+    totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0) - (secondName ? 1 : 0)
+  )
   const lineKey = viewerIsGoing
     ? leadName
       ? othersCount === 0
@@ -189,29 +184,39 @@ export default function WhosGoing({
         : othersCount === 1
           ? 'you_one'
           : 'you_others'
-    : leadName
+    : secondName
       ? othersCount === 0
-        ? 'lead_only'
+        ? 'lead_second'
         : !sayCount
-          ? 'lead_vague'
+          ? 'lead_second_vague'
           : othersCount === 1
-            ? 'lead_one'
-            : 'lead_others'
-      : sayCount
-        ? 'count'
-        : 'vague'
+            ? 'lead_second_one'
+            : 'lead_second_others'
+      : leadName
+        ? othersCount === 0
+          ? 'lead_only'
+          : !sayCount
+            ? 'lead_vague'
+            : othersCount === 1
+              ? 'lead_one'
+              : 'lead_others'
+        : sayCount
+          ? 'count'
+          : 'vague'
   const YOU = '\u0001'
   const LEAD = '\u0002'
+  const SECOND = '\u0003'
   const template = t(`whos_going.line.${lineKey}`, {
     you: YOU,
     lead: LEAD,
+    second: SECOND,
     count: lineKey === 'count' ? totalGoing : othersCount,
     interpolation: { escapeValue: false },
   })
-  const sub = template.split(/([\u0001\u0002])/).map((part, i) =>
-    part === YOU || part === LEAD ? (
+  const sub = template.split(/([\u0001\u0002\u0003])/).map((part, i) =>
+    part === YOU || part === LEAD || part === SECOND ? (
       <strong key={i} className="font-semibold text-white">
-        {part === YOU ? t('whos_going.you_badge', 'You') : leadName}
+        {part === YOU ? t('whos_going.you_badge', 'You') : part === LEAD ? leadName : secondName}
       </strong>
     ) : (
       <span key={i}>{part}</span>
@@ -227,38 +232,32 @@ export default function WhosGoing({
     setSheetOpen(true)
   }
 
-  // Posh's guestlist row (owner's reference, 2026-11-18), same as the app:
-  // one compact filled row, "Guestlist" and who is going on the left, three
-  // overlapping faces and a compact View on the right.
+  // Inline under the date and place (Posh, owner 2026-11-18), same as the
+  // app: three faces then one sentence, no card, no title, no button. The
+  // whole line opens the guest list.
   return (
-    <div className={`px-4 md:max-w-xl md:px-0 ${className}`}>
+    <div className={`px-4 md:px-0 ${className}`}>
       <button
         type="button"
         onClick={openList}
-        className="flex w-full items-center gap-3 rounded bg-white/[0.05] py-3.5 pl-4 pr-3 text-left transition-colors hover:bg-white/[0.08]"
+        className="group flex max-w-full items-center gap-2.5 text-left"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-white">{t('whos_going.guestlist', 'Guestlist')}</span>
-          <span className="mt-0.5 line-clamp-2 block text-[13px] leading-[18px] text-white/55">{sub}</span>
-        </span>
-        <span className="flex shrink-0 -space-x-3" aria-hidden>
+        <span className="flex shrink-0 -space-x-2" aria-hidden>
           {faces.map((u) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={u.uid}
               src={u.photoURL || defaultAvatarUrl(String(u.uid))}
               alt=""
-              className="h-10 w-10 rounded-full object-cover ring-2 ring-[#161616]"
+              className="h-[30px] w-[30px] rounded-full object-cover ring-2 ring-[#0a0a0a]"
             />
           ))}
           {anon.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={`anon-${i}`} src={src} alt="" className="h-10 w-10 rounded-full ring-2 ring-[#161616]" />
+            <img key={`anon-${i}`} src={src} alt="" className="h-[30px] w-[30px] rounded-full ring-2 ring-[#0a0a0a]" />
           ))}
         </span>
-        <span className="grid h-9 shrink-0 place-items-center rounded bg-white/[0.08] px-4 text-[13px] font-bold text-white">
-          {t('whos_going.view', 'View')}
-        </span>
+        <span className="min-w-0 line-clamp-2 text-[14px] leading-[19px] text-white/60 group-hover:text-white/80">{sub}</span>
       </button>
 
       {currentUserId && (

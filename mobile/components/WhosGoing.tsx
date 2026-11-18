@@ -2,12 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
-import { Lock } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchEventSocial } from '../lib/api/social';
 import { colors as T, radius, font } from '../theme/tokens';
 import { useI18n } from '../contexts/I18nContext';
-import SectionHeader from './SectionHeader';
 import GuestlistSheet from './GuestlistSheet';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppAlert } from './AppAlert';
@@ -83,8 +81,6 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
 
   if (visibility === 'hidden') return null;
 
-  // The shared section rail, same component as "about" and "hosted by" above.
-  const heading = <SectionHeader title={t('whosGoing.title')} />;
 
   // Nothing while it loads: the card appears whole rather than a heading and a
   // spinner that then jump.
@@ -110,10 +106,6 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   // owner 2026-11-18): the half-capacity rule protects those still deciding.
   const sayCount = showCount || viewerIsGoing;
 
-  // The headline number, set large in the serif: the count IS the social proof.
-  const headline = showCount ? (
-    <Text style={styles.headline}>{t('whosGoing.goingCount', { count: totalGoing })}</Text>
-  ) : null;
 
   // 'count': the number and nothing that identifies anyone. With the number
   // held back there is nothing left to show but the viewer's own RSVP.
@@ -121,9 +113,11 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
     if (!showCount && !viewerIsGoing) return null;
     return (
       <View style={styles.section}>
-        {heading}
-        {headline}
-        {viewerIsGoing && <Text style={styles.sub}>{t('whosGoing.youreGoing')}</Text>}
+        <Text style={styles.inlineLine}>
+          {[viewerIsGoing ? t('whosGoing.youreGoing') : '', showCount ? t('whosGoing.goingCount', { count: totalGoing }) : '']
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
       </View>
     );
   }
@@ -144,21 +138,13 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
     if (!showCount && !viewerIsGoing) return null;
     return (
       <View style={styles.section}>
-        {heading}
-        <View style={styles.privateRow}>
-          <View style={styles.privateIcon}>
-            <Lock size={16} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.privateTitle}>
-              {viewerIsGoing && showCount
-                ? `${t('whosGoing.youreGoing')} · ${t('whosGoing.goingCount', { count: totalGoing })}`
-                : viewerIsGoing
-                  ? t('whosGoing.youreGoing')
-                  : t('whosGoing.goingCount', { count: totalGoing })}
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.inlineLine}>
+          {viewerIsGoing && showCount
+            ? `${t('whosGoing.youreGoing')} · ${t('whosGoing.goingCount', { count: totalGoing })}`
+            : viewerIsGoing
+              ? t('whosGoing.youreGoing')
+              : t('whosGoing.goingCount', { count: totalGoing })}
+        </Text>
       </View>
     );
   }
@@ -190,7 +176,7 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   const anon = Array.from({ length: Math.min(others, MAX_FACES - faces.length) }, (_, i) => (anonBase + i * 5) % DEFAULT_AVATAR_COUNT);
   const pileSize = faces.length + anon.length;
   const overflow = sayCount ? Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - pileSize) : 0;
-  const FACE = 40;
+  const FACE = 30;
 
   const openList = () => {
     if (!user) {
@@ -203,30 +189,41 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   // The sentence under the faces, names in semibold: "You, Mika and 84 others
   // are going". Templates keep word order translatable.
   const leadName = (faces[0]?.displayName || '').split(' ')[0];
-  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0));
+  // Two names when nobody's "You" leads the line: "Olivier and Marie are
+  // going" fills the row the way Posh does (owner, 2026-11-18).
+  const secondName = viewerIsGoing ? '' : (faces[1]?.displayName || '').split(' ')[0];
+  const namedCount = (leadName ? 1 : 0) + (secondName ? 1 : 0);
+  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - namedCount);
+  const many = (one: string, other: string) => (othersCount === 1 ? one : other);
   const sentenceKey = viewerIsGoing
     ? leadName
       ? othersCount > 0
-        ? 'whosGoing.line.youLeadOthers'
+        ? many('whosGoing.line.youLeadOne', 'whosGoing.line.youLeadOthers')
         : 'whosGoing.line.youLead'
       : othersCount > 0
-        ? 'whosGoing.line.youOthers'
+        ? many('whosGoing.line.youOne', 'whosGoing.line.youOthers')
         : 'whosGoing.line.youOnly'
-    : leadName
+    : secondName
       ? othersCount === 0
-        ? 'whosGoing.line.leadOnly'
+        ? 'whosGoing.line.leadSecond'
         : sayCount
-          ? 'whosGoing.line.leadOthers'
-          : 'whosGoing.line.leadOthersVague'
-      : sayCount
-        ? 'whosGoing.line.count'
-        : 'whosGoing.line.vague';
-  const template = t(sentenceKey, { count: othersCount === 1 && !viewerIsGoing ? 1 : othersCount, total: totalGoing });
-  const bold = { you: t('whosGoing.youBadge'), lead: leadName };
-  const sentence = template.split(/(\{you\}|\{lead\})/).map((part, i) =>
-    part === '{you}' || part === '{lead}' ? (
+          ? many('whosGoing.line.leadSecondOne', 'whosGoing.line.leadSecondOthers')
+          : 'whosGoing.line.leadSecondVague'
+      : leadName
+        ? othersCount === 0
+          ? 'whosGoing.line.leadOnly'
+          : sayCount
+            ? many('whosGoing.line.leadOne', 'whosGoing.line.leadOthers')
+            : 'whosGoing.line.leadOthersVague'
+        : sayCount
+          ? 'whosGoing.line.count'
+          : 'whosGoing.line.vague';
+  const template = t(sentenceKey, { count: othersCount, total: totalGoing });
+  const bold = { you: t('whosGoing.youBadge'), lead: leadName, second: secondName };
+  const sentence = template.split(/(\{you\}|\{lead\}|\{second\})/).map((part, i) =>
+    part === '{you}' || part === '{lead}' || part === '{second}' ? (
       <Text key={i} style={styles.lineStrong}>
-        {bold[part === '{you}' ? 'you' : 'lead']}
+        {bold[part.slice(1, -1) as 'you' | 'lead' | 'second']}
       </Text>
     ) : (
       <Text key={i}>{part}</Text>
@@ -243,38 +240,32 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
         onPress={openList}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel={template.replace('{you}', bold.you).replace('{lead}', leadName)}
+        accessibilityLabel={template.replace('{you}', bold.you).replace('{lead}', leadName).replace('{second}', secondName)}
       >
-        <View style={styles.rowText}>
-          <Text style={styles.rowTitle}>{t('whosGoing.guestlist')}</Text>
-          <Text style={styles.rowSub} numberOfLines={2}>
-            {sentence}
-          </Text>
-        </View>
         <View style={styles.cardPile}>
           {faces.map((u, i) => (
-            <View key={u.uid} style={{ marginLeft: i === 0 ? 0 : -12, zIndex: pileSize - i }}>
-              <Avatar user={u} size={FACE} ring={T.surface} />
+            <View key={u.uid} style={{ marginLeft: i === 0 ? 0 : -9, zIndex: pileSize - i }}>
+              <Avatar user={u} size={FACE} ring={colors.background} />
             </View>
           ))}
           {anon.map((idx, i) => (
             <View
               key={`anon-${i}`}
-              style={{ marginLeft: faces.length + i === 0 ? 0 : -12, zIndex: pileSize - faces.length - i }}
+              style={{ marginLeft: faces.length + i === 0 ? 0 : -9, zIndex: pileSize - faces.length - i }}
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
             >
               <Image
                 source={defaultAvatarAt(idx)}
-                style={{ width: FACE, height: FACE, borderRadius: FACE / 2, borderWidth: 2, borderColor: T.surface }}
+                style={{ width: FACE, height: FACE, borderRadius: FACE / 2, borderWidth: 2, borderColor: colors.background }}
                 contentFit="cover"
               />
             </View>
           ))}
         </View>
-        <View style={styles.viewBtn}>
-          <Text style={styles.viewText}>{t('whosGoing.view')}</Text>
-        </View>
+        <Text style={styles.inlineSentence} numberOfLines={2}>
+          {sentence}
+        </Text>
       </TouchableOpacity>
 
       <GuestlistSheet
@@ -294,9 +285,14 @@ const getStyles = (colors: any) =>
   StyleSheet.create({
     // On the page gutter, no card: the old bordered box sat 16pt inside the
     // content padding, so it was indented from every other section.
+    // Inline under the date and place (Posh): faces then one sentence, no
+    // card, no title, no button. The whole line opens the guest list.
     section: {
-      marginTop: 32,
+      marginTop: 14,
+      marginBottom: 18,
     },
+    inlineLine: { fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+    inlineSentence: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 19, color: colors.textSecondary },
     card: {
       backgroundColor: T.surface,
       borderRadius: radius.lg,
@@ -311,12 +307,7 @@ const getStyles = (colors: any) =>
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      backgroundColor: T.surface,
-      borderRadius: radius.lg,
-      paddingVertical: 14,
-      paddingLeft: 16,
-      paddingRight: 12,
+      gap: 10,
     },
     rowText: { flex: 1, minWidth: 0 },
     rowTitle: { fontSize: 15, fontWeight: '600', color: colors.text },

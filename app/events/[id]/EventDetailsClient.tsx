@@ -143,16 +143,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         selloutSoon={selloutSoon}
         actions={
           <>
-            {/* "Message the organizer" as a small square icon on the organizer
-                line, not a full-width row further down (owner, 2026-11-18). */}
-            {canContactOrganizer && (
-              <ContactOrganizer
-                eventId={event.id}
-                eventTitle={event.title}
-                userId={user?.id ?? null}
-                variant="icon"
-              />
-            )}
             {user && <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />}
             <ShareIconButton eventId={event.id} eventTitle={event.title} tone="dark" />
           </>
@@ -331,7 +321,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           underneath. */}
       {/* top-14 = the navbar's phone height (h-14): pinned UNDER the navbar,
           which is itself sticky. At top-0 it slid behind it while scrolling. */}
-      <div className="md:hidden sticky top-14 z-40 bg-[#0a0a0a]/95 backdrop-blur px-4 py-3">
+      <div className="md:hidden fixed inset-x-0 bottom-[var(--mobile-nav-h)] z-40 bg-[#0a0a0a]/95 backdrop-blur px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
         {/* items-end, not center: on a password-protected event the buy
             column grows a "Password required" line above the button, and
             centred icons then floated between that line and the button. The
@@ -399,6 +389,42 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         isSoldOut={isSoldOut}
         scarcity={scarcity}
       />
+
+      <div className="mx-auto max-w-7xl md:px-6 md:pt-6 lg:px-8">
+          {/* Who's going, right under the date and place (owner, 2026-11-18):
+            nobody scrolls to the foot of the page to see it. */}
+          <WhosGoing
+            eventId={event.id}
+            currentUserId={user?.id || null}
+            visibility={guestlistVisibilityFrom(event as any)}
+            capacity={(event as any).total_tickets}
+            showGoingCount={(event as any).show_going_count === true}
+            viewerName={(user as any)?.full_name ?? null}
+            viewerPhotoUrl={(user as any)?.photo_url ?? null}
+            className="mt-4 md:mt-0"
+          />
+      </div>
+
+      {/* Organizer, after who's going, as in the app: name on the left,
+          message and Follow at the line's end. */}
+      <div className="mx-4 mt-5 flex items-center gap-3 border-t border-white/10 pt-4 md:hidden">
+        <a
+          href={`/profile/organizer/${event.organizer_id}`}
+          className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-80"
+        >
+          <OrganizerMark logoUrl={event.users?.organization_logo} className="h-10 w-10 rounded" />
+          <span className="truncate text-[15px] font-semibold text-white">{organizerLabel}</span>
+          {event.users?.is_verified && (
+            <Shield className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-label={t('events.verified')} />
+          )}
+        </a>
+        {canContactOrganizer && (
+          <ContactOrganizer eventId={event.id} eventTitle={event.title} userId={user?.id ?? null} variant="icon" size="sm" />
+        )}
+        {user?.id !== event.organizer_id && (
+          <FollowButton organizerId={event.organizer_id} userId={user?.id || null} initialIsFollowing={isFollowing} />
+        )}
+      </div>
 
       <MobileSections
         description={event.description}
@@ -721,18 +747,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           className="mt-4"
         />
 
-        {/* Who's Going - social attendance */}
-        <WhosGoing
-          eventId={event.id}
-          currentUserId={user?.id || null}
-          visibility={guestlistVisibilityFrom(event as any)}
-          capacity={(event as any).total_tickets}
-          showGoingCount={(event as any).show_going_count === true}
-          viewerName={(user as any)?.full_name ?? null}
-          viewerPhotoUrl={(user as any)?.photo_url ?? null}
-          className="mt-8"
-        />
-
         {/* Report — quiet, but on every event page (App Store 1.2). Hidden
             from the organizer's own event: the server refuses a self-report. */}
         {user?.id !== event.organizer_id && (
@@ -751,6 +765,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           </div>
         )}
       </div>
+      {/* Room for the buy bar pinned to the bottom on phones. */}
+      <div className="h-24 md:hidden" aria-hidden />
     </div>
   )
 }
