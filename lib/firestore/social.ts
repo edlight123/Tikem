@@ -119,20 +119,21 @@ export async function getEventSocialAttendance(
       return v === 'friends' || v === 'everyone'
     })
     .map(({ id, data }) => summaryFromUserDoc(id, data))
+  friendsGoing.sort((a, b) => Number(!!b.photoURL) - Number(!!a.photoURL))
 
   const friendSet = new Set(friendsGoing.map((f) => f.uid))
 
   // Public face pile: only users who opted into 'everyone', excluding the
   // viewer and anyone already shown in the friends row.
-  const publicGoing: PublicUserSummary[] = []
+  // Faces with a real photo first (owner, 2026-11-18: "why doesn't it show the
+  // faces w pictures first?"), chosen from the whole sample before trimming.
+  const eligible: PublicUserSummary[] = []
   for (const id of sampledAttendeeIds) {
-    if (publicGoing.length >= pileLimit) break
     if (id === viewerId || friendSet.has(id)) continue
     const data = userDocs.get(id)
-    if (attendanceVisibilityOf(data) === 'everyone') {
-      publicGoing.push(summaryFromUserDoc(id, data))
-    }
+    if (attendanceVisibilityOf(data) === 'everyone') eligible.push(summaryFromUserDoc(id, data))
   }
+  const publicGoing = photoFirst(eligible).slice(0, pileLimit)
 
   return { totalGoing, viewerIsGoing, friendsGoing, publicGoing }
 }
@@ -199,4 +200,12 @@ export async function getFriendsGoingCounts(
     counts[eventId] = set.size
   })
   return counts
+}
+
+/** Stable: people with a photo first, otherwise the original order. */
+function photoFirst(list: PublicUserSummary[]): PublicUserSummary[] {
+  return list
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => Number(!!b.p.photoURL) - Number(!!a.p.photoURL) || a.i - b.i)
+    .map((x) => x.p)
 }

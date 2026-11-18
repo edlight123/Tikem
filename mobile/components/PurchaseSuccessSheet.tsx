@@ -6,7 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { X, Ticket, Share2 } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -48,6 +50,7 @@ export default function PurchaseSuccessSheet({
   const { colors } = useTheme();
   const { t, language } = useI18n();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
 
   const start = event?.start_datetime ? new Date(event.start_datetime) : null;
   const startValid = start && !Number.isNaN(start.getTime()) ? start : null;
@@ -66,10 +69,11 @@ export default function PurchaseSuccessSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle]}>
           {/* Paints below the sheet's edge, so the event page's sticky bar can never
               show through a gap under the sheet (see ContactOrganizerModal). */}
           <View pointerEvents="none" style={styles.bottomFill} />
+          <View {...swipe.panHandlers}>
           <View style={styles.grabber} />
 
           <View style={styles.headerRow}>
@@ -82,6 +86,7 @@ export default function PurchaseSuccessSheet({
             >
               <X size={22} color={colors.textSecondary} />
             </TouchableOpacity>
+          </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -151,7 +156,7 @@ export default function PurchaseSuccessSheet({
               <Text style={styles.primaryText}>{t('purchaseSuccess.goToTickets')}</Text>
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

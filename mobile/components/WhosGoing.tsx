@@ -104,6 +104,9 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
   // A small number talks people out of going, so it only prints once the
   // event is at least half full. Below that: faces and names, no number.
   const showCount = shouldShowGoingCount(totalGoing, capacity);
+  // Someone already going sees the real number ("You and 84 others are going",
+  // owner 2026-11-18): the half-capacity rule protects those still deciding.
+  const sayCount = showCount || viewerIsGoing;
 
   // The headline number, set large in the serif: the count IS the social proof.
   const headline = showCount ? (
@@ -176,19 +179,16 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
               ? t('whosGoing.leadAndOne', { name: lead })
               : t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 });
 
-  // The card's pile: up to five faces, photos first, unnamed portraits
-  // filling in for guests who keep themselves private, so a crowd still reads
-  // as one. Bigger than before (owner, 2026-11-17: "could the cards be bigger
-  // and more premium").
-  const MAX_FACES = 5;
+  // Up to six faces, photos first, unnamed portraits filling in for guests who
+  // keep themselves private, so a crowd still reads as one.
+  const MAX_FACES = 3;
   const faces = photoFirst([...friendsGoing, ...pile]).slice(0, MAX_FACES);
   const others = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - faces.length);
   const anonBase = defaultAvatarIndex(eventId);
   const anon = Array.from({ length: Math.min(others, MAX_FACES - faces.length) }, (_, i) => (anonBase + i * 5) % DEFAULT_AVATAR_COUNT);
   const pileSize = faces.length + anon.length;
-  // "+N" only where the number may print at all (shouldShowGoingCount).
-  const overflow = showCount ? Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - pileSize) : 0;
-  const FACE = 52;
+  const overflow = sayCount ? Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - pileSize) : 0;
+  const FACE = 40;
 
   const openList = () => {
     if (!user) {
@@ -198,24 +198,56 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
     setSheetOpen(true);
   };
 
-  // One filled card, Posh's shape in our materials: what it is on the left,
-  // the faces and "View" on the right. It replaced a left-aligned pile under a
-  // heading, which sat lopsided on the page (owner, 2026-11-16).
+  // The sentence under the faces, names in semibold: "You, Mika and 84 others
+  // are going". Templates keep word order translatable.
+  const leadName = (faces[0]?.displayName || '').split(' ')[0];
+  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0));
+  const sentenceKey = viewerIsGoing
+    ? leadName
+      ? othersCount > 0
+        ? 'whosGoing.line.youLeadOthers'
+        : 'whosGoing.line.youLead'
+      : othersCount > 0
+        ? 'whosGoing.line.youOthers'
+        : 'whosGoing.line.youOnly'
+    : leadName
+      ? othersCount === 0
+        ? 'whosGoing.line.leadOnly'
+        : sayCount
+          ? 'whosGoing.line.leadOthers'
+          : 'whosGoing.line.leadOthersVague'
+      : sayCount
+        ? 'whosGoing.line.count'
+        : 'whosGoing.line.vague';
+  const template = t(sentenceKey, { count: othersCount === 1 && !viewerIsGoing ? 1 : othersCount, total: totalGoing });
+  const bold = { you: t('whosGoing.youBadge'), lead: leadName };
+  const sentence = template.split(/(\{you\}|\{lead\})/).map((part, i) =>
+    part === '{you}' || part === '{lead}' ? (
+      <Text key={i} style={styles.lineStrong}>
+        {bold[part === '{you}' ? 'you' : 'lead']}
+      </Text>
+    ) : (
+      <Text key={i}>{part}</Text>
+    )
+  );
+
+  // Posh's guestlist row (owner's reference, 2026-11-18): one compact row,
+  // what it is and who is going on the left, three faces and View on the
+  // right. Three faces max; the sentence carries the rest.
   return (
     <View style={styles.section}>
-      <TouchableOpacity style={styles.card} onPress={openList} activeOpacity={0.85} accessibilityRole="button">
-        <View style={styles.cardTop}>
-          <View style={styles.cardText}>
-            <Text style={styles.cardTitle}>{t('whosGoing.guestlist').toLowerCase()}</Text>
-            <Text style={styles.cardSub} numberOfLines={1}>
-              {showCount
-                ? `${t('whosGoing.goingCount', { count: totalGoing })}${viewerIsGoing ? ` · ${t('whosGoing.youreGoing')}` : ''}`
-                : subLine || t('whosGoing.seeWhosGoing')}
-            </Text>
-          </View>
-          <View style={styles.viewBtn}>
-            <Text style={styles.viewText}>{t('whosGoing.view')}</Text>
-          </View>
+      <TouchableOpacity
+        style={styles.row}
+        onPress={openList}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={template.replace('{you}', bold.you).replace('{lead}', leadName)}
+      >
+        <View style={styles.rowText}>
+          <Text style={styles.rowTitle}>{t('whosGoing.guestlist')}</Text>
+          <Text style={styles.rowSub} numberOfLines={2}>
+            {sentence}
+          </Text>
         </View>
         <View style={styles.cardPile}>
           {faces.map((u, i) => (
@@ -237,11 +269,9 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
               />
             </View>
           ))}
-          {overflow > 0 && (
-            <View style={[styles.moreBubble, { marginLeft: pileSize === 0 ? 0 : -12 }]}>
-              <Text style={styles.moreText}>+{overflow > 999 ? '999' : overflow}</Text>
-            </View>
-          )}
+        </View>
+        <View style={styles.viewBtn}>
+          <Text style={styles.viewText}>{t('whosGoing.view')}</Text>
         </View>
       </TouchableOpacity>
 
@@ -276,6 +306,22 @@ const getStyles = (colors: any) =>
     cardTitle: { fontFamily: font.serif, fontSize: 24, lineHeight: 28, color: colors.text },
     cardSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
     cardPile: { flexDirection: 'row', alignItems: 'center' },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: T.surface,
+      borderRadius: radius.lg,
+      paddingVertical: 14,
+      paddingLeft: 16,
+      paddingRight: 12,
+    },
+    rowText: { flex: 1, minWidth: 0 },
+    rowTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+    rowSub: { fontSize: 13, lineHeight: 18, color: colors.textSecondary, marginTop: 2 },
+    seeAll: { fontSize: 13, color: colors.textSecondary },
+    line: { fontSize: 15, lineHeight: 21, color: colors.textSecondary, marginTop: 12 },
+    lineStrong: { color: colors.text, fontWeight: '600' },
     viewBtn: {
       backgroundColor: T.surfaceRaised,
       borderRadius: radius.button,
@@ -290,12 +336,10 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
     },
     moreBubble: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: T.surfaceRaised,
-      borderWidth: 2,
-      borderColor: T.surface,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: T.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },

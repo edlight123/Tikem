@@ -24,7 +24,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -80,6 +82,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
   const [timeOpen, setTimeOpen] = useState<Which | null>(null);
 
   const visible = !!draft;
+  const swipe = useSwipeToClose(onCancel, visible);
   useEffect(() => {
     if (visible) {
       setUploadError(null);
@@ -184,7 +187,9 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
         style={styles.avoid}
         pointerEvents="box-none"
       >
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 12 }]}>
+          {/* No swipe-to-close mid-upload (the backdrop is locked then too). */}
+          <View {...(uploading ? {} : swipe.panHandlers)}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1}>
@@ -199,6 +204,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
             >
               <Ionicons name="close" size={18} color={colors.text} />
             </Touchable>
+          </View>
           </View>
 
           {draft && (
@@ -318,7 +324,7 @@ export default function LineupEntrySheet({ draft, isNew, onPatch, onSave, onCanc
             </Touchable>
             <WhitePillCTA label={t(`${K}.save`)} onPress={onSave} disabled={!canSave} style={styles.saveBtn} />
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

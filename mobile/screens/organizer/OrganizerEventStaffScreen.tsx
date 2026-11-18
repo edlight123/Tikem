@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
+  Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -28,6 +29,7 @@ import SectionHeader from '../../components/SectionHeader'
 import { Touchable } from '../../components/ui/Touchable'
 import { Switch } from '../../components/ui/Switch'
 import { useActiveOrg } from '../../lib/activeOrg'
+import { useSwipeToClose } from '../../hooks/useSwipeToClose'
 import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 import { colors as T, font, radius } from '../../theme/tokens'
 
@@ -52,6 +54,8 @@ type RouteParams = {
 }
 
 type InviteMethod = 'link' | 'email' | 'phone'
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 type ApiInvite = {
   id: string
@@ -108,6 +112,7 @@ export default function OrganizerEventStaffScreen() {
   const [targetPhone, setTargetPhone] = useState('')
   const [viewAttendees, setViewAttendees] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const inviteSwipe = useSwipeToClose(() => setShowInviteModal(false), showInviteModal)
 
   // Single header only: the in-body OrganizerScreenHeader (serif).
   useEffect(() => {
@@ -587,7 +592,12 @@ export default function OrganizerEventStaffScreen() {
             accessibilityLabel={t('common.close')}
           >
             {/* Swallow taps on the sheet itself so they do not close it. */}
-            <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]} onPress={() => {}}>
+            <AnimatedPressable
+              style={[styles.sheet, inviteSwipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}
+              onPress={() => {}}
+            >
+              {/* Grabber + title drag the sheet down; not while an invite is being created. */}
+              <View {...(submitting ? {} : inviteSwipe.panHandlers)}>
               <View style={styles.grabber} />
               <View style={styles.sheetHead}>
                 <View style={{ flex: 1 }}>
@@ -602,6 +612,7 @@ export default function OrganizerEventStaffScreen() {
                 >
                   <X size={20} color={T.textSecondary} />
                 </Touchable>
+              </View>
               </View>
 
               {/* Compact segmented control: a raised track, the chosen segment one step brighter. */}
@@ -682,7 +693,7 @@ export default function OrganizerEventStaffScreen() {
                   </Text>
                 )}
               </Touchable>
-            </Pressable>
+            </AnimatedPressable>
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>

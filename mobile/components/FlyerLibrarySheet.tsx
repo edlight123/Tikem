@@ -8,7 +8,9 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Search, ImageUp } from 'lucide-react-native';
@@ -75,6 +77,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
 
   const [query, setQuery] = useState('');
   const [library, setLibrary] = useState<LibraryFlyer[]>([]);
@@ -150,7 +153,8 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle]}>
+          <View {...swipe.panHandlers}>
           <View style={styles.grabber} />
 
           <View style={styles.header}>
@@ -163,6 +167,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
             >
               <X size={22} color={colors.textSecondary} />
             </TouchableOpacity>
+          </View>
           </View>
 
           <View style={styles.searchBox}>
@@ -211,7 +216,7 @@ export default function FlyerLibrarySheet({ visible, onClose, onSelect, onUpload
             <ImageUp size={18} color="#0A0A0B" />
             <Text style={styles.uploadPillText}>{t('flyerLibrary.uploadImage')}</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

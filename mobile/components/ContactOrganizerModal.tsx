@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { backendJson } from '../lib/api/backend';
 import { radius, spacing, font } from '../theme/tokens';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 
 /** Mirrors the server's TOPICS union — anything else is rejected by the route. */
 const TOPICS = ['event', 'ticket', 'other'] as const;
@@ -48,6 +50,7 @@ export default function ContactOrganizerModal({
   const styles = getStyles(colors);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const swipe = useSwipeToClose(onClose, visible);
 
   const [topic, setTopic] = useState<Topic>('event');
   const [message, setMessage] = useState('');
@@ -94,9 +97,10 @@ export default function ContactOrganizerModal({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheetWrap}
         >
-          <View
+          <Animated.View
             style={[
               styles.sheet,
+              swipe.sheetStyle,
               {
                 // A number, not '88%': a percentage inside the auto-height
                 // KeyboardAvoidingView has nothing to resolve against.
@@ -109,6 +113,7 @@ export default function ContactOrganizerModal({
                 of the screen bottom and the page's "Event Ended" bar showed
                 through the gap; whatever opens that gap, the fill covers it. */}
             <View pointerEvents="none" style={styles.bottomFill} />
+            <View {...swipe.panHandlers}>
             <View style={styles.grabber} />
 
             <View style={styles.header}>
@@ -131,6 +136,7 @@ export default function ContactOrganizerModal({
               >
                 <X size={18} color={colors.text} />
               </TouchableOpacity>
+            </View>
             </View>
 
             {sent ? (
@@ -208,7 +214,7 @@ export default function ContactOrganizerModal({
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>

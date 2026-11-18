@@ -9,7 +9,9 @@ import {
   type StyleProp,
   type TextStyle,
   type ViewStyle,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../theme/tokens';
@@ -55,6 +57,7 @@ export default function SelectField({
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
   const [open, setOpen] = useState(false);
+  const swipe = useSwipeToClose(() => setOpen(false), open);
 
   const handleSelect = (option: string) => {
     onSelect(option);
@@ -90,7 +93,8 @@ export default function SelectField({
       >
         <View style={styles.overlay}>
           <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
+          <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 8 }]}>
+            <View {...swipe.panHandlers}>
             <View style={styles.grabber} />
             <View style={styles.header}>
               <Text style={styles.title}>{sheetTitle || label || 'Select'}</Text>
@@ -102,6 +106,7 @@ export default function SelectField({
               >
                 <Ionicons name="close" size={22} color={colors.text} />
               </Touchable>
+            </View>
             </View>
 
             <FlatList
@@ -133,7 +138,7 @@ export default function SelectField({
                 );
               }}
             />
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </>

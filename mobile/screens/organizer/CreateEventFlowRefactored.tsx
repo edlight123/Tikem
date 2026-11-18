@@ -28,6 +28,7 @@ import {
   Switch,
   KeyboardTypeOptions,
 } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { useAppAlert } from '../../components/AppAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -461,6 +462,7 @@ export default function CreateEventFlowRefactored() {
   // "Fix N field(s)" banner so off-screen errors don't make Create look broken.
   const [errorCount, setErrorCount] = useState(0);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const confirmSwipe = useSwipeToClose(() => setConfirmVisible(false), confirmVisible);
   // Ref to the single scrolling canvas so a failed Save can scroll the user back
   // to the top where the error banner + first required fields live.
   const scrollRef = useRef<ScrollView>(null);
@@ -3149,9 +3151,12 @@ export default function CreateEventFlowRefactored() {
             activeOpacity={1}
             onPress={() => !saving && setConfirmVisible(false)}
           />
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>{t('organizerCreateEventFlow.confirm.title')}</Text>
+          <Animated.View style={[styles.sheet, confirmSwipe.sheetStyle, { paddingBottom: insets.bottom + 20 }]}>
+            {/* Handle + title drag the sheet down; not while the save is running. */}
+            <View {...(saving ? {} : confirmSwipe.panHandlers)}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>{t('organizerCreateEventFlow.confirm.title')}</Text>
+            </View>
             <Text style={styles.sheetBody}>
               {eventDraft.recurrence !== 'none'
                 ? t('organizerCreateEventFlow.canvas.repeatHint').replace('{n}', String(eventDraft.recurrence_count))
@@ -3185,7 +3190,7 @@ export default function CreateEventFlowRefactored() {
                 {t('organizerCreateEventFlow.confirm.saveDraft')}
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
       <PosterTemplateSheet

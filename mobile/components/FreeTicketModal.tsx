@@ -5,7 +5,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { X, Plus, Minus } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -127,6 +129,7 @@ export default function FreeTicketModal({
   const styles = getStyles(colors);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
+  const swipe = useSwipeToClose(onClose, visible);
 
   // t() has no interpolation: substitute {count} manually. `rc` replaces the
   // placeholder; `pc` also picks the singular/plural variant by count.
@@ -376,10 +379,13 @@ export default function FreeTicketModal({
           onPress={() => !loading && onClose()}
           accessibilityLabel={t('common.cancel')}
         />
-        <View style={styles.modalContainer}>
+        <Animated.View style={[styles.modalContainer, swipe.sheetStyle]}>
           {/* Paints below the sheet's edge, so the event page's sticky bar can never
               show through a gap under the sheet (see ContactOrganizerModal). */}
           <View pointerEvents="none" style={styles.bottomFill} />
+          {/* Handle + header drag the sheet down; not while a claim is in flight
+              (the backdrop is locked then too). */}
+          <View {...(loading ? {} : swipe.panHandlers)}>
           <View style={styles.handle} />
 
           {/* A small serif title (the tier, when one was picked, beneath it) and
@@ -400,6 +406,7 @@ export default function FreeTicketModal({
             >
               <X size={18} color={T.textSecondary} />
             </TouchableOpacity>
+          </View>
           </View>
 
           {/* One filled row: label left, a small stepper (or the locked count) right. */}
@@ -464,7 +471,7 @@ export default function FreeTicketModal({
             disabled={remainingTickets <= 0}
             style={styles.claimButtonFull}
           />
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

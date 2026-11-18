@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View, Animated } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -44,6 +45,7 @@ export default function RefundConfirmSheet({
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onCancel, visible);
   const card = rails.some((r) => r === 'stripe' || r === 'stripe_connect');
   const manual = rails.includes('manual');
   const amountText = formatMoneyLines(totals);
@@ -52,7 +54,9 @@ export default function RefundConfirmSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={busy ? undefined : onCancel}>
       <Pressable style={styles.backdrop} onPress={busy ? undefined : onCancel} />
       <View style={styles.anchor} pointerEvents="box-none">
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
+          {/* No swipe-to-close while the refund is running. */}
+          <View {...(busy ? {} : swipe.panHandlers)}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>{t('organizerOrders.refundSheet.title')}</Text>
@@ -66,6 +70,7 @@ export default function RefundConfirmSheet({
             >
               <X size={20} color={colors.text} />
             </Touchable>
+          </View>
           </View>
 
           {/* The figure, big and unambiguous: an inset fill inside the sheet. */}
@@ -118,7 +123,7 @@ export default function RefundConfirmSheet({
             </Touchable>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

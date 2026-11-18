@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Animated,
   Modal,
   Pressable,
   RefreshControl,
@@ -60,6 +61,7 @@ import { AFTER_ALERT_MS } from '../../lib/moderationActions'
 
 import { Touchable } from '../../components/ui/Touchable';
 import { Switch } from '../../components/ui/Switch';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 type VerificationStatus = 'not_started' | 'pending' | 'verified' | 'failed'
 
 type BankDestination = {
@@ -231,6 +233,7 @@ export default function OrganizerPayoutSettingsScreenV2() {
 
   // The method whose detail sheet is open.
   const [detailDest, setDetailDest] = useState<PayoutDestination | null>(null)
+  const detailSwipe = useSwipeToClose(() => setDetailDest(null), Boolean(detailDest))
 
   // Region on show: the organizer's pick this session, else where they run events.
   const [pickedRegion, setPickedRegion] = useState<PayoutRegion | null>(lastRegionThisSession)
@@ -1073,10 +1076,13 @@ export default function OrganizerPayoutSettingsScreenV2() {
     const needsIdentity = !isBank && !identityVerified
     return (
       <>
-        <Text style={styles.modalTitle} numberOfLines={1}>
-          {methodName(dest)}
-          <Text style={styles.modalTitleDigits}>{`  •••• ${methodLast4(dest)}`}</Text>
-        </Text>
+        {/* The title drags the sheet down too (the grabber alone is a tiny target). */}
+        <View {...detailSwipe.panHandlers}>
+          <Text style={styles.modalTitle} numberOfLines={1}>
+            {methodName(dest)}
+            <Text style={styles.modalTitleDigits}>{`  •••• ${methodLast4(dest)}`}</Text>
+          </Text>
+        </View>
         <ListGroup inset={16}>
           {holder ? <ListRow key="holder" title={t('organizerPayoutSettings.hub.holderLabel')} value={holder} /> : null}
           <ListRow
@@ -1165,10 +1171,12 @@ export default function OrganizerPayoutSettingsScreenV2() {
       <Modal visible={Boolean(detailDest)} transparent animationType="slide" onRequestClose={() => setDetailDest(null)}>
         <View style={styles.modalOverlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setDetailDest(null)} />
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.sheetHandle} />
+          <Animated.View style={[styles.modalContent, detailSwipe.sheetStyle, { paddingBottom: insets.bottom + 20 }]}>
+            <View {...detailSwipe.panHandlers}>
+              <View style={styles.sheetHandle} />
+            </View>
             {renderDetailSheet()}
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 

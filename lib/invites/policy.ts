@@ -86,25 +86,35 @@ export interface InviteFacts {
   mutedBy: ReadonlySet<string>
   /** Targets who blocked the inviter, or whom the inviter blocked. */
   blocked: ReadonlySet<string>
+  /**
+   * Targets who must not get an invite but whose reason must not show: a mute,
+   * or a ticket they keep private. They read as "available" and an invite to
+   * them is recorded as sent without notifying (owner, 2026-11-18: "why can't
+   * i invite him?"). Optional for older callers.
+   */
+  quiet?: ReadonlySet<string>
 }
 
 export interface InvitePlan {
   /** Not an accepted connection: the whole request is refused. */
   notConnected: string[]
   send: string[]
+  /** Recorded as sent, never delivered (see InviteFacts.quiet). */
+  quiet: string[]
   skipped: Array<{ uid: string; reason: InviteSkipReason }>
 }
 
 /** Who gets an invite, who is skipped and why. Order of targets is kept. */
 export function planInvites(targets: string[], facts: InviteFacts): InvitePlan {
-  const plan: InvitePlan = { notConnected: [], send: [], skipped: [] }
+  const plan: InvitePlan = { notConnected: [], send: [], quiet: [], skipped: [] }
   for (const uid of targets) {
     if (!facts.accepted.has(uid)) {
       plan.notConnected.push(uid)
       continue
     }
     const state = pickerStateFor(uid, facts)
-    if (state === 'available') plan.send.push(uid)
+    if (state === 'available' && (facts.mutedBy.has(uid) || facts.quiet?.has(uid))) plan.quiet.push(uid)
+    else if (state === 'available') plan.send.push(uid)
     else if (state === 'invited') plan.skipped.push({ uid, reason: 'already_invited' })
     else if (state === 'going') plan.skipped.push({ uid, reason: 'already_going' })
     else plan.skipped.push({ uid, reason: 'unavailable' })
@@ -117,7 +127,7 @@ export function planInvites(targets: string[], facts: InviteFacts): InvitePlan {
  * a different label; going beats invited (the useful fact for the inviter).
  */
 export function pickerStateFor(uid: string, facts: Omit<InviteFacts, 'accepted'>): InvitePickerState {
-  if (facts.mutedBy.has(uid) || facts.blocked.has(uid)) return 'unavailable'
+  if (facts.blocked.has(uid)) return 'unavailable'
   if (facts.holders.has(uid)) return 'going'
   if (facts.alreadyInvited.has(uid)) return 'invited'
   return 'available'

@@ -11,7 +11,9 @@ import {
   ActivityIndicator,
   ScrollView,
   Share,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { X, Share2, Check } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { backendFetch } from '../lib/api/backend';
@@ -177,6 +179,7 @@ export default function TransferTicketModal({
     onClose();
     if (sent) onTransferSuccess?.();
   };
+  const swipe = useSwipeToClose(close, visible);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
@@ -187,7 +190,8 @@ export default function TransferTicketModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={close} accessible={false} />
-        <View style={styles.modalContainer}>
+        <Animated.View style={[styles.modalContainer, swipe.sheetStyle]}>
+          <View {...swipe.panHandlers}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.sheetTitle}>{(showLink ? t('transferTicket.sentTitle') : t('transferTicket.title')).toLowerCase()}</Text>
@@ -200,6 +204,7 @@ export default function TransferTicketModal({
             >
               <X size={18} color={colors.text} />
             </TouchableOpacity>
+          </View>
           </View>
 
           <ScrollView
@@ -348,7 +353,7 @@ export default function TransferTicketModal({
               </>
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

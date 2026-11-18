@@ -105,6 +105,18 @@ export default {
     friendsGoingSuffix: 'friends going',
   },
   whosGoing: {
+    seeAll: "See all",
+    line: {
+      youLeadOthers: "{you}, {lead} and {count} others",
+      youLead: "{you} and {lead}",
+      youOthers: "{you} and {count} others",
+      youOnly: "{you} are going",
+      leadOnly: "{lead} is going",
+      leadOthers: "{lead} and {count} others",
+      leadOthersVague: "{lead} and others",
+      count: "{total} going",
+      vague: "See who's going",
+    },
     othersGoing: "Others are going",
     privateSub: "Guests here keep their attendance private.",
     title: 'Who\'s going',

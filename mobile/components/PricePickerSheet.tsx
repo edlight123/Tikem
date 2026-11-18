@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Touchable } from './ui/Touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
@@ -43,6 +44,7 @@ export default function PricePickerSheet({
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const styles = getStyles(colors);
+  const swipe = useSwipeToClose(onClose, visible);
 
   const isHighDenomination = currencyCode === 'HTG' || currencyCode === 'DOP';
   const ceiling = isHighDenomination ? 10000 : 200;
@@ -68,7 +70,8 @@ export default function PricePickerSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+      <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
+        <View {...swipe.panHandlers}>
         <View style={styles.handle} />
         <View style={styles.header}>
           <Text style={styles.title}>{t('filters.priceRange')}</Text>
@@ -79,6 +82,7 @@ export default function PricePickerSheet({
           >
             <X size={20} color={colors.text} />
           </Touchable>
+        </View>
         </View>
 
         <Text style={styles.readout}>{readout}</Text>
@@ -121,7 +125,7 @@ export default function PricePickerSheet({
             <Text style={styles.applyText}>{t('filters.apply')}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

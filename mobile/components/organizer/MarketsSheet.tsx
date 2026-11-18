@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, Animated } from 'react-native';
+import { useSwipeToClose } from '../../hooks/useSwipeToClose';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'lucide-react-native';
 
@@ -161,6 +162,7 @@ export function MarketsPicker({ draft, onToggle, disabled = false, onCanvas = fa
 export default function MarketsSheet({ visible, markets, saving, onClose, onSave }: MarketsSheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const swipe = useSwipeToClose(onClose, visible);
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState<string[]>(markets);
@@ -181,7 +183,9 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.close')} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+        <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 16 }]}>
+          {/* No swipe-to-close mid-save. */}
+          <View {...(saving ? {} : swipe.panHandlers)}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -198,6 +202,7 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
               <X size={20} color={colors.text} />
             </Touchable>
           </View>
+          </View>
 
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
             <MarketsPicker draft={draft} onToggle={toggle} disabled={saving} />
@@ -209,7 +214,7 @@ export default function MarketsSheet({ visible, markets, saving, onClose, onSave
             loading={saving}
             disabled={saving || !dirty}
           />
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

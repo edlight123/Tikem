@@ -21,7 +21,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { Image } from 'expo-image';
 import { ArrowUpRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +55,7 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
   const styles = getStyles(colors);
   const entries = useMemo(() => lineupFromEvent(guestlist), [guestlist]);
   const [open, setOpen] = useState<LineupEntry | null>(null);
+  const swipe = useSwipeToClose(() => setOpen(null), !!open);
 
   if (entries.length === 0) return null;
 
@@ -123,10 +126,11 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
       <Modal visible={!!open} transparent animationType="slide" onRequestClose={() => setOpen(null)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(null)} />
         {open && (
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
+          <Animated.View style={[styles.sheet, swipe.sheetStyle, { paddingBottom: insets.bottom + 20 }]}>
             {/* Paints below the sheet's edge, so the event page's sticky bar can never
                 show through a gap under the sheet (see ContactOrganizerModal). */}
             <View pointerEvents="none" style={styles.bottomFill} />
+            <View {...swipe.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
               <View style={[styles.portrait, styles.sheetPortrait]}>
@@ -148,6 +152,7 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
                 </Text>
               </View>
             </View>
+            </View>
             {!!open.description && <Text style={styles.sheetBody}>{open.description}</Text>}
             {openHref && (
               <TouchableOpacity
@@ -163,7 +168,7 @@ export default function EventLineupRail({ guestlist, gutter = 18 }: Props) {
                 <ArrowUpRight size={18} color={colors.text} />
               </TouchableOpacity>
             )}
-          </View>
+          </Animated.View>
         )}
       </Modal>
     </View>

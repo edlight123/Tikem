@@ -104,6 +104,18 @@ export default {
     friendsGoingSuffix: 'zanmi ap ale',
   },
   whosGoing: {
+    seeAll: "Wè tout",
+    line: {
+      youLeadOthers: "{you}, {lead} ak {count} lòt",
+      youLead: "{you} ak {lead}",
+      youOthers: "{you} ak {count} lòt",
+      youOnly: "{you} ap vini",
+      leadOnly: "{lead} ap vini",
+      leadOthers: "{lead} ak {count} lòt",
+      leadOthersVague: "{lead} ak lòt moun",
+      count: "{total} moun ap vini",
+      vague: "Gade kiyès k ap vini",
+    },
     othersGoing: "Lòt moun ap vini",
     privateSub: 'Envite yo kenbe patisipasyon yo prive.',
     title: 'Ki moun k ap ale',
