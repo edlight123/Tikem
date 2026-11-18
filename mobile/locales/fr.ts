@@ -1145,6 +1145,18 @@ export default {
     },
     examplesTitle: 'Exemples de mises à jour :',
     examples: {
+      doorsOpen: {
+        title: "Les portes sont ouvertes",
+        cardTitle: "Ouverture des portes",
+        cardPreview: "Les portes sont ouvertes ! Préparez votre billet à l'entrée. À tout de suite.",
+        message: "Les portes sont ouvertes ! Préparez votre billet à l'entrée. À tout de suite.",
+      },
+      thankYou: {
+        title: "Merci d'être venus",
+        cardTitle: "Merci",
+        cardPreview: "Merci d'être venus ! On espère que vous avez passé un bon moment. À la prochaine.",
+        message: "Merci d'être venus ! On espère que vous avez passé un bon moment. À la prochaine.",
+      },
       venueChange: {
         title: 'Changement de lieu',
         cardTitle: 'Changement de lieu',
@@ -2958,6 +2970,22 @@ export default {
     failed: "Transfert impossible. Réessayez.",
   },
   organizerMessages: {
+    tabQuestions: "Questions",
+    tabAnnouncements: "Annonces",
+    newMessage: "Nouveau message",
+    sentSection: "envoyés",
+    nothingSent: "Rien d'envoyé pour l'instant.",
+    recipients: "{count} personnes",
+    recipientsOne: "1 personne",
+    automaticTitle: "automatiques",
+    statusSent: "Envoyé",
+    morningAfter: "Le lendemain matin",
+    auto: {
+      event_reminder_24h: "Rappel · la veille",
+      event_reminder_3h: "Rappel · 3 h avant",
+      event_reminder_30min: "Rappel · 30 min avant",
+      post_event_followup: "Merci · le lendemain matin",
+    },
     segmentWaiting: 'À répondre',
     segmentAll: 'Tous',
     caughtUpTitle: 'Vous êtes à jour',

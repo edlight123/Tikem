@@ -1114,6 +1114,18 @@ export default {
     },
     examplesTitle: 'Egzanp mizajou:',
     examples: {
+      doorsOpen: {
+        title: "Pòt yo louvri",
+        cardTitle: "Pòt louvri",
+        cardPreview: "Pòt yo louvri! Pare tikè w nan antre a. N ap tann ou.",
+        message: "Pòt yo louvri! Pare tikè w nan antre a. N ap tann ou.",
+      },
+      thankYou: {
+        title: "Mèsi paske w te vini",
+        cardTitle: "Mèsi",
+        cardPreview: "Mèsi paske w te vini! Nou espere w te pase bon moman. N a wè nan pwochen an.",
+        message: "Mèsi paske w te vini! Nou espere w te pase bon moman. N a wè nan pwochen an.",
+      },
       venueChange: {
         title: 'Chanjman kote',
         cardTitle: 'Chanjman kote',
@@ -2926,6 +2938,22 @@ export default {
     failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
   organizerMessages: {
+    tabQuestions: "Kesyon",
+    tabAnnouncements: "Anons",
+    newMessage: "Nouvo mesaj",
+    sentSection: "voye",
+    nothingSent: "Poko voye anyen.",
+    recipients: "{count} moun",
+    recipientsOne: "1 moun",
+    automaticTitle: "otomatik",
+    statusSent: "Voye",
+    morningAfter: "Demen maten",
+    auto: {
+      event_reminder_24h: "Rapèl · lavèy",
+      event_reminder_3h: "Rapèl · 3 è anvan",
+      event_reminder_30min: "Rapèl · 30 min anvan",
+      post_event_followup: "Mèsi · demen maten",
+    },
     segmentWaiting: 'Pou reponn',
     segmentAll: 'Tout',
     caughtUpTitle: 'Ou a jou',
