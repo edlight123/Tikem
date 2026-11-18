@@ -1963,7 +1963,16 @@
       "unauthorized": "Konekte pou w ka siyale kontni.",
       "not_found": "Kontni sa a pa disponib ankò.",
       "self_report": "Ou pa ka siyale tèt ou."
-    }
+    },
+    "report_person": "Siyale",
+    "report_person_title": "Siyale moun sa a",
+    "report_intro_person": "Ki pwoblèm nan? Siyalman yo prive: moun nan pa janm konnen kiyès ki voye l.",
+    "block_person": "Bloke",
+    "unblock_person": "Debloke",
+    "block_confirm_body_person": "Moun sa a p ap parèt pou ou ankò. Ou ka debloke l nenpòt ki lè.",
+    "unblock_confirm_body_person": "Moun sa a ap parèt pou ou ankò.",
+    "blocked_toast_person": "Bloke",
+    "unblocked_toast_person": "Debloke"
   },
   "friendsGoing": {
     "one": "{{name}} prale",

@@ -531,7 +531,6 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 >
                   <option value="link">Link</option>
                   <option value="email">{tx('actions.email')}</option>
-                  <option value="phone">{tx('actions.phone')}</option>
                 </select>
               </div>
 

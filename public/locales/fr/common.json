@@ -1963,7 +1963,16 @@
       "unauthorized": "Connectez-vous pour signaler un contenu.",
       "not_found": "Ce contenu n'est plus disponible.",
       "self_report": "Vous ne pouvez pas vous signaler vous-même."
-    }
+    },
+    "report_person": "Signaler",
+    "report_person_title": "Signaler cette personne",
+    "report_intro_person": "Quel est le problème ? Les signalements sont privés : la personne ne sait jamais qui l'a envoyé.",
+    "block_person": "Bloquer",
+    "unblock_person": "Débloquer",
+    "block_confirm_body_person": "Cette personne n'apparaîtra plus pour vous. Vous pouvez la débloquer à tout moment.",
+    "unblock_confirm_body_person": "Cette personne apparaîtra de nouveau pour vous.",
+    "blocked_toast_person": "Bloqué",
+    "unblocked_toast_person": "Débloqué"
   },
   "friendsGoing": {
     "one": "{{name}} y va",

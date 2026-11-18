@@ -391,8 +391,9 @@ export default function OrganizerProfileClient({
                   shown on your own profile. */}
               {userId !== organizer.id && (
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-                  <ReportButton kind="organizer" targetId={organizer.id} userId={userId} />
+                  <ReportButton kind="organizer" targetId={organizer.id} userId={userId} person={!isHost} />
                   <BlockOrganizerButton
+                    person={!isHost}
                     organizerId={organizer.id}
                     organizerName={organizer.name}
                     userId={userId}
