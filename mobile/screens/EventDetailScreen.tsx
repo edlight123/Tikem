@@ -1107,6 +1107,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             eventId={eventId}
             visibility={guestlistVisibilityFrom(event as any)}
             capacity={event.total_tickets}
+            alwaysCount={(event as any).show_going_count === true}
           />
 
           {/* Bottom padding so the floating CTA never overlaps page content */}

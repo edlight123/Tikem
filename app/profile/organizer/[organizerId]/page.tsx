@@ -176,6 +176,18 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
   const userDoc = await adminDb.collection('users').doc(organizerId).get()
   const userData = userDoc.exists ? userDoc.data() : {}
 
+  // Not everyone is an organizer (owner, 2026-11-17, same rule as the app's
+  // OrganizerProfileScreen). A host has an organization name, any event, or
+  // the organizer role; anyone else gets a person's profile: "Joined Tikèm"
+  // once, no "0 events", no Follow, no empty "upcoming events".
+  const orgName = String(brand.organization_name || organizerRow.organization_name || '').trim()
+  const isHost =
+    !!orgName ||
+    details.kind === 'org' ||
+    organizerEvents.length > 0 ||
+    userData?.role === 'organizer' ||
+    userData?.is_organizer === true
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] pb-mobile-nav">
       <Navbar user={user} />
@@ -199,6 +211,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
         city={typeof userData?.default_city === 'string' ? userData.default_city : undefined}
         country={typeof userData?.default_country === 'string' ? userData.default_country : undefined}
         isBlocked={user && !isSelf ? await isOrganizerBlocked(user.id, organizerId) : false}
+        isHost={isHost}
       />
 
       <MobileNavWrapper user={user} />

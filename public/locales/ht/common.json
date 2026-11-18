@@ -1266,6 +1266,7 @@
     "imageGallery": "Galri imaj",
     "pageSettings": "Paramèt paj la",
     "showOnExplore": "Montre nan Dekouvri",
+    "showGoingCount": "Montre konbyen moun ap vini",
     "passwordProtected": "Evènman pwoteje ak modpas",
     "accessCodePlaceholderNew": "Kòd aksè (omwen 6 karaktè)",
     "accessCodePlaceholderEdit": "Nouvo kòd aksè (kite l vid pou kenbe sa k la a)",
@@ -1612,7 +1613,21 @@
     "more_guests": "+{{count}} lòt",
     "more_private": "Lòt yo kenbe sa prive",
     "no_faces": "Pèsonn poko montre figi yo.",
-    "sign_in_to_view": "Konekte pou w wè kiyès ki prale"
+    "sign_in_to_view": "Konekte pou w wè kiyès ki prale",
+    "line": {
+      "you_lead_others": "{{you}}, {{lead}} ak {{count}} lòt",
+      "you_lead_one": "{{you}}, {{lead}} ak 1 lòt",
+      "you_lead": "{{you}} ak {{lead}}",
+      "you_others": "{{you}} ak {{count}} lòt",
+      "you_one": "{{you}} ak 1 lòt",
+      "you_only": "{{you}} ap vini",
+      "lead_only": "{{lead}} ap vini",
+      "lead_one": "{{lead}} ak 1 lòt",
+      "lead_others": "{{lead}} ak {{count}} lòt",
+      "lead_vague": "{{lead}} ak lòt moun",
+      "count": "{{count}} moun ap vini",
+      "vague": "Gade kiyès k ap vini"
+    }
   },
   "follow": {
     "loading": "Chajman...",

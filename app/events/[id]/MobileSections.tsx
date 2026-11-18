@@ -42,15 +42,12 @@ interface MobileSectionsProps {
   commune: string
   city: string
   /**
-   * The venue map tile, passed in already-built (a composed child, like
-   * `contactOrganizer`). Kept as a
+   * The venue map tile, passed in already-built (a composed child). Kept as a
    * node (rather than widening the props with the raw event doc) so this
    * component stays a list of flat scalars, and so the tile's link is
    * constructed once, next to the desktop one it must match.
    */
   venueMap?: React.ReactNode
-  /** "Message the organizer" row, built by the caller (null on the organizer's own event). */
-  contactOrganizer?: React.ReactNode
 }
 
 export default function MobileSections({
@@ -61,8 +58,7 @@ export default function MobileSections({
   address,
   commune,
   city,
-  venueMap,
-  contactOrganizer
+  venueMap
 }: MobileSectionsProps) {
   const { t } = useTranslation('common')
 
@@ -135,7 +131,6 @@ export default function MobileSections({
       {/* The organizer and the date already lead the page (hero, key facts)
           and share sits beside the title, so their sections are gone: only
           the one thing nothing above offers, a way to write to the organizer. */}
-      {contactOrganizer && <section className="py-6">{contactOrganizer}</section>}
     </div>
   )
 }

@@ -870,6 +870,7 @@ export default {
       ticketValidUntilLabel: 'Valid until',
       ticketNotYetValid: 'Not valid yet',
       ticketExpired: 'Expired',
+      showGoingCount: "Show how many are going",
       passwordProtect: 'Password-protect this event',
       accessCode: 'Access code',
       accessCodeHint: 'Attendees must enter this code to get tickets.',
@@ -3872,6 +3873,11 @@ export default {
     requestErrorBody: "Could not send the friend request. Try again.",
     messageEventRich: "Come with me to {event} · {details}\n{link}",
     close: "Close",
+    shareTo: "Share to",
+    copyLink: "Copy link",
+    contactsRow: "See who's on Tikèm",
+    connectShort: "Connect",
+    settingsShort: "Settings",
   },
   // Approval lists and plus-ones (docs/specs/approval-lists-and-plus-ones.md).
   attendRequests: {

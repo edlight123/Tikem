@@ -143,6 +143,16 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         selloutSoon={selloutSoon}
         actions={
           <>
+            {/* "Message the organizer" as a small square icon on the organizer
+                line, not a full-width row further down (owner, 2026-11-18). */}
+            {canContactOrganizer && (
+              <ContactOrganizer
+                eventId={event.id}
+                eventTitle={event.title}
+                userId={user?.id ?? null}
+                variant="icon"
+              />
+            )}
             {user && <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />}
             <ShareIconButton eventId={event.id} eventTitle={event.title} tone="dark" />
           </>
@@ -398,15 +408,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         address={event.address || ''}
         commune={event.commune || ''}
         city={event.city}
-        contactOrganizer={
-          canContactOrganizer ? (
-            <ContactOrganizer
-              eventId={event.id}
-              eventTitle={event.title}
-              userId={user?.id ?? null}
-            />
-          ) : null
-        }
         venueMap={
           <VenueMap
             event={event}
@@ -572,21 +573,25 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   )}
                 </div>
               </a>
-              <div className="mt-4">
+              {/* Follow, with "Message the organizer" as a small square icon
+                  beside it: a full-width row read as too prominent (owner,
+                  2026-11-18; same as the app). */}
+              <div className="mt-4 flex items-center gap-2">
                 <FollowButton
                   organizerId={event.organizer_id}
                   userId={user?.id || null}
                   initialIsFollowing={isFollowing}
                 />
+                {canContactOrganizer && (
+                  <ContactOrganizer
+                    eventId={event.id}
+                    eventTitle={event.title}
+                    userId={user?.id ?? null}
+                    variant="icon"
+                    size="sm"
+                  />
+                )}
               </div>
-              {canContactOrganizer && (
-                <ContactOrganizer
-                  eventId={event.id}
-                  eventTitle={event.title}
-                  userId={user?.id ?? null}
-                  className="mt-4 max-w-sm"
-                />
-              )}
             </div>
           </div>
 
@@ -722,6 +727,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
           currentUserId={user?.id || null}
           visibility={guestlistVisibilityFrom(event as any)}
           capacity={(event as any).total_tickets}
+          showGoingCount={(event as any).show_going_count === true}
           viewerName={(user as any)?.full_name ?? null}
           viewerPhotoUrl={(user as any)?.photo_url ?? null}
           className="mt-8"

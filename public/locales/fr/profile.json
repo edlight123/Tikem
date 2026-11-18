@@ -105,7 +105,8 @@
     "upcoming_count_one": "{{count}} événement à venir",
     "upcoming_count_other": "{{count}} événements à venir",
     "upcoming_count_plural": "{{count}} événements à venir",
-    "private_details": "La bio et les réseaux ne sont visibles que par les amis."
+    "private_details": "La bio et les réseaux ne sont visibles que par les amis.",
+    "joined": "Sur Tikèm depuis {{date}}"
   },
   "dashboard": {
     "stats": {

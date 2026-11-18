@@ -105,7 +105,8 @@
     "upcoming_count_one": "{{count}} event coming soon",
     "upcoming_count_other": "{{count}} events coming soon",
     "upcoming_count_plural": "{{count}} events coming soon",
-    "private_details": "Bio and socials are visible to friends only."
+    "private_details": "Bio and socials are visible to friends only.",
+    "joined": "Joined Tikèm {{date}}"
   },
   "dashboard": {
     "stats": {

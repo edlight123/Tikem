@@ -16,10 +16,8 @@ import {
   Animated,
 } from 'react-native';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
-import { Check, MessageSquare, Search, Share2, User, UserPlus, Users, X } from 'lucide-react-native';
+import { BookUser, Link2, Search, Share as ShareIcon, User, UserPlus, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
-import { defaultAvatar } from '../lib/defaultAvatar';
-import { Image } from 'expo-image';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,10 +32,9 @@ import {
   updateCachedMatch,
   type DeviceContact,
 } from '../lib/contactSync';
-import { contactPhoneE164, matchedContactIds, openWhatsAppInvite, smsUrl } from '../lib/inviteLink';
+import { contactPhoneE164, matchedContactIds, openWhatsAppInvite } from '../lib/inviteLink';
 import { requestPhonePrompt, usePhonePromptAvailable } from '../lib/phonePrompt';
 import type { ContactMatch } from '../types/social';
-import SectionHeader from './SectionHeader';
 import PersonAvatar from './PersonAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from './AppAlert';
@@ -45,8 +42,8 @@ import { useAppAlert } from './AppAlert';
 const MAX_SELECTED = 20;
 /** Contacts rendered at most; the search box reaches the rest. */
 const MAX_CONTACT_ROWS = 60;
-/** How long the "sent" state shows on the button before the sheet closes. */
-const SENT_HOLD_MS = 900;
+/** Invite taps this close together leave as one sendInvites batch. */
+const INVITE_BATCH_MS = 700;
 
 type ContactsState =
   | { kind: 'checking' }
@@ -103,14 +100,19 @@ function WhatsAppGlyph({ size = 20, color }: { size?: number; color: string }) {
 }
 
 /**
- * "Invite friends" (web lib/invites), one sheet for everyone:
- * - friends going (a face pile) as social proof,
- * - a share row (WhatsApp, Messages, the system sheet) carrying the viewer's
- *   personal link for this event, for anyone at all,
- * - the viewer's ACCEPTED connections, multi-select, sent as in-app invites
- *   (already invited / going / can't invite read as a dot + label),
- * - their phone contacts: people already on Tikèm can be added as friends,
- *   everyone else gets a WhatsApp invite with the event and the link.
+ * "Invite friends" (web lib/invites), after Posh's share sheet (owner,
+ * 2026-11-18: "make the contact sheet also as premium"):
+ * - a serif title and the event line, a square close,
+ * - search beside a contacts button (the contact-matching flow starts there),
+ * - one "on tikèm" list: ACCEPTED friends with a compact white Invite each
+ *   (invited / going / can't invite read as a dot + label), then contacts
+ *   already on Tikèm with an Add,
+ * - "from your contacts": everyone else, invited on WhatsApp with the link,
+ * - a fixed bottom bar: Share to (the system sheet with the whole message)
+ *   and Copy link (the system sheet with just the link: no clipboard module
+ *   ships in the binary, and the share sheet has a real Copy).
+ * Invite taps made in quick succession go out as one batch (sendInvites with
+ * every id, still capped at MAX_SELECTED), so multi-select survives as taps.
  * Contacts are only read once access is granted, and never leave the phone
  * except as numbers to match (lib/contactSync.ts).
  */
@@ -143,13 +145,48 @@ export function InviteFriendsSheet({
   const [friends, setFriends] = useState<InvitePickerFriend[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
   const [contacts, setContacts] = useState<ContactsState>({ kind: 'checking' });
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const linkRef = useRef<string | null>(null);
   const uid = user?.uid || '';
+
+  // Invite taps queue here and leave together a moment after the last one.
+  const queueRef = useRef<Set<string>>(new Set());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushInvites = useCallback(async () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const ids = Array.from(queueRef.current);
+    queueRef.current = new Set();
+    if (ids.length === 0) return;
+    const result = await sendInvites(eventId, ids);
+    if (!result.ok) {
+      // Put the rows back so they can be tapped again.
+      const back = new Set(ids);
+      setFriends((list) => (list ? list.map((f) => (back.has(f.uid) ? { ...f, state: 'available' } : f)) : list));
+      if (result.reason === 'limit') showAlert(t('invites.limitTitle'), t('invites.limitBody'));
+      else showAlert(t('invites.errorTitle'), t('invites.errorBody'));
+    }
+  }, [eventId, showAlert, t]);
+
+  // Whatever is queued goes out when the sheet closes (button, backdrop or swipe).
+  const flushRef = useRef(flushInvites);
+  flushRef.current = flushInvites;
+  useEffect(() => {
+    if (!visible) flushRef.current();
+  }, [visible]);
+  useEffect(() => () => void flushRef.current(), []);
+
+  const inviteFriend = (id: string) => {
+    if (queueRef.current.size >= MAX_SELECTED) flushInvites();
+    queueRef.current.add(id);
+    setFriends((list) => (list ? list.map((f) => (f.uid === id ? { ...f, state: 'invited' } : f)) : list));
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => flushRef.current(), INVITE_BATCH_MS);
+  };
 
   const loadContacts = useCallback(
     async (force = false) => {
@@ -181,14 +218,20 @@ export function InviteFriendsSheet({
     else setContacts({ kind: 'denied' });
   }, [needsPhone, onNeedPhone, loadContacts]);
 
+  /** The contacts button: start matching, re-read, or send to Settings. */
+  const onContactsButton = () => {
+    if (contacts.kind === 'checking' || contacts.kind === 'loading') return;
+    if (contacts.kind === 'denied') Linking.openSettings().catch(() => {});
+    else if (contacts.kind === 'ready') loadContacts(true);
+    else connectContacts();
+  };
+
   useEffect(() => {
     if (!visible) return;
     let active = true;
     setFriends(null);
     setFailed(false);
-    setSelected(new Set());
     setQuery('');
-    setSent(false);
     fetchInvitePicker(eventId).then((list) => {
       if (!active) return;
       if (list === null) {
@@ -216,7 +259,6 @@ export function InviteFriendsSheet({
     () => (friends || []).filter((f) => !q || f.displayName.toLowerCase().includes(q)),
     [friends, q]
   );
-  const going = useMemo(() => (friends || []).filter((f) => f.state === 'going'), [friends]);
 
   // Contacts split: people on Tikèm who are not friends yet (add them), and
   // everyone else (invite them). Friends already show in the list above.
@@ -236,39 +278,19 @@ export function InviteFriendsSheet({
     };
   }, [contacts, q]);
 
-  const toggle = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < MAX_SELECTED) next.add(id);
-      return next;
-    });
-
-  const send = async () => {
-    if (selected.size === 0 || sending || sent) return;
-    setSending(true);
-    const result = await sendInvites(eventId, Array.from(selected));
-    setSending(false);
-    if (!result.ok) {
-      if (result.reason === 'limit') showAlert(t('invites.limitTitle'), t('invites.limitBody'));
-      else showAlert(t('invites.errorTitle'), t('invites.errorBody'));
-      return;
-    }
-    const done = new Set(result.sent.length ? result.sent : selected);
-    setFriends((list) => (list || []).map((f) => (done.has(f.uid) ? { ...f, state: 'invited' } : f)));
-    setSelected(new Set());
-    setSent(true);
-    setTimeout(onClose, SENT_HOLD_MS);
-  };
-
   /** The message every share path sends: the event, when and where, the personal link. */
-  const message = async (): Promise<string | null> => {
+  const getLink = async (): Promise<string | null> => {
     const link = linkRef.current || (await fetchInviteLink(eventId));
     if (!link) {
       showAlert(t('invites.errorTitle'), t('invites.linkError'));
       return null;
     }
     linkRef.current = link;
+    return link;
+  };
+  const message = async (): Promise<string | null> => {
+    const link = await getLink();
+    if (!link) return null;
     if (!event?.title) return t('invites.messageApp', { link });
     if (!event.details) return t('invites.messageEvent', { event: event.title, link });
     return t('invites.messageEventRich', { event: event.title, details: event.details, link });
@@ -284,19 +306,11 @@ export function InviteFriendsSheet({
     }
   };
 
-  const shareVia = (via: 'whatsapp' | 'sms' | 'more') =>
-    withBusy(`share:${via}`, async () => {
-      const text = await message();
+  /** Share to: the whole message. Copy link: just the link (the sheet has Copy). */
+  const shareOut = (what: 'message' | 'link') =>
+    withBusy(`share:${what}`, async () => {
+      const text = what === 'message' ? await message() : await getLink();
       if (!text) return;
-      if (via === 'whatsapp') return openWhatsAppInvite(text);
-      if (via === 'sms') {
-        try {
-          await Linking.openURL(smsUrl(text, null, Platform.OS));
-          return;
-        } catch {
-          // no Messages app: fall through to the share sheet
-        }
-      }
       try {
         await Share.share({ message: text });
       } catch {
@@ -307,7 +321,9 @@ export function InviteFriendsSheet({
   const inviteContact = (c: DeviceContact) =>
     withBusy(`contact:${c.id}`, async () => {
       const text = await message();
-      if (text) await openWhatsAppInvite(text, contactPhoneE164(c.phone) || c.phone);
+      if (!text) return;
+      // No WhatsApp: openWhatsAppInvite falls back to the share sheet (Messages).
+      await openWhatsAppInvite(text, contactPhoneE164(c.phone) || c.phone);
     });
 
   const addPerson = (m: ContactMatch) =>
@@ -327,6 +343,15 @@ export function InviteFriendsSheet({
     s === 'invited' ? t('invites.stateInvited') : s === 'going' ? t('invites.stateGoing') : t('invites.stateUnavailable');
 
   const hasFriends = (friends || []).length > 0;
+  const showOnTikem = friends === null || failed || hasFriends || people.length > 0;
+
+  /** Dot + label, never a filled status pill. */
+  const status = (label: string, accent = false) => (
+    <View style={styles.stateWrap}>
+      <View style={[styles.dot, { backgroundColor: accent ? colors.primary : colors.textTertiary }]} />
+      <Text style={styles.stateText}>{label}</Text>
+    </View>
+  );
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -341,7 +366,7 @@ export function InviteFriendsSheet({
                 // a number, not '90%': a percentage height inside the auto-height
                 // KeyboardAvoidingView has nothing to resolve against.
                 maxHeight: windowHeight - insets.top - 24,
-                paddingBottom: Math.max(insets.bottom, 16) + 8,
+                paddingBottom: Math.max(insets.bottom, 12) + 4,
               },
             ]}
           >
@@ -349,286 +374,226 @@ export function InviteFriendsSheet({
                 of the screen bottom and the page showed through the gap. */}
             <View pointerEvents="none" style={styles.bottomFill} />
             <View {...swipe.panHandlers}>
-            <View style={styles.grabber} />
-            <View style={styles.header}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{t('invites.pickerTitle').toLowerCase()}</Text>
-                {!!event?.title && (
-                  <Text style={styles.subtitle} numberOfLines={1}>
-                    {[event.title, event.details].filter(Boolean).join(' · ')}
-                  </Text>
-                )}
+              <View style={styles.grabber} />
+              <View style={styles.header}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.title}>{t('invites.pickerTitle').toLowerCase()}</Text>
+                  {!!event?.title && (
+                    <Text style={styles.subtitle} numberOfLines={1}>
+                      {[event.title, event.details].filter(Boolean).join(' · ')}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={onClose}
+                  hitSlop={10}
+                  style={styles.close}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('invites.close')}
+                >
+                  <X size={18} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.searchRow}>
+              <View style={styles.searchBox}>
+                <Search size={17} color={colors.textSecondary} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={contacts.kind === 'ready' ? t('invites.searchAll') : t('invites.search')}
+                  placeholderTextColor={colors.textTertiary || colors.textSecondary}
+                  selectionColor={colors.primary}
+                  style={styles.searchInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
               </View>
               <TouchableOpacity
-                onPress={onClose}
-                hitSlop={12}
-                style={styles.close}
+                style={styles.squareBtn}
+                onPress={onContactsButton}
+                activeOpacity={0.75}
                 accessibilityRole="button"
-                accessibilityLabel={t('invites.close')}
+                accessibilityLabel={contacts.kind === 'denied' ? t('invites.openSettings') : t('invites.contactsConnect')}
               >
-                <X size={18} color={colors.text} />
+                {contacts.kind === 'loading' ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <BookUser size={18} color={colors.text} />
+                )}
               </TouchableOpacity>
-            </View>
-            </View>
-
-            {going.length > 0 && (
-              <View style={styles.goingRow}>
-                <View style={styles.pile}>
-                  {going.slice(0, 4).map((f, i) => (
-                    <View key={f.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: 10 - i }}>
-                      <PersonAvatar user={f} size={28} ring />
-                    </View>
-                  ))}
-                </View>
-                <Text style={styles.goingText}>
-                  {going.length === 1
-                    ? t('invites.friendsGoingOne')
-                    : t('invites.friendsGoing', { count: going.length })}
-                </Text>
-              </View>
-            )}
-
-            {/* One slim row (owner, 2026-11-17: the three big tiles read
-                heavy): the label on the left, compact square actions right. */}
-            <View style={styles.shareRow}>
-              <Text style={styles.shareRowLabel} numberOfLines={1}>
-                {t('invites.shareLinkRow')}
-              </Text>
-              {(
-                [
-                  { via: 'whatsapp', label: t('invites.shareWhatsApp'), icon: <WhatsAppGlyph size={19} color={WHATSAPP_GREEN} /> },
-                  { via: 'sms', label: t('invites.shareMessages'), icon: <MessageSquare size={19} color={colors.text} /> },
-                  { via: 'more', label: t('invites.shareMore'), icon: <Share2 size={19} color={colors.text} /> },
-                ] as const
-              ).map((a) => (
-                <TouchableOpacity
-                  key={a.via}
-                  style={styles.shareBtn}
-                  onPress={() => shareVia(a.via)}
-                  disabled={!!busyKey}
-                  activeOpacity={0.75}
-                  accessibilityRole="button"
-                  accessibilityLabel={a.label}
-                >
-                  {busyKey === `share:${a.via}` ? <ActivityIndicator size="small" color={colors.text} /> : a.icon}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.searchBox}>
-              <Search size={18} color={colors.textSecondary} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder={contacts.kind === 'ready' ? t('invites.searchAll') : t('invites.search')}
-                placeholderTextColor={colors.textTertiary || colors.textSecondary}
-                selectionColor={colors.primary}
-                style={styles.searchInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
             </View>
 
             <ScrollView style={styles.list} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              {/* No Tikèm friends yet: skip the section rather than print a
-                  line saying so; the contacts below are the way in. */}
-              {friends !== null && !failed && !hasFriends ? null : (
+              {showOnTikem && (
                 <>
-              <SectionHeader title={t('invites.sectionFriends').toLowerCase()} />
-              {friends === null ? (
-                <ActivityIndicator style={{ marginVertical: 20 }} color={colors.textSecondary} />
-              ) : failed ? (
-                <Text style={styles.empty}>{t('invites.loadError')}</Text>
-              ) : !hasFriends ? (
-                <Text style={styles.empty}>{t('invites.emptyFriends')}</Text>
-              ) : filteredFriends.length === 0 ? (
-                <Text style={styles.empty}>{t('invites.noMatch')}</Text>
-              ) : (
-                filteredFriends.map((f) => {
-                  const selectable = f.state === 'available';
-                  const on = selected.has(f.uid);
-                  return (
-                    <TouchableOpacity
-                      key={f.uid}
-                      style={styles.row}
-                      onPress={() => selectable && toggle(f.uid)}
-                      disabled={!selectable}
-                      activeOpacity={0.7}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: on, disabled: !selectable }}
-                    >
-                      <PersonAvatar user={f} size={44} />
-                      <Text style={[styles.name, !selectable && styles.nameMuted]} numberOfLines={1}>
-                        {f.displayName}
+                  <Text style={styles.section}>{t('invites.sectionFriends').toLowerCase()}</Text>
+                  {friends === null ? (
+                    <ActivityIndicator style={{ marginVertical: 18 }} color={colors.textSecondary} />
+                  ) : failed ? (
+                    <Text style={styles.empty}>{t('invites.loadError')}</Text>
+                  ) : hasFriends && filteredFriends.length === 0 && people.length === 0 ? (
+                    <Text style={styles.empty}>{t('invites.noMatch')}</Text>
+                  ) : null}
+                  {filteredFriends.map((f) => {
+                    const available = f.state === 'available';
+                    return (
+                      <View key={f.uid} style={styles.row}>
+                        <PersonAvatar user={f} size={44} />
+                        <Text style={[styles.name, f.state === 'unavailable' && styles.nameMuted]} numberOfLines={1}>
+                          {f.displayName}
+                        </Text>
+                        {available ? (
+                          <TouchableOpacity
+                            style={styles.btnWhite}
+                            onPress={() => inviteFriend(f.uid)}
+                            activeOpacity={0.85}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('invites.invite')} ${f.displayName}`}
+                          >
+                            <Text style={styles.btnWhiteText}>{t('invites.invite')}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          status(stateLabel(f.state), f.state === 'going')
+                        )}
+                      </View>
+                    );
+                  })}
+                  {people.map((m) => (
+                    <View key={m.uid} style={styles.row}>
+                      <PersonAvatar user={m} size={44} />
+                      <Text style={styles.name} numberOfLines={1}>
+                        {m.displayName}
                       </Text>
-                      {selectable ? (
-                        <View style={[styles.check, on && styles.checkOn]}>
-                          {on ? <Check size={12} color="#000000" strokeWidth={3} /> : null}
-                        </View>
+                      {m.friendship === 'request_sent' ? (
+                        status(t('invites.requested'))
                       ) : (
-                        // Dot + label, never a filled status pill.
-                        <View style={styles.stateWrap}>
-                          <View
-                            style={[
-                              styles.dot,
-                              { backgroundColor: f.state === 'going' ? colors.primary : colors.textTertiary },
-                            ]}
-                          />
-                          <Text style={styles.stateText}>{stateLabel(f.state)}</Text>
-                        </View>
+                        <TouchableOpacity
+                          style={styles.btnWhite}
+                          onPress={() => addPerson(m)}
+                          disabled={!!busyKey}
+                          activeOpacity={0.85}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t('invites.addFriend')} ${m.displayName}`}
+                        >
+                          {busyKey === `person:${m.uid}` ? (
+                            <ActivityIndicator size="small" color="#000000" />
+                          ) : (
+                            <Text style={styles.btnWhiteText}>{t('invites.addFriend')}</Text>
+                          )}
+                        </TouchableOpacity>
                       )}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
+                    </View>
+                  ))}
                 </>
               )}
 
-              <View style={{ marginTop: 14 }}>
-                <SectionHeader title={t('invites.sectionContacts').toLowerCase()} />
-              </View>
-              {contacts.kind === 'checking' || contacts.kind === 'loading' ? (
-                <ActivityIndicator style={{ marginVertical: 20 }} color={colors.textSecondary} />
+              <Text style={[styles.section, showOnTikem && { marginTop: 14 }]}>
+                {t('invites.sectionContacts').toLowerCase()}
+              </Text>
+              {contacts.kind === 'checking' || (contacts.kind === 'loading' && others.length === 0) ? (
+                <ActivityIndicator style={{ marginVertical: 18 }} color={colors.textSecondary} />
               ) : contacts.kind === 'idle' || contacts.kind === 'denied' ? (
-                // Editorial invitation, not a boxed form: a small pile of the
-                // house silhouette, a serif line, one sentence, one button.
-                <View style={styles.connectCard}>
-                  <View style={styles.connectPile}>
-                    {[0, 1, 2].map((i) => (
-                      <View key={i} style={[styles.connectPileItem, { marginLeft: i === 0 ? 0 : -12, zIndex: 3 - i }]}>
-                        <Image source={defaultAvatar(String(i))} style={styles.connectPileImg} />
-                      </View>
-                    ))}
+                // One row, not a card: the contacts button above does the same.
+                <View style={styles.row}>
+                  <View style={styles.initial}>
+                    <BookUser size={18} color={colors.textSecondary} />
                   </View>
-                  <Text style={styles.connectTitle}>{t('invites.contactsCardTitle').toLowerCase()}</Text>
-                  <Text style={styles.connectBody}>
-                    {contacts.kind === 'denied' ? t('invites.contactsDenied') : t('invites.contactsCardBody')}
+                  <Text style={styles.name} numberOfLines={1}>
+                    {t('invites.contactsRow')}
                   </Text>
                   <TouchableOpacity
-                    style={styles.connectBtn}
-                    onPress={() => (contacts.kind === 'denied' ? Linking.openSettings().catch(() => {}) : connectContacts())}
+                    style={styles.btnWhite}
+                    onPress={onContactsButton}
                     activeOpacity={0.85}
                     accessibilityRole="button"
                   >
-                    <Text style={styles.connectBtnText}>
-                      {contacts.kind === 'denied' ? t('invites.openSettings') : t('invites.contactsConnect')}
+                    <Text style={styles.btnWhiteText}>
+                      {contacts.kind === 'denied' ? t('invites.settingsShort') : t('invites.connectShort')}
                     </Text>
                   </TouchableOpacity>
                 </View>
               ) : people.length === 0 && others.length === 0 ? (
                 <Text style={styles.empty}>{q ? t('invites.contactsNoMatch') : t('invites.contactsAllDone')}</Text>
               ) : (
-                <>
-                  {people.map((m) => {
-                    const requested = m.friendship === 'request_sent';
-                    return (
-                      <View key={m.uid} style={styles.row}>
-                        <PersonAvatar user={m} size={44} />
-                        <Text style={styles.name} numberOfLines={1}>
-                          {m.displayName}
+                others.map((c) => (
+                  <View key={c.id} style={styles.row}>
+                    <View style={styles.initial}>
+                      {firstLetter(c.name) ? (
+                        <Text style={styles.initialText}>{firstLetter(c.name)}</Text>
+                      ) : (
+                        <User size={18} color={colors.textSecondary} />
+                      )}
+                    </View>
+                    <View style={styles.contactText}>
+                      <Text style={styles.contactName} numberOfLines={1}>
+                        {cleanName(c.name)}
+                      </Text>
+                      {c.phone ? (
+                        <Text style={styles.contactSub} numberOfLines={1}>
+                          {prettyPhone(c.phone)}
                         </Text>
-                        {requested ? (
-                          <View style={styles.stateWrap}>
-                            <View style={[styles.dot, { backgroundColor: colors.textTertiary }]} />
-                            <Text style={styles.stateText}>{t('invites.requested')}</Text>
-                          </View>
-                        ) : (
-                          <TouchableOpacity
-                            style={styles.rowBtnQuiet}
-                            onPress={() => addPerson(m)}
-                            disabled={!!busyKey}
-                            activeOpacity={0.85}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${t('invites.addFriend')} ${m.displayName}`}
-                          >
-                            {busyKey === `person:${m.uid}` ? (
-                              <ActivityIndicator size="small" color={colors.text} />
-                            ) : (
-                              <>
-                                <UserPlus size={14} color={colors.text} />
-                                <Text style={styles.rowBtnQuietText}>{t('invites.addFriend')}</Text>
-                              </>
-                            )}
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  })}
-                  {others.map((c) => (
-                    // The whole row invites; the square is the visible cue.
+                      ) : null}
+                    </View>
                     <TouchableOpacity
-                      key={c.id}
-                      style={styles.row}
+                      style={styles.btnRaised}
                       onPress={() => inviteContact(c)}
                       disabled={!!busyKey}
-                      activeOpacity={0.7}
+                      activeOpacity={0.8}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('invites.invite')} ${c.name}`}
                     >
-                      <View style={styles.initial}>
-                        {firstLetter(c.name) ? (
-                          <Text style={styles.initialText}>{firstLetter(c.name)}</Text>
-                        ) : (
-                          <User size={18} color={colors.textSecondary} />
-                        )}
-                      </View>
-                      <View style={styles.contactText}>
-                        <Text style={styles.contactName} numberOfLines={1}>
-                          {cleanName(c.name)}
-                        </Text>
-                        {c.phone ? (
-                          <Text style={styles.contactSub} numberOfLines={1}>
-                            {prettyPhone(c.phone)}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.waSquare}>
-                        {busyKey === `contact:${c.id}` ? (
-                          <ActivityIndicator size="small" color={colors.text} />
-                        ) : (
-                          <WhatsAppGlyph size={18} color={WHATSAPP_GREEN} />
-                        )}
-                      </View>
+                      {busyKey === `contact:${c.id}` ? (
+                        <ActivityIndicator size="small" color={colors.text} />
+                      ) : (
+                        <>
+                          <WhatsAppGlyph size={14} color={WHATSAPP_GREEN} />
+                          <Text style={styles.btnRaisedText}>{t('invites.invite')}</Text>
+                        </>
+                      )}
                     </TouchableOpacity>
-                  ))}
-                </>
+                  </View>
+                ))
               )}
-              <View style={{ height: 12 }} />
+              <View style={{ height: 8 }} />
             </ScrollView>
 
-            {/* Compact footer: a quiet count on the left, a small send button on
-                the right, so it never outshouts the per-contact Invite buttons. */}
-            {hasFriends && (
-              <View style={styles.footer}>
-                <Text style={styles.footerHint} numberOfLines={1}>
-                  {sent
-                    ? ''
-                    : selected.size === 0
-                      ? t('invites.selectFriends')
-                      : t('invites.selectedCount', { count: selected.size })}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.submit, selected.size === 0 && !sent && styles.submitDisabled]}
-                  onPress={send}
-                  disabled={(selected.size === 0 && !sent) || sending}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: (selected.size === 0 && !sent) || sending }}
-                >
-                  {sending ? (
-                    <ActivityIndicator color="#000000" size="small" />
-                  ) : sent ? (
-                    <View style={styles.sentWrap}>
-                      <Check size={14} color="#000000" strokeWidth={3} />
-                      <Text style={styles.submitText}>{t('invites.sentTitle')}</Text>
-                    </View>
-                  ) : (
-                    <Text style={[styles.submitText, selected.size === 0 && styles.submitTextDisabled]}>
-                      {selected.size === 0 ? t('invites.invite') : t('invites.sendCount', { count: selected.size })}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
+            {/* Fixed bar, as on Posh: the raised Share to, a quiet Copy link. */}
+            <View style={styles.bar}>
+              <TouchableOpacity
+                style={[styles.barBtn, styles.barBtnRaised]}
+                onPress={() => shareOut('message')}
+                disabled={!!busyKey}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+              >
+                {busyKey === 'share:message' ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <>
+                    <ShareIcon size={16} color={colors.text} />
+                    <Text style={styles.barText}>{t('invites.shareTo')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.barBtn}
+                onPress={() => shareOut('link')}
+                disabled={!!busyKey}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+              >
+                {busyKey === 'share:link' ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <>
+                    <Link2 size={16} color={colors.text} />
+                    <Text style={styles.barText}>{t('invites.copyLink')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -703,9 +668,8 @@ const getStyles = (colors: any) =>
     // flexShrink so the keyboard's padding squeezes the sheet (and with it the
     // list) instead of pushing the header off the top of the screen.
     sheetWrap: { width: '100%', flexShrink: 1 },
-    // Auto-height up to the cap set inline: a short friend list gets a short
-    // sheet, a long one fills the cap and scrolls. The old fixed 90% height
-    // left the list a clipped half-row behind the button on device.
+    // Auto-height up to the cap set inline: a short list gets a short sheet,
+    // a long one fills the cap and scrolls above the fixed bar.
     sheet: {
       backgroundColor: colors.surface,
       borderTopLeftRadius: radius.lg,
@@ -728,96 +692,53 @@ const getStyles = (colors: any) =>
       borderRadius: 2,
       backgroundColor: colors.surfaceRaised,
       marginTop: 10,
-      marginBottom: 14,
+      marginBottom: 12,
     },
     header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     // Editorial sheet title, lowercased at the call site (house voice).
-    title: { fontFamily: font.serif, fontSize: 30, lineHeight: 34, color: colors.text },
+    title: { fontFamily: font.serif, fontSize: 28, lineHeight: 32, color: colors.text },
+    subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2, lineHeight: 17 },
     close: {
-      width: 32,
-      height: 32,
+      width: 36,
+      height: 36,
       borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
       alignItems: 'center',
       justifyContent: 'center',
-      marginTop: 2,
     },
-    subtitle: { fontSize: 15, color: colors.textSecondary, marginTop: 4, lineHeight: 19 },
-    goingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
-    pile: { flexDirection: 'row' },
-    goingText: { fontSize: 13, fontWeight: '600', color: colors.text },
-    // One slim row: label + three compact square actions (4px, fills).
-    shareRow: {
+    searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
+    searchBox: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      marginTop: 18,
-      paddingLeft: 14,
-      paddingRight: 6,
-      height: 52,
+      height: 42,
+      backgroundColor: colors.surfaceRaised,
+      borderRadius: radius.md,
+      paddingHorizontal: 12,
+    },
+    searchInput: { flex: 1, fontSize: 15, color: colors.text, paddingVertical: 0 },
+    squareBtn: {
+      width: 42,
+      height: 42,
       borderRadius: radius.md,
       backgroundColor: colors.surfaceRaised,
-    },
-    shareRowLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
-    shareBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.md,
-      backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    searchBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: radius.md,
-      paddingHorizontal: 14,
-      paddingVertical: Platform.OS === 'ios' ? 12 : 4,
-      marginTop: 14,
-    },
-    searchInput: { flex: 1, fontSize: 15, color: colors.text },
     // Grows with its rows, shrinks (and scrolls) once the sheet hits its cap.
-    list: { flexGrow: 0, flexShrink: 1, marginTop: 8 },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      letterSpacing: 1.2,
-      textTransform: 'uppercase',
-      color: colors.textSecondary,
-      marginTop: 12,
-      marginBottom: 4,
-    },
-    empty: { fontSize: 15, color: colors.textSecondary, marginVertical: 14, lineHeight: 20 },
-    // Borderless rows. Selection is carried by the check circle alone; the
-    // row itself never changes fill (owner: the highlighted row read as not
-    // premium).
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      marginHorizontal: -10,
-      borderRadius: radius.md,
-    },
-    name: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+    list: { flexGrow: 0, flexShrink: 1, marginTop: 6 },
+    // Section label: the house serif, lowercased, small enough to sit above
+    // a compact list.
+    section: { fontFamily: font.serif, fontSize: 20, lineHeight: 24, color: colors.text, marginTop: 10, marginBottom: 2 },
+    empty: { fontSize: 13, color: colors.textSecondary, marginVertical: 12, lineHeight: 18 },
+    // 56pt rows: 44 avatar, name, one compact action on the right.
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 56 },
+    name: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '600', color: colors.text },
     nameMuted: { color: colors.textTertiary || colors.textSecondary },
-    // Radio-like circle (a true circle, so it stays round): an empty raised
-    // fill when off, a small white fill with a black tick when on.
-    check: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      backgroundColor: colors.surfaceRaised,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    checkOn: { backgroundColor: colors.white },
-    stateWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    stateWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 72, justifyContent: 'flex-end' },
     dot: { width: 6, height: 6, borderRadius: 3 },
-    stateText: { fontSize: 12, color: colors.textSecondary },
+    stateText: { fontSize: 13, color: colors.textSecondary },
     initial: {
       width: 44,
       height: 44,
@@ -827,87 +748,45 @@ const getStyles = (colors: any) =>
       justifyContent: 'center',
     },
     initialText: { color: colors.text, fontWeight: '700', fontSize: 15 },
-    // Quiet per-contact action: a raised fill with WhatsApp's own green
-    // mark. White is kept for the sheet's one primary action (the footer).
-    rowBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: radius.chip,
-      paddingHorizontal: 14,
+    // Compact white action, like the website's small buttons.
+    btnWhite: {
       height: 34,
-      minWidth: 88,
-    },
-    rowBtnText: { color: colors.text, fontSize: 13, fontWeight: '700' },
-    rowBtnQuiet: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: radius.chip,
+      minWidth: 72,
       paddingHorizontal: 14,
-      height: 34,
-      minWidth: 88,
-    },
-    rowBtnQuietText: { color: colors.text, fontSize: 13, fontWeight: '700' },
-    // Editorial card: fill, no outline; serif lowercase line like every
-    // section title; one full-width white action.
-    connectCard: {
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: radius.lg,
-      paddingHorizontal: 18,
-      paddingTop: 20,
-      paddingBottom: 18,
-      marginTop: 4,
-    },
-    connectPile: { flexDirection: 'row', marginBottom: 14 },
-    connectPileItem: { borderRadius: 18, borderWidth: 2, borderColor: colors.surfaceRaised },
-    connectPileImg: { width: 32, height: 32, borderRadius: 16 },
-    connectTitle: { fontFamily: font.serif, fontSize: 26, lineHeight: 30, color: colors.text },
-    connectBody: { fontSize: 15, color: colors.textSecondary, marginTop: 6, lineHeight: 21 },
-    connectBtn: {
-      marginTop: 18,
-      backgroundColor: colors.white,
       borderRadius: radius.button,
-      height: 46,
+      backgroundColor: colors.white,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    connectBtnText: { color: '#000000', fontSize: 15, fontWeight: '700' },
+    btnWhiteText: { color: '#000000', fontSize: 13, fontWeight: '600' },
+    // The contact rows' quieter twin: a raised fill with WhatsApp's mark.
+    btnRaised: {
+      flexDirection: 'row',
+      gap: 6,
+      height: 34,
+      minWidth: 72,
+      paddingHorizontal: 12,
+      borderRadius: radius.button,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    btnRaisedText: { color: colors.text, fontSize: 13, fontWeight: '600' },
     contactText: { flex: 1, minWidth: 0, justifyContent: 'center' },
-    contactName: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.text },
+    contactName: { fontSize: 15, lineHeight: 19, fontWeight: '600', color: colors.text },
     contactSub: { fontSize: 13, lineHeight: 17, color: colors.textTertiary || colors.textSecondary, marginTop: 1, fontVariant: ['tabular-nums'] },
-    waSquare: {
-      width: 38,
-      height: 38,
-      borderRadius: radius.md,
-      backgroundColor: colors.surfaceRaised,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    footer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginTop: 10,
-    },
-    footerHint: { flex: 1, fontSize: 13, color: colors.textSecondary },
-    submit: {
-      backgroundColor: colors.white,
+    bar: { flexDirection: 'row', gap: 10, paddingTop: 10 },
+    barBtn: {
+      flex: 1,
+      height: 44,
       borderRadius: radius.button,
-      height: 40,
-      minWidth: 104,
-      paddingHorizontal: 18,
+      flexDirection: 'row',
+      gap: 8,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    submitDisabled: { backgroundColor: colors.surfaceRaised },
-    submitText: { color: '#000000', fontSize: 15, fontWeight: '700' },
-    submitTextDisabled: { color: colors.textTertiary || colors.textSecondary },
-    sentWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    barBtnRaised: { backgroundColor: colors.surfaceRaised },
+    barText: { color: colors.text, fontSize: 15, fontWeight: '600' },
     // A quiet text row: icon + label, no fill, no tile.
     entry: {
       flexDirection: 'row',

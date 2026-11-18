@@ -4,9 +4,19 @@ import { AlertCircle } from 'lucide-react'
 
 type IconType = React.ComponentType<{ className?: string }>
 
+type StrokeIconType = React.ComponentType<{ className?: string; strokeWidth?: number }>
+
 /**
- * Dark-canvas empty state — centered icon, serif title, optional description + CTA.
- * Drop-in for any zero-data list on the organizer portal.
+ * Dark-canvas empty state for any zero-data list on the organizer portal.
+ *
+ * 'card' (default): a filled card, serif title, optional description + CTA.
+ *
+ * 'quiet': the per-event tool pages (guest list, comps, promo codes, tracking
+ * links, promoters, messages, orders, analytics). A thin icon, one short line
+ * and the compact button, centred on the bare canvas: no card, no explainer
+ * subtitle, no big serif (owner, 2026-11-18: "avoid big cards", "avoid too
+ * big texts", "avoid too many explanations"). Same shape as the app's
+ * EmptyState variant="panel". `description` is ignored here on purpose.
  */
 export function OrgEmptyState({
   icon: Icon,
@@ -14,13 +24,25 @@ export function OrgEmptyState({
   description,
   action,
   className = '',
+  variant = 'card',
 }: {
   icon?: IconType
   title: React.ReactNode
   description?: React.ReactNode
   action?: React.ReactNode
   className?: string
+  variant?: 'card' | 'quiet'
 }) {
+  if (variant === 'quiet') {
+    const QuietIcon = Icon as StrokeIconType | undefined
+    return (
+      <div className={`flex flex-col items-center px-6 pb-6 pt-16 text-center ${className}`}>
+        {QuietIcon && <QuietIcon className="h-[22px] w-[22px] text-white/40" strokeWidth={1.5} />}
+        <p className="mt-3 text-[15px] font-semibold leading-5 text-white">{title}</p>
+        {action && <div className="mt-4 flex justify-center">{action}</div>}
+      </div>
+    )
+  }
   return (
     <div
       // The dashed hairline was doing the "nothing here" work that the fill can

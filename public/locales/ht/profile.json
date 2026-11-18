@@ -105,7 +105,8 @@
     "upcoming_count_one": "{{count}} evènman k ap vini",
     "upcoming_count_other": "{{count}} evènman k ap vini",
     "upcoming_count_plural": "{{count}} evènman k ap vini",
-    "private_details": "Se zanmi sèlman ki ka wè biyo ak rezo sosyal yo."
+    "private_details": "Se zanmi sèlman ki ka wè biyo ak rezo sosyal yo.",
+    "joined": "Sou Tikèm depi {{date}}"
   },
   "dashboard": {
     "stats": {

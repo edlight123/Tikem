@@ -2656,6 +2656,7 @@ export default {
       ticketValidUntilLabel: "Valide jusqu'au",
       ticketNotYetValid: 'Pas encore valide',
       ticketExpired: 'Expiré',
+      showGoingCount: "Afficher le nombre de participants",
       passwordProtect: 'Protéger cet événement par mot de passe',
       accessCode: 'Code d’accès',
       accessCodeHint: 'Les participants doivent saisir ce code pour obtenir des billets.',
@@ -3891,6 +3892,11 @@ export default {
     requestErrorBody: "La demande d'ami n'a pas pu partir. Réessaie.",
     messageEventRich: "Viens avec moi à {event} · {details}\n{link}",
     close: "Fermer",
+    shareTo: "Partager via",
+    copyLink: "Copier le lien",
+    contactsRow: "Voir qui est sur Tikèm",
+    connectShort: "Connecter",
+    settingsShort: "Réglages",
   },
   // Listes d'approbation et accompagnants (docs/specs/approval-lists-and-plus-ones.md).
   attendRequests: {

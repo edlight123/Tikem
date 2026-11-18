@@ -91,6 +91,12 @@ interface OrganizerProfileClientProps {
   country?: string
   /** The viewer has blocked this organizer (lib/moderation/blocks.ts). */
   isBlocked?: boolean
+  /**
+   * Has ever hosted (organization name, any event, or the organizer role).
+   * False renders a person's profile: "Joined Tikèm <Mon YYYY>" once, no
+   * stats, no Follow, no events section (owner, 2026-11-17).
+   */
+  isHost?: boolean
 }
 
 type Network = 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'tiktok'
@@ -165,6 +171,7 @@ export default function OrganizerProfileClient({
   city,
   country,
   isBlocked = false,
+  isHost = true,
 }: OrganizerProfileClientProps) {
   // A recurring series is listed once, at its next date (lib/events/series).
   const upcomingEvents = useMemo(() => collapseSeries(upcomingAllDates || []), [upcomingAllDates])
@@ -191,6 +198,17 @@ export default function OrganizerProfileClient({
         month: 'long',
         year: 'numeric',
       }).format(d)
+    } catch {
+      return String(d.getFullYear())
+    }
+  }, [organizer.created_at, i18n.language])
+
+  /** A person's "Joined Tikèm Nov 2025": short month, said once. */
+  const joined = useMemo(() => {
+    const d = new Date(organizer.created_at)
+    if (Number.isNaN(d.getTime())) return null
+    try {
+      return new Intl.DateTimeFormat(i18n.language || 'en', { month: 'short', year: 'numeric' }).format(d)
     } catch {
       return String(d.getFullYear())
     }
@@ -262,7 +280,7 @@ export default function OrganizerProfileClient({
                     {place}
                   </span>
                 )}
-                {since && (
+                {isHost && since && (
                   <span className="text-white/40">
                     {t('organizer_profile.since', {
                       defaultValue: 'On Tikèm since {{date}}',
@@ -270,10 +288,16 @@ export default function OrganizerProfileClient({
                     })}
                   </span>
                 )}
+                {!isHost && joined && (
+                  <span className="text-white/40">
+                    {t('organizer_profile.joined', { defaultValue: 'Joined Tikèm {{date}}', date: joined })}
+                  </span>
+                )}
               </div>
 
-              {/* Stats. One row, no horizontal scroller — three items fit at
-                  320px once the labels stop being 16px. */}
+              {/* Stats, hosts only: a person never shows "0 events". One row,
+                  no horizontal scroller; three items fit at 320px. */}
+              {isHost && (
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
                 <Stat
                   Icon={CalendarDays}
@@ -292,6 +316,7 @@ export default function OrganizerProfileClient({
                   label={t('organizer_profile.sold', 'sold')}
                 />
               </div>
+              )}
 
               {/* An org's description, or a person's bio when their privacy
                   lets this viewer see it (decided on the server). */}
@@ -337,7 +362,9 @@ export default function OrganizerProfileClient({
                       />
                       {/* No Follow while blocked: blocking removed the follow and
                           the follow API refuses to re-add it. */}
-                      {!isBlocked && (
+                      {/* Follow is for hosts (kept for anyone already
+                          following, so they can unfollow). */}
+                      {!isBlocked && (isHost || isFollowing) && (
                         <FollowButton
                           organizerId={organizer.id}
                           userId={userId}
@@ -380,6 +407,8 @@ export default function OrganizerProfileClient({
 
       {/* ───────────────────────── EVENTS ───────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        {/* A person who never hosted has no events section at all. */}
+        {(isHost || (upcomingEvents?.length || 0) > 0) && (
         <section className="border-t border-white/10 pt-8 md:pt-10">
           <SectionHead
             title={t('organizer_profile.upcoming_events', 'upcoming events')}
@@ -421,6 +450,7 @@ export default function OrganizerProfileClient({
             </div>
           )}
         </section>
+        )}
 
         {pastEvents && pastEvents.length > 0 && (
           <section className="mt-10 border-t border-white/10 pt-8 md:mt-14 md:pt-10">

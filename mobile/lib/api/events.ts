@@ -143,6 +143,8 @@ export interface CreateEventData {
    * Same three states the web composer writes.
    */
   guestlist_visibility?: GuestlistVisibility;
+  /** "Show how many are going" (lib/socialProof): count prints at any capacity. */
+  show_going_count?: boolean;
   /** Legacy boolean, derived from guestlist_visibility on write. */
   show_guestlist?: boolean;
   /**
@@ -662,6 +664,7 @@ export async function createEvent(
         // legacy boolean for older readers (see lib/guestlistVisibility).
         guestlist_visibility: guestlistVisibilityFrom(eventData),
         show_guestlist: showGuestlistFor(guestlistVisibilityFrom(eventData)),
+        show_going_count: guestlistVisibilityFrom(eventData) !== 'hidden' && eventData.show_going_count === true,
         // Organizer poster-theme override ('' = Auto). Resolvers fall back to the
         // deterministic pick when this is empty/invalid.
         theme_key: eventData.theme_key || '',
@@ -837,6 +840,7 @@ export async function updateEvent(
       // guestlist_visibility in force, so a mobile "off" never took effect.
       guestlist_visibility: guestlistVisibilityFrom(eventData),
       show_guestlist: showGuestlistFor(guestlistVisibilityFrom(eventData)),
+      show_going_count: guestlistVisibilityFrom(eventData) !== 'hidden' && eventData.show_going_count === true,
       // Organizer poster-theme override ('' = Auto); see createEvent.
       theme_key: eventData.theme_key || '',
       // Password gate flag. When toggled OFF this becomes false and the old

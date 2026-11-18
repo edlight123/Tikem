@@ -29,6 +29,8 @@ interface WhosGoingProps {
   /** The event's ticket capacity: the count only prints once half of it is
    *  taken (shouldShowGoingCount). Unset means no count, faces only. */
   capacity?: number | null;
+  /** The organizer's "Show how many are going" (event.show_going_count). */
+  alwaysCount?: boolean;
 }
 
 /** Faces sit in a ring of the canvas colour, so the pile reads as cut-outs
@@ -47,7 +49,7 @@ function Avatar({ user, size = 44, ring }: { user: PublicUserSummary; size?: num
   );
 }
 
-export default function WhosGoing({ eventId, visibility = 'faces', capacity }: WhosGoingProps) {
+export default function WhosGoing({ eventId, visibility = 'faces', capacity, alwaysCount = false }: WhosGoingProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = getStyles(colors);
@@ -103,7 +105,7 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
 
   // A small number talks people out of going, so it only prints once the
   // event is at least half full. Below that: faces and names, no number.
-  const showCount = shouldShowGoingCount(totalGoing, capacity);
+  const showCount = shouldShowGoingCount(totalGoing, capacity, alwaysCount);
   // Someone already going sees the real number ("You and 84 others are going",
   // owner 2026-11-18): the half-capacity rule protects those still deciding.
   const sayCount = showCount || viewerIsGoing;

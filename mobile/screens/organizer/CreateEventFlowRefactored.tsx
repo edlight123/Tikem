@@ -182,6 +182,8 @@ export interface EventDraft {
   // How the guest list shows on the event page: faces / count / hidden. Same
   // three states the web composer writes (see lib/guestlistVisibility).
   guestlist_visibility: GuestlistVisibility;
+  // "Show how many are going": the count prints whatever the capacity.
+  show_going_count: boolean;
 
   // The national day it is tagged for (lib/nationalDays eventTag), '' = none.
   // Offered only while the start date is near a day; see the toggle.
@@ -550,6 +552,7 @@ export default function CreateEventFlowRefactored() {
     video_url: '',
     spotify_url: '',
     guestlist_visibility: 'faces',
+    show_going_count: false,
     national_day: '',
     theme_key: '',
     recurrence: 'none',
@@ -729,6 +732,7 @@ export default function CreateEventFlowRefactored() {
           spotify_url: (event as any).spotify_url || '',
           // New field first, then the legacy boolean for older events.
           guestlist_visibility: guestlistVisibilityFrom(event as any),
+          show_going_count: (event as any).show_going_count === true,
           national_day: typeof (event as any).national_day === 'string' ? (event as any).national_day : '',
           // Poster-theme override; default '' (Auto) when the field is absent.
           theme_key: (event as any).theme_key || '',
@@ -2880,6 +2884,20 @@ export default function CreateEventFlowRefactored() {
                     value={eventDraft.guestlist_visibility}
                     onChange={(v) => updateDraft({ guestlist_visibility: v })}
                   />
+                  {eventDraft.guestlist_visibility !== 'hidden' && (
+                    <View style={styles.settingRow}>
+                      <View style={styles.settingTextCol}>
+                        <Text style={styles.settingLabel}>{t('organizerCreateEventFlow.canvas.showGoingCount')}</Text>
+                      </View>
+                      <Switch
+                        value={eventDraft.show_going_count}
+                        onValueChange={(v) => updateDraft({ show_going_count: v })}
+                        trackColor={{ false: colors.border, true: colors.primary }}
+                        thumbColor={colors.white}
+                        ios_backgroundColor={colors.border}
+                      />
+                    </View>
+                  )}
 
                   {/* Password protection — gate ticketing behind an access code.
                       The code is hashed on save (never stored in plaintext). */}

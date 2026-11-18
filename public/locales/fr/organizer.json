@@ -967,7 +967,8 @@
     "bank_below_minimum": "Les virements bancaires commencent à {{min}}.",
     "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé. Aucun argent n'a été déplacé.",
     "destination_on_hold": "Votre nouveau compte est enregistré et pourra recevoir des paiements à partir du {{date}}.",
-    "balance_changed": "Votre solde a changé, veuillez réessayer."
+    "balance_changed": "Votre solde a changé, veuillez réessayer.",
+    "free_event_nothing": "Événement gratuit, rien à verser."
   },
   "events_filters": {
     "alphabetical": "Alphabétique",
@@ -1225,7 +1226,8 @@
     "add_first_promoter": "Ajoutez votre premier promoteur",
     "send_via_whatsapp": "Envoyer via WhatsApp",
     "clicks": "Clics",
-    "conversion": "Conversion"
+    "conversion": "Conversion",
+    "commission_note": "La commission est retenue sur vos gains et versée sur le portefeuille Tikèm de chaque promoteur."
   },
   "security": {
     "change_password": "Modifier le mot de passe",
@@ -1560,7 +1562,9 @@
     "orders": "Commandes",
     "every_ticket_sold": "Tous les billets vendus pour vos événements.",
     "search_orders": "Rechercher par événement, participant, e-mail ou n° de commande",
-    "search_orders_tier": "Rechercher par nom, e-mail ou palier"
+    "search_orders_tier": "Rechercher par nom, e-mail ou palier",
+    "no_orders_yet": "Aucune commande pour le moment",
+    "no_orders_match": "Aucune commande ne correspond à votre recherche"
   },
   "scan_selector": {
     "create_first_event": "Créez votre premier événement",

@@ -45,11 +45,10 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
       <TranslatedPageHeader
           eyebrowKey="event"
           titleKey="tickets_title"
-          subtitleKey="tickets_subtitle"
           actions={
           <Link
             href={`/organizer/events/${id}/edit`}
-            className="inline-flex h-11 items-center gap-2 rounded bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="inline-flex h-10 items-center gap-2 rounded bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Pencil className="h-4 w-4" />
             <T k="server_bits.edit_tickets" />
@@ -60,13 +59,13 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ i
       <div className="mt-8">
         {tiers.length === 0 ? (
           <OrgEmptyState
+            variant="quiet"
             icon={Ticket}
             title={<T k="server_bits.no_ticket_types_yet" />}
-            description={<T k="server_bits.add_ticket_types_desc" />}
             action={
               <Link
                 href={`/organizer/events/${id}/edit`}
-                className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 <Pencil className="h-4 w-4" />
                 <T k="server_bits.add_tickets" />

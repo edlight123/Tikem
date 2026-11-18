@@ -967,7 +967,8 @@
     "bank_below_minimum": "Transfè labank kòmanse a {{min}}.",
     "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l. Pa gen okenn lajan ki deplase.",
     "destination_on_hold": "Nouvo kont ou an anrejistre epi li ka resevwa peman apati {{date}}.",
-    "balance_changed": "Balans ou chanje, tanpri eseye ankò."
+    "balance_changed": "Balans ou chanje, tanpri eseye ankò.",
+    "free_event_nothing": "Evènman gratis, pa gen anyen pou peye."
   },
   "events_filters": {
     "alphabetical": "Alfabetik",
@@ -1225,7 +1226,8 @@
     "add_first_promoter": "Ajoute premye pwomotè ou",
     "send_via_whatsapp": "Voye pa WhatsApp",
     "clicks": "Klik",
-    "conversion": "Konvèsyon"
+    "conversion": "Konvèsyon",
+    "commission_note": "Nou retire komisyon an nan sa w touche epi nou peye l nan bous Tikèm chak pwomotè."
   },
   "security": {
     "change_password": "Chanje modpas",
@@ -1560,7 +1562,9 @@
     "orders": "Kòmand",
     "every_ticket_sold": "Tout tikè ki vann nan evènman ou yo.",
     "search_orders": "Chèche pa evènman, patisipan, imel oswa nimewo kòmand",
-    "search_orders_tier": "Chèche pa non, imel oswa nivo"
+    "search_orders_tier": "Chèche pa non, imel oswa nivo",
+    "no_orders_yet": "Poko gen kòmand",
+    "no_orders_match": "Okenn kòmand pa koresponn ak rechèch ou a"
   },
   "scan_selector": {
     "create_first_event": "Kreye premye evènman ou",

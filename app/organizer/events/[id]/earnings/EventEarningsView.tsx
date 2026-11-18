@@ -9,8 +9,9 @@ import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/lib/fees'
 import type { EventEarnings } from '@/types/earnings'
 import type { EventTierSalesBreakdownRow } from '@/lib/earnings'
-import { MetricCard, StatusChip, type ChipTone } from '@/components/organizer/ui'
-import { Building2, CalendarDays, DollarSign, Info, Smartphone, TrendingUp, Wallet } from 'lucide-react'
+import { MetricCard, OrgEmptyState, StatusChip, type ChipTone } from '@/components/organizer/ui'
+import { isFreeOnlyEvent } from '@/lib/ticketPricing'
+import { Building2, CalendarDays, DollarSign, Gift, Info, Smartphone, TrendingUp, Wallet } from 'lucide-react'
 import {
   MONCASH_MIN_WITHDRAWAL_HTG_CENTS,
   type MoncashMinimumInfo,
@@ -254,26 +255,40 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     void run()
   }, [event?.id, showWithdrawModal, withdrawMethod])
 
-  if (!earnings) {
+  // A free-only event that took no money: one quiet line, not a big empty
+  // card and a payout screen of zeros (owner, 2026-11-18; same as the app).
+  // A "free" event that somehow took money keeps the full view.
+  const freeOnly = isFreeOnlyEvent(event) && !((earnings?.grossSales ?? 0) > 0)
+
+  if (freeOnly || !earnings) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Link href="/organizer/earnings" className="text-brand-300 hover:underline mb-4 inline-block">
           ← Back to All Earnings
         </Link>
-        
-        <div className="rounded-2xl bg-white/[0.055] p-8 text-center">
-          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.07]"><Wallet className="h-7 w-7 text-white/70" aria-hidden="true" /></div>
-          <h2 className="font-display lowercase italic !text-[26px] !leading-snug text-white mb-2">{t('event_earnings.no_earnings_yet')}</h2>
-          <p className="text-white/60 mb-6">
-            This event hasn&apos;t generated any earnings yet. Earnings are recorded when attendees purchase tickets.
+
+        {freeOnly ? (
+          <p className="mt-4 flex items-center gap-2 text-sm text-white/60">
+            <Gift className="h-4 w-4 shrink-0 text-white/40" strokeWidth={1.75} aria-hidden="true" />
+            {t('event_earnings.free_event_nothing')}
           </p>
-          <Link 
-            href={`/events/${event.id}`}
-            className="inline-block px-6 py-3 bg-white text-black rounded hover:bg-white/90 transition-colors font-semibold"
-          >
-            {t('event_earnings.view_event_page')}
-          </Link>
-        </div>
+        ) : (
+          // Quiet empty state: thin icon, one line, compact button; no card
+          // and no explainer paragraph.
+          <OrgEmptyState
+            variant="quiet"
+            icon={Wallet}
+            title={t('event_earnings.no_earnings_yet')}
+            action={
+              <Link
+                href={`/events/${event.id}`}
+                className="inline-flex items-center rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+              >
+                {t('event_earnings.view_event_page')}
+              </Link>
+            }
+          />
+        )}
       </div>
     )
   }
@@ -1093,7 +1108,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     ((bankMode === 'new' && (!bankDetails.accountHolder || !bankDetails.bankName || !bankDetails.accountNumber)) ||
                       (bankMode !== 'new' && !selectedBankDestinationId)))
                 }
-                className="flex-1 px-4 py-3 bg-white text-black rounded hover:bg-white/90 transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex-1 px-4 py-2.5 text-sm bg-white text-black rounded hover:bg-white/90 transition-colors font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm Withdrawal'}
               </button>
@@ -1118,7 +1133,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                   })
                 }}
                 disabled={isSubmitting}
-                className="px-4 py-3 rounded bg-white/[0.07] text-white hover:bg-white/[0.12] transition-colors font-semibold disabled:cursor-not-allowed"
+                className="px-4 py-2.5 text-sm rounded bg-white/[0.07] text-white hover:bg-white/[0.12] transition-colors font-semibold disabled:cursor-not-allowed"
               >
                 {t('actions.cancel')}
               </button>

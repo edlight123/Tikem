@@ -1266,6 +1266,7 @@
     "imageGallery": "Galerie d’images",
     "pageSettings": "Paramètres de la page",
     "showOnExplore": "Afficher dans Découvrir",
+    "showGoingCount": "Afficher le nombre de participants",
     "passwordProtected": "Événement protégé par mot de passe",
     "accessCodePlaceholderNew": "Code d’accès (6 caractères minimum)",
     "accessCodePlaceholderEdit": "Nouveau code d’accès (vide garde l’actuel)",
@@ -1612,7 +1613,21 @@
     "more_guests": "+{{count}} autres",
     "more_private": "Les autres restent discrets",
     "no_faces": "Personne ne montre encore son visage.",
-    "sign_in_to_view": "Connectez-vous pour voir qui y va"
+    "sign_in_to_view": "Connectez-vous pour voir qui y va",
+    "line": {
+      "you_lead_others": "{{you}}, {{lead}} et {{count}} autres",
+      "you_lead_one": "{{you}}, {{lead}} et 1 autre",
+      "you_lead": "{{you}} et {{lead}}",
+      "you_others": "{{you}} et {{count}} autres",
+      "you_one": "{{you}} et 1 autre",
+      "you_only": "{{you}} y allez",
+      "lead_only": "{{lead}} y va",
+      "lead_one": "{{lead}} et 1 autre",
+      "lead_others": "{{lead}} et {{count}} autres",
+      "lead_vague": "{{lead}} et d'autres",
+      "count": "{{count}} participants",
+      "vague": "Voir qui y va"
+    }
   },
   "follow": {
     "loading": "Chargement...",

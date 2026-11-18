@@ -118,17 +118,9 @@ export default function EventOrdersClient({ orders }: { orders: Order[] }) {
         }
         empty={
           <OrgEmptyState
+            variant="quiet"
             icon={ShoppingBag}
-            title={
-              orders.length === 0
-                ? 'No orders yet'
-                : 'No orders match your search'
-            }
-            description={
-              orders.length === 0
-                ? 'Orders will appear here as tickets are sold.'
-                : 'Try a different name, email, or tier.'
-            }
+            title={orders.length === 0 ? t('orders.no_orders_yet') : t('orders.no_orders_match')}
           />
         }
         renderMobileCard={(o) => {

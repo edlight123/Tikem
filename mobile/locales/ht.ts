@@ -2625,6 +2625,7 @@ export default {
       ticketValidUntilLabel: 'Valab jiska',
       ticketNotYetValid: 'Poko valab',
       ticketExpired: 'Ekspire',
+      showGoingCount: "Montre konbyen moun ap vini",
       passwordProtect: 'Pwoteje evènman sa a ak yon modpas',
       accessCode: 'Kòd aksè',
       accessCodeHint: 'Patisipan yo dwe antre kòd sa a pou yo jwenn tikè.',
@@ -3859,6 +3860,11 @@ export default {
     requestErrorBody: "Demann zanmi an pa t ka pati. Eseye ankò.",
     messageEventRich: "Vin avè m nan {event} · {details}\n{link}",
     close: "Fèmen",
+    shareTo: "Pataje sou",
+    copyLink: "Kopye lyen an",
+    contactsRow: "Gade kiyès ki sou Tikèm",
+    connectShort: "Konekte",
+    settingsShort: "Paramèt",
   },
   // Lis apwobasyon ak moun k ap vini avè w (docs/specs/approval-lists-and-plus-ones.md).
   attendRequests: {

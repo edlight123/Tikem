@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Copy, ExternalLink, Plus, Users } from 'lucide-react'
-import { OrgEmptyState } from '@/components/organizer/ui'
+import { OrgEmptyState, SectionHeader } from '@/components/organizer/ui'
 import { useToast } from '@/components/ui/Toast'
 import { formatConversion } from '@/lib/attribution'
 
@@ -168,27 +168,26 @@ export default function PromotersClient({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      <div className="rounded-2xl bg-white/[0.055]">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div>
-            <h2 className="font-display lowercase italic !text-[22px] !leading-snug text-white">{t('promoters.promoters')}</h2>
-            <p className="text-sm text-white/50 mt-0.5">
-              Personal links for your street team. Each sale through a link counts for
-              its promoter, and Tikèm tallies the commission you owe them.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t('promoters.add_promoter')}
-          </button>
-        </div>
+      {/* No intro paragraph (owner, 2026-11-18: "avoid too many
+          explanations"). Empty, the empty state carries the one button. */}
+      <SectionHeader
+        title={t('promoters.promoters')}
+        actions={
+          !showForm && promoters.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex shrink-0 items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <Plus className="h-4 w-4" />
+              {t('promoters.add_promoter')}
+            </button>
+          ) : undefined
+        }
+      />
 
         {showForm && (
-          <div className="border-b border-white/10 px-5 py-5 space-y-4">
+          <div className="rounded-2xl bg-white/[0.055] px-5 py-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="label-mono text-[11px] uppercase text-white/50">Name</label>
@@ -249,14 +248,14 @@ export default function PromotersClient({
                 type="button"
                 onClick={handleCreate}
                 disabled={saving || !name.trim()}
-                className="rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {saving ? 'Adding…' : 'Add promoter'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded px-5 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/[0.12] bg-white/[0.07]"
+                className="rounded px-4 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.12] bg-white/[0.07]"
               >
                 {t('actions.cancel')}
               </button>
@@ -266,26 +265,26 @@ export default function PromotersClient({
 
         {loading ? (
           <div className="p-8 text-center text-sm text-white/50">Loading promoters…</div>
-        ) : promoters.length === 0 && !showForm ? (
-          <div className="p-8">
+        ) : promoters.length === 0 ? (
+          showForm ? null : (
             <OrgEmptyState
+              variant="quiet"
               icon={Users}
               title={t('promoters.no_promoters_yet')}
-              description={`Give each person selling "${eventTitle}" their own link, and see exactly who drives which sales.`}
               action={
                 <button
                   type="button"
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 rounded bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  className="inline-flex items-center gap-2 rounded bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Plus className="h-4 w-4" />
                   {t('promoters.add_first_promoter')}
                 </button>
               }
             />
-          </div>
+          )
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-white/5 rounded-2xl bg-white/[0.055]">
             {promoters.map((p) => (
               <div key={p.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -378,15 +377,11 @@ export default function PromotersClient({
             ))}
           </div>
         )}
-      </div>
 
-      <p className="text-xs text-white/40 leading-relaxed">
-        Commission on confirmed sales is withheld from your earnings automatically and
-        paid to each promoter through their Tikèm wallet once this event&apos;s funds
-        release, you never handle it. Free RSVPs count toward their tickets but earn
-        no commission. Amounts tallied before wallets launched are still settled by
-        you directly.
-      </p>
+      {/* One short line where it matters: money leaves their earnings. */}
+      {promoters.length > 0 && (
+        <p className="text-xs text-white/40">{t('promoters.commission_note')}</p>
+      )}
     </div>
   )
 }

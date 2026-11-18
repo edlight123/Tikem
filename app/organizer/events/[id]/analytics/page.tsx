@@ -92,12 +92,7 @@ export default async function EventAnalyticsPage({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {ticketsSold === 0 ? (
-        <OrgEmptyState
-          icon={BarChart2}
-          title={<T k="event_analytics.no_sales_data_yet" />}
-          description={<T k="event_analytics.analytics_after_sales" />}
-          className="mt-2"
-        />
+        <OrgEmptyState variant="quiet" icon={BarChart2} title={<T k="event_analytics.no_sales_data_yet" />} />
       ) : (
         <div className="space-y-8">
           {/* KPI row */}

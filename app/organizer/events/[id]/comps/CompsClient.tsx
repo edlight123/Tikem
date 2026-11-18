@@ -168,20 +168,13 @@ export default function CompsClient({ eventId, comps, tiers }: CompsClientProps)
       <SectionHeader
         className="mb-6"
         title={tx('comps.complimentary_tickets')}
-        description={
-          comps.length > 0 ? tx('event_tools.comp_summary', { count: issuedCount }) : tx('event_tools.comp_intro')
-        }
-        // The empty state below carries the white button while the list is empty.
-        actions={issueButton(comps.length > 0)}
+        description={comps.length > 0 ? tx('event_tools.comp_summary', { count: issuedCount }) : undefined}
+        // Empty, the empty state below carries the one button; no intro line.
+        actions={comps.length > 0 ? issueButton(true) : undefined}
       />
 
       {comps.length === 0 ? (
-        <OrgEmptyState
-          icon={Ticket}
-          title={tx('comps.no_comps_issued')}
-          description={tx('comps.issue_comps_desc')}
-          action={issueButton(true)}
-        />
+        <OrgEmptyState variant="quiet" icon={Ticket} title={tx('comps.no_comps_issued')} action={issueButton(true)} />
       ) : (
         <OrgDataTable rows={comps} columns={buildColumns(tx)} rowKey={(c) => c.id} />
       )}

@@ -967,7 +967,8 @@
     "bank_below_minimum": "Bank transfers start at {{min}}.",
     "needs_admin_review": "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it, and no money has moved.",
     "destination_on_hold": "Your new account is saved and can be paid from {{date}}.",
-    "balance_changed": "Your balance changed, please try again."
+    "balance_changed": "Your balance changed, please try again.",
+    "free_event_nothing": "Free event, nothing to pay out."
   },
   "events_filters": {
     "alphabetical": "Alphabetical",
@@ -1225,7 +1226,8 @@
     "add_first_promoter": "Add your first promoter",
     "send_via_whatsapp": "Send via WhatsApp",
     "clicks": "Clicks",
-    "conversion": "Conversion"
+    "conversion": "Conversion",
+    "commission_note": "Commission is withheld from your earnings and paid to each promoter's Tikèm wallet."
   },
   "security": {
     "change_password": "Change Password",
@@ -1560,7 +1562,9 @@
     "orders": "Orders",
     "every_ticket_sold": "Every ticket sold across your events.",
     "search_orders": "Search by event, attendee, email or order #",
-    "search_orders_tier": "Search by name, email or tier"
+    "search_orders_tier": "Search by name, email or tier",
+    "no_orders_yet": "No orders yet",
+    "no_orders_match": "No orders match your search"
   },
   "scan_selector": {
     "create_first_event": "Create Your First Event",

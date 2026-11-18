@@ -291,6 +291,9 @@ async function getEventByIdUncached(eventId: string): Promise<Event | null> {
             ? data.guestlist_visibility
             : undefined,
         show_guestlist: data?.show_guestlist === false ? false : undefined,
+        // Organizer setting "Show how many are going": the count prints whatever
+        // the capacity (lib/socialProof). Whitelisted or the page never sees it.
+        show_going_count: data?.show_going_count === true ? true : undefined,
         // Read back by the composer's "Part of …?" toggle on edit.
         national_day: typeof data?.national_day === 'string' ? data.national_day : undefined,
         tags: data?.tags && Array.isArray(data.tags) ? data.tags.filter((tag: any) => typeof tag === 'string') : undefined,
