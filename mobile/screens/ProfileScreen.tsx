@@ -22,6 +22,7 @@ import {
   Pencil,
   BookOpen,
   Briefcase,
+  ChevronRight,
   Camera,
   Compass,
   ExternalLink,
@@ -596,7 +597,11 @@ export default function ProfileScreen() {
         {isOwnOrganizer && activeOrg.isOwner ? (
           <View style={styles.block}>
             <SectionHeader title={t('profile.organization.sectionTitle')} />
-            <View style={styles.orgCard}>
+            {/* The brand as a card, not a settings row (owner, 2026-11-18:
+                "see how you can make this more premium"): the logo large with
+                a camera badge, the name in the serif, the whole card opens the
+                edit. No "Add logo" text button. */}
+            <TouchableOpacity style={styles.orgCard} onPress={openEdit} activeOpacity={0.85} accessibilityRole="button">
               <Touchable
                 style={styles.orgLogo}
                 scale={0.98}
@@ -608,7 +613,7 @@ export default function ProfileScreen() {
                 {orgLogo ? (
                   <Image source={{ uri: orgLogo }} style={styles.orgLogoImage} contentFit="cover" transition={150} />
                 ) : (
-                  <Briefcase size={22} color={colors.textSecondary} />
+                  <Briefcase size={24} color={colors.textSecondary} />
                 )}
                 {uploadingLogo ? (
                   <View style={styles.busyOverlay}>
@@ -616,17 +621,19 @@ export default function ProfileScreen() {
                   </View>
                 ) : null}
               </Touchable>
-              <TouchableOpacity style={styles.orgMeta} onPress={openEdit} accessibilityRole="button">
+              <View pointerEvents="none" style={styles.orgCamera}>
+                <Camera size={12} color="#000" strokeWidth={2.4} />
+              </View>
+              <View style={styles.orgMeta}>
                 <Text style={[styles.orgName, !orgName && styles.orgNameEmpty]} numberOfLines={1}>
                   {orgName || t('profile.organization.emptyName')}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={changeLogo} disabled={uploadingLogo} hitSlop={10} accessibilityRole="button">
-                <Text style={styles.orgAction}>
-                  {orgLogo ? t('profile.organization.changeLogo') : t('profile.organization.addLogo')}
+                <Text style={styles.orgHint} numberOfLines={1}>
+                  {t('profile.organization.cardHint')}
                 </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+              <ChevronRight size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -1033,14 +1040,27 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     orgCard: {
       backgroundColor: T.surface,
       borderRadius: radius.lg,
-      padding: 14,
+      padding: 16,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 14,
+      gap: 16,
+    },
+    orgCamera: {
+      position: 'absolute',
+      left: 16 + 72 - 18,
+      top: 16 + 72 - 18,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#FFFFFF',
+      borderWidth: 2,
+      borderColor: T.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     orgLogo: {
-      width: 56,
-      height: 56,
+      width: 72,
+      height: 72,
       borderRadius: radius.md,
       overflow: 'hidden',
       backgroundColor: T.surfaceRaised,
@@ -1049,9 +1069,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     },
     orgLogoImage: { width: '100%', height: '100%' },
     orgMeta: { flex: 1, minWidth: 0 },
-    orgName: { fontSize: 15, fontWeight: '700', color: colors.text },
-    orgNameEmpty: { color: colors.textSecondary, fontWeight: '600' },
-    orgHint: { marginTop: 2, fontSize: 12, lineHeight: 16, color: colors.textTertiary },
+    orgName: { fontFamily: font.serif, fontSize: 26, lineHeight: 30, color: colors.text },
+    orgNameEmpty: { color: colors.textSecondary, fontFamily: undefined, fontSize: 15, fontWeight: '600' },
+    orgHint: { marginTop: 4, fontSize: 13, lineHeight: 17, color: colors.textSecondary },
     orgAction: { fontSize: 13, fontWeight: '700', color: colors.text },
 
     // Same width and gap as EventRail's cards; overflow is clipped by the page.

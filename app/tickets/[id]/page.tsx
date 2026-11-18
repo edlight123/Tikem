@@ -113,7 +113,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
     try {
       const live = await findLivePendingTransfer(String(ticket.id))
       if (live && live.from_user_id === user.id) {
-        pendingTransfer = { id: live.id, toEmail: live.to_email, token: live.transfer_token, expiresAt: live.expires_at }
+        pendingTransfer = { id: live.id, toEmail: live.to_email || live.to_name, token: live.transfer_token, expiresAt: live.expires_at }
       }
     } catch (e: any) {
       console.warn('[ticket-page] pending transfer lookup failed', e?.message)

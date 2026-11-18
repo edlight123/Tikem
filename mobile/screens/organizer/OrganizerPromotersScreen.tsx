@@ -24,7 +24,7 @@ import { Megaphone, Plus, X } from 'lucide-react-native';
 import SectionHeader from '../../components/SectionHeader';
 import PromoteTabs from '../../components/organizer/PromoteTabs';
 import { ListGroup, ListRow } from '../../components/ui/ListRow';
-import { colors as T, font } from '../../theme/tokens';
+import { colors as T, font, spacing } from '../../theme/tokens';
 import { useAppAlert } from '../../components/AppAlert';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -231,7 +231,7 @@ export default function OrganizerPromotersScreen() {
           overlay
           onHeight={onHeight}
         />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + spacing.lg }]}>
           <Skeleton width="100%" height={52} radius={RADIUS.md} />
           <View style={styles.section}>
             {[0, 1].map((i) => (
@@ -326,7 +326,7 @@ export default function OrganizerPromotersScreen() {
       {!!error && <Text style={styles.errorText}>{error}</Text>}
 
       <View style={styles.submitWrap}>
-        <WhitePillCTA
+        <WhitePillCTA size="sm"
           label={submitting ? t('organizerPromoters.creating') : t('organizerPromoters.create')}
           onPress={handleCreate}
           loading={submitting}
@@ -345,10 +345,11 @@ export default function OrganizerPromotersScreen() {
         overlay
         onHeight={onHeight}
       />
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 8 }]}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + spacing.lg }]}>
         <PromoteTabs active="promoters" eventId={eventId} />
         {promoters.length === 0 ? (
           <EmptyState
+            variant="panel"
             icon={Megaphone}
             title={t('organizerPromoters.empty')}
             actionLabel={t('organizerPromoters.formTitle')}
@@ -461,8 +462,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       flex: 1,
       backgroundColor: colors.background,
     },
+    // Same gutter as Tracking links (16pt): the shared Promoters | Tracking
+    // links tab bar must not jump sideways when switching tabs.
     scrollContent: {
-      padding: 20,
+      paddingHorizontal: spacing.lg,
       paddingBottom: 40,
     },
     sheet: { flex: 1, backgroundColor: colors.background },
@@ -484,11 +487,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       backgroundColor: T.surfaceRaised,
     },
     sheetBody: { paddingHorizontal: 20, paddingBottom: 40 },
+    // Uppercase eyebrow labels, the same as FormSheet's SheetLabel.
     label: {
-      marginTop: 14,
-      marginBottom: 6,
-      fontSize: 12,
+      marginTop: 18,
+      marginBottom: 8,
+      fontSize: 11,
+      lineHeight: 14,
       fontWeight: '600',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
       color: colors.textSecondary,
     },
     // Fills, not bordered boxes.
@@ -622,8 +629,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: 8,
       marginTop: 12,
     },
+    // Row actions match Tracking links: 36pt, 13pt semibold.
     actionButton: {
-      paddingVertical: 9,
+      height: 36,
+      justifyContent: 'center',
       paddingHorizontal: 14,
       borderRadius: RADIUS.md,
       backgroundColor: T.surfaceRaised,
@@ -631,7 +640,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     actionPrimary: { backgroundColor: T.white },
     actionPrimaryText: { color: T.onWhite },
     actionText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
     },

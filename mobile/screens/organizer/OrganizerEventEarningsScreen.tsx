@@ -21,8 +21,8 @@ import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
 import { useActiveOrg } from '../../lib/activeOrg'
 import { getEventById } from '../../lib/api/organizer'
+import { fetchEventAnalytics, type EventAnalytics } from '../../lib/api/eventOrders'
 import { isFreeOnlyEvent } from '../../lib/ticketPricing'
-import EmptyState from '../../components/EmptyState'
 import { Gift } from 'lucide-react-native'
 import { getVerificationRequest } from '../../lib/verification'
 import { getRequiredPayoutProfileIdForEventCountry, normalizeCountryCode } from '../../lib/payment-provider'
@@ -89,6 +89,8 @@ export default function OrganizerEventEarningsScreen() {
   // No paid tiers: there is nothing to settle or withdraw, so the screen shows
   // a short "free event" state instead of balances, dates and payout CTAs.
   const [freeOnly, setFreeOnly] = useState(false)
+  // Free-only events: claims + check-ins, so the page isn't just "free event".
+  const [freeStats, setFreeStats] = useState<EventAnalytics | null>(null)
   const [eventCountry, setEventCountry] = useState<string>('')
   const [earnings, setEarnings] = useState<EventEarnings | null>(null)
 
@@ -328,7 +330,14 @@ export default function OrganizerEventEarningsScreen() {
     try {
       const event = await getEventById(eventId)
       setEventTitle(event?.title || '')
-      setFreeOnly(event ? isFreeOnlyEvent(event as any) : false)
+      const isFree = event ? isFreeOnlyEvent(event as any) : false
+      setFreeOnly(isFree)
+      if (isFree) {
+        // Best effort: the free layout still renders (with dashes) without it.
+        fetchEventAnalytics(eventId)
+          .then((res) => setFreeStats(res?.analytics || null))
+          .catch(() => setFreeStats(null))
+      }
       const rawCountry = (event as any)?.country
       setEventCountry(normalizeCountryCode(rawCountry) || '')
 
@@ -845,12 +854,28 @@ export default function OrganizerEventEarningsScreen() {
           subtitle={eventTitle || eventId}
           onBack={() => navigation.goBack()}
         />
-        <View style={styles.freeWrap}>
-          <EmptyState
-            icon={Gift}
-            title={t('organizerEarnings.freeEvent.title')}
+        <ScrollView contentContainerStyle={[styles.freeWrap, { paddingBottom: insets.bottom + 24 }]}>
+          {/* Free event: what the organizer actually has (claims, door), then
+              one quiet line that there is nothing to pay out. */}
+          <StatTriplet
+            items={[
+              { label: t('organizerEarnings.freeEvent.claimed'), value: freeStats ? freeStats.ticketsSold : null },
+              {
+                label: t('organizerEarnings.freeEvent.checkedIn'),
+                value: freeStats ? freeStats.checkedIn : null,
+                caption:
+                  freeStats && freeStats.ticketsSold > 0
+                    ? `${Math.round(freeStats.checkInRate * 100)}%`
+                    : undefined,
+              },
+            ]}
           />
-        </View>
+          {/* One quiet line, no card (owner, 2026-11-18: "avoid big cards"). */}
+          <View style={styles.freeLine}>
+            <Gift size={16} color={colors.textTertiary} strokeWidth={1.75} />
+            <Text style={styles.freeLineText}>{t('organizerEarnings.freeEvent.body')}</Text>
+          </View>
+        </ScrollView>
       </View>
     )
   }
@@ -929,10 +954,10 @@ export default function OrganizerEventEarningsScreen() {
         ) : requiresStripeConnect ? (
           <View style={styles.noticeStack}>
             <InfoNotice icon="card-outline" text={t('organizerEarnings.stripeNotice')} />
-            <SecondaryPill
+            <SecondaryPill size="sm"
               style={styles.noticeCta}
               label={t('organizerEarnings.openPayoutSettings')}
-              icon={<Ionicons name="settings-outline" size={20} color={colors.text} />}
+              icon={<Ionicons name="settings-outline" size={18} color={colors.text} />}
               onPress={() => navigation.navigate('OrganizerPayoutSettings')}
             />
           </View>
@@ -942,10 +967,10 @@ export default function OrganizerEventEarningsScreen() {
               icon="shield-checkmark-outline"
               text={t('organizerEarnings.identity.noticeBody')}
             />
-            <SecondaryPill
+            <SecondaryPill size="sm"
               style={styles.noticeCta}
               label={t('organizerEarnings.identity.cta')}
-              icon={<Ionicons name="shield-checkmark-outline" size={20} color={colors.text} />}
+              icon={<Ionicons name="shield-checkmark-outline" size={18} color={colors.text} />}
               onPress={() => navigation.navigate('OrganizerVerification')}
             />
           </View>
@@ -957,10 +982,10 @@ export default function OrganizerEventEarningsScreen() {
               icon="wallet-outline"
               text={t('organizerEarnings.noMethodNotice')}
             />
-            <SecondaryPill
+            <SecondaryPill size="sm"
               style={styles.noticeCta}
               label={t('organizerEarnings.setUpPayouts')}
-              icon={<Ionicons name="wallet-outline" size={20} color={colors.text} />}
+              icon={<Ionicons name="wallet-outline" size={18} color={colors.text} />}
               onPress={() => navigation.navigate('OrganizerPayoutSettings')}
             />
           </View>
@@ -977,19 +1002,19 @@ export default function OrganizerEventEarningsScreen() {
                 />
               </View>
             ) : null}
-            <WhitePillCTA
+            <WhitePillCTA size="sm"
               label={t('organizerEarnings.withdrawViaMoncash')}
               disabled={moncashBelowMinimum || Boolean(earnings?.withdrawalBlocked)}
               onPress={() => openWithdraw('moncash')}
-              icon={<Ionicons name="phone-portrait-outline" size={20} color={tokenColors.onWhite} />}
+              icon={<Ionicons name="phone-portrait-outline" size={18} color={tokenColors.onWhite} />}
             />
 
             <View style={{ height: 12 }} />
 
             {/* Secondary = dark-grey pill. */}
-            <SecondaryPill
+            <SecondaryPill size="sm"
               label={t('organizerEarnings.withdrawToBank')}
-              icon={<Ionicons name="business-outline" size={20} color={colors.text} />}
+              icon={<Ionicons name="business-outline" size={18} color={colors.text} />}
               onPress={() => openWithdraw('bank')}
             />
           </>
@@ -1090,7 +1115,7 @@ export default function OrganizerEventEarningsScreen() {
                     keyboardType="number-pad"
                     style={styles.input}
                   />
-                  <WhitePillCTA
+                  <WhitePillCTA size="sm"
                     label={isVerifyingCode ? t('organizerEarnings.otp.verifying') : t('organizerEarnings.otp.verifyAndContinue')}
                     onPress={verifyOtpThenRetry}
                     loading={isVerifyingCode}
@@ -1243,7 +1268,7 @@ export default function OrganizerEventEarningsScreen() {
             {!verificationRequired ? (
               <View style={styles.modalFooter}>
                 {/* One white pill that names the commitment. */}
-                <WhitePillCTA
+                <WhitePillCTA size="sm"
                   style={styles.footerPill}
                   label={
                     submitting
@@ -1265,9 +1290,51 @@ export default function OrganizerEventEarningsScreen() {
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   freeWrap: {
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  // Filled card (no hairline), 4pt radius, left-aligned like EmptyState panel.
+  freeLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  freeLineText: { fontSize: 13, color: colors.textSecondary },
+  freeCard: {
+    marginTop: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radius.poster,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 22,
+    alignItems: 'flex-start',
+  },
+  freeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.poster,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 80,
+    marginBottom: 16,
+  },
+  freeTitle: {
+    fontFamily: font.serif,
+    fontSize: 26,
+    lineHeight: 30,
+    color: colors.text,
+  },
+  freeBody: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  freeCta: {
+    marginTop: 18,
+    alignSelf: 'flex-start',
   },
   withdrawTitle: {
     fontFamily: font.serif,
@@ -1412,10 +1479,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     flex: 1,
     backgroundColor: colors.surfaceRaised,
     borderRadius: RADIUS.md,
-    // 56 = the system's primary-row height. This button shares the modal footer
-    // row with a 56pt WhitePillCTA, so an off-scale 48 left the pair misaligned.
-    minHeight: 56,
-    paddingVertical: 14,
+    // 44 = WhitePillCTA size="sm", which shares this modal footer row.
+    minHeight: 44,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

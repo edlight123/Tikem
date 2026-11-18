@@ -429,6 +429,7 @@ export default function OrganizerGuestListScreen() {
             <EmptyState icon={Search} title={t('organizerGuestList.emptyFiltered')} compact />
           ) : (
             <EmptyState
+              variant="panel"
               icon={Users}
               title={t('organizerGuestList.empty')}
               actionLabel={t('organizerGuestList.add')}
@@ -441,7 +442,7 @@ export default function OrganizerGuestListScreen() {
       {/* The screen's one white pill. Hidden while the empty state shows its own. */}
       {hasGuests && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-          <WhitePillCTA
+          <WhitePillCTA size="sm"
             label={t('organizerGuestList.add')}
             icon={<Plus size={18} color={T.onWhite} strokeWidth={2.5} />}
             onPress={openAdd}
@@ -458,7 +459,7 @@ export default function OrganizerGuestListScreen() {
         footer={
           <>
             {!!formError && <Text style={styles.errorText}>{formError}</Text>}
-            <WhitePillCTA
+            <WhitePillCTA size="sm"
               label={
                 saving
                   ? t('organizerGuestList.sheet.saving')
@@ -582,7 +583,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       gap: 10,
       marginTop: spacing.lg,
       paddingHorizontal: 14,
-      height: 48,
+      height: 44,
       borderRadius: radius.md,
       backgroundColor: colors.surface,
     },

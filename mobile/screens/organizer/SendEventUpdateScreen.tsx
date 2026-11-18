@@ -237,7 +237,7 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   sendButtonText: {
     color: '#000000',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -253,9 +253,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   form: {
     paddingHorizontal: 16,
   },
+  // Small uppercase field labels, the same as the comp and promo-code forms.
   label: {
-    fontSize: 13,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     color: colors.textSecondary,
     marginBottom: 8,
   },

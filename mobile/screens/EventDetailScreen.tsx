@@ -996,25 +996,26 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   <VerifiedBadge size="small" label={t('eventDetail.verified')} />
                 )}
               </TouchableOpacity>
+              {/* Message is a quiet icon at the end of the line, beside Follow
+                  (owner, 2026-11-17: the full-width "Message the organizer"
+                  button was "too prominent ... maybe just an icon"). Hidden on
+                  the organizer's own event and when signed out. */}
+              {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && (
+                <TouchableOpacity
+                  style={styles.orgMessageIcon}
+                  onPress={() => setShowContactOrganizer(true)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('contactOrganizer.open')}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <MessageCircle size={18} color={colors.text} />
+                </TouchableOpacity>
+              )}
               {!!event.organizer_id && event.organizer_id !== user?.uid && (
                 <FollowButton organizerId={event.organizer_id} style={styles.orgFollow} />
               )}
             </View>
-            {/* Message: a real full-width button, not a half-width chip
-                (owner, 2026-11-17: "message should be more like a button").
-                Hidden on the organizer's own event and when signed out. */}
-            {!!event.organizer_id && event.organizer_id !== user?.uid && !!user && (
-              <TouchableOpacity
-                style={styles.orgMessageBtn}
-                onPress={() => setShowContactOrganizer(true)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel={t('contactOrganizer.open')}
-              >
-                <MessageCircle size={18} color={colors.text} />
-                <Text style={styles.orgMessageText}>{t('contactOrganizer.title')}</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Waitlist (Add to Calendar moved to the header as an icon). Only
@@ -1792,16 +1793,14 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   // Follow at the end of the identity line: its own white / "Following"
   // fills (FollowButton), sized to sit level with the 44pt avatar.
   orgFollow: { height: 36, minWidth: 96, paddingHorizontal: 16 },
-  orgMessageBtn: {
-    height: 48,
-    flexDirection: 'row',
+  orgMessageIcon: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     borderRadius: 4,
     backgroundColor: colors.surfaceRaised,
   },
-  orgMessageText: { fontSize: 15, fontWeight: '600', color: colors.text },
   orgRowMain: {
     flex: 1,
     flexDirection: 'row',

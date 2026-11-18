@@ -286,7 +286,7 @@ export default function TicketDetailScreen({ route }: any) {
                     <StatusChip status="pending" label={t('ticketDetail.transfer.pending')} />
                   </View>
                   <Text style={styles.pendingTransferEmail}>
-                    {t('ticketDetail.transfer.sentTo')} <Text style={styles.pendingTransferEmailBold}>{pendingTransfer.to_email}</Text>
+                    {t('ticketDetail.transfer.sentTo')} <Text style={styles.pendingTransferEmailBold}>{pendingTransfer.to_email || pendingTransfer.to_name}</Text>
                   </Text>
                   {pendingTransfer.expires_at && (
                     <Text style={styles.pendingTransferExpiry}>

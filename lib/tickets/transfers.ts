@@ -30,6 +30,8 @@ export interface LivePendingTransfer {
   ticket_id: string
   from_user_id: string
   to_email: string
+  /** Set on friend transfers, which store no email (privacy). */
+  to_name: string
   transfer_token: string
   expires_at: string | null
 }
@@ -63,6 +65,7 @@ export async function findLivePendingTransfer(ticketId: string, now = new Date()
         ticket_id: String(data.ticket_id || ticketId),
         from_user_id: String(data.from_user_id || ''),
         to_email: String(data.to_email || ''),
+        to_name: String(data.to_name || ''),
         transfer_token: String(data.transfer_token || ''),
         expires_at: exp ? exp.toISOString() : null,
       }

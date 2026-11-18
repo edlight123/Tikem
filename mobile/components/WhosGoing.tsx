@@ -94,8 +94,12 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
   // Nameless accounts come back as "Tikèm user": never the lead name, never a
   // face (they still count, as unnamed portraits).
   const { totalGoing, viewerIsGoing } = data;
-  const friendsGoing = data.friendsGoing.filter(isNamed);
-  const publicGoing = data.publicGoing.filter(isNamed);
+  // Faces with a real photo lead (owner, 2026-11-17: "show the ones w pics
+  // first"); a stable sort keeps the server's order within each group.
+  const photoFirst = (list: PublicUserSummary[]) =>
+    [...list].sort((a, b) => Number(!!b.photoURL) - Number(!!a.photoURL));
+  const friendsGoing = photoFirst(data.friendsGoing.filter(isNamed));
+  const publicGoing = photoFirst(data.publicGoing.filter(isNamed));
 
   // A small number talks people out of going, so it only prints once the
   // event is at least half full. Below that: faces and names, no number.
@@ -172,13 +176,19 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
               ? t('whosGoing.leadAndOne', { name: lead })
               : t('whosGoing.leadAndOthers', { name: lead, count: totalGoing - 1 });
 
-  // The card's pile: three faces, unnamed portraits filling in for guests who
-  // keep themselves private, so a crowd still reads as one.
-  const faces = [...friendsGoing, ...pile].slice(0, 3);
+  // The card's pile: up to five faces, photos first, unnamed portraits
+  // filling in for guests who keep themselves private, so a crowd still reads
+  // as one. Bigger than before (owner, 2026-11-17: "could the cards be bigger
+  // and more premium").
+  const MAX_FACES = 5;
+  const faces = photoFirst([...friendsGoing, ...pile]).slice(0, MAX_FACES);
   const others = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - faces.length);
   const anonBase = defaultAvatarIndex(eventId);
-  const anon = Array.from({ length: Math.min(others, 3 - faces.length) }, (_, i) => (anonBase + i * 5) % DEFAULT_AVATAR_COUNT);
+  const anon = Array.from({ length: Math.min(others, MAX_FACES - faces.length) }, (_, i) => (anonBase + i * 5) % DEFAULT_AVATAR_COUNT);
   const pileSize = faces.length + anon.length;
+  // "+N" only where the number may print at all (shouldShowGoingCount).
+  const overflow = showCount ? Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - pileSize) : 0;
+  const FACE = 52;
 
   const openList = () => {
     if (!user) {
@@ -194,35 +204,44 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity }: W
   return (
     <View style={styles.section}>
       <TouchableOpacity style={styles.card} onPress={openList} activeOpacity={0.85} accessibilityRole="button">
-        <View style={styles.cardText}>
-          <Text style={styles.cardTitle}>{t('whosGoing.guestlist')}</Text>
-          <Text style={styles.cardSub} numberOfLines={1}>
-            {subLine || t('whosGoing.seeWhosGoing')}
-          </Text>
+        <View style={styles.cardTop}>
+          <View style={styles.cardText}>
+            <Text style={styles.cardTitle}>{t('whosGoing.guestlist').toLowerCase()}</Text>
+            <Text style={styles.cardSub} numberOfLines={1}>
+              {showCount
+                ? `${t('whosGoing.goingCount', { count: totalGoing })}${viewerIsGoing ? ` · ${t('whosGoing.youreGoing')}` : ''}`
+                : subLine || t('whosGoing.seeWhosGoing')}
+            </Text>
+          </View>
+          <View style={styles.viewBtn}>
+            <Text style={styles.viewText}>{t('whosGoing.view')}</Text>
+          </View>
         </View>
         <View style={styles.cardPile}>
           {faces.map((u, i) => (
-            <View key={u.uid} style={{ marginLeft: i === 0 ? 0 : -14, zIndex: pileSize - i }}>
-              <Avatar user={u} size={44} ring={T.surface} />
+            <View key={u.uid} style={{ marginLeft: i === 0 ? 0 : -12, zIndex: pileSize - i }}>
+              <Avatar user={u} size={FACE} ring={T.surface} />
             </View>
           ))}
           {anon.map((idx, i) => (
             <View
               key={`anon-${i}`}
-              style={{ marginLeft: faces.length + i === 0 ? 0 : -14, zIndex: pileSize - faces.length - i }}
+              style={{ marginLeft: faces.length + i === 0 ? 0 : -12, zIndex: pileSize - faces.length - i }}
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
             >
               <Image
                 source={defaultAvatarAt(idx)}
-                style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: T.surface }}
+                style={{ width: FACE, height: FACE, borderRadius: FACE / 2, borderWidth: 2, borderColor: T.surface }}
                 contentFit="cover"
               />
             </View>
           ))}
-        </View>
-        <View style={styles.viewBtn}>
-          <Text style={styles.viewText}>{t('whosGoing.view')}</Text>
+          {overflow > 0 && (
+            <View style={[styles.moreBubble, { marginLeft: pileSize === 0 ? 0 : -12 }]}>
+              <Text style={styles.moreText}>+{overflow > 999 ? '999' : overflow}</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -247,17 +266,14 @@ const getStyles = (colors: any) =>
       marginTop: 32,
     },
     card: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
       backgroundColor: T.surface,
       borderRadius: radius.lg,
-      paddingVertical: 16,
-      paddingLeft: 18,
-      paddingRight: 14,
+      padding: 18,
+      gap: 16,
     },
+    cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     cardText: { flex: 1, minWidth: 0 },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    cardTitle: { fontFamily: font.serif, fontSize: 24, lineHeight: 28, color: colors.text },
     cardSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
     cardPile: { flexDirection: 'row', alignItems: 'center' },
     viewBtn: {
@@ -274,12 +290,12 @@ const getStyles = (colors: any) =>
       alignItems: 'center',
     },
     moreBubble: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
       backgroundColor: T.surfaceRaised,
       borderWidth: 2,
-      borderColor: colors.background,
+      borderColor: T.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },

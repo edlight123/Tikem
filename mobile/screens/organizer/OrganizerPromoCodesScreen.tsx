@@ -370,7 +370,7 @@ export default function OrganizerPromoCodesScreen() {
           overlay
           onHeight={onHeight}
         />
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}>
           <View style={styles.section}>
             {/* Section label + "New code" pill on one row, like the loaded list. */}
             <View style={styles.sectionTitleRow}>
@@ -411,7 +411,7 @@ export default function OrganizerPromoCodesScreen() {
         onHeight={onHeight}
       />
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerH }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerH + 16 }]}
         keyboardShouldPersistTaps="handled"
       >
         {showForm && (
@@ -531,7 +531,7 @@ export default function OrganizerPromoCodesScreen() {
               )}
 
               <View style={styles.formActions}>
-                <SecondaryPill
+                <SecondaryPill size="sm"
                   style={styles.formActionPill}
                   label={t('common.cancel')}
                   onPress={() => {
@@ -540,7 +540,7 @@ export default function OrganizerPromoCodesScreen() {
                   }}
                   disabled={saving}
                 />
-                <WhitePillCTA
+                <WhitePillCTA size="sm"
                   style={styles.formActionPill}
                   label={saving ? t('organizerPromoCodes.create.creating') : t('organizerPromoCodes.create.create')}
                   onPress={handleCreate}
@@ -578,6 +578,7 @@ export default function OrganizerPromoCodesScreen() {
           {promoCodes.length === 0 ? (
             showForm ? null : (
               <EmptyState
+                variant="panel"
                 icon={Tag}
                 title={t('organizerPromoCodes.list.empty')}
                 actionLabel={t('organizerPromoCodes.create.show')}
@@ -695,17 +696,15 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     backgroundColor: colors.background,
   },
   scrollContent: {
-    // Tight top padding — the tester flagged a dead gap between the header
-    // hairline and the section label.
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    // 16pt gutter and 16pt under the header, like every per-event page.
+    paddingHorizontal: 16,
     paddingBottom: 40,
   },
   section: {
     marginTop: 4,
   },
   // SegmentedTabs carries its own 16px horizontal padding; pull it back so the
-  // tabs align with the 20px content gutter.
+  // tabs align with the 16px content gutter.
   tabsWrap: {
     marginHorizontal: -16,
     marginBottom: 10,
@@ -755,10 +754,9 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   // Fill, not a hairline: the form is one surface step, its fields one more.
   formCard: {
-    backgroundColor: colors.surface,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    marginTop: 12,
+      // On the page, no card around the form (owner: "avoid big cards").
+      paddingTop: 4,
+    marginTop: 0,
     marginBottom: 24,
   },
   formEyebrow: {

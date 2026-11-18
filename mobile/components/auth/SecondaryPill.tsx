@@ -8,6 +8,8 @@ interface SecondaryPillProps {
   disabled?: boolean;
   /** Optional leading icon (rendered as-is). */
   icon?: React.ReactNode;
+  /** 'sm' pairs with WhitePillCTA size="sm" (44pt, 15pt semibold). */
+  size?: 'md' | 'sm';
   style?: ViewStyle;
 }
 
@@ -22,8 +24,10 @@ export function SecondaryPill({
   onPress,
   disabled = false,
   icon,
+  size = 'md',
   style,
 }: SecondaryPillProps) {
+  const small = size === 'sm';
   return (
     <Pressable
       onPress={onPress}
@@ -33,13 +37,14 @@ export function SecondaryPill({
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.button,
+        small && styles.buttonSmall,
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
       {icon ? <View style={styles.icon}>{icon}</View> : null}
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={[styles.label, small && styles.labelSmall]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -58,6 +63,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
+  },
+  buttonSmall: {
+    height: 44,
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+  labelSmall: {
+    fontSize: 15,
+    lineHeight: 20,
   },
   pressed: {
     opacity: 0.85,
