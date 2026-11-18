@@ -29,7 +29,7 @@ function block(startMarker: string, endMarker: string): string {
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name.startsWith('.')) continue
+    if (name === 'node_modules' || name === 'Pods' || name === 'ios' || name === 'android' || name.startsWith('.')) continue
     const p = join(dir, name)
     const st = statSync(p)
     if (st.isDirectory()) walk(p, out)
