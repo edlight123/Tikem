@@ -95,12 +95,12 @@ export default function MobileKeyFacts({
   return (
     <div className="md:hidden px-4 pt-2">
       {/* Printed in the event's zone, so the server and the browser agree. */}
-      <p className="text-[15px] font-medium text-white">
+      <p className="text-[15px] text-white/60">
         {formatInZone(startDate, zone, 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
         {endLabel && ` – ${endLabel}`}
       </p>
 
-      {place && <p className="mt-1.5 text-[14px] text-white/60">{place}</p>}
+      {place && <p className="mt-0.5 text-[15px] text-white/60">{place}</p>}
 
       {/* A free event's button already says so; "Free" here was a repeat. */}
       {!isFree && (

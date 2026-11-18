@@ -1682,10 +1682,10 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   },
   // Date + time range on ONE grey line beneath it, matching how posh states
   // "Sat, Aug 22 at 4:00 PM - 9:00 PM".
+  // Same voice as the place line under it (owner, 2026-11-18).
   whenText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: colors.text,
+    color: colors.textSecondary,
     lineHeight: 21,
     marginBottom: 2,
   },
