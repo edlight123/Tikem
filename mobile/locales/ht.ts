@@ -2938,6 +2938,8 @@ export default {
     failed: "Nou pa t ka transfere biyè a. Eseye ankò.",
   },
   organizerMessages: {
+    showAllSent: "Montre tout ({count})",
+    noEventsYet: "Poko gen evènman",
     tabQuestions: "Kesyon",
     tabAnnouncements: "Anons",
     newMessage: "Nouvo mesaj",
@@ -2949,10 +2951,10 @@ export default {
     statusSent: "Voye",
     morningAfter: "Demen maten",
     auto: {
-      event_reminder_24h: "Rapèl · lavèy",
-      event_reminder_3h: "Rapèl · 3 è anvan",
-      event_reminder_30min: "Rapèl · 30 min anvan",
-      post_event_followup: "Mèsi · demen maten",
+      event_reminder_24h: "Rapèl · 1 jou",
+      event_reminder_3h: "Rapèl · 3 è",
+      event_reminder_30min: "Rapèl · 30 min",
+      post_event_followup: "Mèsi",
     },
     segmentWaiting: 'Pou reponn',
     segmentAll: 'Tout',

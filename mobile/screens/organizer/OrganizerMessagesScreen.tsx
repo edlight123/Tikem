@@ -20,7 +20,7 @@ import { defaultAvatar } from '../../lib/defaultAvatar';
 import { inboxTime } from '../../lib/messageTime';
 import { select as hapticSelect } from '../../lib/haptics';
 import { useTabBarSpace } from '../../hooks/useTabBarSpace';
-import EventAnnouncements from '../../components/organizer/EventAnnouncements';
+import EventAnnouncements, { OrgAnnouncements } from '../../components/organizer/EventAnnouncements';
 
 type RouteParams = {
   OrganizerMessages:
@@ -370,6 +370,33 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
     <View style={styles.list}>{shown.map(renderRow)}</View>
   );
 
+  // Questions (one-to-one) | Announcements (bulk + automatic), owner 2026-11-18.
+  const paneTabs = (
+    <View style={styles.segmentTrack} accessibilityRole="tablist">
+      {(['questions', 'announcements'] as const).map((k) => {
+        const active = pane === k;
+        return (
+          <TouchableOpacity
+            key={k}
+            style={[styles.segment, active && styles.segmentActive]}
+            onPress={() => {
+              hapticSelect();
+              setPane(k);
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+          >
+            <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}>
+              {k === 'questions'
+                ? t('organizerMessages.tabQuestions')
+                : t('organizerMessages.tabAnnouncements')}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
   const showSegments = !loading && threads.length > 0;
 
   if (asTab) {
@@ -379,7 +406,7 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
           <Text style={styles.tabTitle} accessibilityRole="header">
             {t('organizerMessages.title').toLowerCase()}
           </Text>
-          {showSegments ? segments : loading ? <Skeleton width="55%" height={26} radius={radius.sm} /> : null}
+          {paneTabs}
         </View>
         <ScrollView
           style={styles.flex}
@@ -389,8 +416,17 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />
           }
         >
-          {showSegments ? eventRail : null}
-          {body}
+          {pane === 'announcements' ? (
+            <View style={{ paddingTop: 12 }}>
+              <OrgAnnouncements />
+            </View>
+          ) : (
+            <>
+              {showSegments ? <View style={[styles.stackSegments, { marginTop: 12 }]}>{segments}</View> : null}
+              {showSegments ? eventRail : null}
+              {body}
+            </>
+          )}
         </ScrollView>
       </View>
     );
@@ -415,33 +451,7 @@ export default function OrganizerMessagesScreen({ asTab = false }: { asTab?: boo
       >
         {/* Event page: Questions (one-to-one) and Announcements (bulk
             messages + the automatic reminders), owner 2026-11-18. */}
-        {eventId ? (
-          <View style={[styles.stackSegments, { marginBottom: 12 }]}>
-            <View style={styles.segmentTrack} accessibilityRole="tablist">
-              {(['questions', 'announcements'] as const).map((k) => {
-                const active = pane === k;
-                return (
-                  <TouchableOpacity
-                    key={k}
-                    style={[styles.segment, active && styles.segmentActive]}
-                    onPress={() => {
-                      hapticSelect();
-                      setPane(k);
-                    }}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}>
-                      {k === 'questions'
-                        ? t('organizerMessages.tabQuestions')
-                        : t('organizerMessages.tabAnnouncements')}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
+        {eventId ? <View style={[styles.stackSegments, { marginBottom: 12 }]}>{paneTabs}</View> : null}
         {eventId && pane === 'announcements' ? (
           <EventAnnouncements eventId={eventId} eventTitle={eventTitle || ''} />
         ) : (

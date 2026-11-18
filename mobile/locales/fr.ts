@@ -2970,6 +2970,8 @@ export default {
     failed: "Transfert impossible. Réessayez.",
   },
   organizerMessages: {
+    showAllSent: "Tout afficher ({count})",
+    noEventsYet: "Pas encore d'événement",
     tabQuestions: "Questions",
     tabAnnouncements: "Annonces",
     newMessage: "Nouveau message",
@@ -2981,10 +2983,10 @@ export default {
     statusSent: "Envoyé",
     morningAfter: "Le lendemain matin",
     auto: {
-      event_reminder_24h: "Rappel · la veille",
-      event_reminder_3h: "Rappel · 3 h avant",
-      event_reminder_30min: "Rappel · 30 min avant",
-      post_event_followup: "Merci · le lendemain matin",
+      event_reminder_24h: "Rappel · 1 jour",
+      event_reminder_3h: "Rappel · 3 heures",
+      event_reminder_30min: "Rappel · 30 min",
+      post_event_followup: "Merci",
     },
     segmentWaiting: 'À répondre',
     segmentAll: 'Tous',

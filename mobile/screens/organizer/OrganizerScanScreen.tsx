@@ -8,7 +8,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import SectionHeader from '../../components/SectionHeader';
-import { Calendar, DoorOpen, Image as ImageIcon, ScanQrCode, UserSearch } from 'lucide-react-native';
+import { Calendar, DoorOpen, Image as ImageIcon, ScanLine, ScanQrCode, UserSearch } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useActiveOrg } from '../../lib/activeOrg';
@@ -155,9 +155,19 @@ export default function OrganizerScanScreen() {
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         {header}
         <View style={styles.content}>
-          <Skeleton width="100%" height={80} radius={radius.lg} style={{ marginBottom: 16 }} />
-          <Skeleton width="100%" height={220} radius={radius.xl} style={{ marginBottom: 16 }} />
-          <Skeleton width="100%" height={64} radius={radius.button} />
+          {/* The loaded layout's shape: poster + two lines, then the count
+              line and its track (was three generic blocks). */}
+          <View style={styles.eventRow}>
+            <Skeleton width={84} height={105} radius={radius.poster} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <Skeleton width="70%" height={16} radius={radius.sm} />
+              <Skeleton width="45%" height={12} radius={radius.sm} />
+            </View>
+          </View>
+          <View style={styles.counterBlock}>
+            <Skeleton width="40%" height={32} radius={radius.sm} />
+            <Skeleton width="100%" height={4} radius={radius.sm} style={{ marginTop: 14 }} />
+          </View>
         </View>
       </View>
     );
@@ -184,7 +194,7 @@ export default function OrganizerScanScreen() {
                 compact
               />
             ) : (
-              <EmptyState icon={Calendar} title={t('organizerScan.noEventsToday')} compact />
+              <EmptyState variant="panel" icon={ScanLine} title={t('organizerScan.noEventsToday')} />
             )}
           </View>
         ) : selectedEvent ? (
@@ -346,11 +356,8 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       paddingHorizontal: 20,
       paddingTop: 12,
     },
-    emptyWrap: {
-      borderRadius: radius.xl,
-      backgroundColor: T.surface,
-      paddingVertical: 8,
-    },
+    // No card behind the empty state (owner, 2026-11-18).
+    emptyWrap: {},
     // Selector row: no card behind it; the poster carries the color.
     eventRow: {
       flexDirection: 'row',
