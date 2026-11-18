@@ -105,6 +105,9 @@ function normalizeInvitePhoneE164(rawPhone: string): string | null {
   return null
 }
 
+/** Flip on once SMS/WhatsApp delivery and phone sign-in exist. */
+const PHONE_STAFF_INVITES_ENABLED = false
+
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth()
@@ -124,6 +127,12 @@ export async function POST(request: NextRequest) {
     if (!eventId) return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
     if (method !== 'email' && method !== 'phone' && method !== 'link') {
       return NextResponse.json({ error: 'Invalid method' }, { status: 400 })
+    }
+    // Phone invites are OFF (owner, 2026-11-18): nothing delivers an SMS yet
+    // and a phone invite can't be redeemed until phone sign-in is live. The
+    // apps no longer offer it; this refuses an old client that still does.
+    if (method === 'phone' && !PHONE_STAFF_INVITES_ENABLED) {
+      return NextResponse.json({ error: 'Phone invites are not available yet. Use a link or an email.' }, { status: 400 })
     }
     if (method === 'email' && !targetEmail) {
       return NextResponse.json({ error: 'targetEmail is required for email invites' }, { status: 400 })

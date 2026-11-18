@@ -25,6 +25,20 @@ function organizerDisplayName(organizer: { organization_name?: unknown; full_nam
   return org || full || 'Organizer'
 }
 
+/** Hosts anything: the organizer role, or at least one event. Best-effort. */
+async function isHostAccount(uid: string): Promise<boolean> {
+  try {
+    const [userDoc, events] = await Promise.all([
+      adminDb.collection('users').doc(uid).get(),
+      adminDb.collection('events').where('organizer_id', '==', uid).limit(1).get(),
+    ])
+    const u = userDoc.exists ? userDoc.data() : {}
+    return u?.role === 'organizer' || u?.is_organizer === true || !events.empty
+  } catch {
+    return true
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ organizerId: string }> }): Promise<Metadata> {
   const { organizerId } = await params
   
@@ -44,8 +58,11 @@ export async function generateMetadata({ params }: { params: Promise<{ organizer
   // The brand name's canonical home is public_profiles (lib/profile/org-brand.ts).
   const brand = await readOrgBrandAdmin(organizerId)
   const name = organizerDisplayName({ ...organizer, organization_name: brand.organization_name })
-  const title = `${name} | Tikèm Organizer`
-  const description = `View all events organized by ${name} on Tikèm`
+  // A person who hosts nothing isn't an "Organizer" (owner, 2026-11-18): same
+  // host test as the page body, cheap version (brand name or role).
+  const host = !!String(brand.organization_name || organizer.organization_name || '').trim() || (await isHostAccount(organizerId))
+  const title = host ? `${name} | Tikèm Organizer` : `${name} | Tikèm`
+  const description = host ? `View all events organized by ${name} on Tikèm` : `${name} on Tikèm`
   return {
     title,
     description,

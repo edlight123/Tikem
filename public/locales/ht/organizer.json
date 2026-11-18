@@ -968,7 +968,8 @@
     "needs_admin_review": "Ekip peman Tikèm nan dwe verifye kòb evènman sa a anvan ou ka retire l. Nou siyale l. Pa gen okenn lajan ki deplase.",
     "destination_on_hold": "Nouvo kont ou an anrejistre epi li ka resevwa peman apati {{date}}.",
     "balance_changed": "Balans ou chanje, tanpri eseye ankò.",
-    "free_event_nothing": "Evènman gratis, pa gen anyen pou peye."
+    "free_event_nothing": "Evènman gratis, pa gen anyen pou peye.",
+    "back_to_all": "← Retounen nan tout revni yo"
   },
   "events_filters": {
     "alphabetical": "Alfabetik",
@@ -1227,7 +1228,30 @@
     "send_via_whatsapp": "Voye pa WhatsApp",
     "clicks": "Klik",
     "conversion": "Konvèsyon",
-    "commission_note": "Nou retire komisyon an nan sa w touche epi nou peye l nan bous Tikèm chak pwomotè."
+    "commission_note": "Nou retire komisyon an nan sa w touche epi nou peye l nan bous Tikèm chak pwomotè.",
+    "name": "Non",
+    "adding": "N ap ajoute…",
+    "loading": "N ap chaje pwomotè yo…",
+    "active": "Aktif",
+    "paused": "Sou poz",
+    "owed": "Dwe",
+    "sales_link": "Lyen vant",
+    "stats_page": "Paj estatistik li",
+    "pause": "Mete sou poz",
+    "resume": "Rekòmanse",
+    "pct_option": "% sou vant",
+    "flat_option": "{{currency}} pa tikè",
+    "commission_pct": "{{value}}% sou vant",
+    "commission_flat": "{{amount}} / tikè",
+    "copy_failed": "Pa ka kopye",
+    "copy_manually": "Kopye l alamen.",
+    "add_failed": "Pa ka ajoute pwomotè a",
+    "update_failed": "Pa ka mete ajou",
+    "remove_failed": "Pa ka retire",
+    "try_again": "Eseye ankò.",
+    "added": "Pwomotè ajoute",
+    "added_body": "Voye ba li lyen estatistik li, se tout zouti li.",
+    "whatsapp_message": "Ou se pwomotè pou {{title}}! Lyen vant pèsonèl ou: {{share}}, swiv vant ou ak komisyon ou isit la: {{stats}}"
   },
   "security": {
     "change_password": "Chanje modpas",

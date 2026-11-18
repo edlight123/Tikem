@@ -29,11 +29,14 @@ export function ReportButton({
   targetId,
   userId,
   className = '',
+  person = false,
 }: {
   kind: 'event' | 'organizer'
   targetId: string
   userId: string | null | undefined
   className?: string
+  /** A person's profile, not a host's: plain "Report". */
+  person?: boolean
 }) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
@@ -46,9 +49,9 @@ export function ReportButton({
         onClick={() => (userId ? setOpen(true) : toLogin())}
       >
         <Flag className="h-3.5 w-3.5" aria-hidden />
-        {kind === 'event' ? t('moderation.report_event') : t('moderation.report_organizer')}
+        {kind === 'event' ? t('moderation.report_event') : person ? t('moderation.report_person') : t('moderation.report_organizer')}
       </button>
-      <ReportSheet isOpen={open} onClose={() => setOpen(false)} kind={kind} targetId={targetId} />
+      <ReportSheet isOpen={open} onClose={() => setOpen(false)} kind={kind} targetId={targetId} person={person} />
     </>
   )
 }
@@ -59,13 +62,18 @@ export function BlockOrganizerButton({
   userId,
   initialBlocked,
   className = '',
+  person = false,
 }: {
   organizerId: string
   organizerName: string
   userId: string | null | undefined
   initialBlocked: boolean
   className?: string
+  /** A person's profile, not a host's: plain "Block", no talk of events. */
+  person?: boolean
 }) {
+  // "_person" variants for someone who doesn't host (owner, 2026-11-18).
+  const k = (key: string) => (person ? `${key}_person` : key)
   const { t } = useTranslation('common')
   const { showToast } = useToast()
   const router = useRouter()
@@ -87,8 +95,8 @@ export function BlockOrganizerButton({
       if (!res.ok) throw new Error(String(res.status))
       showToast({
         type: 'success',
-        title: next ? t('moderation.blocked_toast') : t('moderation.unblocked_toast'),
-        message: next ? t('moderation.blocked_toast_body') : '',
+        title: next ? t(`moderation.${k('blocked_toast')}`) : t(`moderation.${k('unblocked_toast')}`),
+        message: next && !person ? t('moderation.blocked_toast_body') : '',
         duration: 3500,
       })
       // Feeds, follow state and counts are server-rendered: refresh them.
@@ -110,7 +118,7 @@ export function BlockOrganizerButton({
         onClick={() => (userId ? setConfirming(true) : toLogin())}
       >
         <Ban className="h-3.5 w-3.5" aria-hidden />
-        {blocked ? t('moderation.unblock') : t('moderation.block')}
+        {blocked ? t(`moderation.${k('unblock')}`) : t(`moderation.${k('block')}`)}
       </button>
       <BottomSheet
         isOpen={confirming}
@@ -122,7 +130,7 @@ export function BlockOrganizerButton({
         }
       >
         <p className="text-body leading-relaxed text-fg-muted">
-          {blocked ? t('moderation.unblock_confirm_body') : t('moderation.block_confirm_body')}
+          {blocked ? t(`moderation.${k('unblock_confirm_body')}`) : t(`moderation.${k('block_confirm_body')}`)}
         </p>
         <div className="mt-6 flex gap-3">
           <button
@@ -137,7 +145,7 @@ export function BlockOrganizerButton({
             onClick={apply}
             className={`h-12 flex-1 rounded-xl text-body font-semibold ${blocked ? 'bg-inverse text-on-inverse' : 'bg-danger-strong text-fg'} hover:opacity-90`}
           >
-            {blocked ? t('moderation.unblock') : t('moderation.block')}
+            {blocked ? t(`moderation.${k('unblock')}`) : t(`moderation.${k('block')}`)}
           </button>
         </div>
       </BottomSheet>

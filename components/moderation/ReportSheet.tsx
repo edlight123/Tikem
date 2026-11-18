@@ -29,11 +29,14 @@ export default function ReportSheet({
   isOpen,
   onClose,
   kind,
+  person = false,
   targetId,
 }: {
   isOpen: boolean
   onClose: () => void
   kind: 'event' | 'organizer'
+  /** A person's profile (not a host): "Report this person". */
+  person?: boolean
   targetId: string
 }) {
   const { t } = useTranslation('common')
@@ -83,7 +86,9 @@ export default function ReportSheet({
     ? t('moderation.success_title')
     : kind === 'event'
       ? t('moderation.report_event_title')
-      : t('moderation.report_organizer_title')
+      : person
+        ? t('moderation.report_person_title')
+        : t('moderation.report_organizer_title')
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title={title}>
@@ -102,7 +107,7 @@ export default function ReportSheet({
         </div>
       ) : (
         <div>
-          <p className="mb-3 text-sm text-fg-muted">{t('moderation.report_intro')}</p>
+          <p className="mb-3 text-sm text-fg-muted">{t(person ? 'moderation.report_intro_person' : 'moderation.report_intro')}</p>
           <div role="radiogroup" className="divide-y divide-line-soft">
             {REPORT_REASONS.map((key) => {
               const selected = reason === key

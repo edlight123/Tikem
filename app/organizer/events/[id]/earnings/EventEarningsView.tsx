@@ -264,7 +264,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Link href="/organizer/earnings" className="text-brand-300 hover:underline mb-4 inline-block">
-          ← Back to All Earnings
+          {t('event_earnings.back_to_all')}
         </Link>
 
         {freeOnly ? (
@@ -487,7 +487,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
       <Link href="/organizer/earnings" className="text-brand-300 hover:underline mb-4 inline-block">
-        ← Back to All Earnings
+        {t('event_earnings.back_to_all')}
       </Link>
 
       <div className="mb-6">

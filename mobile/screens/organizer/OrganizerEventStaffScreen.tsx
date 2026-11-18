@@ -617,7 +617,8 @@ export default function OrganizerEventStaffScreen() {
 
               {/* Compact segmented control: a raised track, the chosen segment one step brighter. */}
               <View style={styles.segTrack} accessibilityRole="tablist">
-                {(['link', 'email', 'phone'] as InviteMethod[]).map((m) => {
+                {/* Phone is off until SMS delivery + phone sign-in exist (owner, 2026-11-18). */}
+                {(['link', 'email'] as InviteMethod[]).map((m) => {
                   const on = method === m
                   const Icon = m === 'email' ? Mail : m === 'phone' ? Phone : Link2
                   return (

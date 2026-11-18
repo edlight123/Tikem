@@ -968,7 +968,8 @@
     "needs_admin_review": "This event's earnings record needs a quick review by the Tikèm payouts team before it can be withdrawn. We've flagged it, and no money has moved.",
     "destination_on_hold": "Your new account is saved and can be paid from {{date}}.",
     "balance_changed": "Your balance changed, please try again.",
-    "free_event_nothing": "Free event, nothing to pay out."
+    "free_event_nothing": "Free event, nothing to pay out.",
+    "back_to_all": "← Back to all earnings"
   },
   "events_filters": {
     "alphabetical": "Alphabetical",
@@ -1227,7 +1228,30 @@
     "send_via_whatsapp": "Send via WhatsApp",
     "clicks": "Clicks",
     "conversion": "Conversion",
-    "commission_note": "Commission is withheld from your earnings and paid to each promoter's Tikèm wallet."
+    "commission_note": "Commission is withheld from your earnings and paid to each promoter's Tikèm wallet.",
+    "name": "Name",
+    "adding": "Adding…",
+    "loading": "Loading promoters…",
+    "active": "Active",
+    "paused": "Paused",
+    "owed": "Owed",
+    "sales_link": "Sales link",
+    "stats_page": "Their stats page",
+    "pause": "Pause",
+    "resume": "Resume",
+    "pct_option": "% of sales",
+    "flat_option": "{{currency}} per ticket",
+    "commission_pct": "{{value}}% of sales",
+    "commission_flat": "{{amount}} / ticket",
+    "copy_failed": "Couldn’t copy",
+    "copy_manually": "Copy it manually.",
+    "add_failed": "Couldn’t add promoter",
+    "update_failed": "Couldn’t update",
+    "remove_failed": "Couldn’t remove",
+    "try_again": "Try again.",
+    "added": "Promoter added",
+    "added_body": "Send them their stats link, it is their whole toolkit.",
+    "whatsapp_message": "You're a promoter for {{title}}! Your personal sales link: {{share}}, track your sales and commission here: {{stats}}"
   },
   "security": {
     "change_password": "Change Password",

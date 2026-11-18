@@ -1963,7 +1963,16 @@
       "unauthorized": "Sign in to report content.",
       "not_found": "This content isn't available anymore.",
       "self_report": "You can't report yourself."
-    }
+    },
+    "report_person": "Report",
+    "report_person_title": "Report this person",
+    "report_intro_person": "What's wrong? Reports are private. They are never told who sent one.",
+    "block_person": "Block",
+    "unblock_person": "Unblock",
+    "block_confirm_body_person": "They won't show up for you anymore. You can unblock them any time.",
+    "unblock_confirm_body_person": "They'll show up for you again.",
+    "blocked_toast_person": "Blocked",
+    "unblocked_toast_person": "Unblocked"
   },
   "friendsGoing": {
     "one": "{{name}} is going",

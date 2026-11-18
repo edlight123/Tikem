@@ -35,10 +35,10 @@ function fmtMoney(cents: number, currency: string): string {
   return `${(Math.round(cents) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${currency}`
 }
 
-function commissionLabel(p: Promoter): string {
+function commissionLabel(p: Promoter, t: (k: string, o?: any) => string): string {
   return p.commissionType === 'flat_per_ticket'
-    ? `${fmtMoney(p.commissionValue, p.currency)} / ticket`
-    : `${p.commissionValue}% of sales`
+    ? t('promoters.commission_flat', { amount: fmtMoney(p.commissionValue, p.currency) })
+    : t('promoters.commission_pct', { value: p.commissionValue })
 }
 
 function suggestCode(name: string): string {
@@ -98,7 +98,7 @@ export default function PromotersClient({
       setCopiedKey(key)
       setTimeout(() => setCopiedKey(null), 2000)
     } catch {
-      showToast({ type: 'error', title: 'Couldn’t copy', message: 'Copy it manually.' })
+      showToast({ type: 'error', title: t('promoters.copy_failed'), message: t('promoters.copy_manually') })
     }
   }
 
@@ -118,7 +118,7 @@ export default function PromotersClient({
       })
       const data = await res.json()
       if (!res.ok) {
-        showToast({ type: 'error', title: 'Couldn’t add promoter', message: data?.error || 'Try again.' })
+        showToast({ type: 'error', title: t('promoters.add_failed'), message: data?.error || t('promoters.try_again') })
         return
       }
       setPromoters((prev) => [data.promoter, ...prev])
@@ -131,8 +131,8 @@ export default function PromotersClient({
       setCommissionValue('10')
       showToast({
         type: 'success',
-        title: 'Promoter added',
-        message: 'Send them their stats link, it is their whole toolkit.',
+        title: t('promoters.added'),
+        message: t('promoters.added_body'),
       })
     } finally {
       setSaving(false)
@@ -149,7 +149,7 @@ export default function PromotersClient({
       setPromoters((prev) => prev.map((x) => (x.id === p.id ? { ...x, isActive: !p.isActive } : x)))
     } else {
       const data = await res.json().catch(() => ({}))
-      showToast({ type: 'error', title: 'Couldn’t update', message: data?.error || 'Try again.' })
+      showToast({ type: 'error', title: t('promoters.update_failed'), message: data?.error || t('promoters.try_again') })
     }
   }
 
@@ -159,7 +159,7 @@ export default function PromotersClient({
       setPromoters((prev) => prev.filter((x) => x.id !== p.id))
     } else {
       const data = await res.json().catch(() => ({}))
-      showToast({ type: 'error', title: 'Couldn’t remove', message: data?.error || 'Try again.' })
+      showToast({ type: 'error', title: t('promoters.remove_failed'), message: data?.error || t('promoters.try_again') })
     }
   }
 
@@ -190,7 +190,7 @@ export default function PromotersClient({
           <div className="rounded-2xl bg-surface px-5 py-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label-mono text-eyebrow uppercase text-fg-subtle">Name</label>
+                <label className="label-mono text-eyebrow uppercase text-fg-subtle">{t('promoters.name')}</label>
                 <input
                   className={`mt-1.5 ${inputClass}`}
                   value={name}
@@ -237,8 +237,8 @@ export default function PromotersClient({
                     value={commissionType}
                     onChange={(e) => setCommissionType(e.target.value as any)}
                   >
-                    <option value="percentage">% of sales</option>
-                    <option value="flat_per_ticket">{eventCurrency} per ticket</option>
+                    <option value="percentage">{t('promoters.pct_option')}</option>
+                    <option value="flat_per_ticket">{t('promoters.flat_option', { currency: eventCurrency })}</option>
                   </select>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function PromotersClient({
                 disabled={saving || !name.trim()}
                 className="rounded bg-inverse px-4 py-2.5 text-sm font-semibold text-on-inverse transition-colors hover:bg-inverse-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
-                {saving ? 'Adding…' : 'Add promoter'}
+                {saving ? t('promoters.adding') : t('promoters.add_promoter')}
               </button>
               <button
                 type="button"
@@ -264,7 +264,7 @@ export default function PromotersClient({
         )}
 
         {loading ? (
-          <div className="p-8 text-center text-sm text-fg-subtle">Loading promoters…</div>
+          <div className="p-8 text-center text-sm text-fg-subtle">{t('promoters.loading')}</div>
         ) : promoters.length === 0 ? (
           showForm ? null : (
             <OrgEmptyState
@@ -294,11 +294,11 @@ export default function PromotersClient({
                       <span className="font-mono text-xs text-fg-subtle">{p.code}</span>
                       <span className="inline-flex items-center gap-1.5 text-eyebrow uppercase tracking-wider text-fg-subtle">
                         <span className={`h-1.5 w-1.5 rounded-full ${p.isActive ? 'bg-success' : 'bg-fg/30'}`} />
-                        {p.isActive ? 'Active' : 'Paused'}
+                        {p.isActive ? t('promoters.active') : t('promoters.paused')}
                       </span>
                     </div>
                     <p className="mt-0.5 text-sm text-fg-subtle">
-                      {commissionLabel(p)}
+                      {commissionLabel(p, t)}
                       {p.contact ? ` · ${p.contact}` : ''}
                     </p>
                   </div>
@@ -322,7 +322,7 @@ export default function PromotersClient({
                     </div>
                     <div className="text-right">
                       <p className="text-fg font-semibold">{fmtMoney(p.commissionCents, p.currency)}</p>
-                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">Owed</p>
+                      <p className="text-eyebrow uppercase tracking-wider text-fg-subtle">{t('promoters.owed')}</p>
                     </div>
                   </div>
                 </div>
@@ -334,7 +334,7 @@ export default function PromotersClient({
                     className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                   >
                     {copiedKey === `share-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    Sales link
+                    {t('promoters.sales_link')}
                   </button>
                   <button
                     type="button"
@@ -342,11 +342,11 @@ export default function PromotersClient({
                     className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
                   >
                     {copiedKey === `stats-${p.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    Their stats page
+                    {t('promoters.stats_page')}
                   </button>
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
-                      `You're a promoter for ${eventTitle}! Your personal sales link: ${p.shareUrl}, track your sales and commission here: ${p.statsUrl}`
+                      t('promoters.whatsapp_message', { title: eventTitle, share: p.shareUrl, stats: p.statsUrl, interpolation: { escapeValue: false } })
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -361,7 +361,7 @@ export default function PromotersClient({
                     onClick={() => handleToggle(p)}
                     className="rounded-lg px-3 py-1.5 text-xs font-semibold text-fg-subtle transition-colors hover:text-fg"
                   >
-                    {p.isActive ? 'Pause' : 'Resume'}
+                    {p.isActive ? t('promoters.pause') : t('promoters.resume')}
                   </button>
                   {p.ordersCount === 0 && (
                     <button

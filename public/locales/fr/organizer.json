@@ -968,7 +968,8 @@
     "needs_admin_review": "Les gains de cet événement doivent être vérifiés par l'équipe paiements de Tikèm avant tout retrait. Nous l'avons signalé. Aucun argent n'a été déplacé.",
     "destination_on_hold": "Votre nouveau compte est enregistré et pourra recevoir des paiements à partir du {{date}}.",
     "balance_changed": "Votre solde a changé, veuillez réessayer.",
-    "free_event_nothing": "Événement gratuit, rien à verser."
+    "free_event_nothing": "Événement gratuit, rien à verser.",
+    "back_to_all": "← Retour à tous les revenus"
   },
   "events_filters": {
     "alphabetical": "Alphabétique",
@@ -1227,7 +1228,30 @@
     "send_via_whatsapp": "Envoyer via WhatsApp",
     "clicks": "Clics",
     "conversion": "Conversion",
-    "commission_note": "La commission est retenue sur vos gains et versée sur le portefeuille Tikèm de chaque promoteur."
+    "commission_note": "La commission est retenue sur vos gains et versée sur le portefeuille Tikèm de chaque promoteur.",
+    "name": "Nom",
+    "adding": "Ajout…",
+    "loading": "Chargement des promoteurs…",
+    "active": "Actif",
+    "paused": "En pause",
+    "owed": "Dû",
+    "sales_link": "Lien de vente",
+    "stats_page": "Sa page de stats",
+    "pause": "Mettre en pause",
+    "resume": "Reprendre",
+    "pct_option": "% des ventes",
+    "flat_option": "{{currency}} par billet",
+    "commission_pct": "{{value}} % des ventes",
+    "commission_flat": "{{amount}} / billet",
+    "copy_failed": "Copie impossible",
+    "copy_manually": "Copiez-le manuellement.",
+    "add_failed": "Impossible d'ajouter le promoteur",
+    "update_failed": "Mise à jour impossible",
+    "remove_failed": "Suppression impossible",
+    "try_again": "Réessayez.",
+    "added": "Promoteur ajouté",
+    "added_body": "Envoyez-lui son lien de stats : c’est toute sa boîte à outils.",
+    "whatsapp_message": "Tu es promoteur pour {{title}} ! Ton lien de vente personnel : {{share}}, suis tes ventes et ta commission ici : {{stats}}"
   },
   "security": {
     "change_password": "Modifier le mot de passe",
