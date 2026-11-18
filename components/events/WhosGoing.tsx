@@ -165,7 +165,13 @@ export default function WhosGoing({
   // keep the word order translatable; the names go in as markers and are
   // swapped for <strong> below.
   const leadName = (faces[0]?.displayName || '').split(' ')[0]
-  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0))
+  // Two names when "You" isn't leading: "Olivier and Marie are going" fills
+  // the line the way Posh does (owner, 2026-11-18). Same rule as the app.
+  const secondName = viewerIsGoing ? '' : (faces[1]?.displayName || '').split(' ')[0]
+  const othersCount = Math.max(
+    0,
+    totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0) - (secondName ? 1 : 0)
+  )
   const lineKey = viewerIsGoing
     ? leadName
       ? othersCount === 0
@@ -178,29 +184,39 @@ export default function WhosGoing({
         : othersCount === 1
           ? 'you_one'
           : 'you_others'
-    : leadName
+    : secondName
       ? othersCount === 0
-        ? 'lead_only'
+        ? 'lead_second'
         : !sayCount
-          ? 'lead_vague'
+          ? 'lead_second_vague'
           : othersCount === 1
-            ? 'lead_one'
-            : 'lead_others'
-      : sayCount
-        ? 'count'
-        : 'vague'
+            ? 'lead_second_one'
+            : 'lead_second_others'
+      : leadName
+        ? othersCount === 0
+          ? 'lead_only'
+          : !sayCount
+            ? 'lead_vague'
+            : othersCount === 1
+              ? 'lead_one'
+              : 'lead_others'
+        : sayCount
+          ? 'count'
+          : 'vague'
   const YOU = '\u0001'
   const LEAD = '\u0002'
+  const SECOND = '\u0003'
   const template = t(`whos_going.line.${lineKey}`, {
     you: YOU,
     lead: LEAD,
+    second: SECOND,
     count: lineKey === 'count' ? totalGoing : othersCount,
     interpolation: { escapeValue: false },
   })
-  const sub = template.split(/([\u0001\u0002])/).map((part, i) =>
-    part === YOU || part === LEAD ? (
+  const sub = template.split(/([\u0001\u0002\u0003])/).map((part, i) =>
+    part === YOU || part === LEAD || part === SECOND ? (
       <strong key={i} className="font-semibold text-white">
-        {part === YOU ? t('whos_going.you_badge', 'You') : leadName}
+        {part === YOU ? t('whos_going.you_badge', 'You') : part === LEAD ? leadName : secondName}
       </strong>
     ) : (
       <span key={i}>{part}</span>

@@ -189,30 +189,41 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
   // The sentence under the faces, names in semibold: "You, Mika and 84 others
   // are going". Templates keep word order translatable.
   const leadName = (faces[0]?.displayName || '').split(' ')[0];
-  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - (leadName ? 1 : 0));
+  // Two names when nobody's "You" leads the line: "Olivier and Marie are
+  // going" fills the row the way Posh does (owner, 2026-11-18).
+  const secondName = viewerIsGoing ? '' : (faces[1]?.displayName || '').split(' ')[0];
+  const namedCount = (leadName ? 1 : 0) + (secondName ? 1 : 0);
+  const othersCount = Math.max(0, totalGoing - (viewerIsGoing ? 1 : 0) - namedCount);
+  const many = (one: string, other: string) => (othersCount === 1 ? one : other);
   const sentenceKey = viewerIsGoing
     ? leadName
       ? othersCount > 0
-        ? 'whosGoing.line.youLeadOthers'
+        ? many('whosGoing.line.youLeadOne', 'whosGoing.line.youLeadOthers')
         : 'whosGoing.line.youLead'
       : othersCount > 0
-        ? 'whosGoing.line.youOthers'
+        ? many('whosGoing.line.youOne', 'whosGoing.line.youOthers')
         : 'whosGoing.line.youOnly'
-    : leadName
+    : secondName
       ? othersCount === 0
-        ? 'whosGoing.line.leadOnly'
+        ? 'whosGoing.line.leadSecond'
         : sayCount
-          ? 'whosGoing.line.leadOthers'
-          : 'whosGoing.line.leadOthersVague'
-      : sayCount
-        ? 'whosGoing.line.count'
-        : 'whosGoing.line.vague';
-  const template = t(sentenceKey, { count: othersCount === 1 && !viewerIsGoing ? 1 : othersCount, total: totalGoing });
-  const bold = { you: t('whosGoing.youBadge'), lead: leadName };
-  const sentence = template.split(/(\{you\}|\{lead\})/).map((part, i) =>
-    part === '{you}' || part === '{lead}' ? (
+          ? many('whosGoing.line.leadSecondOne', 'whosGoing.line.leadSecondOthers')
+          : 'whosGoing.line.leadSecondVague'
+      : leadName
+        ? othersCount === 0
+          ? 'whosGoing.line.leadOnly'
+          : sayCount
+            ? many('whosGoing.line.leadOne', 'whosGoing.line.leadOthers')
+            : 'whosGoing.line.leadOthersVague'
+        : sayCount
+          ? 'whosGoing.line.count'
+          : 'whosGoing.line.vague';
+  const template = t(sentenceKey, { count: othersCount, total: totalGoing });
+  const bold = { you: t('whosGoing.youBadge'), lead: leadName, second: secondName };
+  const sentence = template.split(/(\{you\}|\{lead\}|\{second\})/).map((part, i) =>
+    part === '{you}' || part === '{lead}' || part === '{second}' ? (
       <Text key={i} style={styles.lineStrong}>
-        {bold[part === '{you}' ? 'you' : 'lead']}
+        {bold[part.slice(1, -1) as 'you' | 'lead' | 'second']}
       </Text>
     ) : (
       <Text key={i}>{part}</Text>
@@ -229,7 +240,7 @@ export default function WhosGoing({ eventId, visibility = 'faces', capacity, alw
         onPress={openList}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel={template.replace('{you}', bold.you).replace('{lead}', leadName)}
+        accessibilityLabel={template.replace('{you}', bold.you).replace('{lead}', leadName).replace('{second}', secondName)}
       >
         <View style={styles.cardPile}>
           {faces.map((u, i) => (

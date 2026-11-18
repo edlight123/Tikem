@@ -363,7 +363,8 @@
     "view_my_tickets": "Gade tikè ou yo",
     "free_tier_already_claimed": "Ou gen tikè gratis ou deja",
     "more_dates_one": "+{{count}} lòt dat",
-    "more_dates_other": "+{{count}} lòt dat"
+    "more_dates_other": "+{{count}} lòt dat",
+    "rsvp_cta": "Rezève"
   },
   "favorites": {
     "title": "Favori mwen",
@@ -1615,16 +1616,20 @@
     "no_faces": "Pèsonn poko montre figi yo.",
     "sign_in_to_view": "Konekte pou w wè kiyès ki prale",
     "line": {
-      "you_lead_others": "{{you}}, {{lead}} ak {{count}} lòt",
-      "you_lead_one": "{{you}}, {{lead}} ak 1 lòt",
-      "you_lead": "{{you}} ak {{lead}}",
-      "you_others": "{{you}} ak {{count}} lòt",
-      "you_one": "{{you}} ak 1 lòt",
+      "you_lead_others": "{{you}}, {{lead}} ak {{count}} lòt ap vini",
+      "you_lead_one": "{{you}}, {{lead}} ak 1 lòt ap vini",
+      "you_lead": "{{you}} ak {{lead}} ap vini",
+      "you_others": "{{you}} ak {{count}} lòt ap vini",
+      "you_one": "{{you}} ak 1 lòt ap vini",
       "you_only": "{{you}} ap vini",
       "lead_only": "{{lead}} ap vini",
-      "lead_one": "{{lead}} ak 1 lòt",
-      "lead_others": "{{lead}} ak {{count}} lòt",
-      "lead_vague": "{{lead}} ak lòt moun",
+      "lead_one": "{{lead}} ak 1 lòt ap vini",
+      "lead_others": "{{lead}} ak {{count}} lòt ap vini",
+      "lead_vague": "{{lead}} ak lòt moun ap vini",
+      "lead_second": "{{lead}} ak {{second}} ap vini",
+      "lead_second_one": "{{lead}}, {{second}} ak 1 lòt ap vini",
+      "lead_second_others": "{{lead}}, {{second}} ak {{count}} lòt ap vini",
+      "lead_second_vague": "{{lead}}, {{second}} ak lòt moun ap vini",
       "count": "{{count}} moun ap vini",
       "vague": "Gade kiyès k ap vini"
     }

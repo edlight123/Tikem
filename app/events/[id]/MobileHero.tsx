@@ -3,8 +3,6 @@
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import PosterImage from '@/components/ui/PosterImage'
-import { Shield } from 'lucide-react'
-import OrganizerMark from '@/components/OrganizerMark'
 import { getPosterTheme } from '@/lib/posterGradient'
 
 interface MobileHeroProps {
@@ -112,51 +110,29 @@ export default function MobileHero({
           {/* Status over the poster: a dark scrim chip with a coloured dot,
               never a filled pill (house rule). The scrim keeps the label
               legible over whatever colours the flyer has. */}
-          <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+          <div className="absolute left-3 top-3 flex flex-col items-start gap-2">
             {isSoldOut && <PosterChip dot="bg-red-400">{t('ticket.sold_out')}</PosterChip>}
             {!isSoldOut && selloutSoon && (
               <PosterChip dot="bg-amber-400">{t('ticket.almost_sold_out')}</PosterChip>
             )}
             {isTrending && <PosterChip dot="bg-brand-400">{t('events.trending')}</PosterChip>}
           </div>
+          {/* Save + share over the poster's corner, like the app's header. */}
+          {actions && <div className="absolute right-2 top-2 flex items-center gap-1">{actions}</div>}
         </div>
       </div>
 
-      {/* Title & Organizer - Below image */}
-      <div className="px-4 py-4">
-        {/* Category: a quiet eyebrow, not a pill. "Other" says nothing. */}
+      {/* Title. The organizer line now sits under the date, the place and
+          who's going, in the app's order (owner, 2026-11-18). */}
+      <div className="px-4 pb-1 pt-4">
         {category && category.toLowerCase() !== 'other' && (
           <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
             {category}
           </p>
         )}
-
-        {/* Title */}
-        <h1 className="font-display italic !text-[36px] text-white mb-3 !leading-[1.02] break-words">
+        <h1 className="font-display italic !text-[34px] text-white !leading-[1.02] break-words">
           {title}
         </h1>
-
-        {/* Organizer, with save + share on the same line */}
-        <div className="flex items-center gap-2">
-        <a
-          href={`/profile/organizer/${organizerId}`}
-          className="flex min-w-0 flex-1 items-center gap-2.5 hover:opacity-80 transition-opacity"
-        >
-          <OrganizerMark logoUrl={organizerLogo} className="h-10 w-10 rounded-xl" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white truncate">
-              {organizerName}
-            </p>
-            {isVerified && (
-              <div className="flex items-center gap-1 text-brand-400 text-xs">
-                <Shield className="w-3 h-3" />
-                <span className="font-medium">{t('events.verified')}</span>
-              </div>
-            )}
-          </div>
-        </a>
-        {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
-        </div>
       </div>
     </div>
   )

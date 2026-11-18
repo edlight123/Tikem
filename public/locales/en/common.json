@@ -363,7 +363,8 @@
     "view_my_tickets": "View tickets",
     "free_tier_already_claimed": "You already have your free ticket",
     "more_dates_one": "+{{count}} more date",
-    "more_dates_other": "+{{count}} more dates"
+    "more_dates_other": "+{{count}} more dates",
+    "rsvp_cta": "RSVP"
   },
   "favorites": {
     "title": "My Favorites",
@@ -1615,16 +1616,20 @@
     "no_faces": "No one shows their face yet.",
     "sign_in_to_view": "Sign in to see who's going",
     "line": {
-      "you_lead_others": "{{you}}, {{lead}} and {{count}} others",
-      "you_lead_one": "{{you}}, {{lead}} and 1 other",
-      "you_lead": "{{you}} and {{lead}}",
-      "you_others": "{{you}} and {{count}} others",
-      "you_one": "{{you}} and 1 other",
+      "you_lead_others": "{{you}}, {{lead}} and {{count}} others are going",
+      "you_lead_one": "{{you}}, {{lead}} and 1 other are going",
+      "you_lead": "{{you}} and {{lead}} are going",
+      "you_others": "{{you}} and {{count}} others are going",
+      "you_one": "{{you}} and 1 other are going",
       "you_only": "{{you}} are going",
       "lead_only": "{{lead}} is going",
-      "lead_one": "{{lead}} and 1 other",
-      "lead_others": "{{lead}} and {{count}} others",
-      "lead_vague": "{{lead}} and others",
+      "lead_one": "{{lead}} and 1 other are going",
+      "lead_others": "{{lead}} and {{count}} others are going",
+      "lead_vague": "{{lead}} and others are going",
+      "lead_second": "{{lead}} and {{second}} are going",
+      "lead_second_one": "{{lead}}, {{second}} and 1 other are going",
+      "lead_second_others": "{{lead}}, {{second}} and {{count}} others are going",
+      "lead_second_vague": "{{lead}}, {{second}} and others are going",
       "count": "{{count}} going",
       "vague": "See who's going"
     }

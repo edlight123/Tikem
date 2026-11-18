@@ -93,7 +93,7 @@ export default function MobileKeyFacts({
     : `${hasFreeOption ? `${t('common.free')}, ` : ''}${ticketPrice.toLocaleString(intlLocaleFor(i18n.language))} ${currency}`
 
   return (
-    <div className="md:hidden border-b border-white/10 px-4 py-5">
+    <div className="md:hidden px-4 pt-2">
       {/* Printed in the event's zone, so the server and the browser agree. */}
       <p className="text-[15px] font-medium text-white">
         {formatInZone(startDate, zone, 'EEE, MMM d, yyyy · h:mm a', { locale: dfLocale })}
