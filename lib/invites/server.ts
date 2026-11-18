@@ -149,14 +149,12 @@ async function inviteFacts(
       }
     })
   }
-  // A quiet record counts as an invite only while its reason holds; once it
-  // is gone (unmuted, say) the friend can be invited for real.
+  // A quiet record reads as "Invited" for good, like any sent invite: if it
+  // flipped back once the mute or private ticket lapsed, the inviter could
+  // learn that one had existed.
   const alreadyInvited = new Set<string>()
   inviteDocs.forEach((d: any, i: number) => {
-    if (!d?.exists) return
-    const uid = candidates[i]
-    if (d.data()?.status === 'quiet' && !quiet.has(uid)) return
-    alreadyInvited.add(uid)
+    if (d?.exists) alreadyInvited.add(candidates[i])
   })
   return { alreadyInvited, holders, mutedBy, blocked, quiet }
 }
@@ -269,8 +267,7 @@ export async function sendEventInvites(
     // Create-if-absent: a double tap or a second device cannot invite twice.
     const created = await adminDb.runTransaction(async (tx: any) => {
       const snap = await tx.get(ref)
-      // A quiet record upgrades once the reason is gone (unmuted, say).
-      if (snap.exists && !(snap.data()?.status === 'quiet' && !isQuiet)) return false
+      if (snap.exists) return false
       tx.set(ref, {
         event_id: eventId,
         inviter_uid: inviterUid,

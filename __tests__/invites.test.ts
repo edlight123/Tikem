@@ -203,10 +203,14 @@ describe('sendEventInvites', () => {
     expect(again).toEqual({ status: 'ok', sent: [], skipped: [{ uid: 'bob', reason: 'already_invited' }] })
     expect(mockCreateNotification).toHaveBeenCalledTimes(1)
 
-    // Unmuted, erin can be invited again.
+    // Unmuted later, erin still reads as invited: the record never flips
+    // back, so the inviter cannot learn a mute existed.
     await unmuteInviter('erin', 'alice')
     const third: any = await sendEventInvites({ inviterUid: 'alice', eventId: 'ev1', friendIds: ['erin'] }, { now })
-    expect(third.sent).toEqual(['erin'])
+    expect(third.sent).toEqual([])
+    expect(third.skipped).toEqual([{ uid: 'erin', reason: 'already_invited' }])
+    const picker: any = await getInvitePicker('alice', 'ev1', now)
+    expect(picker.friends.find((f: any) => f.uid === 'erin').state).toBe('invited')
   })
 
   it('treats a block either way as "unavailable"', async () => {
